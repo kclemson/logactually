@@ -1,0 +1,46 @@
+import { DailyTotals } from '@/types/food';
+
+interface MacroSummaryProps {
+  totals: DailyTotals;
+  size?: 'sm' | 'lg';
+}
+
+export function MacroSummary({ totals, size = 'lg' }: MacroSummaryProps) {
+  const items = [
+    { label: 'Calories', value: Math.round(totals.calories), unit: '' },
+    { label: 'Protein', value: Math.round(totals.protein), unit: 'g' },
+    { label: 'Carbs', value: Math.round(totals.carbs), unit: 'g' },
+    { label: 'Fat', value: Math.round(totals.fat), unit: 'g' },
+  ];
+
+  if (size === 'sm') {
+    return (
+      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+        {items.map(({ label, value, unit }) => (
+          <span key={label}>
+            {value}{unit} {label.charAt(0).toLowerCase()}
+          </span>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-4 gap-2">
+      {items.map(({ label, value, unit }) => (
+        <div
+          key={label}
+          className="flex flex-col items-center rounded-lg bg-muted/50 p-3"
+        >
+          <span className="text-2xl font-bold text-foreground">
+            {value}
+            <span className="text-sm font-normal text-muted-foreground">
+              {unit}
+            </span>
+          </span>
+          <span className="text-xs text-muted-foreground">{label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
