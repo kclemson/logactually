@@ -2,14 +2,14 @@ import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { FoodInput } from '@/components/FoodInput';
 import { MacroSummary } from '@/components/MacroSummary';
-import { FoodConfirmationModal } from '@/components/FoodConfirmationModal';
+import { AIResults } from '@/components/AIResults';
 import { FoodEntryCard } from '@/components/FoodEntryCard';
 import { useAnalyzeFood } from '@/hooks/useAnalyzeFood';
 import { useFoodEntries } from '@/hooks/useFoodEntries';
 import { FoodItem, calculateTotals } from '@/types/food';
 import { useToast } from '@/hooks/use-toast';
 
-const Log = () => {
+const FoodLog = () => {
   const { toast } = useToast();
   const today = format(new Date(), 'yyyy-MM-dd');
   const { entries, createEntry, deleteEntry } = useFoodEntries(today);
@@ -97,7 +97,7 @@ const Log = () => {
       )}
 
       {showModal && (
-        <FoodConfirmationModal
+        <AIResults
           open={showModal}
           onOpenChange={setShowModal}
           foodItems={pendingItems}
@@ -111,4 +111,4 @@ const Log = () => {
   );
 };
 
-export default Log;
+export default FoodLog;
