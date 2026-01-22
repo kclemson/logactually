@@ -4,6 +4,7 @@ import { FoodInput } from '@/components/FoodInput';
 import { MacroSummary } from '@/components/MacroSummary';
 import { AIResults } from '@/components/AIResults';
 import { FoodEntryCard } from '@/components/FoodEntryCard';
+import { Button } from '@/components/ui/button';
 import { useAnalyzeFood } from '@/hooks/useAnalyzeFood';
 import { useFoodEntries } from '@/hooks/useFoodEntries';
 import { FoodItem, calculateTotals } from '@/types/food';
@@ -77,6 +78,25 @@ const FoodLog = () => {
         <h2 className="text-lg font-semibold">Log Food</h2>
         <FoodInput onSubmit={handleSubmit} isLoading={isAnalyzing} />
       </section>
+
+      {pendingItems.length > 0 && !showModal && (
+        <section className="rounded-lg border border-accent bg-accent/20 p-4 space-y-2">
+          <p className="text-sm font-medium">You have unsaved food analysis:</p>
+          <p className="text-sm text-muted-foreground">"{pendingRawInput}"</p>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={() => setShowModal(true)}>
+              Review
+            </Button>
+            <Button 
+              size="sm" 
+              variant="ghost" 
+              onClick={() => { setPendingItems([]); setPendingRawInput(''); }}
+            >
+              Discard
+            </Button>
+          </div>
+        </section>
+      )}
 
       <section className="space-y-4">
         <h2 className="text-lg font-semibold">Today's Totals</h2>
