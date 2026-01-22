@@ -34,11 +34,6 @@ export function FoodConfirmationModal({
   const [items, setItems] = useState<FoodItem[]>(initialItems);
   const [fixContext, setFixContext] = useState('');
 
-  // Sync when modal opens with new items
-  useState(() => {
-    setItems(initialItems);
-  });
-
   const updateItem = (
     index: number,
     field: keyof FoodItem,
