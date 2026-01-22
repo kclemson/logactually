@@ -7,13 +7,22 @@ import { useToast } from '@/hooks/use-toast';
 interface FoodInputProps {
   onSubmit: (text: string) => void;
   isLoading?: boolean;
+  shouldClear?: boolean;
+  onCleared?: () => void;
 }
 
-export function FoodInput({ onSubmit, isLoading }: FoodInputProps) {
+export function FoodInput({ onSubmit, isLoading, shouldClear, onCleared }: FoodInputProps) {
   const { toast } = useToast();
   const [text, setText] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [recognition, setRecognition] = useState<typeof window.webkitSpeechRecognition.prototype | null>(null);
+
+  useEffect(() => {
+    if (shouldClear) {
+      setText('');
+      onCleared?.();
+    }
+  }, [shouldClear, onCleared]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
@@ -66,7 +75,6 @@ export function FoodInput({ onSubmit, isLoading }: FoodInputProps) {
   const handleSubmit = () => {
     if (text.trim() && !isLoading) {
       onSubmit(text.trim());
-      setText('');
     }
   };
 
