@@ -96,15 +96,17 @@ const Log = () => {
         </section>
       )}
 
-      <FoodConfirmationModal
-        open={showModal}
-        onOpenChange={setShowModal}
-        foodItems={pendingItems}
-        rawInput={pendingRawInput}
-        onConfirm={handleConfirm}
-        onReanalyze={handleReanalyze}
-        isReanalyzing={isAnalyzing}
-      />
+      {showModal && (
+        <FoodConfirmationModal
+          open={showModal}
+          onOpenChange={setShowModal}
+          foodItems={pendingItems}
+          rawInput={pendingRawInput}
+          onConfirm={handleConfirm}
+          onReanalyze={handleReanalyze}
+          isReanalyzing={isAnalyzing}
+        />
+      )}
     </div>
   );
 };
