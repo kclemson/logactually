@@ -7,7 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { Layout } from "@/components/Layout";
 import Auth from "./pages/Auth";
-import Log from "./pages/Log";
+import FoodLog from "./pages/FoodLog";
 import Today from "./pages/Today";
 import Trends from "./pages/Trends";
 import History from "./pages/History";
@@ -31,7 +31,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             >
-              <Route path="/" element={<Log />} />
+              <Route path="/" element={<FoodLog />} />
               <Route path="/today" element={<Today />} />
               <Route path="/trends" element={<Trends />} />
               <Route path="/history" element={<History />} />

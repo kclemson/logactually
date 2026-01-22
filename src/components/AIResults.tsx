@@ -12,7 +12,7 @@ import {
 import { MacroSummary } from './MacroSummary';
 import { Trash2 } from 'lucide-react';
 
-interface FoodConfirmationModalProps {
+interface AIResultsProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   foodItems: FoodItem[];
@@ -22,7 +22,7 @@ interface FoodConfirmationModalProps {
   isReanalyzing?: boolean;
 }
 
-export function FoodConfirmationModal({
+export function AIResults({
   open,
   onOpenChange,
   foodItems: initialItems,
@@ -30,7 +30,7 @@ export function FoodConfirmationModal({
   onConfirm,
   onReanalyze,
   isReanalyzing,
-}: FoodConfirmationModalProps) {
+}: AIResultsProps) {
   const [items, setItems] = useState<FoodItem[]>(initialItems);
   const [fixContext, setFixContext] = useState('');
 
