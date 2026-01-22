@@ -12,6 +12,7 @@ export default function Auth() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   if (loading) {
@@ -29,6 +30,16 @@ export default function Auth() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+
+    if (isSignUp && inviteCode !== import.meta.env.VITE_INVITE_CODE) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid invite code',
+        description: 'Please enter a valid invite code to sign up.',
+      });
+      setSubmitting(false);
+      return;
+    }
 
     const { error } = isSignUp 
       ? await signUp(email, password)
@@ -85,6 +96,17 @@ export default function Auth() {
                 minLength={6}
               />
             </div>
+            {isSignUp && (
+              <div className="space-y-2">
+                <Input
+                  type="text"
+                  placeholder="Invite Code"
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value)}
+                  required
+                />
+              </div>
+            )}
             <Button type="submit" className="w-full" disabled={submitting}>
               {submitting ? 'Loading...' : isSignUp ? 'Sign Up' : 'Sign In'}
             </Button>
