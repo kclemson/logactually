@@ -67,7 +67,7 @@ export function AIResults({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="max-h-[90vh] overflow-y-auto sm:max-w-lg"
+        className="max-h-[90vh] overflow-y-auto sm:max-w-md"
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
@@ -76,86 +76,68 @@ export function AIResults({
         </DialogHeader>
 
         <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">"{rawInput}"</p>
+          <p className="text-xs italic text-muted-foreground">{rawInput}</p>
 
-          <div className="space-y-3">
+          <div className="space-y-1">
+            {/* Header row */}
+            <div className="grid grid-cols-[1fr_48px_40px_40px_40px_28px] gap-1 text-xs text-muted-foreground px-1">
+              <span>Item</span>
+              <span className="text-center">Cal</span>
+              <span className="text-center">P</span>
+              <span className="text-center">C</span>
+              <span className="text-center">F</span>
+              <span></span>
+            </div>
+            
+            {/* Data rows */}
             {items.map((item, index) => (
               <div
                 key={index}
-                className="rounded-lg border bg-card p-3 space-y-2"
+                className="grid grid-cols-[1fr_48px_40px_40px_40px_28px] gap-1 items-center"
               >
-                <div className="flex items-center justify-between">
-                  <Input
-                    value={item.name}
-                    onChange={(e) => updateItem(index, 'name', e.target.value)}
-                    className="font-medium border-0 p-0 h-auto text-base focus-visible:ring-0"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeItem(index)}
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
                 <Input
-                  value={item.portion}
-                  onChange={(e) => updateItem(index, 'portion', e.target.value)}
-                  placeholder="Portion"
-                  className="text-sm text-muted-foreground"
+                  value={`${item.name}${item.portion ? ` (${item.portion})` : ''}`}
+                  onChange={(e) => updateItem(index, 'name', e.target.value)}
+                  className="h-7 text-xs truncate"
+                  title={`${item.name} - ${item.portion}`}
                 />
-                <div className="grid grid-cols-4 gap-2">
-                  <div>
-                    <label className="text-xs text-muted-foreground">Cal</label>
-                    <Input
-                      type="number"
-                      value={item.calories}
-                      onChange={(e) =>
-                        updateItem(index, 'calories', Number(e.target.value))
-                      }
-                      className="h-8"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground">Protein</label>
-                    <Input
-                      type="number"
-                      value={item.protein}
-                      onChange={(e) =>
-                        updateItem(index, 'protein', Number(e.target.value))
-                      }
-                      className="h-8"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground">Carbs</label>
-                    <Input
-                      type="number"
-                      value={item.carbs}
-                      onChange={(e) =>
-                        updateItem(index, 'carbs', Number(e.target.value))
-                      }
-                      className="h-8"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground">Fat</label>
-                    <Input
-                      type="number"
-                      value={item.fat}
-                      onChange={(e) =>
-                        updateItem(index, 'fat', Number(e.target.value))
-                      }
-                      className="h-8"
-                    />
-                  </div>
-                </div>
+                <Input
+                  type="number"
+                  value={item.calories}
+                  onChange={(e) => updateItem(index, 'calories', Number(e.target.value))}
+                  className="h-7 text-xs text-center px-1"
+                />
+                <Input
+                  type="number"
+                  value={item.protein}
+                  onChange={(e) => updateItem(index, 'protein', Number(e.target.value))}
+                  className="h-7 text-xs text-center px-1"
+                />
+                <Input
+                  type="number"
+                  value={item.carbs}
+                  onChange={(e) => updateItem(index, 'carbs', Number(e.target.value))}
+                  className="h-7 text-xs text-center px-1"
+                />
+                <Input
+                  type="number"
+                  value={item.fat}
+                  onChange={(e) => updateItem(index, 'fat', Number(e.target.value))}
+                  className="h-7 text-xs text-center px-1"
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => removeItem(index)}
+                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
               </div>
             ))}
           </div>
 
-          <MacroSummary totals={totals} />
+          <MacroSummary totals={totals} size="sm" />
 
           <div className="flex gap-2">
             <Input
@@ -163,9 +145,11 @@ export function AIResults({
               value={fixContext}
               onChange={(e) => setFixContext(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleFix()}
+              className="text-sm"
             />
             <Button
               variant="outline"
+              size="sm"
               onClick={handleFix}
               disabled={!fixContext.trim() || isReanalyzing}
             >
@@ -175,10 +159,10 @@ export function AIResults({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleConfirm} disabled={items.length === 0}>
+          <Button size="sm" onClick={handleConfirm} disabled={items.length === 0}>
             Confirm & Save
           </Button>
         </DialogFooter>
