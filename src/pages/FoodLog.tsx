@@ -19,6 +19,7 @@ const FoodLog = () => {
   const [showModal, setShowModal] = useState(false);
   const [pendingItems, setPendingItems] = useState<FoodItem[]>([]);
   const [pendingRawInput, setPendingRawInput] = useState('');
+  const [shouldClearInput, setShouldClearInput] = useState(false);
 
   useEffect(() => {
     if (analyzeError) {
@@ -59,6 +60,7 @@ const FoodLog = () => {
     });
     setPendingItems([]);
     setPendingRawInput('');
+    setShouldClearInput(true);
   };
 
   // Calculate today's totals from all entries
@@ -76,7 +78,12 @@ const FoodLog = () => {
     <div className="space-y-6">
       <section className="space-y-4">
         <h2 className="text-lg font-semibold">Log Food</h2>
-        <FoodInput onSubmit={handleSubmit} isLoading={isAnalyzing} />
+        <FoodInput 
+          onSubmit={handleSubmit} 
+          isLoading={isAnalyzing}
+          shouldClear={shouldClearInput}
+          onCleared={() => setShouldClearInput(false)}
+        />
       </section>
 
       {pendingItems.length > 0 && !showModal && (
@@ -90,7 +97,7 @@ const FoodLog = () => {
             <Button 
               size="sm" 
               variant="ghost" 
-              onClick={() => { setPendingItems([]); setPendingRawInput(''); }}
+              onClick={() => { setPendingItems([]); setPendingRawInput(''); setShouldClearInput(true); }}
             >
               Discard
             </Button>
