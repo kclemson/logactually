@@ -1,5 +1,7 @@
 import { useState, useCallback } from 'react';
-import { FoodItem } from '@/types/food';
+import { FoodItem, EditableField } from '@/types/food';
+
+const EDITABLE_FIELDS: EditableField[] = ['description', 'calories', 'protein', 'carbs', 'fat'];
 
 export function useEditableFoodItems() {
   const [items, setItems] = useState<FoodItem[]>([]);
@@ -34,8 +36,19 @@ export function useEditableFoodItems() {
       prev.map((item, i) => {
         if (i !== index) return item;
 
+        // Track that this field was edited
+        let newEditedFields: EditableField[] = [...(item.editedFields || [])];
+        if (EDITABLE_FIELDS.includes(field as EditableField) && !newEditedFields.includes(field as EditableField)) {
+          newEditedFields.push(field as EditableField);
+        }
+
         // If changing calories, scale macros proportionally from cached baseline
         if (field === 'calories' && typeof value === 'number') {
+          // Mark macros as edited since they auto-scale
+          (['protein', 'carbs', 'fat'] as EditableField[]).forEach(f => {
+            if (!newEditedFields.includes(f)) newEditedFields.push(f);
+          });
+
           // Get or create baseline for this item
           let baseline = calorieEditBaseline.get(index);
           if (!baseline) {
@@ -45,7 +58,7 @@ export function useEditableFoodItems() {
 
           // Handle zero baseline (edge case - can't scale from 0)
           if (baseline.calories === 0) {
-            return { ...item, calories: value };
+            return { ...item, calories: value, editedFields: newEditedFields };
           }
 
           // Scale from baseline, not current values
@@ -56,6 +69,7 @@ export function useEditableFoodItems() {
             protein: Math.round(baseline.protein * ratio),
             carbs: Math.round(baseline.carbs * ratio),
             fat: Math.round(baseline.fat * ratio),
+            editedFields: newEditedFields,
           };
         }
 
@@ -65,7 +79,7 @@ export function useEditableFoodItems() {
           next.delete(index);
           return next;
         });
-        return { ...item, [field]: value };
+        return { ...item, [field]: value, editedFields: newEditedFields };
       })
     );
     setHasChanges(true);

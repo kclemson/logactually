@@ -1,3 +1,5 @@
+export type EditableField = 'description' | 'calories' | 'protein' | 'carbs' | 'fat';
+
 export interface FoodItem {
   uid: string;
   description: string;  // Combined "Food Name (portion)" e.g. "Cheese Pizza (1 slice)"
@@ -5,6 +7,7 @@ export interface FoodItem {
   protein: number;
   carbs: number;
   fat: number;
+  editedFields?: EditableField[];
 }
 
 export interface FoodEntry {
