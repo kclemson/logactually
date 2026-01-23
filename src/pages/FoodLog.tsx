@@ -1,7 +1,9 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { format, addDays, subDays, isToday, parseISO } from 'date-fns';
-import { Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Check, X, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { FoodInput, FoodInputRef } from '@/components/FoodInput';
 import { FoodItemsTable } from '@/components/FoodItemsTable';
 import { Button } from '@/components/ui/button';
@@ -243,24 +245,52 @@ const FoodLog = () => {
         </Button>
         
         <div className="flex items-center gap-3 min-w-[180px] justify-center">
-          <h2 className="text-heading">
-            {isTodaySelected 
-              ? `Today (${format(selectedDate, 'M/d')})` 
-              : format(selectedDate, 'EEEE (M/d)')}
-          </h2>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="flex items-center gap-1 text-heading hover:text-primary transition-colors cursor-pointer">
+                <span>
+                  {isTodaySelected 
+                    ? `Today (${format(selectedDate, 'M/d')})` 
+                    : format(selectedDate, 'EEEE (M/d)')}
+                </span>
+                <ChevronDown className="h-4 w-4 opacity-50" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="center">
+              {!isTodaySelected && (
+                <div className="p-2 border-b">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full"
+                    onClick={goToToday}
+                  >
+                    Go to Today
+                  </Button>
+                </div>
+              )}
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date) => date && setSelectedDate(date)}
+                disabled={(date) => date > new Date()}
+                defaultMonth={selectedDate}
+              />
+            </PopoverContent>
+          </Popover>
           
           {hasChanges && (
             <div className="flex items-center gap-2">
               <button 
                 onClick={handleSaveChanges}
-                className="flex items-center gap-1 px-2 py-1 rounded text-sm text-green-600 hover:bg-green-100 dark:text-green-500 dark:hover:bg-green-900/30"
+                className="flex items-center gap-1 px-2 py-1 rounded text-sm text-primary hover:bg-primary/10"
               >
                 <Check className="h-4 w-4" />
                 <span>Save</span>
               </button>
               <button 
                 onClick={handleResetChanges}
-                className="flex items-center gap-1 px-2 py-1 rounded text-sm text-red-600 hover:bg-red-100 dark:text-red-500 dark:hover:bg-red-900/30"
+                className="flex items-center gap-1 px-2 py-1 rounded text-sm text-destructive hover:bg-destructive/10"
               >
                 <X className="h-4 w-4" />
                 <span>Cancel</span>
@@ -279,15 +309,6 @@ const FoodLog = () => {
           <ChevronRight className="h-5 w-5" />
         </Button>
       </div>
-
-      {/* Jump to Today - when viewing past dates */}
-      {!isTodaySelected && (
-        <div className="flex justify-center">
-          <Button variant="outline" size="sm" onClick={goToToday}>
-            Jump to Today
-          </Button>
-        </div>
-      )}
 
       {/* Food Items Section */}
       <section>
