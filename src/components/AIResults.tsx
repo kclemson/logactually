@@ -16,6 +16,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Trash2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface AIResultsProps {
   open: boolean;
@@ -23,7 +24,7 @@ interface AIResultsProps {
   foodItems: FoodItem[];
   rawInput: string;
   onConfirm: (items: FoodItem[]) => void;
-  onReanalyze: (additionalContext: string) => void;
+  onReanalyze: (additionalContext: string) => Promise<FoodItem[] | null>;
   isReanalyzing?: boolean;
 }
 
@@ -37,7 +38,13 @@ export function AIResults({
   isReanalyzing,
 }: AIResultsProps) {
   const [items, setItems] = useState<FoodItem[]>(initialItems);
+  const [previousItems, setPreviousItems] = useState<FoodItem[] | null>(null);
   const [fixContext, setFixContext] = useState('');
+
+  const isChanged = (index: number, field: keyof FoodItem): boolean => {
+    if (!previousItems || !previousItems[index]) return false;
+    return previousItems[index][field] !== items[index][field];
+  };
 
   const updateItem = (
     index: number,
@@ -62,9 +69,14 @@ export function AIResults({
     onOpenChange(false);
   };
 
-  const handleFix = () => {
+  const handleFix = async () => {
     if (fixContext.trim()) {
-      onReanalyze(fixContext.trim());
+      const oldItems = [...items];
+      const newItems = await onReanalyze(fixContext.trim());
+      if (newItems) {
+        setPreviousItems(oldItems);
+        setItems(newItems);
+      }
       setFixContext('');
     }
   };
@@ -109,7 +121,10 @@ export function AIResults({
                           contentEditable
                           suppressContentEditableWarning
                           onBlur={(e) => updateItem(index, 'name', e.currentTarget.textContent || '')}
-                          className="text-size-compact px-2 py-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50 focus:outline-none line-clamp-2 cursor-text"
+                          className={cn(
+                            "text-size-compact px-2 py-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50 focus:outline-none line-clamp-2 cursor-text rounded",
+                            isChanged(index, 'name') && "bg-amber-100 dark:bg-amber-900/30"
+                          )}
                         >
                           {displayText}
                         </div>
@@ -122,25 +137,37 @@ export function AIResults({
                       type="number"
                       value={item.calories}
                       onChange={(e) => updateItem(index, 'calories', Number(e.target.value))}
-                      className="h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50"
+                      className={cn(
+                        "h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
+                        isChanged(index, 'calories') && "bg-amber-100 dark:bg-amber-900/30"
+                      )}
                     />
                     <Input
                       type="number"
                       value={item.protein}
                       onChange={(e) => updateItem(index, 'protein', Number(e.target.value))}
-                      className="h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50"
+                      className={cn(
+                        "h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
+                        isChanged(index, 'protein') && "bg-amber-100 dark:bg-amber-900/30"
+                      )}
                     />
                     <Input
                       type="number"
                       value={item.carbs}
                       onChange={(e) => updateItem(index, 'carbs', Number(e.target.value))}
-                      className="h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50"
+                      className={cn(
+                        "h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
+                        isChanged(index, 'carbs') && "bg-amber-100 dark:bg-amber-900/30"
+                      )}
                     />
                     <Input
                       type="number"
                       value={item.fat}
                       onChange={(e) => updateItem(index, 'fat', Number(e.target.value))}
-                      className="h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50"
+                      className={cn(
+                        "h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
+                        isChanged(index, 'fat') && "bg-amber-100 dark:bg-amber-900/30"
+                      )}
                     />
                     <Button
                       variant="ghost"
