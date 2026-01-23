@@ -71,8 +71,11 @@ export default function Auth() {
             )}
             <div className="space-y-2">
               <Input
+                id="email"
+                name="email"
                 type="email"
                 placeholder="Email"
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -80,8 +83,11 @@ export default function Auth() {
             </div>
             <div className="space-y-2">
               <Input
+                id="password"
+                name="password"
                 type="password"
                 placeholder="Password"
+                autoComplete={isSignUp ? "new-password" : "current-password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
