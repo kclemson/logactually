@@ -72,6 +72,19 @@ export function FoodItemsTable({
     return (item.editedFields?.length ?? 0) > 0;
   };
 
+  // Build tooltip showing description + edited fields if any
+  const getItemTooltip = (item: FoodItem): string => {
+    if (!item.editedFields || item.editedFields.length === 0) {
+      return item.description;
+    }
+    
+    const fieldLabels = item.editedFields.map(field => 
+      field.charAt(0).toUpperCase() + field.slice(1)
+    );
+    
+    return `${item.description}\n\nEdited: ${fieldLabels.join(', ')}`;
+  };
+
   // Check if this is a newly-added row (for amber background)
   const isNewItem = (item: FoodItem): boolean => {
     return newItemUids?.has(item.uid) ?? false;
@@ -214,7 +227,7 @@ export function FoodItemsTable({
               <div
                 contentEditable
                 suppressContentEditableWarning
-                title={item.description}
+                title={getItemTooltip(item)}
                 ref={(el) => {
                   // Only sync content when element exists and is NOT being edited
                   if (el && el.textContent !== item.description && document.activeElement !== el) {
@@ -235,7 +248,7 @@ export function FoodItemsTable({
               />
             ) : (
               <span 
-                title={item.description}
+                title={getItemTooltip(item)}
                 className="text-size-compact px-2 py-1 line-clamp-2"
               >
                 {item.description}
