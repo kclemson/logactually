@@ -167,7 +167,7 @@ export function FoodItemsTable({
                 onKeyDown={handleKeyDown}
                 className={cn(
                   "text-size-compact px-2 py-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50 focus:outline-none line-clamp-2 cursor-text rounded",
-                  isChanged(item.name, 'name') && "bg-amber-100 dark:bg-amber-900/30"
+                  isChanged(item.name, 'name') && "bg-amber-100 dark:bg-amber-900/30 focus:bg-amber-100 dark:focus:bg-amber-900/30"
                 )}
               >
                 {displayText}
@@ -191,7 +191,7 @@ export function FoodItemsTable({
                   onKeyDown={handleKeyDown}
                   className={cn(
                     "h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
-                    isChanged(item.name, 'calories') && "bg-amber-100 dark:bg-amber-900/30"
+                    isChanged(item.name, 'calories') && "bg-amber-100 dark:bg-amber-900/30 focus:bg-amber-100 dark:focus:bg-amber-900/30"
                   )}
                 />
                 <Input
@@ -201,7 +201,7 @@ export function FoodItemsTable({
                   onKeyDown={handleKeyDown}
                   className={cn(
                     "h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
-                    isChanged(item.name, 'protein') && "bg-amber-100 dark:bg-amber-900/30"
+                    isChanged(item.name, 'protein') && "bg-amber-100 dark:bg-amber-900/30 focus:bg-amber-100 dark:focus:bg-amber-900/30"
                   )}
                 />
                 <Input
@@ -211,7 +211,7 @@ export function FoodItemsTable({
                   onKeyDown={handleKeyDown}
                   className={cn(
                     "h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
-                    isChanged(item.name, 'carbs') && "bg-amber-100 dark:bg-amber-900/30"
+                    isChanged(item.name, 'carbs') && "bg-amber-100 dark:bg-amber-900/30 focus:bg-amber-100 dark:focus:bg-amber-900/30"
                   )}
                 />
                 <Input
@@ -221,7 +221,7 @@ export function FoodItemsTable({
                   onKeyDown={handleKeyDown}
                   className={cn(
                     "h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
-                    isChanged(item.name, 'fat') && "bg-amber-100 dark:bg-amber-900/30"
+                    isChanged(item.name, 'fat') && "bg-amber-100 dark:bg-amber-900/30 focus:bg-amber-100 dark:focus:bg-amber-900/30"
                   )}
                 />
               </>
