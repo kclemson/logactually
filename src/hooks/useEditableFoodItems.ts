@@ -23,9 +23,32 @@ export function useEditableFoodItems({ initialItems }: UseEditableFoodItemsOptio
     value: string | number
   ) => {
     setItems((prev) =>
-      prev.map((item, i) =>
-        i === index ? { ...item, [field]: value } : item
-      )
+      prev.map((item, i) => {
+        if (i !== index) return item;
+
+        // If changing calories, scale macros proportionally
+        if (field === 'calories' && typeof value === 'number') {
+          const oldCalories = item.calories;
+          const newCalories = value;
+
+          // Avoid division by zero
+          if (oldCalories === 0) {
+            return { ...item, calories: newCalories };
+          }
+
+          const ratio = newCalories / oldCalories;
+          return {
+            ...item,
+            calories: newCalories,
+            protein: Math.round(item.protein * ratio * 10) / 10,
+            carbs: Math.round(item.carbs * ratio * 10) / 10,
+            fat: Math.round(item.fat * ratio * 10) / 10,
+          };
+        }
+
+        // For other fields, just update the single value
+        return { ...item, [field]: value };
+      })
     );
     setHasChanges(true);
   }, []);
