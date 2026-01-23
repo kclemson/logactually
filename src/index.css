@@ -17,10 +17,6 @@ All colors MUST be HSL.
     line-height: 1.4;
   }
   
-  .text-size-sm {
-    font-size: 0.75rem;    /* 12px - secondary text */
-    line-height: 1.4;
-  }
   
   .text-body {
     font-size: 0.875rem;   /* 14px - body text */

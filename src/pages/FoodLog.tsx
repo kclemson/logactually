@@ -93,8 +93,8 @@ const FoodLog = () => {
 
       {pendingItems.length > 0 && !showModal && (
         <section className="rounded-lg border border-accent bg-accent/20 p-4 space-y-2">
-          <p className="text-size-sm font-medium">You have unsaved food analysis:</p>
-          <p className="text-size-sm text-muted-foreground">"{pendingRawInput}"</p>
+          <p className="text-body font-medium">You have unsaved food analysis:</p>
+          <p className="text-size-compact text-muted-foreground">"{pendingRawInput}"</p>
           <div className="flex gap-2">
             <Button size="sm" onClick={() => setShowModal(true)}>
               Review

@@ -79,7 +79,7 @@ export function AIResults({
         </DialogHeader>
 
         <div className="space-y-4">
-          <p className="text-size-sm italic text-foreground">{rawInput}</p>
+          <p className="text-body italic text-foreground">{rawInput}</p>
 
           <FoodItemsTable
             items={items}
@@ -97,7 +97,7 @@ export function AIResults({
               value={fixContext}
               onChange={(e) => setFixContext(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleFix()}
-              className="text-size-sm"
+              className="text-body"
             />
             <Button
               variant="outline"

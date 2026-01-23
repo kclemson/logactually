@@ -37,7 +37,7 @@ const Today = () => {
           <h2 className="text-heading">
             {isToday ? 'Today' : format(date, 'EEEE')}
           </h2>
-          <p className="text-size-sm text-muted-foreground">
+          <p className="text-body text-muted-foreground">
             {format(date, 'MMMM d, yyyy')}
           </p>
         </div>
