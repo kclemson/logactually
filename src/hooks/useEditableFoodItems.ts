@@ -1,24 +1,24 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { FoodItem } from '@/types/food';
 
-interface UseEditableFoodItemsOptions {
-  initialItems: FoodItem[];
-}
-
-export function useEditableFoodItems({ initialItems }: UseEditableFoodItemsOptions) {
-  const [items, setItems] = useState<FoodItem[]>(initialItems);
+export function useEditableFoodItems() {
+  const [items, setItems] = useState<FoodItem[]>([]);
   const [previousItems, setPreviousItems] = useState<FoodItem[] | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
   // Cache original item values when user starts editing calories (to avoid compounding errors)
   const [calorieEditBaseline, setCalorieEditBaseline] = useState<Map<number, FoodItem>>(new Map());
 
-  // Sync with initialItems when they change externally (e.g., after database save)
-  useEffect(() => {
-    setItems(initialItems);
-    setPreviousItems(null);
+  // Imperatively set items with an optional baseline for highlighting
+  // This replaces the old useEffect sync pattern
+  const setItemsWithBaseline = useCallback((
+    newItems: FoodItem[],
+    baseline: FoodItem[] | null
+  ) => {
+    setItems(newItems);
+    setPreviousItems(baseline);
     setHasChanges(false);
     setCalorieEditBaseline(new Map());
-  }, [initialItems]);
+  }, []);
 
   const updateItem = useCallback((
     index: number,
@@ -89,14 +89,6 @@ export function useEditableFoodItems({ initialItems }: UseEditableFoodItemsOptio
     setHasChanges(true);
   }, []);
 
-  // Discard all changes and revert to initial state
-  const resetChanges = useCallback(() => {
-    setItems(initialItems);
-    setPreviousItems(null);
-    setHasChanges(false);
-    setCalorieEditBaseline(new Map());
-  }, [initialItems]);
-
   // Mark changes as saved (keeps current items, clears change tracking)
   const markSaved = useCallback(() => {
     setPreviousItems(null);
@@ -110,7 +102,7 @@ export function useEditableFoodItems({ initialItems }: UseEditableFoodItemsOptio
     updateItem,
     removeItem,
     replaceItems,
-    resetChanges,
+    setItemsWithBaseline,
     markSaved,
   };
 }

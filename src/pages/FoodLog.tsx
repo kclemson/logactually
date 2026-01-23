@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { format } from 'date-fns';
 import { FoodInput } from '@/components/FoodInput';
 import { FoodItemsTable } from '@/components/FoodItemsTable';
@@ -14,6 +14,8 @@ const FoodLog = () => {
   const { analyzeFood, isAnalyzing, error: analyzeError } = useAnalyzeFood();
 
   const [shouldClearInput, setShouldClearInput] = useState(false);
+  // Baseline captured before mutation, used for highlighting new items
+  const [pendingBaseline, setPendingBaseline] = useState<FoodItem[] | null>(null);
 
   // Flatten all entries into a single items array with entry tracking
   const { allItems, entryBoundaries, todaysTotals } = useMemo(() => {
@@ -51,15 +53,36 @@ const FoodLog = () => {
     };
   }, [entries]);
 
-  // Shared editing state for the main food log
+  // Event-driven editing state (no auto-sync)
   const { 
     items: displayItems,
     previousItems,
     hasChanges, 
     updateItem, 
-    removeItem, 
-    resetChanges 
-  } = useEditableFoodItems({ initialItems: allItems });
+    removeItem,
+    setItemsWithBaseline,
+  } = useEditableFoodItems();
+
+  // Track previous allItems to detect when database data changes
+  const prevAllItemsRef = useRef<string>('');
+
+  // Respond to database changes by updating hook state
+  useEffect(() => {
+    const currentKey = JSON.stringify(allItems);
+    if (currentKey !== prevAllItemsRef.current) {
+      // Data changed and we're not in the middle of editing
+      if (!hasChanges) {
+        setItemsWithBaseline(allItems, pendingBaseline);
+        setPendingBaseline(null);
+      }
+      prevAllItemsRef.current = currentKey;
+    }
+  }, [allItems, hasChanges, pendingBaseline, setItemsWithBaseline]);
+
+  // Reset handler that uses current allItems
+  const handleResetChanges = () => {
+    setItemsWithBaseline(allItems, null);
+  };
 
   // Calculate display totals based on current edit state
   const displayTotals = hasChanges ? calculateTotals(displayItems) : todaysTotals;
@@ -67,6 +90,9 @@ const FoodLog = () => {
   const handleSubmit = async (text: string) => {
     const result = await analyzeFood(text);
     if (result) {
+      // Capture current items as baseline BEFORE mutation for highlighting
+      setPendingBaseline([...displayItems]);
+      
       const totals = calculateTotals(result.food_items);
       createEntry.mutate({
         eaten_date: today,
@@ -153,7 +179,7 @@ const FoodLog = () => {
               editable={true}
               onUpdateItem={updateItem}
               onRemoveItem={removeItem}
-              onDiscard={resetChanges}
+              onDiscard={handleResetChanges}
               previousItems={previousItems}
               totals={displayTotals}
               totalsPosition="top"
@@ -164,7 +190,7 @@ const FoodLog = () => {
                 <Button size="sm" onClick={handleSaveChanges}>
                   Save Changes
                 </Button>
-                <Button size="sm" variant="ghost" onClick={resetChanges}>
+                <Button size="sm" variant="ghost" onClick={handleResetChanges}>
                   Discard
                 </Button>
               </div>
