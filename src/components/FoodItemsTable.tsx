@@ -12,7 +12,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface EntryBoundary {
@@ -35,6 +35,8 @@ interface FoodItemsTableProps {
   entryBoundaries?: EntryBoundary[];
   onDeleteEntry?: (entryId: string) => void;
   onDeleteAll?: () => void;
+  hasChanges?: boolean;
+  onSave?: () => void;
 }
 
 export function FoodItemsTable({
@@ -51,6 +53,8 @@ export function FoodItemsTable({
   entryBoundaries,
   onDeleteEntry,
   onDeleteAll,
+  hasChanges,
+  onSave,
 }: FoodItemsTableProps) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape' && onDiscard) {
@@ -157,8 +161,27 @@ export function FoodItemsTable({
     <div className="space-y-1">
       {/* Header row */}
       {showHeader && (
-        <div className={cn('grid gap-0.5 text-muted-foreground', gridCols)}>
-          <span className="text-size-compact px-2"></span>
+        <div className={cn('grid gap-0.5 text-muted-foreground items-center', gridCols)}>
+          <span className="text-size-compact px-2 flex items-center gap-1">
+            {hasChanges && (
+              <>
+                <button 
+                  onClick={onSave}
+                  className="p-0.5 rounded hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600 dark:text-green-500"
+                  title="Save changes"
+                >
+                  <Check className="h-4 w-4" />
+                </button>
+                <button 
+                  onClick={onDiscard}
+                  className="p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500"
+                  title="Discard changes"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </>
+            )}
+          </span>
           <span className="text-size-compact px-1">Calories</span>
           <span className="text-size-compact px-1">Protein</span>
           <span className="text-size-compact px-1">Carbs</span>

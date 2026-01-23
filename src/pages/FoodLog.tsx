@@ -202,17 +202,9 @@ const FoodLog = () => {
               totalsPosition="top"
               showTotals={true}
               onDeleteAll={handleDeleteAll}
+              hasChanges={hasChanges}
+              onSave={handleSaveChanges}
             />
-            {hasChanges && (
-              <div className="flex gap-2 pt-2">
-                <Button size="sm" onClick={handleSaveChanges}>
-                  Save Changes
-                </Button>
-                <Button size="sm" variant="ghost" onClick={handleResetChanges}>
-                  Discard
-                </Button>
-              </div>
-            )}
           </>
         ) : (
           <p className="text-body text-muted-foreground">No entries yet today.</p>
