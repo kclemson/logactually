@@ -113,6 +113,32 @@ export function useFoodEntries(date?: string) {
     },
   });
 
+  const deleteAllByDate = useMutation({
+    mutationFn: async (targetDate: string) => {
+      const { error } = await supabase
+        .from('food_entries')
+        .delete()
+        .eq('eaten_date', targetDate);
+
+      if (error) throw error;
+    },
+    onMutate: async (targetDate) => {
+      await queryClient.cancelQueries({ queryKey: ['food-entries', targetDate] });
+      const previousEntries = queryClient.getQueryData(['food-entries', targetDate]);
+      queryClient.setQueryData(['food-entries', targetDate], []);
+      return { previousEntries, targetDate };
+    },
+    onError: (err, targetDate, context) => {
+      if (context?.previousEntries) {
+        queryClient.setQueryData(['food-entries', context.targetDate], context.previousEntries);
+      }
+      console.error('Failed to delete all entries:', err);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['food-entries'] });
+    },
+  });
+
   return {
     entries: query.data || [],
     isLoading: query.isLoading,
@@ -120,5 +146,6 @@ export function useFoodEntries(date?: string) {
     createEntry,
     updateEntry,
     deleteEntry,
+    deleteAllByDate,
   };
 }
