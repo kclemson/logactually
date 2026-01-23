@@ -242,46 +242,58 @@ export function FoodItemsTable({
             {/* Macro cells */}
             {editable ? (
               <>
-                <Input
-                  type="number"
-                  value={item.calories}
-                  onChange={(e) => onUpdateItem?.(index, 'calories', Number(e.target.value))}
-                  onKeyDown={handleKeyDown}
-                  className={cn(
-                    "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent",
-                    getCellClasses(item, 'calories')
-                  )}
-                />
-                <Input
-                  type="number"
-                  value={Math.round(item.protein)}
-                  onChange={(e) => onUpdateItem?.(index, 'protein', Number(e.target.value))}
-                  onKeyDown={handleKeyDown}
-                  className={cn(
-                    "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent",
-                    getCellClasses(item, 'protein')
-                  )}
-                />
-                <Input
-                  type="number"
-                  value={Math.round(item.carbs)}
-                  onChange={(e) => onUpdateItem?.(index, 'carbs', Number(e.target.value))}
-                  onKeyDown={handleKeyDown}
-                  className={cn(
-                    "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent",
-                    getCellClasses(item, 'carbs')
-                  )}
-                />
-                <Input
-                  type="number"
-                  value={Math.round(item.fat)}
-                  onChange={(e) => onUpdateItem?.(index, 'fat', Number(e.target.value))}
-                  onKeyDown={handleKeyDown}
-                  className={cn(
-                    "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent",
-                    getCellClasses(item, 'fat')
-                  )}
-                />
+                <div className={cn("relative", hasEditedField(item, 'calories') && "edit-indicator")}>
+                  <Input
+                    type="number"
+                    value={item.calories}
+                    onChange={(e) => onUpdateItem?.(index, 'calories', Number(e.target.value))}
+                    onKeyDown={handleKeyDown}
+                    className={cn(
+                      "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent",
+                      isNewItem(item) && "bg-amber-100 dark:bg-amber-900/30",
+                      "hover:bg-muted/50 focus:bg-muted/50"
+                    )}
+                  />
+                </div>
+                <div className={cn("relative", hasEditedField(item, 'protein') && "edit-indicator")}>
+                  <Input
+                    type="number"
+                    value={Math.round(item.protein)}
+                    onChange={(e) => onUpdateItem?.(index, 'protein', Number(e.target.value))}
+                    onKeyDown={handleKeyDown}
+                    className={cn(
+                      "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent",
+                      isNewItem(item) && "bg-amber-100 dark:bg-amber-900/30",
+                      "hover:bg-muted/50 focus:bg-muted/50"
+                    )}
+                  />
+                </div>
+                <div className={cn("relative", hasEditedField(item, 'carbs') && "edit-indicator")}>
+                  <Input
+                    type="number"
+                    value={Math.round(item.carbs)}
+                    onChange={(e) => onUpdateItem?.(index, 'carbs', Number(e.target.value))}
+                    onKeyDown={handleKeyDown}
+                    className={cn(
+                      "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent",
+                      isNewItem(item) && "bg-amber-100 dark:bg-amber-900/30",
+                      "hover:bg-muted/50 focus:bg-muted/50"
+                    )}
+                  />
+                </div>
+                <div className={cn("relative", hasEditedField(item, 'fat') && "edit-indicator")}>
+                  <Input
+                    type="number"
+                    value={Math.round(item.fat)}
+                    onChange={(e) => onUpdateItem?.(index, 'fat', Number(e.target.value))}
+                    onKeyDown={handleKeyDown}
+                    className={cn(
+                      "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent",
+                      isNewItem(item) && "bg-amber-100 dark:bg-amber-900/30",
+                      "hover:bg-muted/50 focus:bg-muted/50"
+                    )}
+                  />
+                </div>
               </>
             ) : (
               <>
