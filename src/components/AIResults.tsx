@@ -9,7 +9,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { MacroSummary } from './MacroSummary';
 import { Trash2 } from 'lucide-react';
 
 interface AIResultsProps {
@@ -76,16 +75,16 @@ export function AIResults({
         </DialogHeader>
 
         <div className="space-y-4">
-          <p className="text-xs italic text-muted-foreground">{rawInput}</p>
+          <p className="text-secondary italic text-muted-foreground">{rawInput}</p>
 
           <div className="space-y-1">
             {/* Header row */}
-            <div className="grid grid-cols-[1fr_48px_40px_40px_40px_28px] gap-1 text-xs text-muted-foreground px-1">
-              <span>Item</span>
-              <span className="text-center">Cal</span>
-              <span className="text-center">P</span>
-              <span className="text-center">C</span>
-              <span className="text-center">F</span>
+            <div className="grid grid-cols-[1fr_48px_40px_40px_40px_28px] gap-1 text-caption text-muted-foreground">
+              <span className="px-2">Item</span>
+              <span className="px-2">Cal</span>
+              <span className="px-2">P</span>
+              <span className="px-2">C</span>
+              <span className="px-2">F</span>
               <span></span>
             </div>
             
@@ -98,32 +97,32 @@ export function AIResults({
                 <Input
                   value={`${item.name}${item.portion ? ` (${item.portion})` : ''}`}
                   onChange={(e) => updateItem(index, 'name', e.target.value)}
-                  className="h-7 text-xs truncate"
+                  className="h-7 text-compact truncate"
                   title={`${item.name} - ${item.portion}`}
                 />
                 <Input
                   type="number"
                   value={item.calories}
                   onChange={(e) => updateItem(index, 'calories', Number(e.target.value))}
-                  className="h-7 text-xs text-center px-1"
+                  className="h-7 text-compact px-2"
                 />
                 <Input
                   type="number"
                   value={item.protein}
                   onChange={(e) => updateItem(index, 'protein', Number(e.target.value))}
-                  className="h-7 text-xs text-center px-1"
+                  className="h-7 text-compact px-2"
                 />
                 <Input
                   type="number"
                   value={item.carbs}
                   onChange={(e) => updateItem(index, 'carbs', Number(e.target.value))}
-                  className="h-7 text-xs text-center px-1"
+                  className="h-7 text-compact px-2"
                 />
                 <Input
                   type="number"
                   value={item.fat}
                   onChange={(e) => updateItem(index, 'fat', Number(e.target.value))}
-                  className="h-7 text-xs text-center px-1"
+                  className="h-7 text-compact px-2"
                 />
                 <Button
                   variant="ghost"
@@ -135,9 +134,17 @@ export function AIResults({
                 </Button>
               </div>
             ))}
-          </div>
 
-          <MacroSummary totals={totals} size="sm" />
+            {/* Totals row - aligned with columns */}
+            <div className="grid grid-cols-[1fr_48px_40px_40px_40px_28px] gap-1 items-center pt-1 border-t text-compact font-medium text-muted-foreground">
+              <span className="px-2">Total</span>
+              <span className="px-2">{Math.round(totals.calories)}</span>
+              <span className="px-2">{Math.round(totals.protein)}</span>
+              <span className="px-2">{Math.round(totals.carbs)}</span>
+              <span className="px-2">{Math.round(totals.fat)}</span>
+              <span></span>
+            </div>
+          </div>
 
           <div className="flex gap-2">
             <Input
