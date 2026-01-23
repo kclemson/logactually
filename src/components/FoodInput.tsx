@@ -71,7 +71,7 @@ export function FoodInput({ onSubmit, isLoading, shouldClear, onCleared }: FoodI
       <Textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="What did you eat? (e.g., 'grilled chicken breast with rice and broccoli')"
+        placeholder="What did you eat?"
         className="min-h-[120px] resize-none text-body"
         disabled={isLoading}
         onKeyDown={(e) => {

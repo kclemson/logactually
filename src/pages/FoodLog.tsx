@@ -159,9 +159,8 @@ const FoodLog = () => {
 
   return (
     <div className="space-y-6">
-      <section className="space-y-4">
-        <h2 className="text-heading">Log Food</h2>
-        <FoodInput 
+      <section>
+        <FoodInput
           onSubmit={handleSubmit} 
           isLoading={isAnalyzing || createEntry.isPending}
           shouldClear={shouldClearInput}
