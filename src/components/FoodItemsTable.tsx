@@ -191,28 +191,33 @@ export function FoodItemsTable({
           >
             {/* Description cell */}
             {editable ? (
-              <div
-                contentEditable
-                suppressContentEditableWarning
-                title={item.description}
-                ref={(el) => {
-                  // Only sync content when element exists and is NOT being edited
-                  if (el && el.textContent !== item.description && document.activeElement !== el) {
-                    el.textContent = item.description;
-                  }
-                }}
-                onInput={(e) => {
-                  const newDescription = e.currentTarget.textContent || '';
-                  if (newDescription !== item.description) {
-                    onUpdateItem?.(index, 'description', newDescription);
-                  }
-                }}
-                onKeyDown={handleKeyDown}
-                className={cn(
-                  "text-size-compact px-2 py-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50 focus:outline-none line-clamp-2 cursor-text rounded",
-                  isChanged(item, 'description') && "bg-amber-100 dark:bg-amber-900/30 focus:bg-amber-100 dark:focus:bg-amber-900/30"
+              <div className="relative">
+                <div
+                  contentEditable
+                  suppressContentEditableWarning
+                  title={item.description}
+                  ref={(el) => {
+                    // Only sync content when element exists and is NOT being edited
+                    if (el && el.textContent !== item.description && document.activeElement !== el) {
+                      el.textContent = item.description;
+                    }
+                  }}
+                  onInput={(e) => {
+                    const newDescription = e.currentTarget.textContent || '';
+                    if (newDescription !== item.description) {
+                      onUpdateItem?.(index, 'description', newDescription);
+                    }
+                  }}
+                  onKeyDown={handleKeyDown}
+                  className={cn(
+                    "text-size-compact px-2 py-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50 focus:outline-none line-clamp-2 cursor-text rounded",
+                    isChanged(item, 'description') && "bg-amber-100 dark:bg-amber-900/30 focus:bg-amber-100 dark:focus:bg-amber-900/30"
+                  )}
+                />
+                {isChanged(item, 'description') && (
+                  <span className="absolute top-0.5 left-0.5 w-1.5 h-1.5 rounded-full bg-amber-500/70 pointer-events-none" />
                 )}
-              />
+              </div>
             ) : (
               <span 
                 title={item.description}
@@ -225,46 +230,66 @@ export function FoodItemsTable({
             {/* Macro cells */}
             {editable ? (
               <>
-                <Input
-                  type="number"
-                  value={item.calories}
-                  onChange={(e) => onUpdateItem?.(index, 'calories', Number(e.target.value))}
-                  onKeyDown={handleKeyDown}
-                  className={cn(
-                    "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
-                    isChanged(item, 'calories') && "bg-amber-100 dark:bg-amber-900/30 focus:bg-amber-100 dark:focus:bg-amber-900/30"
+                <div className="relative">
+                  <Input
+                    type="number"
+                    value={item.calories}
+                    onChange={(e) => onUpdateItem?.(index, 'calories', Number(e.target.value))}
+                    onKeyDown={handleKeyDown}
+                    className={cn(
+                      "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
+                      isChanged(item, 'calories') && "bg-amber-100 dark:bg-amber-900/30 focus:bg-amber-100 dark:focus:bg-amber-900/30"
+                    )}
+                  />
+                  {isChanged(item, 'calories') && (
+                    <span className="absolute top-0.5 left-0.5 w-1.5 h-1.5 rounded-full bg-amber-500/70 pointer-events-none" />
                   )}
-                />
-                <Input
-                  type="number"
-                  value={Math.round(item.protein)}
-                  onChange={(e) => onUpdateItem?.(index, 'protein', Number(e.target.value))}
-                  onKeyDown={handleKeyDown}
-                  className={cn(
-                    "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
-                    isChanged(item, 'protein') && "bg-amber-100 dark:bg-amber-900/30 focus:bg-amber-100 dark:focus:bg-amber-900/30"
+                </div>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    value={Math.round(item.protein)}
+                    onChange={(e) => onUpdateItem?.(index, 'protein', Number(e.target.value))}
+                    onKeyDown={handleKeyDown}
+                    className={cn(
+                      "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
+                      isChanged(item, 'protein') && "bg-amber-100 dark:bg-amber-900/30 focus:bg-amber-100 dark:focus:bg-amber-900/30"
+                    )}
+                  />
+                  {isChanged(item, 'protein') && (
+                    <span className="absolute top-0.5 left-0.5 w-1.5 h-1.5 rounded-full bg-amber-500/70 pointer-events-none" />
                   )}
-                />
-                <Input
-                  type="number"
-                  value={Math.round(item.carbs)}
-                  onChange={(e) => onUpdateItem?.(index, 'carbs', Number(e.target.value))}
-                  onKeyDown={handleKeyDown}
-                  className={cn(
-                    "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
-                    isChanged(item, 'carbs') && "bg-amber-100 dark:bg-amber-900/30 focus:bg-amber-100 dark:focus:bg-amber-900/30"
+                </div>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    value={Math.round(item.carbs)}
+                    onChange={(e) => onUpdateItem?.(index, 'carbs', Number(e.target.value))}
+                    onKeyDown={handleKeyDown}
+                    className={cn(
+                      "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
+                      isChanged(item, 'carbs') && "bg-amber-100 dark:bg-amber-900/30 focus:bg-amber-100 dark:focus:bg-amber-900/30"
+                    )}
+                  />
+                  {isChanged(item, 'carbs') && (
+                    <span className="absolute top-0.5 left-0.5 w-1.5 h-1.5 rounded-full bg-amber-500/70 pointer-events-none" />
                   )}
-                />
-                <Input
-                  type="number"
-                  value={Math.round(item.fat)}
-                  onChange={(e) => onUpdateItem?.(index, 'fat', Number(e.target.value))}
-                  onKeyDown={handleKeyDown}
-                  className={cn(
-                    "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
-                    isChanged(item, 'fat') && "bg-amber-100 dark:bg-amber-900/30 focus:bg-amber-100 dark:focus:bg-amber-900/30"
+                </div>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    value={Math.round(item.fat)}
+                    onChange={(e) => onUpdateItem?.(index, 'fat', Number(e.target.value))}
+                    onKeyDown={handleKeyDown}
+                    className={cn(
+                      "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
+                      isChanged(item, 'fat') && "bg-amber-100 dark:bg-amber-900/30 focus:bg-amber-100 dark:focus:bg-amber-900/30"
+                    )}
+                  />
+                  {isChanged(item, 'fat') && (
+                    <span className="absolute top-0.5 left-0.5 w-1.5 h-1.5 rounded-full bg-amber-500/70 pointer-events-none" />
                   )}
-                />
+                </div>
               </>
             ) : (
               <>
