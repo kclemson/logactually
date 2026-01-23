@@ -8,7 +8,12 @@ const Dialog = DialogPrimitive.Root;
 
 const DialogTrigger = DialogPrimitive.Trigger;
 
-const DialogPortal = DialogPrimitive.Portal;
+const DialogPortal = ({
+  ...props
+}: DialogPrimitive.DialogPortalProps) => (
+  <DialogPrimitive.Portal {...props} />
+);
+DialogPortal.displayName = "DialogPortal";
 
 const DialogClose = DialogPrimitive.Close;
 
