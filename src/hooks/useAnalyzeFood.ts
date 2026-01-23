@@ -38,7 +38,13 @@ export function useAnalyzeFood() {
         throw new Error(data.error);
       }
 
-      return data as AnalyzeResult;
+      // Assign unique IDs to each food item for reliable change tracking
+      const itemsWithIds = data.food_items.map((item: Omit<FoodItem, 'uid'>) => ({
+        ...item,
+        uid: crypto.randomUUID(),
+      }));
+
+      return { ...data, food_items: itemsWithIds } as AnalyzeResult;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to analyze food';
       setError(message);

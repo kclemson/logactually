@@ -1,4 +1,5 @@
 export interface FoodItem {
+  uid: string;
   name: string;
   portion: string;
   calories: number;

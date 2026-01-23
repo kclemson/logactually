@@ -22,11 +22,19 @@ export function useFoodEntries(date?: string) {
 
       if (error) throw error;
 
-      // Parse the food_items JSONB field
-      return (data || []).map((entry) => ({
-        ...entry,
-        food_items: Array.isArray(entry.food_items) ? (entry.food_items as unknown as FoodItem[]) : [],
-      })) as FoodEntry[];
+      // Parse the food_items JSONB field and ensure UIDs exist
+      return (data || []).map((entry) => {
+        const rawItems = Array.isArray(entry.food_items) ? (entry.food_items as unknown as FoodItem[]) : [];
+        // Assign UIDs to items that don't have them (backward compatibility)
+        const itemsWithIds = rawItems.map((item) => ({
+          ...item,
+          uid: item.uid || crypto.randomUUID(),
+        }));
+        return {
+          ...entry,
+          food_items: itemsWithIds,
+        };
+      }) as FoodEntry[];
     },
   });
 
