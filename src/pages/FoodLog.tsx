@@ -247,7 +247,7 @@ const FoodLog = () => {
         <div className="flex items-center gap-3 min-w-[180px] justify-center">
           <Popover>
             <PopoverTrigger asChild>
-              <button className="text-heading text-primary underline underline-offset-2 decoration-primary/50 hover:decoration-primary transition-colors cursor-pointer">
+              <button className="text-heading text-blue-600 underline underline-offset-2 decoration-blue-600/50 hover:decoration-blue-600 transition-colors cursor-pointer">
                 {isTodaySelected 
                   ? `Today (${format(selectedDate, 'M/d')})` 
                   : format(selectedDate, 'EEEE (M/d)')}
