@@ -75,7 +75,7 @@ export function AIResults({
         </DialogHeader>
 
         <div className="space-y-4">
-          <p className="text-secondary italic text-muted-foreground">{rawInput}</p>
+          <p className="text-secondary italic text-foreground">{rawInput}</p>
 
           <div className="space-y-1">
             {/* Header row */}
