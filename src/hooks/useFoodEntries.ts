@@ -1,11 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { FoodEntry, FoodItem } from '@/types/food';
-import { useToast } from '@/hooks/use-toast';
 import { Json } from '@/integrations/supabase/types';
 
 export function useFoodEntries(date?: string) {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const query = useQuery({
@@ -65,17 +63,9 @@ export function useFoodEntries(date?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['food-entries'] });
-      toast({
-        title: 'Entry saved!',
-        description: 'Your food entry has been logged.',
-      });
     },
     onError: (error) => {
-      toast({
-        variant: 'destructive',
-        title: 'Failed to save entry',
-        description: error.message,
-      });
+      console.error('Failed to save entry:', error.message);
     },
   });
 
@@ -100,16 +90,9 @@ export function useFoodEntries(date?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['food-entries'] });
-      toast({
-        title: 'Entry updated!',
-      });
     },
     onError: (error) => {
-      toast({
-        variant: 'destructive',
-        title: 'Failed to update entry',
-        description: error.message,
-      });
+      console.error('Failed to update entry:', error.message);
     },
   });
 
@@ -124,16 +107,9 @@ export function useFoodEntries(date?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['food-entries'] });
-      toast({
-        title: 'Entry deleted!',
-      });
     },
     onError: (error) => {
-      toast({
-        variant: 'destructive',
-        title: 'Failed to delete entry',
-        description: error.message,
-      });
+      console.error('Failed to delete entry:', error.message);
     },
   });
 

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Mic, MicOff, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
 
 interface FoodInputProps {
   onSubmit: (text: string) => void;
@@ -12,10 +11,10 @@ interface FoodInputProps {
 }
 
 export function FoodInput({ onSubmit, isLoading, shouldClear, onCleared }: FoodInputProps) {
-  const { toast } = useToast();
   const [text, setText] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [recognition, setRecognition] = useState<typeof window.webkitSpeechRecognition.prototype | null>(null);
+  const [voiceSupported, setVoiceSupported] = useState(true);
 
   useEffect(() => {
     if (shouldClear) {
@@ -40,29 +39,18 @@ export function FoodInput({ onSubmit, isLoading, shouldClear, onCleared }: FoodI
       };
 
       rec.onend = () => setIsListening(false);
-      rec.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
+      rec.onerror = () => {
         setIsListening(false);
-        toast({
-          variant: 'destructive',
-          title: 'Voice input failed',
-          description: 'Please try again or type your food.',
-        });
       };
 
       setRecognition(rec);
+    } else {
+      setVoiceSupported(false);
     }
-  }, [toast]);
+  }, []);
 
   const toggleListening = () => {
-    if (!recognition) {
-      toast({
-        variant: 'destructive',
-        title: 'Voice not supported',
-        description: 'Your browser does not support voice input.',
-      });
-      return;
-    }
+    if (!recognition) return;
 
     if (isListening) {
       recognition.stop();
@@ -93,14 +81,16 @@ export function FoodInput({ onSubmit, isLoading, shouldClear, onCleared }: FoodI
         }}
       />
       <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={toggleListening}
-          className={isListening ? 'bg-destructive text-destructive-foreground' : ''}
-        >
-          {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-        </Button>
+        {voiceSupported && (
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={toggleListening}
+            className={isListening ? 'bg-destructive text-destructive-foreground' : ''}
+          >
+            {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+          </Button>
+        )}
         <Button
           onClick={handleSubmit}
           disabled={!text.trim() || isLoading}
