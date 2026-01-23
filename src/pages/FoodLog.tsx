@@ -2,8 +2,6 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { format, addDays, subDays, isToday, parseISO } from 'date-fns';
 import { Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import { FoodInput, FoodInputRef } from '@/components/FoodInput';
 import { FoodItemsTable } from '@/components/FoodItemsTable';
 import { Button } from '@/components/ui/button';
@@ -60,7 +58,6 @@ const FoodLog = () => {
   // Navigation handlers
   const goToPreviousDay = () => setSelectedDate(subDays(selectedDate, 1));
   const goToNextDay = () => setSelectedDate(addDays(selectedDate, 1));
-  const goToToday = () => setSelectedDate(new Date());
 
   // Flatten all entries into a single items array with entry tracking
   const { allItems, entryBoundaries, dayTotals } = useMemo(() => {
@@ -245,36 +242,11 @@ const FoodLog = () => {
         </Button>
         
         <div className="flex items-center gap-3 min-w-[180px] justify-center">
-          <Popover>
-            <PopoverTrigger asChild>
-              <button className="text-heading text-blue-600 underline underline-offset-2 decoration-blue-600/50 hover:decoration-blue-600 transition-colors cursor-pointer">
-                {isTodaySelected 
-                  ? `Today (${format(selectedDate, 'M/d')})` 
-                  : format(selectedDate, 'EEEE (M/d)')}
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="center">
-              {!isTodaySelected && (
-                <div className="p-2 border-b">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full"
-                    onClick={goToToday}
-                  >
-                    Go to Today
-                  </Button>
-                </div>
-              )}
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(date) => date && setSelectedDate(date)}
-                disabled={(date) => date > new Date()}
-                defaultMonth={selectedDate}
-              />
-            </PopoverContent>
-          </Popover>
+          <span className="text-heading">
+            {isTodaySelected 
+              ? `Today (${format(selectedDate, 'M/d')})` 
+              : format(selectedDate, 'EEEE (M/d)')}
+          </span>
           
           {hasChanges && (
             <div className="flex items-center gap-2">
