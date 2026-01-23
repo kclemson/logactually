@@ -214,6 +214,12 @@ export function FoodItemsTable({
                 contentEditable
                 suppressContentEditableWarning
                 title={item.description}
+                ref={(el) => {
+                  // Only sync content when element exists and is NOT being edited
+                  if (el && el.textContent !== item.description && document.activeElement !== el) {
+                    el.textContent = item.description;
+                  }
+                }}
                 onInput={(e) => {
                   const newDescription = e.currentTarget.textContent || '';
                   if (newDescription !== item.description) {
@@ -225,9 +231,7 @@ export function FoodItemsTable({
                   "text-size-compact px-2 py-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50 focus:outline-none line-clamp-2 cursor-text rounded",
                   isChanged(item, 'description') && "bg-amber-100 dark:bg-amber-900/30 focus:bg-amber-100 dark:focus:bg-amber-900/30"
                 )}
-              >
-                {item.description}
-              </div>
+              />
             ) : (
               <span 
                 title={item.description}
