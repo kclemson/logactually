@@ -59,7 +59,7 @@ export function FoodItemsTable({
     <div className="space-y-1">
       {/* Header row */}
       {showHeader && (
-        <div className={cn('grid gap-0.5 text-size-compact text-muted-foreground', gridCols)}>
+        <div className={cn('grid gap-0.5 text-size-compact font-semibold text-muted-foreground', gridCols)}>
           <span className="px-2">Item</span>
           <span className="px-1">Calories</span>
           <span className="px-1">Protein</span>
