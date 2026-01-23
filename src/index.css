@@ -7,6 +7,23 @@ All colors MUST be HSL.
 */
 
 @layer components {
+  /* Edit indicator bar - shorter than full height, vertically centered */
+  .edit-indicator {
+    position: relative;
+  }
+
+  .edit-indicator::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2px;
+    height: 60%;
+    background-color: hsl(38 92% 50%); /* amber-500 */
+    border-radius: 1px;
+  }
+
   .text-size-caption {
     font-size: 0.625rem;   /* 10px - units (g), tiny badges */
     line-height: 1.3;
