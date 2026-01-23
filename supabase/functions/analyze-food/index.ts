@@ -136,8 +136,16 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
     // Parse the JSON response
     let parsed: { food_items: FoodItem[] };
     try {
-      // Remove any potential markdown code blocks
-      const cleanContent = content.replace(/```json\n?|\n?```/g, '').trim();
+      // Remove any potential markdown code blocks and extract JSON
+      let cleanContent = content.replace(/```json\n?|\n?```/g, '').trim();
+      
+      // Find the first '{' and last '}' to extract just the JSON object
+      const jsonStart = cleanContent.indexOf('{');
+      const jsonEnd = cleanContent.lastIndexOf('}');
+      if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+        cleanContent = cleanContent.substring(jsonStart, jsonEnd + 1);
+      }
+      
       parsed = JSON.parse(cleanContent);
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError, 'Content:', content);
