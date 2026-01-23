@@ -67,9 +67,9 @@ export function FoodItemsTable({
     }
   };
 
-  // Check if field was user-edited (persisted in editedFields array)
-  const hasEditedField = (item: FoodItem, field: EditableField): boolean => {
-    return item.editedFields?.includes(field) ?? false;
+  // Check if any field was user-edited (row-level indicator)
+  const hasAnyEditedFields = (item: FoodItem): boolean => {
+    return (item.editedFields?.length ?? 0) > 0;
   };
 
   // Check if this is a newly-added row (for amber background)
@@ -159,18 +159,21 @@ export function FoodItemsTable({
     </div>
   );
 
-  // Get cell classes for editable cells
-  const getCellClasses = (item: FoodItem, field: EditableField) => {
-    const isNew = isNewItem(item);
-    const isEdited = hasEditedField(item, field);
-    
+  // Get cell classes for description (includes row-level edit indicator)
+  const getDescriptionClasses = (item: FoodItem) => {
     return cn(
-      // Base hover/focus states
       "hover:bg-muted/50 focus:bg-muted/50",
-      // New item: amber background
-      isNew && "bg-amber-100 dark:bg-amber-900/30",
-      // Edited field: left bar indicator
-      isEdited && "edit-indicator"
+      isNewItem(item) && "bg-amber-100 dark:bg-amber-900/30",
+      hasAnyEditedFields(item) && "edit-indicator"
+    );
+  };
+
+  // Get cell classes for macro inputs (no edit indicator, just new-item highlight)
+  const getMacroClasses = (item: FoodItem) => {
+    return cn(
+      "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent",
+      isNewItem(item) && "bg-amber-100 dark:bg-amber-900/30",
+      "hover:bg-muted/50 focus:bg-muted/50"
     );
   };
 
@@ -227,7 +230,7 @@ export function FoodItemsTable({
                 onKeyDown={handleKeyDown}
                 className={cn(
                   "text-size-compact px-2 py-1 border-0 bg-transparent focus:outline-none line-clamp-2 cursor-text rounded",
-                  getCellClasses(item, 'description')
+                  getDescriptionClasses(item)
                 )}
               />
             ) : (
@@ -242,58 +245,34 @@ export function FoodItemsTable({
             {/* Macro cells */}
             {editable ? (
               <>
-                <div className={cn("relative", hasEditedField(item, 'calories') && "edit-indicator")}>
-                  <Input
-                    type="number"
-                    value={item.calories}
-                    onChange={(e) => onUpdateItem?.(index, 'calories', Number(e.target.value))}
-                    onKeyDown={handleKeyDown}
-                    className={cn(
-                      "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent",
-                      isNewItem(item) && "bg-amber-100 dark:bg-amber-900/30",
-                      "hover:bg-muted/50 focus:bg-muted/50"
-                    )}
-                  />
-                </div>
-                <div className={cn("relative", hasEditedField(item, 'protein') && "edit-indicator")}>
-                  <Input
-                    type="number"
-                    value={Math.round(item.protein)}
-                    onChange={(e) => onUpdateItem?.(index, 'protein', Number(e.target.value))}
-                    onKeyDown={handleKeyDown}
-                    className={cn(
-                      "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent",
-                      isNewItem(item) && "bg-amber-100 dark:bg-amber-900/30",
-                      "hover:bg-muted/50 focus:bg-muted/50"
-                    )}
-                  />
-                </div>
-                <div className={cn("relative", hasEditedField(item, 'carbs') && "edit-indicator")}>
-                  <Input
-                    type="number"
-                    value={Math.round(item.carbs)}
-                    onChange={(e) => onUpdateItem?.(index, 'carbs', Number(e.target.value))}
-                    onKeyDown={handleKeyDown}
-                    className={cn(
-                      "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent",
-                      isNewItem(item) && "bg-amber-100 dark:bg-amber-900/30",
-                      "hover:bg-muted/50 focus:bg-muted/50"
-                    )}
-                  />
-                </div>
-                <div className={cn("relative", hasEditedField(item, 'fat') && "edit-indicator")}>
-                  <Input
-                    type="number"
-                    value={Math.round(item.fat)}
-                    onChange={(e) => onUpdateItem?.(index, 'fat', Number(e.target.value))}
-                    onKeyDown={handleKeyDown}
-                    className={cn(
-                      "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent",
-                      isNewItem(item) && "bg-amber-100 dark:bg-amber-900/30",
-                      "hover:bg-muted/50 focus:bg-muted/50"
-                    )}
-                  />
-                </div>
+                <Input
+                  type="number"
+                  value={item.calories}
+                  onChange={(e) => onUpdateItem?.(index, 'calories', Number(e.target.value))}
+                  onKeyDown={handleKeyDown}
+                  className={getMacroClasses(item)}
+                />
+                <Input
+                  type="number"
+                  value={Math.round(item.protein)}
+                  onChange={(e) => onUpdateItem?.(index, 'protein', Number(e.target.value))}
+                  onKeyDown={handleKeyDown}
+                  className={getMacroClasses(item)}
+                />
+                <Input
+                  type="number"
+                  value={Math.round(item.carbs)}
+                  onChange={(e) => onUpdateItem?.(index, 'carbs', Number(e.target.value))}
+                  onKeyDown={handleKeyDown}
+                  className={getMacroClasses(item)}
+                />
+                <Input
+                  type="number"
+                  value={Math.round(item.fat)}
+                  onChange={(e) => onUpdateItem?.(index, 'fat', Number(e.target.value))}
+                  onKeyDown={handleKeyDown}
+                  className={getMacroClasses(item)}
+                />
               </>
             ) : (
               <>
