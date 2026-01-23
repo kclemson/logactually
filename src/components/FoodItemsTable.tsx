@@ -180,7 +180,7 @@ export function FoodItemsTable({
           <div
             key={index}
             className={cn(
-              'grid gap-0.5 items-start group',
+              'grid gap-0.5 items-stretch group',
               gridCols,
               // Add top border for entry groups (except first entry)
               hasEntryDeletion && isFirstInEntry && index > 0 && 'border-t border-muted/50 pt-1'
@@ -219,7 +219,7 @@ export function FoodItemsTable({
                   onChange={(e) => onUpdateItem?.(index, 'calories', Number(e.target.value))}
                   onKeyDown={handleKeyDown}
                   className={cn(
-                    "h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
+                    "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
                     isChanged(item, 'calories') && "bg-amber-100 dark:bg-amber-900/30 focus:bg-amber-100 dark:focus:bg-amber-900/30"
                   )}
                 />
@@ -229,7 +229,7 @@ export function FoodItemsTable({
                   onChange={(e) => onUpdateItem?.(index, 'protein', Number(e.target.value))}
                   onKeyDown={handleKeyDown}
                   className={cn(
-                    "h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
+                    "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
                     isChanged(item, 'protein') && "bg-amber-100 dark:bg-amber-900/30 focus:bg-amber-100 dark:focus:bg-amber-900/30"
                   )}
                 />
@@ -239,7 +239,7 @@ export function FoodItemsTable({
                   onChange={(e) => onUpdateItem?.(index, 'carbs', Number(e.target.value))}
                   onKeyDown={handleKeyDown}
                   className={cn(
-                    "h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
+                    "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
                     isChanged(item, 'carbs') && "bg-amber-100 dark:bg-amber-900/30 focus:bg-amber-100 dark:focus:bg-amber-900/30"
                   )}
                 />
@@ -249,7 +249,7 @@ export function FoodItemsTable({
                   onChange={(e) => onUpdateItem?.(index, 'fat', Number(e.target.value))}
                   onKeyDown={handleKeyDown}
                   className={cn(
-                    "h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
+                    "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
                     isChanged(item, 'fat') && "bg-amber-100 dark:bg-amber-900/30 focus:bg-amber-100 dark:focus:bg-amber-900/30"
                   )}
                 />
