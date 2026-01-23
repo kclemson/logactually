@@ -151,7 +151,7 @@ export function FoodItemsTable({
           <div
             key={index}
             className={cn(
-              'grid gap-0.5 items-start',
+              'grid gap-0.5 items-start group',
               gridCols,
               // Add top border for entry groups (except first entry)
               hasEntryDeletion && isFirstInEntry && index > 0 && 'border-t border-muted/50 pt-1'
@@ -240,7 +240,7 @@ export function FoodItemsTable({
                 variant="ghost"
                 size="icon"
                 onClick={() => onRemoveItem?.(index)}
-                className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                className="h-6 w-6 text-muted-foreground hover:text-destructive md:opacity-0 md:group-hover:opacity-100 transition-opacity"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
@@ -254,7 +254,7 @@ export function FoodItemsTable({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                      className="h-6 w-6 text-muted-foreground hover:text-destructive md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
