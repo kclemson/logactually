@@ -25,17 +25,17 @@ All colors MUST be HSL.
     line-height: 1.5;
   }
   
-  .text-compact {
+  .text-size-compact {
     font-size: var(--text-xs);
     line-height: 1.4;
   }
   
-  .text-caption {
+  .text-size-caption {
     font-size: var(--text-2xs);
     line-height: 1.3;
   }
   
-  .text-secondary {
+  .text-size-sm {
     font-size: var(--text-sm);
     line-height: 1.4;
   }

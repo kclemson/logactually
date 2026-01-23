@@ -49,13 +49,15 @@ serve(async (req) => {
 Food description: "${rawInput}"
 ${additionalContext ? `Additional context: "${additionalContext}"` : ''}
 
-For each food item, estimate:
-- name: the name of the food
-- portion: the serving size mentioned or a reasonable default portion
-- calories: estimated calories (integer)
-- protein: grams of protein (number with up to 1 decimal)
-- carbs: grams of carbohydrates (number with up to 1 decimal)
-- fat: grams of fat (number with up to 1 decimal)
+For each food item, provide:
+- name: a SHORT, concise name (max 25 characters). Use common abbreviations. Do not include brand names unless essential for identification.
+- portion: the serving size mentioned or a reasonable default
+- calories: estimated calories (whole number)
+- protein: grams of protein (whole number)
+- carbs: grams of carbohydrates (whole number)
+- fat: grams of fat (whole number)
+
+Keep names short and generic - focus on identifying the food type clearly in few words.
 
 Be reasonable with portion sizes. If no portion is specified, use typical serving sizes.
 
@@ -131,9 +133,9 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
     const result: AnalyzeResponse = {
       food_items: parsed.food_items,
       total_calories: Math.round(totals.calories),
-      total_protein: Math.round(totals.protein * 10) / 10,
-      total_carbs: Math.round(totals.carbs * 10) / 10,
-      total_fat: Math.round(totals.fat * 10) / 10,
+      total_protein: Math.round(totals.protein),
+      total_carbs: Math.round(totals.carbs),
+      total_fat: Math.round(totals.fat),
     };
 
     console.log('Analysis result:', result);
