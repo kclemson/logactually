@@ -10,6 +10,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { FoodItemsTable } from './FoodItemsTable';
+import { useEditableFoodItems } from '@/hooks/useEditableFoodItems';
 
 interface AIResultsProps {
   open: boolean;
@@ -30,25 +31,9 @@ export function AIResults({
   onReanalyze,
   isReanalyzing,
 }: AIResultsProps) {
-  const [items, setItems] = useState<FoodItem[]>(initialItems);
-  const [previousItems, setPreviousItems] = useState<FoodItem[] | null>(null);
+  const { items, previousItems, updateItem, removeItem, replaceItems } = 
+    useEditableFoodItems({ initialItems });
   const [fixContext, setFixContext] = useState('');
-
-  const updateItem = (
-    index: number,
-    field: keyof FoodItem,
-    value: string | number
-  ) => {
-    setItems((prev) =>
-      prev.map((item, i) =>
-        i === index ? { ...item, [field]: value } : item
-      )
-    );
-  };
-
-  const removeItem = (index: number) => {
-    setItems((prev) => prev.filter((_, i) => i !== index));
-  };
 
   const handleConfirm = () => {
     onConfirm(items);
@@ -57,11 +42,9 @@ export function AIResults({
 
   const handleFix = async () => {
     if (fixContext.trim()) {
-      const oldItems = [...items];
       const newItems = await onReanalyze(fixContext.trim(), items);
       if (newItems) {
-        setPreviousItems(oldItems);
-        setItems(newItems);
+        replaceItems(newItems);
       }
       setFixContext('');
     }
