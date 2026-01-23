@@ -213,7 +213,7 @@ export function AIResults({
               value={fixContext}
               onChange={(e) => setFixContext(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleFix()}
-              className="text-sm"
+              className="text-size-sm"
             />
             <Button
               variant="outline"

@@ -84,7 +84,7 @@ export function FoodInput({ onSubmit, isLoading, shouldClear, onCleared }: FoodI
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder="What did you eat? (e.g., 'grilled chicken breast with rice and broccoli')"
-        className="min-h-[120px] resize-none text-base"
+        className="min-h-[120px] resize-none text-body"
         onKeyDown={(e) => {
           if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();

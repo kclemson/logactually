@@ -71,10 +71,10 @@ const History = () => {
         return (
           <section key={date} className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="font-semibold">
+              <h2 className="text-heading">
                 {format(new Date(date), 'EEEE, MMMM d')}
               </h2>
-              <span className="text-sm text-muted-foreground">
+              <span className="text-size-sm text-muted-foreground">
                 {Math.round(dayTotals.calories)} cal
               </span>
             </div>

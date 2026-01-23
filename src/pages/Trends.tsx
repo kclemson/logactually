@@ -116,10 +116,10 @@ const Trends = () => {
         {charts.map(({ key, label }) => (
           <Card key={key} className="text-center">
             <CardContent className="p-4">
-              <p className="text-2xl font-bold">
+              <p className="text-stat">
                 {averages[key as keyof typeof averages]}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-size-compact text-muted-foreground">
                 Avg {label.split(' ')[0]}
               </p>
             </CardContent>
@@ -140,7 +140,7 @@ const Trends = () => {
           {charts.map(({ key, label, color }) => (
             <Card key={key}>
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">{label}</CardTitle>
+                <CardTitle className="text-body font-semibold">{label}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="h-48">

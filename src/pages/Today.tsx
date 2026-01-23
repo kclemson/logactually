@@ -34,10 +34,10 @@ const Today = () => {
           <ChevronLeft className="h-5 w-5" />
         </Button>
         <div className="text-center">
-          <h2 className="text-lg font-semibold">
+          <h2 className="text-heading">
             {isToday ? 'Today' : format(date, 'EEEE')}
           </h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-size-sm text-muted-foreground">
             {format(date, 'MMMM d, yyyy')}
           </p>
         </div>
