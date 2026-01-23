@@ -75,7 +75,7 @@ export function AIResults({
         </DialogHeader>
 
         <div className="space-y-4">
-          <p className="text-secondary italic text-foreground">{rawInput}</p>
+          <p className="text-body italic">{rawInput}</p>
 
           <div className="space-y-1">
             {/* Header row */}
@@ -92,37 +92,38 @@ export function AIResults({
             {items.map((item, index) => (
               <div
                 key={index}
-                className="grid grid-cols-[1fr_48px_40px_40px_40px_28px] gap-1 items-center"
+                className="grid grid-cols-[1fr_48px_40px_40px_40px_28px] gap-1 items-start"
               >
-                <Input
+                <textarea
                   value={`${item.name}${item.portion ? ` (${item.portion})` : ''}`}
                   onChange={(e) => updateItem(index, 'name', e.target.value)}
-                  className="h-7 text-compact truncate"
+                  className="min-h-7 text-compact px-2 py-1.5 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50 focus:outline-none resize-none overflow-hidden leading-tight"
+                  rows={2}
                   title={`${item.name} - ${item.portion}`}
                 />
                 <Input
                   type="number"
                   value={item.calories}
                   onChange={(e) => updateItem(index, 'calories', Number(e.target.value))}
-                  className="h-7 text-compact px-2"
+                  className="h-7 text-compact px-2 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50"
                 />
                 <Input
                   type="number"
                   value={item.protein}
                   onChange={(e) => updateItem(index, 'protein', Number(e.target.value))}
-                  className="h-7 text-compact px-2"
+                  className="h-7 text-compact px-2 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50"
                 />
                 <Input
                   type="number"
                   value={item.carbs}
                   onChange={(e) => updateItem(index, 'carbs', Number(e.target.value))}
-                  className="h-7 text-compact px-2"
+                  className="h-7 text-compact px-2 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50"
                 />
                 <Input
                   type="number"
                   value={item.fat}
                   onChange={(e) => updateItem(index, 'fat', Number(e.target.value))}
-                  className="h-7 text-compact px-2"
+                  className="h-7 text-compact px-2 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50"
                 />
                 <Button
                   variant="ghost"
