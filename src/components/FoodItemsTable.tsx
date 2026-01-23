@@ -213,8 +213,10 @@ export function FoodItemsTable({
                 }}
                 onKeyDown={handleKeyDown}
                 className={cn(
-                  "text-size-compact px-2 py-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50 focus:outline-none line-clamp-2 cursor-text rounded",
-                  isChanged(item, 'description') && "bg-amber-100 dark:bg-amber-900/30 focus:bg-amber-100 dark:focus:bg-amber-900/30 edit-indicator"
+                  "text-size-compact px-2 py-1 border-0 bg-transparent focus:outline-none line-clamp-2 cursor-text rounded",
+                  isChanged(item, 'description') 
+                    ? "bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-800/40 focus:bg-amber-100 dark:focus:bg-amber-900/30 edit-indicator"
+                    : "hover:bg-muted/50 focus:bg-muted/50"
                 )}
               />
             ) : (
@@ -235,8 +237,10 @@ export function FoodItemsTable({
                   onChange={(e) => onUpdateItem?.(index, 'calories', Number(e.target.value))}
                   onKeyDown={handleKeyDown}
                   className={cn(
-                    "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
-                    isChanged(item, 'calories') && "bg-amber-100 dark:bg-amber-900/30 focus:bg-amber-100 dark:focus:bg-amber-900/30 edit-indicator"
+                    "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent",
+                    isChanged(item, 'calories') 
+                      ? "bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-800/40 focus:bg-amber-100 dark:focus:bg-amber-900/30 edit-indicator"
+                      : "hover:bg-muted/50 focus:bg-muted/50"
                   )}
                 />
                 <Input
@@ -245,8 +249,10 @@ export function FoodItemsTable({
                   onChange={(e) => onUpdateItem?.(index, 'protein', Number(e.target.value))}
                   onKeyDown={handleKeyDown}
                   className={cn(
-                    "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
-                    isChanged(item, 'protein') && "bg-amber-100 dark:bg-amber-900/30 focus:bg-amber-100 dark:focus:bg-amber-900/30 edit-indicator"
+                    "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent",
+                    isChanged(item, 'protein') 
+                      ? "bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-800/40 focus:bg-amber-100 dark:focus:bg-amber-900/30 edit-indicator"
+                      : "hover:bg-muted/50 focus:bg-muted/50"
                   )}
                 />
                 <Input
@@ -255,8 +261,10 @@ export function FoodItemsTable({
                   onChange={(e) => onUpdateItem?.(index, 'carbs', Number(e.target.value))}
                   onKeyDown={handleKeyDown}
                   className={cn(
-                    "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
-                    isChanged(item, 'carbs') && "bg-amber-100 dark:bg-amber-900/30 focus:bg-amber-100 dark:focus:bg-amber-900/30 edit-indicator"
+                    "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent",
+                    isChanged(item, 'carbs') 
+                      ? "bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-800/40 focus:bg-amber-100 dark:focus:bg-amber-900/30 edit-indicator"
+                      : "hover:bg-muted/50 focus:bg-muted/50"
                   )}
                 />
                 <Input
@@ -265,8 +273,10 @@ export function FoodItemsTable({
                   onChange={(e) => onUpdateItem?.(index, 'fat', Number(e.target.value))}
                   onKeyDown={handleKeyDown}
                   className={cn(
-                    "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
-                    isChanged(item, 'fat') && "bg-amber-100 dark:bg-amber-900/30 focus:bg-amber-100 dark:focus:bg-amber-900/30 edit-indicator"
+                    "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent",
+                    isChanged(item, 'fat') 
+                      ? "bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-800/40 focus:bg-amber-100 dark:focus:bg-amber-900/30 edit-indicator"
+                      : "hover:bg-muted/50 focus:bg-muted/50"
                   )}
                 />
               </>
