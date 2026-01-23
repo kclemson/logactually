@@ -57,6 +57,10 @@ export function FoodItemsTable({
   onSave,
 }: FoodItemsTableProps) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault(); // Prevent newline in contentEditable
+      (e.target as HTMLElement).blur(); // Confirm edit by removing focus
+    }
     if (e.key === 'Escape' && onDiscard) {
       onDiscard();
       (e.target as HTMLElement).blur();
