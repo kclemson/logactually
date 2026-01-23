@@ -1,9 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { FoodInput } from '@/components/FoodInput';
-import { MacroSummary } from '@/components/MacroSummary';
+import { FoodItemsTable } from '@/components/FoodItemsTable';
 import { AIResults } from '@/components/AIResults';
-import { FoodEntryCard } from '@/components/FoodEntryCard';
 import { Button } from '@/components/ui/button';
 import { useAnalyzeFood } from '@/hooks/useAnalyzeFood';
 import { useFoodEntries } from '@/hooks/useFoodEntries';
@@ -56,16 +55,41 @@ const FoodLog = () => {
     setShouldClearInput(true);
   };
 
-  // Calculate today's totals from all entries
-  const todaysTotals = entries.reduce(
-    (acc, entry) => ({
-      calories: acc.calories + entry.total_calories,
-      protein: acc.protein + Number(entry.total_protein),
-      carbs: acc.carbs + Number(entry.total_carbs),
-      fat: acc.fat + Number(entry.total_fat),
-    }),
-    { calories: 0, protein: 0, carbs: 0, fat: 0 }
-  );
+  // Flatten all entries into a single items array with entry tracking
+  const { allItems, entryBoundaries, todaysTotals } = useMemo(() => {
+    const items: FoodItem[] = [];
+    const boundaries: { entryId: string; startIndex: number; endIndex: number }[] = [];
+    let totalCalories = 0;
+    let totalProtein = 0;
+    let totalCarbs = 0;
+    let totalFat = 0;
+
+    entries.forEach((entry) => {
+      const startIndex = items.length;
+      items.push(...entry.food_items);
+      boundaries.push({
+        entryId: entry.id,
+        startIndex,
+        endIndex: items.length - 1,
+      });
+      
+      totalCalories += entry.total_calories;
+      totalProtein += Number(entry.total_protein);
+      totalCarbs += Number(entry.total_carbs);
+      totalFat += Number(entry.total_fat);
+    });
+
+    return {
+      allItems: items,
+      entryBoundaries: boundaries,
+      todaysTotals: {
+        calories: totalCalories,
+        protein: totalProtein,
+        carbs: totalCarbs,
+        fat: totalFat,
+      },
+    };
+  }, [entries]);
 
   return (
     <div className="space-y-6">
@@ -103,23 +127,21 @@ const FoodLog = () => {
         </section>
       )}
 
-      <section className="space-y-4">
-        <h2 className="text-heading">Today's Totals</h2>
-        <MacroSummary totals={todaysTotals} />
+      <section className="space-y-3">
+        <h2 className="text-heading">Today</h2>
+        {entries.length > 0 ? (
+          <FoodItemsTable
+            items={allItems}
+            totals={todaysTotals}
+            totalsPosition="top"
+            showTotals={true}
+            entryBoundaries={entryBoundaries}
+            onDeleteEntry={(entryId) => deleteEntry.mutate(entryId)}
+          />
+        ) : (
+          <p className="text-body text-muted-foreground">No entries yet today.</p>
+        )}
       </section>
-
-      {entries.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-heading">Today's Entries</h2>
-          {entries.map((entry) => (
-            <FoodEntryCard
-              key={entry.id}
-              entry={entry}
-              onDelete={(id) => deleteEntry.mutate(id)}
-            />
-          ))}
-        </section>
-      )}
 
       {showModal && (
         <AIResults
