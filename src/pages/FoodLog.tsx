@@ -153,6 +153,12 @@ const FoodLog = () => {
     }
   };
 
+  const handleDeleteAll = () => {
+    entries.forEach(entry => {
+      deleteEntry.mutate(entry.id);
+    });
+  };
+
   return (
     <div className="space-y-6">
       <section className="space-y-4">
@@ -184,6 +190,7 @@ const FoodLog = () => {
               totals={displayTotals}
               totalsPosition="top"
               showTotals={true}
+              onDeleteAll={handleDeleteAll}
             />
             {hasChanges && (
               <div className="flex gap-2 pt-2">
