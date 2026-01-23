@@ -163,7 +163,7 @@ const FoodLog = () => {
         <h2 className="text-heading">Log Food</h2>
         <FoodInput 
           onSubmit={handleSubmit} 
-          isLoading={isAnalyzing}
+          isLoading={isAnalyzing || createEntry.isPending}
           shouldClear={shouldClearInput}
           onCleared={() => setShouldClearInput(false)}
         />
