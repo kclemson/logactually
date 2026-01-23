@@ -4,16 +4,15 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
 
 export default function Auth() {
   const { user, signUp, signIn, loading } = useAuth();
-  const { toast } = useToast();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   if (loading) {
     return (
@@ -30,13 +29,10 @@ export default function Auth() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    setErrorMessage(null);
 
     if (isSignUp && inviteCode !== import.meta.env.VITE_INVITE_CODE) {
-      toast({
-        variant: 'destructive',
-        title: 'Invalid invite code',
-        description: 'Please enter a valid invite code to sign up.',
-      });
+      setErrorMessage('Invalid invite code. Please enter a valid invite code to sign up.');
       setSubmitting(false);
       return;
     }
@@ -46,16 +42,7 @@ export default function Auth() {
       : await signIn(email, password);
 
     if (error) {
-      toast({
-        variant: 'destructive',
-        title: isSignUp ? 'Sign up failed' : 'Sign in failed',
-        description: error.message,
-      });
-    } else if (isSignUp) {
-      toast({
-        title: 'Account created!',
-        description: 'You are now signed in.',
-      });
+      setErrorMessage(error.message);
     }
 
     setSubmitting(false);
@@ -77,6 +64,11 @@ export default function Auth() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {errorMessage && (
+              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                {errorMessage}
+              </div>
+            )}
             <div className="space-y-2">
               <Input
                 type="email"

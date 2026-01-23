@@ -5,17 +5,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MacroSummary } from './MacroSummary';
 import { FoodItemsTable } from './FoodItemsTable';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 
 interface FoodEntryCardProps {
   entry: FoodEntry;
@@ -32,6 +21,13 @@ export function FoodEntryCard({ entry, onDelete }: FoodEntryCardProps) {
     fat: Number(entry.total_fat),
   };
 
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm('Delete this food entry?')) {
+      onDelete(entry.id);
+    }
+  };
+
   return (
     <Card>
       <CardContent className="p-4">
@@ -46,32 +42,14 @@ export function FoodEntryCard({ entry, onDelete }: FoodEntryCardProps) {
             <MacroSummary totals={totals} size="sm" />
           </div>
           <div className="flex items-center gap-2">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={(e) => e.stopPropagation()}
-                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete entry?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will permanently delete this food entry.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => onDelete(entry.id)}>
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleDelete}
+              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
             {expanded ? (
               <ChevronUp className="h-5 w-5 text-muted-foreground" />
             ) : (

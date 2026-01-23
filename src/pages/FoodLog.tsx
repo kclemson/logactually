@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { format } from 'date-fns';
 import { FoodInput } from '@/components/FoodInput';
 import { MacroSummary } from '@/components/MacroSummary';
@@ -8,10 +8,8 @@ import { Button } from '@/components/ui/button';
 import { useAnalyzeFood } from '@/hooks/useAnalyzeFood';
 import { useFoodEntries } from '@/hooks/useFoodEntries';
 import { FoodItem, calculateTotals } from '@/types/food';
-import { useToast } from '@/hooks/use-toast';
 
 const FoodLog = () => {
-  const { toast } = useToast();
   const today = format(new Date(), 'yyyy-MM-dd');
   const { entries, createEntry, deleteEntry } = useFoodEntries(today);
   const { analyzeFood, isAnalyzing, error: analyzeError } = useAnalyzeFood();
@@ -20,16 +18,6 @@ const FoodLog = () => {
   const [pendingItems, setPendingItems] = useState<FoodItem[]>([]);
   const [pendingRawInput, setPendingRawInput] = useState('');
   const [shouldClearInput, setShouldClearInput] = useState(false);
-
-  useEffect(() => {
-    if (analyzeError) {
-      toast({
-        variant: 'destructive',
-        title: 'Analysis failed',
-        description: analyzeError,
-      });
-    }
-  }, [analyzeError, toast]);
 
   const handleSubmit = async (text: string) => {
     const result = await analyzeFood(text);
@@ -89,6 +77,11 @@ const FoodLog = () => {
           shouldClear={shouldClearInput}
           onCleared={() => setShouldClearInput(false)}
         />
+        {analyzeError && (
+          <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            Analysis failed: {analyzeError}
+          </div>
+        )}
       </section>
 
       {pendingItems.length > 0 && !showModal && (
