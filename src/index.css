@@ -9,7 +9,7 @@ All colors MUST be HSL.
 @layer base {
   :root {
     /* Typography scale */
-    --text-2xs: 0.5625rem;   /* 9px - table headers, tiny labels */
+    --text-2xs: 0.5625rem;   /* 9px - nav labels, units, tiny badges */
     --text-xs: 0.625rem;     /* 10px - compact UI, data tables */
     --text-sm: 0.75rem;      /* 12px - secondary text, captions */
     --text-base: 0.875rem;   /* 14px - body text */
