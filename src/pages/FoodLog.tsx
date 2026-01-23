@@ -222,39 +222,7 @@ const FoodLog = () => {
 
   return (
     <div className="space-y-6">
-      {/* Date Navigation Header */}
-      <div className="flex items-center justify-center gap-1">
-        <Button variant="ghost" size="icon" onClick={goToPreviousDay}>
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
-        <div className="text-center min-w-[180px]">
-          <h2 className="text-lg font-semibold">
-            {isTodaySelected ? 'Today' : format(selectedDate, 'EEEE')}
-          </h2>
-          <p className="text-body text-muted-foreground">
-            {format(selectedDate, 'MMMM d, yyyy')}
-          </p>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={goToNextDay}
-          disabled={isTodaySelected}
-        >
-          <ChevronRight className="h-5 w-5" />
-        </Button>
-      </div>
-
-      {/* Jump to Today button when viewing past dates */}
-      {!isTodaySelected && (
-        <div className="flex justify-center">
-          <Button variant="outline" size="sm" onClick={goToToday}>
-            Jump to Today
-          </Button>
-        </div>
-      )}
-
-      {/* Food Input Section */}
+      {/* Food Input Section - At top */}
       <section>
         <FoodInput
           ref={foodInputRef}
@@ -268,11 +236,17 @@ const FoodLog = () => {
         )}
       </section>
 
-      {/* Food Items Section */}
-      <section className="space-y-3">
-        <div className="flex items-center gap-3">
+      {/* Unified Date Navigation */}
+      <div className="flex items-center justify-center gap-1">
+        <Button variant="ghost" size="icon" onClick={goToPreviousDay}>
+          <ChevronLeft className="h-5 w-5" />
+        </Button>
+        
+        <div className="flex items-center gap-3 min-w-[180px] justify-center">
           <h2 className="text-heading">
-            {isTodaySelected ? `Today (${format(selectedDate, 'M/d')})` : format(selectedDate, 'EEEE (M/d)')}
+            {isTodaySelected 
+              ? `Today (${format(selectedDate, 'M/d')})` 
+              : format(selectedDate, 'EEEE (M/d)')}
           </h2>
           
           {hasChanges && (
@@ -294,6 +268,28 @@ const FoodLog = () => {
             </div>
           )}
         </div>
+        
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={goToNextDay}
+          disabled={isTodaySelected}
+        >
+          <ChevronRight className="h-5 w-5" />
+        </Button>
+      </div>
+
+      {/* Jump to Today - when viewing past dates */}
+      {!isTodaySelected && (
+        <div className="flex justify-center">
+          <Button variant="outline" size="sm" onClick={goToToday}>
+            Jump to Today
+          </Button>
+        </div>
+      )}
+
+      {/* Food Items Section */}
+      <section>
         {entries.length > 0 ? (
           <FoodItemsTable
             items={displayItems}
