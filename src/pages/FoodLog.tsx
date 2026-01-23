@@ -1,6 +1,6 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { format } from 'date-fns';
-import { FoodInput } from '@/components/FoodInput';
+import { FoodInput, FoodInputRef } from '@/components/FoodInput';
 import { FoodItemsTable } from '@/components/FoodItemsTable';
 import { Button } from '@/components/ui/button';
 import { useAnalyzeFood } from '@/hooks/useAnalyzeFood';
@@ -12,10 +12,9 @@ const FoodLog = () => {
   const today = format(new Date(), 'yyyy-MM-dd');
   const { entries, createEntry, updateEntry, deleteEntry, deleteAllByDate } = useFoodEntries(today);
   const { analyzeFood, isAnalyzing, error: analyzeError } = useAnalyzeFood();
-
-  const [shouldClearInput, setShouldClearInput] = useState(false);
-  // Baseline captured before mutation, used for highlighting new items
-  const [pendingBaseline, setPendingBaseline] = useState<FoodItem[] | null>(null);
+  
+  const foodInputRef = useRef<FoodInputRef>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Flatten all entries into a single items array with entry tracking
   const { allItems, entryBoundaries, todaysTotals } = useMemo(() => {
@@ -53,7 +52,7 @@ const FoodLog = () => {
     };
   }, [entries]);
 
-  // Event-driven editing state (no auto-sync)
+  // Event-driven editing state
   const { 
     items: displayItems,
     previousItems,
@@ -63,23 +62,13 @@ const FoodLog = () => {
     setItemsWithBaseline,
   } = useEditableFoodItems();
 
-  // Track previous allItems to detect when database data changes
-  const prevAllItemsRef = useRef<string>('');
+  // Initialize display items from DB on first load (one-time, event-driven)
+  if (!isInitialized && allItems.length > 0) {
+    setItemsWithBaseline(allItems, null);
+    setIsInitialized(true);
+  }
 
-  // Respond to database changes by updating hook state
-  useEffect(() => {
-    const currentKey = JSON.stringify(allItems);
-    if (currentKey !== prevAllItemsRef.current) {
-      // Data changed and we're not in the middle of editing
-      if (!hasChanges) {
-        setItemsWithBaseline(allItems, pendingBaseline);
-        setPendingBaseline(null);
-      }
-      prevAllItemsRef.current = currentKey;
-    }
-  }, [allItems, hasChanges, pendingBaseline, setItemsWithBaseline]);
-
-  // Reset handler that uses current allItems
+  // Reset handler
   const handleResetChanges = () => {
     setItemsWithBaseline(allItems, null);
   };
@@ -91,19 +80,28 @@ const FoodLog = () => {
     const result = await analyzeFood(text);
     if (result) {
       // Capture current items as baseline BEFORE mutation for highlighting
-      setPendingBaseline([...displayItems]);
+      const currentItems = [...displayItems];
       
       const totals = calculateTotals(result.food_items);
-      createEntry.mutate({
-        eaten_date: today,
-        raw_input: text,
-        food_items: result.food_items,
-        total_calories: Math.round(totals.calories),
-        total_protein: Math.round(totals.protein * 10) / 10,
-        total_carbs: Math.round(totals.carbs * 10) / 10,
-        total_fat: Math.round(totals.fat * 10) / 10,
-      });
-      setShouldClearInput(true);
+      createEntry.mutate(
+        {
+          eaten_date: today,
+          raw_input: text,
+          food_items: result.food_items,
+          total_calories: Math.round(totals.calories),
+          total_protein: Math.round(totals.protein * 10) / 10,
+          total_carbs: Math.round(totals.carbs * 10) / 10,
+          total_fat: Math.round(totals.fat * 10) / 10,
+        },
+        {
+          onSuccess: () => {
+            // Update display with new items, using current as baseline for highlighting
+            const newItems = [...currentItems, ...result.food_items];
+            setItemsWithBaseline(newItems, currentItems);
+            foodInputRef.current?.clear();
+          },
+        }
+      );
     }
   };
 
@@ -122,10 +120,7 @@ const FoodLog = () => {
       const entryItems: FoodItem[] = [];
       
       // Count how many items remain for this entry
-      // Items are only removed, not reordered between entries
       for (let i = 0; i < originalCount && displayIndex < displayItems.length; i++) {
-        // Check if this item was removed by comparing counts
-        // Since we can only remove items (not reorder), we assign sequentially
         entryItems.push(displayItems[displayIndex]);
         displayIndex++;
       }
@@ -137,34 +132,53 @@ const FoodLog = () => {
     for (const [entryId, items] of entryItemsMap) {
       if (items.length === 0) {
         // Entry is now empty, delete it
-        deleteEntry.mutate(entryId);
+        deleteEntry.mutate(entryId, {
+          onSuccess: () => {
+            // Sync display state after successful delete
+            setItemsWithBaseline(allItems.filter(item => 
+              !entries.find(e => e.id === entryId)?.food_items.includes(item)
+            ), null);
+          },
+        });
       } else {
         // Update with new items and recalculated totals
         const totals = calculateTotals(items);
-        updateEntry.mutate({
-          id: entryId,
-          food_items: items,
-          total_calories: Math.round(totals.calories),
-          total_protein: Math.round(totals.protein * 10) / 10,
-          total_carbs: Math.round(totals.carbs * 10) / 10,
-          total_fat: Math.round(totals.fat * 10) / 10,
-        });
+        updateEntry.mutate(
+          {
+            id: entryId,
+            food_items: items,
+            total_calories: Math.round(totals.calories),
+            total_protein: Math.round(totals.protein * 10) / 10,
+            total_carbs: Math.round(totals.carbs * 10) / 10,
+            total_fat: Math.round(totals.fat * 10) / 10,
+          },
+          {
+            onSuccess: () => {
+              // Mark changes as saved - display matches DB now
+              setItemsWithBaseline(displayItems, null);
+            },
+          }
+        );
       }
     }
   };
 
   const handleDeleteAll = () => {
-    deleteAllByDate.mutate(today);
+    deleteAllByDate.mutate(today, {
+      onSuccess: () => {
+        setItemsWithBaseline([], null);
+        setIsInitialized(false);
+      },
+    });
   };
 
   return (
     <div className="space-y-6">
       <section>
         <FoodInput
+          ref={foodInputRef}
           onSubmit={handleSubmit} 
           isLoading={isAnalyzing || createEntry.isPending}
-          shouldClear={shouldClearInput}
-          onCleared={() => setShouldClearInput(false)}
         />
         {analyzeError && (
           <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
