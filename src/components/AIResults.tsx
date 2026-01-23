@@ -73,6 +73,7 @@ export function AIResults({
         className="max-h-[90vh] overflow-y-auto sm:max-w-md px-4"
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
+        onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader>
           <DialogTitle>Confirm Your Food</DialogTitle>
