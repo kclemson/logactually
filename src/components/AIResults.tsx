@@ -93,7 +93,7 @@ export function AIResults({
 
           <div className="flex gap-2">
             <Input
-              placeholder="Ask AI to fix (e.g. 'this was from Chipotle')"
+              placeholder="Ask AI to fix"
               value={fixContext}
               onChange={(e) => setFixContext(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleFix()}
