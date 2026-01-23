@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { format, addDays, subDays, isToday, parseISO } from 'date-fns';
-import { Check, X, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
+import { Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { FoodInput, FoodInputRef } from '@/components/FoodInput';
@@ -247,13 +247,10 @@ const FoodLog = () => {
         <div className="flex items-center gap-3 min-w-[180px] justify-center">
           <Popover>
             <PopoverTrigger asChild>
-              <button className="flex items-center gap-1 text-heading hover:text-primary transition-colors cursor-pointer">
-                <span>
-                  {isTodaySelected 
-                    ? `Today (${format(selectedDate, 'M/d')})` 
-                    : format(selectedDate, 'EEEE (M/d)')}
-                </span>
-                <ChevronDown className="h-4 w-4 opacity-50" />
+              <button className="text-heading text-primary underline underline-offset-2 decoration-primary/50 hover:decoration-primary transition-colors cursor-pointer">
+                {isTodaySelected 
+                  ? `Today (${format(selectedDate, 'M/d')})` 
+                  : format(selectedDate, 'EEEE (M/d)')}
               </button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="center">
