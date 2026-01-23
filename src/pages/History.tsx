@@ -1,93 +1,195 @@
-import { useMemo } from 'react';
-import { format } from 'date-fns';
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  format, 
+  startOfMonth, 
+  endOfMonth, 
+  eachDayOfInterval, 
+  isSameMonth, 
+  isToday,
+  addMonths,
+  subMonths,
+  startOfWeek,
+  endOfWeek,
+  isSameDay
+} from 'date-fns';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { FoodEntry, FoodItem } from '@/types/food';
-import { FoodEntryCard } from '@/components/FoodEntryCard';
-import { useFoodEntries } from '@/hooks/useFoodEntries';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+
+interface DaySummary {
+  date: string;
+  totalCalories: number;
+  entryCount: number;
+}
 
 const History = () => {
-  const { deleteEntry } = useFoodEntries();
+  const navigate = useNavigate();
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  const { data: entries = [], isLoading } = useQuery({
-    queryKey: ['food-entries-history'],
+  // Fetch entries for the visible month range
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(currentMonth);
+  
+  const { data: daySummaries = [], isLoading } = useQuery({
+    queryKey: ['food-entries-summary', format(monthStart, 'yyyy-MM')],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('food_entries')
-        .select('*')
-        .order('eaten_date', { ascending: false })
-        .order('created_at', { ascending: false })
-        .limit(100);
+        .select('eaten_date, total_calories')
+        .gte('eaten_date', format(monthStart, 'yyyy-MM-dd'))
+        .lte('eaten_date', format(monthEnd, 'yyyy-MM-dd'));
 
       if (error) throw error;
 
-      return (data || []).map((entry) => ({
-        ...entry,
-        food_items: Array.isArray(entry.food_items)
-          ? (entry.food_items as unknown as FoodItem[])
-          : [],
-      })) as FoodEntry[];
+      // Aggregate by date
+      const summaryMap = new Map<string, DaySummary>();
+      (data || []).forEach((entry) => {
+        const existing = summaryMap.get(entry.eaten_date);
+        if (existing) {
+          existing.totalCalories += entry.total_calories;
+          existing.entryCount += 1;
+        } else {
+          summaryMap.set(entry.eaten_date, {
+            date: entry.eaten_date,
+            totalCalories: entry.total_calories,
+            entryCount: 1,
+          });
+        }
+      });
+
+      return Array.from(summaryMap.values());
     },
   });
 
-  // Group entries by date
-  const groupedEntries = useMemo(() => {
-    const groups: Record<string, FoodEntry[]> = {};
-    entries.forEach((entry) => {
-      const date = entry.eaten_date;
-      if (!groups[date]) groups[date] = [];
-      groups[date].push(entry);
-    });
-    return Object.entries(groups);
-  }, [entries]);
+  // Build calendar grid
+  const calendarDays = useMemo(() => {
+    const start = startOfWeek(monthStart, { weekStartsOn: 0 });
+    const end = endOfWeek(monthEnd, { weekStartsOn: 0 });
+    return eachDayOfInterval({ start, end });
+  }, [monthStart, monthEnd]);
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
+  // Map summaries by date for quick lookup
+  const summaryByDate = useMemo(() => {
+    const map = new Map<string, DaySummary>();
+    daySummaries.forEach((s) => map.set(s.date, s));
+    return map;
+  }, [daySummaries]);
 
-  if (entries.length === 0) {
-    return (
-      <div className="py-8 text-center text-muted-foreground">
-        No entries yet. Start logging your food!
-      </div>
-    );
-  }
+  const handleDayClick = (date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    
+    if (dateStr === todayStr) {
+      navigate('/');
+    } else {
+      navigate(`/?date=${dateStr}`);
+    }
+  };
+
+  const goToPreviousMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
+  const goToNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
+
+  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   return (
-    <div className="space-y-6">
-      {groupedEntries.map(([date, dayEntries]) => {
-        const dayTotals = dayEntries.reduce(
-          (acc, entry) => ({
-            calories: acc.calories + entry.total_calories,
-            protein: acc.protein + Number(entry.total_protein),
-          }),
-          { calories: 0, protein: 0 }
-        );
+    <div className="space-y-4">
+      {/* Month Navigation */}
+      <div className="flex items-center justify-between">
+        <Button variant="ghost" size="icon" onClick={goToPreviousMonth}>
+          <ChevronLeft className="h-5 w-5" />
+        </Button>
+        <h2 className="text-heading">
+          {format(currentMonth, 'MMMM yyyy')}
+        </h2>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={goToNextMonth}
+          disabled={isSameMonth(currentMonth, new Date())}
+        >
+          <ChevronRight className="h-5 w-5" />
+        </Button>
+      </div>
 
-        return (
-          <section key={date} className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-heading">
-                {format(new Date(date), 'EEEE, MMMM d')}
-              </h2>
-              <span className="text-size-compact text-muted-foreground">
-                {Math.round(dayTotals.calories)} cal
-              </span>
+      {/* Calendar Grid */}
+      <div className="rounded-lg border bg-card">
+        {/* Week day headers */}
+        <div className="grid grid-cols-7 border-b">
+          {weekDays.map((day) => (
+            <div
+              key={day}
+              className="py-2 text-center text-size-compact font-medium text-muted-foreground"
+            >
+              {day}
             </div>
-            {dayEntries.map((entry) => (
-              <FoodEntryCard
-                key={entry.id}
-                entry={entry}
-                onDelete={(id) => deleteEntry.mutate(id)}
-              />
-            ))}
-          </section>
-        );
-      })}
+          ))}
+        </div>
+
+        {/* Calendar days */}
+        <div className="grid grid-cols-7">
+          {calendarDays.map((day, index) => {
+            const dateStr = format(day, 'yyyy-MM-dd');
+            const summary = summaryByDate.get(dateStr);
+            const isCurrentMonth = isSameMonth(day, currentMonth);
+            const isTodayDate = isToday(day);
+            const hasEntries = !!summary;
+
+            return (
+              <button
+                key={index}
+                onClick={() => handleDayClick(day)}
+                disabled={!isCurrentMonth}
+                className={cn(
+                  "relative flex flex-col items-center justify-center p-2 min-h-[60px] border-b border-r transition-colors",
+                  "last:border-r-0 [&:nth-child(7n)]:border-r-0",
+                  isCurrentMonth 
+                    ? "hover:bg-muted/50 cursor-pointer" 
+                    : "text-muted-foreground/40 cursor-default",
+                  isTodayDate && "bg-primary/10",
+                )}
+              >
+                <span
+                  className={cn(
+                    "text-size-compact font-medium",
+                    isTodayDate && "text-primary font-semibold",
+                  )}
+                >
+                  {format(day, 'd')}
+                </span>
+                {hasEntries && isCurrentMonth && (
+                  <span className="text-size-caption text-muted-foreground mt-0.5">
+                    {Math.round(summary.totalCalories)}
+                  </span>
+                )}
+                {hasEntries && isCurrentMonth && (
+                  <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-primary" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {isLoading && (
+        <div className="flex justify-center py-4">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      )}
+
+      {/* Legend */}
+      <div className="flex items-center justify-center gap-4 text-size-compact text-muted-foreground">
+        <div className="flex items-center gap-1.5">
+          <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+          <span>Has entries</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-4 h-4 rounded bg-primary/10" />
+          <span>Today</span>
+        </div>
+      </div>
     </div>
   );
 };
