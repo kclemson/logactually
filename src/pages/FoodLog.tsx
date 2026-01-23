@@ -128,7 +128,7 @@ const FoodLog = () => {
       )}
 
       <section className="space-y-3">
-        <h2 className="text-heading">Today</h2>
+        <h2 className="text-heading">Today ({format(new Date(), 'M/d')})</h2>
         {entries.length > 0 ? (
           <FoodItemsTable
             items={allItems}

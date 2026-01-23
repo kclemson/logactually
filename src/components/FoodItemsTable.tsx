@@ -121,7 +121,7 @@ export function FoodItemsTable({
       {/* Header row */}
       {showHeader && (
         <div className={cn('grid gap-0.5 text-muted-foreground', gridCols)}>
-          <span className="text-size-compact px-2">Item</span>
+          <span className="text-size-compact px-2"></span>
           <span className="text-size-compact px-1">Calories</span>
           <span className="text-size-compact px-1">Protein</span>
           <span className="text-size-compact px-1">Carbs</span>

@@ -90,6 +90,7 @@ export function AIResults({
             previousItems={previousItems}
             showHeader={true}
             showTotals={true}
+            totalsPosition="top"
           />
 
           <div className="flex gap-2">
