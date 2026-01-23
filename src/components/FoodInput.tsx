@@ -96,14 +96,14 @@ export function FoodInput({ onSubmit, isLoading, shouldClear, onCleared }: FoodI
           disabled={!text.trim() || isLoading}
           className="flex-1"
         >
-          {isLoading ? (
-            'Analyzing...'
-          ) : (
-            <>
-              <Send className="mr-2 h-4 w-4" />
-              Analyze
-            </>
-          )}
+        {isLoading ? (
+          'Adding...'
+        ) : (
+          <>
+            <Send className="mr-2 h-4 w-4" />
+            Add Food
+          </>
+        )}
         </Button>
       </div>
     </div>
