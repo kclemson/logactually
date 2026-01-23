@@ -36,7 +36,7 @@ export function FoodEntryCard({ entry, onDelete }: FoodEntryCardProps) {
           onClick={() => setExpanded(!expanded)}
         >
           <div className="flex-1">
-            <p className="text-size-compact text-muted-foreground line-clamp-1">
+            <p className="text-body text-muted-foreground line-clamp-1">
               {entry.raw_input || 'No description'}
             </p>
             <MacroSummary totals={totals} size="sm" />
