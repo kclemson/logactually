@@ -172,7 +172,6 @@ export function FoodItemsTable({
 
       {/* Data rows */}
       {items.map((item, index) => {
-        const displayText = `${item.name}${item.portion ? ` (${item.portion})` : ''}`;
         const entryBoundary = isLastItemInEntry(index);
         const isFirstInEntry = isFirstItemInEntry(index);
         
@@ -186,27 +185,32 @@ export function FoodItemsTable({
               hasEntryDeletion && isFirstInEntry && index > 0 && 'border-t border-muted/50 pt-1'
             )}
           >
-            {/* Name cell */}
+            {/* Description cell */}
             {editable ? (
               <div
                 contentEditable
                 suppressContentEditableWarning
-                title={displayText}
-                onBlur={(e) => onUpdateItem?.(index, 'name', e.currentTarget.textContent || '')}
+                title={item.description}
+                onBlur={(e) => {
+                  const newDescription = e.currentTarget.textContent || '';
+                  if (newDescription !== item.description) {
+                    onUpdateItem?.(index, 'description', newDescription);
+                  }
+                }}
                 onKeyDown={handleKeyDown}
                 className={cn(
                   "text-size-compact px-2 py-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50 focus:outline-none line-clamp-2 cursor-text rounded",
-                  isChanged(item, 'name') && "bg-amber-100 dark:bg-amber-900/30 focus:bg-amber-100 dark:focus:bg-amber-900/30"
+                  isChanged(item, 'description') && "bg-amber-100 dark:bg-amber-900/30 focus:bg-amber-100 dark:focus:bg-amber-900/30"
                 )}
               >
-                {displayText}
+                {item.description}
               </div>
             ) : (
               <span 
-                title={displayText}
+                title={item.description}
                 className="text-size-compact px-2 py-1 line-clamp-2"
               >
-                {displayText}
+                {item.description}
               </span>
             )}
 

@@ -6,9 +6,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface FoodItem {
+// Internal interface for parsing AI response (keeps name and portion separate)
+interface ParsedFoodItem {
   name: string;
   portion: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
+// Output interface sent to client (merged description)
+interface FoodItem {
+  description: string;
   calories: number;
   protein: number;
   carbs: number;
@@ -134,7 +144,7 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
     console.log('AI response content:', content);
 
     // Parse the JSON response
-    let parsed: { food_items: FoodItem[] };
+    let parsed: { food_items: ParsedFoodItem[] };
     try {
       // Remove any potential markdown code blocks and extract JSON
       let cleanContent = content.replace(/```json\n?|\n?```/g, '').trim();
@@ -155,19 +165,28 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
       );
     }
 
+    // Merge name and portion into description for client consumption
+    const mergedItems: FoodItem[] = parsed.food_items.map(item => ({
+      description: item.portion ? `${item.name} (${item.portion})` : item.name,
+      calories: item.calories || 0,
+      protein: item.protein || 0,
+      carbs: item.carbs || 0,
+      fat: item.fat || 0,
+    }));
+
     // Calculate totals
-    const totals = parsed.food_items.reduce(
+    const totals = mergedItems.reduce(
       (acc, item) => ({
-        calories: acc.calories + (item.calories || 0),
-        protein: acc.protein + (item.protein || 0),
-        carbs: acc.carbs + (item.carbs || 0),
-        fat: acc.fat + (item.fat || 0),
+        calories: acc.calories + item.calories,
+        protein: acc.protein + item.protein,
+        carbs: acc.carbs + item.carbs,
+        fat: acc.fat + item.fat,
       }),
       { calories: 0, protein: 0, carbs: 0, fat: 0 }
     );
 
     const result: AnalyzeResponse = {
-      food_items: parsed.food_items,
+      food_items: mergedItems,
       total_calories: Math.round(totals.calories),
       total_protein: Math.round(totals.protein),
       total_carbs: Math.round(totals.carbs),

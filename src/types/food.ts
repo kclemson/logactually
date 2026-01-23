@@ -1,7 +1,6 @@
 export interface FoodItem {
   uid: string;
-  name: string;
-  portion: string;
+  description: string;  // Combined "Food Name (portion)" e.g. "Cheese Pizza (1 slice)"
   calories: number;
   protein: number;
   carbs: number;
