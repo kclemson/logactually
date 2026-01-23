@@ -111,7 +111,7 @@ export default function Auth() {
               {submitting ? 'Loading...' : isSignUp ? 'Sign Up' : 'Sign In'}
             </Button>
           </form>
-          <div className="mt-4 text-center text-size-sm text-muted-foreground">
+          <div className="mt-4 text-center text-body text-muted-foreground">
             {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
             <button
               type="button"

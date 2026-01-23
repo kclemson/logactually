@@ -74,7 +74,7 @@ const History = () => {
               <h2 className="text-heading">
                 {format(new Date(date), 'EEEE, MMMM d')}
               </h2>
-              <span className="text-size-sm text-muted-foreground">
+              <span className="text-size-compact text-muted-foreground">
                 {Math.round(dayTotals.calories)} cal
               </span>
             </div>
