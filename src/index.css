@@ -24,8 +24,7 @@ All colors MUST be HSL.
   }
   
   .text-heading {
-    font-size: 0.875rem;   /* 14px - section headings */
-    line-height: 1.4;
+    @apply text-body;
     font-weight: 600;
   }
   
