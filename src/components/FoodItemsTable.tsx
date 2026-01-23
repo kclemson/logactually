@@ -79,10 +79,10 @@ export function FoodItemsTable({
               key={index}
               className={cn('grid gap-0.5 items-start', gridCols)}
             >
-              {/* Name cell */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  {editable ? (
+            {/* Name cell */}
+              {editable ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
                     <div
                       contentEditable
                       suppressContentEditableWarning
@@ -94,16 +94,23 @@ export function FoodItemsTable({
                     >
                       {displayText}
                     </div>
-                  ) : (
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[300px]">
+                    <p>{displayText}</p>
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger asChild>
                     <span className="text-size-compact px-2 py-1 line-clamp-2">
                       {displayText}
                     </span>
-                  )}
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-[300px]">
-                  <p>{displayText}</p>
-                </TooltipContent>
-              </Tooltip>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[300px]">
+                    <p>{displayText}</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
 
               {/* Macro cells */}
               {editable ? (
