@@ -1,4 +1,4 @@
-import { FoodItem, DailyTotals, calculateTotals } from '@/types/food';
+import { FoodItem, DailyTotals, calculateTotals, EditableField } from '@/types/food';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,7 +12,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Trash2, Check, X } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface EntryBoundary {
@@ -27,7 +27,7 @@ interface FoodItemsTableProps {
   onUpdateItem?: (index: number, field: keyof FoodItem, value: string | number) => void;
   onRemoveItem?: (index: number) => void;
   onDiscard?: () => void;
-  previousItems?: FoodItem[] | null;
+  newItemUids?: Set<string>;
   showHeader?: boolean;
   showTotals?: boolean;
   totalsPosition?: 'top' | 'bottom';
@@ -45,7 +45,7 @@ export function FoodItemsTable({
   onUpdateItem,
   onRemoveItem,
   onDiscard,
-  previousItems,
+  newItemUids,
   showHeader = true,
   showTotals = true,
   totalsPosition = 'bottom',
@@ -66,17 +66,15 @@ export function FoodItemsTable({
       (e.target as HTMLElement).blur();
     }
   };
-  const isChanged = (item: FoodItem, field: keyof FoodItem): boolean => {
-    if (!previousItems) return false;
-    
-    // Find matching item by UID
-    const prevItem = previousItems.find(p => p.uid === item.uid);
-    
-    // New item (no matching UID in previous) = highlight everything
-    if (!prevItem) return true;
-    
-    // Existing item = check if this specific field changed
-    return prevItem[field] !== item[field];
+
+  // Check if field was user-edited (persisted in editedFields array)
+  const hasEditedField = (item: FoodItem, field: EditableField): boolean => {
+    return item.editedFields?.includes(field) ?? false;
+  };
+
+  // Check if this is a newly-added row (for amber background)
+  const isNewItem = (item: FoodItem): boolean => {
+    return newItemUids?.has(item.uid) ?? false;
   };
 
   const calculatedTotals = calculateTotals(items);
@@ -161,6 +159,21 @@ export function FoodItemsTable({
     </div>
   );
 
+  // Get cell classes for editable cells
+  const getCellClasses = (item: FoodItem, field: EditableField) => {
+    const isNew = isNewItem(item);
+    const isEdited = hasEditedField(item, field);
+    
+    return cn(
+      // Base hover/focus states
+      "hover:bg-muted/50 focus:bg-muted/50",
+      // New item: amber background
+      isNew && "bg-amber-100 dark:bg-amber-900/30",
+      // Edited field: left bar indicator
+      isEdited && "edit-indicator"
+    );
+  };
+
   return (
     <div className="space-y-1">
       {/* Header row */}
@@ -185,7 +198,7 @@ export function FoodItemsTable({
         
         return (
           <div
-            key={index}
+            key={item.uid || index}
             className={cn(
               'grid gap-0.5 items-stretch group',
               gridCols,
@@ -214,9 +227,7 @@ export function FoodItemsTable({
                 onKeyDown={handleKeyDown}
                 className={cn(
                   "text-size-compact px-2 py-1 border-0 bg-transparent focus:outline-none line-clamp-2 cursor-text rounded",
-                  isChanged(item, 'description') 
-                    ? "bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-800/40 focus:bg-amber-100 dark:focus:bg-amber-900/30 edit-indicator"
-                    : "hover:bg-muted/50 focus:bg-muted/50"
+                  getCellClasses(item, 'description')
                 )}
               />
             ) : (
@@ -238,9 +249,7 @@ export function FoodItemsTable({
                   onKeyDown={handleKeyDown}
                   className={cn(
                     "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent",
-                    isChanged(item, 'calories') 
-                      ? "bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-800/40 focus:bg-amber-100 dark:focus:bg-amber-900/30 edit-indicator"
-                      : "hover:bg-muted/50 focus:bg-muted/50"
+                    getCellClasses(item, 'calories')
                   )}
                 />
                 <Input
@@ -250,9 +259,7 @@ export function FoodItemsTable({
                   onKeyDown={handleKeyDown}
                   className={cn(
                     "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent",
-                    isChanged(item, 'protein') 
-                      ? "bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-800/40 focus:bg-amber-100 dark:focus:bg-amber-900/30 edit-indicator"
-                      : "hover:bg-muted/50 focus:bg-muted/50"
+                    getCellClasses(item, 'protein')
                   )}
                 />
                 <Input
@@ -262,9 +269,7 @@ export function FoodItemsTable({
                   onKeyDown={handleKeyDown}
                   className={cn(
                     "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent",
-                    isChanged(item, 'carbs') 
-                      ? "bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-800/40 focus:bg-amber-100 dark:focus:bg-amber-900/30 edit-indicator"
-                      : "hover:bg-muted/50 focus:bg-muted/50"
+                    getCellClasses(item, 'carbs')
                   )}
                 />
                 <Input
@@ -274,9 +279,7 @@ export function FoodItemsTable({
                   onKeyDown={handleKeyDown}
                   className={cn(
                     "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent",
-                    isChanged(item, 'fat') 
-                      ? "bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-800/40 focus:bg-amber-100 dark:focus:bg-amber-900/30 edit-indicator"
-                      : "hover:bg-muted/50 focus:bg-muted/50"
+                    getCellClasses(item, 'fat')
                   )}
                 />
               </>
