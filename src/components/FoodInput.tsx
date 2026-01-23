@@ -73,6 +73,7 @@ export function FoodInput({ onSubmit, isLoading, shouldClear, onCleared }: FoodI
         onChange={(e) => setText(e.target.value)}
         placeholder="What did you eat? (e.g., 'grilled chicken breast with rice and broccoli')"
         className="min-h-[120px] resize-none text-body"
+        disabled={isLoading}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -86,6 +87,7 @@ export function FoodInput({ onSubmit, isLoading, shouldClear, onCleared }: FoodI
             variant="outline"
             size="icon"
             onClick={toggleListening}
+            disabled={isLoading}
             className={isListening ? 'bg-destructive text-destructive-foreground' : ''}
           >
             {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
