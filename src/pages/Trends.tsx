@@ -3,8 +3,8 @@ import { format, subDays, startOfDay } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import {
-  LineChart,
-  Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -143,19 +143,19 @@ const Trends = () => {
                 <CardTitle className="text-body font-semibold">{label}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-48">
+                <div className="h-32">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData}>
+                    <BarChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis
                         dataKey="date"
-                        tick={{ fontSize: 12 }}
+                        tick={{ fontSize: 10 }}
                         stroke="hsl(var(--muted-foreground))"
                       />
                       <YAxis
-                        tick={{ fontSize: 12 }}
+                        tick={{ fontSize: 10 }}
                         stroke="hsl(var(--muted-foreground))"
-                        width={40}
+                        width={35}
                       />
                       <Tooltip
                         contentStyle={{
@@ -164,14 +164,12 @@ const Trends = () => {
                           borderRadius: '8px',
                         }}
                       />
-                      <Line
-                        type="monotone"
+                      <Bar
                         dataKey={key}
-                        stroke={color}
-                        strokeWidth={2}
-                        dot={false}
+                        fill={color}
+                        radius={[2, 2, 0, 0]}
                       />
-                    </LineChart>
+                    </BarChart>
                   </ResponsiveContainer>
                 </div>
               </CardContent>
