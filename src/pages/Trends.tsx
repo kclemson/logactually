@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { forwardRef, useState, useMemo } from 'react';
 import { format, subDays, startOfDay } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,7 +21,7 @@ const periods = [
   { label: '90 days', days: 90 },
 ];
 
-const Trends = () => {
+const Trends = forwardRef<HTMLDivElement>((_, ref) => {
   const [selectedPeriod, setSelectedPeriod] = useState(7);
 
   const { data: entries = [], isLoading } = useQuery({
@@ -69,8 +69,7 @@ const Trends = () => {
 
   // Calculate averages
   const averages = useMemo(() => {
-    if (chartData.length === 0)
-      return { calories: 0, protein: 0, carbs: 0, fat: 0 };
+    if (chartData.length === 0) return { calories: 0, protein: 0, carbs: 0, fat: 0 };
 
     const sum = chartData.reduce(
       (acc, day) => ({
@@ -98,7 +97,7 @@ const Trends = () => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div ref={ref} className="space-y-6">
       <div className="flex items-center justify-center gap-2">
         {periods.map(({ label, days }) => (
           <Button
@@ -116,9 +115,7 @@ const Trends = () => {
         {charts.map(({ key, label }) => (
           <Card key={key} className="text-center">
             <CardContent className="p-4">
-              <p className="text-title">
-                {averages[key as keyof typeof averages]}
-              </p>
+              <p className="text-title">{averages[key as keyof typeof averages]}</p>
               <p className="text-size-compact text-muted-foreground">
                 Avg {label.split(' ')[0]}
               </p>
@@ -181,6 +178,8 @@ const Trends = () => {
       )}
     </div>
   );
-};
+});
+
+Trends.displayName = 'Trends';
 
 export default Trends;

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { forwardRef, useState } from 'react';
 import { format, addDays, subDays } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,7 +6,7 @@ import { MacroSummary } from '@/components/MacroSummary';
 import { FoodEntryCard } from '@/components/FoodEntryCard';
 import { useFoodEntries } from '@/hooks/useFoodEntries';
 
-const Today = () => {
+const Today = forwardRef<HTMLDivElement>((_, ref) => {
   const [date, setDate] = useState(new Date());
   const dateStr = format(date, 'yyyy-MM-dd');
   const { entries, isLoading, deleteEntry } = useFoodEntries(dateStr);
@@ -24,22 +24,14 @@ const Today = () => {
   );
 
   return (
-    <div className="space-y-6">
+    <div ref={ref} className="space-y-6">
       <div className="flex items-center justify-between">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setDate(subDays(date, 1))}
-        >
+        <Button variant="ghost" size="icon" onClick={() => setDate(subDays(date, 1))}>
           <ChevronLeft className="h-5 w-5" />
         </Button>
         <div className="text-center">
-          <h2 className="text-heading">
-            {isToday ? 'Today' : format(date, 'EEEE')}
-          </h2>
-          <p className="text-body text-muted-foreground">
-            {format(date, 'MMMM d, yyyy')}
-          </p>
+          <h2 className="text-heading">{isToday ? 'Today' : format(date, 'EEEE')}</h2>
+          <p className="text-body text-muted-foreground">{format(date, 'MMMM d, yyyy')}</p>
         </div>
         <Button
           variant="ghost"
@@ -74,6 +66,8 @@ const Today = () => {
       )}
     </div>
   );
-};
+});
+
+Today.displayName = 'Today';
 
 export default Today;

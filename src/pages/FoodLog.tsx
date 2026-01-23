@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { forwardRef, useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { FoodInput } from '@/components/FoodInput';
 import { MacroSummary } from '@/components/MacroSummary';
@@ -10,7 +10,7 @@ import { useFoodEntries } from '@/hooks/useFoodEntries';
 import { FoodItem, calculateTotals } from '@/types/food';
 import { useToast } from '@/hooks/use-toast';
 
-const FoodLog = () => {
+const FoodLog = forwardRef<HTMLDivElement>((_, ref) => {
   const { toast } = useToast();
   const today = format(new Date(), 'yyyy-MM-dd');
   const { entries, createEntry, deleteEntry } = useFoodEntries(today);
@@ -80,11 +80,11 @@ const FoodLog = () => {
   );
 
   return (
-    <div className="space-y-6">
+    <div ref={ref} className="space-y-6">
       <section className="space-y-4">
         <h2 className="text-heading">Log Food</h2>
-        <FoodInput 
-          onSubmit={handleSubmit} 
+        <FoodInput
+          onSubmit={handleSubmit}
           isLoading={isAnalyzing}
           shouldClear={shouldClearInput}
           onCleared={() => setShouldClearInput(false)}
@@ -99,10 +99,14 @@ const FoodLog = () => {
             <Button size="sm" onClick={() => setShowModal(true)}>
               Review
             </Button>
-            <Button 
-              size="sm" 
-              variant="ghost" 
-              onClick={() => { setPendingItems([]); setPendingRawInput(''); setShouldClearInput(true); }}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setPendingItems([]);
+                setPendingRawInput('');
+                setShouldClearInput(true);
+              }}
             >
               Discard
             </Button>
@@ -141,6 +145,8 @@ const FoodLog = () => {
       )}
     </div>
   );
-};
+});
+
+FoodLog.displayName = 'FoodLog';
 
 export default FoodLog;
