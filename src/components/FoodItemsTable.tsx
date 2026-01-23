@@ -1,6 +1,17 @@
 import { FoodItem, DailyTotals, calculateTotals } from '@/types/food';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -225,18 +236,34 @@ export function FoodItemsTable({
             {/* Entry delete button (only on last item of each entry) */}
             {!editable && hasEntryDeletion && (
               entryBoundary ? (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    if (confirm('Delete this entry?')) {
-                      onDeleteEntry(entryBoundary.entryId);
-                    }
-                  }}
-                  className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete this entry?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently remove this meal and all its items.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={() => onDeleteEntry!(entryBoundary.entryId)}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               ) : (
                 <span></span>
               )
