@@ -82,7 +82,7 @@ const FoodLog = () => {
   return (
     <div className="space-y-6">
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold">Log Food</h2>
+        <h2 className="text-heading">Log Food</h2>
         <FoodInput 
           onSubmit={handleSubmit} 
           isLoading={isAnalyzing}
@@ -93,8 +93,8 @@ const FoodLog = () => {
 
       {pendingItems.length > 0 && !showModal && (
         <section className="rounded-lg border border-accent bg-accent/20 p-4 space-y-2">
-          <p className="text-sm font-medium">You have unsaved food analysis:</p>
-          <p className="text-sm text-muted-foreground">"{pendingRawInput}"</p>
+          <p className="text-size-sm font-medium">You have unsaved food analysis:</p>
+          <p className="text-size-sm text-muted-foreground">"{pendingRawInput}"</p>
           <div className="flex gap-2">
             <Button size="sm" onClick={() => setShowModal(true)}>
               Review
@@ -111,13 +111,13 @@ const FoodLog = () => {
       )}
 
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold">Today's Totals</h2>
+        <h2 className="text-heading">Today's Totals</h2>
         <MacroSummary totals={todaysTotals} />
       </section>
 
       {entries.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold">Today's Entries</h2>
+          <h2 className="text-heading">Today's Entries</h2>
           {entries.map((entry) => (
             <FoodEntryCard
               key={entry.id}

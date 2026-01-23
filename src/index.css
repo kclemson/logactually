@@ -39,6 +39,12 @@ All colors MUST be HSL.
     font-size: var(--text-sm);
     line-height: 1.4;
   }
+  
+  .text-heading {
+    font-size: var(--text-base);
+    line-height: 1.4;
+    font-weight: 600;
+  }
 }
 
 @layer base {
