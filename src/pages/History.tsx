@@ -96,11 +96,11 @@ const History = () => {
   return (
     <div className="space-y-4">
       {/* Month Navigation */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-center gap-1">
         <Button variant="ghost" size="icon" onClick={goToPreviousMonth}>
           <ChevronLeft className="h-5 w-5" />
         </Button>
-        <h2 className="text-heading">
+        <h2 className="text-lg font-semibold min-w-[160px] text-center">
           {format(currentMonth, 'MMMM yyyy')}
         </h2>
         <Button 
@@ -140,27 +140,27 @@ const History = () => {
               onClick={() => handleDayClick(day)}
               disabled={!isCurrentMonth}
               className={cn(
-                "relative flex flex-col items-end justify-end p-2 min-h-[68px] rounded-xl transition-colors",
+                "flex flex-col items-center justify-center p-2 min-h-[68px] rounded-xl transition-colors",
                 isCurrentMonth 
-                  ? "hover:bg-muted/50 cursor-pointer" 
-                  : "text-muted-foreground/30 cursor-default",
-                hasEntries && isCurrentMonth && "bg-rose-100 dark:bg-rose-900/20",
-                isTodayDate && !hasEntries && "bg-primary/10",
-                isTodayDate && hasEntries && "ring-2 ring-primary ring-inset",
+                  ? "bg-muted/40 hover:bg-muted/60 cursor-pointer" 
+                  : "bg-transparent text-muted-foreground/30 cursor-default",
+                hasEntries && isCurrentMonth && "bg-rose-100 hover:bg-rose-200 dark:bg-rose-900/20 dark:hover:bg-rose-800/30",
+                isTodayDate && "ring-2 ring-primary ring-inset",
               )}
             >
-              {/* Calorie count in top-left */}
+              {/* Calorie count - above day number */}
               {hasEntries && isCurrentMonth && (
-                <span className="absolute top-1.5 left-2 text-size-caption text-rose-500 dark:text-rose-400 font-medium">
+                <span className="text-size-caption text-rose-500 dark:text-rose-400 font-medium">
                   {Math.round(summary.totalCalories)}
                 </span>
               )}
               
-              {/* Day number */}
+              {/* Day number - centered */}
               <span
                 className={cn(
                   "text-body font-medium",
                   isTodayDate && "text-primary font-semibold",
+                  !isCurrentMonth && "text-muted-foreground/30",
                 )}
               >
                 {format(day, 'd')}
