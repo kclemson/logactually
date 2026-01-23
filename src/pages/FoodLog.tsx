@@ -253,7 +253,7 @@ const FoodLog = () => {
                   : format(selectedDate, 'EEEE (M/d)')}
               </button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="center">
+            <PopoverContent className="w-[280px] p-0" align="center">
               {!isTodaySelected && (
                 <div className="p-2 border-b">
                   <Button 
