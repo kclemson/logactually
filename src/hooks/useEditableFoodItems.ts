@@ -48,9 +48,9 @@ export function useEditableFoodItems({ initialItems }: UseEditableFoodItemsOptio
           return {
             ...item,
             calories: value,
-            protein: Math.round(baseline.protein * ratio * 10) / 10,
-            carbs: Math.round(baseline.carbs * ratio * 10) / 10,
-            fat: Math.round(baseline.fat * ratio * 10) / 10,
+            protein: Math.round(baseline.protein * ratio),
+            carbs: Math.round(baseline.carbs * ratio),
+            fat: Math.round(baseline.fat * ratio),
           };
         }
 
