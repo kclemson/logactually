@@ -22,12 +22,17 @@ export function useFoodEntries(date?: string) {
 
       if (error) throw error;
 
-      // Parse the food_items JSONB field and ensure UIDs exist
+      // Parse the food_items JSONB field, migrate legacy data, and ensure UIDs exist
       return (data || []).map((entry) => {
-        const rawItems = Array.isArray(entry.food_items) ? (entry.food_items as unknown as FoodItem[]) : [];
-        // Assign UIDs to items that don't have them (backward compatibility)
-        const itemsWithIds = rawItems.map((item) => ({
-          ...item,
+        const rawItems = Array.isArray(entry.food_items) ? (entry.food_items as unknown as any[]) : [];
+        // Migrate legacy name+portion to description, assign UIDs
+        const itemsWithIds: FoodItem[] = rawItems.map((item) => ({
+          // Migrate legacy format: if 'description' exists use it, else merge name+portion
+          description: item.description || (item.portion ? `${item.name} (${item.portion})` : (item.name || '')),
+          calories: item.calories || 0,
+          protein: item.protein || 0,
+          carbs: item.carbs || 0,
+          fat: item.fat || 0,
           uid: item.uid || crypto.randomUUID(),
         }));
         return {
