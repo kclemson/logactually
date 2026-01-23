@@ -19,18 +19,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    let initialCheckComplete = false;
 
-    // Listen for auth changes
+    // Listen for auth changes FIRST - this catches token refresh events
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+      initialCheckComplete = true;
       setLoading(false);
+    });
+
+    // Then check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      // If we got a session, we're done loading
+      if (session) {
+        setLoading(false);
+      } else {
+        // No session - wait briefly for potential token refresh via onAuthStateChange
+        // If it doesn't fire within 1 second, assume truly logged out
+        setTimeout(() => {
+          if (!initialCheckComplete) {
+            setLoading(false);
+          }
+        }, 1000);
+      }
     });
 
     return () => subscription.unsubscribe();
