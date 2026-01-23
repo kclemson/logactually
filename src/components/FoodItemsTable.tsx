@@ -59,12 +59,12 @@ export function FoodItemsTable({
     <div className="space-y-1">
       {/* Header row */}
       {showHeader && (
-        <div className={cn('grid gap-0.5 text-size-compact text-muted-foreground', gridCols)}>
-          <span className="px-2">Item</span>
-          <span className="px-1">Calories</span>
-          <span className="px-1">Protein</span>
-          <span className="px-1">Carbs</span>
-          <span className="px-1">Fat</span>
+        <div className={cn('grid gap-0.5 text-muted-foreground', gridCols)}>
+          <span className="text-size-compact px-2">Item</span>
+          <span className="text-size-compact px-1">Calories</span>
+          <span className="text-size-compact px-1">Protein</span>
+          <span className="text-size-compact px-1">Carbs</span>
+          <span className="text-size-compact px-1">Fat</span>
           {editable && <span></span>}
         </div>
       )}
