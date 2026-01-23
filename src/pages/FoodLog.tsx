@@ -134,10 +134,10 @@ const FoodLog = () => {
         // Entry is now empty, delete it
         deleteEntry.mutate(entryId, {
           onSuccess: () => {
-            // Sync display state after successful delete
+            // Sync display state after successful delete, preserve highlighting
             setItemsWithBaseline(allItems.filter(item => 
               !entries.find(e => e.id === entryId)?.food_items.includes(item)
-            ), null);
+            ), previousItems);
           },
         });
       } else {
@@ -154,8 +154,8 @@ const FoodLog = () => {
           },
           {
             onSuccess: () => {
-              // Mark changes as saved - display matches DB now
-              setItemsWithBaseline(displayItems, null);
+              // Keep previousItems to persist highlighting until next user action
+              setItemsWithBaseline(displayItems, previousItems);
             },
           }
         );
