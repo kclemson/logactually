@@ -116,7 +116,7 @@ const Trends = () => {
         {charts.map(({ key, label }) => (
           <Card key={key} className="text-center">
             <CardContent className="p-4">
-              <p className="text-stat">
+              <p className="text-title">
                 {averages[key as keyof typeof averages]}
               </p>
               <p className="text-size-compact text-muted-foreground">
