@@ -4,6 +4,7 @@ import { FoodEntry } from '@/types/food';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MacroSummary } from './MacroSummary';
+import { FoodItemsTable } from './FoodItemsTable';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -80,21 +81,13 @@ export function FoodEntryCard({ entry, onDelete }: FoodEntryCardProps) {
         </div>
 
         {expanded && entry.food_items.length > 0 && (
-          <div className="mt-3 space-y-2 border-t pt-3">
-            {entry.food_items.map((item, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between text-size-sm"
-              >
-                <div>
-                  <span className="font-medium">{item.name}</span>
-                  <span className="text-muted-foreground"> · {item.portion}</span>
-                </div>
-                <span className="text-muted-foreground">
-                  {item.calories} cal
-                </span>
-              </div>
-            ))}
+          <div className="mt-3 border-t pt-3">
+            <FoodItemsTable
+              items={entry.food_items}
+              editable={false}
+              showHeader={true}
+              showTotals={false}
+            />
           </div>
         )}
       </CardContent>
