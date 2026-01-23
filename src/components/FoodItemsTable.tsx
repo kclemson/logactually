@@ -214,7 +214,7 @@ export function FoodItemsTable({
                 contentEditable
                 suppressContentEditableWarning
                 title={item.description}
-                onBlur={(e) => {
+                onInput={(e) => {
                   const newDescription = e.currentTarget.textContent || '';
                   if (newDescription !== item.description) {
                     onUpdateItem?.(index, 'description', newDescription);
