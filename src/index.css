@@ -6,56 +6,37 @@
 All colors MUST be HSL.
 */
 
-@layer base {
-  :root {
-    /* Typography scale */
-    --text-2xs: 0.5625rem;   /* 9px - nav labels, units, tiny badges */
-    --text-xs: 0.625rem;     /* 10px - compact UI, data tables */
-    --text-sm: 0.75rem;      /* 12px - secondary text, captions */
-    --text-base: 0.875rem;   /* 14px - body text */
-    --text-lg: 1rem;         /* 16px - emphasis */
-    --text-xl: 1.25rem;      /* 20px - headings */
-    --text-2xl: 1.5rem;      /* 24px - large headings */
-  }
-}
-
 @layer components {
-  .text-body {
-    font-size: var(--text-base);
-    line-height: 1.5;
-  }
-  
-  .text-size-compact {
-    font-size: var(--text-xs);
-    line-height: 1.4;
-  }
-  
   .text-size-caption {
-    font-size: var(--text-2xs);
+    font-size: 0.5625rem;  /* 9px - units (g), tiny badges */
     line-height: 1.3;
   }
   
-  .text-size-sm {
-    font-size: var(--text-sm);
+  .text-size-compact {
+    font-size: 0.625rem;   /* 10px - data tables */
     line-height: 1.4;
   }
   
+  .text-size-sm {
+    font-size: 0.75rem;    /* 12px - secondary text */
+    line-height: 1.4;
+  }
+  
+  .text-body {
+    font-size: 0.875rem;   /* 14px - body text */
+    line-height: 1.5;
+  }
+  
   .text-heading {
-    font-size: var(--text-base);
+    font-size: 0.875rem;   /* 14px - section headings */
     line-height: 1.4;
     font-weight: 600;
   }
   
   .text-title {
-    font-size: var(--text-xl);
+    font-size: 1.125rem;   /* 18px - dialog titles (largest) */
     line-height: 1.3;
-    font-weight: 700;
-  }
-  
-  .text-stat {
-    font-size: var(--text-2xl);
-    line-height: 1.2;
-    font-weight: 700;
+    font-weight: 600;
   }
 }
 
