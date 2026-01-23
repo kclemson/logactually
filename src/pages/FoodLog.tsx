@@ -228,16 +228,12 @@ const FoodLog = () => {
   return (
     <div className="space-y-6">
       {/* Date Navigation Header */}
-      <div className="flex items-center justify-between">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={goToPreviousDay}
-        >
+      <div className="flex items-center justify-center gap-1">
+        <Button variant="ghost" size="icon" onClick={goToPreviousDay}>
           <ChevronLeft className="h-5 w-5" />
         </Button>
-        <div className="text-center">
-          <h2 className="text-heading">
+        <div className="text-center min-w-[180px]">
+          <h2 className="text-lg font-semibold">
             {isTodaySelected ? 'Today' : format(selectedDate, 'EEEE')}
           </h2>
           <p className="text-body text-muted-foreground">
