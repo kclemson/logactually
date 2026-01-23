@@ -11,7 +11,6 @@ import {
   subMonths,
   startOfWeek,
   endOfWeek,
-  isSameDay
 } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -114,63 +113,61 @@ const History = () => {
         </Button>
       </div>
 
+      {/* Week day headers */}
+      <div className="grid grid-cols-7 gap-1.5">
+        {weekDays.map((day) => (
+          <div
+            key={day}
+            className="py-1 text-center text-size-compact font-medium text-muted-foreground"
+          >
+            {day}
+          </div>
+        ))}
+      </div>
+
       {/* Calendar Grid */}
-      <div className="rounded-lg border bg-card">
-        {/* Week day headers */}
-        <div className="grid grid-cols-7 border-b">
-          {weekDays.map((day) => (
-            <div
-              key={day}
-              className="py-2 text-center text-size-compact font-medium text-muted-foreground"
+      <div className="grid grid-cols-7 gap-1.5">
+        {calendarDays.map((day, index) => {
+          const dateStr = format(day, 'yyyy-MM-dd');
+          const summary = summaryByDate.get(dateStr);
+          const isCurrentMonth = isSameMonth(day, currentMonth);
+          const isTodayDate = isToday(day);
+          const hasEntries = !!summary;
+
+          return (
+            <button
+              key={index}
+              onClick={() => handleDayClick(day)}
+              disabled={!isCurrentMonth}
+              className={cn(
+                "relative flex flex-col items-end justify-end p-2 min-h-[68px] rounded-xl transition-colors",
+                isCurrentMonth 
+                  ? "hover:bg-muted/50 cursor-pointer" 
+                  : "text-muted-foreground/30 cursor-default",
+                hasEntries && isCurrentMonth && "bg-rose-100 dark:bg-rose-900/20",
+                isTodayDate && !hasEntries && "bg-primary/10",
+                isTodayDate && hasEntries && "ring-2 ring-primary ring-inset",
+              )}
             >
-              {day}
-            </div>
-          ))}
-        </div>
-
-        {/* Calendar days */}
-        <div className="grid grid-cols-7">
-          {calendarDays.map((day, index) => {
-            const dateStr = format(day, 'yyyy-MM-dd');
-            const summary = summaryByDate.get(dateStr);
-            const isCurrentMonth = isSameMonth(day, currentMonth);
-            const isTodayDate = isToday(day);
-            const hasEntries = !!summary;
-
-            return (
-              <button
-                key={index}
-                onClick={() => handleDayClick(day)}
-                disabled={!isCurrentMonth}
+              {/* Calorie count in top-left */}
+              {hasEntries && isCurrentMonth && (
+                <span className="absolute top-1.5 left-2 text-size-caption text-rose-500 dark:text-rose-400 font-medium">
+                  {Math.round(summary.totalCalories)}
+                </span>
+              )}
+              
+              {/* Day number */}
+              <span
                 className={cn(
-                  "relative flex flex-col items-center justify-center p-2 min-h-[60px] border-b border-r transition-colors",
-                  "last:border-r-0 [&:nth-child(7n)]:border-r-0",
-                  isCurrentMonth 
-                    ? "hover:bg-muted/50 cursor-pointer" 
-                    : "text-muted-foreground/40 cursor-default",
-                  isTodayDate && "bg-primary/10",
+                  "text-body font-medium",
+                  isTodayDate && "text-primary font-semibold",
                 )}
               >
-                <span
-                  className={cn(
-                    "text-size-compact font-medium",
-                    isTodayDate && "text-primary font-semibold",
-                  )}
-                >
-                  {format(day, 'd')}
-                </span>
-                {hasEntries && isCurrentMonth && (
-                  <span className="text-size-caption text-muted-foreground mt-0.5">
-                    {Math.round(summary.totalCalories)}
-                  </span>
-                )}
-                {hasEntries && isCurrentMonth && (
-                  <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-primary" />
-                )}
-              </button>
-            );
-          })}
-        </div>
+                {format(day, 'd')}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {isLoading && (
@@ -178,18 +175,6 @@ const History = () => {
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         </div>
       )}
-
-      {/* Legend */}
-      <div className="flex items-center justify-center gap-4 text-size-compact text-muted-foreground">
-        <div className="flex items-center gap-1.5">
-          <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-          <span>Has entries</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-4 h-4 rounded bg-primary/10" />
-          <span>Today</span>
-        </div>
-      </div>
     </div>
   );
 };
