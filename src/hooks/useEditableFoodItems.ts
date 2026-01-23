@@ -5,21 +5,30 @@ const EDITABLE_FIELDS: EditableField[] = ['description', 'calories', 'protein', 
 
 export function useEditableFoodItems() {
   const [items, setItems] = useState<FoodItem[]>([]);
-  const [previousItems, setPreviousItems] = useState<FoodItem[] | null>(null);
+  const [newItemUids, setNewItemUids] = useState<Set<string>>(new Set());
   const [hasChanges, setHasChanges] = useState(false);
   // Cache original item values when user starts editing calories (to avoid compounding errors)
   const [calorieEditBaseline, setCalorieEditBaseline] = useState<Map<number, FoodItem>>(new Map());
 
-  // Imperatively set items with an optional baseline for highlighting
-  // This replaces the old useEffect sync pattern
-  const setItemsWithBaseline = useCallback((
-    newItems: FoodItem[],
-    baseline: FoodItem[] | null
-  ) => {
-    setItems(newItems);
-    setPreviousItems(baseline);
+  // Set items from DB, clearing new highlights and change state
+  const setItemsFromDB = useCallback((dbItems: FoodItem[]) => {
+    setItems(dbItems);
+    setNewItemUids(new Set());
     setHasChanges(false);
     setCalorieEditBaseline(new Map());
+  }, []);
+
+  // Add new items (from AI) and mark them for amber row highlighting
+  const addNewItems = useCallback((newItems: FoodItem[]) => {
+    const uids = new Set(newItems.map(item => item.uid));
+    setItems(prev => [...prev, ...newItems]);
+    setNewItemUids(uids);
+    // Note: Don't set hasChanges here - the DB mutation already saved these
+  }, []);
+
+  // Clear the "new" highlighting (e.g., when adding more items or on next action)
+  const clearNewHighlights = useCallback(() => {
+    setNewItemUids(new Set());
   }, []);
 
   const updateItem = useCallback((
@@ -27,11 +36,6 @@ export function useEditableFoodItems() {
     field: keyof FoodItem,
     value: string | number
   ) => {
-    // Capture original state on first edit for change highlighting
-    if (!hasChanges) {
-      setPreviousItems([...items]);
-    }
-
     setItems((prev) =>
       prev.map((item, i) => {
         if (i !== index) return item;
@@ -83,40 +87,35 @@ export function useEditableFoodItems() {
       })
     );
     setHasChanges(true);
-  }, [calorieEditBaseline, hasChanges, items]);
+  }, [calorieEditBaseline]);
 
   const removeItem = useCallback((index: number) => {
-    // Capture original state on first edit for change highlighting
-    if (!hasChanges) {
-      setPreviousItems([...items]);
-    }
     setItems((prev) => prev.filter((_, i) => i !== index));
-    setHasChanges(true);
-  }, [hasChanges, items]);
-
-  // Replace all items (e.g., after AI re-analysis), preserving previous for diff highlighting
-  const replaceItems = useCallback((newItems: FoodItem[]) => {
-    setItems((prev) => {
-      setPreviousItems([...prev]);
-      return newItems;
-    });
     setHasChanges(true);
   }, []);
 
-  // Mark changes as saved (keeps current items, clears change tracking)
+  // Replace all items (e.g., after AI re-analysis)
+  const replaceItems = useCallback((newItems: FoodItem[]) => {
+    setItems(newItems);
+    setHasChanges(true);
+  }, []);
+
+  // Mark changes as saved (clears change tracking but keeps new highlights)
   const markSaved = useCallback(() => {
-    setPreviousItems(null);
     setHasChanges(false);
+    setCalorieEditBaseline(new Map());
   }, []);
 
   return {
     items,
-    previousItems,
+    newItemUids,
     hasChanges,
     updateItem,
     removeItem,
     replaceItems,
-    setItemsWithBaseline,
+    setItemsFromDB,
+    addNewItems,
+    clearNewHighlights,
     markSaved,
   };
 }

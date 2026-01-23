@@ -96,34 +96,37 @@ const FoodLog = () => {
     };
   }, [entries]);
 
-  // Event-driven editing state
+  // Editing state with new clean architecture
   const { 
     items: displayItems,
-    previousItems,
+    newItemUids,
     hasChanges, 
     updateItem, 
     removeItem,
-    setItemsWithBaseline,
+    setItemsFromDB,
+    addNewItems,
+    clearNewHighlights,
+    markSaved,
   } = useEditableFoodItems();
 
   // Reset state when date changes
   useEffect(() => {
     if (lastLoadedDate !== dateStr) {
       setIsInitialized(false);
-      setItemsWithBaseline([], null);
+      setItemsFromDB([]);
       setLastLoadedDate(dateStr);
     }
-  }, [dateStr, lastLoadedDate, setItemsWithBaseline]);
+  }, [dateStr, lastLoadedDate, setItemsFromDB]);
 
   // Initialize display items from DB on first load (one-time, event-driven)
   if (!isInitialized && allItems.length > 0 && lastLoadedDate === dateStr) {
-    setItemsWithBaseline(allItems, null);
+    setItemsFromDB(allItems);
     setIsInitialized(true);
   }
 
   // Reset handler
   const handleResetChanges = () => {
-    setItemsWithBaseline(allItems, null);
+    setItemsFromDB(allItems);
   };
 
   // Calculate display totals based on current edit state
@@ -132,9 +135,6 @@ const FoodLog = () => {
   const handleSubmit = async (text: string) => {
     const result = await analyzeFood(text);
     if (result) {
-      // Capture current items as baseline BEFORE mutation for highlighting
-      const currentItems = [...displayItems];
-      
       const totals = calculateTotals(result.food_items);
       createEntry.mutate(
         {
@@ -148,9 +148,8 @@ const FoodLog = () => {
         },
         {
           onSuccess: () => {
-            // Update display with new items, using current as baseline for highlighting
-            const newItems = [...currentItems, ...result.food_items];
-            setItemsWithBaseline(newItems, currentItems);
+            // Add new items with amber row highlighting
+            addNewItems(result.food_items);
             foodInputRef.current?.clear();
           },
         }
@@ -187,10 +186,7 @@ const FoodLog = () => {
         // Entry is now empty, delete it
         deleteEntry.mutate(entryId, {
           onSuccess: () => {
-            // Sync display state after successful delete, preserve highlighting
-            setItemsWithBaseline(allItems.filter(item => 
-              !entries.find(e => e.id === entryId)?.food_items.includes(item)
-            ), previousItems);
+            markSaved();
           },
         });
       } else {
@@ -207,8 +203,7 @@ const FoodLog = () => {
           },
           {
             onSuccess: () => {
-              // Keep previousItems to persist highlighting until next user action
-              setItemsWithBaseline(displayItems, previousItems);
+              markSaved();
             },
           }
         );
@@ -219,7 +214,7 @@ const FoodLog = () => {
   const handleDeleteAll = () => {
     deleteAllByDate.mutate(dateStr, {
       onSuccess: () => {
-        setItemsWithBaseline([], null);
+        setItemsFromDB([]);
         setIsInitialized(false);
       },
     });
@@ -306,7 +301,7 @@ const FoodLog = () => {
             onUpdateItem={updateItem}
             onRemoveItem={removeItem}
             onDiscard={handleResetChanges}
-            previousItems={previousItems}
+            newItemUids={newItemUids}
             totals={displayTotals}
             totalsPosition="top"
             showTotals={true}
