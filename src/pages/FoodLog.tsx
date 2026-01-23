@@ -274,6 +274,7 @@ const FoodLog = () => {
           size="icon"
           onClick={goToNextDay}
           disabled={isTodaySelected}
+          className={isTodaySelected ? "opacity-20" : ""}
         >
           <ChevronRight className="h-5 w-5" />
         </Button>
