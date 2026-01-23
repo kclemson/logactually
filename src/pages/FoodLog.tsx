@@ -57,7 +57,8 @@ const FoodLog = () => {
 
   // Shared editing state for the main food log
   const { 
-    items: displayItems, 
+    items: displayItems,
+    previousItems,
     hasChanges, 
     updateItem, 
     removeItem, 
@@ -196,6 +197,7 @@ const FoodLog = () => {
               onUpdateItem={updateItem}
               onRemoveItem={removeItem}
               onDiscard={resetChanges}
+              previousItems={previousItems}
               totals={displayTotals}
               totalsPosition="top"
               showTotals={true}

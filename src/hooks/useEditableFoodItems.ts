@@ -25,6 +25,11 @@ export function useEditableFoodItems({ initialItems }: UseEditableFoodItemsOptio
     field: keyof FoodItem,
     value: string | number
   ) => {
+    // Capture original state on first edit for change highlighting
+    if (!hasChanges) {
+      setPreviousItems([...items]);
+    }
+
     setItems((prev) =>
       prev.map((item, i) => {
         if (i !== index) return item;
@@ -64,12 +69,16 @@ export function useEditableFoodItems({ initialItems }: UseEditableFoodItemsOptio
       })
     );
     setHasChanges(true);
-  }, [calorieEditBaseline]);
+  }, [calorieEditBaseline, hasChanges, items]);
 
   const removeItem = useCallback((index: number) => {
+    // Capture original state on first edit for change highlighting
+    if (!hasChanges) {
+      setPreviousItems([...items]);
+    }
     setItems((prev) => prev.filter((_, i) => i !== index));
     setHasChanges(true);
-  }, []);
+  }, [hasChanges, items]);
 
   // Replace all items (e.g., after AI re-analysis), preserving previous for diff highlighting
   const replaceItems = useCallback((newItems: FoodItem[]) => {
