@@ -203,7 +203,7 @@ const FoodLog = () => {
               </button>
               <button 
                 onClick={handleResetChanges}
-                className="flex items-center gap-1 px-2 py-1 rounded text-sm text-muted-foreground hover:bg-muted"
+                className="flex items-center gap-1 px-2 py-1 rounded text-sm text-red-600 hover:bg-red-100 dark:text-red-500 dark:hover:bg-red-900/30"
               >
                 <X className="h-4 w-4" />
                 <span>Cancel</span>
