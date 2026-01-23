@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Mic, MicOff, Send } from 'lucide-react';
+import { Mic, MicOff, Send, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -97,7 +97,10 @@ export function FoodInput({ onSubmit, isLoading, shouldClear, onCleared }: FoodI
           className="flex-1"
         >
         {isLoading ? (
-          'Adding...'
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Adding...
+          </>
         ) : (
           <>
             <Send className="mr-2 h-4 w-4" />
