@@ -10,7 +10,7 @@ import { FoodItem, calculateTotals } from '@/types/food';
 
 const FoodLog = () => {
   const today = format(new Date(), 'yyyy-MM-dd');
-  const { entries, createEntry, updateEntry, deleteEntry } = useFoodEntries(today);
+  const { entries, createEntry, updateEntry, deleteEntry, deleteAllByDate } = useFoodEntries(today);
   const { analyzeFood, isAnalyzing, error: analyzeError } = useAnalyzeFood();
 
   const [shouldClearInput, setShouldClearInput] = useState(false);
@@ -154,9 +154,7 @@ const FoodLog = () => {
   };
 
   const handleDeleteAll = () => {
-    entries.forEach(entry => {
-      deleteEntry.mutate(entry.id);
-    });
+    deleteAllByDate.mutate(today);
   };
 
   return (
