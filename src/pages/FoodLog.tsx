@@ -1,6 +1,7 @@
-import { useState, useMemo, useRef } from 'react';
-import { format } from 'date-fns';
-import { Check, X } from 'lucide-react';
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { format, addDays, subDays, isToday, parseISO } from 'date-fns';
+import { Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { FoodInput, FoodInputRef } from '@/components/FoodInput';
 import { FoodItemsTable } from '@/components/FoodItemsTable';
 import { Button } from '@/components/ui/button';
@@ -10,15 +11,57 @@ import { useEditableFoodItems } from '@/hooks/useEditableFoodItems';
 import { FoodItem, calculateTotals } from '@/types/food';
 
 const FoodLog = () => {
-  const today = format(new Date(), 'yyyy-MM-dd');
-  const { entries, createEntry, updateEntry, deleteEntry, deleteAllByDate } = useFoodEntries(today);
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Parse date from URL or default to today
+  const dateParam = searchParams.get('date');
+  const [selectedDate, setSelectedDate] = useState(() => {
+    if (dateParam) {
+      try {
+        return parseISO(dateParam);
+      } catch {
+        return new Date();
+      }
+    }
+    return new Date();
+  });
+
+  // Sync URL when date changes
+  useEffect(() => {
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    
+    if (dateStr === todayStr) {
+      // Remove date param when viewing today
+      if (searchParams.has('date')) {
+        searchParams.delete('date');
+        setSearchParams(searchParams, { replace: true });
+      }
+    } else {
+      // Set date param when viewing other days
+      if (searchParams.get('date') !== dateStr) {
+        setSearchParams({ date: dateStr }, { replace: true });
+      }
+    }
+  }, [selectedDate, searchParams, setSearchParams]);
+
+  const dateStr = format(selectedDate, 'yyyy-MM-dd');
+  const isTodaySelected = isToday(selectedDate);
+  
+  const { entries, createEntry, updateEntry, deleteEntry, deleteAllByDate } = useFoodEntries(dateStr);
   const { analyzeFood, isAnalyzing, error: analyzeError } = useAnalyzeFood();
   
   const foodInputRef = useRef<FoodInputRef>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [lastLoadedDate, setLastLoadedDate] = useState<string | null>(null);
+
+  // Navigation handlers
+  const goToPreviousDay = () => setSelectedDate(subDays(selectedDate, 1));
+  const goToNextDay = () => setSelectedDate(addDays(selectedDate, 1));
+  const goToToday = () => setSelectedDate(new Date());
 
   // Flatten all entries into a single items array with entry tracking
-  const { allItems, entryBoundaries, todaysTotals } = useMemo(() => {
+  const { allItems, entryBoundaries, dayTotals } = useMemo(() => {
     const items: FoodItem[] = [];
     const boundaries: { entryId: string; startIndex: number; endIndex: number }[] = [];
     let totalCalories = 0;
@@ -44,7 +87,7 @@ const FoodLog = () => {
     return {
       allItems: items,
       entryBoundaries: boundaries,
-      todaysTotals: {
+      dayTotals: {
         calories: totalCalories,
         protein: totalProtein,
         carbs: totalCarbs,
@@ -63,8 +106,17 @@ const FoodLog = () => {
     setItemsWithBaseline,
   } = useEditableFoodItems();
 
+  // Reset state when date changes
+  useEffect(() => {
+    if (lastLoadedDate !== dateStr) {
+      setIsInitialized(false);
+      setItemsWithBaseline([], null);
+      setLastLoadedDate(dateStr);
+    }
+  }, [dateStr, lastLoadedDate, setItemsWithBaseline]);
+
   // Initialize display items from DB on first load (one-time, event-driven)
-  if (!isInitialized && allItems.length > 0) {
+  if (!isInitialized && allItems.length > 0 && lastLoadedDate === dateStr) {
     setItemsWithBaseline(allItems, null);
     setIsInitialized(true);
   }
@@ -75,7 +127,7 @@ const FoodLog = () => {
   };
 
   // Calculate display totals based on current edit state
-  const displayTotals = hasChanges ? calculateTotals(displayItems) : todaysTotals;
+  const displayTotals = hasChanges ? calculateTotals(displayItems) : dayTotals;
 
   const handleSubmit = async (text: string) => {
     const result = await analyzeFood(text);
@@ -86,7 +138,7 @@ const FoodLog = () => {
       const totals = calculateTotals(result.food_items);
       createEntry.mutate(
         {
-          eaten_date: today,
+          eaten_date: dateStr,
           raw_input: text,
           food_items: result.food_items,
           total_calories: Math.round(totals.calories),
@@ -165,7 +217,7 @@ const FoodLog = () => {
   };
 
   const handleDeleteAll = () => {
-    deleteAllByDate.mutate(today, {
+    deleteAllByDate.mutate(dateStr, {
       onSuccess: () => {
         setItemsWithBaseline([], null);
         setIsInitialized(false);
@@ -175,6 +227,43 @@ const FoodLog = () => {
 
   return (
     <div className="space-y-6">
+      {/* Date Navigation Header */}
+      <div className="flex items-center justify-between">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={goToPreviousDay}
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </Button>
+        <div className="text-center">
+          <h2 className="text-heading">
+            {isTodaySelected ? 'Today' : format(selectedDate, 'EEEE')}
+          </h2>
+          <p className="text-body text-muted-foreground">
+            {format(selectedDate, 'MMMM d, yyyy')}
+          </p>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={goToNextDay}
+          disabled={isTodaySelected}
+        >
+          <ChevronRight className="h-5 w-5" />
+        </Button>
+      </div>
+
+      {/* Jump to Today button when viewing past dates */}
+      {!isTodaySelected && (
+        <div className="flex justify-center">
+          <Button variant="outline" size="sm" onClick={goToToday}>
+            Jump to Today
+          </Button>
+        </div>
+      )}
+
+      {/* Food Input Section */}
       <section>
         <FoodInput
           ref={foodInputRef}
@@ -188,9 +277,12 @@ const FoodLog = () => {
         )}
       </section>
 
+      {/* Food Items Section */}
       <section className="space-y-3">
         <div className="flex items-center gap-3">
-          <h2 className="text-heading">Today ({format(new Date(), 'M/d')})</h2>
+          <h2 className="text-heading">
+            {isTodaySelected ? `Today (${format(selectedDate, 'M/d')})` : format(selectedDate, 'EEEE (M/d)')}
+          </h2>
           
           {hasChanges && (
             <div className="flex items-center gap-2">
@@ -212,24 +304,24 @@ const FoodLog = () => {
           )}
         </div>
         {entries.length > 0 ? (
-          <>
-            <FoodItemsTable
-              items={displayItems}
-              editable={true}
-              onUpdateItem={updateItem}
-              onRemoveItem={removeItem}
-              onDiscard={handleResetChanges}
-              previousItems={previousItems}
-              totals={displayTotals}
-              totalsPosition="top"
-              showTotals={true}
-              onDeleteAll={handleDeleteAll}
-              hasChanges={hasChanges}
-              onSave={handleSaveChanges}
-            />
-          </>
+          <FoodItemsTable
+            items={displayItems}
+            editable={true}
+            onUpdateItem={updateItem}
+            onRemoveItem={removeItem}
+            onDiscard={handleResetChanges}
+            previousItems={previousItems}
+            totals={displayTotals}
+            totalsPosition="top"
+            showTotals={true}
+            onDeleteAll={handleDeleteAll}
+            hasChanges={hasChanges}
+            onSave={handleSaveChanges}
+          />
         ) : (
-          <p className="text-body text-muted-foreground">No entries yet today.</p>
+          <p className="text-body text-muted-foreground">
+            {isTodaySelected ? 'No entries yet today.' : 'No entries for this day.'}
+          </p>
         )}
       </section>
     </div>
