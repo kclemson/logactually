@@ -186,7 +186,7 @@ export function FoodItemsTable({
                 />
                 <Input
                   type="number"
-                  value={item.protein}
+                  value={Math.round(item.protein)}
                   onChange={(e) => onUpdateItem?.(index, 'protein', Number(e.target.value))}
                   className={cn(
                     "h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
@@ -195,7 +195,7 @@ export function FoodItemsTable({
                 />
                 <Input
                   type="number"
-                  value={item.carbs}
+                  value={Math.round(item.carbs)}
                   onChange={(e) => onUpdateItem?.(index, 'carbs', Number(e.target.value))}
                   className={cn(
                     "h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
@@ -204,7 +204,7 @@ export function FoodItemsTable({
                 />
                 <Input
                   type="number"
-                  value={item.fat}
+                  value={Math.round(item.fat)}
                   onChange={(e) => onUpdateItem?.(index, 'fat', Number(e.target.value))}
                   className={cn(
                     "h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
@@ -215,9 +215,9 @@ export function FoodItemsTable({
             ) : (
               <>
                 <span className="text-size-compact px-1 py-1 text-muted-foreground">{item.calories}</span>
-                <span className="text-size-compact px-1 py-1 text-muted-foreground">{item.protein}</span>
-                <span className="text-size-compact px-1 py-1 text-muted-foreground">{item.carbs}</span>
-                <span className="text-size-compact px-1 py-1 text-muted-foreground">{item.fat}</span>
+                <span className="text-size-compact px-1 py-1 text-muted-foreground">{Math.round(item.protein)}</span>
+                <span className="text-size-compact px-1 py-1 text-muted-foreground">{Math.round(item.carbs)}</span>
+                <span className="text-size-compact px-1 py-1 text-muted-foreground">{Math.round(item.fat)}</span>
               </>
             )}
 
