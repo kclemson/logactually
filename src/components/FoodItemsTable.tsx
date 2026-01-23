@@ -34,6 +34,7 @@ interface FoodItemsTableProps {
   totals?: DailyTotals;
   entryBoundaries?: EntryBoundary[];
   onDeleteEntry?: (entryId: string) => void;
+  onDeleteAll?: () => void;
 }
 
 export function FoodItemsTable({
@@ -49,6 +50,7 @@ export function FoodItemsTable({
   totals: externalTotals,
   entryBoundaries,
   onDeleteEntry,
+  onDeleteAll,
 }: FoodItemsTableProps) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape' && onDiscard) {
@@ -110,7 +112,7 @@ export function FoodItemsTable({
 
   const TotalsRow = () => (
     <div className={cn(
-      'grid gap-0.5 items-center text-body font-semibold',
+      'grid gap-0.5 items-center text-body font-semibold group',
       totalsPosition === 'top' && 'bg-muted/30 rounded py-1',
       totalsPosition === 'bottom' && 'pt-1 border-t text-muted-foreground',
       gridCols
@@ -120,7 +122,40 @@ export function FoodItemsTable({
       <span className="px-1">{Math.round(totals.protein)}</span>
       <span className="px-1">{Math.round(totals.carbs)}</span>
       <span className="px-1">{Math.round(totals.fat)}</span>
-      {(editable || hasEntryDeletion) && <span></span>}
+      {(editable || hasEntryDeletion) && (
+        onDeleteAll ? (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-muted-foreground hover:text-destructive md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete all entries?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently remove all food entries for today.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={onDeleteAll}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Delete All
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        ) : (
+          <span></span>
+        )
+      )}
     </div>
   );
 
