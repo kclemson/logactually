@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { FoodInput } from '@/components/FoodInput';
 import { FoodItemsTable } from '@/components/FoodItemsTable';
-import { AIResults } from '@/components/AIResults';
 import { Button } from '@/components/ui/button';
 import { useAnalyzeFood } from '@/hooks/useAnalyzeFood';
 import { useFoodEntries } from '@/hooks/useFoodEntries';
@@ -14,9 +13,6 @@ const FoodLog = () => {
   const { entries, createEntry, updateEntry, deleteEntry } = useFoodEntries(today);
   const { analyzeFood, isAnalyzing, error: analyzeError } = useAnalyzeFood();
 
-  const [showModal, setShowModal] = useState(false);
-  const [pendingItems, setPendingItems] = useState<FoodItem[]>([]);
-  const [pendingRawInput, setPendingRawInput] = useState('');
   const [shouldClearInput, setShouldClearInput] = useState(false);
 
   // Flatten all entries into a single items array with entry tracking
@@ -71,38 +67,18 @@ const FoodLog = () => {
   const handleSubmit = async (text: string) => {
     const result = await analyzeFood(text);
     if (result) {
-      setPendingItems(result.food_items);
-      setPendingRawInput(text);
-      setShowModal(true);
+      const totals = calculateTotals(result.food_items);
+      createEntry.mutate({
+        eaten_date: today,
+        raw_input: text,
+        food_items: result.food_items,
+        total_calories: Math.round(totals.calories),
+        total_protein: Math.round(totals.protein * 10) / 10,
+        total_carbs: Math.round(totals.carbs * 10) / 10,
+        total_fat: Math.round(totals.fat * 10) / 10,
+      });
+      setShouldClearInput(true);
     }
-  };
-
-  const handleReanalyze = async (
-    additionalContext: string,
-    currentItems: FoodItem[]
-  ): Promise<FoodItem[] | null> => {
-    const result = await analyzeFood(pendingRawInput, additionalContext, currentItems);
-    if (result) {
-      setPendingItems(result.food_items);
-      return result.food_items;
-    }
-    return null;
-  };
-
-  const handleConfirm = (items: FoodItem[]) => {
-    const totals = calculateTotals(items);
-    createEntry.mutate({
-      eaten_date: today,
-      raw_input: pendingRawInput,
-      food_items: items,
-      total_calories: Math.round(totals.calories),
-      total_protein: Math.round(totals.protein * 10) / 10,
-      total_carbs: Math.round(totals.carbs * 10) / 10,
-      total_fat: Math.round(totals.fat * 10) / 10,
-    });
-    setPendingItems([]);
-    setPendingRawInput('');
-    setShouldClearInput(true);
   };
 
   // Save edits by mapping flat items back to their original entries
@@ -168,25 +144,6 @@ const FoodLog = () => {
         )}
       </section>
 
-      {pendingItems.length > 0 && !showModal && (
-        <section className="rounded-lg border border-accent bg-accent/20 p-4 space-y-2">
-          <p className="text-body font-medium">You have unsaved food analysis:</p>
-          <p className="text-size-compact text-muted-foreground">"{pendingRawInput}"</p>
-          <div className="flex gap-2">
-            <Button size="sm" onClick={() => setShowModal(true)}>
-              Review
-            </Button>
-            <Button 
-              size="sm" 
-              variant="ghost" 
-              onClick={() => { setPendingItems([]); setPendingRawInput(''); }}
-            >
-              Discard
-            </Button>
-          </div>
-        </section>
-      )}
-
       <section className="space-y-3">
         <h2 className="text-heading">Today ({format(new Date(), 'M/d')})</h2>
         {entries.length > 0 ? (
@@ -217,18 +174,6 @@ const FoodLog = () => {
           <p className="text-body text-muted-foreground">No entries yet today.</p>
         )}
       </section>
-
-      {showModal && (
-        <AIResults
-          open={showModal}
-          onOpenChange={setShowModal}
-          foodItems={pendingItems}
-          rawInput={pendingRawInput}
-          onConfirm={handleConfirm}
-          onReanalyze={handleReanalyze}
-          isReanalyzing={isAnalyzing}
-        />
-      )}
     </div>
   );
 };
