@@ -162,26 +162,7 @@ export function FoodItemsTable({
       {/* Header row */}
       {showHeader && (
         <div className={cn('grid gap-0.5 text-muted-foreground items-center', gridCols)}>
-          <span className="text-size-compact px-2 flex items-center gap-1">
-            {hasChanges && (
-              <>
-                <button 
-                  onClick={onSave}
-                  className="p-0.5 rounded hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600 dark:text-green-500"
-                  title="Save changes"
-                >
-                  <Check className="h-4 w-4" />
-                </button>
-                <button 
-                  onClick={onDiscard}
-                  className="p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500"
-                  title="Discard changes"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </>
-            )}
-          </span>
+          <span className="text-size-compact px-2"></span>
           <span className="text-size-compact px-1">Calories</span>
           <span className="text-size-compact px-1">Protein</span>
           <span className="text-size-compact px-1">Carbs</span>
