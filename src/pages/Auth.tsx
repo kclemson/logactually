@@ -1,18 +1,12 @@
-import { forwardRef, useState } from 'react';
+import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 
-const Auth = forwardRef<HTMLDivElement>((_, ref) => {
+export default function Auth() {
   const { user, signUp, signIn, loading } = useAuth();
   const { toast } = useToast();
   const [isSignUp, setIsSignUp] = useState(false);
@@ -23,10 +17,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
 
   if (loading) {
     return (
-      <div
-        ref={ref}
-        className="flex min-h-screen items-center justify-center bg-background"
-      >
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     );
@@ -50,7 +41,7 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
       return;
     }
 
-    const { error } = isSignUp
+    const { error } = isSignUp 
       ? await signUp(email, password)
       : await signIn(email, password);
 
@@ -71,19 +62,17 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
   };
 
   return (
-    <div
-      ref={ref}
-      className="flex min-h-screen items-center justify-center bg-background px-4"
-    >
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-title">
             {isSignUp ? 'Create Account' : 'Welcome Back'}
           </CardTitle>
           <CardDescription>
-            {isSignUp
+            {isSignUp 
               ? 'Sign up to start tracking your nutrition'
-              : 'Sign in to continue tracking your nutrition'}
+              : 'Sign in to continue tracking your nutrition'
+            }
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -136,8 +125,4 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
       </Card>
     </div>
   );
-});
-
-Auth.displayName = 'Auth';
-
-export default Auth;
+}

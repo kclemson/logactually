@@ -1,4 +1,4 @@
-import { forwardRef, useMemo } from 'react';
+import { useMemo } from 'react';
 import { format } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,7 +6,7 @@ import { FoodEntry, FoodItem } from '@/types/food';
 import { FoodEntryCard } from '@/components/FoodEntryCard';
 import { useFoodEntries } from '@/hooks/useFoodEntries';
 
-const History = forwardRef<HTMLDivElement>((_, ref) => {
+const History = () => {
   const { deleteEntry } = useFoodEntries();
 
   const { data: entries = [], isLoading } = useQuery({
@@ -43,7 +43,7 @@ const History = forwardRef<HTMLDivElement>((_, ref) => {
 
   if (isLoading) {
     return (
-      <div ref={ref} className="flex justify-center py-8">
+      <div className="flex justify-center py-8">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     );
@@ -51,14 +51,14 @@ const History = forwardRef<HTMLDivElement>((_, ref) => {
 
   if (entries.length === 0) {
     return (
-      <div ref={ref} className="py-8 text-center text-muted-foreground">
+      <div className="py-8 text-center text-muted-foreground">
         No entries yet. Start logging your food!
       </div>
     );
   }
 
   return (
-    <div ref={ref} className="space-y-6">
+    <div className="space-y-6">
       {groupedEntries.map(([date, dayEntries]) => {
         const dayTotals = dayEntries.reduce(
           (acc, entry) => ({
@@ -71,7 +71,9 @@ const History = forwardRef<HTMLDivElement>((_, ref) => {
         return (
           <section key={date} className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-heading">{format(new Date(date), 'EEEE, MMMM d')}</h2>
+              <h2 className="text-heading">
+                {format(new Date(date), 'EEEE, MMMM d')}
+              </h2>
               <span className="text-size-compact text-muted-foreground">
                 {Math.round(dayTotals.calories)} cal
               </span>
@@ -88,8 +90,6 @@ const History = forwardRef<HTMLDivElement>((_, ref) => {
       })}
     </div>
   );
-});
-
-History.displayName = 'History';
+};
 
 export default History;
