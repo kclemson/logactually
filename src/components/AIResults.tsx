@@ -9,6 +9,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Trash2 } from 'lucide-react';
 
 interface AIResultsProps {
@@ -75,69 +81,82 @@ export function AIResults({
         </DialogHeader>
 
         <div className="space-y-4">
-          <p className="text-secondary italic">{rawInput}</p>
+          <p className="text-secondary italic text-foreground">{rawInput}</p>
 
           <div className="space-y-1">
             {/* Header row */}
-            <div className="grid grid-cols-[1fr_48px_40px_40px_40px_28px] gap-1 text-caption text-muted-foreground">
+            <div className="grid grid-cols-[1fr_60px_52px_48px_36px_28px] gap-1 text-caption text-muted-foreground">
               <span className="px-2">Item</span>
-              <span className="px-1">Cal</span>
-              <span className="px-1">P</span>
-              <span className="px-1">C</span>
-              <span className="px-1">F</span>
+              <span className="px-1">Calories</span>
+              <span className="px-1">Protein</span>
+              <span className="px-1">Carbs</span>
+              <span className="px-1">Fat</span>
               <span></span>
             </div>
             
             {/* Data rows */}
-            {items.map((item, index) => (
-              <div
-                key={index}
-                className="grid grid-cols-[1fr_48px_40px_40px_40px_28px] gap-1 items-start"
-              >
-                <textarea
-                  value={`${item.name}${item.portion ? ` (${item.portion})` : ''}`}
-                  onChange={(e) => updateItem(index, 'name', e.target.value)}
-                  className="min-h-7 text-compact px-2 py-1.5 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50 focus:outline-none resize-none overflow-hidden leading-tight"
-                  rows={2}
-                  title={`${item.name} - ${item.portion}`}
-                />
-                <Input
-                  type="number"
-                  value={item.calories}
-                  onChange={(e) => updateItem(index, 'calories', Number(e.target.value))}
-                  className="h-7 text-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50"
-                />
-                <Input
-                  type="number"
-                  value={item.protein}
-                  onChange={(e) => updateItem(index, 'protein', Number(e.target.value))}
-                  className="h-7 text-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50"
-                />
-                <Input
-                  type="number"
-                  value={item.carbs}
-                  onChange={(e) => updateItem(index, 'carbs', Number(e.target.value))}
-                  className="h-7 text-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50"
-                />
-                <Input
-                  type="number"
-                  value={item.fat}
-                  onChange={(e) => updateItem(index, 'fat', Number(e.target.value))}
-                  className="h-7 text-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50"
-                />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeItem(index)}
-                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              </div>
-            ))}
+            <TooltipProvider>
+              {items.map((item, index) => {
+                const displayText = `${item.name}${item.portion ? ` (${item.portion})` : ''}`;
+                return (
+                  <div
+                    key={index}
+                    className="grid grid-cols-[1fr_60px_52px_48px_36px_28px] gap-1 items-start"
+                  >
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div
+                          contentEditable
+                          suppressContentEditableWarning
+                          onBlur={(e) => updateItem(index, 'name', e.currentTarget.textContent || '')}
+                          className="text-compact px-2 py-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50 focus:outline-none line-clamp-2 cursor-text"
+                        >
+                          {displayText}
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[300px]">
+                        <p>{displayText}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Input
+                      type="number"
+                      value={item.calories}
+                      onChange={(e) => updateItem(index, 'calories', Number(e.target.value))}
+                      className="h-7 !text-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50"
+                    />
+                    <Input
+                      type="number"
+                      value={item.protein}
+                      onChange={(e) => updateItem(index, 'protein', Number(e.target.value))}
+                      className="h-7 !text-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50"
+                    />
+                    <Input
+                      type="number"
+                      value={item.carbs}
+                      onChange={(e) => updateItem(index, 'carbs', Number(e.target.value))}
+                      className="h-7 !text-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50"
+                    />
+                    <Input
+                      type="number"
+                      value={item.fat}
+                      onChange={(e) => updateItem(index, 'fat', Number(e.target.value))}
+                      className="h-7 !text-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeItem(index)}
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                );
+              })}
+            </TooltipProvider>
 
             {/* Totals row - aligned with columns */}
-            <div className="grid grid-cols-[1fr_48px_40px_40px_40px_28px] gap-1 items-center pt-1 border-t text-compact font-medium text-muted-foreground">
+            <div className="grid grid-cols-[1fr_60px_52px_48px_36px_28px] gap-1 items-center pt-1 border-t !text-compact font-medium text-muted-foreground">
               <span className="px-2">Total</span>
               <span className="px-1">{Math.round(totals.calories)}</span>
               <span className="px-1">{Math.round(totals.protein)}</span>
