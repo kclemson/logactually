@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef } from 'react';
 import { format } from 'date-fns';
+import { Check, X } from 'lucide-react';
 import { FoodInput, FoodInputRef } from '@/components/FoodInput';
 import { FoodItemsTable } from '@/components/FoodItemsTable';
 import { Button } from '@/components/ui/button';
@@ -188,7 +189,28 @@ const FoodLog = () => {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-heading">Today ({format(new Date(), 'M/d')})</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-heading">Today ({format(new Date(), 'M/d')})</h2>
+          
+          {hasChanges && (
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={handleSaveChanges}
+                className="flex items-center gap-1 px-2 py-1 rounded text-sm text-green-600 hover:bg-green-100 dark:text-green-500 dark:hover:bg-green-900/30"
+              >
+                <Check className="h-4 w-4" />
+                <span>Save</span>
+              </button>
+              <button 
+                onClick={handleResetChanges}
+                className="flex items-center gap-1 px-2 py-1 rounded text-sm text-muted-foreground hover:bg-muted"
+              >
+                <X className="h-4 w-4" />
+                <span>Cancel</span>
+              </button>
+            </div>
+          )}
+        </div>
         {entries.length > 0 ? (
           <>
             <FoodItemsTable
