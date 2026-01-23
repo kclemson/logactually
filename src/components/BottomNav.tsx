@@ -11,8 +11,8 @@ const navItems = [
 
 export function BottomNav() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background">
-      <div className="mx-auto flex max-w-lg items-center justify-around">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background md:static md:z-auto">
+      <div className="mx-auto flex max-w-lg items-center justify-around md:max-w-2xl">
         {navItems.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
