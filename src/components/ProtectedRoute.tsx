@@ -25,7 +25,8 @@ export const ProtectedRoute = forwardRef<HTMLDivElement, ProtectedRouteProps>(
       return <Navigate to="/auth" replace />;
     }
 
-    return <>{children}</>;
+    // Wrap children in a div to properly forward the ref
+    return <div ref={ref}>{children}</div>;
   }
 );
 
