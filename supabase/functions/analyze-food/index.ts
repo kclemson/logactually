@@ -30,7 +30,7 @@ serve(async (req) => {
   }
 
   try {
-    const { rawInput, additionalContext } = await req.json();
+    const { rawInput, additionalContext, currentItems } = await req.json();
 
     if (!rawInput || typeof rawInput !== 'string') {
       return new Response(
@@ -43,8 +43,36 @@ serve(async (req) => {
     if (additionalContext) {
       console.log('Additional context:', additionalContext);
     }
+    if (currentItems) {
+      console.log('Current items for correction:', JSON.stringify(currentItems));
+    }
 
-    const prompt = `You are a nutrition expert. Analyze the following food description and extract individual food items with their nutritional information.
+    // Use correction prompt when currentItems is provided (fix mode)
+    // Use fresh analysis prompt otherwise (initial analysis)
+    const prompt = currentItems && Array.isArray(currentItems) && currentItems.length > 0
+      ? `You are a nutrition expert helping to correct a food entry.
+
+Original description: "${rawInput}"
+
+Current parsed items:
+${JSON.stringify(currentItems, null, 2)}
+
+User's correction request: "${additionalContext}"
+
+IMPORTANT RULES:
+1. ONLY modify the specific item(s) mentioned in the correction request
+2. Keep ALL other items EXACTLY as they are - same names, portions, and nutritional values
+3. If the correction adds a new item, add it to the list
+4. If the correction removes an item, remove it from the list
+5. Preserve the exact order of unchanged items
+
+Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
+{
+  "food_items": [
+    { "name": "Food name", "portion": "portion size", "calories": 0, "protein": 0, "carbs": 0, "fat": 0 }
+  ]
+}`
+      : `You are a nutrition expert. Analyze the following food description and extract individual food items with their nutritional information.
 
 Food description: "${rawInput}"
 ${additionalContext ? `Additional context: "${additionalContext}"` : ''}

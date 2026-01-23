@@ -40,8 +40,11 @@ const FoodLog = () => {
     }
   };
 
-  const handleReanalyze = async (additionalContext: string): Promise<FoodItem[] | null> => {
-    const result = await analyzeFood(pendingRawInput, additionalContext);
+  const handleReanalyze = async (
+    additionalContext: string,
+    currentItems: FoodItem[]
+  ): Promise<FoodItem[] | null> => {
+    const result = await analyzeFood(pendingRawInput, additionalContext, currentItems);
     if (result) {
       setPendingItems(result.food_items);
       return result.food_items;

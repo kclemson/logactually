@@ -24,7 +24,7 @@ interface AIResultsProps {
   foodItems: FoodItem[];
   rawInput: string;
   onConfirm: (items: FoodItem[]) => void;
-  onReanalyze: (additionalContext: string) => Promise<FoodItem[] | null>;
+  onReanalyze: (additionalContext: string, currentItems: FoodItem[]) => Promise<FoodItem[] | null>;
   isReanalyzing?: boolean;
 }
 
@@ -41,9 +41,23 @@ export function AIResults({
   const [previousItems, setPreviousItems] = useState<FoodItem[] | null>(null);
   const [fixContext, setFixContext] = useState('');
 
-  const isChanged = (index: number, field: keyof FoodItem): boolean => {
-    if (!previousItems || !previousItems[index]) return false;
-    return previousItems[index][field] !== items[index][field];
+  const isChanged = (itemName: string, field: keyof FoodItem): boolean => {
+    if (!previousItems) return false;
+    
+    const normalizedName = itemName.toLowerCase().trim();
+    const prevItem = previousItems.find(
+      p => p.name.toLowerCase().trim() === normalizedName
+    );
+    
+    // New item = highlight everything
+    if (!prevItem) return true;
+    
+    const currentItem = items.find(
+      i => i.name.toLowerCase().trim() === normalizedName
+    );
+    if (!currentItem) return false;
+    
+    return prevItem[field] !== currentItem[field];
   };
 
   const updateItem = (
@@ -72,7 +86,7 @@ export function AIResults({
   const handleFix = async () => {
     if (fixContext.trim()) {
       const oldItems = [...items];
-      const newItems = await onReanalyze(fixContext.trim());
+      const newItems = await onReanalyze(fixContext.trim(), items);
       if (newItems) {
         setPreviousItems(oldItems);
         setItems(newItems);
@@ -123,7 +137,7 @@ export function AIResults({
                           onBlur={(e) => updateItem(index, 'name', e.currentTarget.textContent || '')}
                           className={cn(
                             "text-size-compact px-2 py-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50 focus:outline-none line-clamp-2 cursor-text rounded",
-                            isChanged(index, 'name') && "bg-amber-100 dark:bg-amber-900/30"
+                            isChanged(item.name, 'name') && "bg-amber-100 dark:bg-amber-900/30"
                           )}
                         >
                           {displayText}
@@ -139,7 +153,7 @@ export function AIResults({
                       onChange={(e) => updateItem(index, 'calories', Number(e.target.value))}
                       className={cn(
                         "h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
-                        isChanged(index, 'calories') && "bg-amber-100 dark:bg-amber-900/30"
+                        isChanged(item.name, 'calories') && "bg-amber-100 dark:bg-amber-900/30"
                       )}
                     />
                     <Input
@@ -148,7 +162,7 @@ export function AIResults({
                       onChange={(e) => updateItem(index, 'protein', Number(e.target.value))}
                       className={cn(
                         "h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
-                        isChanged(index, 'protein') && "bg-amber-100 dark:bg-amber-900/30"
+                        isChanged(item.name, 'protein') && "bg-amber-100 dark:bg-amber-900/30"
                       )}
                     />
                     <Input
@@ -157,7 +171,7 @@ export function AIResults({
                       onChange={(e) => updateItem(index, 'carbs', Number(e.target.value))}
                       className={cn(
                         "h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
-                        isChanged(index, 'carbs') && "bg-amber-100 dark:bg-amber-900/30"
+                        isChanged(item.name, 'carbs') && "bg-amber-100 dark:bg-amber-900/30"
                       )}
                     />
                     <Input
@@ -166,7 +180,7 @@ export function AIResults({
                       onChange={(e) => updateItem(index, 'fat', Number(e.target.value))}
                       className={cn(
                         "h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
-                        isChanged(index, 'fat') && "bg-amber-100 dark:bg-amber-900/30"
+                        isChanged(item.name, 'fat') && "bg-amber-100 dark:bg-amber-900/30"
                       )}
                     />
                     <Button
