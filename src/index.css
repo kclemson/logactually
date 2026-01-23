@@ -19,7 +19,7 @@ All colors MUST be HSL.
   
   
   .text-body {
-    font-size: 0.875rem;   /* 14px - body text */
+    font-size: 0.75rem;   /* 12px - body text */
     line-height: 1.5;
   }
   
