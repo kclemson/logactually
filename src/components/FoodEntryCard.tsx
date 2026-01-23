@@ -39,7 +39,7 @@ export function FoodEntryCard({ entry, onDelete }: FoodEntryCardProps) {
           onClick={() => setExpanded(!expanded)}
         >
           <div className="flex-1">
-            <p className="text-secondary text-muted-foreground line-clamp-1">
+            <p className="text-size-sm text-muted-foreground line-clamp-1">
               {entry.raw_input || 'No description'}
             </p>
             <MacroSummary totals={totals} size="sm" />
@@ -84,7 +84,7 @@ export function FoodEntryCard({ entry, onDelete }: FoodEntryCardProps) {
             {entry.food_items.map((item, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between text-secondary"
+                className="flex items-center justify-between text-size-sm"
               >
                 <div>
                   <span className="font-medium">{item.name}</span>
