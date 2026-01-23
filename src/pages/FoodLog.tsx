@@ -119,7 +119,7 @@ const FoodLog = () => {
             <Button 
               size="sm" 
               variant="ghost" 
-              onClick={() => { setPendingItems([]); setPendingRawInput(''); setShouldClearInput(true); }}
+              onClick={() => { setPendingItems([]); setPendingRawInput(''); }}
             >
               Discard
             </Button>
