@@ -195,6 +195,7 @@ const FoodLog = () => {
               editable={true}
               onUpdateItem={updateItem}
               onRemoveItem={removeItem}
+              onDiscard={resetChanges}
               totals={displayTotals}
               totalsPosition="top"
               showTotals={true}

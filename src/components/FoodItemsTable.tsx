@@ -26,6 +26,7 @@ interface FoodItemsTableProps {
   editable?: boolean;
   onUpdateItem?: (index: number, field: keyof FoodItem, value: string | number) => void;
   onRemoveItem?: (index: number) => void;
+  onDiscard?: () => void;
   previousItems?: FoodItem[] | null;
   showHeader?: boolean;
   showTotals?: boolean;
@@ -40,6 +41,7 @@ export function FoodItemsTable({
   editable = false,
   onUpdateItem,
   onRemoveItem,
+  onDiscard,
   previousItems,
   showHeader = true,
   showTotals = true,
@@ -48,6 +50,12 @@ export function FoodItemsTable({
   entryBoundaries,
   onDeleteEntry,
 }: FoodItemsTableProps) {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape' && onDiscard) {
+      onDiscard();
+      (e.target as HTMLElement).blur();
+    }
+  };
   const isChanged = (itemName: string, field: keyof FoodItem): boolean => {
     if (!previousItems) return false;
     
@@ -156,6 +164,7 @@ export function FoodItemsTable({
                 suppressContentEditableWarning
                 title={displayText}
                 onBlur={(e) => onUpdateItem?.(index, 'name', e.currentTarget.textContent || '')}
+                onKeyDown={handleKeyDown}
                 className={cn(
                   "text-size-compact px-2 py-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50 focus:outline-none line-clamp-2 cursor-text rounded",
                   isChanged(item.name, 'name') && "bg-amber-100 dark:bg-amber-900/30"
@@ -179,6 +188,7 @@ export function FoodItemsTable({
                   type="number"
                   value={item.calories}
                   onChange={(e) => onUpdateItem?.(index, 'calories', Number(e.target.value))}
+                  onKeyDown={handleKeyDown}
                   className={cn(
                     "h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
                     isChanged(item.name, 'calories') && "bg-amber-100 dark:bg-amber-900/30"
@@ -188,6 +198,7 @@ export function FoodItemsTable({
                   type="number"
                   value={Math.round(item.protein)}
                   onChange={(e) => onUpdateItem?.(index, 'protein', Number(e.target.value))}
+                  onKeyDown={handleKeyDown}
                   className={cn(
                     "h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
                     isChanged(item.name, 'protein') && "bg-amber-100 dark:bg-amber-900/30"
@@ -197,6 +208,7 @@ export function FoodItemsTable({
                   type="number"
                   value={Math.round(item.carbs)}
                   onChange={(e) => onUpdateItem?.(index, 'carbs', Number(e.target.value))}
+                  onKeyDown={handleKeyDown}
                   className={cn(
                     "h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
                     isChanged(item.name, 'carbs') && "bg-amber-100 dark:bg-amber-900/30"
@@ -206,6 +218,7 @@ export function FoodItemsTable({
                   type="number"
                   value={Math.round(item.fat)}
                   onChange={(e) => onUpdateItem?.(index, 'fat', Number(e.target.value))}
+                  onKeyDown={handleKeyDown}
                   className={cn(
                     "h-7 !text-size-compact px-1 border-0 bg-transparent hover:bg-muted/50 focus:bg-muted/50",
                     isChanged(item.name, 'fat') && "bg-amber-100 dark:bg-amber-900/30"
