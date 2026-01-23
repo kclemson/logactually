@@ -1,8 +1,14 @@
-import { FoodItem, calculateTotals } from '@/types/food';
+import { FoodItem, DailyTotals, calculateTotals } from '@/types/food';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+interface EntryBoundary {
+  entryId: string;
+  startIndex: number;
+  endIndex: number;
+}
 
 interface FoodItemsTableProps {
   items: FoodItem[];
@@ -12,6 +18,10 @@ interface FoodItemsTableProps {
   previousItems?: FoodItem[] | null;
   showHeader?: boolean;
   showTotals?: boolean;
+  totalsPosition?: 'top' | 'bottom';
+  totals?: DailyTotals;
+  entryBoundaries?: EntryBoundary[];
+  onDeleteEntry?: (entryId: string) => void;
 }
 
 export function FoodItemsTable({
@@ -22,6 +32,10 @@ export function FoodItemsTable({
   previousItems,
   showHeader = true,
   showTotals = true,
+  totalsPosition = 'bottom',
+  totals: externalTotals,
+  entryBoundaries,
+  onDeleteEntry,
 }: FoodItemsTableProps) {
   const isChanged = (itemName: string, field: keyof FoodItem): boolean => {
     if (!previousItems) return false;
@@ -42,12 +56,54 @@ export function FoodItemsTable({
     return prevItem[field] !== currentItem[field];
   };
 
-  const totals = calculateTotals(items);
+  const calculatedTotals = calculateTotals(items);
+  const totals = externalTotals || calculatedTotals;
 
-  // Grid columns: with delete button vs without
-  const gridCols = editable
-    ? 'grid-cols-[1fr_56px_50px_44px_32px_24px]'
-    : 'grid-cols-[1fr_56px_50px_44px_32px]';
+  // Determine if we're in entry-delete mode (grouped items with entry deletion)
+  const hasEntryDeletion = entryBoundaries && onDeleteEntry;
+
+  // Grid columns based on mode
+  const getGridCols = (showDelete: boolean) => {
+    if (showDelete) {
+      return 'grid-cols-[1fr_56px_50px_44px_32px_24px]';
+    }
+    return 'grid-cols-[1fr_56px_50px_44px_32px]';
+  };
+
+  // For entry-deletion mode, check if this index is the last item in its entry
+  const isLastItemInEntry = (index: number): EntryBoundary | null => {
+    if (!entryBoundaries) return null;
+    const boundary = entryBoundaries.find(b => b.endIndex === index);
+    return boundary || null;
+  };
+
+  // Check if this is the first item in an entry (for visual grouping)
+  const isFirstItemInEntry = (index: number): boolean => {
+    if (!entryBoundaries) return false;
+    return entryBoundaries.some(b => b.startIndex === index);
+  };
+
+  const gridCols = editable 
+    ? getGridCols(true) 
+    : hasEntryDeletion 
+      ? getGridCols(true) 
+      : getGridCols(false);
+
+  const TotalsRow = () => (
+    <div className={cn(
+      'grid gap-0.5 items-center text-body font-semibold',
+      totalsPosition === 'top' && 'bg-muted/30 rounded py-1',
+      totalsPosition === 'bottom' && 'pt-1 border-t text-muted-foreground',
+      gridCols
+    )}>
+      <span className="px-2">Total</span>
+      <span className="px-1">{Math.round(totals.calories)}</span>
+      <span className="px-1">{Math.round(totals.protein)}</span>
+      <span className="px-1">{Math.round(totals.carbs)}</span>
+      <span className="px-1">{Math.round(totals.fat)}</span>
+      {(editable || hasEntryDeletion) && <span></span>}
+    </div>
+  );
 
   return (
     <div className="space-y-1">
@@ -59,18 +115,28 @@ export function FoodItemsTable({
           <span className="text-size-compact px-1">Protein</span>
           <span className="text-size-compact px-1">Carbs</span>
           <span className="text-size-compact px-1">Fat</span>
-          {editable && <span></span>}
+          {(editable || hasEntryDeletion) && <span></span>}
         </div>
       )}
+
+      {/* Totals at top */}
+      {showTotals && totalsPosition === 'top' && <TotalsRow />}
 
       {/* Data rows */}
       {items.map((item, index) => {
         const displayText = `${item.name}${item.portion ? ` (${item.portion})` : ''}`;
+        const entryBoundary = isLastItemInEntry(index);
+        const isFirstInEntry = isFirstItemInEntry(index);
         
         return (
           <div
             key={index}
-            className={cn('grid gap-0.5 items-start', gridCols)}
+            className={cn(
+              'grid gap-0.5 items-start',
+              gridCols,
+              // Add top border for entry groups (except first entry)
+              hasEntryDeletion && isFirstInEntry && index > 0 && 'border-t border-muted/50 pt-1'
+            )}
           >
             {/* Name cell */}
             {editable ? (
@@ -144,7 +210,7 @@ export function FoodItemsTable({
               </>
             )}
 
-            {/* Delete button (editable only) */}
+            {/* Delete button */}
             {editable && (
               <Button
                 variant="ghost"
@@ -155,21 +221,32 @@ export function FoodItemsTable({
                 <Trash2 className="h-3 w-3" />
               </Button>
             )}
+            
+            {/* Entry delete button (only on last item of each entry) */}
+            {!editable && hasEntryDeletion && (
+              entryBoundary ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    if (confirm('Delete this entry?')) {
+                      onDeleteEntry(entryBoundary.entryId);
+                    }
+                  }}
+                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              ) : (
+                <span></span>
+              )
+            )}
           </div>
         );
       })}
 
-      {/* Totals row */}
-      {showTotals && (
-        <div className={cn('grid gap-0.5 items-center pt-1 border-t !text-size-compact font-medium text-muted-foreground', gridCols)}>
-          <span className="px-2">Total</span>
-          <span className="px-1">{Math.round(totals.calories)}</span>
-          <span className="px-1">{Math.round(totals.protein)}</span>
-          <span className="px-1">{Math.round(totals.carbs)}</span>
-          <span className="px-1">{Math.round(totals.fat)}</span>
-          {editable && <span></span>}
-        </div>
-      )}
+      {/* Totals at bottom */}
+      {showTotals && totalsPosition === 'bottom' && <TotalsRow />}
     </div>
   );
 }
