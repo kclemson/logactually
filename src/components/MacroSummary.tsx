@@ -32,13 +32,13 @@ export function MacroSummary({ totals, size = 'lg' }: MacroSummaryProps) {
           key={label}
           className="flex flex-col items-center rounded-lg bg-muted/50 p-2"
         >
-          <span className="text-body font-bold text-foreground">
+          <span className="text-size-lg font-bold text-foreground">
             {value}
-            <span className="text-size-caption font-normal text-muted-foreground">
+            <span className="text-size-compact font-normal text-muted-foreground">
               {unit}
             </span>
           </span>
-          <span className="text-size-caption text-muted-foreground">{label}</span>
+          <span className="text-size-compact text-muted-foreground">{label}</span>
         </div>
       ))}
     </div>
