@@ -15,7 +15,7 @@ export function MacroSummary({ totals, size = 'lg' }: MacroSummaryProps) {
 
   if (size === 'sm') {
     return (
-      <div className="flex items-center gap-4 text-size-compact text-muted-foreground">
+      <div className="flex items-center gap-4 text-sm-app text-muted-foreground">
         {items.map(({ label, value, unit }) => (
           <span key={label}>
             {value}{unit} {label.charAt(0).toLowerCase()}
@@ -32,13 +32,13 @@ export function MacroSummary({ totals, size = 'lg' }: MacroSummaryProps) {
           key={label}
           className="flex flex-col items-center rounded-lg bg-muted/50 p-2"
         >
-          <span className="text-size-lg font-bold text-foreground">
+          <span className="text-lg font-bold text-foreground">
             {value}
-            <span className="text-size-compact font-normal text-muted-foreground">
+            <span className="text-sm-app font-normal text-muted-foreground">
               {unit}
             </span>
           </span>
-          <span className="text-size-compact text-muted-foreground">{label}</span>
+          <span className="text-sm-app text-muted-foreground">{label}</span>
         </div>
       ))}
     </div>
