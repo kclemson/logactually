@@ -97,7 +97,7 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="What did you eat?"
-          className="min-h-[120px] resize-none text-body"
+          className="min-h-[120px] resize-none"
           disabled={isLoading}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
