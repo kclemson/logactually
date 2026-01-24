@@ -6,6 +6,14 @@ import { BarcodeScanner } from '@/components/BarcodeScanner';
 import { useScanBarcode } from '@/hooks/useScanBarcode';
 import { FoodItem } from '@/types/food';
 
+const PLACEHOLDER_EXAMPLES = [
+  "egg mcmuffin and like half the hash brown...",
+  "grande oat milk latte from Starbucks, a banana...",
+  "Chipotle bowl with chicken and extra guac...",
+  "blueberry muffin but only the top part...",
+  "iced coffee, couple bites of my friend's bagel...",
+];
+
 // Detect UPC patterns in text input to route to database lookup
 function extractUpcFromText(input: string): string | null {
   // "UPC code: 717524611109", "UPC: 717524611109", "barcode: 717524611109"
@@ -50,6 +58,9 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(
     const [text, setText] = useState('');
     const [isListening, setIsListening] = useState(false);
     const [scannerOpen, setScannerOpen] = useState(false);
+    const [placeholder] = useState(
+      () => PLACEHOLDER_EXAMPLES[Math.floor(Math.random() * PLACEHOLDER_EXAMPLES.length)]
+    );
     
     // Use ref for recognition instance - no re-renders needed
     const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -172,7 +183,7 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="What did you eat?"
+          placeholder={placeholder}
           className="min-h-[120px] resize-none"
           disabled={isBusy}
           onKeyDown={(e) => {
