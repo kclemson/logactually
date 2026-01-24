@@ -12,7 +12,7 @@ import { FoodItem, calculateTotals } from '@/types/food';
 
 const FoodLog = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [showRawInputs, setShowRawInputs] = useState(false);
+  const [expandedEntryIds, setExpandedEntryIds] = useState<Set<string>>(new Set());
   
   // Parse date from URL or default to today
   const dateParam = searchParams.get('date');
@@ -132,13 +132,24 @@ const FoodLog = () => {
   // Calculate display totals based on current edit state
   const displayTotals = hasChanges ? calculateTotals(displayItems) : dayTotals;
 
-  // Filter to entries that still have items in displayItems (for raw inputs display)
-  const entriesWithItems = useMemo(() => {
-    const entryIdsWithItems = new Set(
-      displayItems.map(item => item.entryId).filter(Boolean)
-    );
-    return entries.filter(entry => entryIdsWithItems.has(entry.id));
-  }, [displayItems, entries]);
+  // Build map of entryId -> raw_input for inline expansion
+  const entryRawInputs = useMemo(() => {
+    const map = new Map<string, string>();
+    entries.forEach(entry => {
+      if (entry.raw_input) map.set(entry.id, entry.raw_input);
+    });
+    return map;
+  }, [entries]);
+
+  // Toggle handler for expanding/collapsing raw inputs
+  const handleToggleEntryExpand = (entryId: string) => {
+    setExpandedEntryIds(prev => {
+      const next = new Set(prev);
+      if (next.has(entryId)) next.delete(entryId);
+      else next.add(entryId);
+      return next;
+    });
+  };
 
   const handleSubmit = async (text: string) => {
     const result = await analyzeFood(text);
@@ -318,28 +329,11 @@ const FoodLog = () => {
               onDeleteAll={handleDeleteAll}
               hasChanges={hasChanges}
               onSave={handleSaveChanges}
+              entryBoundaries={entryBoundaries}
+              entryRawInputs={entryRawInputs}
+              expandedEntryIds={expandedEntryIds}
+              onToggleEntryExpand={handleToggleEntryExpand}
             />
-            
-            {/* Collapsible raw inputs section */}
-            <div className="mt-4">
-              <button
-                onClick={() => setShowRawInputs(!showRawInputs)}
-                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ChevronRight className={`h-3 w-3 transition-transform ${showRawInputs ? 'rotate-90' : ''}`} />
-                <span>{showRawInputs ? 'Hide' : 'Show'} original inputs ({entriesWithItems.length})</span>
-              </button>
-              
-              {showRawInputs && entriesWithItems.length > 0 && (
-                <div className="mt-2 space-y-2 pl-4 border-l-2 border-muted">
-                  {entriesWithItems.map((entry) => (
-                    <p key={entry.id} className="text-sm text-muted-foreground whitespace-pre-wrap">
-                      {entry.raw_input || '(no text recorded)'}
-                    </p>
-                  ))}
-                </div>
-              )}
-            </div>
           </>
         ) : (
           <p className="text-body text-muted-foreground">
