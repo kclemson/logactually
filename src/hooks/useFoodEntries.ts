@@ -12,7 +12,8 @@ export function useFoodEntries(date?: string) {
       let query = supabase
         .from('food_entries')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true });
 
       if (date) {
         query = query.eq('eaten_date', date);
