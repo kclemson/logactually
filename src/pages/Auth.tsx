@@ -101,7 +101,7 @@ export default function Auth() {
                 minLength={6}
               />
             </div>
-            {isSignUp && !inviteFromUrl && (
+            {isSignUp && (
               <div className="space-y-2">
                 <Input
                   type="text"
