@@ -61,18 +61,10 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
         const reader = new BrowserMultiFormatReader(hints);
         readerRef.current = reader;
 
-        // Get available video devices and prefer back camera
-        const devices = await reader.listVideoInputDevices();
-        const backCamera = devices.find(d => 
-          d.label.toLowerCase().includes('back') || 
-          d.label.toLowerCase().includes('rear') ||
-          d.label.toLowerCase().includes('environment')
-        );
-        const deviceId = backCamera?.deviceId || null;
-
-        // Start continuous scanning
+        // Start continuous scanning - let ZXing handle camera selection
+        // Passing undefined uses the default back camera via facingMode: 'environment'
         await reader.decodeFromVideoDevice(
-          deviceId,
+          undefined,
           videoRef.current,
           (result, err) => {
             if (result) {
@@ -94,6 +86,9 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
         }
       } catch (err) {
         console.error('Scanner error:', err);
+        if (err instanceof Error) {
+          console.error('Error name:', err.name, 'Message:', err.message);
+        }
         if (mounted) {
           if (err instanceof Error) {
             if (err.message.includes('Permission') || err.name === 'NotAllowedError') {
@@ -157,6 +152,7 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
                 <video 
                   ref={videoRef}
                   className="w-full h-[250px] object-cover"
+                  autoPlay
                   playsInline
                   muted
                 />
