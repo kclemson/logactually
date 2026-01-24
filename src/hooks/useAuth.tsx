@@ -17,6 +17,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 let cachedSession: Session | null = null;
 let cachedUser: User | null = null;
 
+// Preserve cache across HMR updates (dev only)
+if (import.meta.hot) {
+  import.meta.hot.data.cachedSession ??= cachedSession;
+  import.meta.hot.data.cachedUser ??= cachedUser;
+  cachedSession = import.meta.hot.data.cachedSession;
+  cachedUser = import.meta.hot.data.cachedUser;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(cachedUser);
   const [session, setSession] = useState<Session | null>(cachedSession);
