@@ -33,7 +33,7 @@ export default function Admin() {
     <div className="p-4 space-y-3">
       <h1 className="text-body font-semibold">Admin Stats (Dev Only)</h1>
       
-      <div className="text-size-compact text-muted-foreground space-y-0.5">
+      <div className="text-muted-foreground space-y-0.5">
         <p>Users: {stats?.total_users ?? 0} (active in last 7 days: {stats?.active_last_7_days ?? 0})</p>
         <p>Entries: {stats?.total_entries ?? 0} (avg per user: {avgEntriesPerUser})</p>
       </div>
@@ -41,7 +41,7 @@ export default function Admin() {
       <div>
         <h2 className="text-size-compact font-medium mb-1">Entries by Date</h2>
         {stats?.entries_by_date && stats.entries_by_date.length > 0 ? (
-          <table className="text-size-caption w-full">
+          <table className="w-full">
             <thead>
               <tr className="border-b">
                 <th className="text-left py-1 font-medium text-muted-foreground">Date</th>
@@ -58,7 +58,7 @@ export default function Admin() {
             </tbody>
           </table>
         ) : (
-          <p className="text-size-caption text-muted-foreground">No entries in the last 14 days.</p>
+          <p className="text-muted-foreground">No entries in the last 14 days.</p>
         )}
       </div>
     </div>
