@@ -158,4 +158,19 @@ All colors MUST be HSL.
   input[type="number"] {
     -moz-appearance: textfield;
   }
+
+  /* Prevent iOS Safari zoom on input focus (requires 16px minimum) */
+  @media screen and (max-width: 767px) {
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="tel"],
+    input[type="url"],
+    input[type="search"],
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
 }
