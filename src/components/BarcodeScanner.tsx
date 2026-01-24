@@ -28,8 +28,53 @@ interface BarcodeScannerProps {
 export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
   const [error, setError] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleManualCapture = async () => {
+    if (!scannerRef.current) {
+      setDebugInfo('Scanner not initialized');
+      return;
+    }
+
+    try {
+      setDebugInfo('Checking scanner...');
+      
+      // Check if native BarcodeDetector is available
+      const hasNativeAPI = 'BarcodeDetector' in window;
+      console.log('Native BarcodeDetector available:', hasNativeAPI);
+      
+      let nativeFormats: string[] = [];
+      if (hasNativeAPI) {
+        try {
+          nativeFormats = await (window as any).BarcodeDetector.getSupportedFormats();
+          console.log('Supported native formats:', nativeFormats);
+        } catch (e) {
+          console.log('Could not get native formats:', e);
+        }
+      }
+      
+      // Get scanner state
+      const state = scannerRef.current.getState();
+      console.log('Scanner state:', state);
+      
+      const stateNames = ['NOT_STARTED', 'SCANNING', 'PAUSED', 'UNKNOWN'];
+      const stateName = stateNames[state] || 'UNKNOWN';
+      
+      const info = [
+        `State: ${stateName}`,
+        `Native API: ${hasNativeAPI ? 'YES' : 'NO'}`,
+        hasNativeAPI ? `Formats: ${nativeFormats.join(', ')}` : 'Using JS fallback'
+      ].join('\n');
+      
+      setDebugInfo(info);
+      
+    } catch (err) {
+      console.error('Manual capture error:', err);
+      setDebugInfo(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -148,6 +193,23 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
               <p className="text-center text-muted-foreground text-sm">
                 Point the camera at a barcode
               </p>
+              {!isStarting && (
+                <div className="space-y-2">
+                  <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    onClick={handleManualCapture}
+                    className="w-full"
+                  >
+                    Capture Now (Debug)
+                  </Button>
+                  {debugInfo && (
+                    <pre className="text-center text-xs font-mono bg-muted p-2 rounded whitespace-pre-wrap">
+                      {debugInfo}
+                    </pre>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>
