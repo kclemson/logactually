@@ -281,7 +281,7 @@ export function FoodItemsTable({
       "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent transition-all",
       isNewItem(item) && "animate-highlight-fade",
       isEditing
-        ? "ring-2 ring-focus-ring bg-focus-bg"
+        ? "ring-2 ring-focus-ring bg-focus-bg focus-visible:ring-focus-ring"
         : isLinkedToCalories
           ? "bg-focus-linked"
           : "hover:bg-muted/50 focus:bg-muted/50"
@@ -356,7 +356,7 @@ export function FoodItemsTable({
                   onBlur={handleDescriptionBlur}
                   onKeyDown={(e) => handleDescriptionKeyDown(e, index, item)}
                   className={cn(
-                    "text-size-compact pl-2 pr-0 py-1 border-0 bg-transparent focus:outline-none line-clamp-2 cursor-text rounded shrink min-w-0",
+                    "text-size-compact pl-2 pr-0 py-1 border-0 bg-transparent focus:outline-none line-clamp-2 cursor-text rounded flex-1 min-w-0",
                     getDescriptionClasses(item),
                     "focus:ring-2 focus:ring-focus-ring focus:bg-focus-bg"
                   )}
@@ -364,7 +364,6 @@ export function FoodItemsTable({
                 {hasAnyEditedFields(item) && (
                   <span className="text-focus-ring font-bold text-size-compact shrink-0 ml-1" title={formatEditedFields(item) || 'Edited'}>*</span>
                 )}
-                <div className="flex-1" />
               </div>
             ) : (
               <div className="flex items-baseline min-w-0">
