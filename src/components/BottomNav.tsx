@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom';
-import { PenLine, CalendarDays, TrendingUp } from 'lucide-react';
+import { PenLine, CalendarDays, TrendingUp, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { to: '/', icon: PenLine, label: 'Log Food' },
   { to: '/history', icon: CalendarDays, label: 'Calendar' },
   { to: '/trends', icon: TrendingUp, label: 'Trends' },
+  ...(import.meta.env.DEV ? [{ to: '/admin', icon: Shield, label: 'Admin' }] : []),
 ];
 
 export function BottomNav() {

@@ -36,15 +36,15 @@ export default function Admin() {
       <div className="text-muted-foreground space-y-2">
         <div>
           <p>Users: {stats?.total_users ?? 0}</p>
-          <p className="ml-6">With entries: {stats?.users_with_entries ?? 0}</p>
-          <p className="ml-6">Active in last 7 days: {stats?.active_last_7_days ?? 0}</p>
-          <p className="ml-6">Created in last 7 days: {stats?.users_created_last_7_days ?? 0}</p>
+          <p className="ml-6 text-size-compact">With entries: {stats?.users_with_entries ?? 0}</p>
+          <p className="ml-6 text-size-compact">Active in last 7 days: {stats?.active_last_7_days ?? 0}</p>
+          <p className="ml-6 text-size-compact">Created in last 7 days: {stats?.users_created_last_7_days ?? 0}</p>
         </div>
         
         <div>
           <p>Entries: {stats?.total_entries ?? 0}</p>
-          <p className="ml-6">Average per user: {avgEntriesPerUser}</p>
-          <p className="ml-6">Created in last 7 days: {stats?.entries_created_last_7_days ?? 0}</p>
+          <p className="ml-6 text-size-compact">Average per user: {avgEntriesPerUser}</p>
+          <p className="ml-6 text-size-compact">Created in last 7 days: {stats?.entries_created_last_7_days ?? 0}</p>
         </div>
       </div>
 
