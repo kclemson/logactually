@@ -80,9 +80,9 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
     try {
       setDebugInfo(prev => ({ ...prev, captureResult: 'Capturing...', status: 'captured' }));
       
-      // Create a canvas and draw the current video frame
       const video = videoRef.current;
-      // Use ZXing's synchronous decode method on the video element directly
+      
+      // Use ZXing's synchronous decode method on the video element
       const result = readerRef.current.decode(video);
       
       logDebugEvents([{ 
@@ -150,8 +150,9 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { 
             facingMode: 'environment',
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            aspectRatio: { ideal: 16/9 }
           }
         });
 
@@ -324,7 +325,7 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-w-[calc(100vw-32px)] sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Camera className="h-5 w-5" />
@@ -342,17 +343,17 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
             </div>
           ) : (
             <>
-              <div className="w-full min-h-[250px] bg-muted rounded-lg overflow-hidden relative">
+              <div className="w-full bg-black rounded-lg overflow-hidden relative">
                 <video 
                   ref={videoRef}
-                  className="w-full h-[250px] object-cover"
+                  className="w-full aspect-video object-contain bg-black"
                   autoPlay
                   playsInline
                   muted
                 />
                 {/* Scan region indicator */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="w-[280px] h-[100px] border-2 border-primary/50 rounded-lg" />
+                  <div className="w-[80%] max-w-[280px] h-[80px] border-2 border-primary/50 rounded-lg" />
                 </div>
               </div>
 
