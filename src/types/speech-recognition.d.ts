@@ -38,6 +38,10 @@ interface SpeechRecognition extends EventTarget {
 }
 
 interface Window {
+  SpeechRecognition: {
+    new (): SpeechRecognition;
+    prototype: SpeechRecognition;
+  };
   webkitSpeechRecognition: {
     new (): SpeechRecognition;
     prototype: SpeechRecognition;

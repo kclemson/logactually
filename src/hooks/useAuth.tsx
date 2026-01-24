@@ -19,10 +19,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     let initialCheckComplete = false;
+
+    // Absolute timeout - never stay loading forever (10 seconds max)
+    const absoluteTimeout = setTimeout(() => {
+      if (isMounted && !initialCheckComplete) {
+        console.error('Auth initialization timed out after 10 seconds');
+        setLoading(false);
+      }
+    }, 10000);
 
     // Listen for auth changes FIRST - this catches token refresh events
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!isMounted) return;
       setSession(session);
       setUser(session?.user ?? null);
       initialCheckComplete = true;
@@ -30,25 +40,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     // Then check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      // If we got a session, we're done loading
-      if (session) {
-        setLoading(false);
-      } else {
-        // No session - wait briefly for potential token refresh via onAuthStateChange
-        // If it doesn't fire within 1 second, assume truly logged out
-        setTimeout(() => {
-          if (!initialCheckComplete) {
-            setLoading(false);
-          }
-        }, 1000);
-      }
-    });
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        if (!isMounted) return;
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        // If we got a session, we're done loading
+        if (session) {
+          initialCheckComplete = true;
+          setLoading(false);
+        } else {
+          // No session - wait briefly for potential token refresh via onAuthStateChange
+          // If it doesn't fire within 1 second, assume truly logged out
+          setTimeout(() => {
+            if (isMounted && !initialCheckComplete) {
+              initialCheckComplete = true;
+              setLoading(false);
+            }
+          }, 1000);
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to get session:', error);
+        if (isMounted) {
+          initialCheckComplete = true;
+          setLoading(false);
+        }
+      });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      clearTimeout(absoluteTimeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string) => {
