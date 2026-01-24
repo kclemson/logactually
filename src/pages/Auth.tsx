@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,10 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 export default function Auth() {
   const { user, signUp, signIn, loading } = useAuth();
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [searchParams] = useSearchParams();
+  const inviteFromUrl = searchParams.get('invite');
+  
+  const [isSignUp, setIsSignUp] = useState(!!inviteFromUrl);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [inviteCode, setInviteCode] = useState('');
+  const [inviteCode, setInviteCode] = useState(inviteFromUrl || '');
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -53,11 +56,15 @@ export default function Auth() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-title">
-            {isSignUp ? 'Create Account' : 'Welcome Back'}
+            {isSignUp 
+              ? (inviteFromUrl ? "You're Invited!" : 'Create Account')
+              : 'Welcome Back'}
           </CardTitle>
           <CardDescription>
             {isSignUp 
-              ? 'Sign up to start tracking your nutrition'
+              ? (inviteFromUrl 
+                  ? 'Log what you eat in plain English — AI handles the macros'
+                  : 'Sign up to start tracking your nutrition')
               : 'Sign in to continue tracking your nutrition'
             }
           </CardDescription>
@@ -94,7 +101,7 @@ export default function Auth() {
                 minLength={6}
               />
             </div>
-            {isSignUp && (
+            {isSignUp && !inviteFromUrl && (
               <div className="space-y-2">
                 <Input
                   type="text"
