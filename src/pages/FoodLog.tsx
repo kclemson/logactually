@@ -152,6 +152,32 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     }
   };
 
+  // Handle direct scan results (when barcode lookup succeeds)
+  const handleScanResult = async (foodItem: Omit<FoodItem, 'uid' | 'entryId'>) => {
+    const itemWithUid = {
+      ...foodItem,
+      uid: crypto.randomUUID(),
+    };
+    const totals = calculateTotals([itemWithUid]);
+    createEntry.mutate(
+      {
+        eaten_date: dateStr,
+        raw_input: `Scanned: ${foodItem.description}`,
+        food_items: [itemWithUid],
+        total_calories: Math.round(totals.calories),
+        total_protein: Math.round(totals.protein * 10) / 10,
+        total_carbs: Math.round(totals.carbs * 10) / 10,
+        total_fat: Math.round(totals.fat * 10) / 10,
+      },
+      {
+        onSuccess: (createdEntry) => {
+          const itemWithEntryId = { ...itemWithUid, entryId: createdEntry.id };
+          addNewItems([itemWithEntryId]);
+        },
+      }
+    );
+  };
+
   // Find which entry an item belongs to based on its index
   const findEntryForIndex = useCallback((index: number): { entryId: string; localIndex: number } | null => {
     for (const boundary of entryBoundaries) {
@@ -255,7 +281,8 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       <section>
         <FoodInput
           ref={foodInputRef}
-          onSubmit={handleSubmit} 
+          onSubmit={handleSubmit}
+          onScanResult={handleScanResult}
           isLoading={isAnalyzing || createEntry.isPending}
         />
         {analyzeError && (

@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.validate-invite]
 verify_jwt = false
+
+[functions.lookup-upc]
+verify_jwt = false
