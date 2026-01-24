@@ -3,6 +3,7 @@ import { Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function Auth() {
@@ -77,11 +78,12 @@ export default function Auth() {
               </div>
             )}
             <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 name="email"
                 type="email"
-                placeholder="Email"
+                placeholder="Enter your email"
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -89,11 +91,12 @@ export default function Auth() {
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 name="password"
                 type="password"
-                placeholder="Password"
+                placeholder="Enter your password"
                 autoComplete={isSignUp ? "new-password" : "current-password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -103,9 +106,11 @@ export default function Auth() {
             </div>
             {isSignUp && (
               <div className="space-y-2">
+                <Label htmlFor="inviteCode">Invite Code</Label>
                 <Input
+                  id="inviteCode"
                   type="text"
-                  placeholder="Invite Code"
+                  placeholder="Enter your invite code"
                   value={inviteCode}
                   onChange={(e) => setInviteCode(e.target.value)}
                   required
