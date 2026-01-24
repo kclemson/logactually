@@ -1,3 +1,4 @@
+import { useState, useRef } from 'react';
 import { FoodItem, DailyTotals, calculateTotals, EditableField } from '@/types/food';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,15 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+type EditableFieldKey = 'description' | 'calories' | 'protein' | 'carbs' | 'fat';
+
+interface EditingCell {
+  index: number;
+  field: EditableFieldKey;
+  value: string | number;
+  originalValue: string | number;
+}
 
 interface EntryBoundary {
   entryId: string;
@@ -56,11 +66,58 @@ export function FoodItemsTable({
   expandedEntryIds,
   onToggleEntryExpand,
 }: FoodItemsTableProps) {
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === 'Escape') {
+  // Local editing state - only saved on Enter
+  const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
+  const descriptionOriginalRef = useRef<string>('');
+
+  const handleKeyDown = (
+    e: React.KeyboardEvent,
+    index: number,
+    field: EditableFieldKey
+  ) => {
+    if (e.key === 'Enter') {
       e.preventDefault();
-      (e.target as HTMLElement).blur(); // Blur to trigger save
+      // Save the edit
+      if (editingCell && editingCell.value !== editingCell.originalValue) {
+        onUpdateItem?.(index, field, editingCell.value);
+      }
+      setEditingCell(null);
+      (e.target as HTMLElement).blur();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      // Cancel - revert to original (state will be cleared, input will show item value)
+      setEditingCell(null);
+      (e.target as HTMLElement).blur();
     }
+  };
+
+  const handleDescriptionKeyDown = (
+    e: React.KeyboardEvent<HTMLDivElement>,
+    index: number,
+    item: FoodItem
+  ) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const newDescription = e.currentTarget.textContent || '';
+      if (newDescription !== descriptionOriginalRef.current) {
+        onUpdateItem?.(index, 'description', newDescription);
+      }
+      (e.target as HTMLElement).blur();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      // Revert to original
+      e.currentTarget.textContent = descriptionOriginalRef.current;
+      (e.target as HTMLElement).blur();
+    }
+  };
+
+  const handleDescriptionFocus = (e: React.FocusEvent<HTMLDivElement>, item: FoodItem) => {
+    descriptionOriginalRef.current = item.description;
+  };
+
+  const handleDescriptionBlur = (e: React.FocusEvent<HTMLDivElement>) => {
+    // Revert to original on blur (cancel)
+    e.currentTarget.textContent = descriptionOriginalRef.current;
   };
 
   // Check if any field was user-edited (row-level indicator)
@@ -261,13 +318,9 @@ export function FoodItemsTable({
                       el.textContent = item.description;
                     }
                   }}
-                  onInput={(e) => {
-                    const newDescription = e.currentTarget.textContent || '';
-                    if (newDescription !== item.description) {
-                      onUpdateItem?.(index, 'description', newDescription);
-                    }
-                  }}
-                  onKeyDown={handleKeyDown}
+                  onFocus={(e) => handleDescriptionFocus(e, item)}
+                  onBlur={handleDescriptionBlur}
+                  onKeyDown={(e) => handleDescriptionKeyDown(e, index, item)}
                   className={cn(
                     "text-size-compact pl-2 pr-0 py-1 border-0 bg-transparent focus:outline-none line-clamp-2 cursor-text rounded shrink min-w-0",
                     getDescriptionClasses(item)
@@ -314,30 +367,90 @@ export function FoodItemsTable({
               <>
                 <Input
                   type="number"
-                  value={item.calories}
-                  onChange={(e) => onUpdateItem?.(index, 'calories', Number(e.target.value))}
-                  onKeyDown={handleKeyDown}
+                  value={
+                    editingCell?.index === index && editingCell?.field === 'calories'
+                      ? editingCell.value
+                      : item.calories
+                  }
+                  onFocus={() => setEditingCell({
+                    index,
+                    field: 'calories',
+                    value: item.calories,
+                    originalValue: item.calories
+                  })}
+                  onChange={(e) => {
+                    if (editingCell) {
+                      setEditingCell({ ...editingCell, value: Number(e.target.value) });
+                    }
+                  }}
+                  onBlur={() => setEditingCell(null)}
+                  onKeyDown={(e) => handleKeyDown(e, index, 'calories')}
                   className={getMacroClasses(item)}
                 />
                 <Input
                   type="number"
-                  value={Math.round(item.protein)}
-                  onChange={(e) => onUpdateItem?.(index, 'protein', Number(e.target.value))}
-                  onKeyDown={handleKeyDown}
+                  value={
+                    editingCell?.index === index && editingCell?.field === 'protein'
+                      ? editingCell.value
+                      : Math.round(item.protein)
+                  }
+                  onFocus={() => setEditingCell({
+                    index,
+                    field: 'protein',
+                    value: Math.round(item.protein),
+                    originalValue: Math.round(item.protein)
+                  })}
+                  onChange={(e) => {
+                    if (editingCell) {
+                      setEditingCell({ ...editingCell, value: Number(e.target.value) });
+                    }
+                  }}
+                  onBlur={() => setEditingCell(null)}
+                  onKeyDown={(e) => handleKeyDown(e, index, 'protein')}
                   className={getMacroClasses(item)}
                 />
                 <Input
                   type="number"
-                  value={Math.round(item.carbs)}
-                  onChange={(e) => onUpdateItem?.(index, 'carbs', Number(e.target.value))}
-                  onKeyDown={handleKeyDown}
+                  value={
+                    editingCell?.index === index && editingCell?.field === 'carbs'
+                      ? editingCell.value
+                      : Math.round(item.carbs)
+                  }
+                  onFocus={() => setEditingCell({
+                    index,
+                    field: 'carbs',
+                    value: Math.round(item.carbs),
+                    originalValue: Math.round(item.carbs)
+                  })}
+                  onChange={(e) => {
+                    if (editingCell) {
+                      setEditingCell({ ...editingCell, value: Number(e.target.value) });
+                    }
+                  }}
+                  onBlur={() => setEditingCell(null)}
+                  onKeyDown={(e) => handleKeyDown(e, index, 'carbs')}
                   className={getMacroClasses(item)}
                 />
                 <Input
                   type="number"
-                  value={Math.round(item.fat)}
-                  onChange={(e) => onUpdateItem?.(index, 'fat', Number(e.target.value))}
-                  onKeyDown={handleKeyDown}
+                  value={
+                    editingCell?.index === index && editingCell?.field === 'fat'
+                      ? editingCell.value
+                      : Math.round(item.fat)
+                  }
+                  onFocus={() => setEditingCell({
+                    index,
+                    field: 'fat',
+                    value: Math.round(item.fat),
+                    originalValue: Math.round(item.fat)
+                  })}
+                  onChange={(e) => {
+                    if (editingCell) {
+                      setEditingCell({ ...editingCell, value: Number(e.target.value) });
+                    }
+                  }}
+                  onBlur={() => setEditingCell(null)}
+                  onKeyDown={(e) => handleKeyDown(e, index, 'fat')}
                   className={getMacroClasses(item)}
                 />
               </>
