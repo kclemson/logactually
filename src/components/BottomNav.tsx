@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { PenLine, CalendarDays, TrendingUp, Shield } from 'lucide-react';
+import { PenLine, CalendarDays, TrendingUp, Settings, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 
@@ -13,6 +13,7 @@ export function BottomNav() {
     { to: '/', icon: PenLine, label: 'Log Food' },
     { to: '/history', icon: CalendarDays, label: 'Calendar' },
     { to: '/trends', icon: TrendingUp, label: 'Trends' },
+    { to: '/settings', icon: Settings, label: 'Settings' },
     ...(showAdmin ? [{ to: '/admin', icon: Shield, label: 'Admin' }] : []),
   ];
   return (
