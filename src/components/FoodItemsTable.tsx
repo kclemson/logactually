@@ -224,16 +224,16 @@ export function FoodItemsTable({
 
   const TotalsRow = () => (
     <div className={cn(
-      'grid gap-0.5 items-center text-body font-semibold group',
-      totalsPosition === 'top' && 'bg-muted/30 rounded py-1',
-      totalsPosition === 'bottom' && 'pt-1 border-t text-muted-foreground',
+      'grid gap-0.5 items-center group',
+      totalsPosition === 'top' && 'bg-slate-200 dark:bg-slate-700 rounded py-1.5 border border-slate-300 dark:border-slate-600',
+      totalsPosition === 'bottom' && 'pt-1.5 border-t-2 border-slate-300 dark:border-slate-600',
       gridCols
     )}>
-      <span className={cn("px-2", showEntryDividers && "pl-6")}>Total</span>
-      <span className="px-1">{Math.round(totals.calories)}</span>
-      <span className="px-1">{Math.round(totals.protein)}</span>
-      <span className="px-1">{Math.round(totals.carbs)}</span>
-      <span className="px-1">{Math.round(totals.fat)}</span>
+      <span className={cn("px-2 text-body font-semibold", showEntryDividers && "pl-6")}>Total</span>
+      <span className="px-1 text-heading">{Math.round(totals.calories)}</span>
+      <span className="px-1 text-heading">{Math.round(totals.protein)}</span>
+      <span className="px-1 text-heading">{Math.round(totals.carbs)}</span>
+      <span className="px-1 text-heading">{Math.round(totals.fat)}</span>
       {hasDeleteColumn && (
         onDeleteAll ? (
           <AlertDialog>
