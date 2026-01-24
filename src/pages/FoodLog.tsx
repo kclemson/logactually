@@ -155,9 +155,13 @@ const FoodLog = () => {
           total_fat: Math.round(totals.fat * 10) / 10,
         },
         {
-          onSuccess: () => {
-            // Add new items with amber row highlighting
-            addNewItems(result.food_items);
+          onSuccess: (createdEntry) => {
+            // Attach the new entry's ID to each item for raw inputs tracking
+            const itemsWithEntryId = result.food_items.map(item => ({
+              ...item,
+              entryId: createdEntry.id,
+            }));
+            addNewItems(itemsWithEntryId);
             foodInputRef.current?.clear();
           },
         }
