@@ -26,7 +26,6 @@ interface FoodItemsTableProps {
   editable?: boolean;
   onUpdateItem?: (index: number, field: keyof FoodItem, value: string | number) => void;
   onRemoveItem?: (index: number) => void;
-  onDiscard?: () => void;
   newItemUids?: Set<string>;
   showHeader?: boolean;
   showTotals?: boolean;
@@ -35,8 +34,6 @@ interface FoodItemsTableProps {
   entryBoundaries?: EntryBoundary[];
   onDeleteEntry?: (entryId: string) => void;
   onDeleteAll?: () => void;
-  hasChanges?: boolean;
-  onSave?: () => void;
   entryRawInputs?: Map<string, string>;
   expandedEntryIds?: Set<string>;
   onToggleEntryExpand?: (entryId: string) => void;
@@ -47,7 +44,6 @@ export function FoodItemsTable({
   editable = false,
   onUpdateItem,
   onRemoveItem,
-  onDiscard,
   newItemUids,
   showHeader = true,
   showTotals = true,
@@ -56,20 +52,14 @@ export function FoodItemsTable({
   entryBoundaries,
   onDeleteEntry,
   onDeleteAll,
-  hasChanges,
-  onSave,
   entryRawInputs,
   expandedEntryIds,
   onToggleEntryExpand,
 }: FoodItemsTableProps) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault(); // Prevent newline in contentEditable
-      (e.target as HTMLElement).blur(); // Confirm edit by removing focus
-    }
-    if (e.key === 'Escape' && onDiscard) {
-      onDiscard();
-      (e.target as HTMLElement).blur();
+    if (e.key === 'Enter' || e.key === 'Escape') {
+      e.preventDefault();
+      (e.target as HTMLElement).blur(); // Blur to trigger save
     }
   };
 
