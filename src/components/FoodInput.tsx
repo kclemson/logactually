@@ -1,4 +1,4 @@
-import { useState, useImperativeHandle, forwardRef } from 'react';
+import { useState, useImperativeHandle, forwardRef, useRef, useCallback } from 'react';
 import { Mic, MicOff, Send, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,22 +12,38 @@ export interface FoodInputRef {
   clear: () => void;
 }
 
+// Check support once at module level (read-only, no state update during render)
+const getSpeechRecognitionSupport = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return !!((window as any).SpeechRecognition || window.webkitSpeechRecognition);
+};
+
 export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(
   function FoodInput({ onSubmit, isLoading }, ref) {
     const [text, setText] = useState('');
     const [isListening, setIsListening] = useState(false);
-    const [recognition, setRecognition] = useState<typeof window.webkitSpeechRecognition.prototype | null>(null);
-    const [voiceSupported, setVoiceSupported] = useState(true);
+    
+    // Use ref for recognition instance - no re-renders needed
+    const recognitionRef = useRef<SpeechRecognition | null>(null);
+    
+    // Compute support status once (no useState to avoid render-time state updates)
+    const voiceSupported = getSpeechRecognitionSupport();
 
     // Expose clear method to parent
     useImperativeHandle(ref, () => ({
       clear: () => setText(''),
     }));
 
-    // Initialize speech recognition once on first render
-    if (recognition === null && typeof window !== 'undefined') {
-      if ('webkitSpeechRecognition' in window) {
-        const SpeechRecognitionClass = window.webkitSpeechRecognition;
+    // Lazy initialization - only create recognition when user clicks mic
+    const getOrCreateRecognition = useCallback((): SpeechRecognition | null => {
+      if (recognitionRef.current) return recognitionRef.current;
+      
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const SpeechRecognitionClass = (window as any).SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognitionClass) return null;
+      
+      try {
         const rec = new SpeechRecognitionClass();
         rec.continuous = false;
         rec.interimResults = true;
@@ -43,22 +59,31 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(
         rec.onend = () => setIsListening(false);
         rec.onerror = () => setIsListening(false);
 
-        setRecognition(rec);
-      } else {
-        setVoiceSupported(false);
+        recognitionRef.current = rec;
+        return rec;
+      } catch (error) {
+        console.error('Failed to initialize speech recognition:', error);
+        return null;
       }
-    }
+    }, []);
 
-    const toggleListening = () => {
+    const toggleListening = useCallback(() => {
+      if (isListening) {
+        recognitionRef.current?.stop();
+        return;
+      }
+
+      const recognition = getOrCreateRecognition();
       if (!recognition) return;
 
-      if (isListening) {
-        recognition.stop();
-      } else {
+      try {
         recognition.start();
         setIsListening(true);
+      } catch (error) {
+        console.error('Failed to start speech recognition:', error);
+        setIsListening(false);
       }
-    };
+    }, [isListening, getOrCreateRecognition]);
 
     const handleSubmit = () => {
       if (text.trim() && !isLoading) {
