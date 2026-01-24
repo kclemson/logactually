@@ -282,7 +282,7 @@ export function FoodItemsTable({
   // Get cell classes for calories input
   const getCaloriesClasses = (item: FoodItem, isEditing: boolean) => {
     return cn(
-      "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent transition-all",
+      "h-full min-h-7 px-1 border-0 bg-transparent transition-all",
       isNewItem(item) && "animate-highlight-fade",
       isEditing
         ? "ring-2 ring-focus-ring bg-focus-bg focus-visible:ring-focus-ring"
@@ -294,10 +294,10 @@ export function FoodItemsTable({
     <div className="space-y-1">
       {/* Header row */}
       {showHeader && (
-        <div className={cn('grid gap-0.5 text-muted-foreground items-center', gridCols)}>
-          <span className={cn("text-size-compact px-2", showEntryDividers && "pl-6")}></span>
-          <span className="text-size-compact px-1">Calories</span>
-          <span className="text-size-compact px-1 text-center">P / C / F</span>
+        <div className={cn('grid gap-0.5 text-muted-foreground items-center text-sm-app', gridCols)}>
+          <span className={cn("px-2", showEntryDividers && "pl-6")}></span>
+          <span className="px-1">Calories</span>
+          <span className="px-1 text-center">P / C / F</span>
           {hasDeleteColumn && <span></span>}
         </div>
       )}
@@ -359,13 +359,13 @@ export function FoodItemsTable({
                   onBlur={handleDescriptionBlur}
                   onKeyDown={(e) => handleDescriptionKeyDown(e, index, item)}
                   className={cn(
-                    "text-size-compact pl-2 pr-0 py-1 border-0 bg-transparent focus:outline-none line-clamp-2 cursor-text rounded min-w-0",
+                    "pl-2 pr-0 py-1 border-0 bg-transparent focus:outline-none line-clamp-2 cursor-text rounded min-w-0",
                     getDescriptionClasses(item),
                     "focus:ring-2 focus:ring-focus-ring focus:bg-focus-bg"
                   )}
                 />
                 {hasAnyEditedFields(item) && (
-                  <span className="text-focus-ring font-bold text-size-compact shrink-0 ml-0.5" title={formatEditedFields(item) || 'Edited'}>*</span>
+                  <span className="text-focus-ring font-bold shrink-0 ml-0.5" title={formatEditedFields(item) || 'Edited'}>*</span>
                 )}
                 <div className="flex-1" />
               </div>
@@ -389,7 +389,7 @@ export function FoodItemsTable({
                 )}
                 <span 
                   title={getItemTooltip(item)}
-                  className="text-size-compact pl-2 pr-0 py-1 line-clamp-2 shrink min-w-0"
+                  className="pl-2 pr-0 py-1 line-clamp-2 shrink min-w-0"
                 >
                   {item.description}
                   {hasAnyEditedFields(item) && (
@@ -427,7 +427,7 @@ export function FoodItemsTable({
                 />
                 {/* P/C/F combined - read-only with preview when editing calories */}
                 <span className={cn(
-                  "text-size-compact px-1 py-1 text-center",
+                  "px-1 py-1 text-center",
                   isNewItem(item) && "animate-highlight-fade",
                   isCaloriesEditing ? "text-focus-ring" : "text-muted-foreground"
                 )}>
@@ -439,8 +439,8 @@ export function FoodItemsTable({
               </>
             ) : (
               <>
-                <span className="text-size-compact px-1 py-1 text-muted-foreground">{item.calories}</span>
-                <span className="text-size-compact px-1 py-1 text-muted-foreground text-center">
+                <span className="px-1 py-1 text-muted-foreground">{item.calories}</span>
+                <span className="px-1 py-1 text-muted-foreground text-center">
                   {Math.round(item.protein)} / {Math.round(item.carbs)} / {Math.round(item.fat)}
                 </span>
               </>

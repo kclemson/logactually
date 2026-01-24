@@ -7,19 +7,10 @@ All colors MUST be HSL.
 */
 
 @layer components {
-  .text-size-caption {
-    font-size: 0.625rem;   /* 10px - units (g), tiny badges */
-    line-height: 1.3;
-  }
-  
-  .text-size-compact {
-    font-size: 0.6875rem;  /* 11px - inline summaries, secondary text */
+  /* Simplified typography: 3 sizes that work with iOS 16px minimum */
+  .text-sm-app {
+    font-size: 0.8125rem;  /* 13px desktop, bumped on mobile */
     line-height: 1.4;
-  }
-  
-  .text-body {
-    font-size: 0.8125rem;  /* 13px - body text, inputs, buttons */
-    line-height: 1.5;
   }
   
   .text-heading {
@@ -28,13 +19,8 @@ All colors MUST be HSL.
     font-weight: 600;
   }
   
-  .text-size-lg {
-    font-size: 1rem;       /* 16px - macro values, emphasis */
-    line-height: 1.3;
-  }
-  
   .text-title {
-    font-size: 1.125rem;   /* 18px - dialog titles (largest) */
+    font-size: 1.125rem;   /* 18px - dialog titles */
     line-height: 1.3;
     font-weight: 600;
   }
@@ -145,7 +131,9 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground text-body;
+    @apply bg-background text-foreground;
+    font-size: 0.875rem; /* 14px desktop */
+    line-height: 1.5;
   }
 
   /* Hide number input spinners */
@@ -159,18 +147,10 @@ All colors MUST be HSL.
     -moz-appearance: textfield;
   }
 
-  /* Prevent iOS Safari zoom on input focus (requires 16px minimum) */
+  /* Mobile: 16px baseline for iOS zoom prevention - applies to everything */
   @media screen and (max-width: 767px) {
-    input[type="text"],
-    input[type="email"],
-    input[type="password"],
-    input[type="number"],
-    input[type="tel"],
-    input[type="url"],
-    input[type="search"],
-    select,
-    textarea {
-      font-size: 16px !important;
+    body {
+      font-size: 1rem; /* 16px */
     }
   }
 }
