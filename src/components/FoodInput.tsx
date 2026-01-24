@@ -151,6 +151,7 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(
           {voiceSupported && (
             <Button
               variant="outline"
+              size="sm"
               onClick={toggleListening}
               disabled={isBusy}
               className={isListening ? 'bg-destructive text-destructive-foreground' : ''}
@@ -162,6 +163,7 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(
           {cameraSupported && (
             <Button
               variant="outline"
+              size="sm"
               onClick={() => setScannerOpen(true)}
               disabled={isBusy}
             >
@@ -172,6 +174,7 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(
           <Button
             onClick={handleSubmit}
             disabled={!text.trim() || isBusy}
+            size="sm"
             className="flex-1"
           >
             {isBusy ? (
