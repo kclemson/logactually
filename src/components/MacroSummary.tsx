@@ -34,7 +34,7 @@ export function MacroSummary({ totals, size = 'lg' }: MacroSummaryProps) {
         >
           <span className="text-lg font-bold text-foreground">
             {value}
-            <span className="text-sm-app font-normal text-muted-foreground">
+            <span className="text-sm font-normal text-muted-foreground">
               {unit}
             </span>
           </span>

@@ -100,7 +100,7 @@ const History = () => {
         <Button variant="ghost" size="icon" onClick={goToPreviousMonth}>
           <ChevronLeft className="h-5 w-5" />
         </Button>
-        <h2 className="text-lg font-semibold min-w-[160px] text-center">
+        <h2 className="text-title min-w-[160px] text-center">
           {format(currentMonth, 'MMMM yyyy')}
         </h2>
         <Button 
