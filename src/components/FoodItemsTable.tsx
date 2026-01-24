@@ -230,7 +230,7 @@ export function FoodItemsTable({
       gridCols
     )}>
       <span className={cn("px-2 font-semibold", showEntryDividers && "pl-6")}>Total</span>
-      <span className="px-1 text-heading">{Math.round(totals.calories)}</span>
+      <span className="px-1 text-heading text-center">{Math.round(totals.calories)}</span>
       <span className="px-1 text-heading text-center">
         {Math.round(totals.protein)} / {Math.round(totals.carbs)} / {Math.round(totals.fat)}
       </span>
@@ -282,7 +282,7 @@ export function FoodItemsTable({
   // Get cell classes for calories input
   const getCaloriesClasses = (item: FoodItem, isEditing: boolean) => {
     return cn(
-      "h-full min-h-7 px-1 border-0 bg-transparent transition-all",
+      "h-full min-h-7 px-1 border-0 bg-transparent transition-all text-center",
       isNewItem(item) && "animate-highlight-fade",
       isEditing
         ? "ring-2 ring-focus-ring bg-focus-bg focus-visible:ring-focus-ring"
@@ -296,7 +296,7 @@ export function FoodItemsTable({
       {showHeader && (
         <div className={cn('grid gap-0.5 text-muted-foreground items-center text-xs', gridCols)}>
           <span className={cn("px-2", showEntryDividers && "pl-6")}></span>
-          <span className="px-1">Calories</span>
+          <span className="px-1 text-center">Calories</span>
           <span className="px-1 text-center">Protein/Carbs/Fat</span>
           {hasDeleteColumn && <span></span>}
         </div>
@@ -439,7 +439,7 @@ export function FoodItemsTable({
               </>
             ) : (
               <>
-                <span className="px-1 py-1 text-muted-foreground">{item.calories}</span>
+                <span className="px-1 py-1 text-muted-foreground text-center">{item.calories}</span>
                 <span className="px-1 py-1 text-muted-foreground text-center">
                   {Math.round(item.protein)} / {Math.round(item.carbs)} / {Math.round(item.fat)}
                 </span>
