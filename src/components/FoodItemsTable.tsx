@@ -357,11 +357,12 @@ export function FoodItemsTable({
                   onKeyDown={(e) => handleDescriptionKeyDown(e, index, item)}
                   className={cn(
                     "text-size-compact pl-2 pr-0 py-1 border-0 bg-transparent focus:outline-none line-clamp-2 cursor-text rounded shrink min-w-0",
-                    getDescriptionClasses(item)
+                    getDescriptionClasses(item),
+                    "focus:ring-2 focus:ring-focus-ring focus:bg-focus-bg"
                   )}
                 />
                 {hasAnyEditedFields(item) && (
-                  <span className="text-edited font-bold text-size-compact shrink-0 ml-1" title={formatEditedFields(item) || 'Edited'}>*</span>
+                  <span className="text-focus-ring font-bold text-size-compact shrink-0 ml-1" title={formatEditedFields(item) || 'Edited'}>*</span>
                 )}
                 <div className="flex-1" />
               </div>
@@ -390,7 +391,7 @@ export function FoodItemsTable({
                   {item.description}
                 </span>
                 {hasAnyEditedFields(item) && (
-                  <span className="text-edited font-bold text-size-compact shrink-0 ml-1" title={formatEditedFields(item) || 'Edited'}>*</span>
+                  <span className="text-focus-ring font-bold text-size-compact shrink-0 ml-1" title={formatEditedFields(item) || 'Edited'}>*</span>
                 )}
                 <div className="flex-1" />
               </div>
