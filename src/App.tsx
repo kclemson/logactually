@@ -8,6 +8,7 @@ import Auth from "./pages/Auth";
 import FoodLog from "./pages/FoodLog";
 import Trends from "./pages/Trends";
 import History from "./pages/History";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
               <Route path="/" element={<FoodLog />} />
               <Route path="/trends" element={<Trends />} />
               <Route path="/history" element={<History />} />
+              <Route path="/admin" element={<Admin />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
