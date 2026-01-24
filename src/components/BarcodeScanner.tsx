@@ -1,5 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
+
+// Barcode formats to support (UPC/EAN for products, CODE_128/39 for general)
+const formatsToSupport = [
+  Html5QrcodeSupportedFormats.UPC_A,
+  Html5QrcodeSupportedFormats.UPC_E,
+  Html5QrcodeSupportedFormats.EAN_13,
+  Html5QrcodeSupportedFormats.EAN_8,
+  Html5QrcodeSupportedFormats.CODE_128,
+  Html5QrcodeSupportedFormats.CODE_39,
+];
 import { X, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,14 +47,20 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
         
         if (!mounted) return;
 
-        const scanner = new Html5Qrcode(scannerId);
+        const scanner = new Html5Qrcode(scannerId, {
+          formatsToSupport,
+          verbose: false,
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true,
+          },
+        });
         scannerRef.current = scanner;
 
         await scanner.start(
           { facingMode: 'environment' },
           {
             fps: 10,
-            qrbox: { width: 250, height: 150 },
+            qrbox: { width: 280, height: 120 },
             aspectRatio: 1.5,
           },
           (decodedText) => {
