@@ -294,10 +294,10 @@ export function FoodItemsTable({
     <div className="space-y-1">
       {/* Header row */}
       {showHeader && (
-        <div className={cn('grid gap-0.5 text-muted-foreground items-center text-sm', gridCols)}>
+        <div className={cn('grid gap-0.5 text-muted-foreground items-center text-xs', gridCols)}>
           <span className={cn("px-2", showEntryDividers && "pl-6")}></span>
           <span className="px-1">Calories</span>
-          <span className="px-1 text-center">Protein / Carbs / Fat</span>
+          <span className="px-1 text-center">Protein/Carbs/Fat</span>
           {hasDeleteColumn && <span></span>}
         </div>
       )}
