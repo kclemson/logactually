@@ -96,7 +96,7 @@ export function FoodItemsTable({
   const hasEntryDeletion = entryBoundaries && onDeleteEntry;
   
   // Show dividers between entries when there are multiple entries
-  const showEntryDividers = entryBoundaries && entryBoundaries.length > 1;
+  const showEntryDividers = entryBoundaries && entryBoundaries.length > 0;
 
   // Grid columns based on mode
   const getGridCols = (showDelete: boolean) => {
