@@ -139,13 +139,13 @@ const History = () => {
             <button
               key={index}
               onClick={() => handleDayClick(day)}
-              disabled={!isCurrentMonth || isFutureDate}
+              disabled={isFutureDate}
               className={cn(
                 "flex flex-col items-center justify-center p-2 min-h-[68px] rounded-xl transition-colors",
-                !isCurrentMonth && "bg-transparent text-muted-foreground/30 cursor-default",
-                isCurrentMonth && isFutureDate && "bg-muted/20 text-muted-foreground/50 cursor-default",
+                isFutureDate && "bg-muted/20 text-muted-foreground/50 cursor-default",
+                !isCurrentMonth && !isFutureDate && "bg-muted/30 hover:bg-muted/50 text-muted-foreground/60 cursor-pointer",
                 isCurrentMonth && !isFutureDate && !hasEntries && "bg-muted/40 hover:bg-muted/60 cursor-pointer",
-                hasEntries && isCurrentMonth && !isFutureDate && "bg-rose-100 hover:bg-rose-200 dark:bg-rose-900/20 dark:hover:bg-rose-800/30",
+                hasEntries && !isFutureDate && "bg-rose-100 hover:bg-rose-200 dark:bg-rose-900/20 dark:hover:bg-rose-800/30",
                 isTodayDate && "ring-2 ring-primary ring-inset",
               )}
             >
