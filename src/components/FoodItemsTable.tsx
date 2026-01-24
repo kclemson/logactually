@@ -186,7 +186,7 @@ export function FoodItemsTable({
   const getDescriptionClasses = (item: FoodItem) => {
     return cn(
       "hover:bg-muted/50 focus:bg-muted/50",
-      isNewItem(item) && "bg-new-item dark:bg-new-item"
+      isNewItem(item) && "animate-highlight-fade"
     );
   };
 
@@ -194,7 +194,7 @@ export function FoodItemsTable({
   const getMacroClasses = (item: FoodItem) => {
     return cn(
       "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent",
-      isNewItem(item) && "bg-new-item dark:bg-new-item",
+      isNewItem(item) && "animate-highlight-fade",
       "hover:bg-muted/50 focus:bg-muted/50"
     );
   };

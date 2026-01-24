@@ -82,10 +82,19 @@ export default {
             height: "0",
           },
         },
+        "highlight-fade": {
+          "0%, 80%": {
+            backgroundColor: "hsl(var(--new-item))",
+          },
+          "100%": {
+            backgroundColor: "transparent",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "highlight-fade": "highlight-fade 2.5s ease-out forwards",
       },
     },
   },
