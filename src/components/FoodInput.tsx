@@ -6,6 +6,23 @@ import { BarcodeScanner } from '@/components/BarcodeScanner';
 import { useScanBarcode } from '@/hooks/useScanBarcode';
 import { FoodItem } from '@/types/food';
 
+// Detect UPC patterns in text input to route to database lookup
+function extractUpcFromText(input: string): string | null {
+  // "UPC code: 717524611109", "UPC: 717524611109", "barcode: 717524611109"
+  const prefixMatch = input.match(/(?:upc|barcode)(?:\s+(?:code|number))?[\s:]+(\d[\d\s]{6,})/i);
+  if (prefixMatch) {
+    return prefixMatch[1].replace(/\s/g, '');
+  }
+  
+  // Pure digits (8-14 characters, standard UPC/EAN lengths)
+  const trimmed = input.trim();
+  if (/^\d{8,14}$/.test(trimmed)) {
+    return trimmed;
+  }
+  
+  return null;
+}
+
 interface FoodInputProps {
   onSubmit: (text: string) => void;
   isLoading?: boolean;
@@ -98,10 +115,28 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(
       }
     }, [isListening, getOrCreateRecognition]);
 
-    const handleSubmit = () => {
-      if (text.trim() && !isLoading && !isScanning) {
-        onSubmit(text.trim());
+    const handleSubmit = async () => {
+      const trimmed = text.trim();
+      if (!trimmed || isBusy) return;
+      
+      // Check for UPC pattern - route to database lookup instead of AI
+      const upc = extractUpcFromText(trimmed);
+      
+      if (upc && onScanResult) {
+        console.log('Detected UPC in text input, routing to lookup-upc:', upc);
+        const result = await lookupUpc(upc);
+        
+        if (result.success) {
+          const foodItem = createFoodItemFromScan(result.data);
+          onScanResult(foodItem);
+          setText('');
+          return;
+        }
+        // If not found in database, fall through to analyze-food
       }
+      
+      // Normal food description - use analyze-food
+      onSubmit(trimmed);
     };
 
     const handleBarcodeScan = async (code: string) => {
