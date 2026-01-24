@@ -34,6 +34,23 @@ interface AnalyzeResponse {
   total_fat: number;
 }
 
+// Detect if input is a UPC/barcode lookup request
+function extractUpcCode(input: string): string | null {
+  // Pattern 1: "UPC code: 717524611109" or "UPC: 717524611109" or "barcode: 717524611109"
+  const prefixMatch = input.match(/(?:upc|barcode)[\s:]+(\d[\d\s]{6,})/i);
+  if (prefixMatch) {
+    return prefixMatch[1].replace(/\s/g, '');
+  }
+  
+  // Pattern 2: Pure digits (8-14 characters, standard UPC/EAN lengths)
+  const trimmed = input.trim();
+  if (/^\d{8,14}$/.test(trimmed)) {
+    return trimmed;
+  }
+  
+  return null;
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -87,10 +104,37 @@ serve(async (req) => {
       console.log('Current items for correction:', JSON.stringify(currentItems));
     }
 
-    // Use correction prompt when currentItems is provided (fix mode)
-    // Use fresh analysis prompt otherwise (initial analysis)
-    const prompt = currentItems && Array.isArray(currentItems) && currentItems.length > 0
-      ? `You are a nutrition expert helping to correct a food entry.
+    // Check if this is a UPC lookup
+    const upcCode = extractUpcCode(rawInput);
+    
+    let prompt: string;
+    
+    if (upcCode) {
+      // UPC-specific prompt for barcode lookups
+      console.log('Detected UPC code in input:', upcCode);
+      prompt = `What food product has UPC barcode ${upcCode}?
+
+I need the product name and nutritional information for one typical serving.
+This could be a packaged retail product or fresh produce.
+
+For produce, use typical weight-based servings.
+
+Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
+{
+  "food_items": [
+    { "name": "Product Name", "portion": "serving size", "calories": 0, "protein": 0, "carbs": 0, "fat": 0 }
+  ]
+}
+
+If you cannot identify the product, respond with:
+{
+  "food_items": [
+    { "name": "Unknown Product", "portion": "1 serving", "calories": 0, "protein": 0, "carbs": 0, "fat": 0 }
+  ]
+}`;
+    } else if (currentItems && Array.isArray(currentItems) && currentItems.length > 0) {
+      // Correction prompt when currentItems is provided (fix mode)
+      prompt = `You are a nutrition expert helping to correct a food entry.
 
 Original description: "${rawInput}"
 
@@ -111,8 +155,10 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
   "food_items": [
     { "name": "Food name", "portion": "portion size", "calories": 0, "protein": 0, "carbs": 0, "fat": 0 }
   ]
-}`
-      : `You are a nutrition expert. Analyze the following food description and extract individual food items with their nutritional information.
+}`;
+    } else {
+      // Fresh analysis prompt for food descriptions
+      prompt = `You are a nutrition expert. Analyze the following food description and extract individual food items with their nutritional information.
 
 Food description: "${rawInput}"
 ${additionalContext ? `Additional context: "${additionalContext}"` : ''}
@@ -135,6 +181,7 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
     { "name": "Food name", "portion": "portion size", "calories": 0, "protein": 0, "carbs": 0, "fat": 0 }
   ]
 }`;
+    }
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
