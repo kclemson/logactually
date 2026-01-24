@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { FoodItem, DailyTotals, calculateTotals, EditableField, scaleMacrosByCalories, ScaledMacros } from '@/types/food';
+import { FoodItem, DailyTotals, calculateTotals, scaleMacrosByCalories, ScaledMacros } from '@/types/food';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,7 +16,7 @@ import {
 import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-type EditableFieldKey = 'description' | 'calories' | 'protein' | 'carbs' | 'fat';
+type EditableFieldKey = 'description' | 'calories';
 
 interface EditingCell {
   index: number;
@@ -189,12 +189,12 @@ export function FoodItemsTable({
   // Show dividers between entries when there are multiple entries
   const showEntryDividers = entryBoundaries && entryBoundaries.length > 0;
 
-  // Grid columns based on mode
+  // Grid columns: Description | Calories | P/C/F (combined) | Delete
   const getGridCols = (showDelete: boolean) => {
     if (showDelete) {
-      return `grid-cols-[1fr_56px_50px_44px_32px_24px]`;
+      return `grid-cols-[1fr_60px_110px_28px]`;
     }
-    return `grid-cols-[1fr_56px_50px_44px_32px]`;
+    return `grid-cols-[1fr_60px_110px]`;
   };
 
   // For entry-deletion mode, check if this index is the last item in its entry
@@ -231,9 +231,9 @@ export function FoodItemsTable({
     )}>
       <span className={cn("px-2 text-body font-semibold", showEntryDividers && "pl-6")}>Total</span>
       <span className="px-1 text-heading">{Math.round(totals.calories)}</span>
-      <span className="px-1 text-heading">{Math.round(totals.protein)}</span>
-      <span className="px-1 text-heading">{Math.round(totals.carbs)}</span>
-      <span className="px-1 text-heading">{Math.round(totals.fat)}</span>
+      <span className="px-1 text-heading text-center">
+        {Math.round(totals.protein)} / {Math.round(totals.carbs)} / {Math.round(totals.fat)}
+      </span>
       {hasDeleteColumn && (
         onDeleteAll ? (
           <AlertDialog>
@@ -279,16 +279,14 @@ export function FoodItemsTable({
     );
   };
 
-  // Get cell classes for macro inputs
-  const getMacroClasses = (item: FoodItem, isEditing: boolean, isLinkedToCalories: boolean) => {
+  // Get cell classes for calories input
+  const getCaloriesClasses = (item: FoodItem, isEditing: boolean) => {
     return cn(
       "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent transition-all",
       isNewItem(item) && "animate-highlight-fade",
       isEditing
         ? "ring-2 ring-focus-ring bg-focus-bg focus-visible:ring-focus-ring"
-        : isLinkedToCalories
-          ? "bg-focus-linked"
-          : "hover:bg-muted/50 focus:bg-muted/50"
+        : "hover:bg-muted/50 focus:bg-muted/50"
     );
   };
 
@@ -299,9 +297,7 @@ export function FoodItemsTable({
         <div className={cn('grid gap-0.5 text-muted-foreground items-center', gridCols)}>
           <span className={cn("text-size-compact px-2", showEntryDividers && "pl-6")}></span>
           <span className="text-size-compact px-1">Calories</span>
-          <span className="text-size-compact px-1">Protein</span>
-          <span className="text-size-compact px-1">Carbs</span>
-          <span className="text-size-compact px-1">Fat</span>
+          <span className="text-size-compact px-1 text-center">P / C / F</span>
           {hasDeleteColumn && <span></span>}
         </div>
       )}
@@ -317,6 +313,9 @@ export function FoodItemsTable({
         const currentEntryId = getEntryIdForItem(index);
         const isCurrentExpanded = currentEntryId ? expandedEntryIds?.has(currentEntryId) : false;
         const currentRawInput = currentEntryId ? entryRawInputs?.get(currentEntryId) : null;
+        
+        const isCaloriesEditing = editingCell?.index === index && editingCell?.field === 'calories';
+        const previewMacros = getPreviewMacros(item, index);
         
         return (
           <div key={item.uid || index} className="contents">
@@ -401,111 +400,49 @@ export function FoodItemsTable({
               </div>
             )}
 
-            {/* Macro cells */}
+            {/* Calories + P/C/F cells */}
             {editable ? (
-              (() => {
-                const isCaloriesEditing = editingCell?.index === index && editingCell?.field === 'calories';
-                const previewMacros = getPreviewMacros(item, index);
-                
-                return (
-                  <>
-                    <Input
-                      type="number"
-                      value={
-                        editingCell?.index === index && editingCell?.field === 'calories'
-                          ? editingCell.value
-                          : item.calories
-                      }
-                      onFocus={() => setEditingCell({
-                        index,
-                        field: 'calories',
-                        value: item.calories,
-                        originalValue: item.calories
-                      })}
-                      onChange={(e) => {
-                        if (editingCell) {
-                          setEditingCell({ ...editingCell, value: Number(e.target.value) });
-                        }
-                      }}
-                      onBlur={() => setEditingCell(null)}
-                      onKeyDown={(e) => handleKeyDown(e, index, 'calories')}
-                      className={getMacroClasses(item, isCaloriesEditing, false)}
-                    />
-                    <Input
-                      type="number"
-                      value={
-                        editingCell?.index === index && editingCell?.field === 'protein'
-                          ? editingCell.value
-                          : previewMacros?.protein ?? Math.round(item.protein)
-                      }
-                      onFocus={() => setEditingCell({
-                        index,
-                        field: 'protein',
-                        value: Math.round(item.protein),
-                        originalValue: Math.round(item.protein)
-                      })}
-                      onChange={(e) => {
-                        if (editingCell) {
-                          setEditingCell({ ...editingCell, value: Number(e.target.value) });
-                        }
-                      }}
-                      onBlur={() => setEditingCell(null)}
-                      onKeyDown={(e) => handleKeyDown(e, index, 'protein')}
-                      className={getMacroClasses(item, editingCell?.index === index && editingCell?.field === 'protein', isCaloriesEditing)}
-                    />
-                    <Input
-                      type="number"
-                      value={
-                        editingCell?.index === index && editingCell?.field === 'carbs'
-                          ? editingCell.value
-                          : previewMacros?.carbs ?? Math.round(item.carbs)
-                      }
-                      onFocus={() => setEditingCell({
-                        index,
-                        field: 'carbs',
-                        value: Math.round(item.carbs),
-                        originalValue: Math.round(item.carbs)
-                      })}
-                      onChange={(e) => {
-                        if (editingCell) {
-                          setEditingCell({ ...editingCell, value: Number(e.target.value) });
-                        }
-                      }}
-                      onBlur={() => setEditingCell(null)}
-                      onKeyDown={(e) => handleKeyDown(e, index, 'carbs')}
-                      className={getMacroClasses(item, editingCell?.index === index && editingCell?.field === 'carbs', isCaloriesEditing)}
-                    />
-                    <Input
-                      type="number"
-                      value={
-                        editingCell?.index === index && editingCell?.field === 'fat'
-                          ? editingCell.value
-                          : previewMacros?.fat ?? Math.round(item.fat)
-                      }
-                      onFocus={() => setEditingCell({
-                        index,
-                        field: 'fat',
-                        value: Math.round(item.fat),
-                        originalValue: Math.round(item.fat)
-                      })}
-                      onChange={(e) => {
-                        if (editingCell) {
-                          setEditingCell({ ...editingCell, value: Number(e.target.value) });
-                        }
-                      }}
-                      onBlur={() => setEditingCell(null)}
-                      onKeyDown={(e) => handleKeyDown(e, index, 'fat')}
-                      className={getMacroClasses(item, editingCell?.index === index && editingCell?.field === 'fat', isCaloriesEditing)}
-                    />
-                  </>
-                );
-              })()
+              <>
+                <Input
+                  type="number"
+                  value={
+                    editingCell?.index === index && editingCell?.field === 'calories'
+                      ? editingCell.value
+                      : item.calories
+                  }
+                  onFocus={() => setEditingCell({
+                    index,
+                    field: 'calories',
+                    value: item.calories,
+                    originalValue: item.calories
+                  })}
+                  onChange={(e) => {
+                    if (editingCell) {
+                      setEditingCell({ ...editingCell, value: Number(e.target.value) });
+                    }
+                  }}
+                  onBlur={() => setEditingCell(null)}
+                  onKeyDown={(e) => handleKeyDown(e, index, 'calories')}
+                  className={getCaloriesClasses(item, isCaloriesEditing)}
+                />
+                {/* P/C/F combined - read-only with preview when editing calories */}
+                <span className={cn(
+                  "text-size-compact px-1 py-1 text-center",
+                  isNewItem(item) && "animate-highlight-fade",
+                  isCaloriesEditing ? "text-focus-ring" : "text-muted-foreground"
+                )}>
+                  {previewMacros 
+                    ? `${previewMacros.protein} / ${previewMacros.carbs} / ${previewMacros.fat}`
+                    : `${Math.round(item.protein)} / ${Math.round(item.carbs)} / ${Math.round(item.fat)}`
+                  }
+                </span>
+              </>
             ) : (
               <>
                 <span className="text-size-compact px-1 py-1 text-muted-foreground">{item.calories}</span>
-                <span className="text-size-compact px-1 py-1 text-muted-foreground">{Math.round(item.protein)}</span>
-                <span className="text-size-compact px-1 py-1 text-muted-foreground">{Math.round(item.carbs)}</span>
-                <span className="text-size-compact px-1 py-1 text-muted-foreground">{Math.round(item.fat)}</span>
+                <span className="text-size-compact px-1 py-1 text-muted-foreground text-center">
+                  {Math.round(item.protein)} / {Math.round(item.carbs)} / {Math.round(item.fat)}
+                </span>
               </>
             )}
 
@@ -561,7 +498,7 @@ export function FoodItemsTable({
             {/* Expanded raw input - shows after last item in entry */}
             {showEntryDividers && isLastInEntry && isCurrentExpanded && currentRawInput && (
               <div className={cn('grid gap-0.5', gridCols)}>
-                <div className="col-span-5 pl-6 py-1 text-size-compact text-muted-foreground whitespace-pre-wrap italic">
+                <div className="col-span-full pl-6 py-1 text-size-compact text-muted-foreground whitespace-pre-wrap italic">
                   {currentRawInput}
                 </div>
               </div>
