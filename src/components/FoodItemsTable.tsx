@@ -256,6 +256,7 @@ export function FoodItemsTable({
                 <div
                   contentEditable
                   suppressContentEditableWarning
+                  spellCheck={false}
                   title={getItemTooltip(item)}
                   ref={(el) => {
                     // Only sync content when element exists and is NOT being edited
