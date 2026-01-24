@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 
-// Barcode formats to support (UPC/EAN for products, CODE_128/39 for general)
+// Barcode formats to support (UPC/EAN for products, CODE_128/39 for general, RSS for produce)
 const formatsToSupport = [
   Html5QrcodeSupportedFormats.UPC_A,
   Html5QrcodeSupportedFormats.UPC_E,
@@ -9,6 +9,8 @@ const formatsToSupport = [
   Html5QrcodeSupportedFormats.EAN_8,
   Html5QrcodeSupportedFormats.CODE_128,
   Html5QrcodeSupportedFormats.CODE_39,
+  Html5QrcodeSupportedFormats.RSS_14,        // GS1 DataBar (produce like bananas)
+  Html5QrcodeSupportedFormats.RSS_EXPANDED,  // GS1 DataBar Expanded
 ];
 import { X, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -104,9 +106,10 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
         await scanner.start(
           { facingMode: 'environment' },
           {
-            fps: 10,
-            qrbox: { width: 280, height: 120 },
+            fps: 15,                            // Higher FPS for better detection
+            qrbox: { width: 280, height: 150 }, // Taller scan area for linear barcodes
             aspectRatio: 1.5,
+            disableFlip: true,                  // Save processing cycles on mobile
           },
           (decodedText) => {
             console.log('Barcode detected:', decodedText);
@@ -191,7 +194,7 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
                 </p>
               )}
               <p className="text-center text-muted-foreground text-sm">
-                Point the camera at a barcode
+                Hold steady, about 6 inches away
               </p>
               {!isStarting && (
                 <div className="space-y-2">
