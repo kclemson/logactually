@@ -189,12 +189,11 @@ export function FoodItemsTable({
     </div>
   );
 
-  // Get cell classes for description (includes row-level edit indicator)
+  // Get cell classes for description (new-item highlight only)
   const getDescriptionClasses = (item: FoodItem) => {
     return cn(
       "hover:bg-muted/50 focus:bg-muted/50",
-      isNewItem(item) && "bg-amber-100 dark:bg-amber-900/30",
-      hasAnyEditedFields(item) && "edit-indicator"
+      isNewItem(item) && "bg-new-item dark:bg-new-item"
     );
   };
 
@@ -202,7 +201,7 @@ export function FoodItemsTable({
   const getMacroClasses = (item: FoodItem) => {
     return cn(
       "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent",
-      isNewItem(item) && "bg-amber-100 dark:bg-amber-900/30",
+      isNewItem(item) && "bg-new-item dark:bg-new-item",
       "hover:bg-muted/50 focus:bg-muted/50"
     );
   };
@@ -260,35 +259,45 @@ export function FoodItemsTable({
             )}
             {/* Description cell */}
             {editable ? (
-              <div
-                contentEditable
-                suppressContentEditableWarning
-                title={getItemTooltip(item)}
-                ref={(el) => {
-                  // Only sync content when element exists and is NOT being edited
-                  if (el && el.textContent !== item.description && document.activeElement !== el) {
-                    el.textContent = item.description;
-                  }
-                }}
-                onInput={(e) => {
-                  const newDescription = e.currentTarget.textContent || '';
-                  if (newDescription !== item.description) {
-                    onUpdateItem?.(index, 'description', newDescription);
-                  }
-                }}
-                onKeyDown={handleKeyDown}
-                className={cn(
-                  "text-size-compact px-2 py-1 border-0 bg-transparent focus:outline-none line-clamp-2 cursor-text rounded",
-                  getDescriptionClasses(item)
+              <div className="flex items-center min-w-0">
+                <div
+                  contentEditable
+                  suppressContentEditableWarning
+                  title={getItemTooltip(item)}
+                  ref={(el) => {
+                    // Only sync content when element exists and is NOT being edited
+                    if (el && el.textContent !== item.description && document.activeElement !== el) {
+                      el.textContent = item.description;
+                    }
+                  }}
+                  onInput={(e) => {
+                    const newDescription = e.currentTarget.textContent || '';
+                    if (newDescription !== item.description) {
+                      onUpdateItem?.(index, 'description', newDescription);
+                    }
+                  }}
+                  onKeyDown={handleKeyDown}
+                  className={cn(
+                    "text-size-compact px-2 py-1 border-0 bg-transparent focus:outline-none line-clamp-2 cursor-text rounded flex-1 min-w-0",
+                    getDescriptionClasses(item)
+                  )}
+                />
+                {hasAnyEditedFields(item) && (
+                  <span className="text-edited font-bold text-size-compact shrink-0" title="Edited">*</span>
                 )}
-              />
+              </div>
             ) : (
-              <span 
-                title={getItemTooltip(item)}
-                className="text-size-compact px-2 py-1 line-clamp-2"
-              >
-                {item.description}
-              </span>
+              <div className="flex items-center min-w-0">
+                <span 
+                  title={getItemTooltip(item)}
+                  className="text-size-compact px-2 py-1 line-clamp-2 flex-1 min-w-0"
+                >
+                  {item.description}
+                </span>
+                {hasAnyEditedFields(item) && (
+                  <span className="text-edited font-bold text-size-compact shrink-0" title="Edited">*</span>
+                )}
+              </div>
             )}
 
             {/* Macro cells */}
