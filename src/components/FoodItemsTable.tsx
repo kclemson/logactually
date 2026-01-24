@@ -192,9 +192,9 @@ export function FoodItemsTable({
   // Grid columns: Description | Calories | P/C/F (combined) | Delete
   const getGridCols = (showDelete: boolean) => {
     if (showDelete) {
-      return `grid-cols-[1fr_60px_110px_28px]`;
+      return `grid-cols-[1fr_50px_90px_24px]`;
     }
-    return `grid-cols-[1fr_60px_110px]`;
+    return `grid-cols-[1fr_50px_90px]`;
   };
 
   // For entry-deletion mode, check if this index is the last item in its entry
