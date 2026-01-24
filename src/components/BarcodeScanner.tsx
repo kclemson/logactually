@@ -81,6 +81,11 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
   useEffect(() => {
     if (!open) return;
 
+    // Reset state for fresh start each time dialog opens
+    setError(null);
+    setDebugInfo(null);
+    setIsStarting(true);
+
     let mounted = true;
     const scannerId = 'barcode-scanner-region';
 
@@ -104,7 +109,12 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
         scannerRef.current = scanner;
 
         await scanner.start(
-          { facingMode: 'environment' },
+          { 
+            facingMode: 'environment',
+            // Request higher resolution and continuous focus for better barcode detection
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
           {
             fps: 15,                            // Higher FPS for better detection
             qrbox: { width: 280, height: 150 }, // Taller scan area for linear barcodes
@@ -160,6 +170,9 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
       scannerRef.current.stop().catch(console.error);
       scannerRef.current = null;
     }
+    // Clear state on close for clean reopening
+    setDebugInfo(null);
+    setError(null);
     onClose();
   };
 
