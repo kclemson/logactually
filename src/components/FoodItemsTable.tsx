@@ -388,7 +388,7 @@ export function FoodItemsTable({
             
             {/* Expanded raw input - shows after last item in entry */}
             {showEntryDividers && isLastInEntry && isCurrentExpanded && currentRawInput && (
-              <div className="col-span-full pl-5 py-1 text-size-compact text-muted-foreground whitespace-pre-wrap italic">
+              <div className="col-span-full pl-4 py-1 text-size-compact text-muted-foreground whitespace-pre-wrap italic">
                 {currentRawInput}
               </div>
             )}
