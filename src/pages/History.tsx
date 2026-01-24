@@ -118,7 +118,7 @@ const History = () => {
         {weekDays.map((day) => (
           <div
             key={day}
-            className="py-1 text-center text-size-compact font-medium text-muted-foreground"
+            className="py-1 text-center font-medium text-muted-foreground"
           >
             {day}
           </div>
@@ -150,7 +150,7 @@ const History = () => {
             >
               {/* Calorie count - above day number */}
               {hasEntries && isCurrentMonth && (
-                <span className="text-size-caption text-rose-500 dark:text-rose-400 font-medium">
+                <span className="text-rose-500 dark:text-rose-400 font-medium">
                   {Math.round(summary.totalCalories)}
                 </span>
               )}
@@ -158,7 +158,7 @@ const History = () => {
               {/* Day number - centered */}
               <span
                 className={cn(
-                  "text-body font-medium",
+                  "font-medium",
                   isTodayDate && "text-primary font-semibold",
                   !isCurrentMonth && "text-muted-foreground/30",
                 )}

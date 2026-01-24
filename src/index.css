@@ -7,12 +7,7 @@ All colors MUST be HSL.
 */
 
 @layer components {
-  /* Simplified typography: 3 sizes that work with iOS 16px minimum */
-  .text-sm-app {
-    font-size: 0.8125rem;  /* 13px desktop, bumped on mobile */
-    line-height: 1.4;
-  }
-  
+  /* Typography: semantic classes that work with iOS 16px minimum */
   .text-heading {
     font-size: 0.875rem;   /* 14px - section headings */
     line-height: 1.4;

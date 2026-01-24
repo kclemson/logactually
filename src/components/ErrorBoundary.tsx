@@ -34,7 +34,7 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 text-center">
           <div className="max-w-md space-y-4">
             <h1 className="text-title text-foreground">Something went wrong</h1>
-            <p className="text-body text-muted-foreground">
+            <p className="text-muted-foreground">
               We're sorry, but something unexpected happened. Please try reloading the page.
             </p>
             <Button onClick={this.handleReload} className="mt-4">

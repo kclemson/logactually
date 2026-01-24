@@ -309,7 +309,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
             onToggleEntryExpand={handleToggleEntryExpand}
           />
         ) : (
-          <p className="text-body text-muted-foreground">
+          <p className="text-muted-foreground">
             {isTodaySelected ? 'No entries yet today.' : 'No entries for this day.'}
           </p>
         )}

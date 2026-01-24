@@ -229,7 +229,7 @@ export function FoodItemsTable({
       totalsPosition === 'bottom' && 'pt-1.5 border-t-2 border-slate-300 dark:border-slate-600',
       gridCols
     )}>
-      <span className={cn("px-2 text-body font-semibold", showEntryDividers && "pl-6")}>Total</span>
+      <span className={cn("px-2 font-semibold", showEntryDividers && "pl-6")}>Total</span>
       <span className="px-1 text-heading">{Math.round(totals.calories)}</span>
       <span className="px-1 text-heading text-center">
         {Math.round(totals.protein)} / {Math.round(totals.carbs)} / {Math.round(totals.fat)}
@@ -498,7 +498,7 @@ export function FoodItemsTable({
             {/* Expanded raw input - shows after last item in entry */}
             {showEntryDividers && isLastInEntry && isCurrentExpanded && currentRawInput && (
               <div className={cn('grid gap-0.5', gridCols)}>
-                <div className="col-span-full pl-6 py-1 text-size-compact text-muted-foreground whitespace-pre-wrap italic">
+                <div className="col-span-full pl-6 py-1 text-muted-foreground whitespace-pre-wrap italic">
                   {currentRawInput}
                 </div>
               </div>

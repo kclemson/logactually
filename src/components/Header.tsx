@@ -13,7 +13,7 @@ export function Header() {
         </div>
         <button
           onClick={() => signOut()}
-          className="text-body text-muted-foreground hover:text-foreground hover:underline min-h-[44px] px-2 -mr-2"
+          className="text-muted-foreground hover:text-foreground hover:underline min-h-[44px] px-2 -mr-2"
         >
           Sign out
         </button>
