@@ -7,7 +7,7 @@ import {
   BinaryBitmap,
   HybridBinarizer,
 } from '@zxing/library';
-import { Camera, ScanLine } from 'lucide-react';
+import { Camera, ScanLine, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -36,13 +36,18 @@ const SUPPORTED_FORMATS = [
 ];
 
 interface DebugInfo {
-  status: 'starting' | 'active' | 'error' | 'captured';
+  status: 'starting' | 'active' | 'error' | 'captured' | 'success';
   videoWidth: number;
   videoHeight: number;
   decodeAttempts: number;
   lastError: string | null;
   captureResult: string | null;
   rotationApplied: number;
+}
+
+interface SuccessState {
+  code: string;
+  format: string;
 }
 
 interface TrackDimensions {
@@ -202,6 +207,7 @@ async function logDebugEvents(
 export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
   const [error, setError] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
+  const [successState, setSuccessState] = useState<SuccessState | null>(null);
   const [debugInfo, setDebugInfo] = useState<DebugInfo>({
     status: 'starting',
     videoWidth: 0,
@@ -342,18 +348,25 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
         } 
       }]);
       
-      // Stop everything
+      // Stop decode loop but keep stream for success overlay
       if (decodeLoopRef.current) {
         cancelAnimationFrame(decodeLoopRef.current);
         decodeLoopRef.current = null;
       }
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
-      readerRef.current = null;
-      streamRef.current = null;
       
-      onScan(result.text);
+      // Show success state
+      setSuccessState({ code: result.text, format: result.format });
+      setDebugInfo(prev => ({ ...prev, status: 'success' }));
+      
+      // Delay before calling onScan to show success feedback
+      setTimeout(() => {
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+        }
+        readerRef.current = null;
+        streamRef.current = null;
+        onScan(result.text);
+      }, 1200);
     } else {
       setDebugInfo(prev => ({ 
         ...prev, 
@@ -390,6 +403,7 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
     decodeStartTimeRef.current = Date.now();
     errorCountsRef.current = new Map();
     rotationNeededRef.current = 0;
+    setSuccessState(null);
     setDebugInfo({
       status: 'starting',
       videoWidth: 0,
@@ -584,13 +598,19 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
               } 
             }]);
 
-            if (streamRef.current) {
-              streamRef.current.getTracks().forEach(track => track.stop());
-            }
-            readerRef.current = null;
-            streamRef.current = null;
+            // Show success state with delay
+            setSuccessState({ code: result.text, format: result.format });
+            setDebugInfo(prev => ({ ...prev, status: 'success' }));
             
-            onScan(result.text);
+            // Delay before calling onScan to show success feedback
+            setTimeout(() => {
+              if (streamRef.current) {
+                streamRef.current.getTracks().forEach(track => track.stop());
+              }
+              readerRef.current = null;
+              streamRef.current = null;
+              onScan(result.text);
+            }, 1200);
             return;
           }
 
@@ -790,18 +810,31 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
             </div>
           ) : (
             <>
-              <div className="w-full bg-black rounded-lg overflow-hidden relative">
+              <div className="w-full bg-black rounded-lg overflow-hidden relative flex items-center justify-center">
                 <video 
                   ref={videoRef}
-                  className="w-full aspect-video object-contain bg-black"
+                  className="w-full max-h-[60vh] object-contain bg-black"
                   autoPlay
                   playsInline
                   muted
                 />
-                {/* Scan region indicator */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="w-[80%] max-w-[280px] h-[80px] border-2 border-primary/50 rounded-lg" />
-                </div>
+                {/* Scan region indicator - horizontal band for 1D barcodes */}
+                {!successState && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="w-[90%] h-[60px] border-2 border-primary/60 rounded-lg bg-primary/5" />
+                  </div>
+                )}
+                
+                {/* Success overlay */}
+                {successState && (
+                  <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center animate-fade-in">
+                    <div className="bg-green-500/20 rounded-full p-4 mb-3 animate-scale-in">
+                      <CheckCircle2 className="h-12 w-12 text-green-500" />
+                    </div>
+                    <p className="text-white font-semibold text-lg mb-1">Barcode detected!</p>
+                    <p className="text-white/80 font-mono text-sm">{successState.code}</p>
+                  </div>
+                )}
               </div>
 
               {/* Debug Info Display */}
