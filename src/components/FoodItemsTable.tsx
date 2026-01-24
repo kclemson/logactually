@@ -12,7 +12,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Trash2 } from 'lucide-react';
+import { Trash2, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface EntryBoundary {
@@ -37,6 +37,9 @@ interface FoodItemsTableProps {
   onDeleteAll?: () => void;
   hasChanges?: boolean;
   onSave?: () => void;
+  entryRawInputs?: Map<string, string>;
+  expandedEntryIds?: Set<string>;
+  onToggleEntryExpand?: (entryId: string) => void;
 }
 
 export function FoodItemsTable({
@@ -55,6 +58,9 @@ export function FoodItemsTable({
   onDeleteAll,
   hasChanges,
   onSave,
+  entryRawInputs,
+  expandedEntryIds,
+  onToggleEntryExpand,
 }: FoodItemsTableProps) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -115,6 +121,13 @@ export function FoodItemsTable({
   const isFirstItemInEntry = (index: number): boolean => {
     if (!entryBoundaries) return false;
     return entryBoundaries.some(b => b.startIndex === index);
+  };
+
+  // Get the entry ID for the entry that ended just before this index
+  const getPreviousEntryId = (index: number): string | null => {
+    if (!entryBoundaries) return null;
+    const boundary = entryBoundaries.find(b => b.endIndex === index - 1);
+    return boundary?.entryId || null;
   };
 
   const gridCols = editable 
@@ -211,17 +224,43 @@ export function FoodItemsTable({
       {items.map((item, index) => {
         const entryBoundary = isLastItemInEntry(index);
         const isFirstInEntry = isFirstItemInEntry(index);
+        const previousEntryId = getPreviousEntryId(index);
+        const isPreviousExpanded = previousEntryId ? expandedEntryIds?.has(previousEntryId) : false;
+        const previousRawInput = previousEntryId ? entryRawInputs?.get(previousEntryId) : null;
         
         return (
-          <div
-            key={item.uid || index}
-            className={cn(
-              'grid gap-0.5 items-stretch group',
-              gridCols,
-              // Add top border for entry groups (except first entry)
-              hasEntryDeletion && isFirstInEntry && index > 0 && 'border-t border-muted/50 pt-1'
+          <div key={item.uid || index} className="contents">
+            {/* Divider row between entries */}
+            {hasEntryDeletion && isFirstInEntry && index > 0 && previousEntryId && (
+              <>
+                <div className="col-span-full flex items-center py-0.5">
+                  <button
+                    onClick={() => onToggleEntryExpand?.(previousEntryId)}
+                    className="p-0.5 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+                  >
+                    <ChevronRight className={cn(
+                      "h-3 w-3 transition-transform",
+                      isPreviousExpanded && "rotate-90"
+                    )} />
+                  </button>
+                  <div className="flex-1 border-t border-muted/30 ml-1" />
+                </div>
+                
+                {/* Expanded raw input */}
+                {isPreviousExpanded && previousRawInput && (
+                  <div className="col-span-full pl-5 pb-1 text-size-compact text-muted-foreground whitespace-pre-wrap">
+                    {previousRawInput}
+                  </div>
+                )}
+              </>
             )}
-          >
+            
+            <div
+              className={cn(
+                'grid gap-0.5 items-stretch group',
+                gridCols
+              )}
+            >
             {/* Description cell */}
             {editable ? (
               <div
@@ -343,6 +382,7 @@ export function FoodItemsTable({
                 <span></span>
               )
             )}
+            </div>
           </div>
         );
       })}
