@@ -16,10 +16,9 @@ All colors MUST be HSL.
     content: '';
     position: absolute;
     left: 0;
-    top: 50%;
-    transform: translateY(-50%);
+    top: 4px;
+    bottom: 4px;
     width: 2px;
-    height: 60%;
     background-color: hsl(38 92% 50%); /* amber-500 */
     border-radius: 1px;
   }
