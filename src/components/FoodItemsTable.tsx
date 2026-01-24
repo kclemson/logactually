@@ -237,7 +237,7 @@ export function FoodItemsTable({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 text-muted-foreground hover:text-destructive md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                className="h-11 w-11 -m-2.5 text-muted-foreground hover:text-destructive md:opacity-0 md:group-hover:opacity-100 transition-opacity"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
@@ -327,12 +327,12 @@ export function FoodItemsTable({
               <div className="flex items-baseline min-w-0">
                 {/* Always reserve chevron space when showing entry dividers */}
                 {showEntryDividers && (
-                  <div className="w-4 shrink-0 text-center">
+                  <div className="w-4 shrink-0 flex items-center justify-center">
                     {isLastInEntry ? (
                       <button
                         onClick={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
                         className={cn(
-                          "text-muted-foreground/40 hover:text-muted-foreground transition-transform inline-block",
+                          "min-h-[44px] min-w-[44px] -ml-3 flex items-center justify-center text-muted-foreground/40 hover:text-muted-foreground transition-transform",
                           isCurrentExpanded && "rotate-90"
                         )}
                       >
@@ -369,12 +369,12 @@ export function FoodItemsTable({
               <div className="flex items-baseline min-w-0">
                 {/* Always reserve chevron space when showing entry dividers */}
                 {showEntryDividers && (
-                  <div className="w-4 shrink-0 text-center">
+                  <div className="w-4 shrink-0 flex items-center justify-center">
                     {isLastInEntry ? (
                       <button
                         onClick={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
                         className={cn(
-                          "text-muted-foreground/40 hover:text-muted-foreground transition-transform inline-block",
+                          "min-h-[44px] min-w-[44px] -ml-3 flex items-center justify-center text-muted-foreground/40 hover:text-muted-foreground transition-transform",
                           isCurrentExpanded && "rotate-90"
                         )}
                       >
@@ -510,7 +510,7 @@ export function FoodItemsTable({
                 variant="ghost"
                 size="icon"
                 onClick={() => onRemoveItem?.(index)}
-                className="h-6 w-6 text-muted-foreground hover:text-destructive md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                className="h-11 w-11 -m-2.5 text-muted-foreground hover:text-destructive md:opacity-0 md:group-hover:opacity-100 transition-opacity"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
@@ -524,7 +524,7 @@ export function FoodItemsTable({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 text-muted-foreground hover:text-destructive md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                      className="h-11 w-11 -m-2.5 text-muted-foreground hover:text-destructive md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>

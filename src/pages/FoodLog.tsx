@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { format, addDays, subDays, isToday, parseISO } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { FoodInput, FoodInputRef } from '@/components/FoodInput';
 import { FoodItemsTable } from '@/components/FoodItemsTable';
 import { Button } from '@/components/ui/button';
@@ -278,7 +279,7 @@ const FoodLog = () => {
 
       {/* Date Navigation */}
       <div className="flex items-center justify-center gap-1">
-        <Button variant="ghost" size="icon" onClick={goToPreviousDay}>
+        <Button variant="ghost" size="icon" onClick={goToPreviousDay} className="h-11 w-11">
           <ChevronLeft className="h-5 w-5" />
         </Button>
         
@@ -295,7 +296,7 @@ const FoodLog = () => {
           size="icon"
           onClick={goToNextDay}
           disabled={isTodaySelected}
-          className={isTodaySelected ? "opacity-20" : ""}
+          className={cn("h-11 w-11", isTodaySelected && "opacity-20")}
         >
           <ChevronRight className="h-5 w-5" />
         </Button>
