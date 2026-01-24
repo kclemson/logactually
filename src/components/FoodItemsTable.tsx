@@ -78,17 +78,20 @@ export function FoodItemsTable({
     return (item.editedFields?.length ?? 0) > 0;
   };
 
-  // Build tooltip showing description + edited fields if any
-  const getItemTooltip = (item: FoodItem): string => {
+  // Format edited fields for tooltip display (reusable helper)
+  const formatEditedFields = (item: FoodItem): string | null => {
     if (!item.editedFields || item.editedFields.length === 0) {
-      return item.description;
+      return null;
     }
-    
     const fieldLabels = item.editedFields.map(field => 
       field.charAt(0).toUpperCase() + field.slice(1)
     );
-    
-    return `${item.description}\n\nEdited: ${fieldLabels.join(', ')}`;
+    return `Edited: ${fieldLabels.join(', ')}`;
+  };
+
+  // Build tooltip for description (just the description text)
+  const getItemTooltip = (item: FoodItem): string => {
+    return item.description;
   };
 
   // Check if this is a newly-added row (for amber background)
@@ -283,7 +286,7 @@ export function FoodItemsTable({
                   )}
                 />
                 {hasAnyEditedFields(item) && (
-                  <span className="text-edited font-bold text-size-compact shrink-0 ml-1" title="Edited">*</span>
+                  <span className="text-edited font-bold text-size-compact shrink-0 ml-1" title={formatEditedFields(item) || 'Edited'}>*</span>
                 )}
                 <div className="flex-1" />
               </div>
@@ -296,7 +299,7 @@ export function FoodItemsTable({
                   {item.description}
                 </span>
                 {hasAnyEditedFields(item) && (
-                  <span className="text-edited font-bold text-size-compact shrink-0 ml-1" title="Edited">*</span>
+                  <span className="text-edited font-bold text-size-compact shrink-0 ml-1" title={formatEditedFields(item) || 'Edited'}>*</span>
                 )}
                 <div className="flex-1" />
               </div>
