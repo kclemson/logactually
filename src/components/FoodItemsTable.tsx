@@ -245,7 +245,7 @@ export function FoodItemsTable({
             {/* Expand column cell */}
             {showEntryDividers && (
               <div className="flex items-center justify-center">
-                {isFirstInEntry ? (
+                {isLastInEntry ? (
                   <button
                     onClick={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
                     className="p-0.5 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
