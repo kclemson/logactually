@@ -229,7 +229,7 @@ export function FoodItemsTable({
       totalsPosition === 'bottom' && 'pt-1.5 border-t-2 border-slate-300 dark:border-slate-600',
       gridCols
     )}>
-      <span className={cn("px-2 font-semibold", showEntryDividers && "pl-6")}>Total</span>
+      <span className={cn("px-1 font-semibold", showEntryDividers && "pl-4")}>Total</span>
       <span className="px-1 text-heading text-center">{Math.round(totals.calories)}</span>
       <span className="px-1 text-heading text-center">
         {Math.round(totals.protein)} / {Math.round(totals.carbs)} / {Math.round(totals.fat)}
@@ -295,7 +295,7 @@ export function FoodItemsTable({
       {/* Header row */}
       {showHeader && (
         <div className={cn('grid gap-0.5 text-muted-foreground items-center text-xs', gridCols)}>
-          <span className={cn("px-2", showEntryDividers && "pl-6")}></span>
+          <span className={cn("px-1", showEntryDividers && "pl-4")}></span>
           <span className="px-1 text-center">Calories</span>
           <span className="px-1 text-center">Protein/Carbs/Fat</span>
           {hasDeleteColumn && <span></span>}
@@ -330,7 +330,7 @@ export function FoodItemsTable({
               <div className="flex items-baseline min-w-0">
                 {/* Always reserve chevron space when showing entry dividers */}
                 {showEntryDividers && (
-                  <div className="w-4 shrink-0 relative flex items-center justify-center self-stretch">
+                  <div className="w-3 shrink-0 relative flex items-center justify-center self-stretch">
                     {isLastInEntry ? (
                       <button
                         onClick={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
@@ -359,7 +359,7 @@ export function FoodItemsTable({
                   onBlur={handleDescriptionBlur}
                   onKeyDown={(e) => handleDescriptionKeyDown(e, index, item)}
                   className={cn(
-                    "pl-2 pr-0 py-1 border-0 bg-transparent focus:outline-none line-clamp-2 cursor-text rounded min-w-0",
+                    "pl-1 pr-0 py-1 border-0 bg-transparent focus:outline-none line-clamp-2 cursor-text rounded min-w-0",
                     getDescriptionClasses(item),
                     "focus:ring-2 focus:ring-focus-ring focus:bg-focus-bg"
                   )}
@@ -373,7 +373,7 @@ export function FoodItemsTable({
               <div className="flex items-baseline min-w-0">
                 {/* Always reserve chevron space when showing entry dividers */}
                 {showEntryDividers && (
-                  <div className="w-4 shrink-0 relative flex items-center justify-center self-stretch">
+                  <div className="w-3 shrink-0 relative flex items-center justify-center self-stretch">
                     {isLastInEntry ? (
                       <button
                         onClick={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
@@ -389,7 +389,7 @@ export function FoodItemsTable({
                 )}
                 <span 
                   title={getItemTooltip(item)}
-                  className="pl-2 pr-0 py-1 line-clamp-2 shrink min-w-0"
+                  className="pl-1 pr-0 py-1 line-clamp-2 shrink min-w-0"
                 >
                   {item.description}
                   {hasAnyEditedFields(item) && (
