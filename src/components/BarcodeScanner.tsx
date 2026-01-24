@@ -437,7 +437,31 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
         const reader = new BrowserMultiFormatReader(DECODER_HINTS);
         readerRef.current = reader;
 
-        if (!mounted || !videoRef.current) return;
+        // Wait for video element to be ready (poll with timeout)
+        const maxWaitMs = 2000;
+        const pollIntervalMs = 50;
+        let waited = 0;
+        
+        while (!videoRef.current && waited < maxWaitMs) {
+          await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+          waited += pollIntervalMs;
+        }
+        
+        if (!mounted) return;
+        
+        if (!videoRef.current) {
+          logDebugEvents(sessionId, [{
+            event: 'video_ref_timeout',
+            phase: 'error',
+            data: { 
+              reason: 'Video element not attached to DOM after waiting',
+              waitedMs: waited 
+            }
+          }]);
+          setError('Camera initialization failed. Please try again.');
+          setIsStarting(false);
+          return;
+        }
 
         const requestedConstraints = {
           facingMode: 'environment',
