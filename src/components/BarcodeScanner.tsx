@@ -35,6 +35,12 @@ const SUPPORTED_FORMATS = [
   BarcodeFormat.RSS_EXPANDED,
 ];
 
+// Pre-configured decoder hints (created once, reused)
+const DECODER_HINTS = new Map<DecodeHintType, unknown>([
+  [DecodeHintType.TRY_HARDER, true],
+  [DecodeHintType.POSSIBLE_FORMATS, SUPPORTED_FORMATS],
+]);
+
 interface DebugInfo {
   status: 'starting' | 'active' | 'error' | 'captured' | 'success';
   videoWidth: number;
@@ -427,8 +433,10 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
           data: { environment }
         }]);
 
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
+        // Pre-create ZXing decoder (doesn't depend on video stream)
+        const reader = new BrowserMultiFormatReader(DECODER_HINTS);
+        readerRef.current = reader;
+
         if (!mounted || !videoRef.current) return;
 
         const requestedConstraints = {
@@ -518,6 +526,9 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
 
         if (!mounted) return;
 
+        // Show UI immediately now that video is playing
+        setIsStarting(false);
+
         const video = videoRef.current;
         const videoWidth = video.videoWidth;
         const videoHeight = video.videoHeight;
@@ -557,14 +568,6 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
           rotationApplied: rotation,
         }));
         setStreamReady(true);
-
-        // Configure ZXing decoder
-        const hints = new Map<DecodeHintType, unknown>();
-        hints.set(DecodeHintType.TRY_HARDER, true);
-        hints.set(DecodeHintType.POSSIBLE_FORMATS, SUPPORTED_FORMATS);
-
-        const reader = new BrowserMultiFormatReader(hints);
-        readerRef.current = reader;
 
         decodeStartTimeRef.current = Date.now();
 
@@ -668,9 +671,6 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
         // Start decode loop
         decodeLoopRef.current = requestAnimationFrame(runDecodeLoop);
 
-        if (mounted) {
-          setIsStarting(false);
-        }
       } catch (err) {
         console.error('Scanner error:', err);
         
