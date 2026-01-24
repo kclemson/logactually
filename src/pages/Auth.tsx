@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -35,10 +36,23 @@ export default function Auth() {
     setSubmitting(true);
     setErrorMessage(null);
 
-    if (isSignUp && inviteCode !== import.meta.env.VITE_INVITE_CODE) {
-      setErrorMessage('Invalid invite code. Please enter a valid invite code to sign up.');
-      setSubmitting(false);
-      return;
+    if (isSignUp) {
+      // Validate invite code via backend
+      const { data, error: invokeError } = await supabase.functions.invoke('validate-invite', {
+        body: { inviteCode }
+      });
+
+      if (invokeError) {
+        setErrorMessage('Failed to validate invite code. Please try again.');
+        setSubmitting(false);
+        return;
+      }
+
+      if (!data?.valid) {
+        setErrorMessage('Invalid invite code. Please enter a valid invite code to sign up.');
+        setSubmitting(false);
+        return;
+      }
     }
 
     const { error } = isSignUp 
