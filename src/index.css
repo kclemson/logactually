@@ -142,10 +142,16 @@ All colors MUST be HSL.
     -moz-appearance: textfield;
   }
 
-  /* Mobile: 16px baseline for iOS zoom prevention - applies to everything */
+  /* Mobile: 16px baseline for iOS zoom prevention - applies to inputs */
   @media screen and (max-width: 767px) {
     body {
       font-size: 1rem; /* 16px */
+    }
+    
+    /* Buttons don't trigger iOS zoom - keep desktop size */
+    button,
+    [role="button"] {
+      font-size: 0.875rem; /* 14px */
     }
   }
 }
