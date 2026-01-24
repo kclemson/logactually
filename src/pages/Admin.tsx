@@ -1,9 +1,24 @@
 import { Navigate } from 'react-router-dom';
 import { useAdminStats, useAdminUserStats } from '@/hooks/useAdminStats';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { format, parseISO } from 'date-fns';
 
 export default function Admin() {
-  if (!import.meta.env.DEV) {
+  const { data: isAdmin, isLoading: isAdminLoading } = useIsAdmin();
+  
+  // Allow access if in dev mode OR if user has admin role
+  const hasAccess = import.meta.env.DEV || isAdmin;
+
+  // Show loading only if we're checking admin status (not in dev mode)
+  if (!import.meta.env.DEV && isAdminLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
     return <Navigate to="/" replace />;
   }
 
