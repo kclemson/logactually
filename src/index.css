@@ -142,10 +142,17 @@ All colors MUST be HSL.
     -moz-appearance: textfield;
   }
 
-  /* Mobile: 16px baseline for iOS zoom prevention - applies to inputs */
+  /* Mobile: 16px baseline for iOS zoom prevention */
   @media screen and (max-width: 767px) {
     body {
       font-size: 1rem; /* 16px */
+    }
+    
+    /* All form elements MUST be 16px to prevent iOS auto-zoom on refresh */
+    input,
+    textarea,
+    select {
+      font-size: 1rem !important; /* 16px - prevents iOS zoom */
     }
     
     /* Buttons don't trigger iOS zoom - keep desktop size */
