@@ -153,7 +153,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   };
 
   // Handle direct scan results (when barcode lookup succeeds)
-  const handleScanResult = async (foodItem: Omit<FoodItem, 'uid' | 'entryId'>) => {
+  const handleScanResult = async (foodItem: Omit<FoodItem, 'uid' | 'entryId'>, originalInput: string) => {
     const itemWithUid = {
       ...foodItem,
       uid: crypto.randomUUID(),
@@ -162,7 +162,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     createEntry.mutate(
       {
         eaten_date: dateStr,
-        raw_input: `Scanned: ${foodItem.description}`,
+        raw_input: originalInput,
         food_items: [itemWithUid],
         total_calories: Math.round(totals.calories),
         total_protein: Math.round(totals.protein * 10) / 10,
