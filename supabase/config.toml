@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.lookup-upc]
 verify_jwt = false
+
+[functions.log-scanner-debug]
+verify_jwt = false
