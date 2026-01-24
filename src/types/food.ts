@@ -32,6 +32,43 @@ export interface DailyTotals {
   fat: number;
 }
 
+export interface ScaledMacros {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
+/**
+ * Scale macros proportionally when calories change.
+ * Single source of truth for this calculation - used for both preview and save.
+ */
+export function scaleMacrosByCalories(
+  originalCalories: number,
+  originalProtein: number,
+  originalCarbs: number,
+  originalFat: number,
+  newCalories: number
+): ScaledMacros {
+  // Edge case: can't scale from 0
+  if (originalCalories === 0) {
+    return {
+      calories: newCalories,
+      protein: originalProtein,
+      carbs: originalCarbs,
+      fat: originalFat,
+    };
+  }
+
+  const ratio = newCalories / originalCalories;
+  return {
+    calories: newCalories,
+    protein: Math.round(originalProtein * ratio),
+    carbs: Math.round(originalCarbs * ratio),
+    fat: Math.round(originalFat * ratio),
+  };
+}
+
 export function calculateTotals(items: FoodItem[]): DailyTotals {
   return items.reduce(
     (acc, item) => ({

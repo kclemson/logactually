@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { FoodItem, DailyTotals, calculateTotals, EditableField } from '@/types/food';
+import { FoodItem, DailyTotals, calculateTotals, EditableField, scaleMacrosByCalories, ScaledMacros } from '@/types/food';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -70,6 +70,20 @@ export function FoodItemsTable({
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const descriptionOriginalRef = useRef<string>('');
 
+  // Get preview macros when editing calories (uses same helper as save)
+  const getPreviewMacros = (item: FoodItem, index: number): ScaledMacros | null => {
+    if (editingCell?.index === index && editingCell?.field === 'calories') {
+      return scaleMacrosByCalories(
+        item.calories,
+        item.protein,
+        item.carbs,
+        item.fat,
+        Number(editingCell.value)
+      );
+    }
+    return null;
+  };
+
   const handleKeyDown = (
     e: React.KeyboardEvent,
     index: number,
@@ -79,7 +93,23 @@ export function FoodItemsTable({
       e.preventDefault();
       // Save the edit
       if (editingCell && editingCell.value !== editingCell.originalValue) {
-        onUpdateItem?.(index, field, editingCell.value);
+        // If editing calories, save all 4 fields with scaled values
+        if (field === 'calories') {
+          const item = items[index];
+          const scaled = scaleMacrosByCalories(
+            item.calories,
+            item.protein,
+            item.carbs,
+            item.fat,
+            Number(editingCell.value)
+          );
+          onUpdateItem?.(index, 'calories', scaled.calories);
+          onUpdateItem?.(index, 'protein', scaled.protein);
+          onUpdateItem?.(index, 'carbs', scaled.carbs);
+          onUpdateItem?.(index, 'fat', scaled.fat);
+        } else {
+          onUpdateItem?.(index, field, editingCell.value);
+        }
       }
       setEditingCell(null);
       (e.target as HTMLElement).blur();
@@ -245,12 +275,16 @@ export function FoodItemsTable({
     );
   };
 
-  // Get cell classes for macro inputs (no edit indicator, just new-item highlight)
-  const getMacroClasses = (item: FoodItem) => {
+  // Get cell classes for macro inputs
+  const getMacroClasses = (item: FoodItem, isEditing: boolean, isLinkedToCalories: boolean) => {
     return cn(
-      "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent",
+      "h-full min-h-7 !text-size-compact px-1 border-0 bg-transparent transition-all",
       isNewItem(item) && "animate-highlight-fade",
-      "hover:bg-muted/50 focus:bg-muted/50"
+      isEditing
+        ? "ring-2 ring-focus-ring bg-focus-bg"
+        : isLinkedToCalories
+          ? "bg-focus-linked"
+          : "hover:bg-muted/50 focus:bg-muted/50"
     );
   };
 
@@ -364,96 +398,103 @@ export function FoodItemsTable({
 
             {/* Macro cells */}
             {editable ? (
-              <>
-                <Input
-                  type="number"
-                  value={
-                    editingCell?.index === index && editingCell?.field === 'calories'
-                      ? editingCell.value
-                      : item.calories
-                  }
-                  onFocus={() => setEditingCell({
-                    index,
-                    field: 'calories',
-                    value: item.calories,
-                    originalValue: item.calories
-                  })}
-                  onChange={(e) => {
-                    if (editingCell) {
-                      setEditingCell({ ...editingCell, value: Number(e.target.value) });
-                    }
-                  }}
-                  onBlur={() => setEditingCell(null)}
-                  onKeyDown={(e) => handleKeyDown(e, index, 'calories')}
-                  className={getMacroClasses(item)}
-                />
-                <Input
-                  type="number"
-                  value={
-                    editingCell?.index === index && editingCell?.field === 'protein'
-                      ? editingCell.value
-                      : Math.round(item.protein)
-                  }
-                  onFocus={() => setEditingCell({
-                    index,
-                    field: 'protein',
-                    value: Math.round(item.protein),
-                    originalValue: Math.round(item.protein)
-                  })}
-                  onChange={(e) => {
-                    if (editingCell) {
-                      setEditingCell({ ...editingCell, value: Number(e.target.value) });
-                    }
-                  }}
-                  onBlur={() => setEditingCell(null)}
-                  onKeyDown={(e) => handleKeyDown(e, index, 'protein')}
-                  className={getMacroClasses(item)}
-                />
-                <Input
-                  type="number"
-                  value={
-                    editingCell?.index === index && editingCell?.field === 'carbs'
-                      ? editingCell.value
-                      : Math.round(item.carbs)
-                  }
-                  onFocus={() => setEditingCell({
-                    index,
-                    field: 'carbs',
-                    value: Math.round(item.carbs),
-                    originalValue: Math.round(item.carbs)
-                  })}
-                  onChange={(e) => {
-                    if (editingCell) {
-                      setEditingCell({ ...editingCell, value: Number(e.target.value) });
-                    }
-                  }}
-                  onBlur={() => setEditingCell(null)}
-                  onKeyDown={(e) => handleKeyDown(e, index, 'carbs')}
-                  className={getMacroClasses(item)}
-                />
-                <Input
-                  type="number"
-                  value={
-                    editingCell?.index === index && editingCell?.field === 'fat'
-                      ? editingCell.value
-                      : Math.round(item.fat)
-                  }
-                  onFocus={() => setEditingCell({
-                    index,
-                    field: 'fat',
-                    value: Math.round(item.fat),
-                    originalValue: Math.round(item.fat)
-                  })}
-                  onChange={(e) => {
-                    if (editingCell) {
-                      setEditingCell({ ...editingCell, value: Number(e.target.value) });
-                    }
-                  }}
-                  onBlur={() => setEditingCell(null)}
-                  onKeyDown={(e) => handleKeyDown(e, index, 'fat')}
-                  className={getMacroClasses(item)}
-                />
-              </>
+              (() => {
+                const isCaloriesEditing = editingCell?.index === index && editingCell?.field === 'calories';
+                const previewMacros = getPreviewMacros(item, index);
+                
+                return (
+                  <>
+                    <Input
+                      type="number"
+                      value={
+                        editingCell?.index === index && editingCell?.field === 'calories'
+                          ? editingCell.value
+                          : item.calories
+                      }
+                      onFocus={() => setEditingCell({
+                        index,
+                        field: 'calories',
+                        value: item.calories,
+                        originalValue: item.calories
+                      })}
+                      onChange={(e) => {
+                        if (editingCell) {
+                          setEditingCell({ ...editingCell, value: Number(e.target.value) });
+                        }
+                      }}
+                      onBlur={() => setEditingCell(null)}
+                      onKeyDown={(e) => handleKeyDown(e, index, 'calories')}
+                      className={getMacroClasses(item, isCaloriesEditing, false)}
+                    />
+                    <Input
+                      type="number"
+                      value={
+                        editingCell?.index === index && editingCell?.field === 'protein'
+                          ? editingCell.value
+                          : previewMacros?.protein ?? Math.round(item.protein)
+                      }
+                      onFocus={() => setEditingCell({
+                        index,
+                        field: 'protein',
+                        value: Math.round(item.protein),
+                        originalValue: Math.round(item.protein)
+                      })}
+                      onChange={(e) => {
+                        if (editingCell) {
+                          setEditingCell({ ...editingCell, value: Number(e.target.value) });
+                        }
+                      }}
+                      onBlur={() => setEditingCell(null)}
+                      onKeyDown={(e) => handleKeyDown(e, index, 'protein')}
+                      className={getMacroClasses(item, editingCell?.index === index && editingCell?.field === 'protein', isCaloriesEditing)}
+                    />
+                    <Input
+                      type="number"
+                      value={
+                        editingCell?.index === index && editingCell?.field === 'carbs'
+                          ? editingCell.value
+                          : previewMacros?.carbs ?? Math.round(item.carbs)
+                      }
+                      onFocus={() => setEditingCell({
+                        index,
+                        field: 'carbs',
+                        value: Math.round(item.carbs),
+                        originalValue: Math.round(item.carbs)
+                      })}
+                      onChange={(e) => {
+                        if (editingCell) {
+                          setEditingCell({ ...editingCell, value: Number(e.target.value) });
+                        }
+                      }}
+                      onBlur={() => setEditingCell(null)}
+                      onKeyDown={(e) => handleKeyDown(e, index, 'carbs')}
+                      className={getMacroClasses(item, editingCell?.index === index && editingCell?.field === 'carbs', isCaloriesEditing)}
+                    />
+                    <Input
+                      type="number"
+                      value={
+                        editingCell?.index === index && editingCell?.field === 'fat'
+                          ? editingCell.value
+                          : previewMacros?.fat ?? Math.round(item.fat)
+                      }
+                      onFocus={() => setEditingCell({
+                        index,
+                        field: 'fat',
+                        value: Math.round(item.fat),
+                        originalValue: Math.round(item.fat)
+                      })}
+                      onChange={(e) => {
+                        if (editingCell) {
+                          setEditingCell({ ...editingCell, value: Number(e.target.value) });
+                        }
+                      }}
+                      onBlur={() => setEditingCell(null)}
+                      onKeyDown={(e) => handleKeyDown(e, index, 'fat')}
+                      className={getMacroClasses(item, editingCell?.index === index && editingCell?.field === 'fat', isCaloriesEditing)}
+                    />
+                  </>
+                );
+              })()
             ) : (
               <>
                 <span className="text-size-compact px-1 py-1 text-muted-foreground">{item.calories}</span>

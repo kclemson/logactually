@@ -40,30 +40,6 @@ export function useEditableFoodItems() {
           newEditedFields.push(field as EditableField);
         }
 
-        // If changing calories, scale macros proportionally
-        if (field === 'calories' && typeof value === 'number') {
-          // Mark macros as edited since they auto-scale
-          (['protein', 'carbs', 'fat'] as EditableField[]).forEach(f => {
-            if (!newEditedFields.includes(f)) newEditedFields.push(f);
-          });
-
-          // Handle zero calories (edge case - can't scale from 0)
-          if (item.calories === 0) {
-            return { ...item, calories: value, editedFields: newEditedFields };
-          }
-
-          // Scale from current values
-          const ratio = value / item.calories;
-          return {
-            ...item,
-            calories: value,
-            protein: Math.round(item.protein * ratio),
-            carbs: Math.round(item.carbs * ratio),
-            fat: Math.round(item.fat * ratio),
-            editedFields: newEditedFields,
-          };
-        }
-
         return { ...item, [field]: value, editedFields: newEditedFields };
       })
     );
