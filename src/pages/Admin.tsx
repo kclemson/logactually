@@ -30,8 +30,8 @@ export default function Admin() {
     : '0';
 
   return (
-    <div className="p-4 space-y-4 text-heading">
-      <h1 className="font-semibold">Admin Stats</h1>
+    <div className="p-4 space-y-4">
+      <h1 className="font-semibold text-heading">Admin Stats</h1>
       
       <div className="text-muted-foreground space-y-2">
         <div>
