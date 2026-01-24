@@ -187,7 +187,7 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(function FoodI
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder={placeholder}
-        className="min-h-[120px] resize-none"
+        className="min-h-[80px] resize-none"
         disabled={isBusy}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey) {
