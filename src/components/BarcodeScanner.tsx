@@ -1,18 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
-
-// Barcode formats to support (UPC/EAN for products, CODE_128/39 for general, RSS for produce)
-const formatsToSupport = [
-  Html5QrcodeSupportedFormats.UPC_A,
-  Html5QrcodeSupportedFormats.UPC_E,
-  Html5QrcodeSupportedFormats.EAN_13,
-  Html5QrcodeSupportedFormats.EAN_8,
-  Html5QrcodeSupportedFormats.CODE_128,
-  Html5QrcodeSupportedFormats.CODE_39,
-  Html5QrcodeSupportedFormats.RSS_14,        // GS1 DataBar (produce like bananas)
-  Html5QrcodeSupportedFormats.RSS_EXPANDED,  // GS1 DataBar Expanded
-];
-import { X, Camera } from 'lucide-react';
+import { 
+  BrowserMultiFormatReader, 
+  DecodeHintType, 
+  BarcodeFormat,
+} from '@zxing/library';
+import { Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -27,118 +19,86 @@ interface BarcodeScannerProps {
   onScan: (code: string) => void;
 }
 
+// Barcode formats to support (UPC/EAN for products, CODE_128/39 for general, RSS for produce)
+const SUPPORTED_FORMATS = [
+  BarcodeFormat.UPC_A,
+  BarcodeFormat.UPC_E,
+  BarcodeFormat.EAN_13,
+  BarcodeFormat.EAN_8,
+  BarcodeFormat.CODE_128,
+  BarcodeFormat.CODE_39,
+  BarcodeFormat.RSS_14,        // GS1 DataBar (produce like bananas)
+  BarcodeFormat.RSS_EXPANDED,  // GS1 DataBar Expanded
+];
+
 export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
   const [error, setError] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<string | null>(null);
-  const scannerRef = useRef<Html5Qrcode | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const handleManualCapture = async () => {
-    if (!scannerRef.current) {
-      setDebugInfo('Scanner not initialized');
-      return;
-    }
-
-    try {
-      setDebugInfo('Checking scanner...');
-      
-      // Check if native BarcodeDetector is available
-      const hasNativeAPI = 'BarcodeDetector' in window;
-      console.log('Native BarcodeDetector available:', hasNativeAPI);
-      
-      let nativeFormats: string[] = [];
-      if (hasNativeAPI) {
-        try {
-          nativeFormats = await (window as any).BarcodeDetector.getSupportedFormats();
-          console.log('Supported native formats:', nativeFormats);
-        } catch (e) {
-          console.log('Could not get native formats:', e);
-        }
-      }
-      
-      // Get scanner state
-      const state = scannerRef.current.getState();
-      console.log('Scanner state:', state);
-      
-      const stateNames = ['NOT_STARTED', 'SCANNING', 'PAUSED', 'UNKNOWN'];
-      const stateName = stateNames[state] || 'UNKNOWN';
-      
-      const info = [
-        `State: ${stateName}`,
-        `Native API: ${hasNativeAPI ? 'YES' : 'NO'}`,
-        hasNativeAPI ? `Formats: ${nativeFormats.join(', ')}` : 'Using JS fallback'
-      ].join('\n');
-      
-      setDebugInfo(info);
-      
-    } catch (err) {
-      console.error('Manual capture error:', err);
-      setDebugInfo(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    }
-  };
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const readerRef = useRef<BrowserMultiFormatReader | null>(null);
 
   useEffect(() => {
     if (!open) return;
 
     // Reset state for fresh start each time dialog opens
     setError(null);
-    setDebugInfo(null);
     setIsStarting(true);
 
     let mounted = true;
-    const scannerId = 'barcode-scanner-region';
 
     const startScanner = async () => {
-      setIsStarting(true);
-      setError(null);
-
       try {
-        // Wait for the container to be in the DOM
+        // Wait for video element to be in DOM
         await new Promise(resolve => setTimeout(resolve, 100));
         
-        if (!mounted) return;
+        if (!mounted || !videoRef.current) return;
 
-        const scanner = new Html5Qrcode(scannerId, {
-          formatsToSupport,
-          verbose: false,
-          experimentalFeatures: {
-            useBarCodeDetectorIfSupported: true,
-          },
-        });
-        scannerRef.current = scanner;
+        // Configure decoder with TRY_HARDER for reliable 1D barcode detection
+        const hints = new Map<DecodeHintType, unknown>();
+        hints.set(DecodeHintType.TRY_HARDER, true);
+        hints.set(DecodeHintType.POSSIBLE_FORMATS, SUPPORTED_FORMATS);
 
-        await scanner.start(
-          { 
-            facingMode: 'environment',
-            // Request higher resolution and continuous focus for better barcode detection
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-          {
-            fps: 15,                            // Higher FPS for better detection
-            qrbox: { width: 280, height: 150 }, // Taller scan area for linear barcodes
-            aspectRatio: 1.5,
-            disableFlip: true,                  // Save processing cycles on mobile
-          },
-          (decodedText) => {
-            console.log('Barcode detected:', decodedText);
-            // Stop scanner before calling onScan to prevent multiple scans
-            scanner.stop().catch(console.error);
-            scannerRef.current = null;
-            onScan(decodedText);
-          },
-          () => {
-            // Ignore scan failures (no barcode in view)
+        const reader = new BrowserMultiFormatReader(hints);
+        readerRef.current = reader;
+
+        // Get available video devices and prefer back camera
+        const devices = await reader.listVideoInputDevices();
+        const backCamera = devices.find(d => 
+          d.label.toLowerCase().includes('back') || 
+          d.label.toLowerCase().includes('rear') ||
+          d.label.toLowerCase().includes('environment')
+        );
+        const deviceId = backCamera?.deviceId || null;
+
+        // Start continuous scanning
+        await reader.decodeFromVideoDevice(
+          deviceId,
+          videoRef.current,
+          (result, err) => {
+            if (result) {
+              console.log('Barcode detected:', result.getText());
+              // Stop scanner before calling onScan to prevent multiple scans
+              reader.stopContinuousDecode();
+              reader.reset();
+              readerRef.current = null;
+              onScan(result.getText());
+            }
+            // Silently continue on decode failures (no barcode in view)
           }
         );
+
+        if (mounted) {
+          setIsStarting(false);
+        } else {
+          reader.reset();
+        }
       } catch (err) {
         console.error('Scanner error:', err);
         if (mounted) {
           if (err instanceof Error) {
-            if (err.message.includes('Permission')) {
+            if (err.message.includes('Permission') || err.name === 'NotAllowedError') {
               setError('Camera permission denied. Please allow camera access and try again.');
-            } else if (err.message.includes('NotFoundError')) {
+            } else if (err.message.includes('NotFoundError') || err.name === 'NotFoundError') {
               setError('No camera found on this device.');
             } else {
               setError('Could not start camera. Please try again.');
@@ -146,9 +106,6 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
           } else {
             setError('Could not start camera. Please try again.');
           }
-        }
-      } finally {
-        if (mounted) {
           setIsStarting(false);
         }
       }
@@ -158,20 +115,20 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
 
     return () => {
       mounted = false;
-      if (scannerRef.current) {
-        scannerRef.current.stop().catch(console.error);
-        scannerRef.current = null;
+      if (readerRef.current) {
+        readerRef.current.stopContinuousDecode();
+        readerRef.current.reset();
+        readerRef.current = null;
       }
     };
   }, [open, onScan]);
 
   const handleClose = () => {
-    if (scannerRef.current) {
-      scannerRef.current.stop().catch(console.error);
-      scannerRef.current = null;
+    if (readerRef.current) {
+      readerRef.current.stopContinuousDecode();
+      readerRef.current.reset();
+      readerRef.current = null;
     }
-    // Clear state on close for clean reopening
-    setDebugInfo(null);
     setError(null);
     onClose();
   };
@@ -196,11 +153,18 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
             </div>
           ) : (
             <>
-              <div 
-                ref={containerRef}
-                id="barcode-scanner-region" 
-                className="w-full min-h-[250px] bg-muted rounded-lg overflow-hidden"
-              />
+              <div className="w-full min-h-[250px] bg-muted rounded-lg overflow-hidden relative">
+                <video 
+                  ref={videoRef}
+                  className="w-full h-[250px] object-cover"
+                  playsInline
+                  muted
+                />
+                {/* Scan region indicator */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="w-[280px] h-[100px] border-2 border-primary/50 rounded-lg" />
+                </div>
+              </div>
               {isStarting && (
                 <p className="text-center text-muted-foreground text-sm">
                   Starting camera...
@@ -209,23 +173,6 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
               <p className="text-center text-muted-foreground text-sm">
                 Hold steady, about 6 inches away
               </p>
-              {!isStarting && (
-                <div className="space-y-2">
-                  <Button 
-                    variant="secondary" 
-                    size="sm" 
-                    onClick={handleManualCapture}
-                    className="w-full"
-                  >
-                    Capture Now (Debug)
-                  </Button>
-                  {debugInfo && (
-                    <pre className="text-center text-xs font-mono bg-muted p-2 rounded whitespace-pre-wrap">
-                      {debugInfo}
-                    </pre>
-                  )}
-                </div>
-              )}
             </>
           )}
         </div>
