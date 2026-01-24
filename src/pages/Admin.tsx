@@ -76,9 +76,8 @@ export default function Admin() {
         <p className="text-muted-foreground">No data in the last 14 days.</p>
       )}
 
-      <h2 className="font-medium text-muted-foreground mt-6">Users</h2>
       {userStats && userStats.length > 0 ? (
-        <table className="w-auto mt-2">
+        <table className="w-auto mt-6">
           <thead>
             <tr className="border-b">
               <th className="text-left py-1 pr-4 font-medium text-muted-foreground">User</th>

@@ -97,8 +97,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_usage_stats: { Args: { exclude_user_id: string }; Returns: Json }
-      get_user_stats: { Args: { exclude_user_id: string }; Returns: Json }
+      get_usage_stats: { Args: { exclude_user_id?: string }; Returns: Json }
+      get_user_stats: { Args: { exclude_user_id?: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

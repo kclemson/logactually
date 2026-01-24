@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
 
 interface DailyStats {
   stat_date: string;
@@ -27,33 +26,25 @@ interface UserStats {
 }
 
 export function useAdminStats() {
-  const { user } = useAuth();
-
   return useQuery({
     queryKey: ['admin-stats'],
     queryFn: async (): Promise<UsageStats> => {
-      const { data, error } = await supabase.rpc('get_usage_stats', {
-        exclude_user_id: user?.id,
-      });
+      const { data, error } = await supabase.rpc('get_usage_stats');
       if (error) throw error;
       return data as unknown as UsageStats;
     },
-    enabled: !!user && import.meta.env.DEV,
+    enabled: import.meta.env.DEV,
   });
 }
 
 export function useAdminUserStats() {
-  const { user } = useAuth();
-
   return useQuery({
     queryKey: ['admin-user-stats'],
     queryFn: async (): Promise<UserStats[]> => {
-      const { data, error } = await supabase.rpc('get_user_stats', {
-        exclude_user_id: user?.id,
-      });
+      const { data, error } = await supabase.rpc('get_user_stats');
       if (error) throw error;
       return (data as unknown as UserStats[]) ?? [];
     },
-    enabled: !!user && import.meta.env.DEV,
+    enabled: import.meta.env.DEV,
   });
 }
