@@ -156,7 +156,7 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(
               disabled={isBusy}
               className={isListening ? 'bg-destructive text-destructive-foreground' : ''}
             >
-              {isListening ? <MicOff className="h-4 w-4 mr-2" /> : <Mic className="h-4 w-4 mr-2" />}
+              {isListening ? <MicOff className="h-4 w-4 mr-1" /> : <Mic className="h-4 w-4 mr-1" />}
               Voice
             </Button>
           )}
@@ -167,8 +167,8 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(
               onClick={() => setScannerOpen(true)}
               disabled={isBusy}
             >
-              <ScanBarcode className="h-4 w-4 mr-2" />
-              Scan Bar Code
+              <ScanBarcode className="h-4 w-4 mr-1" />
+              Bar Code
             </Button>
           )}
           <Button
@@ -177,14 +177,14 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(
             size="sm"
             className="flex-1"
           >
-            {isBusy ? (
+          {isBusy ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
                 {isScanning ? 'Looking up...' : 'Adding...'}
               </>
             ) : (
               <>
-                <Send className="mr-2 h-4 w-4" />
+                <Send className="mr-1 h-4 w-4" />
                 Add Food
               </>
             )}
