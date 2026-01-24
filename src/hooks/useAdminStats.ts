@@ -20,6 +20,12 @@ interface UsageStats {
   daily_stats: DailyStats[];
 }
 
+interface UserStats {
+  user_id: string;
+  total_entries: number;
+  entries_today: number;
+}
+
 export function useAdminStats() {
   const { user } = useAuth();
 
@@ -31,6 +37,22 @@ export function useAdminStats() {
       });
       if (error) throw error;
       return data as unknown as UsageStats;
+    },
+    enabled: !!user && import.meta.env.DEV,
+  });
+}
+
+export function useAdminUserStats() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['admin-user-stats'],
+    queryFn: async (): Promise<UserStats[]> => {
+      const { data, error } = await supabase.rpc('get_user_stats', {
+        exclude_user_id: user?.id,
+      });
+      if (error) throw error;
+      return (data as unknown as UserStats[]) ?? [];
     },
     enabled: !!user && import.meta.env.DEV,
   });
