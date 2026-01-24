@@ -12,7 +12,7 @@ const PLACEHOLDER_EXAMPLES = [
   "Describe what you ate: Chipotle bowl with chicken and extra guac...",
   "Describe what you ate: blueberry muffin but only the top part...",
   "Describe what you ate: iced coffee, couple bites of my friend's bagel...",
-  "Describe what you ate: lean cuisine alfredo noodles and an apple with a couple of tb of peanut butter...",
+  "Describe what you ate: lean cuisine alfredo noodles and an apple with around 2Tb of peanut butter...",
 ];
 
 // Detect UPC patterns in text input to route to database lookup
