@@ -3,6 +3,9 @@ import {
   BrowserMultiFormatReader, 
   DecodeHintType, 
   BarcodeFormat,
+  HTMLCanvasElementLuminanceSource,
+  BinaryBitmap,
+  HybridBinarizer,
 } from '@zxing/library';
 import { Camera, ScanLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -28,8 +31,8 @@ const SUPPORTED_FORMATS = [
   BarcodeFormat.EAN_8,
   BarcodeFormat.CODE_128,
   BarcodeFormat.CODE_39,
-  BarcodeFormat.RSS_14,        // GS1 DataBar (produce like bananas)
-  BarcodeFormat.RSS_EXPANDED,  // GS1 DataBar Expanded
+  BarcodeFormat.RSS_14,
+  BarcodeFormat.RSS_EXPANDED,
 ];
 
 interface DebugInfo {
@@ -39,6 +42,24 @@ interface DebugInfo {
   decodeAttempts: number;
   lastError: string | null;
   captureResult: string | null;
+  rotationApplied: number;
+}
+
+interface TrackDimensions {
+  width: number;
+  height: number;
+}
+
+// Detect if we need to rotate: track is landscape but video element is portrait (or vice versa)
+function detectRotationNeeded(track: TrackDimensions, video: HTMLVideoElement): number {
+  const trackIsLandscape = track.width > track.height;
+  const videoIsLandscape = video.videoWidth > video.videoHeight;
+  
+  // If orientations don't match, we need 90° rotation
+  if (trackIsLandscape !== videoIsLandscape) {
+    return 90;
+  }
+  return 0;
 }
 
 // Collect environment info once per session
@@ -116,7 +137,6 @@ function computeFrameStats(canvas: HTMLCanvasElement): Record<string, number> {
   let totalLuminance = 0;
   let pixelCount = 0;
   
-  // Sample every 4th pixel for speed
   for (let i = 0; i < data.length; i += 16) {
     const r = data[i];
     const g = data[i + 1];
@@ -128,7 +148,6 @@ function computeFrameStats(canvas: HTMLCanvasElement): Record<string, number> {
   
   const meanLuminance = totalLuminance / pixelCount;
   
-  // Compute variance for contrast
   let variance = 0;
   for (let i = 0; i < data.length; i += 16) {
     const r = data[i];
@@ -139,12 +158,11 @@ function computeFrameStats(canvas: HTMLCanvasElement): Record<string, number> {
   }
   const stdDev = Math.sqrt(variance / pixelCount);
   
-  // Simple edge detection (horizontal gradient)
   let edgeSum = 0;
   let edgeCount = 0;
   const width = canvas.width;
   for (let i = 4; i < data.length - 4; i += 16) {
-    if ((i / 4) % width === 0) continue; // Skip row boundaries
+    if ((i / 4) % width === 0) continue;
     const left = 0.299 * data[i - 4] + 0.587 * data[i - 3] + 0.114 * data[i - 2];
     const right = 0.299 * data[i + 4] + 0.587 * data[i + 5] + 0.114 * data[i + 6];
     edgeSum += Math.abs(right - left);
@@ -177,7 +195,6 @@ async function logDebugEvents(
       }
     });
   } catch (err) {
-    // Silently fail - don't break the scanner if logging fails
     console.error('Debug logging failed:', err);
   }
 }
@@ -192,18 +209,80 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
     decodeAttempts: 0,
     lastError: null,
     captureResult: null,
+    rotationApplied: 0,
   });
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const sessionIdRef = useRef<string>('');
   const decodeAttemptsRef = useRef(0);
   const decodeStartTimeRef = useRef<number>(0);
   const errorCountsRef = useRef<Map<string, number>>(new Map());
+  const trackDimensionsRef = useRef<TrackDimensions>({ width: 0, height: 0 });
+  const rotationNeededRef = useRef<number>(0);
+  const decodeLoopRef = useRef<number | null>(null);
 
-  // Manual capture function - uses ZXing's synchronous decode on video element
+  // Rotation-aware decode from video element
+  const decodeWithRotation = useCallback((
+    video: HTMLVideoElement,
+    reader: BrowserMultiFormatReader,
+    rotation: number
+  ): { text: string; format: string } | null => {
+    // Ensure canvas exists
+    if (!canvasRef.current) {
+      canvasRef.current = document.createElement('canvas');
+    }
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    
+    if (vw === 0 || vh === 0) return null;
+
+    // Set canvas size based on rotation
+    if (rotation === 90 || rotation === 270) {
+      canvas.width = vh;
+      canvas.height = vw;
+    } else {
+      canvas.width = vw;
+      canvas.height = vh;
+    }
+
+    // Draw with rotation
+    ctx.save();
+    if (rotation === 90) {
+      ctx.translate(canvas.width, 0);
+      ctx.rotate(Math.PI / 2);
+    } else if (rotation === 180) {
+      ctx.translate(canvas.width, canvas.height);
+      ctx.rotate(Math.PI);
+    } else if (rotation === 270) {
+      ctx.translate(0, canvas.height);
+      ctx.rotate(-Math.PI / 2);
+    }
+    ctx.drawImage(video, 0, 0);
+    ctx.restore();
+
+    // Decode from canvas
+    try {
+      const luminanceSource = new HTMLCanvasElementLuminanceSource(canvas);
+      const binaryBitmap = new BinaryBitmap(new HybridBinarizer(luminanceSource));
+      const result = reader.decodeBitmap(binaryBitmap);
+      return {
+        text: result.getText(),
+        format: BarcodeFormat[result.getBarcodeFormat()] || 'unknown',
+      };
+    } catch {
+      return null;
+    }
+  }, []);
+
+  // Manual capture function
   const handleManualCapture = useCallback(() => {
     if (!readerRef.current || !videoRef.current) {
       setDebugInfo(prev => ({ ...prev, captureResult: 'No reader/video available' }));
@@ -211,60 +290,74 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
     }
 
     const video = videoRef.current;
+    const reader = readerRef.current;
     const sessionId = sessionIdRef.current;
+    const rotation = rotationNeededRef.current;
     
-    // Capture frame stats before decode attempt
+    // Capture frame stats
     let frameStats: Record<string, unknown> = {};
     try {
-      const canvas = document.createElement('canvas');
+      const statsCanvas = document.createElement('canvas');
       const targetWidth = 320;
       const scale = targetWidth / video.videoWidth;
-      canvas.width = targetWidth;
-      canvas.height = Math.round(video.videoHeight * scale);
-      const ctx = canvas.getContext('2d');
+      statsCanvas.width = targetWidth;
+      statsCanvas.height = Math.round(video.videoHeight * scale);
+      const ctx = statsCanvas.getContext('2d');
       if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        frameStats = computeFrameStats(canvas);
+        ctx.drawImage(video, 0, 0, statsCanvas.width, statsCanvas.height);
+        frameStats = computeFrameStats(statsCanvas);
       }
     } catch (e) {
       frameStats = { error: 'Failed to compute frame stats' };
     }
     
-    // Get current layout info
     const layout = getLayoutInfo(dialogRef.current, video);
 
-    try {
-      setDebugInfo(prev => ({ ...prev, captureResult: 'Capturing...', status: 'captured' }));
-      
-      const result = readerRef.current.decode(video);
-      
+    setDebugInfo(prev => ({ ...prev, captureResult: 'Capturing...', status: 'captured' }));
+
+    // Try multiple rotations if needed
+    const rotationsToTry = rotation !== 0 ? [rotation, 0, 180, 270] : [0, 90, 180, 270];
+    let result: { text: string; format: string } | null = null;
+    let successRotation = 0;
+
+    for (const rot of rotationsToTry) {
+      result = decodeWithRotation(video, reader, rot);
+      if (result) {
+        successRotation = rot;
+        break;
+      }
+    }
+
+    if (result) {
       logDebugEvents(sessionId, [{ 
         event: 'manual_capture_success',
         phase: 'capture',
         data: { 
-          code: result.getText(),
+          code: result.text,
+          format: result.format,
+          rotationUsed: successRotation,
           frameStats,
           layout,
           attempts: decodeAttemptsRef.current,
         } 
       }]);
       
-      // Success - close and return result
+      // Stop everything
+      if (decodeLoopRef.current) {
+        cancelAnimationFrame(decodeLoopRef.current);
+        decodeLoopRef.current = null;
+      }
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
-      readerRef.current.reset();
       readerRef.current = null;
       streamRef.current = null;
       
-      onScan(result.getText());
-    } catch (err) {
-      const errName = err instanceof Error ? err.name : 'unknown';
-      const errMessage = err instanceof Error ? err.message : 'Unknown error';
-      
+      onScan(result.text);
+    } else {
       setDebugInfo(prev => ({ 
         ...prev, 
-        captureResult: `No barcode found`,
+        captureResult: 'No barcode found',
         status: 'active'
       }));
       
@@ -272,8 +365,7 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
         event: 'manual_capture_failed',
         phase: 'capture',
         data: { 
-          errorName: errName,
-          errorMessage: errMessage,
+          rotationsTried: rotationsToTry,
           frameStats,
           layout,
           attempts: decodeAttemptsRef.current,
@@ -284,21 +376,20 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
         setDebugInfo(prev => ({ ...prev, captureResult: null }));
       }, 2000);
     }
-  }, [onScan]);
+  }, [onScan, decodeWithRotation]);
 
   useEffect(() => {
     if (!open) return;
 
-    // Generate new session ID
     const sessionId = crypto.randomUUID();
     sessionIdRef.current = sessionId;
     
-    // Reset state for fresh start each time dialog opens
     setError(null);
     setIsStarting(true);
     decodeAttemptsRef.current = 0;
     decodeStartTimeRef.current = Date.now();
     errorCountsRef.current = new Map();
+    rotationNeededRef.current = 0;
     setDebugInfo({
       status: 'starting',
       videoWidth: 0,
@@ -306,13 +397,13 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
       decodeAttempts: 0,
       lastError: null,
       captureResult: null,
+      rotationApplied: 0,
     });
 
     let mounted = true;
 
     const startScanner = async () => {
       try {
-        // Log session start with full environment
         const environment = getEnvironmentInfo();
         logDebugEvents(sessionId, [{ 
           event: 'scanner_session_start',
@@ -320,12 +411,10 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
           data: { environment }
         }]);
 
-        // Wait for video element to be in DOM
         await new Promise(resolve => setTimeout(resolve, 100));
         
         if (!mounted || !videoRef.current) return;
 
-        // Define constraints we'll request
         const requestedConstraints = {
           facingMode: 'environment',
           width: { ideal: 1920 },
@@ -333,7 +422,6 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
           aspectRatio: { ideal: 16/9 }
         };
 
-        // Step 1: Manually acquire the camera stream
         const stream = await navigator.mediaDevices.getUserMedia({
           video: requestedConstraints
         });
@@ -346,10 +434,15 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
         streamRef.current = stream;
         videoRef.current.srcObject = stream;
 
-        // Log track settings and capabilities
         const videoTrack = stream.getVideoTracks()[0];
         const trackSettings = videoTrack?.getSettings?.() ?? {};
         const trackCapabilities = videoTrack?.getCapabilities?.() ?? {};
+        
+        // Store track dimensions for rotation detection
+        trackDimensionsRef.current = {
+          width: trackSettings.width || 0,
+          height: trackSettings.height || 0,
+        };
         
         logDebugEvents(sessionId, [{
           event: 'stream_acquired',
@@ -376,7 +469,6 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
           }
         }]);
 
-        // Step 2: Wait for video metadata to load (ensures videoWidth > 0)
         await new Promise<void>((resolve, reject) => {
           const video = videoRef.current!;
           
@@ -395,7 +487,6 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
           video.addEventListener('loadedmetadata', onLoadedMetadata);
           video.addEventListener('error', onError);
           
-          // Timeout fallback
           setTimeout(() => {
             video.removeEventListener('loadedmetadata', onLoadedMetadata);
             video.removeEventListener('error', onError);
@@ -407,23 +498,17 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
           }, 5000);
         });
 
-        // Step 3: Start playing the video
         await videoRef.current.play();
 
         if (!mounted) return;
 
-        const videoWidth = videoRef.current.videoWidth;
-        const videoHeight = videoRef.current.videoHeight;
+        const video = videoRef.current;
+        const videoWidth = video.videoWidth;
+        const videoHeight = video.videoHeight;
 
-        // Log layout after video is ready (with small delay for DOM update)
-        setTimeout(() => {
-          const layout = getLayoutInfo(dialogRef.current, videoRef.current);
-          logDebugEvents(sessionId, [{ 
-            event: 'layout_measured',
-            phase: 'layout',
-            data: { layout }
-          }]);
-        }, 250);
+        // Detect rotation mismatch
+        const rotation = detectRotationNeeded(trackDimensionsRef.current, video);
+        rotationNeededRef.current = rotation;
 
         logDebugEvents(sessionId, [{ 
           event: 'video_ready', 
@@ -431,19 +516,32 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
           data: { 
             videoWidth, 
             videoHeight,
-            videoClientWidth: videoRef.current.clientWidth,
-            videoClientHeight: videoRef.current.clientHeight,
+            videoClientWidth: video.clientWidth,
+            videoClientHeight: video.clientHeight,
+            trackWidth: trackDimensionsRef.current.width,
+            trackHeight: trackDimensionsRef.current.height,
+            rotationDetected: rotation,
           } 
         }]);
+
+        setTimeout(() => {
+          const layout = getLayoutInfo(dialogRef.current, videoRef.current);
+          logDebugEvents(sessionId, [{ 
+            event: 'layout_measured',
+            phase: 'layout',
+            data: { layout, rotationApplied: rotation }
+          }]);
+        }, 250);
 
         setDebugInfo(prev => ({
           ...prev,
           status: 'active',
           videoWidth,
           videoHeight,
+          rotationApplied: rotation,
         }));
 
-        // Step 4: Configure ZXing decoder
+        // Configure ZXing decoder
         const hints = new Map<DecodeHintType, unknown>();
         hints.set(DecodeHintType.TRY_HARDER, true);
         hints.set(DecodeHintType.POSSIBLE_FORMATS, SUPPORTED_FORMATS);
@@ -453,43 +551,78 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
 
         decodeStartTimeRef.current = Date.now();
 
-        // Step 5: Start continuous decoding from the already-playing video element
-        reader.decodeContinuously(videoRef.current, (result, err) => {
+        // Custom decode loop with rotation support
+        const runDecodeLoop = () => {
+          if (!mounted || !videoRef.current || !readerRef.current) return;
+          
           decodeAttemptsRef.current++;
+          const video = videoRef.current;
+          const currentRotation = rotationNeededRef.current;
           
-          // Track error counts by type
-          if (err) {
-            const errKey = `${err.name}:${err.message?.slice(0, 50)}`;
-            errorCountsRef.current.set(errKey, (errorCountsRef.current.get(errKey) || 0) + 1);
+          // Try decode with detected rotation first, then fallback
+          let result = decodeWithRotation(video, readerRef.current, currentRotation);
+          let usedRotation = currentRotation;
+          
+          // If primary rotation fails and we're supposed to rotate, also try 0
+          if (!result && currentRotation !== 0) {
+            result = decodeWithRotation(video, readerRef.current, 0);
+            usedRotation = 0;
           }
-          
-          // Update debug info periodically
+
+          if (result) {
+            const layout = getLayoutInfo(dialogRef.current, video);
+            
+            logDebugEvents(sessionId, [{ 
+              event: 'barcode_detected',
+              phase: 'decode',
+              data: { 
+                code: result.text,
+                format: result.format,
+                rotationUsed: usedRotation,
+                attempts: decodeAttemptsRef.current,
+                layout,
+              } 
+            }]);
+
+            if (streamRef.current) {
+              streamRef.current.getTracks().forEach(track => track.stop());
+            }
+            readerRef.current = null;
+            streamRef.current = null;
+            
+            onScan(result.text);
+            return;
+          }
+
+          // Track errors
+          const errKey = 'NotFoundException';
+          errorCountsRef.current.set(errKey, (errorCountsRef.current.get(errKey) || 0) + 1);
+
+          // Update UI periodically
           if (decodeAttemptsRef.current <= 3 || decodeAttemptsRef.current % 30 === 0) {
             setDebugInfo(prev => ({
               ...prev,
               decodeAttempts: decodeAttemptsRef.current,
-              lastError: err?.message || null,
+              lastError: 'No barcode detected',
             }));
           }
-          
-          // Log heartbeat every 100 attempts with comprehensive info
+
+          // Log heartbeat every 100 attempts
           if (decodeAttemptsRef.current % 100 === 0) {
             const elapsed = (Date.now() - decodeStartTimeRef.current) / 1000;
             const rate = decodeAttemptsRef.current / elapsed;
             
-            // Get top 3 errors
             const topErrors = Array.from(errorCountsRef.current.entries())
               .sort((a, b) => b[1] - a[1])
               .slice(0, 3)
               .map(([key, count]) => ({ key, count }));
             
-            const video = videoRef.current;
-            const currentDims = video ? {
+            const currentDims = {
               videoWidth: video.videoWidth,
               videoHeight: video.videoHeight,
               clientWidth: video.clientWidth,
               clientHeight: video.clientHeight,
-            } : null;
+            };
             
             logDebugEvents(sessionId, [{ 
               event: 'decode_heartbeat',
@@ -498,37 +631,19 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
                 attempts: decodeAttemptsRef.current,
                 elapsedSec: Math.round(elapsed),
                 rate: Math.round(rate * 10) / 10,
+                rotationApplied: currentRotation,
                 topErrors,
                 currentDims,
               } 
             }]);
           }
 
-          if (result) {
-            const layout = getLayoutInfo(dialogRef.current, videoRef.current);
-            
-            logDebugEvents(sessionId, [{ 
-              event: 'barcode_detected',
-              phase: 'decode',
-              data: { 
-                code: result.getText(), 
-                attempts: decodeAttemptsRef.current,
-                format: result.getBarcodeFormat?.() ?? 'unknown',
-                layout,
-              } 
-            }]);
+          // Continue loop
+          decodeLoopRef.current = requestAnimationFrame(runDecodeLoop);
+        };
 
-            // Stop scanner before calling onScan to prevent multiple scans
-            if (streamRef.current) {
-              streamRef.current.getTracks().forEach(track => track.stop());
-            }
-            reader.reset();
-            readerRef.current = null;
-            streamRef.current = null;
-            
-            onScan(result.getText());
-          }
-        });
+        // Start decode loop
+        decodeLoopRef.current = requestAnimationFrame(runDecodeLoop);
 
         if (mounted) {
           setIsStarting(false);
@@ -570,7 +685,6 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
 
     startScanner();
 
-    // Orientation change handler
     const handleOrientationChange = () => {
       const layout = getLayoutInfo(dialogRef.current, videoRef.current);
       const orientation = screen.orientation ? {
@@ -585,7 +699,6 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
       }]);
     };
 
-    // Visual viewport resize handler (important on iOS)
     const handleViewportResize = () => {
       const vv = window.visualViewport;
       const layout = getLayoutInfo(dialogRef.current, videoRef.current);
@@ -612,7 +725,11 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
       screen.orientation?.removeEventListener('change', handleOrientationChange);
       window.visualViewport?.removeEventListener('resize', handleViewportResize);
       
-      // Log session end
+      if (decodeLoopRef.current) {
+        cancelAnimationFrame(decodeLoopRef.current);
+        decodeLoopRef.current = null;
+      }
+      
       logDebugEvents(sessionId, [{
         event: 'scanner_session_end',
         phase: 'close',
@@ -631,9 +748,13 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
         streamRef.current = null;
       }
     };
-  }, [open, onScan]);
+  }, [open, onScan, decodeWithRotation]);
 
   const handleClose = () => {
+    if (decodeLoopRef.current) {
+      cancelAnimationFrame(decodeLoopRef.current);
+      decodeLoopRef.current = null;
+    }
     if (readerRef.current) {
       readerRef.current.reset();
       readerRef.current = null;
@@ -694,6 +815,10 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
                 <div className="flex justify-between">
                   <span>Video:</span>
                   <span>{debugInfo.videoWidth} × {debugInfo.videoHeight}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Rotation fix:</span>
+                  <span>{debugInfo.rotationApplied}°</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Decode attempts:</span>
