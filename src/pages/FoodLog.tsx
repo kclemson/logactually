@@ -92,9 +92,9 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     };
   }, [entries]);
 
-  // Initialize editable state directly from query data (runs once on mount)
+  // Derive display items from query data + pending local edits
   const { 
-    items: displayItems,
+    displayItems,
     newItemUids,
     updateItem,
     updateItemBatch,
@@ -104,7 +104,6 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
 
   // Calculate display totals based on current edit state
   const displayTotals = calculateTotals(displayItems);
-
   // Build map of entryId -> raw_input for inline expansion
   const entryRawInputs = useMemo(() => {
     const map = new Map<string, string>();
@@ -292,7 +291,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       </div>
 
       <section>
-        {entries.length > 0 ? (
+        {displayItems.length > 0 ? (
           <FoodItemsTable
             items={displayItems}
             editable={true}
