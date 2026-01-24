@@ -327,12 +327,12 @@ export function FoodItemsTable({
               <div className="flex items-baseline min-w-0">
                 {/* Always reserve chevron space when showing entry dividers */}
                 {showEntryDividers && (
-                  <div className="w-4 shrink-0 flex items-center justify-center">
+                  <div className="w-4 shrink-0 relative flex items-center justify-center self-stretch">
                     {isLastInEntry ? (
                       <button
                         onClick={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
                         className={cn(
-                          "min-h-[44px] min-w-[44px] -ml-3 flex items-center justify-center text-muted-foreground/40 hover:text-muted-foreground transition-transform",
+                          "absolute inset-0 w-[44px] -left-3 flex items-center justify-center text-muted-foreground/40 hover:text-muted-foreground transition-transform",
                           isCurrentExpanded && "rotate-90"
                         )}
                       >
@@ -369,12 +369,12 @@ export function FoodItemsTable({
               <div className="flex items-baseline min-w-0">
                 {/* Always reserve chevron space when showing entry dividers */}
                 {showEntryDividers && (
-                  <div className="w-4 shrink-0 flex items-center justify-center">
+                  <div className="w-4 shrink-0 relative flex items-center justify-center self-stretch">
                     {isLastInEntry ? (
                       <button
                         onClick={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
                         className={cn(
-                          "min-h-[44px] min-w-[44px] -ml-3 flex items-center justify-center text-muted-foreground/40 hover:text-muted-foreground transition-transform",
+                          "absolute inset-0 w-[44px] -left-3 flex items-center justify-center text-muted-foreground/40 hover:text-muted-foreground transition-transform",
                           isCurrentExpanded && "rotate-90"
                         )}
                       >
