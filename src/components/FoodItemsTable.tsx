@@ -12,7 +12,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Trash2, ChevronRight } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface EntryBoundary {
@@ -236,16 +236,16 @@ export function FoodItemsTable({
               <div className="flex items-baseline min-w-0">
                 {/* Always reserve chevron space when showing entry dividers */}
                 {showEntryDividers && (
-                  <div className="w-4 shrink-0 flex items-baseline justify-center">
+                  <div className="w-4 shrink-0 text-center">
                     {isLastInEntry ? (
                       <button
                         onClick={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
-                        className="p-0.5 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
-                      >
-                        <ChevronRight className={cn(
-                          "h-3 w-3 transition-transform",
+                        className={cn(
+                          "text-muted-foreground/40 hover:text-muted-foreground transition-transform inline-block",
                           isCurrentExpanded && "rotate-90"
-                        )} />
+                        )}
+                      >
+                        ›
                       </button>
                     ) : null}
                   </div>
@@ -282,16 +282,16 @@ export function FoodItemsTable({
               <div className="flex items-baseline min-w-0">
                 {/* Always reserve chevron space when showing entry dividers */}
                 {showEntryDividers && (
-                  <div className="w-4 shrink-0 flex items-baseline justify-center">
+                  <div className="w-4 shrink-0 text-center">
                     {isLastInEntry ? (
                       <button
                         onClick={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
-                        className="p-0.5 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
-                      >
-                        <ChevronRight className={cn(
-                          "h-3 w-3 transition-transform",
+                        className={cn(
+                          "text-muted-foreground/40 hover:text-muted-foreground transition-transform inline-block",
                           isCurrentExpanded && "rotate-90"
-                        )} />
+                        )}
+                      >
+                        ›
                       </button>
                     ) : null}
                   </div>
