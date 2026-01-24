@@ -13,10 +13,14 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Module-level cache that survives HMR reloads
+let cachedSession: Session | null = null;
+let cachedUser: User | null = null;
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(cachedUser);
+  const [session, setSession] = useState<Session | null>(cachedSession);
+  const [loading, setLoading] = useState(!cachedUser);
 
   useEffect(() => {
     let isMounted = true;
@@ -33,6 +37,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes FIRST - this catches token refresh events
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!isMounted) return;
+      // Update module-level cache
+      cachedSession = session;
+      cachedUser = session?.user ?? null;
+      // Update React state
       setSession(session);
       setUser(session?.user ?? null);
       initialCheckComplete = true;
@@ -43,6 +51,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
         if (!isMounted) return;
+        // Update module-level cache
+        cachedSession = session;
+        cachedUser = session?.user ?? null;
+        // Update React state
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -94,6 +106,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    // Clear module-level cache
+    cachedSession = null;
+    cachedUser = null;
     await supabase.auth.signOut();
   };
 
