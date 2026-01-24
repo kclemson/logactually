@@ -26,7 +26,7 @@ function extractUpcFromText(input: string): string | null {
 interface FoodInputProps {
   onSubmit: (text: string) => void;
   isLoading?: boolean;
-  onScanResult?: (foodItem: Omit<FoodItem, 'uid' | 'entryId'>) => void;
+  onScanResult?: (foodItem: Omit<FoodItem, 'uid' | 'entryId'>, originalInput: string) => void;
 }
 
 export interface FoodInputRef {
@@ -126,12 +126,12 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(
         console.log('Detected UPC in text input, routing to lookup-upc:', upc);
         const result = await lookupUpc(upc);
         
-        if (result.success) {
-          const foodItem = createFoodItemFromScan(result.data);
-          onScanResult(foodItem);
-          setText('');
-          return;
-        }
+      if (result.success) {
+        const foodItem = createFoodItemFromScan(result.data);
+        onScanResult(foodItem, trimmed);
+        setText('');
+        return;
+      }
         // If not found in database, fall through to analyze-food
       }
       
@@ -146,17 +146,17 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(
       const result = await lookupUpc(code);
 
       if (result.success) {
-        // Product found - add directly
+        // Product found - add directly with scanned UPC as original input
         const foodItem = createFoodItemFromScan(result.data);
         if (onScanResult) {
-          onScanResult(foodItem);
+          onScanResult(foodItem, `Scanned: ${code}`);
         } else {
           // Fallback: submit as text if no direct handler
           onSubmit(result.data.description);
         }
       } else if ('notFound' in result && result.notFound) {
         // Not found - populate textarea and auto-submit to analyze-food
-        const fallbackText = `UPC barcode: ${result.upc}`;
+        const fallbackText = `Scanned: ${code}`;
         setText(fallbackText);
         // Auto-submit after a brief moment so user sees what's happening
         setTimeout(() => {
