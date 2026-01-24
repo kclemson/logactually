@@ -356,14 +356,15 @@ export function FoodItemsTable({
                   onBlur={handleDescriptionBlur}
                   onKeyDown={(e) => handleDescriptionKeyDown(e, index, item)}
                   className={cn(
-                    "text-size-compact pl-2 pr-0 py-1 border-0 bg-transparent focus:outline-none line-clamp-2 cursor-text rounded flex-1 min-w-0",
+                    "text-size-compact pl-2 pr-0 py-1 border-0 bg-transparent focus:outline-none line-clamp-2 cursor-text rounded min-w-0",
                     getDescriptionClasses(item),
                     "focus:ring-2 focus:ring-focus-ring focus:bg-focus-bg"
                   )}
                 />
                 {hasAnyEditedFields(item) && (
-                  <span className="text-focus-ring font-bold text-size-compact shrink-0 ml-1" title={formatEditedFields(item) || 'Edited'}>*</span>
+                  <span className="text-focus-ring font-bold text-size-compact shrink-0 ml-0.5" title={formatEditedFields(item) || 'Edited'}>*</span>
                 )}
+                <div className="flex-1" />
               </div>
             ) : (
               <div className="flex items-baseline min-w-0">
@@ -388,10 +389,10 @@ export function FoodItemsTable({
                   className="text-size-compact pl-2 pr-0 py-1 line-clamp-2 shrink min-w-0"
                 >
                   {item.description}
+                  {hasAnyEditedFields(item) && (
+                    <span className="text-focus-ring font-bold ml-0.5" title={formatEditedFields(item) || 'Edited'}>*</span>
+                  )}
                 </span>
-                {hasAnyEditedFields(item) && (
-                  <span className="text-focus-ring font-bold text-size-compact shrink-0 ml-1" title={formatEditedFields(item) || 'Edited'}>*</span>
-                )}
                 <div className="flex-1" />
               </div>
             )}
