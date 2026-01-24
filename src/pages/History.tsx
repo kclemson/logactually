@@ -127,24 +127,25 @@ const History = () => {
 
       {/* Calendar Grid */}
       <div className="grid grid-cols-7 gap-1.5">
-        {calendarDays.map((day, index) => {
+      {calendarDays.map((day, index) => {
           const dateStr = format(day, 'yyyy-MM-dd');
           const summary = summaryByDate.get(dateStr);
           const isCurrentMonth = isSameMonth(day, currentMonth);
           const isTodayDate = isToday(day);
+          const isFutureDate = day > new Date();
           const hasEntries = !!summary;
 
           return (
             <button
               key={index}
               onClick={() => handleDayClick(day)}
-              disabled={!isCurrentMonth}
+              disabled={!isCurrentMonth || isFutureDate}
               className={cn(
                 "flex flex-col items-center justify-center p-2 min-h-[68px] rounded-xl transition-colors",
-                isCurrentMonth 
-                  ? "bg-muted/40 hover:bg-muted/60 cursor-pointer" 
-                  : "bg-transparent text-muted-foreground/30 cursor-default",
-                hasEntries && isCurrentMonth && "bg-rose-100 hover:bg-rose-200 dark:bg-rose-900/20 dark:hover:bg-rose-800/30",
+                !isCurrentMonth && "bg-transparent text-muted-foreground/30 cursor-default",
+                isCurrentMonth && isFutureDate && "bg-muted/20 text-muted-foreground/50 cursor-default",
+                isCurrentMonth && !isFutureDate && !hasEntries && "bg-muted/40 hover:bg-muted/60 cursor-pointer",
+                hasEntries && isCurrentMonth && !isFutureDate && "bg-rose-100 hover:bg-rose-200 dark:bg-rose-900/20 dark:hover:bg-rose-800/30",
                 isTodayDate && "ring-2 ring-primary ring-inset",
               )}
             >
