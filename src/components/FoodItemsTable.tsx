@@ -35,6 +35,7 @@ interface FoodItemsTableProps {
   items: FoodItem[];
   editable?: boolean;
   onUpdateItem?: (index: number, field: keyof FoodItem, value: string | number) => void;
+  onUpdateItemBatch?: (index: number, updates: Partial<FoodItem>) => void;
   onRemoveItem?: (index: number) => void;
   newItemUids?: Set<string>;
   showHeader?: boolean;
@@ -53,6 +54,7 @@ export function FoodItemsTable({
   items,
   editable = false,
   onUpdateItem,
+  onUpdateItemBatch,
   onRemoveItem,
   newItemUids,
   showHeader = true,
@@ -93,7 +95,7 @@ export function FoodItemsTable({
       e.preventDefault();
       // Save the edit
       if (editingCell && editingCell.value !== editingCell.originalValue) {
-        // If editing calories, save all 4 fields with scaled values
+        // If editing calories, batch all 4 fields with scaled values in one atomic call
         if (field === 'calories') {
           const item = items[index];
           const scaled = scaleMacrosByCalories(
@@ -103,10 +105,12 @@ export function FoodItemsTable({
             item.fat,
             Number(editingCell.value)
           );
-          onUpdateItem?.(index, 'calories', scaled.calories);
-          onUpdateItem?.(index, 'protein', scaled.protein);
-          onUpdateItem?.(index, 'carbs', scaled.carbs);
-          onUpdateItem?.(index, 'fat', scaled.fat);
+          onUpdateItemBatch?.(index, {
+            calories: scaled.calories,
+            protein: scaled.protein,
+            carbs: scaled.carbs,
+            fat: scaled.fat,
+          });
         } else {
           onUpdateItem?.(index, field, editingCell.value);
         }
