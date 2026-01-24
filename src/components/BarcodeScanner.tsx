@@ -63,10 +63,21 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
 
         // Start continuous scanning - let ZXing handle camera selection
         // Passing undefined uses the default back camera via facingMode: 'environment'
+        let decodeAttempts = 0;
         await reader.decodeFromVideoDevice(
           undefined,
           videoRef.current,
           (result, err) => {
+            decodeAttempts++;
+            // Log every 30th attempt to avoid spam, but always log first few
+            if (decodeAttempts <= 3 || decodeAttempts % 30 === 0) {
+              console.log(`Decode attempt #${decodeAttempts}:`, {
+                hasResult: !!result,
+                error: err?.message || 'none',
+                videoWidth: videoRef.current?.videoWidth,
+                videoHeight: videoRef.current?.videoHeight,
+              });
+            }
             if (result) {
               console.log('Barcode detected:', result.getText());
               // Stop scanner before calling onScan to prevent multiple scans
@@ -75,9 +86,16 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
               readerRef.current = null;
               onScan(result.getText());
             }
-            // Silently continue on decode failures (no barcode in view)
           }
         );
+        
+        // Log video state after scanner starts
+        console.log('Scanner initialized, video state:', {
+          videoWidth: videoRef.current.videoWidth,
+          videoHeight: videoRef.current.videoHeight,
+          readyState: videoRef.current.readyState,
+          paused: videoRef.current.paused,
+        });
 
         if (mounted) {
           setIsStarting(false);
