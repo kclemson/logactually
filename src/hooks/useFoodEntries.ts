@@ -35,6 +35,7 @@ export function useFoodEntries(date?: string) {
           carbs: item.carbs || 0,
           fat: item.fat || 0,
           uid: item.uid || crypto.randomUUID(),
+          entryId: entry.id,
           editedFields: item.editedFields,
         }));
         return {

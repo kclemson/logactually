@@ -12,6 +12,7 @@ import { FoodItem, calculateTotals } from '@/types/food';
 
 const FoodLog = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [showRawInputs, setShowRawInputs] = useState(false);
   
   // Parse date from URL or default to today
   const dateParam = searchParams.get('date');
@@ -130,6 +131,14 @@ const FoodLog = () => {
 
   // Calculate display totals based on current edit state
   const displayTotals = hasChanges ? calculateTotals(displayItems) : dayTotals;
+
+  // Filter to entries that still have items in displayItems (for raw inputs display)
+  const entriesWithItems = useMemo(() => {
+    const entryIdsWithItems = new Set(
+      displayItems.map(item => item.entryId).filter(Boolean)
+    );
+    return entries.filter(entry => entryIdsWithItems.has(entry.id));
+  }, [displayItems, entries]);
 
   const handleSubmit = async (text: string) => {
     const result = await analyzeFood(text);
@@ -291,20 +300,43 @@ const FoodLog = () => {
       {/* Food Items Section */}
       <section>
         {entries.length > 0 ? (
-          <FoodItemsTable
-            items={displayItems}
-            editable={true}
-            onUpdateItem={updateItem}
-            onRemoveItem={removeItem}
-            onDiscard={handleResetChanges}
-            newItemUids={newItemUids}
-            totals={displayTotals}
-            totalsPosition="top"
-            showTotals={true}
-            onDeleteAll={handleDeleteAll}
-            hasChanges={hasChanges}
-            onSave={handleSaveChanges}
-          />
+          <>
+            <FoodItemsTable
+              items={displayItems}
+              editable={true}
+              onUpdateItem={updateItem}
+              onRemoveItem={removeItem}
+              onDiscard={handleResetChanges}
+              newItemUids={newItemUids}
+              totals={displayTotals}
+              totalsPosition="top"
+              showTotals={true}
+              onDeleteAll={handleDeleteAll}
+              hasChanges={hasChanges}
+              onSave={handleSaveChanges}
+            />
+            
+            {/* Collapsible raw inputs section */}
+            <div className="mt-4">
+              <button
+                onClick={() => setShowRawInputs(!showRawInputs)}
+                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ChevronRight className={`h-3 w-3 transition-transform ${showRawInputs ? 'rotate-90' : ''}`} />
+                <span>{showRawInputs ? 'Hide' : 'Show'} original inputs ({entriesWithItems.length})</span>
+              </button>
+              
+              {showRawInputs && entriesWithItems.length > 0 && (
+                <div className="mt-2 space-y-2 pl-4 border-l-2 border-muted">
+                  {entriesWithItems.map((entry) => (
+                    <p key={entry.id} className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      {entry.raw_input || '(no text recorded)'}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
         ) : (
           <p className="text-body text-muted-foreground">
             {isTodaySelected ? 'No entries yet today.' : 'No entries for this day.'}
