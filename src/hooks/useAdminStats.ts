@@ -6,11 +6,13 @@ interface DailyStats {
   stat_date: string;
   entry_count: number;
   total_users: number;
+  users_with_entries: number;
   users_created: number;
 }
 
 interface UsageStats {
   total_users: number;
+  users_with_entries: number;
   total_entries: number;
   active_last_7_days: number;
   users_created_last_7_days: number;
