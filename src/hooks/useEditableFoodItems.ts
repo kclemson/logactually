@@ -45,6 +45,28 @@ export function useEditableFoodItems() {
     );
   }, []);
 
+  // Batch update multiple fields at once (atomic operation)
+  const updateItemBatch = useCallback((
+    index: number,
+    updates: Partial<FoodItem>
+  ) => {
+    setItems((prev) =>
+      prev.map((item, i) => {
+        if (i !== index) return item;
+
+        // Track all edited fields
+        let newEditedFields: EditableField[] = [...(item.editedFields || [])];
+        for (const field of Object.keys(updates)) {
+          if (EDITABLE_FIELDS.includes(field as EditableField) && !newEditedFields.includes(field as EditableField)) {
+            newEditedFields.push(field as EditableField);
+          }
+        }
+
+        return { ...item, ...updates, editedFields: newEditedFields };
+      })
+    );
+  }, []);
+
   const removeItem = useCallback((index: number) => {
     setItems((prev) => prev.filter((_, i) => i !== index));
   }, []);
@@ -58,6 +80,7 @@ export function useEditableFoodItems() {
     items,
     newItemUids,
     updateItem,
+    updateItemBatch,
     removeItem,
     replaceItems,
     setItemsFromDB,

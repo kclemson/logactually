@@ -101,7 +101,8 @@ const FoodLog = () => {
   const { 
     items: displayItems,
     newItemUids,
-    updateItem, 
+    updateItem,
+    updateItemBatch,
     removeItem,
     setItemsFromDB,
     addNewItems,
@@ -221,7 +222,7 @@ const FoodLog = () => {
     }
   }, [deleteEntry, updateEntry]);
 
-  // Auto-save handler for item updates (called on blur)
+  // Auto-save handler for single field updates
   const handleItemUpdate = useCallback((index: number, field: keyof FoodItem, value: string | number) => {
     updateItem(index, field, value);
     
@@ -236,6 +237,20 @@ const FoodLog = () => {
       saveEntry(entryInfo.entryId, updatedItems);
     }
   }, [updateItem, findEntryForIndex, getItemsForEntry, saveEntry]);
+
+  // Auto-save handler for batch updates (e.g., calories + scaled macros)
+  const handleItemUpdateBatch = useCallback((index: number, updates: Partial<FoodItem>) => {
+    updateItemBatch(index, updates);
+    
+    const entryInfo = findEntryForIndex(index);
+    if (entryInfo) {
+      const currentItems = getItemsForEntry(entryInfo.entryId);
+      const updatedItems = currentItems.map((item, i) => 
+        i === entryInfo.localIndex ? { ...item, ...updates } : item
+      );
+      saveEntry(entryInfo.entryId, updatedItems);
+    }
+  }, [updateItemBatch, findEntryForIndex, getItemsForEntry, saveEntry]);
 
   // Auto-save handler for item removal (called on delete)
   const handleItemRemove = useCallback((index: number) => {
@@ -308,6 +323,7 @@ const FoodLog = () => {
             items={displayItems}
             editable={true}
             onUpdateItem={handleItemUpdate}
+            onUpdateItemBatch={handleItemUpdateBatch}
             onRemoveItem={handleItemRemove}
             newItemUids={newItemUids}
             totals={displayTotals}
