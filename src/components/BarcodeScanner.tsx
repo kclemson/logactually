@@ -810,18 +810,24 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
             </div>
           ) : (
             <>
-              <div className="w-full bg-black rounded-lg overflow-hidden relative flex items-center justify-center">
+              <div className="w-full h-[180px] bg-black rounded-lg overflow-hidden relative">
                 <video 
                   ref={videoRef}
-                  className="w-full max-h-[60vh] object-contain bg-black"
+                  className="w-full h-full object-cover bg-black"
                   autoPlay
                   playsInline
                   muted
                 />
-                {/* Scan region indicator - horizontal band for 1D barcodes */}
+                {/* Scan region indicator - corner brackets for 1D barcodes */}
                 {!successState && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="w-[90%] h-[60px] border-2 border-primary/60 rounded-lg bg-primary/5" />
+                    <div className="w-[85%] h-[100px] relative">
+                      {/* Corner brackets */}
+                      <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-primary" />
+                      <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-primary" />
+                      <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-primary" />
+                      <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-primary" />
+                    </div>
                   </div>
                 )}
                 
@@ -837,37 +843,6 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
                 )}
               </div>
 
-              {/* Debug Info Display */}
-              <div className="bg-muted/50 rounded-md p-2 text-xs font-mono space-y-1 overflow-hidden">
-                <div className="flex justify-between">
-                  <span>Status:</span>
-                  <span className={debugInfo.status === 'active' ? 'text-green-600' : 'text-muted-foreground'}>
-                    {debugInfo.status}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Video:</span>
-                  <span>{debugInfo.videoWidth} × {debugInfo.videoHeight}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Rotation fix:</span>
-                  <span>{debugInfo.rotationApplied}°</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Decode attempts:</span>
-                  <span>{debugInfo.decodeAttempts}</span>
-                </div>
-                {debugInfo.lastError && (
-                  <div className="text-destructive break-words">
-                    Last: {debugInfo.lastError}
-                  </div>
-                )}
-                {debugInfo.captureResult && (
-                  <div className="text-primary font-medium">
-                    {debugInfo.captureResult}
-                  </div>
-                )}
-              </div>
 
               {/* Manual Capture Button */}
               {!isStarting && debugInfo.status === 'active' && (
