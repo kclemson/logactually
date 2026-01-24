@@ -70,6 +70,11 @@ export default function Auth() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
+          <img 
+            src="/favicon.png" 
+            alt="Log Actually" 
+            className="w-16 h-16 mx-auto mb-2"
+          />
           <CardTitle className="text-title">
             {isSignUp 
               ? (inviteFromUrl ? "You're Invited!" : 'Create Account')

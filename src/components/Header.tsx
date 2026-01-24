@@ -7,7 +7,10 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto flex h-14 max-w-lg md:max-w-2xl items-center justify-between px-4">
-        <h1 className="text-title text-foreground">{APP_NAME}</h1>
+        <div className="flex items-center gap-2">
+          <img src="/favicon.png" alt="" className="w-6 h-6" />
+          <h1 className="text-title text-foreground">{APP_NAME}</h1>
+        </div>
         <button
           onClick={() => signOut()}
           className="text-body text-muted-foreground hover:text-foreground hover:underline min-h-[44px] px-2 -mr-2"
