@@ -101,6 +101,9 @@ export function FoodItemsTable({
 
   // Determine if we're in entry-delete mode (grouped items with entry deletion)
   const hasEntryDeletion = entryBoundaries && onDeleteEntry;
+  
+  // Show dividers between entries when there are multiple entries
+  const showEntryDividers = entryBoundaries && entryBoundaries.length > 1;
 
   // Grid columns based on mode
   const getGridCols = (showDelete: boolean) => {
@@ -231,7 +234,7 @@ export function FoodItemsTable({
         return (
           <div key={item.uid || index} className="contents">
             {/* Divider row between entries */}
-            {hasEntryDeletion && isFirstInEntry && index > 0 && previousEntryId && (
+            {showEntryDividers && isFirstInEntry && index > 0 && previousEntryId && (
               <>
                 <div className="col-span-full flex items-center py-0.5">
                   <button
