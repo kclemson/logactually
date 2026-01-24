@@ -1,90 +1,181 @@
-import { useState, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { FoodItem, EditableField } from '@/types/food';
 
 const EDITABLE_FIELDS: EditableField[] = ['description', 'calories', 'protein', 'carbs', 'fat'];
 
-export function useEditableFoodItems(initialItems: FoodItem[] = []) {
-  const [items, setItems] = useState<FoodItem[]>(initialItems);
+/**
+ * Hook that derives display items from query data + local pending edits.
+ * 
+ * Architecture:
+ * - queryItems (from React Query) is the source of truth for saved data
+ * - pendingEdits stores unsaved field changes (keyed by uid)
+ * - pendingRemovals stores uids of items marked for local deletion
+ * - newItems stores items added locally (not yet in query)
+ * 
+ * displayItems = queryItems (filtered/edited) + newItems
+ */
+export function useEditableFoodItems(queryItems: FoodItem[]) {
+  // Pending edits: Map<uid, partial updates>
+  const [pendingEdits, setPendingEdits] = useState<Map<string, Partial<FoodItem>>>(new Map());
+  
+  // Pending removals: Set of uids to hide from display
+  const [pendingRemovals, setPendingRemovals] = useState<Set<string>>(new Set());
+  
+  // New items added locally (not yet saved to DB)
+  const [newItems, setNewItems] = useState<FoodItem[]>([]);
+  
+  // Track new item uids for amber highlight
   const [newItemUids, setNewItemUids] = useState<Set<string>>(new Set());
 
-  // Set items from DB, clearing new highlights
-  const setItemsFromDB = useCallback((dbItems: FoodItem[]) => {
-    setItems(dbItems);
-    setNewItemUids(new Set());
-  }, []);
+  // Derive display items from query + pending state
+  const displayItems = useMemo(() => {
+    // Start with query items
+    const fromQuery = queryItems
+      // Filter out items pending removal
+      .filter(item => !pendingRemovals.has(item.uid))
+      // Apply any pending edits
+      .map(item => {
+        const edits = pendingEdits.get(item.uid);
+        if (!edits) return item;
+        
+        // Merge edits and track edited fields
+        const editedFields: EditableField[] = [...(item.editedFields || [])];
+        for (const field of Object.keys(edits)) {
+          if (EDITABLE_FIELDS.includes(field as EditableField) && !editedFields.includes(field as EditableField)) {
+            editedFields.push(field as EditableField);
+          }
+        }
+        
+        return { ...item, ...edits, editedFields };
+      });
+    
+    // Filter newItems to exclude any that now exist in queryItems (they've "graduated")
+    const queryUids = new Set(queryItems.map(item => item.uid));
+    const stillNewItems = newItems.filter(item => !queryUids.has(item.uid));
+    
+    // If some items graduated, clean up newItemUids too
+    if (stillNewItems.length !== newItems.length) {
+      const graduatedUids = newItems
+        .filter(item => queryUids.has(item.uid))
+        .map(item => item.uid);
+      
+      if (graduatedUids.length > 0) {
+        // Schedule cleanup of graduated items (can't setState during render)
+        setTimeout(() => {
+          setNewItems(stillNewItems);
+          setNewItemUids(prev => {
+            const next = new Set(prev);
+            graduatedUids.forEach(uid => next.delete(uid));
+            return next;
+          });
+        }, 0);
+      }
+    }
+    
+    return [...fromQuery, ...stillNewItems];
+  }, [queryItems, pendingEdits, pendingRemovals, newItems]);
 
-  // Add new items (from AI) and mark them for amber row highlighting
-  const addNewItems = useCallback((newItems: FoodItem[]) => {
-    const uids = new Set(newItems.map(item => item.uid));
-    setItems(prev => [...prev, ...newItems]);
+  // Add new items (from AI analysis) and mark them for amber highlighting
+  const addNewItems = useCallback((items: FoodItem[]) => {
+    const uids = new Set(items.map(item => item.uid));
+    setNewItems(prev => [...prev, ...items]);
     setNewItemUids(uids);
   }, []);
 
-  // Clear the "new" highlighting (e.g., when adding more items or on next action)
+  // Clear the "new" highlighting
   const clearNewHighlights = useCallback(() => {
     setNewItemUids(new Set());
   }, []);
 
+  // Update a single field on an item
   const updateItem = useCallback((
     index: number,
     field: keyof FoodItem,
     value: string | number
   ) => {
-    setItems((prev) =>
-      prev.map((item, i) => {
-        if (i !== index) return item;
-
-        // Track that this field was edited
-        let newEditedFields: EditableField[] = [...(item.editedFields || [])];
-        if (EDITABLE_FIELDS.includes(field as EditableField) && !newEditedFields.includes(field as EditableField)) {
-          newEditedFields.push(field as EditableField);
-        }
-
-        return { ...item, [field]: value, editedFields: newEditedFields };
-      })
-    );
-  }, []);
+    // Find the item at this index in displayItems
+    const item = displayItems[index];
+    if (!item) return;
+    
+    setPendingEdits(prev => {
+      const next = new Map(prev);
+      const existing = next.get(item.uid) || {};
+      next.set(item.uid, { ...existing, [field]: value });
+      return next;
+    });
+  }, [displayItems]);
 
   // Batch update multiple fields at once (atomic operation)
   const updateItemBatch = useCallback((
     index: number,
     updates: Partial<FoodItem>
   ) => {
-    setItems((prev) =>
-      prev.map((item, i) => {
-        if (i !== index) return item;
+    const item = displayItems[index];
+    if (!item) return;
+    
+    setPendingEdits(prev => {
+      const next = new Map(prev);
+      const existing = next.get(item.uid) || {};
+      next.set(item.uid, { ...existing, ...updates });
+      return next;
+    });
+  }, [displayItems]);
 
-        // Track all edited fields
-        let newEditedFields: EditableField[] = [...(item.editedFields || [])];
-        for (const field of Object.keys(updates)) {
-          if (EDITABLE_FIELDS.includes(field as EditableField) && !newEditedFields.includes(field as EditableField)) {
-            newEditedFields.push(field as EditableField);
-          }
-        }
-
-        return { ...item, ...updates, editedFields: newEditedFields };
-      })
-    );
-  }, []);
-
+  // Mark an item for removal (optimistic delete)
   const removeItem = useCallback((index: number) => {
-    setItems((prev) => prev.filter((_, i) => i !== index));
+    const item = displayItems[index];
+    if (!item) return;
+    
+    // Check if it's a new item (not yet in DB)
+    const isNewItem = newItems.some(ni => ni.uid === item.uid);
+    
+    if (isNewItem) {
+      // Just remove from newItems
+      setNewItems(prev => prev.filter(ni => ni.uid !== item.uid));
+      setNewItemUids(prev => {
+        const next = new Set(prev);
+        next.delete(item.uid);
+        return next;
+      });
+    } else {
+      // Mark for removal from query items
+      setPendingRemovals(prev => {
+        const next = new Set(prev);
+        next.add(item.uid);
+        return next;
+      });
+    }
+  }, [displayItems, newItems]);
+
+  // Clear pending state for an item (call after successful save)
+  const clearPendingForItem = useCallback((uid: string) => {
+    setPendingEdits(prev => {
+      const next = new Map(prev);
+      next.delete(uid);
+      return next;
+    });
+    setPendingRemovals(prev => {
+      const next = new Set(prev);
+      next.delete(uid);
+      return next;
+    });
   }, []);
 
-  // Replace all items (e.g., after AI re-analysis)
-  const replaceItems = useCallback((newItems: FoodItem[]) => {
-    setItems(newItems);
+  // Clear all pending state (e.g., after query invalidation)
+  const clearAllPending = useCallback(() => {
+    setPendingEdits(new Map());
+    setPendingRemovals(new Set());
   }, []);
 
   return {
-    items,
+    displayItems,
     newItemUids,
     updateItem,
     updateItemBatch,
     removeItem,
-    replaceItems,
-    setItemsFromDB,
     addNewItems,
     clearNewHighlights,
+    clearPendingForItem,
+    clearAllPending,
   };
 }
