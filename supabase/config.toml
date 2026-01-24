@@ -1,1 +1,7 @@
 project_id = "enricsnosdrhmfvbjaei"
+
+[functions.analyze-food]
+verify_jwt = false
+
+[functions.validate-invite]
+verify_jwt = false
