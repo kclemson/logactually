@@ -170,11 +170,20 @@ const FoodLog = () => {
       const originalCount = boundary.endIndex - boundary.startIndex + 1;
       const entryItems: FoodItem[] = [];
       
-      // Count how many items remain for this entry
-      for (let i = 0; i < originalCount && displayIndex < displayItems.length; i++) {
-        entryItems.push(displayItems[displayIndex]);
-        displayIndex++;
-      }
+    // Count how many items remain for this entry
+    for (let i = 0; i < originalCount && displayIndex < displayItems.length; i++) {
+      // Sanitize numeric values to strip leading zeros and ensure proper numbers
+      const rawItem = displayItems[displayIndex];
+      const sanitizedItem: FoodItem = {
+        ...rawItem,
+        calories: Number(rawItem.calories) || 0,
+        protein: Number(rawItem.protein) || 0,
+        carbs: Number(rawItem.carbs) || 0,
+        fat: Number(rawItem.fat) || 0,
+      };
+      entryItems.push(sanitizedItem);
+      displayIndex++;
+    }
       
       entryItemsMap.set(boundary.entryId, entryItems);
     }
