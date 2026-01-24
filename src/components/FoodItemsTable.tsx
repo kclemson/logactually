@@ -344,30 +344,31 @@ export function FoodItemsTable({
                     ) : null}
                   </div>
                 )}
-                <div
-                  contentEditable
-                  suppressContentEditableWarning
-                  spellCheck={false}
-                  title={getItemTooltip(item)}
-                  ref={(el) => {
-                    // Only sync content when element exists and is NOT being edited
-                    if (el && el.textContent !== item.description && document.activeElement !== el) {
-                      el.textContent = item.description;
-                    }
-                  }}
-                  onFocus={(e) => handleDescriptionFocus(e, item)}
-                  onBlur={handleDescriptionBlur}
-                  onKeyDown={(e) => handleDescriptionKeyDown(e, index, item)}
-                  className={cn(
-                    "pl-1 pr-0 py-1 border-0 bg-transparent focus:outline-none line-clamp-2 cursor-text rounded min-w-0",
-                    getDescriptionClasses(item),
-                    "focus:ring-2 focus:ring-focus-ring focus:bg-focus-bg"
+                <div className={cn(
+                  "flex-1 min-w-0 flex items-baseline rounded",
+                  "focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg",
+                  isNewItem(item) && "animate-highlight-fade"
+                )}>
+                  <div
+                    contentEditable
+                    suppressContentEditableWarning
+                    spellCheck={false}
+                    title={getItemTooltip(item)}
+                    ref={(el) => {
+                      // Only sync content when element exists and is NOT being edited
+                      if (el && el.textContent !== item.description && document.activeElement !== el) {
+                        el.textContent = item.description;
+                      }
+                    }}
+                    onFocus={(e) => handleDescriptionFocus(e, item)}
+                    onBlur={handleDescriptionBlur}
+                    onKeyDown={(e) => handleDescriptionKeyDown(e, index, item)}
+                    className="pl-1 py-1 border-0 bg-transparent focus:outline-none line-clamp-2 cursor-text min-w-0 hover:bg-muted/50"
+                  />
+                  {hasAnyEditedFields(item) && (
+                    <span className="text-focus-ring font-bold shrink-0 ml-0.5 pr-1" title={formatEditedFields(item) || 'Edited'}>*</span>
                   )}
-                />
-                {hasAnyEditedFields(item) && (
-                  <span className="text-focus-ring font-bold shrink-0 ml-0.5" title={formatEditedFields(item) || 'Edited'}>*</span>
-                )}
-                <div className="flex-1" />
+                </div>
               </div>
             ) : (
               <div className="flex items-baseline min-w-0">
