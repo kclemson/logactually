@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom';
-import { useAdminStats } from '@/hooks/useAdminStats';
+import { useAdminStats, useAdminUserStats } from '@/hooks/useAdminStats';
 import { format, parseISO } from 'date-fns';
 
 export default function Admin() {
@@ -8,6 +8,7 @@ export default function Admin() {
   }
 
   const { data: stats, isLoading, error } = useAdminStats();
+  const { data: userStats } = useAdminUserStats();
 
   if (isLoading) {
     return (
@@ -73,6 +74,30 @@ export default function Admin() {
         </table>
       ) : (
         <p className="text-muted-foreground">No data in the last 14 days.</p>
+      )}
+
+      <h2 className="font-medium text-muted-foreground mt-6">Users</h2>
+      {userStats && userStats.length > 0 ? (
+        <table className="w-auto mt-2">
+          <thead>
+            <tr className="border-b">
+              <th className="text-left py-1 pr-4 font-medium text-muted-foreground">User</th>
+              <th className="text-center py-1 pr-4 font-medium text-muted-foreground">Total Entries</th>
+              <th className="text-center py-1 font-medium text-muted-foreground">Today</th>
+            </tr>
+          </thead>
+          <tbody>
+            {userStats.map((user, index) => (
+              <tr key={user.user_id} className="border-b border-border/50">
+                <td className="py-1 pr-4">User {index + 1}</td>
+                <td className="text-center py-1 pr-4">{user.total_entries}</td>
+                <td className="text-center py-1">{user.entries_today}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p className="text-muted-foreground text-sm">No users found.</p>
       )}
     </div>
   );
