@@ -1,11 +1,8 @@
 import { Navigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAdminStats } from '@/hooks/useAdminStats';
-import { Users, FileText, Activity } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
 
 export default function Admin() {
-  // Only render in dev mode
   if (!import.meta.env.DEV) {
     return <Navigate to="/" replace />;
   }
@@ -15,19 +12,15 @@ export default function Admin() {
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="container mx-auto p-6">
-        <Card className="border-destructive">
-          <CardContent className="pt-6">
-            <p className="text-destructive">Error loading stats: {(error as Error).message}</p>
-          </CardContent>
-        </Card>
+      <div className="p-4 text-size-compact text-destructive">
+        Error loading stats: {(error as Error).message}
       </div>
     );
   }
@@ -37,81 +30,37 @@ export default function Admin() {
     : '0';
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <h1 className="text-2xl font-bold">Admin Stats (Dev Mode Only)</h1>
-      <p className="text-muted-foreground text-sm">
-        Excludes your own data. Only visible in development mode.
-      </p>
-
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.total_users ?? 0}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active (7 days)</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.active_last_7_days ?? 0}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Entries</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.total_entries ?? 0}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg per User</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{avgEntriesPerUser}</div>
-          </CardContent>
-        </Card>
+    <div className="p-4 space-y-3">
+      <h1 className="text-body font-semibold">Admin Stats (Dev Only)</h1>
+      
+      <div className="text-size-compact text-muted-foreground space-y-0.5">
+        <p>Users: {stats?.total_users ?? 0} (active in last 7 days: {stats?.active_last_7_days ?? 0})</p>
+        <p>Entries: {stats?.total_entries ?? 0} (avg per user: {avgEntriesPerUser})</p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Entries by Date (Last 14 Days)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {stats?.entries_by_date && stats.entries_by_date.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Entries</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {stats.entries_by_date.map((row) => (
-                  <TableRow key={row.eaten_date}>
-                    <TableCell>{row.eaten_date}</TableCell>
-                    <TableCell className="text-right">{row.count}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <p className="text-muted-foreground">No entries in the last 14 days.</p>
-          )}
-        </CardContent>
-      </Card>
+      <div>
+        <h2 className="text-size-compact font-medium mb-1">Entries by Date</h2>
+        {stats?.entries_by_date && stats.entries_by_date.length > 0 ? (
+          <table className="text-size-caption w-full">
+            <thead>
+              <tr className="border-b">
+                <th className="text-left py-1 font-medium text-muted-foreground">Date</th>
+                <th className="text-right py-1 font-medium text-muted-foreground">Entries</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stats.entries_by_date.map((row) => (
+                <tr key={row.eaten_date} className="border-b border-border/50">
+                  <td className="py-1">{format(parseISO(row.eaten_date), 'MMM-dd')}</td>
+                  <td className="text-right py-1">{row.count}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p className="text-size-caption text-muted-foreground">No entries in the last 14 days.</p>
+        )}
+      </div>
     </div>
   );
 }
