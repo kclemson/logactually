@@ -74,6 +74,9 @@ All colors MUST be HSL.
 
     --edited: 38 92% 50%;
     --new-item: 45 93% 85%;
+    --focus-ring: 217 91% 60%;
+    --focus-bg: 217 91% 97%;
+    --focus-linked: 217 91% 95%;
     --sidebar-background: 0 0% 98%;
 
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -130,6 +133,9 @@ All colors MUST be HSL.
     
     --edited: 38 92% 50%;
     --new-item: 38 80% 25%;
+    --focus-ring: 217 91% 60%;
+    --focus-bg: 217 30% 20%;
+    --focus-linked: 217 30% 15%;
   }
 }
 

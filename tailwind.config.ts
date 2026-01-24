@@ -21,6 +21,9 @@ export default {
         foreground: "hsl(var(--foreground))",
         edited: "hsl(var(--edited))",
         "new-item": "hsl(var(--new-item))",
+        "focus-ring": "hsl(var(--focus-ring))",
+        "focus-bg": "hsl(var(--focus-bg))",
+        "focus-linked": "hsl(var(--focus-linked))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
