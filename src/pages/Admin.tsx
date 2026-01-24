@@ -36,6 +36,7 @@ export default function Admin() {
       <div className="text-muted-foreground space-y-2">
         <div>
           <p>Users: {stats?.total_users ?? 0}</p>
+          <p className="ml-6">With entries: {stats?.users_with_entries ?? 0}</p>
           <p className="ml-6">Active in last 7 days: {stats?.active_last_7_days ?? 0}</p>
           <p className="ml-6">Created in last 7 days: {stats?.users_created_last_7_days ?? 0}</p>
         </div>
@@ -54,6 +55,7 @@ export default function Admin() {
               <th className="text-left py-1 pr-4 font-medium text-muted-foreground">Date</th>
               <th className="text-center py-1 pr-4 font-medium text-muted-foreground">Entries</th>
               <th className="text-center py-1 pr-4 font-medium text-muted-foreground">Users</th>
+              <th className="text-center py-1 pr-4 font-medium text-muted-foreground">With Entries</th>
               <th className="text-center py-1 font-medium text-muted-foreground">New Users</th>
             </tr>
           </thead>
@@ -63,6 +65,7 @@ export default function Admin() {
                 <td className="py-1 pr-4">{format(parseISO(row.stat_date), 'MMM-dd')}</td>
                 <td className="text-center py-1 pr-4">{row.entry_count}</td>
                 <td className="text-center py-1 pr-4">{row.total_users}</td>
+                <td className="text-center py-1 pr-4">{row.users_with_entries}</td>
                 <td className="text-center py-1">{row.users_created}</td>
               </tr>
             ))}
