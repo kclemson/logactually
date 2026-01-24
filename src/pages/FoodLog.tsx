@@ -1,7 +1,7 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { format, addDays, subDays, isToday, parseISO } from 'date-fns';
-import { Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { FoodInput, FoodInputRef } from '@/components/FoodInput';
 import { FoodItemsTable } from '@/components/FoodItemsTable';
 import { Button } from '@/components/ui/button';
@@ -100,13 +100,11 @@ const FoodLog = () => {
   const { 
     items: displayItems,
     newItemUids,
-    hasChanges, 
     updateItem, 
     removeItem,
     setItemsFromDB,
     addNewItems,
     clearNewHighlights,
-    markSaved,
   } = useEditableFoodItems();
 
   // Reset state when date changes
@@ -124,13 +122,8 @@ const FoodLog = () => {
     setIsInitialized(true);
   }
 
-  // Reset handler
-  const handleResetChanges = () => {
-    setItemsFromDB(allItems);
-  };
-
   // Calculate display totals based on current edit state
-  const displayTotals = hasChanges ? calculateTotals(displayItems) : dayTotals;
+  const displayTotals = calculateTotals(displayItems);
 
   // Build map of entryId -> raw_input for inline expansion
   const entryRawInputs = useMemo(() => {
@@ -179,69 +172,84 @@ const FoodLog = () => {
       );
     }
   };
-
-  // Save edits by mapping flat items back to their original entries
-  const handleSaveChanges = () => {
-    // Build a map of entryId -> items for that entry
-    const entryItemsMap = new Map<string, FoodItem[]>();
-    entries.forEach(e => entryItemsMap.set(e.id, []));
-
-    // Track current position in displayItems
-    let displayIndex = 0;
-
-    // Walk through original boundaries and assign displayItems accordingly
+  // Find which entry an item belongs to based on its index
+  const findEntryForIndex = useCallback((index: number): { entryId: string; localIndex: number } | null => {
     for (const boundary of entryBoundaries) {
-      const originalCount = boundary.endIndex - boundary.startIndex + 1;
-      const entryItems: FoodItem[] = [];
-      
-    // Count how many items remain for this entry
-    for (let i = 0; i < originalCount && displayIndex < displayItems.length; i++) {
-      // Sanitize numeric values to strip leading zeros and ensure proper numbers
-      const rawItem = displayItems[displayIndex];
-      const sanitizedItem: FoodItem = {
-        ...rawItem,
-        calories: Number(rawItem.calories) || 0,
-        protein: Number(rawItem.protein) || 0,
-        carbs: Number(rawItem.carbs) || 0,
-        fat: Number(rawItem.fat) || 0,
-      };
-      entryItems.push(sanitizedItem);
-      displayIndex++;
-    }
-      
-      entryItemsMap.set(boundary.entryId, entryItems);
-    }
-
-    // Now apply updates/deletes for each entry
-    for (const [entryId, items] of entryItemsMap) {
-      if (items.length === 0) {
-        // Entry is now empty, delete it
-        deleteEntry.mutate(entryId, {
-          onSuccess: () => {
-            markSaved();
-          },
-        });
-      } else {
-        // Update with new items and recalculated totals
-        const totals = calculateTotals(items);
-        updateEntry.mutate(
-          {
-            id: entryId,
-            food_items: items,
-            total_calories: Math.round(totals.calories),
-            total_protein: Math.round(totals.protein * 10) / 10,
-            total_carbs: Math.round(totals.carbs * 10) / 10,
-            total_fat: Math.round(totals.fat * 10) / 10,
-          },
-          {
-            onSuccess: () => {
-              markSaved();
-            },
-          }
-        );
+      if (index >= boundary.startIndex && index <= boundary.endIndex) {
+        return {
+          entryId: boundary.entryId,
+          localIndex: index - boundary.startIndex,
+        };
       }
     }
-  };
+    return null;
+  }, [entryBoundaries]);
+
+  // Get all current items for a specific entry
+  const getItemsForEntry = useCallback((entryId: string): FoodItem[] => {
+    const boundary = entryBoundaries.find(b => b.entryId === entryId);
+    if (!boundary) return [];
+    return displayItems.slice(boundary.startIndex, boundary.endIndex + 1);
+  }, [entryBoundaries, displayItems]);
+
+  // Save a single entry to the database
+  const saveEntry = useCallback((entryId: string, items: FoodItem[]) => {
+    // Sanitize numeric values
+    const sanitizedItems = items.map(item => ({
+      ...item,
+      calories: Number(item.calories) || 0,
+      protein: Number(item.protein) || 0,
+      carbs: Number(item.carbs) || 0,
+      fat: Number(item.fat) || 0,
+    }));
+
+    if (sanitizedItems.length === 0) {
+      // Entry is now empty, delete it
+      deleteEntry.mutate(entryId);
+    } else {
+      // Update with new items and recalculated totals
+      const totals = calculateTotals(sanitizedItems);
+      updateEntry.mutate({
+        id: entryId,
+        food_items: sanitizedItems,
+        total_calories: Math.round(totals.calories),
+        total_protein: Math.round(totals.protein * 10) / 10,
+        total_carbs: Math.round(totals.carbs * 10) / 10,
+        total_fat: Math.round(totals.fat * 10) / 10,
+      });
+    }
+  }, [deleteEntry, updateEntry]);
+
+  // Auto-save handler for item updates (called on blur)
+  const handleItemUpdate = useCallback((index: number, field: keyof FoodItem, value: string | number) => {
+    updateItem(index, field, value);
+    
+    // Find the entry and save it
+    const entryInfo = findEntryForIndex(index);
+    if (entryInfo) {
+      // Get items AFTER the update by computing what they'll be
+      const currentItems = getItemsForEntry(entryInfo.entryId);
+      const updatedItems = currentItems.map((item, i) => 
+        i === entryInfo.localIndex ? { ...item, [field]: value } : item
+      );
+      saveEntry(entryInfo.entryId, updatedItems);
+    }
+  }, [updateItem, findEntryForIndex, getItemsForEntry, saveEntry]);
+
+  // Auto-save handler for item removal (called on delete)
+  const handleItemRemove = useCallback((index: number) => {
+    const entryInfo = findEntryForIndex(index);
+    
+    // Update local state first
+    removeItem(index);
+    
+    if (entryInfo) {
+      // Get items AFTER removal
+      const currentItems = getItemsForEntry(entryInfo.entryId);
+      const updatedItems = currentItems.filter((_, i) => i !== entryInfo.localIndex);
+      saveEntry(entryInfo.entryId, updatedItems);
+    }
+  }, [removeItem, findEntryForIndex, getItemsForEntry, saveEntry]);
 
   const handleDeleteAll = () => {
     deleteAllByDate.mutate(dateStr, {
@@ -268,7 +276,7 @@ const FoodLog = () => {
         )}
       </section>
 
-      {/* Unified Date Navigation */}
+      {/* Date Navigation */}
       <div className="flex items-center justify-center gap-1">
         <Button variant="ghost" size="icon" onClick={goToPreviousDay}>
           <ChevronLeft className="h-5 w-5" />
@@ -280,25 +288,6 @@ const FoodLog = () => {
               ? `Today (${format(selectedDate, 'M/d')})` 
               : format(selectedDate, 'EEEE (M/d)')}
           </span>
-          
-          {hasChanges && (
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={handleSaveChanges}
-                className="flex items-center gap-1 px-2 py-1 rounded text-sm text-primary hover:bg-primary/10"
-              >
-                <Check className="h-4 w-4" />
-                <span>Save</span>
-              </button>
-              <button 
-                onClick={handleResetChanges}
-                className="flex items-center gap-1 px-2 py-1 rounded text-sm text-destructive hover:bg-destructive/10"
-              >
-                <X className="h-4 w-4" />
-                <span>Cancel</span>
-              </button>
-            </div>
-          )}
         </div>
         
         <Button
@@ -312,29 +301,23 @@ const FoodLog = () => {
         </Button>
       </div>
 
-      {/* Food Items Section */}
       <section>
         {entries.length > 0 ? (
-          <>
-            <FoodItemsTable
-              items={displayItems}
-              editable={true}
-              onUpdateItem={updateItem}
-              onRemoveItem={removeItem}
-              onDiscard={handleResetChanges}
-              newItemUids={newItemUids}
-              totals={displayTotals}
-              totalsPosition="top"
-              showTotals={true}
-              onDeleteAll={handleDeleteAll}
-              hasChanges={hasChanges}
-              onSave={handleSaveChanges}
-              entryBoundaries={entryBoundaries}
-              entryRawInputs={entryRawInputs}
-              expandedEntryIds={expandedEntryIds}
-              onToggleEntryExpand={handleToggleEntryExpand}
-            />
-          </>
+          <FoodItemsTable
+            items={displayItems}
+            editable={true}
+            onUpdateItem={handleItemUpdate}
+            onRemoveItem={handleItemRemove}
+            newItemUids={newItemUids}
+            totals={displayTotals}
+            totalsPosition="top"
+            showTotals={true}
+            onDeleteAll={handleDeleteAll}
+            entryBoundaries={entryBoundaries}
+            entryRawInputs={entryRawInputs}
+            expandedEntryIds={expandedEntryIds}
+            onToggleEntryExpand={handleToggleEntryExpand}
+          />
         ) : (
           <p className="text-body text-muted-foreground">
             {isTodaySelected ? 'No entries yet today.' : 'No entries for this day.'}
