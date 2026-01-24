@@ -208,6 +208,7 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
   const [error, setError] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
   const [successState, setSuccessState] = useState<SuccessState | null>(null);
+  const [streamReady, setStreamReady] = useState(false);
   const [debugInfo, setDebugInfo] = useState<DebugInfo>({
     status: 'starting',
     videoWidth: 0,
@@ -404,6 +405,7 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
     errorCountsRef.current = new Map();
     rotationNeededRef.current = 0;
     setSuccessState(null);
+    setStreamReady(false);
     setDebugInfo({
       status: 'starting',
       videoWidth: 0,
@@ -554,6 +556,7 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
           videoHeight,
           rotationApplied: rotation,
         }));
+        setStreamReady(true);
 
         // Configure ZXing decoder
         const hints = new Map<DecodeHintType, unknown>();
@@ -813,7 +816,9 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
               <div className="w-full h-[180px] bg-black rounded-lg overflow-hidden relative">
                 <video 
                   ref={videoRef}
-                  className="w-full h-full object-cover bg-black"
+                  className={`w-full h-full object-cover bg-black transition-opacity duration-200 ${
+                    streamReady ? 'opacity-100' : 'opacity-0'
+                  }`}
                   autoPlay
                   playsInline
                   muted
