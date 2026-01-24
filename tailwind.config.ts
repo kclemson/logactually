@@ -13,6 +13,9 @@ export default {
       },
     },
     extend: {
+      ringColor: {
+        "focus-ring": "hsl(var(--focus-ring))",
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
