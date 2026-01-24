@@ -272,11 +272,10 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
         </Button>
         
         <div className="flex items-center gap-3 min-w-[180px] justify-center">
-          <span className="text-heading">
-            {isTodaySelected 
-              ? `Today (${format(selectedDate, 'M/d')})` 
-              : format(selectedDate, 'EEEE (M/d)')}
-          </span>
+        <span className="text-heading">
+          {format(selectedDate, 'EEEE (MMM d)')}
+          {isTodaySelected && ' - Today'}
+        </span>
         </div>
         
         <Button
