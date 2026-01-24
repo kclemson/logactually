@@ -99,12 +99,11 @@ export function FoodItemsTable({
   const showEntryDividers = entryBoundaries && entryBoundaries.length > 1;
 
   // Grid columns based on mode
-  const getGridCols = (showDelete: boolean, hasExpandColumn: boolean) => {
-    const expandCol = hasExpandColumn ? '16px_' : '';
+  const getGridCols = (showDelete: boolean) => {
     if (showDelete) {
-      return `grid-cols-[${expandCol}1fr_56px_50px_44px_32px_24px]`;
+      return `grid-cols-[1fr_56px_50px_44px_32px_24px]`;
     }
-    return `grid-cols-[${expandCol}1fr_56px_50px_44px_32px]`;
+    return `grid-cols-[1fr_56px_50px_44px_32px]`;
   };
 
   // For entry-deletion mode, check if this index is the last item in its entry
@@ -130,7 +129,7 @@ export function FoodItemsTable({
   };
 
   const hasDeleteColumn = editable || hasEntryDeletion;
-  const gridCols = getGridCols(!!hasDeleteColumn, !!showEntryDividers);
+  const gridCols = getGridCols(!!hasDeleteColumn);
 
   const TotalsRow = () => (
     <div className={cn(
@@ -139,8 +138,7 @@ export function FoodItemsTable({
       totalsPosition === 'bottom' && 'pt-1 border-t text-muted-foreground',
       gridCols
     )}>
-      {showEntryDividers && <span></span>}
-      <span className="px-2">Total</span>
+      <span className={cn("px-2", showEntryDividers && "pl-6")}>Total</span>
       <span className="px-1">{Math.round(totals.calories)}</span>
       <span className="px-1">{Math.round(totals.protein)}</span>
       <span className="px-1">{Math.round(totals.carbs)}</span>
@@ -204,8 +202,7 @@ export function FoodItemsTable({
       {/* Header row */}
       {showHeader && (
         <div className={cn('grid gap-0.5 text-muted-foreground items-center', gridCols)}>
-          {showEntryDividers && <span></span>}
-          <span className="text-size-compact px-2"></span>
+          <span className={cn("text-size-compact px-2", showEntryDividers && "pl-6")}></span>
           <span className="text-size-compact px-1">Calories</span>
           <span className="text-size-compact px-1">Protein</span>
           <span className="text-size-compact px-1">Carbs</span>
@@ -234,25 +231,25 @@ export function FoodItemsTable({
                 gridCols
               )}
             >
-            {/* Expand column cell */}
-            {showEntryDividers && (
-              <div className="flex items-center justify-center">
-                {isLastInEntry ? (
-                  <button
-                    onClick={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
-                    className="p-0.5 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
-                  >
-                    <ChevronRight className={cn(
-                      "h-3 w-3 transition-transform",
-                      isCurrentExpanded && "rotate-90"
-                    )} />
-                  </button>
-                ) : null}
-              </div>
-            )}
-            {/* Description cell */}
+            {/* Description cell (with chevron space when showing entry dividers) */}
             {editable ? (
               <div className="flex items-baseline min-w-0">
+                {/* Always reserve chevron space when showing entry dividers */}
+                {showEntryDividers && (
+                  <div className="w-4 shrink-0 flex items-baseline justify-center">
+                    {isLastInEntry ? (
+                      <button
+                        onClick={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
+                        className="p-0.5 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+                      >
+                        <ChevronRight className={cn(
+                          "h-3 w-3 transition-transform",
+                          isCurrentExpanded && "rotate-90"
+                        )} />
+                      </button>
+                    ) : null}
+                  </div>
+                )}
                 <div
                   contentEditable
                   suppressContentEditableWarning
@@ -283,6 +280,22 @@ export function FoodItemsTable({
               </div>
             ) : (
               <div className="flex items-baseline min-w-0">
+                {/* Always reserve chevron space when showing entry dividers */}
+                {showEntryDividers && (
+                  <div className="w-4 shrink-0 flex items-baseline justify-center">
+                    {isLastInEntry ? (
+                      <button
+                        onClick={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
+                        className="p-0.5 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+                      >
+                        <ChevronRight className={cn(
+                          "h-3 w-3 transition-transform",
+                          isCurrentExpanded && "rotate-90"
+                        )} />
+                      </button>
+                    ) : null}
+                  </div>
+                )}
                 <span 
                   title={getItemTooltip(item)}
                   className="text-size-compact pl-2 pr-0 py-1 line-clamp-2 shrink min-w-0"
@@ -389,8 +402,7 @@ export function FoodItemsTable({
             {/* Expanded raw input - shows after last item in entry */}
             {showEntryDividers && isLastInEntry && isCurrentExpanded && currentRawInput && (
               <div className={cn('grid gap-0.5', gridCols)}>
-                <span></span>
-                <div className="col-span-5 pl-2 py-1 text-size-compact text-muted-foreground whitespace-pre-wrap italic">
+                <div className="col-span-5 pl-6 py-1 text-size-compact text-muted-foreground whitespace-pre-wrap italic">
                   {currentRawInput}
                 </div>
               </div>
