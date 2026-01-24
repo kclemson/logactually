@@ -1,6 +1,4 @@
-import { LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/button';
 
 export function Header() {
   const { signOut } = useAuth();
@@ -8,15 +6,13 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto flex h-14 max-w-lg md:max-w-2xl items-center justify-between px-4">
-        <h1 className="text-title text-foreground">Food Log</h1>
-        <Button
-          variant="ghost"
-          size="icon"
+        <h1 className="text-title text-foreground">Log Actually</h1>
+        <button
           onClick={() => signOut()}
-          className="text-muted-foreground hover:text-foreground"
+          className="text-body text-muted-foreground hover:text-foreground hover:underline"
         >
-          <LogOut className="h-5 w-5" />
-        </Button>
+          Sign out
+        </button>
       </div>
     </header>
   );
