@@ -7,11 +7,11 @@ import { useScanBarcode } from '@/hooks/useScanBarcode';
 import { FoodItem } from '@/types/food';
 
 const PLACEHOLDER_EXAMPLES = [
-  "egg mcmuffin and like half the hash brown...",
-  "grande oat milk latte from Starbucks, a banana...",
-  "Chipotle bowl with chicken and extra guac...",
-  "blueberry muffin but only the top part...",
-  "iced coffee, couple bites of my friend's bagel...",
+  "Describe what you ate: egg mcmuffin and like half the hash brown...",
+  "Describe what you ate: grande oat milk latte from Starbucks, a banana...",
+  "Describe what you ate: Chipotle bowl with chicken and extra guac...",
+  "Describe what you ate: blueberry muffin but only the top part...",
+  "Describe what you ate: iced coffee, couple bites of my friend's bagel...",
 ];
 
 // Detect UPC patterns in text input to route to database lookup
