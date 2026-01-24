@@ -3,8 +3,8 @@ import { FoodItem, EditableField } from '@/types/food';
 
 const EDITABLE_FIELDS: EditableField[] = ['description', 'calories', 'protein', 'carbs', 'fat'];
 
-export function useEditableFoodItems() {
-  const [items, setItems] = useState<FoodItem[]>([]);
+export function useEditableFoodItems(initialItems: FoodItem[] = []) {
+  const [items, setItems] = useState<FoodItem[]>(initialItems);
   const [newItemUids, setNewItemUids] = useState<Set<string>>(new Set());
 
   // Set items from DB, clearing new highlights

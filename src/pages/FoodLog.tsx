@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { format, addDays, subDays, isToday, parseISO } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -11,55 +11,50 @@ import { useFoodEntries } from '@/hooks/useFoodEntries';
 import { useEditableFoodItems } from '@/hooks/useEditableFoodItems';
 import { FoodItem, calculateTotals } from '@/types/food';
 
+// Wrapper component: extracts date from URL, forces remount via key
 const FoodLog = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
+  const dateParam = searchParams.get('date');
+  const dateKey = dateParam || format(new Date(), 'yyyy-MM-dd');
+  
+  return <FoodLogContent key={dateKey} initialDate={dateKey} />;
+};
+
+export default FoodLog;
+
+interface FoodLogContentProps {
+  initialDate: string;
+}
+
+const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
+  const [, setSearchParams] = useSearchParams();
   const [expandedEntryIds, setExpandedEntryIds] = useState<Set<string>>(new Set());
   
-  // Parse date from URL or default to today
-  const dateParam = searchParams.get('date');
-  const [selectedDate, setSelectedDate] = useState(() => {
-    if (dateParam) {
-      try {
-        return parseISO(dateParam);
-      } catch {
-        return new Date();
-      }
-    }
-    return new Date();
-  });
-
-  // Sync URL when date changes
-  useEffect(() => {
-    const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
-    
-    if (dateStr === todayStr) {
-      // Remove date param when viewing today
-      if (searchParams.has('date')) {
-        searchParams.delete('date');
-        setSearchParams(searchParams, { replace: true });
-      }
-    } else {
-      // Set date param when viewing other days
-      if (searchParams.get('date') !== dateStr) {
-        setSearchParams({ date: dateStr }, { replace: true });
-      }
-    }
-  }, [selectedDate, searchParams, setSearchParams]);
-
-  const dateStr = format(selectedDate, 'yyyy-MM-dd');
+  // Date is stable for this component instance - derived from props, no state needed
+  const dateStr = initialDate;
+  const selectedDate = parseISO(initialDate);
   const isTodaySelected = isToday(selectedDate);
   
   const { entries, createEntry, updateEntry, deleteEntry, deleteAllByDate } = useFoodEntries(dateStr);
   const { analyzeFood, isAnalyzing, error: analyzeError } = useAnalyzeFood();
   
   const foodInputRef = useRef<FoodInputRef>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [lastLoadedDate, setLastLoadedDate] = useState<string | null>(null);
 
-  // Navigation handlers
-  const goToPreviousDay = () => setSelectedDate(subDays(selectedDate, 1));
-  const goToNextDay = () => setSelectedDate(addDays(selectedDate, 1));
+  // Navigation updates URL directly - triggers remount via wrapper's key
+  const goToPreviousDay = () => {
+    const prevDate = format(subDays(selectedDate, 1), 'yyyy-MM-dd');
+    setSearchParams({ date: prevDate }, { replace: true });
+  };
+
+  const goToNextDay = () => {
+    const nextDate = format(addDays(selectedDate, 1), 'yyyy-MM-dd');
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    if (nextDate === todayStr) {
+      setSearchParams({}, { replace: true }); // Remove param for today
+    } else {
+      setSearchParams({ date: nextDate }, { replace: true });
+    }
+  };
 
   // Flatten all entries into a single items array with entry tracking
   const { allItems, entryBoundaries, dayTotals } = useMemo(() => {
@@ -97,32 +92,15 @@ const FoodLog = () => {
     };
   }, [entries]);
 
-  // Editing state with new clean architecture
+  // Initialize editable state directly from query data (runs once on mount)
   const { 
     items: displayItems,
     newItemUids,
     updateItem,
     updateItemBatch,
     removeItem,
-    setItemsFromDB,
     addNewItems,
-    clearNewHighlights,
-  } = useEditableFoodItems();
-
-  // Reset state when date changes
-  useEffect(() => {
-    if (lastLoadedDate !== dateStr) {
-      setIsInitialized(false);
-      setItemsFromDB([]);
-      setLastLoadedDate(dateStr);
-    }
-  }, [dateStr, lastLoadedDate, setItemsFromDB]);
-
-  // Initialize display items from DB on first load (one-time, event-driven)
-  if (!isInitialized && allItems.length > 0 && lastLoadedDate === dateStr) {
-    setItemsFromDB(allItems);
-    setIsInitialized(true);
-  }
+  } = useEditableFoodItems(allItems);
 
   // Calculate display totals based on current edit state
   const displayTotals = calculateTotals(displayItems);
@@ -174,6 +152,7 @@ const FoodLog = () => {
       );
     }
   };
+
   // Find which entry an item belongs to based on its index
   const findEntryForIndex = useCallback((index: number): { entryId: string; localIndex: number } | null => {
     for (const boundary of entryBoundaries) {
@@ -268,12 +247,7 @@ const FoodLog = () => {
   }, [removeItem, findEntryForIndex, getItemsForEntry, saveEntry]);
 
   const handleDeleteAll = () => {
-    deleteAllByDate.mutate(dateStr, {
-      onSuccess: () => {
-        setItemsFromDB([]);
-        setIsInitialized(false);
-      },
-    });
+    deleteAllByDate.mutate(dateStr);
   };
 
   return (
@@ -344,5 +318,3 @@ const FoodLog = () => {
     </div>
   );
 };
-
-export default FoodLog;
