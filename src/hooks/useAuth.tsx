@@ -19,10 +19,19 @@ let cachedUser: User | null = null;
 
 // Preserve cache across HMR updates (dev only)
 if (import.meta.hot) {
-  import.meta.hot.data.cachedSession ??= cachedSession;
-  import.meta.hot.data.cachedUser ??= cachedUser;
-  cachedSession = import.meta.hot.data.cachedSession;
-  cachedUser = import.meta.hot.data.cachedUser;
+  // Read from hot data first (if it exists)
+  if (import.meta.hot.data.cachedSession !== undefined) {
+    cachedSession = import.meta.hot.data.cachedSession;
+  }
+  if (import.meta.hot.data.cachedUser !== undefined) {
+    cachedUser = import.meta.hot.data.cachedUser;
+  }
+  
+  // Store current values before module unloads
+  import.meta.hot.dispose((data) => {
+    data.cachedSession = cachedSession;
+    data.cachedUser = cachedUser;
+  });
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -92,13 +101,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           initialCheckComplete = true;
           setLoading(false);
         } else {
-          // No session and no cache - wait briefly for potential token refresh
-          setTimeout(() => {
-            if (isMounted && !initialCheckComplete) {
-              initialCheckComplete = true;
-              setLoading(false);
-            }
-          }, 1000);
+          // No session and no cache - user is not logged in
+          initialCheckComplete = true;
+          setLoading(false);
         }
       })
       .catch((error) => {
