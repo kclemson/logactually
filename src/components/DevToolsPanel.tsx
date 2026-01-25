@@ -14,6 +14,7 @@ interface TestResult {
   latencyMs: number;
   error?: string;
   isHallucination?: boolean;
+  promptVersion?: 'default' | 'experimental';
 }
 
 interface RunResponse {
@@ -38,7 +39,6 @@ export function DevToolsPanel() {
   const runTests = async () => {
     setIsRunning(true);
     setError(null);
-    setResults([]);
 
     const testCases = testCasesText
       .split('\n')
@@ -66,7 +66,11 @@ export function DevToolsPanel() {
 
       if (data) {
         setRunId(data.run_id);
-        setResults(data.results);
+        const taggedResults = data.results.map(r => ({
+          ...r,
+          promptVersion: promptVersion
+        }));
+        setResults(prev => [...taggedResults, ...prev].slice(0, 100));
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to run tests');
@@ -210,6 +214,7 @@ export function DevToolsPanel() {
                     <thead className="bg-muted/50 sticky top-0">
                       <tr>
                         <th className="px-3 py-2 text-left font-medium">Input</th>
+                        <th className="px-3 py-2 text-left font-medium">Version</th>
                         <th className="px-3 py-2 text-left font-medium">Output</th>
                         <th className="px-3 py-2 text-center font-medium">Halluc?</th>
                       </tr>
@@ -219,6 +224,11 @@ export function DevToolsPanel() {
                         <tr key={i} className="border-t">
                           <td className="px-3 py-2 font-mono text-xs max-w-[200px] truncate">
                             {result.input}
+                          </td>
+                          <td className="px-3 py-2 text-xs">
+                            <span className={result.promptVersion === 'experimental' ? 'text-amber-600' : 'text-muted-foreground'}>
+                              {result.promptVersion === 'experimental' ? 'exp' : 'def'}
+                            </span>
                           </td>
                           <td className="px-3 py-2 text-xs max-w-[300px]">
                             {result.error ? (
