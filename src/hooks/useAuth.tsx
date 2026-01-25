@@ -46,24 +46,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!isMounted) return;
       
+      console.log('Auth state change:', event, !!session);
+      
       // Only clear auth state on explicit sign out
       if (event === 'SIGNED_OUT') {
         cachedSession = null;
         cachedUser = null;
         setSession(null);
         setUser(null);
+        initialCheckComplete = true;
+        setLoading(false);
       } else if (session) {
         // Update cache when we have a valid session
         cachedSession = session;
         cachedUser = session.user;
         setSession(session);
         setUser(session.user);
+        initialCheckComplete = true;
+        setLoading(false);
       }
-      // If session is null but event isn't SIGNED_OUT (e.g., failed refresh),
-      // keep existing cached session - don't log user out
-      
-      initialCheckComplete = true;
-      setLoading(false);
+      // KEY FIX: If session is null but event isn't SIGNED_OUT,
+      // DON'T set loading = false here. Let getSession() handle it.
+      // This prevents the race condition where early null events
+      // cause a redirect before the real session is loaded.
     });
 
     // Then check for existing session
