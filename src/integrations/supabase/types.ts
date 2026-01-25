@@ -87,6 +87,7 @@ export type Database = {
           latency_ms: number | null
           prompt_version: string
           run_id: string
+          source: string | null
           test_input: string
         }
         Insert: {
@@ -98,6 +99,7 @@ export type Database = {
           latency_ms?: number | null
           prompt_version: string
           run_id: string
+          source?: string | null
           test_input: string
         }
         Update: {
@@ -109,6 +111,7 @@ export type Database = {
           latency_ms?: number | null
           prompt_version?: string
           run_id?: string
+          source?: string | null
           test_input?: string
         }
         Relationships: []

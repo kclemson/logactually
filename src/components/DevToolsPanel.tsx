@@ -48,7 +48,7 @@ export function DevToolsPanel() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('prompt_tests')
-        .select('test_input, actual_output, latency_ms, is_hallucination, prompt_version, run_id')
+        .select('test_input, actual_output, latency_ms, is_hallucination, prompt_version, run_id, source')
         .order('created_at', { ascending: false })
         .limit(20);
       
@@ -60,7 +60,7 @@ export function DevToolsPanel() {
         latencyMs: row.latency_ms ?? 0,
         isHallucination: row.is_hallucination ?? false,
         promptVersion: row.prompt_version as 'default' | 'experimental',
-        source: 'ai' as const,
+        source: (row.source as TestResult['source']) || 'ai',
         error: undefined,
       }));
     },
@@ -119,11 +119,13 @@ export function DevToolsPanel() {
           }
 
           // Regular text OR UPC not found - call run-prompt-tests (which calls analyze-food)
+          const source = upc ? 'ai-fallback' as const : 'ai' as const;
+          
           const { data, error: invokeError } = await supabase.functions.invoke<RunResponse>(
             'run-prompt-tests',
             {
               body: { 
-                testCases: [testCase], 
+                testCases: [{ input: testCase.input, source }], 
                 promptVersion, 
                 iterations: 1 
               },
@@ -207,7 +209,6 @@ export function DevToolsPanel() {
                 id="test-cases"
                 value={testCasesText}
                 onChange={e => setTestCasesText(e.target.value)}
-                placeholder="2 eggs scrambled&#10;chicken salad with ranch&#10;large coffee with oat milk"
                 className="h-24 font-mono text-sm"
               />
             </div>
@@ -321,7 +322,7 @@ export function DevToolsPanel() {
                                 ? 'text-purple-500' 
                                 : 'text-muted-foreground'
                             }>
-                              {result.promptVersion === 'experimental' ? 'Exp' : 'Def'}
+                              {result.promptVersion === 'experimental' ? 'Experimental' : 'Default'}
                             </span>
                           </td>
                           <td className="px-3 py-2 text-xs max-w-[300px]">

@@ -11,6 +11,7 @@ const corsHeaders = {
 interface TestCase {
   input: string;
   additionalContext?: string;
+  source?: 'upc-lookup' | 'ai' | 'ai-fallback';
 }
 
 interface TestResult {
@@ -151,6 +152,7 @@ serve(async (req) => {
               additional_context: testCase.additionalContext,
               actual_output: { food_items: data.food_items },
               latency_ms: latencyMs,
+              source: testCase.source || 'ai',
             });
 
           if (insertError) {
