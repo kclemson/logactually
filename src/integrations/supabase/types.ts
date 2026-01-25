@@ -77,6 +77,42 @@ export type Database = {
         }
         Relationships: []
       }
+      prompt_tests: {
+        Row: {
+          actual_output: Json
+          additional_context: string | null
+          created_at: string
+          id: string
+          is_hallucination: boolean | null
+          latency_ms: number | null
+          prompt_version: string
+          run_id: string
+          test_input: string
+        }
+        Insert: {
+          actual_output: Json
+          additional_context?: string | null
+          created_at?: string
+          id?: string
+          is_hallucination?: boolean | null
+          latency_ms?: number | null
+          prompt_version: string
+          run_id: string
+          test_input: string
+        }
+        Update: {
+          actual_output?: Json
+          additional_context?: string | null
+          created_at?: string
+          id?: string
+          is_hallucination?: boolean | null
+          latency_ms?: number | null
+          prompt_version?: string
+          run_id?: string
+          test_input?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
