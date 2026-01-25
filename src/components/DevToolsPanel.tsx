@@ -5,6 +5,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ChevronDown, ChevronUp, Play, Loader2 } from 'lucide-react';
+import { extractUpcFromText } from '@/lib/upc-utils';
+import { useScanBarcode } from '@/hooks/useScanBarcode';
 
 interface TestResult {
   id?: string;
@@ -15,6 +17,7 @@ interface TestResult {
   error?: string;
   isHallucination?: boolean;
   promptVersion?: 'default' | 'experimental';
+  source?: 'upc-lookup' | 'ai' | 'ai-fallback';
 }
 
 interface RunResponse {
@@ -36,6 +39,8 @@ export function DevToolsPanel() {
   const [runId, setRunId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const { lookupUpc } = useScanBarcode();
+
   const runTests = async () => {
     setIsRunning(true);
     setError(null);
@@ -52,26 +57,71 @@ export function DevToolsPanel() {
       return;
     }
 
+    const allResults: TestResult[] = [];
+    let currentRunId: string | null = null;
+
     try {
-      const { data, error: invokeError } = await supabase.functions.invoke<RunResponse>(
-        'run-prompt-tests',
-        {
-          body: { testCases, promptVersion, iterations },
+      for (const testCase of testCases) {
+        for (let iter = 0; iter < iterations; iter++) {
+          const upc = extractUpcFromText(testCase.input);
+          const startTime = Date.now();
+
+          if (upc) {
+            // UPC detected - call lookup-upc directly (mirrors FoodInput behavior)
+            const result = await lookupUpc(upc);
+            const latencyMs = Date.now() - startTime;
+
+            if (result.success) {
+              // Found in database - add as UPC lookup result
+              allResults.push({
+                input: testCase.input,
+                output: {
+                  food_items: [{
+                    description: result.data.description,
+                    calories: result.data.calories,
+                  }]
+                },
+                latencyMs,
+                promptVersion,
+                source: 'upc-lookup',
+              });
+              continue;
+            }
+            // Not found - fall through to analyze-food via run-prompt-tests
+          }
+
+          // Regular text OR UPC not found - call run-prompt-tests (which calls analyze-food)
+          const { data, error: invokeError } = await supabase.functions.invoke<RunResponse>(
+            'run-prompt-tests',
+            {
+              body: { 
+                testCases: [testCase], 
+                promptVersion, 
+                iterations: 1 
+              },
+            }
+          );
+
+          if (invokeError) {
+            throw new Error(invokeError.message);
+          }
+
+          if (data) {
+            if (!currentRunId) {
+              currentRunId = data.run_id;
+              setRunId(currentRunId);
+            }
+            const taggedResults = data.results.map(r => ({
+              ...r,
+              promptVersion,
+              source: upc ? 'ai-fallback' as const : 'ai' as const,
+            }));
+            allResults.push(...taggedResults);
+          }
         }
-      );
-
-      if (invokeError) {
-        throw new Error(invokeError.message);
       }
 
-      if (data) {
-        setRunId(data.run_id);
-        const taggedResults = data.results.map(r => ({
-          ...r,
-          promptVersion: promptVersion
-        }));
-        setResults(prev => [...taggedResults, ...prev].slice(0, 100));
-      }
+      setResults(prev => [...allResults, ...prev].slice(0, 100));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to run tests');
     } finally {
@@ -214,7 +264,7 @@ export function DevToolsPanel() {
                     <thead className="bg-muted/50 sticky top-0">
                       <tr>
                         <th className="px-3 py-2 text-left font-medium">Input</th>
-                        <th className="px-3 py-2 text-left font-medium">Version</th>
+                        <th className="px-3 py-2 text-left font-medium">Source</th>
                         <th className="px-3 py-2 text-left font-medium">Output</th>
                         <th className="px-3 py-2 text-center font-medium">Halluc?</th>
                       </tr>
@@ -226,8 +276,14 @@ export function DevToolsPanel() {
                             {result.input}
                           </td>
                           <td className="px-3 py-2 text-xs">
-                            <span className={result.promptVersion === 'experimental' ? 'text-amber-600' : 'text-muted-foreground'}>
-                              {result.promptVersion === 'experimental' ? 'experimental' : 'default'}
+                            <span className={
+                              result.source === 'upc-lookup' 
+                                ? 'text-green-600' 
+                                : result.source === 'ai-fallback'
+                                  ? 'text-amber-600'
+                                  : 'text-muted-foreground'
+                            }>
+                              {result.source === 'upc-lookup' ? 'UPC' : result.source === 'ai-fallback' ? 'AI (fallback)' : 'AI'}
                             </span>
                           </td>
                           <td className="px-3 py-2 text-xs max-w-[300px]">

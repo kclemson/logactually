@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { useScanBarcode } from "@/hooks/useScanBarcode";
+import { extractUpcFromText } from "@/lib/upc-utils";
 import { FoodItem } from "@/types/food";
 
 const PLACEHOLDER_EXAMPLES = [
@@ -16,23 +17,6 @@ const PLACEHOLDER_EXAMPLES = [
   "Describe what you ate, such as: protein bar (the kirkland ones from costco)",
   "Describe what you ate, such as: leftover Domino's, two and a half slices of pepperoni",
 ];
-
-// Detect UPC patterns in text input to route to database lookup
-function extractUpcFromText(input: string): string | null {
-  // "UPC code: 717524611109", "UPC: 717524611109", "barcode: 717524611109"
-  const prefixMatch = input.match(/(?:upc|barcode)(?:\s+(?:code|number))?[\s:]+(\d[\d\s]{6,})/i);
-  if (prefixMatch) {
-    return prefixMatch[1].replace(/\s/g, "");
-  }
-
-  // Pure digits (8-14 characters, standard UPC/EAN lengths)
-  const trimmed = input.trim();
-  if (/^\d{8,14}$/.test(trimmed)) {
-    return trimmed;
-  }
-
-  return null;
-}
 
 interface FoodInputProps {
   onSubmit: (text: string) => void;
