@@ -16,8 +16,7 @@ export function useAnalyzeFood() {
 
   const analyzeFood = async (
     rawInput: string,
-    additionalContext?: string,
-    currentItems?: FoodItem[]
+    additionalContext?: string
   ): Promise<AnalyzeResult | null> => {
     setIsAnalyzing(true);
     setError(null);
@@ -26,7 +25,7 @@ export function useAnalyzeFood() {
       const { data, error: invokeError } = await supabase.functions.invoke(
         'analyze-food',
         {
-          body: { rawInput, additionalContext, currentItems },
+          body: { rawInput, additionalContext },
         }
       );
 
