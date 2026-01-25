@@ -1,7 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getAnalyzeFoodPrompt, interpolatePrompt, type PromptVersion } from "../_shared/prompts.ts";
+import type { PromptVersion } from "../_shared/prompts.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,15 +19,6 @@ interface TestResult {
   output: unknown;
   latencyMs: number;
   error?: string;
-}
-
-interface ParsedFoodItem {
-  name: string;
-  portion: string;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
 }
 
 serve(async (req) => {
@@ -91,24 +82,25 @@ serve(async (req) => {
     console.log(`Starting test run ${runId}: ${testCases.length} cases × ${iterations} iterations = ${testCases.length * iterations} total`);
     console.log(`Prompt version: ${version}`);
 
+    // Build the analyze-food URL
+    const analyzeFoodUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/analyze-food`;
+
     for (const testCase of testCases as TestCase[]) {
       for (let i = 0; i < iterations; i++) {
         const startTime = Date.now();
         
         try {
-          const promptTemplate = getAnalyzeFoodPrompt(version);
-          const prompt = interpolatePrompt(promptTemplate, testCase.input, testCase.additionalContext);
-
-          const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          // Call analyze-food directly instead of duplicating AI logic
+          const response = await fetch(analyzeFoodUrl, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${Deno.env.get('LOVABLE_API_KEY')}`,
+              'Authorization': authHeader,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              model: 'google/gemini-3-flash-preview',
-              messages: [{ role: 'user', content: prompt }],
-              temperature: 0.3,
+              rawInput: testCase.input,
+              additionalContext: testCase.additionalContext,
+              promptVersion: version,
             }),
           });
 
@@ -121,59 +113,29 @@ serve(async (req) => {
               additionalContext: testCase.additionalContext,
               output: null,
               latencyMs,
-              error: `AI Gateway error: ${errorText}`,
+              error: `analyze-food error (${response.status}): ${errorText}`,
             });
             continue;
           }
 
           const data = await response.json();
-          const content = data.choices?.[0]?.message?.content;
 
-          if (!content) {
+          // Check if analyze-food returned an error
+          if (data.error) {
             results.push({
               input: testCase.input,
               additionalContext: testCase.additionalContext,
               output: null,
               latencyMs,
-              error: 'No content in AI response',
+              error: data.error,
             });
             continue;
           }
-
-          // Parse AI response
-          let parsed: { food_items: ParsedFoodItem[] };
-          try {
-            let cleanContent = content.replace(/```json\n?|\n?```/g, '').trim();
-            const jsonStart = cleanContent.indexOf('{');
-            const jsonEnd = cleanContent.lastIndexOf('}');
-            if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-              cleanContent = cleanContent.substring(jsonStart, jsonEnd + 1);
-            }
-            parsed = JSON.parse(cleanContent);
-          } catch {
-            results.push({
-              input: testCase.input,
-              additionalContext: testCase.additionalContext,
-              output: { raw: content },
-              latencyMs,
-              error: 'Failed to parse AI response',
-            });
-            continue;
-          }
-
-          // Merge name and portion into description
-          const mergedItems = parsed.food_items.map(item => ({
-            description: item.portion ? `${item.name} (${item.portion})` : item.name,
-            calories: item.calories || 0,
-            protein: item.protein || 0,
-            carbs: item.carbs || 0,
-            fat: item.fat || 0,
-          }));
 
           const result: TestResult = {
             input: testCase.input,
             additionalContext: testCase.additionalContext,
-            output: { food_items: mergedItems },
+            output: { food_items: data.food_items },
             latencyMs,
           };
 
@@ -187,7 +149,7 @@ serve(async (req) => {
               prompt_version: version,
               test_input: testCase.input,
               additional_context: testCase.additionalContext,
-              actual_output: { food_items: mergedItems },
+              actual_output: { food_items: data.food_items },
               latency_ms: latencyMs,
             });
 
