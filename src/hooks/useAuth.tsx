@@ -43,14 +43,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, 10000);
 
     // Listen for auth changes FIRST - this catches token refresh events
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!isMounted) return;
-      // Update module-level cache
-      cachedSession = session;
-      cachedUser = session?.user ?? null;
-      // Update React state
-      setSession(session);
-      setUser(session?.user ?? null);
+      
+      // Only clear auth state on explicit sign out
+      if (event === 'SIGNED_OUT') {
+        cachedSession = null;
+        cachedUser = null;
+        setSession(null);
+        setUser(null);
+      } else if (session) {
+        // Update cache when we have a valid session
+        cachedSession = session;
+        cachedUser = session.user;
+        setSession(session);
+        setUser(session.user);
+      }
+      // If session is null but event isn't SIGNED_OUT (e.g., failed refresh),
+      // keep existing cached session - don't log user out
+      
       initialCheckComplete = true;
       setLoading(false);
     });
