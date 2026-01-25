@@ -417,11 +417,11 @@ export function FoodItemsTable({
                     value: item.calories,
                     originalValue: item.calories
                   })}
-                  onChange={(e) => {
-                    if (editingCell) {
-                      setEditingCell({ ...editingCell, value: Number(e.target.value) });
-                    }
-                  }}
+                onChange={(e) => {
+                  if (editingCell) {
+                    setEditingCell({ ...editingCell, value: parseInt(e.target.value, 10) || 0 });
+                  }
+                }}
                   onBlur={() => setEditingCell(null)}
                   onKeyDown={(e) => handleKeyDown(e, index, 'calories')}
                   className={getCaloriesClasses(item, isCaloriesEditing)}
