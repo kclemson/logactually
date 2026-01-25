@@ -152,7 +152,7 @@ const History = () => {
               {/* Calorie count - above day number */}
               {hasEntries && isCurrentMonth && (
                 <span className="text-rose-500 dark:text-rose-400 font-medium">
-                  {Math.round(summary.totalCalories)}
+                  {Math.round(summary.totalCalories).toLocaleString()}
                 </span>
               )}
               
