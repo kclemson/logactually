@@ -211,7 +211,6 @@ export function DevToolsPanel() {
                       <tr>
                         <th className="px-3 py-2 text-left font-medium">Input</th>
                         <th className="px-3 py-2 text-left font-medium">Output</th>
-                        <th className="px-3 py-2 text-right font-medium">Latency</th>
                         <th className="px-3 py-2 text-center font-medium">Halluc?</th>
                       </tr>
                     </thead>
@@ -226,12 +225,9 @@ export function DevToolsPanel() {
                               <span className="text-destructive">{result.error}</span>
                             ) : (
                               <span className="truncate block">
-                                {result.output?.food_items?.map(f => f.description).join(', ')}
+                                {result.output?.food_items?.map(f => `${f.description} (${f.calories} cal)`).join(', ')}
                               </span>
                             )}
-                          </td>
-                          <td className="px-3 py-2 text-right text-xs text-muted-foreground">
-                            {result.latencyMs}ms
                           </td>
                           <td className="px-3 py-2 text-center">
                             {!result.error && (
