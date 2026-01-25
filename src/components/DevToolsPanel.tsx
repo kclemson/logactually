@@ -105,7 +105,7 @@ export function DevToolsPanel() {
 
   return (
     <div className="hidden md:block border-t bg-background">
-    <div className="mx-auto max-w-lg px-3">
+    <div className="mx-auto max-w-4xl px-3">
         {/* Toggle Header */}
         <button
           onClick={() => setIsOpen(!isOpen)}
