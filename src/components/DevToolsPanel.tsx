@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -32,14 +33,41 @@ interface RunResponse {
 export function DevToolsPanel() {
   const [isOpen, setIsOpen] = useState(false);
   const [promptVersion, setPromptVersion] = useState<'default' | 'experimental'>('default');
-  const [testCasesText, setTestCasesText] = useState('2 eggs scrambled\nchicken salad with ranch\nlarge coffee with oat milk');
-  const [iterations, setIterations] = useState(1);
+  const [testCasesText, setTestCasesText] = useState('');
+  const [iterations, setIterations] = useState(3);
   const [results, setResults] = useState<TestResult[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [runId, setRunId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const { lookupUpc } = useScanBarcode();
+
+  // Fetch historical results from database
+  const { data: historicalResults } = useQuery({
+    queryKey: ['prompt-tests-recent'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('prompt_tests')
+        .select('test_input, actual_output, latency_ms, is_hallucination, prompt_version, run_id')
+        .order('created_at', { ascending: false })
+        .limit(20);
+      
+      if (error) throw error;
+      
+      return data.map(row => ({
+        input: row.test_input,
+        output: row.actual_output as TestResult['output'],
+        latencyMs: row.latency_ms ?? 0,
+        isHallucination: row.is_hallucination ?? false,
+        promptVersion: row.prompt_version as 'default' | 'experimental',
+        source: 'ai' as const,
+        error: undefined,
+      }));
+    },
+  });
+
+  // Combine session results with historical
+  const displayResults = [...results, ...(historicalResults ?? [])];
 
   const runTests = async () => {
     setIsRunning(true);
@@ -154,8 +182,8 @@ export function DevToolsPanel() {
     }
   };
 
-  const hallucinationCount = results.filter(r => r.isHallucination).length;
-  const successCount = results.filter(r => !r.error).length;
+  const hallucinationCount = displayResults.filter(r => r.isHallucination).length;
+  const successCount = displayResults.filter(r => !r.error).length;
 
   return (
     <div className="hidden md:block border-t bg-background">
@@ -248,7 +276,7 @@ export function DevToolsPanel() {
             )}
 
             {/* Results */}
-            {results.length > 0 && (
+            {displayResults.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium">
@@ -265,12 +293,13 @@ export function DevToolsPanel() {
                       <tr>
                         <th className="px-3 py-2 text-left font-medium">Input</th>
                         <th className="px-3 py-2 text-left font-medium">Source</th>
+                        <th className="px-3 py-2 text-left font-medium">Prompt</th>
                         <th className="px-3 py-2 text-left font-medium">Output</th>
                         <th className="px-3 py-2 text-center font-medium">Halluc?</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {results.map((result, i) => (
+                      {displayResults.map((result, i) => (
                         <tr key={i} className="border-t">
                           <td className="px-3 py-2 font-mono text-xs max-w-[200px] truncate">
                             {result.input}
@@ -284,6 +313,15 @@ export function DevToolsPanel() {
                                   : 'text-muted-foreground'
                             }>
                               {result.source === 'upc-lookup' ? 'UPC' : result.source === 'ai-fallback' ? 'AI (fallback)' : 'AI'}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-xs">
+                            <span className={
+                              result.promptVersion === 'experimental' 
+                                ? 'text-purple-500' 
+                                : 'text-muted-foreground'
+                            }>
+                              {result.promptVersion === 'experimental' ? 'Exp' : 'Def'}
                             </span>
                           </td>
                           <td className="px-3 py-2 text-xs max-w-[300px]">
