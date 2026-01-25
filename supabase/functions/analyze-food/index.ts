@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getAnalyzeFoodPrompt, interpolatePrompt, type PromptVersion } from "../_shared/prompts.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -71,7 +72,7 @@ serve(async (req) => {
     const userId = claimsData.claims.sub;
     console.log('Authenticated user:', userId);
 
-    const { rawInput, additionalContext } = await req.json();
+    const { rawInput, additionalContext, promptVersion } = await req.json();
 
     if (!rawInput || typeof rawInput !== 'string') {
       return new Response(
@@ -80,34 +81,18 @@ serve(async (req) => {
       );
     }
 
+    // Validate promptVersion if provided
+    const version: PromptVersion = promptVersion === 'experimental' ? 'experimental' : 'default';
+
     console.log('Analyzing food input:', rawInput);
+    console.log('Prompt version:', version);
     if (additionalContext) {
       console.log('Additional context:', additionalContext);
     }
 
-    const prompt = `You are a nutrition expert. Analyze the following food description and extract individual food items with their nutritional information.
-
-Food description: "${rawInput}"
-${additionalContext ? `Additional context: "${additionalContext}"` : ''}
-
-For each food item, provide:
-- name: a SHORT, concise name (max 25 characters). Use common abbreviations. Do not include brand names unless essential for identification.
-- portion: the serving size mentioned or a reasonable default
-- calories: estimated calories (whole number)
-- protein: grams of protein (whole number)
-- carbs: grams of carbohydrates (whole number)
-- fat: grams of fat (whole number)
-
-Keep names short and generic - focus on identifying the food type clearly in few words.
-
-Be reasonable with portion sizes. If no portion is specified, use typical serving sizes.
-
-Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
-{
-  "food_items": [
-    { "name": "Food name", "portion": "portion size", "calories": 0, "protein": 0, "carbs": 0, "fat": 0 }
-  ]
-}`;
+    // Get prompt template and interpolate values
+    const promptTemplate = getAnalyzeFoodPrompt(version);
+    const prompt = interpolatePrompt(promptTemplate, rawInput, additionalContext);
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
