@@ -408,7 +408,7 @@ export function FoodItemsTable({
                   type="number"
                   value={
                     editingCell?.index === index && editingCell?.field === 'calories'
-                      ? editingCell.value
+                      ? String(editingCell.value)
                       : item.calories
                   }
                   onFocus={() => setEditingCell({
