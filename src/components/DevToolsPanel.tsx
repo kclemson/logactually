@@ -227,7 +227,7 @@ export function DevToolsPanel() {
                           </td>
                           <td className="px-3 py-2 text-xs">
                             <span className={result.promptVersion === 'experimental' ? 'text-amber-600' : 'text-muted-foreground'}>
-                              {result.promptVersion === 'experimental' ? 'exp' : 'def'}
+                              {result.promptVersion === 'experimental' ? 'experimental' : 'default'}
                             </span>
                           </td>
                           <td className="px-3 py-2 text-xs max-w-[300px]">
