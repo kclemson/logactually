@@ -29,7 +29,10 @@ export function useAdminStats() {
   return useQuery({
     queryKey: ['admin-stats'],
     queryFn: async (): Promise<UsageStats> => {
-      const { data, error } = await supabase.rpc('get_usage_stats');
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const { data, error } = await supabase.rpc('get_usage_stats', {
+        user_timezone: timezone
+      });
       if (error) throw error;
       return data as unknown as UsageStats;
     },
@@ -41,7 +44,10 @@ export function useAdminUserStats() {
   return useQuery({
     queryKey: ['admin-user-stats'],
     queryFn: async (): Promise<UserStats[]> => {
-      const { data, error } = await supabase.rpc('get_user_stats');
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const { data, error } = await supabase.rpc('get_user_stats', {
+        user_timezone: timezone
+      });
       if (error) throw error;
       return (data as unknown as UserStats[]) ?? [];
     },
