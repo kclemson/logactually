@@ -36,7 +36,7 @@ export function useAdminStats() {
       if (error) throw error;
       return data as unknown as UsageStats;
     },
-    enabled: import.meta.env.DEV,
+    enabled: true,
   });
 }
 
@@ -51,6 +51,6 @@ export function useAdminUserStats() {
       if (error) throw error;
       return (data as unknown as UserStats[]) ?? [];
     },
-    enabled: import.meta.env.DEV,
+    enabled: true,
   });
 }
