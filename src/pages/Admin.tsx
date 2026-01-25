@@ -4,7 +4,10 @@ import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { format, parseISO } from 'date-fns';
 
 export default function Admin() {
+  // All hooks must be called before any conditional returns
   const { data: isAdmin, isLoading: isAdminLoading } = useIsAdmin();
+  const { data: stats, isLoading, error } = useAdminStats();
+  const { data: userStats } = useAdminUserStats();
   
   // Allow access if in dev mode OR if user has admin role
   const hasAccess = import.meta.env.DEV || isAdmin;
@@ -21,9 +24,6 @@ export default function Admin() {
   if (!hasAccess) {
     return <Navigate to="/" replace />;
   }
-
-  const { data: stats, isLoading, error } = useAdminStats();
-  const { data: userStats } = useAdminUserStats();
 
   if (isLoading) {
     return (
