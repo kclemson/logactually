@@ -2,15 +2,29 @@ import { useTheme } from 'next-themes';
 import { Moon, Sun, Monitor } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
+import { useUserSettings } from '@/hooks/useUserSettings';
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
+  const { settings, updateSettings, isLoading } = useUserSettings();
   const [mounted, setMounted] = useState(false);
 
   // Avoid hydration mismatch
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Sync theme from database on load
+  useEffect(() => {
+    if (!isLoading && settings.theme && mounted) {
+      setTheme(settings.theme);
+    }
+  }, [isLoading, settings.theme, setTheme, mounted]);
+
+  const handleThemeChange = (value: 'light' | 'dark' | 'system') => {
+    setTheme(value);
+    updateSettings({ theme: value });
+  };
 
   const themeOptions = [
     { value: 'light', label: 'Light', icon: Sun },
@@ -26,9 +40,9 @@ export default function Settings() {
         <h3 className="text-heading text-muted-foreground">Appearance</h3>
         <div className="flex gap-2">
           {themeOptions.map(({ value, label, icon: Icon }) => (
-            <button
+          <button
               key={value}
-              onClick={() => setTheme(value)}
+              onClick={() => handleThemeChange(value)}
               className={cn(
                 "flex flex-1 flex-col items-center gap-2 rounded-lg border p-3 transition-colors",
                 mounted && theme === value
