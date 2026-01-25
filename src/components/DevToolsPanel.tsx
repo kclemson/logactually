@@ -104,7 +104,7 @@ export function DevToolsPanel() {
   const successCount = results.filter(r => !r.error).length;
 
   return (
-    <div className="hidden md:block fixed bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 z-50">
+    <div className="hidden md:block border-t bg-background">
       <div className="mx-auto max-w-4xl px-4">
         {/* Toggle Header */}
         <button
