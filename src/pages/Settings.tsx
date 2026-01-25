@@ -44,13 +44,13 @@ export default function Settings() {
               key={value}
               onClick={() => handleThemeChange(value)}
               className={cn(
-                "flex flex-1 flex-col items-center gap-2 rounded-lg border p-3 transition-colors",
+                "flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 transition-colors",
                 mounted && theme === value
                   ? "border-primary bg-primary/5"
                   : "border-border hover:bg-muted/50"
               )}
             >
-              <Icon className="h-5 w-5" />
+              <Icon className="h-4 w-4" />
               <span className="text-sm">{label}</span>
             </button>
           ))}
