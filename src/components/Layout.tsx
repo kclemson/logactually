@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import { Header } from './Header';
 import { BottomNav } from './BottomNav';
+import { DevToolsPanel } from './DevToolsPanel';
 
 export function Layout() {
   return (
@@ -10,6 +11,7 @@ export function Layout() {
         <Outlet />
       </main>
       <BottomNav />
+      {import.meta.env.DEV && <DevToolsPanel />}
     </div>
   );
 }
