@@ -105,7 +105,7 @@ export function DevToolsPanel() {
 
   return (
     <div className="hidden md:block border-t bg-background">
-      <div className="mx-auto max-w-4xl px-4">
+    <div className="mx-auto max-w-lg px-3">
         {/* Toggle Header */}
         <button
           onClick={() => setIsOpen(!isOpen)}
@@ -117,69 +117,73 @@ export function DevToolsPanel() {
 
         {/* Panel Content */}
         {isOpen && (
-          <div className="pb-4 space-y-4">
-            <div className="grid grid-cols-3 gap-4">
-              {/* Test Cases */}
-              <div className="col-span-2 space-y-2">
-                <Label htmlFor="test-cases">Test Cases (one per line)</Label>
-                <Textarea
-                  id="test-cases"
-                  value={testCasesText}
-                  onChange={e => setTestCasesText(e.target.value)}
-                  placeholder="2 eggs scrambled&#10;chicken salad with ranch&#10;large coffee with oat milk"
-                  className="h-24 font-mono text-sm"
+          <div className="pb-4 space-y-3">
+            {/* Test Cases - Full Width */}
+            <div className="space-y-2">
+              <Label htmlFor="test-cases">Test Cases (one per line)</Label>
+              <Textarea
+                id="test-cases"
+                value={testCasesText}
+                onChange={e => setTestCasesText(e.target.value)}
+                placeholder="2 eggs scrambled&#10;chicken salad with ranch&#10;large coffee with oat milk"
+                className="h-24 font-mono text-sm"
+              />
+            </div>
+
+            {/* Controls Row: Radio + Iterations + Run Button */}
+            <div className="flex items-center justify-between gap-4">
+              {/* Prompt Version Radio */}
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="promptVersion"
+                    checked={promptVersion === 'default'}
+                    onChange={() => setPromptVersion('default')}
+                    className="h-4 w-4 accent-primary"
+                  />
+                  Default
+                </label>
+                <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="promptVersion"
+                    checked={promptVersion === 'experimental'}
+                    onChange={() => setPromptVersion('experimental')}
+                    className="h-4 w-4 accent-primary"
+                  />
+                  Experimental
+                </label>
+              </div>
+
+              {/* Iterations */}
+              <div className="flex items-center gap-2">
+                <Label htmlFor="iterations" className="text-sm whitespace-nowrap">Iterations</Label>
+                <Input
+                  id="iterations"
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={iterations}
+                  onChange={e => setIterations(Math.min(10, Math.max(1, parseInt(e.target.value) || 1)))}
+                  className="w-16 h-8"
                 />
               </div>
 
-              {/* Settings */}
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <Label>Prompt Version</Label>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant={promptVersion === 'default' ? 'default' : 'outline'}
-                      onClick={() => setPromptVersion('default')}
-                    >
-                      Default
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={promptVersion === 'experimental' ? 'default' : 'outline'}
-                      onClick={() => setPromptVersion('experimental')}
-                    >
-                      Experimental
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="iterations">Iterations</Label>
-                  <Input
-                    id="iterations"
-                    type="number"
-                    min={1}
-                    max={10}
-                    value={iterations}
-                    onChange={e => setIterations(Math.min(10, Math.max(1, parseInt(e.target.value) || 1)))}
-                    className="w-20"
-                  />
-                </div>
-
-                <Button onClick={runTests} disabled={isRunning} className="w-full">
-                  {isRunning ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Running...
-                    </>
-                  ) : (
-                    <>
-                      <Play className="mr-2 h-4 w-4" />
-                      Run Tests
-                    </>
-                  )}
-                </Button>
-              </div>
+              {/* Run Button */}
+              <Button size="sm" onClick={runTests} disabled={isRunning}>
+                {isRunning ? (
+                  <>
+                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                    Running...
+                  </>
+                ) : (
+                  <>
+                    <Play className="mr-1.5 h-4 w-4" />
+                    Run Tests
+                  </>
+                )}
+              </Button>
             </div>
 
             {/* Error */}
@@ -201,7 +205,7 @@ export function DevToolsPanel() {
                   </span>
                 </div>
 
-                <div className="max-h-48 overflow-y-auto rounded-md border">
+                <div className="max-h-80 overflow-y-auto rounded-md border">
                   <table className="w-full text-sm">
                     <thead className="bg-muted/50 sticky top-0">
                       <tr>
