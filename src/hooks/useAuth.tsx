@@ -70,20 +70,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
         if (!isMounted) return;
-        // Update module-level cache
-        cachedSession = session;
-        cachedUser = session?.user ?? null;
-        // Update React state
-        setSession(session);
-        setUser(session?.user ?? null);
         
-        // If we got a session, we're done loading
         if (session) {
+          // Got a valid session - update everything
+          cachedSession = session;
+          cachedUser = session.user;
+          setSession(session);
+          setUser(session.user);
+          initialCheckComplete = true;
+          setLoading(false);
+        } else if (cachedUser) {
+          // No session returned BUT we have a cached user
+          // This happens when refresh token was rotated by another device
+          // Keep the cached session - user stays logged in
+          console.warn('getSession returned null but cached user exists - preserving session');
           initialCheckComplete = true;
           setLoading(false);
         } else {
-          // No session - wait briefly for potential token refresh via onAuthStateChange
-          // If it doesn't fire within 1 second, assume truly logged out
+          // No session and no cache - wait briefly for potential token refresh
           setTimeout(() => {
             if (isMounted && !initialCheckComplete) {
               initialCheckComplete = true;
@@ -95,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .catch((error) => {
         console.error('Failed to get session:', error);
         if (isMounted) {
+          // Preserve existing cache on error - don't log user out due to network issues
           initialCheckComplete = true;
           setLoading(false);
         }
