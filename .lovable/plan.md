@@ -1,41 +1,64 @@
 
-## Fix: Save Meal Dialog Too Wide on Mobile
 
-### The Problem
-The "Save as Meal" dialog extends to the full screen width on mobile, causing content to appear cut off at the edges (as seen in the screenshot).
+## Fix Missing Mobile Insets Across UI Components
 
-### Root Cause
-The `DialogContent` base component uses `w-full max-w-lg` with centered positioning, but doesn't have mobile inset constraints. The `SaveMealDialog` passes `sm:max-w-md` which only applies at 640px+, leaving mobile with no width constraint.
+### Components Requiring Updates
 
-### The Solution
-Apply the same responsive inset-based positioning pattern already used by `BarcodeScanner`:
+#### 1. FoodItemsTable.tsx - AlertDialogs (2 instances)
+Both "Delete all entries" and "Delete this entry" confirmation dialogs lack mobile inset styling.
 
-- On mobile: Use `left-4 right-4` insets with `translate-x-0 w-auto` and `max-w-[calc(100vw-32px)]`
-- On desktop: Keep the existing centered `sm:left-[50%] sm:translate-x-[-50%]` behavior
+**File: `src/components/FoodItemsTable.tsx`**
 
-### Code Changes
-
-**File: `src/components/SaveMealDialog.tsx`**
-
-Update the `DialogContent` className (line 94):
-
+**Line 259** - Delete All confirmation:
 ```tsx
 // FROM:
-<DialogContent className="sm:max-w-md">
+<AlertDialogContent>
 
 // TO:
-<DialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md">
+<AlertDialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-lg">
 ```
 
-This pattern:
-- **Mobile** (default): `left-4 right-4` creates 16px margins on both sides, `translate-x-0` removes centering transform, `w-auto` lets it size naturally, `max-w-[calc(100vw-32px)]` ensures it fits
-- **Desktop** (sm:): Restores centered positioning with `left-[50%] translate-x-[-50%]` and standard `max-w-md` constraint
+**Line 489** - Delete Entry confirmation:
+```tsx
+// FROM:
+<AlertDialogContent>
+
+// TO:
+<AlertDialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-lg">
+```
+
+#### 2. Settings.tsx - Delete Meal Popover
+The popover uses `side="left"` which causes overflow on mobile. Change to `side="top"` for better mobile behavior.
+
+**File: `src/pages/Settings.tsx`**
+
+**Line 123**:
+```tsx
+// FROM:
+<PopoverContent className="w-64 p-4" side="left" align="center">
+
+// TO:
+<PopoverContent className="w-64 p-4" side="top" align="end">
+```
+
+Changes:
+- `side="top"` - Opens above the trigger instead of to the left (prevents horizontal overflow)
+- `align="end"` - Right-aligns with the trash icon for visual balance
+
+---
 
 ### Files to Change
 
-| File | Change |
-|------|--------|
-| `src/components/SaveMealDialog.tsx` | Add responsive mobile inset styling to DialogContent |
+| File | Changes |
+|------|---------|
+| `src/components/FoodItemsTable.tsx` | Add mobile inset classes to both AlertDialogContent instances (lines 259, 489) |
+| `src/pages/Settings.tsx` | Change popover positioning from `side="left"` to `side="top"` (line 123) |
 
-### Result
-The dialog will have proper 16px margins on mobile devices, matching the BarcodeScanner behavior and preventing content overflow.
+---
+
+### Technical Details
+
+The responsive inset pattern works as follows:
+- **Mobile (default)**: `left-4 right-4` creates 16px margins, `translate-x-0` removes centering transform, `w-auto` lets content size naturally, `max-w-[calc(100vw-32px)]` ensures it never exceeds viewport minus margins
+- **Desktop (sm:)**: Restores standard centered positioning with `left-[50%] translate-x-[-50%]` and `max-w-lg` constraint
+
