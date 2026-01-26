@@ -284,8 +284,7 @@ export function FoodItemsTable({
   // Get cell classes for calories input
   const getCaloriesClasses = (item: FoodItem, isEditing: boolean) => {
     return cn(
-      "h-auto min-h-7 px-1 py-1 border-0 rounded-none bg-transparent transition-all text-center",
-      isNewItem(item) && "animate-highlight-fade",
+      "h-auto min-h-7 px-1 py-1 border-0 bg-transparent transition-all text-center",
       isEditing
         ? "ring-2 ring-focus-ring bg-focus-bg focus-visible:ring-focus-ring"
         : "hover:bg-muted/50 focus:bg-muted/50"
@@ -323,8 +322,9 @@ export function FoodItemsTable({
           <div key={item.uid || index} className="contents">
             <div
               className={cn(
-                'grid gap-0.5 items-center group',
-                gridCols
+                'grid gap-0.5 items-center group rounded-md',
+                gridCols,
+                isNewItem(item) && "animate-highlight-fade"
               )}
             >
             {/* Description cell (with chevron space when showing entry dividers) */}
@@ -348,8 +348,7 @@ export function FoodItemsTable({
                 )}
                 <div className={cn(
                   "flex-1 min-w-0 flex items-baseline rounded",
-                  "focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg",
-                  isNewItem(item) && "animate-highlight-fade"
+                  "focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg"
                 )}>
                   <div
                     contentEditable
@@ -431,7 +430,6 @@ export function FoodItemsTable({
                 {/* P/C/F combined - read-only with preview when editing calories */}
                 <span className={cn(
                   "px-1 py-1 text-center",
-                  isNewItem(item) && "animate-highlight-fade",
                   isCaloriesEditing ? "text-focus-ring" : "text-muted-foreground"
                 )}>
                   {previewMacros 
