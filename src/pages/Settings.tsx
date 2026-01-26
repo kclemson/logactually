@@ -102,10 +102,28 @@ export default function Settings() {
                     {meal.name}
                   </div>
 
-                  {/* Item count - separate column */}
-                  <span className="text-xs text-muted-foreground shrink-0">
-                    {meal.food_items.length} {meal.food_items.length === 1 ? 'item' : 'items'}
-                  </span>
+                  {/* Item count with popover to show items */}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <span className="text-xs text-muted-foreground shrink-0 cursor-pointer hover:text-foreground transition-colors">
+                        {meal.food_items.length} {meal.food_items.length === 1 ? 'item' : 'items'}
+                      </span>
+                    </PopoverTrigger>
+                    <PopoverContent 
+                      className="w-48 p-2" 
+                      side="top" 
+                      align="center"
+                      onOpenAutoFocus={(e) => e.preventDefault()}
+                    >
+                      <ul className="text-xs space-y-0.5">
+                        {meal.food_items.map((item) => (
+                          <li key={item.uid} className="truncate">
+                            {item.description}
+                          </li>
+                        ))}
+                      </ul>
+                    </PopoverContent>
+                  </Popover>
 
                   {/* Delete button with popover confirmation */}
                   <Popover 
