@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,8 +10,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2 } from 'lucide-react';
 import { FoodItem } from '@/types/food';
+import { useSuggestMealName } from '@/hooks/useSuggestMealName';
 
 interface SaveMealDialogProps {
   open: boolean;
@@ -23,10 +25,10 @@ interface SaveMealDialogProps {
 }
 
 /**
- * Extract a suggested name from the first food item's description.
+ * Extract a fallback name from the first food item's description.
  * Takes the text before any parentheses (portion info).
  */
-function getSuggestedName(foodItems: FoodItem[]): string {
+function getFallbackName(foodItems: FoodItem[]): string {
   if (foodItems.length === 0) return '';
   const first = foodItems[0].description;
   // Remove portion info in parentheses
@@ -43,13 +45,47 @@ export function SaveMealDialog({
   isSaving,
 }: SaveMealDialogProps) {
   const [name, setName] = useState('');
+  const [userHasTyped, setUserHasTyped] = useState(false);
+  const { suggestName, isLoading: isSuggesting } = useSuggestMealName();
+  const suggestionRequestedRef = useRef(false);
 
-  // Reset name when dialog opens with new data
+  // Reset state and fetch AI suggestion when dialog opens
   useEffect(() => {
     if (open) {
-      setName(getSuggestedName(foodItems));
+      setName('');
+      setUserHasTyped(false);
+      suggestionRequestedRef.current = false;
     }
-  }, [open, foodItems]);
+  }, [open]);
+
+  // Fetch AI-suggested name when dialog opens
+  useEffect(() => {
+    if (!open || suggestionRequestedRef.current || foodItems.length === 0) {
+      return;
+    }
+
+    suggestionRequestedRef.current = true;
+
+    const fetchSuggestion = async () => {
+      const descriptions = foodItems.map(item => item.description);
+      const suggested = await suggestName(descriptions);
+      
+      // Only set if user hasn't started typing
+      if (suggested && !userHasTyped) {
+        setName(suggested);
+      } else if (!suggested && !userHasTyped) {
+        // Fallback to first item if AI fails
+        setName(getFallbackName(foodItems));
+      }
+    };
+
+    fetchSuggestion();
+  }, [open, foodItems, suggestName, userHasTyped]);
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setName(e.target.value);
+    setUserHasTyped(true);
+  };
 
   const handleSave = () => {
     const trimmed = name.trim();
@@ -65,6 +101,8 @@ export function SaveMealDialog({
     }
   };
 
+  const showSkeleton = isSuggesting && !userHasTyped && !name;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -77,15 +115,19 @@ export function SaveMealDialog({
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="meal-name">Meal name</Label>
-            <Input
-              id="meal-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="e.g., Morning Coffee"
-              disabled={isSaving}
-              autoFocus
-            />
+            {showSkeleton ? (
+              <Skeleton className="h-10 w-full" />
+            ) : (
+              <Input
+                id="meal-name"
+                value={name}
+                onChange={handleNameChange}
+                onKeyDown={handleKeyDown}
+                placeholder="e.g., Morning Coffee"
+                disabled={isSaving}
+                autoFocus
+              />
+            )}
           </div>
           <div className="text-sm text-muted-foreground">
             <p className="font-medium mb-1">Items ({foodItems.length}):</p>
@@ -103,7 +145,7 @@ export function SaveMealDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={!name.trim() || isSaving}>
+          <Button onClick={handleSave} disabled={!name.trim() || isSaving || showSkeleton}>
             {isSaving ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-1" />

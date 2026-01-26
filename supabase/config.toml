@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.run-prompt-tests]
 verify_jwt = false
+
+[functions.suggest-meal-name]
+verify_jwt = false
