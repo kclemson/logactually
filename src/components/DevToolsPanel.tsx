@@ -33,6 +33,7 @@ interface RunResponse {
 export function DevToolsPanel() {
   const [isOpen, setIsOpen] = useState(false);
   const [promptVersion, setPromptVersion] = useState<'default' | 'experimental'>('default');
+  const [routingMode, setRoutingMode] = useState<'client' | 'ai-only'>('client');
   const [testCasesText, setTestCasesText] = useState('');
   const [iterations, setIterations] = useState(3);
   const [results, setResults] = useState<TestResult[]>([]);
@@ -91,35 +92,40 @@ export function DevToolsPanel() {
     try {
       for (const testCase of testCases) {
         for (let iter = 0; iter < iterations; iter++) {
-          const upc = extractUpcFromText(testCase.input);
-          const startTime = Date.now();
+          let source: 'upc-lookup' | 'ai' | 'ai-fallback' = 'ai';
 
-          if (upc) {
-            // UPC detected - call lookup-upc directly (mirrors FoodInput behavior)
-            const result = await lookupUpc(upc);
-            const latencyMs = Date.now() - startTime;
+          // Only check for UPC in client mode
+          if (routingMode === 'client') {
+            const upc = extractUpcFromText(testCase.input);
+            const startTime = Date.now();
 
-            if (result.success) {
-              // Found in database - add as UPC lookup result
-              allResults.push({
-                input: testCase.input,
-                output: {
-                  food_items: [{
-                    description: result.data.description,
-                    calories: result.data.calories,
-                  }]
-                },
-                latencyMs,
-                promptVersion,
-                source: 'upc-lookup',
-              });
-              continue;
+            if (upc) {
+              // UPC detected - call lookup-upc directly (mirrors FoodInput behavior)
+              const result = await lookupUpc(upc);
+              const latencyMs = Date.now() - startTime;
+
+              if (result.success) {
+                // Found in database - add as UPC lookup result
+                allResults.push({
+                  input: testCase.input,
+                  output: {
+                    food_items: [{
+                      description: result.data.description,
+                      calories: result.data.calories,
+                    }]
+                  },
+                  latencyMs,
+                  promptVersion,
+                  source: 'upc-lookup',
+                });
+                continue;
+              }
+              // Not found - mark as fallback and proceed to AI
+              source = 'ai-fallback';
             }
-            // Not found - fall through to analyze-food via run-prompt-tests
           }
 
-          // Regular text OR UPC not found - call run-prompt-tests (which calls analyze-food)
-          const source = upc ? 'ai-fallback' as const : 'ai' as const;
+          // Send to analyze-food via run-prompt-tests
           
           const { data, error: invokeError } = await supabase.functions.invoke<RunResponse>(
             'run-prompt-tests',
@@ -144,7 +150,7 @@ export function DevToolsPanel() {
             const taggedResults = data.results.map(r => ({
               ...r,
               promptVersion,
-              source: upc ? 'ai-fallback' as const : 'ai' as const,
+              source,
             }));
             allResults.push(...taggedResults);
           }
@@ -213,35 +219,61 @@ export function DevToolsPanel() {
               />
             </div>
 
-            {/* Controls Row: Radio + Iterations + Run Button */}
-            <div className="flex items-center justify-between gap-4">
-              {/* Prompt Version Radio */}
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+            {/* Controls Row */}
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+              {/* Prompt Version */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Prompt:</span>
+                <label className="flex items-center gap-1 text-sm cursor-pointer">
                   <input
                     type="radio"
                     name="promptVersion"
                     checked={promptVersion === 'default'}
                     onChange={() => setPromptVersion('default')}
-                    className="h-4 w-4 accent-primary"
+                    className="h-3.5 w-3.5 accent-primary"
                   />
                   Default
                 </label>
-                <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+                <label className="flex items-center gap-1 text-sm cursor-pointer">
                   <input
                     type="radio"
                     name="promptVersion"
                     checked={promptVersion === 'experimental'}
                     onChange={() => setPromptVersion('experimental')}
-                    className="h-4 w-4 accent-primary"
+                    className="h-3.5 w-3.5 accent-primary"
                   />
                   Experimental
                 </label>
               </div>
 
+              {/* Routing Mode */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Routing:</span>
+                <label className="flex items-center gap-1 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="routingMode"
+                    checked={routingMode === 'client'}
+                    onChange={() => setRoutingMode('client')}
+                    className="h-3.5 w-3.5 accent-primary"
+                  />
+                  Client
+                </label>
+                <label className="flex items-center gap-1 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="routingMode"
+                    checked={routingMode === 'ai-only'}
+                    onChange={() => setRoutingMode('ai-only')}
+                    className="h-3.5 w-3.5 accent-primary"
+                  />
+                  AI Only
+                </label>
+              </div>
+
               {/* Iterations */}
               <div className="flex items-center gap-2">
-                <Label htmlFor="iterations" className="text-sm whitespace-nowrap">Iterations</Label>
+                <Label htmlFor="iterations" className="text-xs text-muted-foreground">Iterations:</Label>
                 <Input
                   id="iterations"
                   type="number"
@@ -249,12 +281,12 @@ export function DevToolsPanel() {
                   max={10}
                   value={iterations}
                   onChange={e => setIterations(Math.min(10, Math.max(1, parseInt(e.target.value) || 1)))}
-                  className="w-16 h-8"
+                  className="w-14 h-7 text-sm"
                 />
               </div>
 
               {/* Run Button */}
-              <Button size="sm" onClick={runTests} disabled={isRunning}>
+              <Button size="sm" onClick={runTests} disabled={isRunning} className="ml-auto">
                 {isRunning ? (
                   <>
                     <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
