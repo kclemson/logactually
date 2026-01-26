@@ -68,7 +68,7 @@ export function useEditableFoodItems(queryItems: FoodItem[]) {
             graduatedUids.forEach(uid => next.delete(uid));
             return next;
           });
-        }, 0);
+        }, 2500); // Match animation duration before clearing highlights
       }
     }
     
