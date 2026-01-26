@@ -17,6 +17,11 @@ interface UsageStats {
   users_created_last_7_days: number;
   entries_created_last_7_days: number;
   daily_stats: DailyStats[];
+  // Saved meals metrics
+  total_saved_meals: number;
+  users_with_saved_meals: number;
+  avg_saved_meals_per_user: number;
+  saved_meals_used_last_7_days: number;
 }
 
 interface UserStats {

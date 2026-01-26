@@ -62,6 +62,13 @@ export default function Admin() {
           <p className="ml-6">Average per user: {avgEntriesPerUser}</p>
           <p className="ml-6">Created in last 7 days: {stats?.entries_created_last_7_days ?? 0}</p>
         </div>
+
+        <div>
+          <p>Saved Meals: {stats?.total_saved_meals ?? 0}</p>
+          <p className="ml-6">Users with saved meals: {stats?.users_with_saved_meals ?? 0}</p>
+          <p className="ml-6">Avg per user: {stats?.avg_saved_meals_per_user ?? 0}</p>
+          <p className="ml-6">Used in last 7 days: {stats?.saved_meals_used_last_7_days ?? 0}</p>
+        </div>
       </div>
 
       {stats?.daily_stats && stats.daily_stats.length > 0 ? (

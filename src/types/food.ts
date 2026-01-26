@@ -82,3 +82,17 @@ export function calculateTotals(items: FoodItem[]): DailyTotals {
     { calories: 0, protein: 0, carbs: 0, fat: 0 }
   );
 }
+
+export interface SavedMeal {
+  id: string;
+  user_id: string;
+  name: string;
+  original_input: string | null;
+  food_items: FoodItem[];
+  input_signature: string | null;
+  items_signature: string | null;
+  use_count: number;
+  last_used_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
