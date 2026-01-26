@@ -176,8 +176,6 @@ const Trends = () => {
                         interval="preserveStartEnd"
                       />
                       <Tooltip
-                        position={{ y: 100 }}
-                        wrapperStyle={{ visibility: 'visible' }}
                         contentStyle={{
                           backgroundColor: 'hsl(var(--card))',
                           border: '1px solid hsl(var(--border))',
@@ -208,8 +206,6 @@ const Trends = () => {
                         interval="preserveStartEnd"
                       />
                       <Tooltip
-                        position={{ y: 100 }}
-                        wrapperStyle={{ visibility: 'visible' }}
                         contentStyle={{
                           backgroundColor: 'hsl(var(--card))',
                           border: '1px solid hsl(var(--border))',
@@ -250,8 +246,6 @@ const Trends = () => {
                           interval="preserveStartEnd"
                         />
                         <Tooltip
-                          position={{ y: 100 }}
-                          wrapperStyle={{ visibility: 'visible' }}
                           contentStyle={{
                             backgroundColor: 'hsl(var(--card))',
                             border: '1px solid hsl(var(--border))',
