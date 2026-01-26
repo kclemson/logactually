@@ -204,44 +204,48 @@ const Trends = () => {
             </CardContent>
           </Card>
 
-          {charts.map(({ key, label, color }) => (
-            <Card key={key}>
-              <CardHeader className="pb-2">
-                <CardTitle className="font-semibold">{label}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-32">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis
-                        dataKey="date"
-                        tick={{ fontSize: 10 }}
-                        stroke="hsl(var(--muted-foreground))"
-                      />
-                      <YAxis
-                        tick={{ fontSize: 10 }}
-                        stroke="hsl(var(--muted-foreground))"
-                        width={35}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                        }}
-                      />
-                      <Bar
-                        dataKey={key}
-                        fill={color}
-                        radius={[2, 2, 0, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          {/* Individual Macro Charts - 2x2 Grid */}
+          <div className="grid grid-cols-2 gap-3">
+            {charts.map(({ key, label, color }) => (
+              <Card key={key}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-semibold">{label}</CardTitle>
+                </CardHeader>
+                <CardContent className="p-3 pt-0">
+                  <div className="h-24">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis
+                          dataKey="date"
+                          tick={{ fontSize: 8 }}
+                          stroke="hsl(var(--muted-foreground))"
+                          interval="preserveStartEnd"
+                        />
+                        <YAxis
+                          tick={{ fontSize: 8 }}
+                          stroke="hsl(var(--muted-foreground))"
+                          width={28}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                          }}
+                        />
+                        <Bar
+                          dataKey={key}
+                          fill={color}
+                          radius={[2, 2, 0, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       )}
     </div>
