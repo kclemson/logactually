@@ -1,109 +1,177 @@
 
 
-## Create Test User with 45+ Days of Food Data
+## Add Permanent User Number to Database Schema
 
 ### Overview
-Create a dedicated test user account pre-populated with realistic food entry data spanning at least 45 days over the last 60 days. This will enable comprehensive testing of the Trends page charts (7-day, 30-day, and 90-day views) and other features.
+Add a permanent, auto-incrementing `user_number` column to the `profiles` table. This number is assigned once at signup and never changes, ensuring efficient queries at scale.
 
 ---
 
-### Approach
+### Database Migration
 
-Since this project uses invite-code-protected signups, I'll need to:
-1. Create the test user via Supabase Auth admin API (bypassing invite code)
-2. Insert 45+ days of food entries with realistic, varied data
+**1. Add column to profiles table**
 
----
+```sql
+ALTER TABLE public.profiles 
+ADD COLUMN user_number INTEGER;
+```
 
-### Step 1: Create Test User
+**2. Backfill existing users based on signup order**
 
-Create a new user in auth.users with known credentials:
+```sql
+WITH numbered AS (
+  SELECT id, ROW_NUMBER() OVER (ORDER BY created_at ASC) as num
+  FROM public.profiles
+)
+UPDATE public.profiles p
+SET user_number = n.num
+FROM numbered n
+WHERE p.id = n.id;
+```
 
-| Field | Value |
-|-------|-------|
-| Email | `testuser@logactually.test` |
-| Password | `testpassword123` |
+**3. Update the `handle_new_user` trigger to assign next number**
 
-The profile record will be auto-created by the existing `handle_new_user` trigger.
+```sql
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  next_number INTEGER;
+BEGIN
+  SELECT COALESCE(MAX(user_number), 0) + 1 INTO next_number FROM public.profiles;
+  
+  INSERT INTO public.profiles (id, user_number)
+  VALUES (NEW.id, next_number);
+  
+  RETURN NEW;
+END;
+$function$;
+```
 
----
+**4. Add NOT NULL constraint after backfill**
 
-### Step 2: Generate Food Entry Data
+```sql
+ALTER TABLE public.profiles 
+ALTER COLUMN user_number SET NOT NULL;
+```
 
-Insert food entries for 45-50 random days within the last 60 days.
+**5. Add unique index for fast lookups**
 
-**Data characteristics:**
-- 1-4 entries per day (realistic logging behavior)
-- Varied meal types: breakfast, lunch, dinner, snacks
-- Realistic calorie ranges: 150-800 per entry
-- Proper macro distributions
-- Some days with higher/lower totals to create interesting chart patterns
-
-**Sample meals to include:**
-
-| Meal Type | Example | Calories | Protein | Carbs | Fat |
-|-----------|---------|----------|---------|-------|-----|
-| Breakfast | Eggs & toast | 350 | 18 | 30 | 16 |
-| Breakfast | Oatmeal with berries | 280 | 8 | 48 | 6 |
-| Lunch | Chicken salad | 450 | 35 | 20 | 25 |
-| Lunch | Turkey sandwich | 380 | 28 | 42 | 12 |
-| Dinner | Salmon with rice | 550 | 40 | 45 | 22 |
-| Dinner | Pasta with meat sauce | 620 | 28 | 72 | 24 |
-| Snack | Apple + peanut butter | 280 | 7 | 35 | 14 |
-| Snack | Greek yogurt | 150 | 15 | 12 | 4 |
-
----
-
-### Step 3: Implementation
-
-**Create a one-time edge function** `seed-test-user` that:
-1. Creates the test user via Supabase admin auth
-2. Generates 45-50 days of varied food entries
-3. Returns success/failure status
-
-The function will use the service role key to bypass RLS for inserting data.
-
----
-
-### Files to Create/Modify
-
-| File | Action |
-|------|--------|
-| `supabase/functions/seed-test-user/index.ts` | Create new edge function |
-| `supabase/config.toml` | Add function configuration |
-
----
-
-### Test User Credentials
-
-After creation, you can log in with:
-```text
-Email: testuser@logactually.test
-Password: testpassword123
+```sql
+CREATE UNIQUE INDEX idx_profiles_user_number ON public.profiles(user_number);
 ```
 
 ---
 
-### Data Distribution
+### Code Changes
 
-```text
-Days with data:     45-50 days
-Date range:         Last 60 days
-Entries per day:    1-4 (randomized)
-Total entries:      ~100-150
+**File: `src/integrations/supabase/types.ts`**
 
-Daily calorie range: 800-2400 (varies by entries)
-Weekly patterns:     Some days skipped to simulate real usage
+The types will auto-update after migration. The profiles table will include:
+```typescript
+user_number: number
+```
+
+**File: `supabase/functions/seed-test-user/index.ts`**
+
+No changes needed - the trigger handles user_number assignment automatically.
+
+**File: Database function `get_user_stats`**
+
+Update to return the stored `user_number` instead of calculating it:
+
+```sql
+CREATE OR REPLACE FUNCTION public.get_user_stats(
+  user_timezone text DEFAULT 'America/Los_Angeles'
+)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  result json;
+  local_today date;
+BEGIN
+  local_today := (NOW() AT TIME ZONE user_timezone)::date;
+  
+  SELECT json_agg(row_to_json(t) ORDER BY t.total_entries DESC)
+  INTO result
+  FROM (
+    SELECT 
+      p.id as user_id,
+      p.user_number,
+      COUNT(fe.id) as total_entries,
+      COUNT(CASE WHEN fe.eaten_date = local_today THEN 1 END) as entries_today
+    FROM profiles p
+    LEFT JOIN food_entries fe ON p.id = fe.user_id
+    GROUP BY p.id, p.user_number
+  ) t;
+  
+  RETURN COALESCE(result, '[]'::json);
+END;
+$function$;
+```
+
+**File: `src/hooks/useAdminStats.ts`**
+
+Update interface:
+```typescript
+interface UserStats {
+  user_id: string;
+  user_number: number;
+  total_entries: number;
+  entries_today: number;
+}
+```
+
+**File: `src/pages/Admin.tsx`**
+
+Use the stored number:
+```tsx
+<td className="py-0.5 pr-2">User {user.user_number}</td>
 ```
 
 ---
 
-### After Running
+### How It Works
 
-The Trends page will show:
-- **7-day view**: Recent data with daily variations
-- **30-day view**: ~25 days of data with gaps
-- **90-day view**: ~45 days clustered in the last 60 days
+```text
+User signs up
+    ↓
+auth.users INSERT triggers handle_new_user()
+    ↓
+Trigger calculates MAX(user_number) + 1
+    ↓
+INSERT into profiles with permanent user_number
+    ↓
+Number never changes, even if other users are deleted
+```
 
-This provides realistic test scenarios for chart rendering, averages calculation, and empty-day handling.
+---
+
+### Result
+
+| Aspect | Before | After |
+|--------|--------|-------|
+| Calculation | ROW_NUMBER() at query time | Stored on signup |
+| Performance | O(n log n) per query | O(1) indexed lookup |
+| Permanence | Could shift if users deleted | Never changes |
+| Gaps | Close on deletion | Remain permanently |
+
+---
+
+### Example Data After Migration
+
+| user_number | created_at | Status |
+|-------------|------------|--------|
+| 1 | Jan 1 | First signup |
+| 2 | Jan 5 | Second signup |
+| 3 | Jan 10 | (deleted) - gap remains |
+| 4 | Jan 15 | Fourth signup |
+| 5 | Jan 20 | Fifth signup |
+| 6 | Jan 25 | Test user (most recent) |
 
