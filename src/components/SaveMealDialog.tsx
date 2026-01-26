@@ -91,7 +91,7 @@ export function SaveMealDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Save as Meal</DialogTitle>
           <DialogDescription>
