@@ -89,10 +89,8 @@ export function SavedMealsPopover({ onSelectMeal, onClose }: SavedMealsPopoverPr
               >
                 <div className="flex items-center justify-between">
                   <span className="font-medium truncate">{meal.name}</span>
-                  {isLogging ? (
+                  {isLogging && (
                     <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                  ) : (
-                    <span className="text-muted-foreground text-xs">›</span>
                   )}
                 </div>
                 <div className="text-xs text-muted-foreground">
