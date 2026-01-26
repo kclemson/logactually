@@ -140,10 +140,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    // Clear module-level cache
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      // Log but don't throw - we still want to clear local state
+      // This handles 403 "session_not_found" errors when session is already invalid
+      console.warn('Sign out API call failed:', error);
+    }
+    
+    // ALWAYS clear local state, even if API failed
+    // If session was already invalid, we still want to "sign out" locally
     cachedSession = null;
     cachedUser = null;
-    await supabase.auth.signOut();
+    setSession(null);
+    setUser(null);
   };
 
   return (

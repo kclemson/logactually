@@ -1,8 +1,16 @@
+import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { APP_NAME } from '@/lib/constants';
 
 export function Header() {
   const { signOut } = useAuth();
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  const handleSignOut = async () => {
+    setIsSigningOut(true);
+    await signOut();
+    // Navigation will happen via ProtectedRoute detecting null user
+  };
 
   return (
     <header className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -12,10 +20,11 @@ export function Header() {
           <h1 className="text-title text-foreground">{APP_NAME}</h1>
         </div>
         <button
-          onClick={() => signOut()}
-          className="text-muted-foreground hover:text-foreground hover:underline min-h-[44px] px-2 -mr-2"
+          onClick={handleSignOut}
+          disabled={isSigningOut}
+          className="text-muted-foreground hover:text-foreground hover:underline min-h-[44px] px-2 -mr-2 disabled:opacity-50"
         >
-          Sign out
+          {isSigningOut ? 'Signing out...' : 'Sign out'}
         </button>
       </div>
     </header>
