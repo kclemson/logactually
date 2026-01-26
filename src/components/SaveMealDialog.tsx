@@ -135,9 +135,9 @@ export function SaveMealDialog({
                 <div className="absolute left-10 top-0 bottom-0 flex items-center pointer-events-none text-muted-foreground italic">
                   <span>Generating suggested meal name</span>
                   <span className="inline-flex">
-                    <span className="animate-ellipsis-dot" style={{ animationDelay: '0ms' }}>.</span>
-                    <span className="animate-ellipsis-dot" style={{ animationDelay: '200ms' }}>.</span>
-                    <span className="animate-ellipsis-dot" style={{ animationDelay: '400ms' }}>.</span>
+                    <span className="animate-ellipsis-dot w-[0.25em] text-center" style={{ animationDelay: '0ms' }}>.</span>
+                    <span className="animate-ellipsis-dot w-[0.25em] text-center" style={{ animationDelay: '200ms' }}>.</span>
+                    <span className="animate-ellipsis-dot w-[0.25em] text-center" style={{ animationDelay: '400ms' }}>.</span>
                   </span>
                 </div>
               )}
