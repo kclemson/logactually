@@ -1,5 +1,5 @@
 import { useTheme } from 'next-themes';
-import { Moon, Sun, Monitor, Trash2 } from 'lucide-react';
+import { Moon, Sun, Monitor, Trash2, Star, SunMoon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { useUserSettings } from '@/hooks/useUserSettings';
@@ -51,7 +51,10 @@ export default function Settings() {
 
       {/* Saved Meals - frequently accessed */}
       <section className="space-y-3">
-        <h3 className="text-heading text-muted-foreground">Saved Meals</h3>
+        <h3 className="text-heading text-muted-foreground flex items-center gap-2">
+          <Star className="h-4 w-4" />
+          Saved Meals
+        </h3>
         
         <div className="pl-4">
           {mealsLoading ? (
@@ -152,7 +155,10 @@ export default function Settings() {
 
       {/* Appearance - set once */}
       <section className="space-y-3">
-        <h3 className="text-heading text-muted-foreground">Appearance</h3>
+        <h3 className="text-heading text-muted-foreground flex items-center gap-2">
+          <SunMoon className="h-4 w-4" />
+          Appearance
+        </h3>
         <div className="pl-4">
           <div className="flex gap-2 max-w-xs">
             {themeOptions.map(({ value, label, icon: Icon }) => (
