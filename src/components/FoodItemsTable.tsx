@@ -284,7 +284,7 @@ export function FoodItemsTable({
   // Get cell classes for calories input
   const getCaloriesClasses = (item: FoodItem, isEditing: boolean) => {
     return cn(
-      "h-auto min-h-7 px-1 py-1 border-0 bg-transparent transition-all text-center",
+      "h-auto min-h-7 px-1 py-1 border-0 rounded-none bg-transparent transition-all text-center",
       isNewItem(item) && "animate-highlight-fade",
       isEditing
         ? "ring-2 ring-focus-ring bg-focus-bg focus-visible:ring-focus-ring"
