@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,13 +11,25 @@ export default function Auth() {
   const { user, signUp, signIn, loading } = useAuth();
   const [searchParams] = useSearchParams();
   const inviteFromUrl = searchParams.get('invite');
+  const isResetCallback = searchParams.get('reset') === 'true';
   
   const [isSignUp, setIsSignUp] = useState(!!inviteFromUrl);
+  const [isResetMode, setIsResetMode] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [inviteCode, setInviteCode] = useState(inviteFromUrl || '');
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Handle password reset callback
+  useEffect(() => {
+    if (isResetCallback && user) {
+      setIsUpdatingPassword(true);
+    }
+  }, [isResetCallback, user]);
 
   if (loading) {
     return (
@@ -27,9 +39,45 @@ export default function Auth() {
     );
   }
 
-  if (user) {
+  // Only redirect if user is logged in AND not in password update mode
+  if (user && !isUpdatingPassword) {
     return <Navigate to="/" replace />;
   }
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setErrorMessage(null);
+    
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth?reset=true`,
+    });
+    
+    if (error) {
+      setErrorMessage(error.message);
+    } else {
+      setResetSent(true);
+    }
+    setSubmitting(false);
+  };
+
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setErrorMessage(null);
+    
+    const { error } = await supabase.auth.updateUser({ password });
+    
+    if (error) {
+      setErrorMessage(error.message);
+    } else {
+      setSuccessMessage('Password updated successfully! Redirecting...');
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 1500);
+    }
+    setSubmitting(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,6 +113,127 @@ export default function Auth() {
 
     setSubmitting(false);
   };
+
+  // Password update form (after clicking reset link)
+  if (isUpdatingPassword) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <img src="/favicon.png" alt="Log Actually" className="w-16 h-16 mx-auto mb-2" />
+            <CardTitle className="text-title">Set New Password</CardTitle>
+            <CardDescription>Enter your new password below</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handlePasswordUpdate} className="space-y-4">
+              {errorMessage && (
+                <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                  {errorMessage}
+                </div>
+              )}
+              {successMessage && (
+                <div className="rounded-md bg-primary/10 p-3 text-sm text-primary">
+                  {successMessage}
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label htmlFor="password">New Password</Label>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder="Enter your new password"
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={submitting}>
+                {submitting ? 'Updating...' : 'Update Password'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Password reset request form
+  if (isResetMode) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <img src="/favicon.png" alt="Log Actually" className="w-16 h-16 mx-auto mb-2" />
+            <CardTitle className="text-title">Reset Password</CardTitle>
+            <CardDescription>
+              {resetSent 
+                ? "Check your email for a reset link"
+                : "Enter your email to receive a reset link"
+              }
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {resetSent ? (
+              <div className="space-y-4">
+                <div className="rounded-md bg-primary/10 p-3 text-sm text-primary">
+                  Password reset email sent! Check your inbox.
+                </div>
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => {
+                    setIsResetMode(false);
+                    setResetSent(false);
+                    setEmail('');
+                  }}
+                >
+                  Back to Sign In
+                </Button>
+              </div>
+            ) : (
+              <form onSubmit={handlePasswordReset} className="space-y-4">
+                {errorMessage && (
+                  <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                    {errorMessage}
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="Enter your email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={submitting}>
+                  {submitting ? 'Sending...' : 'Send Reset Link'}
+                </Button>
+                <Button 
+                  type="button"
+                  variant="ghost" 
+                  className="w-full"
+                  onClick={() => {
+                    setIsResetMode(false);
+                    setErrorMessage(null);
+                  }}
+                >
+                  Back to Sign In
+                </Button>
+              </form>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -110,7 +279,18 @@ export default function Auth() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                {!isSignUp && (
+                  <button
+                    type="button"
+                    onClick={() => setIsResetMode(true)}
+                    className="text-sm text-primary hover:underline"
+                  >
+                    Forgot password?
+                  </button>
+                )}
+              </div>
               <Input
                 id="password"
                 name="password"
