@@ -5,15 +5,11 @@ import { useEffect, useState } from 'react';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { useSavedMeals, useUpdateSavedMeal, useDeleteSavedMeal } from '@/hooks/useSavedMeals';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
@@ -24,7 +20,7 @@ export default function Settings() {
   const { data: savedMeals, isLoading: mealsLoading } = useSavedMeals();
   const updateMeal = useUpdateSavedMeal();
   const deleteMeal = useDeleteSavedMeal();
-  const [mealToDelete, setMealToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
 
   // Avoid hydration mismatch
   useEffect(() => {
@@ -41,17 +37,6 @@ export default function Settings() {
   const handleThemeChange = (value: 'light' | 'dark' | 'system') => {
     setTheme(value);
     updateSettings({ theme: value });
-  };
-
-  const handleDelete = (id: string, name: string) => {
-    setMealToDelete({ id, name });
-  };
-
-  const confirmDelete = () => {
-    if (mealToDelete) {
-      deleteMeal.mutate(mealToDelete.id);
-      setMealToDelete(null);
-    }
   };
 
   const themeOptions = [
@@ -115,14 +100,49 @@ export default function Settings() {
                     {meal.food_items.length} {meal.food_items.length === 1 ? 'item' : 'items'}
                   </span>
 
-                  {/* Delete button */}
-                  <button
-                    onClick={() => handleDelete(meal.id, meal.name)}
-                    className="p-1.5 hover:bg-muted rounded"
-                    title="Delete"
+                  {/* Delete button with popover confirmation */}
+                  <Popover 
+                    open={openPopoverId === meal.id} 
+                    onOpenChange={(open) => setOpenPopoverId(open ? meal.id : null)}
                   >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </button>
+                    <PopoverTrigger asChild>
+                      <button
+                        className="p-1.5 hover:bg-muted rounded"
+                        title="Delete"
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64 p-4" side="left" align="center">
+                      <div className="space-y-3">
+                        <div className="space-y-1">
+                          <p className="font-medium text-sm">Delete saved meal?</p>
+                          <p className="text-xs text-muted-foreground">
+                            "{meal.name}" will be permanently removed.
+                          </p>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setOpenPopoverId(null)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button 
+                            variant="destructive" 
+                            size="sm"
+                            onClick={() => {
+                              deleteMeal.mutate(meal.id);
+                              setOpenPopoverId(null);
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </li>
               ))}
             </ul>
@@ -154,25 +174,6 @@ export default function Settings() {
         </div>
       </section>
 
-      <AlertDialog open={!!mealToDelete} onOpenChange={(open) => !open && setMealToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete saved meal?</AlertDialogTitle>
-            <AlertDialogDescription>
-              "{mealToDelete?.name}" will be permanently removed. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmDelete} 
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
