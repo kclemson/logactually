@@ -1,77 +1,51 @@
 
 
-## Rebrand Sign-In Page
+## Shorten Auth Page Tagline
 
 ### Overview
-Make the sign-in page more engaging and on-brand by updating the visual hierarchy and using the OpenGraph tagline.
+Update the sign-in page tagline to a shorter version that fits on one line on mobile screens.
 
 ---
 
 ### Changes to `src/pages/Auth.tsx`
 
-#### 1. Make icon significantly larger
-- Before: `w-16 h-16` (64px)
-- After: `w-24 h-24` (96px) with more bottom margin
-
-#### 2. Remove "Welcome Back" title
-- Delete the conditional `CardTitle` that shows "Welcome Back" / "Create Account" / "You're Invited!"
-
-#### 3. Add app name prominently below icon
-- Display "Log Actually" using `APP_NAME` constant
-- Style with `text-2xl font-bold`
-
-#### 4. Use exact OpenGraph tagline
-- **"Braindump what you ate, and AI handles the nutrition math"**
-- Use `APP_DESCRIPTION` constant for consistency
+**Update the CardDescription in the main sign-in/sign-up form:**
+- Before: `{APP_DESCRIPTION}` → "Braindump what you ate, and AI handles the nutrition math"
+- After: Hardcoded string → "Braindump what you ate — AI handles the rest"
 
 ---
 
-### Updated Visual Structure
+### Visual Result
 
 ```text
-Before:                              After:
-+----------------------+             +----------------------+
-|     [icon 64px]      |             |     [icon 96px]      |
-|    Welcome Back      |             |     Log Actually     |
-| Sign in to continue  |             | Braindump what you   |
-|  tracking your...    |             | ate, and AI handles  |
-+----------------------+             | the nutrition math   |
-                                     +----------------------+
+Before (wraps on mobile):           After (single line):
++----------------------+            +----------------------+
+|     Log Actually     |            |     Log Actually     |
+| Braindump what you   |            | Braindump what you   |
+| ate, and AI handles  |            | ate — AI handles the |
+| the nutrition math   |            | rest                 |
++----------------------+            +----------------------+
 ```
 
 ---
 
-### Code Changes
+### Code Change
 
 ```tsx
-import { APP_NAME, APP_DESCRIPTION } from '@/lib/constants';
-
-<CardHeader className="text-center">
-  <img 
-    src="/favicon.png" 
-    alt={APP_NAME} 
-    className="w-24 h-24 mx-auto mb-4"
-  />
-  <CardTitle className="text-2xl font-bold">
-    {APP_NAME}
-  </CardTitle>
-  <CardDescription>
-    {APP_DESCRIPTION}
-  </CardDescription>
-</CardHeader>
+// Line ~254 in Auth.tsx - main sign-in/sign-up form
+<CardDescription>
+  Braindump what you ate — AI handles the rest
+</CardDescription>
 ```
 
 ---
 
-### All Auth Views
+### Notes
 
-| View | Title | Description |
-|------|-------|-------------|
-| **Sign In** | Log Actually | Braindump what you ate, and AI handles the nutrition math |
-| **Sign Up** | Log Actually | Braindump what you ate, and AI handles the nutrition math |
-| **Sign Up (invited)** | Log Actually | Braindump what you ate, and AI handles the nutrition math |
-| **Password Reset** | Log Actually | Enter your email to receive a reset link |
-| **Set New Password** | Log Actually | Enter your new password below |
+- Using an em dash (—) instead of hyphen (-) for better typography
+- Keep `APP_DESCRIPTION` unchanged in constants.ts for OpenGraph/SEO purposes
+- The auth page uses a shorter, punchier version for better mobile UX
+- Password reset views keep their functional descriptions unchanged
 
 ---
 
@@ -79,5 +53,5 @@ import { APP_NAME, APP_DESCRIPTION } from '@/lib/constants';
 
 | File | Action |
 |------|--------|
-| `src/pages/Auth.tsx` | Update icon size, remove old title, add APP_NAME/APP_DESCRIPTION |
+| `src/pages/Auth.tsx` | Replace `{APP_DESCRIPTION}` with shorter hardcoded string |
 
