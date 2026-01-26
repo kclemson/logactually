@@ -73,11 +73,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session.user);
         initialCheckComplete = true;
         setLoading(false);
+      } else if (event === 'INITIAL_SESSION' && cachedUser && cachedSession) {
+        // INITIAL_SESSION with null session during HMR - reinforce cached state
+        // This prevents the redirect when auth events arrive out of order
+        setUser(cachedUser);
+        setSession(cachedSession);
+        initialCheckComplete = true;
+        setLoading(false);
       }
-      // KEY FIX: If session is null but event isn't SIGNED_OUT,
-      // DON'T set loading = false here. Let getSession() handle it.
-      // This prevents the race condition where early null events
-      // cause a redirect before the real session is loaded.
+      // For other events with null session, don't set loading = false here.
+      // Let getSession() handle it.
     });
 
     // Then check for existing session
