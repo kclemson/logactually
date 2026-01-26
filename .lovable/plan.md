@@ -1,77 +1,109 @@
 
 
-## Copy Experimental Prompt to Default
+## Create Test User with 45+ Days of Food Data
 
 ### Overview
-Replace the current default prompt with the experimental prompt content, while preserving the experimental version unchanged as a backup.
+Create a dedicated test user account pre-populated with realistic food entry data spanning at least 45 days over the last 60 days. This will enable comprehensive testing of the Trends page charts (7-day, 30-day, and 90-day views) and other features.
 
 ---
 
-### Changes
+### Approach
 
-**File: `supabase/functions/_shared/prompts.ts`**
+Since this project uses invite-code-protected signups, I'll need to:
+1. Create the test user via Supabase Auth admin API (bypassing invite code)
+2. Insert 45+ days of food entries with realistic, varied data
 
-#### Replace `ANALYZE_FOOD_PROMPT_DEFAULT` content (lines 4-22)
+---
 
-The default prompt will be updated to include:
-- Stakes framing ("helping a user track their food intake for health goals")
-- Accuracy emphasis ("Accuracy is important")
-- Intent guidance ("interpret their input as something they ate")
-- Confidence field (`high`/`medium`/`low`)
-- Source note field (optional)
+### Step 1: Create Test User
 
-```typescript
-export const ANALYZE_FOOD_PROMPT_DEFAULT = `You are a nutrition expert helping a user track their food intake for health goals. Accuracy is important. The user is logging food they consumed, so interpret their input as something they ate and identify the most likely food item(s).
+Create a new user in auth.users with known credentials:
 
-Analyze the following food description and extract individual food items with their nutritional information.
+| Field | Value |
+|-------|-------|
+| Email | `testuser@logactually.test` |
+| Password | `testpassword123` |
 
-Food description: "{{rawInput}}"
-{{additionalContext}}
+The profile record will be auto-created by the existing `handle_new_user` trigger.
 
-For each food item, provide:
-- name: a SHORT, concise name (max 25 characters). Use common abbreviations. Do not include brand names unless essential for identification.
-- portion: the serving size mentioned or a reasonable default
-- calories: estimated calories (whole number)
-- protein: grams of protein (whole number)
-- carbs: grams of carbohydrates (whole number)
-- fat: grams of fat (whole number)
-- confidence: your certainty level for the nutritional data:
-  - "high" = known brand with verified nutritional data, or very common food with well-established values
-  - "medium" = generic food with typical values, reasonable confidence
-  - "low" = estimate based on similar foods, uncertain portion size, or ambiguous input
-- source_note: (optional) brief note explaining your data source or estimation method, especially for "low" or "medium" confidence items
+---
 
-Keep names short and generic - focus on identifying the food type clearly in few words.
+### Step 2: Generate Food Entry Data
 
-Be reasonable with portion sizes. If no portion is specified, use typical serving sizes.
+Insert food entries for 45-50 random days within the last 60 days.
 
-Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
-{
-  "food_items": [
-    { "name": "Food name", "portion": "portion size", "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "confidence": "high", "source_note": "optional" }
-  ]
-}`;
+**Data characteristics:**
+- 1-4 entries per day (realistic logging behavior)
+- Varied meal types: breakfast, lunch, dinner, snacks
+- Realistic calorie ranges: 150-800 per entry
+- Proper macro distributions
+- Some days with higher/lower totals to create interesting chart patterns
+
+**Sample meals to include:**
+
+| Meal Type | Example | Calories | Protein | Carbs | Fat |
+|-----------|---------|----------|---------|-------|-----|
+| Breakfast | Eggs & toast | 350 | 18 | 30 | 16 |
+| Breakfast | Oatmeal with berries | 280 | 8 | 48 | 6 |
+| Lunch | Chicken salad | 450 | 35 | 20 | 25 |
+| Lunch | Turkey sandwich | 380 | 28 | 42 | 12 |
+| Dinner | Salmon with rice | 550 | 40 | 45 | 22 |
+| Dinner | Pasta with meat sauce | 620 | 28 | 72 | 24 |
+| Snack | Apple + peanut butter | 280 | 7 | 35 | 14 |
+| Snack | Greek yogurt | 150 | 15 | 12 | 4 |
+
+---
+
+### Step 3: Implementation
+
+**Create a one-time edge function** `seed-test-user` that:
+1. Creates the test user via Supabase admin auth
+2. Generates 45-50 days of varied food entries
+3. Returns success/failure status
+
+The function will use the service role key to bypass RLS for inserting data.
+
+---
+
+### Files to Create/Modify
+
+| File | Action |
+|------|--------|
+| `supabase/functions/seed-test-user/index.ts` | Create new edge function |
+| `supabase/config.toml` | Add function configuration |
+
+---
+
+### Test User Credentials
+
+After creation, you can log in with:
+```text
+Email: testuser@logactually.test
+Password: testpassword123
 ```
 
-#### Keep `ANALYZE_FOOD_PROMPT_EXPERIMENTAL` unchanged
+---
 
-The experimental prompt remains as-is for future A/B testing of new variations.
+### Data Distribution
+
+```text
+Days with data:     45-50 days
+Date range:         Last 60 days
+Entries per day:    1-4 (randomized)
+Total entries:      ~100-150
+
+Daily calorie range: 800-2400 (varies by entries)
+Weekly patterns:     Some days skipped to simulate real usage
+```
 
 ---
 
-### What Changes
+### After Running
 
-| Aspect | Before | After |
-|--------|--------|-------|
-| Default prompt | Basic nutrition expert role | Stakes framing + intent guidance |
-| Confidence field | Not in default | Included in default |
-| Source note field | Not in default | Included in default |
-| Experimental prompt | Same as new default | Unchanged (serves as backup) |
+The Trends page will show:
+- **7-day view**: Recent data with daily variations
+- **30-day view**: ~25 days of data with gaps
+- **90-day view**: ~45 days clustered in the last 60 days
 
----
-
-### Result
-- All users will now receive confidence scores and source notes by default
-- The `promptVersion: 'experimental'` parameter still works (returns identical results)
-- Future experiments can modify the experimental prompt without affecting production
+This provides realistic test scenarios for chart rendering, averages calculation, and empty-day handling.
 
