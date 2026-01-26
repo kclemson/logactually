@@ -1,8 +1,15 @@
 
-## Adjust Grid Column Widths for Admin Stats
+## Align Header and Sub-stats Rows
 
-### Overview
-Change the stats grid from equal-width columns (`grid-cols-3`) to auto-fitting columns where the Users column gets more space since it has longer text (percentages).
+### Problem
+The header row ("Users: 5", "Entries: 47", "Saved Meals: 3") and sub-stats row are separate CSS grids. Even though both use `grid-cols-[auto_auto_auto]`, columns don't align because each grid calculates its own column widths independently.
+
+### Solution
+Combine both rows into a single 3-column grid, where:
+- Row 1: Header cells (Users, Entries, Saved Meals totals)
+- Row 2: Sub-stat cells (each cell contains multiple lines)
+
+This ensures all content shares the same column tracks.
 
 ---
 
@@ -10,21 +17,51 @@ Change the stats grid from equal-width columns (`grid-cols-3`) to auto-fitting c
 
 **File: `src/pages/Admin.tsx`**
 
-#### Change: Use custom grid template instead of `grid-cols-3`
+#### Merge into single grid (lines 46-80)
 
-Current (lines 47 and 54):
+Current structure:
 ```tsx
-<div className="grid grid-cols-3 gap-1 text-muted-foreground text-xs">
+{/* Row 1: Headers with totals */}
+<div className="grid grid-cols-[auto_auto_auto] gap-1 ...">
+  <p>Users: 5</p>
+  <p>Entries: 47</p>
+  <p>Saved Meals: 3</p>
+</div>
+
+{/* Row 2: Sub-stats in 3 columns */}
+<div className="grid grid-cols-[auto_auto_auto] gap-1 ...">
+  <div>...</div>
+  <div>...</div>
+  <div>...</div>
+</div>
 ```
 
-New:
+New structure (single grid with 6 cells across 2 rows):
 ```tsx
-<div className="grid grid-cols-[auto_auto_auto] gap-1 text-muted-foreground text-xs">
-```
+{/* Stats grid: 3 columns, 2 rows */}
+<div className="grid grid-cols-[auto_auto_auto] gap-x-1 gap-y-0.5 text-muted-foreground text-xs">
+  {/* Row 1: Headers */}
+  <p className="font-medium">Users: {stats?.total_users ?? 0}</p>
+  <p className="font-medium">Entries: {stats?.total_entries ?? 0}</p>
+  <p className="font-medium">Saved Meals: {stats?.total_saved_meals ?? 0}</p>
 
-Using `grid-cols-[auto_auto_auto]` makes each column shrink to fit its content rather than dividing space equally. This allows:
-- Users column to expand for the longer percentage text
-- Entries and Saved Meals columns to stay compact since they have shorter values
+  {/* Row 2: Sub-stats (each cell wraps to grid row 2) */}
+  <div className="space-y-0">
+    <p>W/entries: {stats?.users_with_entries ?? 0} ({pct(...)}%)</p>
+    <p>Active RL7: {stats?.active_last_7_days ?? 0} ({pct(...)}%)</p>
+    <p>Created RL7: {stats?.users_created_last_7_days ?? 0} ({pct(...)}%)</p>
+  </div>
+  <div className="space-y-0">
+    <p>Avg/user: {avgEntriesPerUser}</p>
+    <p>Created RL7: {stats?.entries_created_last_7_days ?? 0}</p>
+  </div>
+  <div className="space-y-0">
+    <p>Users w/SM: {stats?.users_with_saved_meals ?? 0}</p>
+    <p>Avg/user: {stats?.avg_saved_meals_per_user ?? 0}</p>
+    <p>Used RL7: {stats?.saved_meals_used_last_7_days ?? 0}</p>
+  </div>
+</div>
+```
 
 ---
 
@@ -32,13 +69,12 @@ Using `grid-cols-[auto_auto_auto]` makes each column shrink to fit its content r
 
 | Aspect | Before | After |
 |--------|--------|-------|
-| Grid column sizing | `grid-cols-3` (equal 1/3 each) | `grid-cols-[auto_auto_auto]` (content-based) |
-| Users column | Constrained to 1/3 width | Expands to fit "Created RL7: 5 (100%)" |
-| Other columns | 1/3 each | Shrink to fit content |
+| Grid structure | 2 separate grids | 1 unified grid |
+| Column alignment | Independent | Shared column tracks |
+| Gap | `gap-1` (uniform) | `gap-x-1 gap-y-0.5` (tighter vertical) |
 
 ---
 
 ### Result
-- Each column auto-sizes to its content
-- Users column gets more space naturally due to percentage text
-- No text wrapping on the sub-stats
+- Headers and sub-stats columns will always align perfectly
+- Single grid ensures consistent column widths across both rows
