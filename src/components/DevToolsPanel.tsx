@@ -41,7 +41,9 @@ export function DevToolsPanel() {
   const [isOpen, setIsOpen] = useState(false);
   const [promptVersion, setPromptVersion] = useState<'default' | 'experimental'>('default');
   const [routingMode, setRoutingMode] = useState<'client' | 'ai-only'>('client');
-  const [testCasesText, setTestCasesText] = useState('');
+  const [testCasesText, setTestCasesText] = useState(
+    () => localStorage.getItem('devtools-test-cases') ?? ''
+  );
   const [iterations, setIterations] = useState(3);
   const [results, setResults] = useState<TestResult[]>([]);
   const [isRunning, setIsRunning] = useState(false);
@@ -78,6 +80,7 @@ export function DevToolsPanel() {
   const displayResults = [...results, ...(historicalResults ?? [])];
 
   const runTests = async () => {
+    localStorage.setItem('devtools-test-cases', testCasesText);
     setIsRunning(true);
     setError(null);
 
