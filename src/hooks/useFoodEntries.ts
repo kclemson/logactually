@@ -30,6 +30,7 @@ export function useFoodEntries(date?: string) {
         const itemsWithIds: FoodItem[] = rawItems.map((item) => ({
           // Migrate legacy format: if 'description' exists use it, else merge name+portion
           description: item.description || (item.portion ? `${item.name} (${item.portion})` : (item.name || '')),
+          portion: item.portion,
           calories: item.calories || 0,
           protein: item.protein || 0,
           carbs: item.carbs || 0,
