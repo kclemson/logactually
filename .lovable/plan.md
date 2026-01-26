@@ -1,8 +1,8 @@
 
-## Convert Macros Breakdown to 100% Stacked Chart
+## Arrange Individual Charts in 2x2 Grid
 
 ### Overview
-Transform the stacked column chart from showing absolute grams to showing percentage composition. Each day's bar will be the same height (100%) and display the relative proportion of carbs, protein, and fat.
+Change the layout of the 4 individual macro charts (Calories, Protein, Carbs, Fat) from a vertical stack to a 2-column grid: Calories + Protein on the first row, Carbs + Fat on the second row.
 
 ---
 
@@ -10,91 +10,74 @@ Transform the stacked column chart from showing absolute grams to showing percen
 
 **File: `src/pages/Trends.tsx`**
 
-#### 1. Create percentage-based chart data (add new useMemo around line 69)
+#### Replace the charts.map() section (lines 207-244)
 
-Add a new `percentageChartData` that calculates the percentage of each macro:
-
-```tsx
-const percentageChartData = useMemo(() => {
-  return chartData.map((day) => {
-    const total = day.carbs + day.protein + day.fat;
-    if (total === 0) {
-      return { date: day.date, carbs: 0, protein: 0, fat: 0, carbsRaw: 0, proteinRaw: 0, fatRaw: 0 };
-    }
-    return {
-      date: day.date,
-      carbs: (day.carbs / total) * 100,
-      protein: (day.protein / total) * 100,
-      fat: (day.fat / total) * 100,
-      // Keep raw values for tooltip
-      carbsRaw: day.carbs,
-      proteinRaw: day.protein,
-      fatRaw: day.fat,
-    };
-  });
-}, [chartData]);
-```
-
-#### 2. Update the stacked chart to use percentage data (lines 141-197)
-
-- Change `data={chartData}` to `data={percentageChartData}`
-- Update chart title from "Macros Breakdown (g)" to "Macros Breakdown (%)"
-- Set YAxis domain to `[0, 100]` and add "%" suffix
-- Add custom tooltip formatter to show both percentage and raw grams
+Instead of mapping all 4 charts in a vertical stack with `space-y-6`, wrap them in a 2-column grid:
 
 ```tsx
-<Card>
-  <CardHeader className="pb-2">
-    <CardTitle className="font-semibold">Macros Breakdown (%)</CardTitle>
-  </CardHeader>
-  <CardContent>
-    <div className="h-40">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={percentageChartData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-          <XAxis
-            dataKey="date"
-            tick={{ fontSize: 10 }}
-            stroke="hsl(var(--muted-foreground))"
-          />
-          <YAxis
-            tick={{ fontSize: 10 }}
-            stroke="hsl(var(--muted-foreground))"
-            width={35}
-            domain={[0, 100]}
-            tickFormatter={(value) => `${value}%`}
-          />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: 'hsl(var(--card))',
-              border: '1px solid hsl(var(--border))',
-              borderRadius: '8px',
-            }}
-            formatter={(value: number, name: string, props: any) => {
-              const rawKey = `${name.toLowerCase()}Raw`;
-              const rawValue = props.payload[rawKey];
-              return [`${Math.round(value)}% (${Math.round(rawValue)}g)`, name];
-            }}
-          />
-          <Legend 
-            wrapperStyle={{ fontSize: 12 }}
-            iconSize={10}
-          />
-          <Bar dataKey="carbs" name="Carbs" stackId="macros" fill="hsl(38 92% 50%)" radius={[0, 0, 0, 0]} />
-          <Bar dataKey="protein" name="Protein" stackId="macros" fill="hsl(142 76% 36%)" radius={[0, 0, 0, 0]} />
-          <Bar dataKey="fat" name="Fat" stackId="macros" fill="hsl(346 77% 49%)" radius={[2, 2, 0, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  </CardContent>
-</Card>
+{/* Individual Macro Charts - 2x2 Grid */}
+<div className="grid grid-cols-2 gap-3">
+  {charts.map(({ key, label, color }) => (
+    <Card key={key}>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-semibold">{label}</CardTitle>
+      </CardHeader>
+      <CardContent className="p-3 pt-0">
+        <div className="h-24">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 8 }}
+                stroke="hsl(var(--muted-foreground))"
+                interval="preserveStartEnd"
+              />
+              <YAxis
+                tick={{ fontSize: 8 }}
+                stroke="hsl(var(--muted-foreground))"
+                width={28}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px',
+                }}
+              />
+              <Bar
+                dataKey={key}
+                fill={color}
+                radius={[2, 2, 0, 0]}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </CardContent>
+    </Card>
+  ))}
+</div>
 ```
 
 ---
 
+### Key Adjustments for Compact Layout
+
+| Element | Before | After | Reason |
+|---------|--------|-------|--------|
+| Grid | Single column (stack) | `grid-cols-2 gap-3` | 2x2 layout |
+| Chart height | `h-32` (128px) | `h-24` (96px) | Fit smaller cards |
+| Title | `text-base` | `text-sm` | Proportional to card size |
+| CardContent padding | `p-6 pt-0` | `p-3 pt-0` | Tighter fit |
+| Axis font | `fontSize: 10` | `fontSize: 8` | Fit narrower charts |
+| YAxis width | `35` | `28` | Save horizontal space |
+| XAxis interval | default | `preserveStartEnd` | Show only first/last labels to avoid crowding |
+
+---
+
 ### Result
-- Every bar reaches exactly 100% height
-- Visually compare macro proportions across days
-- Y-axis shows 0-100% scale
-- Tooltip shows both percentage and raw gram values (e.g., "45% (120g)")
-- Makes it easy to spot days with higher/lower protein or carb ratios
+- 4 charts arranged in 2 rows of 2
+- Row 1: Calories | Protein
+- Row 2: Carbs | Fat
+- More compact view with all trends visible at once
+- Maintains the `charts` array order which already matches this grouping
