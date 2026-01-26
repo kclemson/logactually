@@ -1,6 +1,7 @@
 import { useState, useImperativeHandle, forwardRef, useRef, useCallback } from "react";
 import { Mic, MicOff, Send, Loader2, ScanBarcode, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
@@ -198,22 +199,22 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(function FoodI
             size="sm"
             onClick={toggleListening}
             disabled={isBusy}
-            className={isListening ? "bg-destructive text-destructive-foreground" : ""}
+            className={cn("px-2", isListening && "bg-destructive text-destructive-foreground")}
           >
             {isListening ? <MicOff className="h-4 w-4 mr-1" /> : <Mic className="h-4 w-4 mr-1" />}
             Voice
           </Button>
         )}
         {cameraSupported && (
-          <Button variant="outline" size="sm" onClick={() => setScannerOpen(true)} disabled={isBusy}>
+          <Button variant="outline" size="sm" className="px-2" onClick={() => setScannerOpen(true)} disabled={isBusy}>
             <ScanBarcode className="h-4 w-4 mr-1" />
-            Bar Code
+            Scan
           </Button>
         )}
         {onLogSavedMeal && (
           <Popover open={savedMealsOpen} onOpenChange={setSavedMealsOpen}>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" disabled={isBusy}>
+              <Button variant="outline" size="sm" className="px-2" disabled={isBusy}>
                 <Star className="h-4 w-4 mr-1" />
                 Saved
               </Button>
@@ -226,16 +227,18 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(function FoodI
             </PopoverContent>
           </Popover>
         )}
-        <Button onClick={handleSubmit} disabled={!text.trim() || isBusy} size="sm" className="flex-1">
+        <Button onClick={handleSubmit} disabled={!text.trim() || isBusy} size="sm" className="flex-1 px-2">
           {isBusy ? (
             <>
               <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-              {isScanning ? "Looking up..." : "Adding..."}
+              <span className="hidden sm:inline">{isScanning ? "Looking up..." : "Adding..."}</span>
+              <span className="sm:hidden">...</span>
             </>
           ) : (
             <>
               <Send className="mr-1 h-4 w-4" />
-              Add Food
+              <span className="hidden sm:inline">Add Food</span>
+              <span className="sm:hidden">Add</span>
             </>
           )}
         </Button>
