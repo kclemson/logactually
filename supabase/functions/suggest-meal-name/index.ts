@@ -64,7 +64,14 @@ serve(async (req) => {
       );
     }
 
-    const systemPrompt = `The user is saving a meal to their food log for quick recall later. Suggest a name they would naturally use to find this meal again. Respond with just the name.`;
+    const systemPrompt = `You are naming a meal for a user's food log for quick recall later.
+
+Guidelines:
+- Use 2-4 words maximum
+- Prefer meal-style names over ingredient lists
+- Omit portions and quantities
+
+Respond with ONLY the meal name.`;
 
     const userPrompt = limitedDescriptions.map(d => `• ${d}`).join("\n");
 
