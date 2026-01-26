@@ -16,6 +16,8 @@ interface ParsedFoodItem {
   protein: number;
   carbs: number;
   fat: number;
+  confidence?: 'high' | 'medium' | 'low';
+  source_note?: string;
 }
 
 // Output interface sent to client (merged description)
@@ -25,6 +27,8 @@ interface FoodItem {
   protein: number;
   carbs: number;
   fat: number;
+  confidence?: 'high' | 'medium' | 'low';
+  source_note?: string;
 }
 
 interface AnalyzeResponse {
@@ -160,6 +164,8 @@ serve(async (req) => {
       protein: item.protein || 0,
       carbs: item.carbs || 0,
       fat: item.fat || 0,
+      confidence: item.confidence,
+      source_note: item.source_note,
     }));
 
     // Calculate totals

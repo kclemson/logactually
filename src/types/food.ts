@@ -9,6 +9,8 @@ export interface FoodItem {
   carbs: number;
   fat: number;
   editedFields?: EditableField[];
+  confidence?: 'high' | 'medium' | 'low';  // AI confidence level (experimental prompt only)
+  source_note?: string;  // Optional note about data source/estimation
 }
 
 export interface FoodEntry {

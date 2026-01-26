@@ -9,11 +9,18 @@ import { ChevronDown, ChevronUp, Play, Loader2 } from 'lucide-react';
 import { extractUpcFromText } from '@/lib/upc-utils';
 import { useScanBarcode } from '@/hooks/useScanBarcode';
 
+interface FoodItemOutput {
+  description: string;
+  calories: number;
+  confidence?: 'high' | 'medium' | 'low';
+  source_note?: string;
+}
+
 interface TestResult {
   id?: string;
   input: string;
   additionalContext?: string;
-  output: { food_items?: Array<{ description: string; calories: number }> } | null;
+  output: { food_items?: FoodItemOutput[] } | null;
   latencyMs: number;
   error?: string;
   isHallucination?: boolean;
@@ -360,9 +367,28 @@ export function DevToolsPanel() {
                             {result.error ? (
                               <span className="text-destructive">{result.error}</span>
                             ) : (
-                              <span className="truncate block">
-                                {result.output?.food_items?.map(f => `${f.description} (${f.calories} cal)`).join(', ')}
-                              </span>
+                              <div className="space-y-0.5">
+                                {result.output?.food_items?.map((f, idx) => (
+                                  <div key={idx} className="flex items-center gap-1 truncate" title={f.source_note || undefined}>
+                                    {/* Confidence indicator dot */}
+                                    <span 
+                                      className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${
+                                        f.confidence === 'high' 
+                                          ? 'bg-green-500' 
+                                          : f.confidence === 'medium' 
+                                            ? 'bg-yellow-500' 
+                                            : f.confidence === 'low' 
+                                              ? 'bg-red-500' 
+                                              : 'bg-muted-foreground/30'
+                                      }`}
+                                      title={f.confidence ? `Confidence: ${f.confidence}${f.source_note ? ` - ${f.source_note}` : ''}` : 'No confidence data'}
+                                    />
+                                    <span className="truncate">
+                                      {f.description} ({f.calories} cal)
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
                             )}
                           </td>
                         </tr>
