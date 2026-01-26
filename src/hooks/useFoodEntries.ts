@@ -50,12 +50,13 @@ export function useFoodEntries(date?: string) {
   const createEntry = useMutation({
     mutationFn: async (entry: {
       eaten_date: string;
-      raw_input: string;
+      raw_input: string | null;
       food_items: FoodItem[];
       total_calories: number;
       total_protein: number;
       total_carbs: number;
       total_fat: number;
+      source_meal_id?: string | null;
     }) => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error('Not authenticated');
@@ -71,6 +72,7 @@ export function useFoodEntries(date?: string) {
           total_protein: entry.total_protein,
           total_carbs: entry.total_carbs,
           total_fat: entry.total_fat,
+          source_meal_id: entry.source_meal_id ?? null,
         })
         .select()
         .single();

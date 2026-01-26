@@ -6,7 +6,7 @@ import { useSavedMeals, useLogSavedMeal } from '@/hooks/useSavedMeals';
 import { SavedMeal, FoodItem, calculateTotals } from '@/types/food';
 
 interface SavedMealsPopoverProps {
-  onSelectMeal: (foodItems: FoodItem[]) => void;
+  onSelectMeal: (foodItems: FoodItem[], mealId: string) => void;
   onClose?: () => void;
 }
 
@@ -28,7 +28,7 @@ export function SavedMealsPopover({ onSelectMeal, onClose }: SavedMealsPopoverPr
 
   const handleSelectMeal = async (meal: SavedMeal) => {
     const foodItems = await logMeal.mutateAsync(meal.id);
-    onSelectMeal(foodItems);
+    onSelectMeal(foodItems, meal.id);
     onClose?.();
   };
 

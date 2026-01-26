@@ -137,6 +137,18 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     return map;
   }, [entries]);
 
+  // Build map of entryId -> meal name for entries from saved meals
+  const entryMealNames = useMemo(() => {
+    const map = new Map<string, string>();
+    entries.forEach(entry => {
+      if (entry.source_meal_id && savedMeals) {
+        const meal = savedMeals.find(m => m.id === entry.source_meal_id);
+        if (meal) map.set(entry.id, meal.name);
+      }
+    });
+    return map;
+  }, [entries, savedMeals]);
+
   // Toggle handler for expanding/collapsing raw inputs
   const handleToggleEntryExpand = (entryId: string) => {
     setExpandedEntryIds(prev => {
@@ -148,7 +160,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   };
 
   // Helper to create and save entry from food items
-  const createEntryFromItems = useCallback((items: FoodItem[], rawInput: string | null) => {
+  const createEntryFromItems = useCallback((items: FoodItem[], rawInput: string | null, sourceMealId?: string) => {
     // Generate UIDs once upfront to ensure consistency between DB and local state
     const itemsWithUids = items.map(item => ({
       ...item,
@@ -165,6 +177,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
         total_protein: Math.round(totals.protein * 10) / 10,
         total_carbs: Math.round(totals.carbs * 10) / 10,
         total_fat: Math.round(totals.fat * 10) / 10,
+        source_meal_id: sourceMealId ?? null,
       },
       {
         onSuccess: (createdEntry) => {
@@ -206,7 +219,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     if (!similarMatch) return;
     
     const foodItems = await logSavedMeal.mutateAsync(similarMatch.meal.id);
-    createEntryFromItems(foodItems, similarMatch.meal.original_input);
+    createEntryFromItems(foodItems, similarMatch.meal.original_input, similarMatch.meal.id);
     
     setSimilarMatch(null);
     setPendingAiResult(null);
@@ -265,8 +278,8 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   };
 
   // Handle logging a saved meal from popover
-  const handleLogSavedMeal = async (foodItems: FoodItem[]) => {
-    createEntryFromItems(foodItems, null);
+  const handleLogSavedMeal = async (foodItems: FoodItem[], mealId: string) => {
+    createEntryFromItems(foodItems, null, mealId);
   };
 
   // Handle save as meal from FoodItemsTable expando
@@ -485,6 +498,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
             expandedEntryIds={expandedEntryIds}
             onToggleEntryExpand={handleToggleEntryExpand}
             onSaveAsMeal={handleSaveAsMeal}
+            entryMealNames={entryMealNames}
           />
         ) : (
           <p className="text-muted-foreground">

@@ -21,6 +21,7 @@ export type Database = {
           food_items: Json
           id: string
           raw_input: string | null
+          source_meal_id: string | null
           total_calories: number
           total_carbs: number
           total_fat: number
@@ -34,6 +35,7 @@ export type Database = {
           food_items?: Json
           id?: string
           raw_input?: string | null
+          source_meal_id?: string | null
           total_calories?: number
           total_carbs?: number
           total_fat?: number
@@ -47,6 +49,7 @@ export type Database = {
           food_items?: Json
           id?: string
           raw_input?: string | null
+          source_meal_id?: string | null
           total_calories?: number
           total_carbs?: number
           total_fat?: number
@@ -54,7 +57,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "food_entries_source_meal_id_fkey"
+            columns: ["source_meal_id"]
+            isOneToOne: false
+            referencedRelation: "saved_meals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {

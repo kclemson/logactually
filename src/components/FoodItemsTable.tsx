@@ -49,6 +49,7 @@ interface FoodItemsTableProps {
   expandedEntryIds?: Set<string>;
   onToggleEntryExpand?: (entryId: string) => void;
   onSaveAsMeal?: (entryId: string, rawInput: string | null, foodItems: FoodItem[]) => void;
+  entryMealNames?: Map<string, string>;
 }
 
 export function FoodItemsTable({
@@ -69,6 +70,7 @@ export function FoodItemsTable({
   expandedEntryIds,
   onToggleEntryExpand,
   onSaveAsMeal,
+  entryMealNames,
 }: FoodItemsTableProps) {
   // Local editing state - only saved on Enter
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
@@ -519,7 +521,12 @@ export function FoodItemsTable({
                       {currentRawInput}
                     </p>
                   )}
-                  {onSaveAsMeal && currentEntryId && (
+                  {/* Show meal name if from saved meal, otherwise show "Save as meal" link */}
+                  {currentEntryId && entryMealNames?.get(currentEntryId) ? (
+                    <p className="text-sm text-muted-foreground">
+                      Saved meal: <span className="font-medium">{entryMealNames.get(currentEntryId)}</span>
+                    </p>
+                  ) : onSaveAsMeal && currentEntryId && (
                     <button
                       onClick={() => {
                         const boundary = entryBoundaries?.find(b => b.entryId === currentEntryId);
