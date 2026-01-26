@@ -42,18 +42,18 @@ export default function Admin() {
   const pct = (value: number) => (stats && stats.total_users > 0 ? Math.round((value / stats.total_users) * 100) : 0);
 
   return (
-    <div className="p-4 space-y-3">
+    <div className="px-1 py-2 space-y-2">
       {/* Row 1: Headers with totals */}
-      <div className="grid grid-cols-3 gap-2 text-muted-foreground text-xs">
+      <div className="grid grid-cols-3 gap-1 text-muted-foreground text-xs">
         <p className="font-medium">Users: {stats?.total_users ?? 0}</p>
         <p className="font-medium">Entries: {stats?.total_entries ?? 0}</p>
         <p className="font-medium">Saved Meals: {stats?.total_saved_meals ?? 0}</p>
       </div>
 
       {/* Row 2: Sub-stats in 3 columns */}
-      <div className="grid grid-cols-3 gap-2 text-muted-foreground text-xs">
+      <div className="grid grid-cols-3 gap-1 text-muted-foreground text-xs">
         {/* Users column */}
-        <div className="space-y-0.5">
+        <div className="space-y-0">
           <p>
             W/entries: {stats?.users_with_entries ?? 0} ({pct(stats?.users_with_entries ?? 0)}%)
           </p>
@@ -66,13 +66,13 @@ export default function Admin() {
         </div>
 
         {/* Entries column */}
-        <div className="space-y-0.5">
+        <div className="space-y-0">
           <p>Avg/user: {avgEntriesPerUser}</p>
           <p>Created RL7: {stats?.entries_created_last_7_days ?? 0}</p>
         </div>
 
         {/* Saved Meals column */}
-        <div className="space-y-0.5">
+        <div className="space-y-0">
           <p>Users w/SM: {stats?.users_with_saved_meals ?? 0}</p>
           <p>Avg/user: {stats?.avg_saved_meals_per_user ?? 0}</p>
           <p>Used RL7: {stats?.saved_meals_used_last_7_days ?? 0}</p>
