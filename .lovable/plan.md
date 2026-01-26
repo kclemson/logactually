@@ -1,9 +1,11 @@
 
 
-## Reduce Chart Widget Padding
+## Fix Chart Alignment and Macros Stacking Order
 
 ### Overview
-Minimize the internal padding on all four sides of each chart card to create a more compact, information-dense layout.
+Two fixes:
+1. Remove the left indentation of charts relative to their titles by hiding the YAxis
+2. Reorder the stacked bars in Macros (%) chart to match the row 2 layout: Protein (bottom/green) → Carbs (middle/orange) → Fat (top/red)
 
 ---
 
@@ -11,32 +13,36 @@ Minimize the internal padding on all four sides of each chart card to create a m
 
 **File: `src/pages/Trends.tsx`**
 
-#### Current Padding Structure
-- `CardHeader`: Default `p-6` from Card component, with only `pb-2` override (so it still has 24px on other sides)
-- `CardContent`: `p-3 pt-0` (12px sides/bottom, 0 top)
+#### 1. Remove YAxis from all charts to eliminate left indentation
 
-#### New Padding Structure
-- `CardHeader`: Add `p-2 pb-1` to reduce all header padding (8px, then 4px bottom)
-- `CardContent`: Change from `p-3 pt-0` to `p-2 pt-0` (8px sides/bottom, 0 top)
+The YAxis creates a fixed-width area on the left side of the chart that causes the bars to be indented from the title. Remove the YAxis component from all 5 charts:
 
----
+| Line | Chart | Change |
+|------|-------|--------|
+| 178-182 | Calories | Remove entire `<YAxis ... />` |
+| 213-219 | Macros (%) | Remove entire `<YAxis ... />` |
+| 260-264 | Row 2 mapped charts | Remove entire `<YAxis ... />` |
 
-### Specific Updates
+#### 2. Reorder stacked bars in Macros (%) chart
 
-| Line | Location | Current | New |
-|------|----------|---------|-----|
-| 164 | Calories CardHeader | `className="pb-2"` | `className="p-2 pb-1"` |
-| 167 | Calories CardContent | `className="p-3 pt-0"` | `className="p-2 pt-0"` |
-| 199 | Macros CardHeader | `className="pb-2"` | `className="p-2 pb-1"` |
-| 202 | Macros CardContent | `className="p-3 pt-0"` | `className="p-2 pt-0"` |
-| 246 | Row 2 charts CardHeader | `className="pb-2"` | `className="p-2 pb-1"` |
-| 249 | Row 2 charts CardContent | `className="p-3 pt-0"` | `className="p-2 pt-0"` |
+Current order (lines 232-234):
+```tsx
+<Bar dataKey="carbs" ... />    // Bottom
+<Bar dataKey="protein" ... />  // Middle  
+<Bar dataKey="fat" ... />      // Top
+```
+
+New order to match row 2 (Protein | Carbs | Fat):
+```tsx
+<Bar dataKey="protein" name="Protein" stackId="macros" fill="hsl(142 76% 36%)" radius={[0, 0, 0, 0]} />  // Bottom (green)
+<Bar dataKey="carbs" name="Carbs" stackId="macros" fill="hsl(38 92% 50%)" radius={[0, 0, 0, 0]} />      // Middle (orange)
+<Bar dataKey="fat" name="Fat" stackId="macros" fill="hsl(346 77% 49%)" radius={[2, 2, 0, 0]} />         // Top (red)
+```
 
 ---
 
 ### Result
-- All chart cards will have tighter padding (8px instead of 24px on header, 8px instead of 12px on content)
-- More chart area visible within each card
-- Consistent compact styling across all 5 chart widgets
-- Maintains the minimalist, high-density aesthetic
+- Charts will be left-aligned with their titles (no Y-axis creating indent)
+- Macros (%) stacked bar colors from bottom to top: Green (Protein) → Orange (Carbs) → Red (Fat)
+- This matches the visual order of the row 2 charts: Protein (green) | Carbs (orange) | Fat (red)
 
