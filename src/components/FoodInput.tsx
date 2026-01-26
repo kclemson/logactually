@@ -1,5 +1,5 @@
 import { useState, useImperativeHandle, forwardRef, useRef, useCallback } from "react";
-import { Mic, MicOff, Send, Loader2, ScanBarcode, Bookmark } from "lucide-react";
+import { Mic, MicOff, Send, Loader2, ScanBarcode, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -214,7 +214,7 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(function FoodI
           <Popover open={savedMealsOpen} onOpenChange={setSavedMealsOpen}>
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" disabled={isBusy}>
-                <Bookmark className="h-4 w-4 mr-1" />
+                <Star className="h-4 w-4 mr-1" />
                 Saved
               </Button>
             </PopoverTrigger>
