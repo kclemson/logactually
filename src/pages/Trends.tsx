@@ -16,6 +16,30 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
+const CompactTooltip = ({ active, payload, label, formatter }: any) => {
+  if (!active || !payload?.length) return null;
+  
+  return (
+    <div className="rounded-md border border-border bg-card px-2 py-1 shadow-sm">
+      <p className="text-[10px] font-medium text-foreground mb-0.5">{label}</p>
+      {payload.map((entry: any, index: number) => {
+        const displayValue = formatter 
+          ? formatter(entry.value, entry.name, entry, index, entry.payload)
+          : `${entry.name}: ${Math.round(entry.value)}`;
+        return (
+          <p 
+            key={entry.dataKey || index} 
+            className="text-[10px]"
+            style={{ color: entry.color }}
+          >
+            {Array.isArray(displayValue) ? displayValue[0] : displayValue}
+          </p>
+        );
+      })}
+    </div>
+  );
+};
+
 const periods = [
   { label: '7 days', days: 7 },
   { label: '30 days', days: 30 },
@@ -176,11 +200,9 @@ const Trends = () => {
                         interval="preserveStartEnd"
                       />
                       <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                        }}
+                        content={<CompactTooltip />}
+                        offset={20}
+                        cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
                       />
                       <Bar dataKey="calories" fill="hsl(var(--primary))" radius={[2, 2, 0, 0]} />
                     </BarChart>
@@ -206,16 +228,17 @@ const Trends = () => {
                         interval="preserveStartEnd"
                       />
                       <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                        }}
-                        formatter={(value: number, name: string, props: any) => {
-                          const rawKey = `${name.toLowerCase()}Raw`;
-                          const rawValue = props.payload[rawKey];
-                          return [`${Math.round(value)}% (${Math.round(rawValue)}g)`, name];
-                        }}
+                        content={
+                          <CompactTooltip
+                            formatter={(value: number, name: string, props: any) => {
+                              const rawKey = `${name.toLowerCase()}Raw`;
+                              const rawValue = props.payload[rawKey];
+                              return [`${Math.round(value)}% (${Math.round(rawValue)}g)`];
+                            }}
+                          />
+                        }
+                        offset={20}
+                        cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
                       />
                       <Bar dataKey="fat" name="Fat" stackId="macros" fill="hsl(346 77% 49%)" radius={[0, 0, 0, 0]} />
                       <Bar dataKey="carbs" name="Carbs" stackId="macros" fill="hsl(38 92% 50%)" radius={[0, 0, 0, 0]} />
@@ -246,11 +269,9 @@ const Trends = () => {
                           interval="preserveStartEnd"
                         />
                         <Tooltip
-                          contentStyle={{
-                            backgroundColor: 'hsl(var(--card))',
-                            border: '1px solid hsl(var(--border))',
-                            borderRadius: '8px',
-                          }}
+                          content={<CompactTooltip />}
+                          offset={20}
+                          cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
                         />
                         <Bar
                           dataKey={key}
