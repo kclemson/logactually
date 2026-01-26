@@ -28,6 +28,8 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
 // Stakes framing: adds user context, accuracy importance, and intent guidance
 export const ANALYZE_FOOD_PROMPT_EXPERIMENTAL = `You are a nutrition expert helping a user track their food intake for health goals. Accuracy is important. The user is logging food they consumed, so interpret their input as something they ate and identify the most likely food item(s).
 
+If you can identify where your nutritional data comes from, note it. If you are estimating based on similar foods, indicate that.
+
 Analyze the following food description and extract individual food items with their nutritional information.
 
 Food description: "{{rawInput}}"
