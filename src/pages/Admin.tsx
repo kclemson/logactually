@@ -84,9 +84,9 @@ export default function Admin() {
             </tr>
           </thead>
           <tbody>
-            {userStats.map((user, index) => (
+            {userStats.map((user) => (
               <tr key={user.user_id} className="border-b border-border/50">
-                <td className="py-0.5 pr-2">User {index + 1}</td>
+                <td className="py-0.5 pr-2">User {user.user_number}</td>
                 <td className="text-center py-0.5 pr-2">{user.total_entries}</td>
                 <td className="text-center py-0.5">{user.entries_today}</td>
               </tr>
