@@ -110,14 +110,14 @@ export default function Settings() {
                       </span>
                     </PopoverTrigger>
                     <PopoverContent 
-                      className="w-48 p-2" 
+                      className="w-64 p-2" 
                       side="top" 
-                      align="center"
+                      align="end"
                       onOpenAutoFocus={(e) => e.preventDefault()}
                     >
-                      <ul className="text-xs space-y-0.5">
+                      <ul className="text-xs space-y-1">
                         {meal.food_items.map((item) => (
-                          <li key={item.uid} className="truncate">
+                          <li key={item.uid}>
                             {item.description}
                           </li>
                         ))}
