@@ -93,6 +93,7 @@ export default function Settings() {
                         }}
                         className="h-8 flex-1"
                         autoFocus
+                        spellCheck={false}
                       />
                       <button onClick={saveEditing} className="p-1.5 hover:bg-muted rounded" title="Save">
                         <Check className="h-4 w-4 text-green-600" />
