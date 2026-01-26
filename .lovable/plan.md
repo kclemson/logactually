@@ -1,122 +1,61 @@
 
+Goal  
+Fix the “portion floats on the first line while the name wraps to the second line” issue on the main Food Log page (route “/”), and ensure there’s always a readable space before the opening parenthesis.
 
-## Fix Portion Display: Inline Text Flow + Proper Spacing
+What’s happening (root cause)  
+- On “/”, `FoodItemsTable` runs in `editable={true}` mode.
+- In editable mode, the description and portion are currently laid out as separate flex children inside a `flex items-baseline` container.
+- When the description wraps to two lines, baseline alignment uses the first line’s baseline, so the portion stays visually attached to the first line (e.g., “Ground (0.5 tsp)” + “Cinnamon”), which looks wrong.
 
-### The Problems
-1. **Missing space before `(`**: Currently using `ml-0.5` (2px) which is too tight
-2. **Ugly two-line wrapping**: The portion is a flex sibling that stays on its own baseline when the description wraps, causing "(0.5 tsp)" to float alone on the second line
+What we’ll change  
+1) Update the editable description cell layout to be inline text flow (not flex siblings)
+- In `src/components/FoodItemsTable.tsx`, inside the `{editable ? (...) : (...)}` block:
+  - Keep the outer wrapper that reserves chevron space.
+  - Replace the inner container currently using:
+    - `flex items-baseline` between the contentEditable element, portion, and asterisk
+  - With a non-flex container where:
+    - the description is an inline contentEditable element
+    - the portion is an inline `<span>` immediately after the description
+    - the edited “*” indicator is also inline after that
+  Result: when the name wraps to 2 lines, the portion will naturally appear after the last word (typically on line 2: “Cinnamon (0.5 tsp)”).
 
-### The Solution
-Make the portion truly **inline** with the description text, not a flex sibling. This way it flows naturally with the text.
+2) Ensure proper spacing before “(”
+- In editable mode, change the portion rendering from:
+  - `({item.portion})` with margin hacks
+- To:
+  - ` ({item.portion})` (a literal leading space in the text), matching the non-editable mode behavior.
 
----
+3) Adjust event handler typings after changing contentEditable element
+- If we switch the editable element from `<div contentEditable>` to `<span contentEditable>` (recommended for inline flow):
+  - Update the handler signatures:
+    - `handleDescriptionKeyDown` from `React.KeyboardEvent<HTMLDivElement>` to `React.KeyboardEvent<HTMLSpanElement>` (or `HTMLElement` if we want to be flexible)
+    - `handleDescriptionFocus/Blur` similarly
+  - Update the `ref` typing usage accordingly (still safe since we only use `textContent` and `document.activeElement` checks).
 
-### Visual Comparison
+4) Keep the existing “edits only save on Enter” behavior intact
+- Confirm:
+  - Enter saves description and clears `portion` (already implemented)
+  - Escape cancels and reverts
+  - Blur cancels and reverts
+- Ensure that the new inline layout doesn’t accidentally insert line breaks on Enter (we already `preventDefault()`; we’ll keep that).
 
-```text
-CURRENT (flex siblings):
-┌─────────────────────────────────────┐
-│ [description div] [portion span]   │  ← flex row
-│ Ground           │ (0.5 tsp)       │  ← portion stays on own baseline
-│ Cinnamon         │                 │
-└─────────────────────────────────────┘
+5) Quick visual verification checklist
+- On “/” (editable mode):
+  - A 2-line name like “Ground Cinnamon” should display as:
+    - Line 1: “Ground”
+    - Line 2: “Cinnamon (0.5 tsp)” (or “Cinnamon” then portion if there’s room)
+  - Confirm there’s a visible space before “(”
+  - Confirm the focus ring/blue editing style still works
+- On “/history” (non-editable mode):
+  - No regression; it already uses inline flow.
 
-FIXED (inline text):
-┌─────────────────────────────────────┐
-│ Ground Cinnamon (0.5 tsp)          │  ← flows as one text block
-│                                     │
-└─────────────────────────────────────┘
-OR when wrapping:
-┌─────────────────────────────────────┐
-│ Ground Cinnamon                     │  ← wraps naturally
-│ (0.5 tsp)                          │  ← continues inline
-└─────────────────────────────────────┘
-```
+Files involved  
+- `src/components/FoodItemsTable.tsx`
+  - Editable description cell layout refactor (main fix)
+  - Portion spacing tweak
+  - Handler typings updates (if needed)
 
----
-
-### Technical Approach
-
-**For non-editable rows (easier):**
-Keep portion inside the same `<span>` as the description text:
-
-```tsx
-<span className="pl-1 pr-0 py-1 line-clamp-2 shrink min-w-0">
-  {item.description}
-  {item.portion && (
-    <span className="text-xs text-muted-foreground whitespace-nowrap"> ({item.portion})</span>
-  )}
-  {hasAnyEditedFields(item) && ...}
-</span>
-```
-
-Key changes:
-- Add space inside the text: ` ({item.portion})`
-- Add `whitespace-nowrap` to keep the portion together as a unit
-- Keep it inside the line-clamp container so it flows with text
-
-**For editable rows (trickier):**
-The contentEditable div contains only the description. We need the portion to appear inline but outside the editable area.
-
-Options:
-- **Option A**: Append portion visually after contentEditable but style it to appear inline (requires CSS trickery)
-- **Option B**: For editable mode, keep the current layout but adjust spacing
-
-For simplicity, I recommend:
-- Non-editable: True inline text flow (best appearance)
-- Editable: Keep flexbox but add proper spacing ` (` with `ml-1` instead of `ml-0.5`
-
----
-
-### Code Changes
-
-**File: `src/components/FoodItemsTable.tsx`**
-
-**1. Non-editable rows (lines 403-414)** - Make portion truly inline:
-```tsx
-<span 
-  title={getItemTooltip(item)}
-  className="pl-1 pr-0 py-1 line-clamp-2 shrink min-w-0"
->
-  {item.description}
-  {item.portion && (
-    <span className="text-xs text-muted-foreground whitespace-nowrap"> ({item.portion})</span>
-  )}
-  {hasAnyEditedFields(item) && (
-    <span className="text-focus-ring font-bold" title={formatEditedFields(item) || 'Edited'}> *</span>
-  )}
-</span>
-```
-
-Changes:
-- ` ({item.portion})` - space before paren inside the string
-- `whitespace-nowrap` - keeps "(0.5 tsp)" together
-- Remove `ml-0.5` - space is now in the text
-
-**2. Editable rows (lines 377-382)** - Fix spacing:
-```tsx
-{item.portion && (
-  <span className="text-xs text-muted-foreground shrink-0 ml-1 whitespace-nowrap">({item.portion})</span>
-)}
-```
-
-Changes:
-- `ml-1` instead of `ml-0.5` for visible spacing
-- `whitespace-nowrap` to keep portion together
-- Note: For editable, we can't make it truly inline because the contentEditable is a separate element
-
----
-
-### Files to Change
-
-| File | Change |
-|------|--------|
-| `src/components/FoodItemsTable.tsx` | Fix spacing and wrapping for portion display in both editable and non-editable modes |
-
----
-
-### Trade-off
-
-- **Non-editable** (FoodLog view): Perfect inline flow
-- **Editable** (AIResults dialog): Still uses flexbox so portion may still wrap awkwardly on very long names, but with better spacing. This is acceptable since the dialog is typically wider and items are confirmatory before save.
-
+Expected outcome  
+- Portions will no longer “stick” to the first line when descriptions wrap.
+- The portion will read naturally as part of the description line flow, with correct spacing.
+- Editing UX and “save on Enter” persistence model remains unchanged.
