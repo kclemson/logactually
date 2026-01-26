@@ -10,6 +10,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Legend,
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -137,6 +138,64 @@ const Trends = () => {
         </div>
       ) : (
         <div className="space-y-6">
+          {/* Stacked Macros Chart */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="font-semibold">Macros Breakdown (g)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-40">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 10 }}
+                      stroke="hsl(var(--muted-foreground))"
+                    />
+                    <YAxis
+                      tick={{ fontSize: 10 }}
+                      stroke="hsl(var(--muted-foreground))"
+                      width={35}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                      }}
+                    />
+                    <Legend 
+                      wrapperStyle={{ fontSize: 12 }}
+                      iconSize={10}
+                    />
+                    <Bar
+                      dataKey="carbs"
+                      name="Carbs"
+                      stackId="macros"
+                      fill="hsl(38 92% 50%)"
+                      radius={[0, 0, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="protein"
+                      name="Protein"
+                      stackId="macros"
+                      fill="hsl(142 76% 36%)"
+                      radius={[0, 0, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="fat"
+                      name="Fat"
+                      stackId="macros"
+                      fill="hsl(346 77% 49%)"
+                      radius={[2, 2, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
           {charts.map(({ key, label, color }) => (
             <Card key={key}>
               <CardHeader className="pb-2">
