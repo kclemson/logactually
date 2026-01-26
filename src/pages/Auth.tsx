@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { APP_NAME, APP_DESCRIPTION } from '@/lib/constants';
 
 export default function Auth() {
   const { user, signUp, signIn, loading } = useAuth();
@@ -120,8 +121,8 @@ export default function Auth() {
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <img src="/favicon.png" alt="Log Actually" className="w-16 h-16 mx-auto mb-2" />
-            <CardTitle className="text-title">Set New Password</CardTitle>
+            <img src="/favicon.png" alt={APP_NAME} className="w-24 h-24 mx-auto mb-4" />
+            <CardTitle className="text-2xl font-bold">{APP_NAME}</CardTitle>
             <CardDescription>Enter your new password below</CardDescription>
           </CardHeader>
           <CardContent>
@@ -166,8 +167,8 @@ export default function Auth() {
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <img src="/favicon.png" alt="Log Actually" className="w-16 h-16 mx-auto mb-2" />
-            <CardTitle className="text-title">Reset Password</CardTitle>
+            <img src="/favicon.png" alt={APP_NAME} className="w-24 h-24 mx-auto mb-4" />
+            <CardTitle className="text-2xl font-bold">{APP_NAME}</CardTitle>
             <CardDescription>
               {resetSent 
                 ? "Check your email for a reset link"
@@ -241,21 +242,14 @@ export default function Auth() {
         <CardHeader className="text-center">
           <img 
             src="/favicon.png" 
-            alt="Log Actually" 
-            className="w-16 h-16 mx-auto mb-2"
+            alt={APP_NAME} 
+            className="w-24 h-24 mx-auto mb-4"
           />
-          <CardTitle className="text-title">
-            {isSignUp 
-              ? (inviteFromUrl ? "You're Invited!" : 'Create Account')
-              : 'Welcome Back'}
+          <CardTitle className="text-2xl font-bold">
+            {APP_NAME}
           </CardTitle>
           <CardDescription>
-            {isSignUp 
-              ? (inviteFromUrl 
-                  ? 'Log what you eat in plain English — AI handles the macros'
-                  : 'Sign up to start tracking your nutrition')
-              : 'Sign in to continue tracking your nutrition'
-            }
+            {APP_DESCRIPTION}
           </CardDescription>
         </CardHeader>
         <CardContent>
