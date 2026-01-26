@@ -42,7 +42,7 @@ export default function Admin() {
   const pct = (value: number) => (stats && stats.total_users > 0 ? Math.round((value / stats.total_users) * 100) : 0);
 
   return (
-    <div className="px-1 py-2 space-y-2">
+    <div className="px-1 py-2 space-y-4">
       {/* Stats grid: 3 columns, 2 rows */}
       <div className="grid grid-cols-[auto_auto_auto] gap-x-1 gap-y-0.5 text-muted-foreground text-xs">
         {/* Row 1: Headers */}
@@ -67,8 +67,22 @@ export default function Admin() {
         </div>
       </div>
 
+      {/* User stats - textual format */}
+      {userStats && userStats.length > 0 ? (
+        <div className="text-xs text-muted-foreground space-y-0.5">
+          {userStats.map((user, index) => (
+            <p key={user.user_id}>
+              User {index + 1}: {user.total_entries} total entries ({user.entries_today} today)
+            </p>
+          ))}
+        </div>
+      ) : (
+        <p className="text-muted-foreground text-xs">No users found.</p>
+      )}
+
+      {/* Daily stats table */}
       {stats?.daily_stats && stats.daily_stats.length > 0 ? (
-        <table className="w-auto mt-3 text-xs">
+        <table className="w-auto text-xs">
           <thead>
             <tr className="border-b">
               <th className="text-left py-0.5 pr-2 font-medium text-muted-foreground">Date</th>
@@ -92,29 +106,6 @@ export default function Admin() {
         </table>
       ) : (
         <p className="text-muted-foreground text-xs">No data in the last 14 days.</p>
-      )}
-
-      {userStats && userStats.length > 0 ? (
-        <table className="w-auto mt-4 text-xs">
-          <thead>
-            <tr className="border-b">
-              <th className="text-left py-0.5 pr-2 font-medium text-muted-foreground">User</th>
-              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Total Entries</th>
-              <th className="text-center py-0.5 font-medium text-muted-foreground">Today</th>
-            </tr>
-          </thead>
-          <tbody>
-            {userStats.map((user, index) => (
-              <tr key={user.user_id} className="border-b border-border/50">
-                <td className="py-0.5 pr-2">User {index + 1}</td>
-                <td className="text-center py-0.5 pr-2">{user.total_entries}</td>
-                <td className="text-center py-0.5">{user.entries_today}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : (
-        <p className="text-muted-foreground text-xs">No users found.</p>
       )}
     </div>
   );
