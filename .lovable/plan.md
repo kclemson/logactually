@@ -1,9 +1,8 @@
 
-
-## Admin Page Compact Layout
+## Adjust Grid Column Widths for Admin Stats
 
 ### Overview
-Make the admin stats section more compact by reducing padding and gaps to fit sub-stats on single lines without wrapping.
+Change the stats grid from equal-width columns (`grid-cols-3`) to auto-fitting columns where the Users column gets more space since it has longer text (percentages).
 
 ---
 
@@ -11,67 +10,35 @@ Make the admin stats section more compact by reducing padding and gaps to fit su
 
 **File: `src/pages/Admin.tsx`**
 
-#### Change 1: Reduce container padding (line 45)
+#### Change: Use custom grid template instead of `grid-cols-3`
 
-Current:
-```tsx
-<div className="p-4 space-y-3">
-```
-
-New:
-```tsx
-<div className="px-1 py-2 space-y-2">
-```
-
-This reduces:
-- Horizontal padding from 16px to 4px (combined with Layout's 12px = minimal edge margin)
-- Vertical padding from 16px to 8px
-- Vertical spacing between sections from 12px to 8px
-
-#### Change 2: Reduce grid gap (lines 47 and 54)
-
-Current:
-```tsx
-<div className="grid grid-cols-3 gap-2 text-muted-foreground text-xs">
-```
-
-New:
+Current (lines 47 and 54):
 ```tsx
 <div className="grid grid-cols-3 gap-1 text-muted-foreground text-xs">
 ```
 
-This reduces the gap between the 3 columns from 8px to 4px, giving more room for text.
-
-#### Change 3: Reduce vertical spacing in sub-stat columns (lines 56, 69, 75)
-
-Current:
-```tsx
-<div className="space-y-0.5">
-```
-
 New:
 ```tsx
-<div className="space-y-0">
+<div className="grid grid-cols-[auto_auto_auto] gap-1 text-muted-foreground text-xs">
 ```
 
-This removes the 2px vertical gap between sub-stat lines.
+Using `grid-cols-[auto_auto_auto]` makes each column shrink to fit its content rather than dividing space equally. This allows:
+- Users column to expand for the longer percentage text
+- Entries and Saved Meals columns to stay compact since they have shorter values
 
 ---
 
 ### Summary
 
-| Element | Before | After |
-|---------|--------|-------|
-| Container horizontal padding | `p-4` (16px) | `px-1` (4px) |
-| Container vertical padding | `p-4` (16px) | `py-2` (8px) |
-| Section spacing | `space-y-3` (12px) | `space-y-2` (8px) |
-| Grid column gap | `gap-2` (8px) | `gap-1` (4px) |
-| Sub-stat line spacing | `space-y-0.5` (2px) | `space-y-0` (0px) |
+| Aspect | Before | After |
+|--------|--------|-------|
+| Grid column sizing | `grid-cols-3` (equal 1/3 each) | `grid-cols-[auto_auto_auto]` (content-based) |
+| Users column | Constrained to 1/3 width | Expands to fit "Created RL7: 5 (100%)" |
+| Other columns | 1/3 each | Shrink to fit content |
 
 ---
 
 ### Result
-- More horizontal space for text, reducing line wrapping
-- Tighter overall layout for quick scanning
-- Minimal margins from viewport edge (Layout's 12px + Admin's 4px = 16px total)
-
+- Each column auto-sizes to its content
+- Users column gets more space naturally due to percentage text
+- No text wrapping on the sub-stats
