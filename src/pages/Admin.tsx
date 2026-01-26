@@ -53,7 +53,7 @@ export default function Admin() {
         {/* Row 2: Sub-stats */}
         <div className="space-y-0">
           <p>
-            W/entries: {stats?.users_with_entries ?? 0} ({pct(stats?.users_with_entries ?? 0)}%)
+            w/entries: {stats?.users_with_entries ?? 0} ({pct(stats?.users_with_entries ?? 0)}%)
           </p>
           <p>
             Active RL7: {stats?.active_last_7_days ?? 0} ({pct(stats?.active_last_7_days ?? 0)}%)
