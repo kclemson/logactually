@@ -68,6 +68,25 @@ const Trends = () => {
     }));
   }, [entries]);
 
+  // Calculate percentage data for 100% stacked chart
+  const percentageChartData = useMemo(() => {
+    return chartData.map((day) => {
+      const total = day.carbs + day.protein + day.fat;
+      if (total === 0) {
+        return { date: day.date, carbs: 0, protein: 0, fat: 0, carbsRaw: 0, proteinRaw: 0, fatRaw: 0 };
+      }
+      return {
+        date: day.date,
+        carbs: (day.carbs / total) * 100,
+        protein: (day.protein / total) * 100,
+        fat: (day.fat / total) * 100,
+        carbsRaw: day.carbs,
+        proteinRaw: day.protein,
+        fatRaw: day.fat,
+      };
+    });
+  }, [chartData]);
+
   // Calculate averages
   const averages = useMemo(() => {
     if (chartData.length === 0)
@@ -138,15 +157,15 @@ const Trends = () => {
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Stacked Macros Chart */}
+          {/* Stacked Macros Chart (100%) */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="font-semibold">Macros Breakdown (g)</CardTitle>
+              <CardTitle className="font-semibold">Macros Breakdown (%)</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-40">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData}>
+                  <BarChart data={percentageChartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis
                       dataKey="date"
@@ -157,6 +176,8 @@ const Trends = () => {
                       tick={{ fontSize: 10 }}
                       stroke="hsl(var(--muted-foreground))"
                       width={35}
+                      domain={[0, 100]}
+                      tickFormatter={(value) => `${value}%`}
                     />
                     <Tooltip
                       contentStyle={{
@@ -164,32 +185,19 @@ const Trends = () => {
                         border: '1px solid hsl(var(--border))',
                         borderRadius: '8px',
                       }}
+                      formatter={(value: number, name: string, props: any) => {
+                        const rawKey = `${name.toLowerCase()}Raw`;
+                        const rawValue = props.payload[rawKey];
+                        return [`${Math.round(value)}% (${Math.round(rawValue)}g)`, name];
+                      }}
                     />
                     <Legend 
                       wrapperStyle={{ fontSize: 12 }}
                       iconSize={10}
                     />
-                    <Bar
-                      dataKey="carbs"
-                      name="Carbs"
-                      stackId="macros"
-                      fill="hsl(38 92% 50%)"
-                      radius={[0, 0, 0, 0]}
-                    />
-                    <Bar
-                      dataKey="protein"
-                      name="Protein"
-                      stackId="macros"
-                      fill="hsl(142 76% 36%)"
-                      radius={[0, 0, 0, 0]}
-                    />
-                    <Bar
-                      dataKey="fat"
-                      name="Fat"
-                      stackId="macros"
-                      fill="hsl(346 77% 49%)"
-                      radius={[2, 2, 0, 0]}
-                    />
+                    <Bar dataKey="carbs" name="Carbs" stackId="macros" fill="hsl(38 92% 50%)" radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="protein" name="Protein" stackId="macros" fill="hsl(142 76% 36%)" radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="fat" name="Fat" stackId="macros" fill="hsl(346 77% 49%)" radius={[2, 2, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
