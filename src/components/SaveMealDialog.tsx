@@ -116,6 +116,7 @@ export function SaveMealDialog({
                 disabled={isSaving || isGenerating}
                 autoFocus={!isGenerating}
                 className={isGenerating ? "pl-10" : ""}
+                spellCheck={false}
               />
               {isGenerating && (
                 <div className="absolute left-10 top-0 bottom-0 flex items-center pointer-events-none text-muted-foreground italic">
