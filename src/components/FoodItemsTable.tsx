@@ -48,6 +48,7 @@ interface FoodItemsTableProps {
   entryRawInputs?: Map<string, string>;
   expandedEntryIds?: Set<string>;
   onToggleEntryExpand?: (entryId: string) => void;
+  onSaveAsMeal?: (entryId: string, rawInput: string | null, foodItems: FoodItem[]) => void;
 }
 
 export function FoodItemsTable({
@@ -67,6 +68,7 @@ export function FoodItemsTable({
   entryRawInputs,
   expandedEntryIds,
   onToggleEntryExpand,
+  onSaveAsMeal,
 }: FoodItemsTableProps) {
   // Local editing state - only saved on Enter
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
@@ -497,10 +499,28 @@ export function FoodItemsTable({
             </div>
             
             {/* Expanded raw input - shows after last item in entry */}
-            {showEntryDividers && isLastInEntry && isCurrentExpanded && currentRawInput && (
+            {showEntryDividers && isLastInEntry && isCurrentExpanded && (
               <div className={cn('grid gap-0.5', gridCols)}>
-                <div className="col-span-full pl-6 py-1 text-muted-foreground whitespace-pre-wrap italic">
-                  {currentRawInput}
+                <div className="col-span-full pl-6 py-1 space-y-2">
+                  {currentRawInput && (
+                    <p className="text-muted-foreground whitespace-pre-wrap italic">
+                      {currentRawInput}
+                    </p>
+                  )}
+                  {onSaveAsMeal && currentEntryId && (
+                    <button
+                      onClick={() => {
+                        const boundary = entryBoundaries?.find(b => b.entryId === currentEntryId);
+                        if (boundary) {
+                          const entryItems = items.slice(boundary.startIndex, boundary.endIndex + 1);
+                          onSaveAsMeal(currentEntryId, currentRawInput ?? null, entryItems);
+                        }
+                      }}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      Save as meal
+                    </button>
+                  )}
                 </div>
               </div>
             )}

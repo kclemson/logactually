@@ -5,10 +5,14 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FoodInput, FoodInputRef } from '@/components/FoodInput';
 import { FoodItemsTable } from '@/components/FoodItemsTable';
+import { SaveMealDialog } from '@/components/SaveMealDialog';
+import { SimilarMealPrompt } from '@/components/SimilarMealPrompt';
 import { Button } from '@/components/ui/button';
 import { useAnalyzeFood } from '@/hooks/useAnalyzeFood';
 import { useFoodEntries } from '@/hooks/useFoodEntries';
 import { useEditableFoodItems } from '@/hooks/useEditableFoodItems';
+import { useSavedMeals, useSaveMeal, useLogSavedMeal } from '@/hooks/useSavedMeals';
+import { findSimilarMeals, createItemsSignature, SimilarMealMatch } from '@/lib/text-similarity';
 import { FoodItem, calculateTotals } from '@/types/food';
 
 // Wrapper component: extracts date from URL, forces remount via key
@@ -30,6 +34,20 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   const [, setSearchParams] = useSearchParams();
   const [expandedEntryIds, setExpandedEntryIds] = useState<Set<string>>(new Set());
   
+  // State for save meal dialog
+  const [saveMealDialogData, setSaveMealDialogData] = useState<{
+    entryId: string;
+    rawInput: string | null;
+    foodItems: FoodItem[];
+  } | null>(null);
+
+  // State for similar meal prompt
+  const [similarMatch, setSimilarMatch] = useState<SimilarMealMatch | null>(null);
+  const [pendingAiResult, setPendingAiResult] = useState<{
+    text: string;
+    items: FoodItem[];
+  } | null>(null);
+  
   // Date is stable for this component instance - derived from props, no state needed
   const dateStr = initialDate;
   const selectedDate = parseISO(initialDate);
@@ -37,6 +55,9 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   
   const { entries, createEntry, updateEntry, deleteEntry, deleteAllByDate } = useFoodEntries(dateStr);
   const { analyzeFood, isAnalyzing, error: analyzeError } = useAnalyzeFood();
+  const { data: savedMeals } = useSavedMeals();
+  const saveMeal = useSaveMeal();
+  const logSavedMeal = useLogSavedMeal();
   
   const foodInputRef = useRef<FoodInputRef>(null);
 
@@ -123,33 +144,89 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     });
   };
 
+  // Helper to create and save entry from food items
+  const createEntryFromItems = useCallback((items: FoodItem[], rawInput: string | null) => {
+    const totals = calculateTotals(items);
+    createEntry.mutate(
+      {
+        eaten_date: dateStr,
+        raw_input: rawInput,
+        food_items: items.map(item => ({ ...item, uid: crypto.randomUUID() })),
+        total_calories: Math.round(totals.calories),
+        total_protein: Math.round(totals.protein * 10) / 10,
+        total_carbs: Math.round(totals.carbs * 10) / 10,
+        total_fat: Math.round(totals.fat * 10) / 10,
+      },
+      {
+        onSuccess: (createdEntry) => {
+          const itemsWithEntryId = items.map(item => ({
+            ...item,
+            uid: crypto.randomUUID(),
+            entryId: createdEntry.id,
+          }));
+          addNewItems(itemsWithEntryId);
+          foodInputRef.current?.clear();
+        },
+      }
+    );
+  }, [createEntry, dateStr, addNewItems]);
+
   const handleSubmit = async (text: string) => {
     const result = await analyzeFood(text);
     if (result) {
-      const totals = calculateTotals(result.food_items);
-      createEntry.mutate(
-        {
-          eaten_date: dateStr,
-          raw_input: text,
-          food_items: result.food_items,
-          total_calories: Math.round(totals.calories),
-          total_protein: Math.round(totals.protein * 10) / 10,
-          total_carbs: Math.round(totals.carbs * 10) / 10,
-          total_fat: Math.round(totals.fat * 10) / 10,
-        },
-        {
-          onSuccess: (createdEntry) => {
-            // Attach the new entry's ID to each item for raw inputs tracking
-            const itemsWithEntryId = result.food_items.map(item => ({
-              ...item,
-              entryId: createdEntry.id,
-            }));
-            addNewItems(itemsWithEntryId);
-            foodInputRef.current?.clear();
-          },
+      // Check for similar saved meals
+      if (savedMeals && savedMeals.length > 0) {
+        const itemsSignature = createItemsSignature(result.food_items);
+        const match = findSimilarMeals(text, itemsSignature, savedMeals, 0.6);
+        
+        if (match) {
+          // Show similar meal prompt
+          setPendingAiResult({ text, items: result.food_items });
+          setSimilarMatch(match);
+          return;
         }
-      );
+      }
+
+      // No similar meal found - proceed normally
+      createEntryFromItems(result.food_items, text);
     }
+  };
+
+  // Similar meal prompt handlers
+  const handleUseSaved = async () => {
+    if (!similarMatch) return;
+    
+    const foodItems = await logSavedMeal.mutateAsync(similarMatch.meal.id);
+    createEntryFromItems(foodItems, similarMatch.meal.original_input);
+    
+    setSimilarMatch(null);
+    setPendingAiResult(null);
+  };
+
+  const handleKeepThis = () => {
+    if (!pendingAiResult) return;
+    
+    createEntryFromItems(pendingAiResult.items, pendingAiResult.text);
+    
+    setSimilarMatch(null);
+    setPendingAiResult(null);
+  };
+
+  const handleSaveAsNew = () => {
+    if (!pendingAiResult) return;
+    
+    // First save the entry
+    createEntryFromItems(pendingAiResult.items, pendingAiResult.text);
+    
+    // Then open save meal dialog
+    setSaveMealDialogData({
+      entryId: '', // Not from an existing entry
+      rawInput: pendingAiResult.text,
+      foodItems: pendingAiResult.items,
+    });
+    
+    setSimilarMatch(null);
+    setPendingAiResult(null);
   };
 
   // Handle direct scan results (when barcode lookup succeeds)
@@ -173,6 +250,34 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
         onSuccess: (createdEntry) => {
           const itemWithEntryId = { ...itemWithUid, entryId: createdEntry.id };
           addNewItems([itemWithEntryId]);
+        },
+      }
+    );
+  };
+
+  // Handle logging a saved meal from popover
+  const handleLogSavedMeal = async (foodItems: FoodItem[]) => {
+    createEntryFromItems(foodItems, null);
+  };
+
+  // Handle save as meal from FoodItemsTable expando
+  const handleSaveAsMeal = (entryId: string, rawInput: string | null, foodItems: FoodItem[]) => {
+    setSaveMealDialogData({ entryId, rawInput, foodItems });
+  };
+
+  // Handle saving the meal
+  const handleSaveMealConfirm = (name: string) => {
+    if (!saveMealDialogData) return;
+    
+    saveMeal.mutate(
+      {
+        name,
+        originalInput: saveMealDialogData.rawInput,
+        foodItems: saveMealDialogData.foodItems,
+      },
+      {
+        onSuccess: () => {
+          setSaveMealDialogData(null);
         },
       }
     );
@@ -283,11 +388,25 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
           ref={foodInputRef}
           onSubmit={handleSubmit}
           onScanResult={handleScanResult}
+          onLogSavedMeal={handleLogSavedMeal}
           isLoading={isAnalyzing || createEntry.isPending}
         />
         {analyzeError && (
-          <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+          <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive mt-3">
             Analysis failed: {analyzeError}
+          </div>
+        )}
+        
+        {/* Similar Meal Prompt */}
+        {similarMatch && (
+          <div className="mt-3">
+            <SimilarMealPrompt
+              match={similarMatch}
+              onUseSaved={handleUseSaved}
+              onKeepThis={handleKeepThis}
+              onSaveAsNew={handleSaveAsNew}
+              isLoading={logSavedMeal.isPending || createEntry.isPending}
+            />
           </div>
         )}
       </section>
@@ -333,6 +452,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
             entryRawInputs={entryRawInputs}
             expandedEntryIds={expandedEntryIds}
             onToggleEntryExpand={handleToggleEntryExpand}
+            onSaveAsMeal={handleSaveAsMeal}
           />
         ) : (
           <p className="text-muted-foreground">
@@ -340,6 +460,18 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
           </p>
         )}
       </section>
+
+      {/* Save Meal Dialog */}
+      {saveMealDialogData && (
+        <SaveMealDialog
+          open={!!saveMealDialogData}
+          onOpenChange={(open) => !open && setSaveMealDialogData(null)}
+          rawInput={saveMealDialogData.rawInput}
+          foodItems={saveMealDialogData.foodItems}
+          onSave={handleSaveMealConfirm}
+          isSaving={saveMeal.isPending}
+        />
+      )}
     </div>
   );
 };
