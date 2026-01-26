@@ -64,7 +64,7 @@ serve(async (req) => {
       );
     }
 
-    const systemPrompt = `The user is saving a meal to their food log for quick recall later. Given these food items, suggest a short name (2-5 words) they would naturally use to find this meal again. Respond with just the name, nothing else.`;
+    const systemPrompt = `The user is saving a meal to their food log for quick recall later. Suggest a name they would naturally use to find this meal again. Respond with just the name.`;
 
     const userPrompt = `Food items:\n${limitedDescriptions.join("\n")}`;
 

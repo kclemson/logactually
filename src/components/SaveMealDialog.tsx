@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
+
 import { Loader2 } from 'lucide-react';
 import { FoodItem } from '@/types/food';
 import { useSuggestMealName } from '@/hooks/useSuggestMealName';
@@ -101,7 +101,7 @@ export function SaveMealDialog({
     }
   };
 
-  const showSkeleton = isSuggesting && !userHasTyped && !name;
+  const isGenerating = isSuggesting && !userHasTyped;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -115,19 +115,20 @@ export function SaveMealDialog({
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="meal-name">Meal name</Label>
-            {showSkeleton ? (
-              <Skeleton className="h-10 w-full" />
-            ) : (
+            <div className="relative">
               <Input
                 id="meal-name"
                 value={name}
                 onChange={handleNameChange}
                 onKeyDown={handleKeyDown}
-                placeholder="e.g., Morning Coffee"
-                disabled={isSaving}
-                autoFocus
+                placeholder={isGenerating ? "Generating suggested name..." : "e.g., Morning Coffee"}
+                disabled={isSaving || isGenerating}
+                autoFocus={!isGenerating}
               />
-            )}
+              {isGenerating && (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+              )}
+            </div>
           </div>
           <div className="text-sm text-muted-foreground">
             <p className="font-medium mb-1">Items ({foodItems.length}):</p>
@@ -145,7 +146,7 @@ export function SaveMealDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={!name.trim() || isSaving || showSkeleton}>
+          <Button onClick={handleSave} disabled={!name.trim() || isSaving || isGenerating}>
             {isSaving ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-1" />
