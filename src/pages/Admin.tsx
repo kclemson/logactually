@@ -52,9 +52,15 @@ export default function Admin() {
 
         {/* Row 2: Sub-stats */}
         <div className="space-y-0">
-          <p>W/entries: {stats?.users_with_entries ?? 0} ({pct(stats?.users_with_entries ?? 0)}%)</p>
-          <p>Active RL7: {stats?.active_last_7_days ?? 0} ({pct(stats?.active_last_7_days ?? 0)}%)</p>
-          <p>Created RL7: {stats?.users_created_last_7_days ?? 0} ({pct(stats?.users_created_last_7_days ?? 0)}%)</p>
+          <p>
+            W/entries: {stats?.users_with_entries ?? 0} ({pct(stats?.users_with_entries ?? 0)}%)
+          </p>
+          <p>
+            Active RL7: {stats?.active_last_7_days ?? 0} ({pct(stats?.active_last_7_days ?? 0)}%)
+          </p>
+          <p>
+            Created RL7: {stats?.users_created_last_7_days ?? 0} ({pct(stats?.users_created_last_7_days ?? 0)}%)
+          </p>
         </div>
         <div className="space-y-0">
           <p>Avg/user: {avgEntriesPerUser}</p>
@@ -62,7 +68,7 @@ export default function Admin() {
         </div>
         <div className="space-y-0">
           <p>Users w/SM: {stats?.users_with_saved_meals ?? 0}</p>
-          <p>Avg/user: {stats?.avg_saved_meals_per_user ?? 0}</p>
+          <p>Avg SM/user: {stats?.avg_saved_meals_per_user ?? 0}</p>
           <p>Used RL7: {stats?.saved_meals_used_last_7_days ?? 0}</p>
         </div>
       </div>
@@ -99,7 +105,7 @@ export default function Admin() {
               <th className="text-left py-0.5 pr-2 font-medium text-muted-foreground">Date</th>
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Entries</th>
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Users</th>
-              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">With Entries</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Users w/Entries</th>
               <th className="text-center py-0.5 font-medium text-muted-foreground">New Users</th>
             </tr>
           </thead>
