@@ -120,7 +120,7 @@ export default function Settings() {
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-64 p-4" side="left" align="center">
+                    <PopoverContent className="w-64 p-4" side="top" align="end">
                       <div className="space-y-3">
                         <div className="space-y-1">
                           <p className="font-medium text-sm">Delete saved meal?</p>

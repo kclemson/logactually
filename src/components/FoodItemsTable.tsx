@@ -256,7 +256,7 @@ export function FoodItemsTable({
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent>
+            <AlertDialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-lg">
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete all entries?</AlertDialogTitle>
                 <AlertDialogDescription>
@@ -486,7 +486,7 @@ export function FoodItemsTable({
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </AlertDialogTrigger>
-                  <AlertDialogContent>
+                  <AlertDialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-lg">
                     <AlertDialogHeader>
                       <AlertDialogTitle>Delete this entry?</AlertDialogTitle>
                       <AlertDialogDescription>
