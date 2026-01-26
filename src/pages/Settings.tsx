@@ -1,5 +1,5 @@
 import { useTheme } from 'next-themes';
-import { Moon, Sun, Monitor, Trash2, Star, SunMoon } from 'lucide-react';
+import { Moon, Sun, Monitor, Trash2, Star, SunMoon, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { useUserSettings } from '@/hooks/useUserSettings';
@@ -10,6 +10,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
+import { useExportData } from '@/hooks/useExportData';
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
@@ -18,6 +19,9 @@ export default function Settings() {
   
   // Saved meals
   const { data: savedMeals, isLoading: mealsLoading } = useSavedMeals();
+  
+  // Export data
+  const { isExporting, exportDailyTotals, exportFoodLog } = useExportData();
   const updateMeal = useUpdateSavedMeal();
   const deleteMeal = useDeleteSavedMeal();
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
@@ -177,6 +181,41 @@ export default function Settings() {
               </button>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Export Data */}
+      <section className="space-y-3">
+        <h3 className="text-heading text-muted-foreground flex items-center gap-2">
+          <Download className="h-4 w-4" />
+          Export Data
+        </h3>
+        <div className="pl-4 space-y-2">
+          <div className="flex flex-col gap-2 max-w-xs">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportDailyTotals}
+              disabled={isExporting}
+              className="justify-start"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Daily Totals (CSV)
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportFoodLog}
+              disabled={isExporting}
+              className="justify-start"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Full Food Log (CSV)
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Export your data for use in spreadsheet apps
+          </p>
         </div>
       </section>
 

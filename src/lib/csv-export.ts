@@ -1,0 +1,107 @@
+import { FoodEntry } from '@/types/food';
+import { format } from 'date-fns';
+
+/**
+ * Escape a value for CSV (handle commas, quotes, newlines)
+ */
+function escapeCSV(value: string | number | null): string {
+  if (value === null || value === undefined) return '';
+  const str = String(value);
+  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+}
+
+/**
+ * Trigger a CSV file download in the browser
+ */
+function downloadCSV(content: string, filename: string) {
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Export daily totals - one row per date with aggregated macros
+ */
+export function exportDailyTotals(entries: FoodEntry[]) {
+  const byDate: Record<string, { calories: number; protein: number; carbs: number; fat: number }> = {};
+
+  entries.forEach((entry) => {
+    const date = entry.eaten_date;
+    if (!byDate[date]) {
+      byDate[date] = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+    }
+    byDate[date].calories += entry.total_calories;
+    byDate[date].protein += entry.total_protein;
+    byDate[date].carbs += entry.total_carbs;
+    byDate[date].fat += entry.total_fat;
+  });
+
+  const headers = ['Date', 'Calories', 'Protein (g)', 'Carbs (g)', 'Fat (g)'];
+  const rows = Object.entries(byDate)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, totals]) => [
+      date,
+      totals.calories,
+      totals.protein,
+      totals.carbs,
+      totals.fat,
+    ]);
+
+  const csv = [
+    headers.join(','),
+    ...rows.map((row) => row.map(escapeCSV).join(',')),
+  ].join('\n');
+
+  const timestamp = format(new Date(), 'yyyy-MM-dd');
+  downloadCSV(csv, `daily-totals-${timestamp}.csv`);
+}
+
+/**
+ * Export detailed food log - one row per food item
+ */
+export function exportFoodLog(entries: FoodEntry[]) {
+  const headers = ['Date', 'Time', 'Food Item', 'Calories', 'Protein (g)', 'Carbs (g)', 'Fat (g)', 'Raw Input'];
+
+  const rows: (string | number)[][] = [];
+
+  const sorted = [...entries].sort((a, b) => {
+    if (a.eaten_date !== b.eaten_date) {
+      return a.eaten_date.localeCompare(b.eaten_date);
+    }
+    return a.created_at.localeCompare(b.created_at);
+  });
+
+  sorted.forEach((entry) => {
+    const time = format(new Date(entry.created_at), 'HH:mm');
+
+    entry.food_items.forEach((item) => {
+      rows.push([
+        entry.eaten_date,
+        time,
+        item.description,
+        item.calories,
+        item.protein,
+        item.carbs,
+        item.fat,
+        entry.raw_input || '',
+      ]);
+    });
+  });
+
+  const csv = [
+    headers.join(','),
+    ...rows.map((row) => row.map(escapeCSV).join(',')),
+  ].join('\n');
+
+  const timestamp = format(new Date(), 'yyyy-MM-dd');
+  downloadCSV(csv, `food-log-${timestamp}.csv`);
+}
