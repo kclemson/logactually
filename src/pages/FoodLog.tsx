@@ -381,16 +381,32 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   const handleItemRemove = useCallback((index: number) => {
     const entryInfo = findEntryForIndex(index);
     
-    // Update local state first
-    removeItem(index);
-    
     if (entryInfo) {
+      // Find the boundary for this entry
+      const boundary = entryBoundaries.find(b => b.entryId === entryInfo.entryId);
+      
+      // If deleting the last item in an entry (the one with the chevron),
+      // collapse the entry to prevent auto-expansion of next item
+      if (boundary && index === boundary.endIndex && expandedEntryIds.has(entryInfo.entryId)) {
+        setExpandedEntryIds(prev => {
+          const next = new Set(prev);
+          next.delete(entryInfo.entryId);
+          return next;
+        });
+      }
+      
+      // Update local state
+      removeItem(index);
+      
       // Get items AFTER removal
       const currentItems = getItemsForEntry(entryInfo.entryId);
       const updatedItems = currentItems.filter((_, i) => i !== entryInfo.localIndex);
       saveEntry(entryInfo.entryId, updatedItems);
+    } else {
+      // Just remove locally if no entry found
+      removeItem(index);
     }
-  }, [removeItem, findEntryForIndex, getItemsForEntry, saveEntry]);
+  }, [removeItem, findEntryForIndex, getItemsForEntry, saveEntry, entryBoundaries, expandedEntryIds]);
 
   const handleDeleteAll = () => {
     deleteAllByDate.mutate(dateStr);
