@@ -1,69 +1,83 @@
 
 
-## Update Export Section Styling
+## Rebrand Sign-In Page
 
 ### Overview
-Improve the Export Data section UI to match the Appearance section's button layout and simplify the title.
+Make the sign-in page more engaging and on-brand by updating the visual hierarchy and using the OpenGraph tagline.
 
 ---
 
-### Changes to `src/pages/Settings.tsx`
+### Changes to `src/pages/Auth.tsx`
 
-**1. Update section title**
-- Before: `Export Data`
-- After: `Export as CSV`
+#### 1. Make icon significantly larger
+- Before: `w-16 h-16` (64px)
+- After: `w-24 h-24` (96px) with more bottom margin
 
-**2. Remove helper text**
-- Delete: `Export your data for use in spreadsheet apps`
+#### 2. Remove "Welcome Back" title
+- Delete the conditional `CardTitle` that shows "Welcome Back" / "Create Account" / "You're Invited!"
 
-**3. Change button layout to match Appearance section**
+#### 3. Add app name prominently below icon
+- Display "Log Actually" using `APP_NAME` constant
+- Style with `text-2xl font-bold`
 
-| Before | After |
-|--------|-------|
-| Stacked full-width buttons (`flex-col`) | Side-by-side compact buttons (`flex gap-2`) |
+#### 4. Use exact OpenGraph tagline
+- **"Braindump what you ate, and AI handles the nutrition math"**
+- Use `APP_DESCRIPTION` constant for consistency
+
+---
+
+### Updated Visual Structure
+
+```text
+Before:                              After:
++----------------------+             +----------------------+
+|     [icon 64px]      |             |     [icon 96px]      |
+|    Welcome Back      |             |     Log Actually     |
+| Sign in to continue  |             | Braindump what you   |
+|  tracking your...    |             | ate, and AI handles  |
++----------------------+             | the nutrition math   |
+                                     +----------------------+
+```
 
 ---
 
 ### Code Changes
 
 ```tsx
-{/* Export as CSV */}
-<section className="space-y-3">
-  <h3 className="text-heading text-muted-foreground flex items-center gap-2">
-    <Download className="h-4 w-4" />
-    Export as CSV
-  </h3>
-  <div className="pl-4">
-    <div className="flex gap-2 max-w-xs">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={exportDailyTotals}
-        disabled={isExporting}
-      >
-        Daily Totals
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={exportFoodLog}
-        disabled={isExporting}
-      >
-        Food Log
-      </Button>
-    </div>
-  </div>
-</section>
+import { APP_NAME, APP_DESCRIPTION } from '@/lib/constants';
+
+<CardHeader className="text-center">
+  <img 
+    src="/favicon.png" 
+    alt={APP_NAME} 
+    className="w-24 h-24 mx-auto mb-4"
+  />
+  <CardTitle className="text-2xl font-bold">
+    {APP_NAME}
+  </CardTitle>
+  <CardDescription>
+    {APP_DESCRIPTION}
+  </CardDescription>
+</CardHeader>
 ```
 
 ---
 
-### Visual Result
+### All Auth Views
 
-```text
-Export as CSV
-  [Daily Totals] [Food Log]
-```
+| View | Title | Description |
+|------|-------|-------------|
+| **Sign In** | Log Actually | Braindump what you ate, and AI handles the nutrition math |
+| **Sign Up** | Log Actually | Braindump what you ate, and AI handles the nutrition math |
+| **Sign Up (invited)** | Log Actually | Braindump what you ate, and AI handles the nutrition math |
+| **Password Reset** | Log Actually | Enter your email to receive a reset link |
+| **Set New Password** | Log Actually | Enter your new password below |
 
-Buttons will be compact and side-by-side, matching the Appearance section's `[Light] [Dark] [System]` layout.
+---
+
+### Files Changed
+
+| File | Action |
+|------|--------|
+| `src/pages/Auth.tsx` | Update icon size, remove old title, add APP_NAME/APP_DESCRIPTION |
 
