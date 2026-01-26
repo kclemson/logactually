@@ -1,15 +1,20 @@
 
 
-## Fix Tooltip Issues on Trends Charts
+## Improve Chart Tooltip Positioning and Size
 
-### Problem Analysis
-The recent tooltip changes are causing three issues:
-1. **Blank squares below charts** - `wrapperStyle={{ visibility: 'visible' }}` forces the tooltip to always render even when not hovering
-2. **Macros tooltip z-order/background issues** - Fixed positioning conflicts with the chart's layering
-3. **Persistent date labels** - The tooltip doesn't clean up properly due to forced visibility
+### Overview
+Two improvements to the chart tooltips:
+1. Position tooltip so it doesn't cover the chart bars being hovered
+2. Reduce font size for a more compact, less intrusive appearance
 
-### Solution
-Revert the problematic tooltip props and use Recharts' default tooltip behavior. The default tooltip follows the cursor naturally and only appears on hover - this is more reliable than trying to force a fixed position below the chart.
+---
+
+### Solution Approach
+
+Use Recharts' built-in `offset` prop combined with a shared custom tooltip component. This is the standard, non-fragile approach:
+
+- **`offset` prop**: Increases the distance between the cursor and tooltip (default is 5px, we'll use ~20px)
+- **Custom tooltip component**: Gives us full control over font size and styling in one reusable place
 
 ---
 
@@ -17,65 +22,87 @@ Revert the problematic tooltip props and use Recharts' default tooltip behavior.
 
 **File: `src/pages/Trends.tsx`**
 
-#### Remove the problematic props from all Tooltip components
+#### 1. Create a compact custom tooltip component (add near top of file, after imports)
 
-| Location | Lines | Action |
-|----------|-------|--------|
-| Calories chart | 178-186 | Remove `position` and `wrapperStyle` props |
-| Macros (%) chart | 210-223 | Remove `position` and `wrapperStyle` props |
-| Row 2 charts (Protein/Carbs/Fat) | 252-260 | Remove `position` and `wrapperStyle` props |
+```tsx
+const CompactTooltip = ({ active, payload, label, formatter }: any) => {
+  if (!active || !payload?.length) return null;
+  
+  return (
+    <div className="rounded-md border border-border bg-card px-2 py-1 shadow-sm">
+      <p className="text-[10px] font-medium text-foreground mb-0.5">{label}</p>
+      {payload.map((entry: any, index: number) => {
+        const displayValue = formatter 
+          ? formatter(entry.value, entry.name, entry, index, entry.payload)
+          : `${entry.name}: ${Math.round(entry.value)}`;
+        return (
+          <p 
+            key={entry.dataKey || index} 
+            className="text-[10px]"
+            style={{ color: entry.color }}
+          >
+            {Array.isArray(displayValue) ? displayValue[0] : displayValue}
+          </p>
+        );
+      })}
+    </div>
+  );
+};
+```
 
-#### Updated Tooltip for Calories (example):
+#### 2. Update all Tooltip components to use the custom component with offset
+
+**Calories chart (lines 178-184):**
 ```tsx
 <Tooltip
-  contentStyle={{
-    backgroundColor: 'hsl(var(--card))',
-    border: '1px solid hsl(var(--border))',
-    borderRadius: '8px',
-  }}
+  content={<CompactTooltip />}
+  offset={20}
+  cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
 />
 ```
 
-#### Updated Tooltip for Macros (%):
+**Macros (%) chart (lines 208-219):**
 ```tsx
 <Tooltip
-  contentStyle={{
-    backgroundColor: 'hsl(var(--card))',
-    border: '1px solid hsl(var(--border))',
-    borderRadius: '8px',
-  }}
-  formatter={(value: number, name: string, props: any) => {
-    const rawKey = `${name.toLowerCase()}Raw`;
-    const rawValue = props.payload[rawKey];
-    return [`${Math.round(value)}% (${Math.round(rawValue)}g)`, name];
-  }}
+  content={
+    <CompactTooltip
+      formatter={(value: number, name: string, props: any) => {
+        const rawKey = `${name.toLowerCase()}Raw`;
+        const rawValue = props.payload[rawKey];
+        return [`${Math.round(value)}% (${Math.round(rawValue)}g)`];
+      }}
+    />
+  }
+  offset={20}
+  cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
 />
 ```
 
-#### Updated Tooltip for Row 2 charts:
+**Row 2 charts (lines 248-254):**
 ```tsx
 <Tooltip
-  contentStyle={{
-    backgroundColor: 'hsl(var(--card))',
-    border: '1px solid hsl(var(--border))',
-    borderRadius: '8px',
-  }}
+  content={<CompactTooltip />}
+  offset={20}
+  cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
 />
 ```
 
 ---
 
-### Technical Notes
-- Recharts' default tooltip behavior is to follow the cursor and only appear on hover
-- The forced `visibility: 'visible'` was creating persistent empty tooltip wrappers
-- The fixed `y: 100` position was causing overlap and z-index conflicts
-- By removing these overrides, the tooltip will naturally appear near the hovered bar and disappear when not hovering
+### Technical Details
+
+| Setting | Purpose |
+|---------|---------|
+| `offset={20}` | Pushes tooltip 20px away from cursor, reducing overlap with bars |
+| `cursor={{ fill: 'hsl(var(--muted)/0.3)' }}` | Subtle highlight on hovered bar, helps user see which bar is active |
+| `text-[10px]` | Compact font size (reduced from default ~14-16px) |
+| Tailwind classes | Uses existing design tokens (border, card, foreground) for consistency |
 
 ---
 
 ### Result
-- No more blank squares below charts
-- Tooltips appear cleanly on hover near the cursor
-- Tooltips properly disappear when not hovering
-- Macros (%) tooltip renders with correct background and z-order
+- Tooltip appears offset from cursor, not covering the hovered bar
+- Font size reduced significantly for less visual intrusion
+- Single reusable component for consistency across all charts
+- Uses standard Recharts props - no fragile workarounds
 
