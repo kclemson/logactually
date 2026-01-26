@@ -1,12 +1,9 @@
 
 
-## Admin Page Density Improvements
+## Admin Page Compact Layout
 
 ### Overview
-Make the Admin page more compact by:
-1. Reducing table padding/spacing
-2. Reducing font sizes across the page
-3. Removing the "Admin Stats" heading
+Make the admin stats section more compact by reducing padding and gaps to fit sub-stats on single lines without wrapping.
 
 ---
 
@@ -14,121 +11,67 @@ Make the Admin page more compact by:
 
 **File: `src/pages/Admin.tsx`**
 
-#### Change 1: Remove "Admin Stats" heading (line 55)
+#### Change 1: Reduce container padding (line 45)
 
-Delete the entire line:
+Current:
 ```tsx
-<h1 className="font-semibold text-heading">Admin Stats</h1>
+<div className="p-4 space-y-3">
 ```
 
-#### Change 2: Reduce font sizes by one stop
+New:
+```tsx
+<div className="px-1 py-2 space-y-2">
+```
 
-| Element | Current | New |
-|---------|---------|-----|
-| Stats row 1 (headers) | Default (14px/16px) | `text-xs` (12px) |
-| Stats row 2 (sub-stats) | `text-sm` | `text-xs` (12px) |
-| Daily stats table | Default | `text-xs` on table |
-| User stats table | Default | `text-xs` on table |
+This reduces:
+- Horizontal padding from 16px to 4px (combined with Layout's 12px = minimal edge margin)
+- Vertical padding from 16px to 8px
+- Vertical spacing between sections from 12px to 8px
 
-#### Change 3: Reduce table padding
+#### Change 2: Reduce grid gap (lines 47 and 54)
 
-Current table cells use `py-1 pr-4`. Change to:
-- `py-0.5 pr-2` for tighter vertical and horizontal spacing
+Current:
+```tsx
+<div className="grid grid-cols-3 gap-2 text-muted-foreground text-xs">
+```
+
+New:
+```tsx
+<div className="grid grid-cols-3 gap-1 text-muted-foreground text-xs">
+```
+
+This reduces the gap between the 3 columns from 8px to 4px, giving more room for text.
+
+#### Change 3: Reduce vertical spacing in sub-stat columns (lines 56, 69, 75)
+
+Current:
+```tsx
+<div className="space-y-0.5">
+```
+
+New:
+```tsx
+<div className="space-y-0">
+```
+
+This removes the 2px vertical gap between sub-stat lines.
 
 ---
 
-### Updated Code Structure
+### Summary
 
-**Lines 53-55 (container start):**
-```tsx
-return (
-  <div className="p-4 space-y-3">
-    {/* "Admin Stats" heading removed */}
-```
-
-**Lines 57-62 (stats row 1):**
-```tsx
-<div className="grid grid-cols-3 gap-2 text-muted-foreground text-xs">
-  <p className="font-medium">Users: {stats?.total_users ?? 0}</p>
-  <p className="font-medium">Entries: {stats?.total_entries ?? 0}</p>
-  <p className="font-medium">Saved Meals: {stats?.total_saved_meals ?? 0}</p>
-</div>
-```
-
-**Lines 64-85 (stats row 2):**
-```tsx
-<div className="grid grid-cols-3 gap-2 text-muted-foreground text-xs">
-  {/* ... same content, just smaller text */}
-</div>
-```
-
-**Lines 87-109 (daily stats table):**
-```tsx
-<table className="w-auto mt-3 text-xs">
-  <thead>
-    <tr className="border-b">
-      <th className="text-left py-0.5 pr-2 font-medium text-muted-foreground">Date</th>
-      <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Entries</th>
-      <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Users</th>
-      <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">With Entries</th>
-      <th className="text-center py-0.5 font-medium text-muted-foreground">New Users</th>
-    </tr>
-  </thead>
-  <tbody>
-    {stats.daily_stats.slice(0, 3).map((row) => (
-      <tr key={row.stat_date} className="border-b border-border/50">
-        <td className="py-0.5 pr-2">{format(parseISO(row.stat_date), 'MMM-dd')}</td>
-        <td className="text-center py-0.5 pr-2">{row.entry_count}</td>
-        <td className="text-center py-0.5 pr-2">{row.total_users}</td>
-        <td className="text-center py-0.5 pr-2">{row.users_with_entries}</td>
-        <td className="text-center py-0.5">{row.users_created}</td>
-      </tr>
-    ))}
-  </tbody>
-</table>
-```
-
-**Lines 114-132 (user stats table):**
-```tsx
-<table className="w-auto mt-4 text-xs">
-  <thead>
-    <tr className="border-b">
-      <th className="text-left py-0.5 pr-2 font-medium text-muted-foreground">User</th>
-      <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Total Entries</th>
-      <th className="text-center py-0.5 font-medium text-muted-foreground">Today</th>
-    </tr>
-  </thead>
-  <tbody>
-    {userStats.map((user, index) => (
-      <tr key={user.user_id} className="border-b border-border/50">
-        <td className="py-0.5 pr-2">User {index + 1}</td>
-        <td className="text-center py-0.5 pr-2">{user.total_entries}</td>
-        <td className="text-center py-0.5">{user.entries_today}</td>
-      </tr>
-    ))}
-  </tbody>
-</table>
-```
-
----
-
-### Summary of Changes
-
-| Aspect | Before | After |
-|--------|--------|-------|
-| "Admin Stats" heading | Present | Removed |
-| Stats grid font | Default / `text-sm` | `text-xs` |
-| Stats grid gap | `gap-4` | `gap-2` |
-| Table font | Default | `text-xs` |
-| Table cell padding | `py-1 pr-4` | `py-0.5 pr-2` |
-| Table margins | `mt-4` / `mt-6` | `mt-3` / `mt-4` |
-| Container spacing | `space-y-4` | `space-y-3` |
+| Element | Before | After |
+|---------|--------|-------|
+| Container horizontal padding | `p-4` (16px) | `px-1` (4px) |
+| Container vertical padding | `p-4` (16px) | `py-2` (8px) |
+| Section spacing | `space-y-3` (12px) | `space-y-2` (8px) |
+| Grid column gap | `gap-2` (8px) | `gap-1` (4px) |
+| Sub-stat line spacing | `space-y-0.5` (2px) | `space-y-0` (0px) |
 
 ---
 
 ### Result
-- More compact, data-dense admin view
-- Smaller text throughout (12px instead of 14px)
-- Tighter table cells for better scannability
-- No unnecessary heading taking up vertical space
+- More horizontal space for text, reducing line wrapping
+- Tighter overall layout for quick scanning
+- Minimal margins from viewport edge (Layout's 12px + Admin's 4px = 16px total)
 
