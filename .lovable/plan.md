@@ -1,102 +1,146 @@
 
-## Fix HMR Auth State Race Condition
+
+## Handle "Save as meal" Link for Already-Saved Meals
 
 ### The Problem
-During development (HMR), the auth state can become inconsistent:
+When a user logs a saved meal (via the Saved Meals popover), expanding that entry still shows the "Save as meal" link. This is confusing since the meal is already saved.
 
-1. User logs a saved meal
-2. HMR triggers a component remount of `AuthProvider`
-3. `onAuthStateChange` fires `INITIAL_SESSION` with `session = null` AFTER valid `SIGNED_IN` events
-4. The current code ignores this null session (doesn't set loading=false), but the user/session React state may already be null from the remount
-5. `ProtectedRoute` sees `loading=false` + `user=null` and redirects to `/auth`
+### Solution Options Considered
 
-The issue is that when the `AuthProvider` remounts during HMR:
-- `useState(cachedUser)` initializes from the cached value
-- But multiple auth events fire in rapid succession
-- The `INITIAL_SESSION false` event arrives last and the code doesn't reinforce the cached state
+| Approach | Pros | Cons |
+|----------|------|------|
+| **A: Add `source_meal_id` to `food_entries`** | Full tracking, can show meal name, link to settings | Requires database migration, more complex |
+| **B: Hide expando for saved-meal entries** | Simple, no DB change needed | Loses ability to review raw input (which is null anyway for saved meals) |
+| **C: Match items_signature against saved meals** | No DB change, can detect similarity | Expensive to compute on every render, may have false positives |
 
-### Solution
-Add explicit handling for `INITIAL_SESSION` events with null session to reinforce the cached user/session if available. This ensures that even if auth events arrive out of order during HMR, the cached state takes precedence.
+**Recommended: Option A** - Add a `source_meal_id` column to track when an entry came from a saved meal. This enables showing "Saved meal: [name]" with a link to view saved meals.
 
 ### Implementation
 
-**File: `src/hooks/useAuth.tsx`**
+#### 1. Database Migration
+Add an optional `source_meal_id` column to `food_entries`:
 
-Update the `onAuthStateChange` handler (around lines 55-81) to explicitly handle `INITIAL_SESSION` with null session:
-
-```tsx
-// Current code (lines 76-81):
-// KEY FIX: If session is null but event isn't SIGNED_OUT,
-// DON'T set loading = false here. Let getSession() handle it.
-// This prevents the race condition where early null events
-// cause a redirect before the real session is loaded.
-
-// Updated code:
-else if (event === 'INITIAL_SESSION' && !session) {
-  // INITIAL_SESSION with null session during HMR - use cached state
-  if (cachedUser && cachedSession) {
-    setUser(cachedUser);
-    setSession(cachedSession);
-    initialCheckComplete = true;
-    setLoading(false);
-  }
-  // If no cache, let getSession() handle it (don't set loading=false)
-}
-// For other events with null session (TOKEN_REFRESHED, etc),
-// don't set loading = false here. Let getSession() handle it.
+```sql
+ALTER TABLE public.food_entries
+ADD COLUMN source_meal_id UUID REFERENCES public.saved_meals(id) ON DELETE SET NULL;
 ```
 
-### Full Updated Handler Logic
+#### 2. Update Types
+Update `FoodEntry` interface in `src/types/food.ts`:
 
-```tsx
-const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-  if (!isMounted) return;
-  
-  console.log('Auth state change:', event, !!session);
-  
-  // Only clear auth state on explicit sign out
-  if (event === 'SIGNED_OUT') {
-    cachedSession = null;
-    cachedUser = null;
-    setSession(null);
-    setUser(null);
-    initialCheckComplete = true;
-    setLoading(false);
-  } else if (session) {
-    // Update cache when we have a valid session
-    cachedSession = session;
-    cachedUser = session.user;
-    setSession(session);
-    setUser(session.user);
-    initialCheckComplete = true;
-    setLoading(false);
-  } else if (event === 'INITIAL_SESSION' && cachedUser && cachedSession) {
-    // INITIAL_SESSION with null session during HMR - reinforce cached state
-    // This prevents the redirect when auth events arrive out of order
-    setUser(cachedUser);
-    setSession(cachedSession);
-    initialCheckComplete = true;
-    setLoading(false);
-  }
-  // For other events with null session, don't set loading = false here.
-  // Let getSession() handle it.
+```typescript
+export interface FoodEntry {
+  // ... existing fields
+  source_meal_id: string | null;  // NEW
+}
+```
+
+#### 3. Update Entry Creation Flow
+Modify `createEntryFromItems` in `src/pages/FoodLog.tsx` to accept an optional `sourceMealId`:
+
+```typescript
+const createEntryFromItems = useCallback((
+  items: FoodItem[], 
+  rawInput: string | null,
+  sourceMealId?: string  // NEW parameter
+) => {
+  // ... existing logic
+  createEntry.mutate({
+    // ... existing fields
+    source_meal_id: sourceMealId ?? null,  // NEW
+  });
 });
 ```
 
-### Why This Works
+Update `handleUseSaved` and `handleLogSavedMeal` to pass the meal ID:
 
-1. **Normal startup (no cache)**: `INITIAL_SESSION null` fires, no cached user exists, so we skip setting state and let `getSession()` handle it
-2. **HMR with logged-in user**: `INITIAL_SESSION null` fires, cached user exists, so we reinforce the cached state immediately
-3. **Token refresh**: `TOKEN_REFRESHED` with new session updates everything correctly
-4. **Sign out**: `SIGNED_OUT` clears everything correctly
+```typescript
+const handleUseSaved = async () => {
+  if (!similarMatch) return;
+  const foodItems = await logSavedMeal.mutateAsync(similarMatch.meal.id);
+  createEntryFromItems(foodItems, similarMatch.meal.original_input, similarMatch.meal.id);
+  // ...
+};
+
+const handleLogSavedMeal = async (foodItems: FoodItem[], mealId?: string) => {
+  createEntryFromItems(foodItems, null, mealId);
+};
+```
+
+#### 4. Update SavedMealsPopover
+Pass the meal ID when selecting a saved meal:
+
+```typescript
+// In SavedMealsPopover.tsx
+onSelectMeal: (foodItems: FoodItem[], mealId: string) => void;
+
+const handleSelectMeal = async (meal: SavedMeal) => {
+  const foodItems = await logMeal.mutateAsync(meal.id);
+  onSelectMeal(foodItems, meal.id);  // Pass ID
+  onClose?.();
+};
+```
+
+#### 5. Track Meal Names for Display
+Build a map of entry ID to meal name in `FoodLogContent`:
+
+```typescript
+const entryMealNames = useMemo(() => {
+  const map = new Map<string, string>();
+  entries.forEach(entry => {
+    if (entry.source_meal_id && savedMeals) {
+      const meal = savedMeals.find(m => m.id === entry.source_meal_id);
+      if (meal) map.set(entry.id, meal.name);
+    }
+  });
+  return map;
+}, [entries, savedMeals]);
+```
+
+#### 6. Update FoodItemsTable
+Add new props and conditional rendering:
+
+```typescript
+// New props
+entryMealNames?: Map<string, string>;
+
+// In expanded section (lines 514-538):
+{isLastInEntry && isCurrentExpanded && (
+  <div className="col-span-full pl-6 py-1 space-y-2">
+    {/* Show raw input if present */}
+    {currentRawInput && (
+      <p className="text-muted-foreground whitespace-pre-wrap italic">
+        {currentRawInput}
+      </p>
+    )}
+    
+    {/* Either show "Saved meal: name" OR "Save as meal" link */}
+    {currentMealName ? (
+      <p className="text-sm text-muted-foreground">
+        Saved meal: <span className="font-medium">{currentMealName}</span>
+      </p>
+    ) : onSaveAsMeal && currentEntryId && (
+      <button onClick={...} className="text-sm text-blue-600 underline">
+        Save as meal
+      </button>
+    )}
+  </div>
+)}
+```
 
 ### Files to Change
 
-| File | Change |
-|------|--------|
-| `src/hooks/useAuth.tsx` | Add explicit handling for `INITIAL_SESSION` with null session to reinforce cached state (lines 55-81) |
+| File | Changes |
+|------|---------|
+| Database migration | Add `source_meal_id` column to `food_entries` |
+| `src/types/food.ts` | Add `source_meal_id` to `FoodEntry` interface |
+| `src/hooks/useFoodEntries.ts` | Include `source_meal_id` in create mutation |
+| `src/pages/FoodLog.tsx` | Pass `sourceMealId` through entry creation, build meal name map, pass to table |
+| `src/components/SavedMealsPopover.tsx` | Update callback signature to include meal ID |
+| `src/components/FoodInput.tsx` | Update `onLogSavedMeal` prop signature |
+| `src/components/FoodItemsTable.tsx` | Add `entryMealNames` prop, conditional display logic |
 
-### Technical Notes
-- This is a dev-mode only issue (HMR doesn't happen in production builds)
-- The fix is defensive - it doesn't change production behavior
-- The cached user/session is already being preserved across HMR via `import.meta.hot`
+### User Experience Result
+- Entries created from AI analysis: Show "Save as meal" link when expanded
+- Entries created from saved meals: Show "Saved meal: [name]" instead (no confusing "Save as meal" option)
+
