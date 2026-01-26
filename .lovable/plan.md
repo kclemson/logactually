@@ -1,60 +1,71 @@
 
-## Add Items Preview Popover for Saved Meals
+## Fix Items Preview Popover Size and Positioning
 
-### What We're Building
-A click-to-open popover on the "X items" text that shows the list of food items in that meal. Works on both desktop (click) and mobile (tap).
+### The Problem
+The current popover is too narrow (`w-48` = 192px) causing food item descriptions to be truncated. Screenshots show text like "French bread five cheese & gar..." and "Vanilla Yogurt (1 container (113..." getting cut off.
+
+### Solution
+1. **Increase width** - Change from `w-48` (192px) to `w-64` (256px) for more readable text
+2. **Allow text wrapping** - Remove `truncate` class so full descriptions display (most food items are 1-2 lines)
+3. **Adjust alignment** - Change to `align="end"` to anchor popover to the right side, preventing it from overlapping the meal name column
 
 ### Implementation
 
 **File: `src/pages/Settings.tsx`**
 
-Replace the item count span (lines 105-108) with a Popover:
+**Lines 112-124** - Update PopoverContent styling:
 
 ```tsx
-{/* Item count with popover to show items */}
-<Popover>
-  <PopoverTrigger asChild>
-    <span className="text-xs text-muted-foreground shrink-0 cursor-pointer hover:text-foreground transition-colors">
-      {meal.food_items.length} {meal.food_items.length === 1 ? 'item' : 'items'}
-    </span>
-  </PopoverTrigger>
-  <PopoverContent 
-    className="w-48 p-2" 
-    side="top" 
-    align="center"
-    onOpenAutoFocus={(e) => e.preventDefault()}
-  >
-    <ul className="text-xs space-y-0.5">
-      {meal.food_items.map((item) => (
-        <li key={item.uid} className="truncate">
-          {item.description}
-        </li>
-      ))}
-    </ul>
-  </PopoverContent>
-</Popover>
+// FROM:
+<PopoverContent 
+  className="w-48 p-2" 
+  side="top" 
+  align="center"
+  onOpenAutoFocus={(e) => e.preventDefault()}
+>
+  <ul className="text-xs space-y-0.5">
+    {meal.food_items.map((item) => (
+      <li key={item.uid} className="truncate">
+        {item.description}
+      </li>
+    ))}
+  </ul>
+</PopoverContent>
+
+// TO:
+<PopoverContent 
+  className="w-64 p-2" 
+  side="top" 
+  align="end"
+  onOpenAutoFocus={(e) => e.preventDefault()}
+>
+  <ul className="text-xs space-y-1">
+    {meal.food_items.map((item) => (
+      <li key={item.uid}>
+        {item.description}
+      </li>
+    ))}
+  </ul>
+</PopoverContent>
 ```
 
-### Key Details
+### Changes Summary
 
-| Aspect | Choice |
-|--------|--------|
-| Interaction | Click/tap (Radix Popover default) - works on both desktop and mobile |
-| Width | `w-48` (192px) - compact but readable |
-| Padding | `p-2` - minimal for a tight list |
-| Position | `side="top"` - consistent with delete popover, avoids edge clipping on mobile |
-| Trigger styling | `cursor-pointer hover:text-foreground` - indicates interactivity |
-| Focus handling | `onOpenAutoFocus={(e) => e.preventDefault()}` - prevents jarring focus shift |
+| Aspect | Before | After |
+|--------|--------|-------|
+| Width | `w-48` (192px) | `w-64` (256px) |
+| Alignment | `align="center"` | `align="end"` (right-aligned) |
+| Text overflow | `truncate` (ellipsis) | Removed (text wraps) |
+| Line spacing | `space-y-0.5` | `space-y-1` (more readable) |
 
-### Mobile Compatibility
-Radix UI's Popover is click-based, which means:
-- **Desktop**: Click to open
-- **Mobile**: Tap to open
-
-This works seamlessly on mobile without any additional configuration. The `side="top"` positioning also prevents the popover from getting clipped at screen edges on narrow viewports.
+### Why These Changes
+- **Wider popover**: 256px fits most food descriptions without wrapping excessively
+- **Right alignment**: Anchors popover to the "X items" trigger, keeping it away from the meal name column
+- **Text wrap instead of truncate**: Shows full item names since that's the purpose of the popover
+- **Increased spacing**: Makes multi-line content more readable
 
 ### Files to Change
 
 | File | Change |
 |------|--------|
-| `src/pages/Settings.tsx` | Wrap item count span (lines 105-108) with Popover showing food items list |
+| `src/pages/Settings.tsx` | Update PopoverContent width, alignment, and remove truncation (lines 112-124) |
