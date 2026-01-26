@@ -6,6 +6,17 @@
 All colors MUST be HSL.
 */
 
+/* Animated ellipsis for loading states */
+@keyframes ellipsis-dot {
+  0%, 20% { opacity: 0; }
+  40%, 100% { opacity: 1; }
+}
+
+.animate-ellipsis-dot {
+  opacity: 0;
+  animation: ellipsis-dot 1.5s infinite;
+}
+
 @layer components {
   /* Typography: semantic classes that work with iOS 16px minimum */
   .text-heading {

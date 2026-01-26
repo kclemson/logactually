@@ -117,18 +117,30 @@ export function SaveMealDialog({
             <Label htmlFor="meal-name">Meal name</Label>
             <div className="relative">
               {isGenerating && (
-                <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                <div className="absolute left-3 top-0 bottom-0 flex items-center pointer-events-none">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                </div>
               )}
               <Input
                 id="meal-name"
                 value={name}
                 onChange={handleNameChange}
                 onKeyDown={handleKeyDown}
-                placeholder={isGenerating ? "Generating suggested name..." : "e.g., Morning Coffee"}
+                placeholder=""
                 disabled={isSaving || isGenerating}
                 autoFocus={!isGenerating}
-                className={isGenerating ? "pl-9" : ""}
+                className={isGenerating ? "pl-10" : ""}
               />
+              {isGenerating && (
+                <div className="absolute left-10 top-0 bottom-0 flex items-center pointer-events-none text-muted-foreground italic">
+                  <span>Generating suggested meal name</span>
+                  <span className="inline-flex">
+                    <span className="animate-ellipsis-dot" style={{ animationDelay: '0ms' }}>.</span>
+                    <span className="animate-ellipsis-dot" style={{ animationDelay: '200ms' }}>.</span>
+                    <span className="animate-ellipsis-dot" style={{ animationDelay: '400ms' }}>.</span>
+                  </span>
+                </div>
+              )}
             </div>
           </div>
           <div className="text-sm text-muted-foreground">
