@@ -413,7 +413,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Food Input Section - At top */}
       <section>
         <FoodInput
