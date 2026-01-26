@@ -1,12 +1,12 @@
 
 
-## Admin Page Layout Redesign
+## Admin Page Density Improvements
 
 ### Overview
-Redesign the top stats section of the Admin page to be more scannable:
-1. Replace "in last 7 days" with "RL7" (rolling 7 days)
-2. Add percentages to the user sub-stats
-3. Reformat the stats into a 3-column, 2-row grid layout
+Make the Admin page more compact by:
+1. Reducing table padding/spacing
+2. Reducing font sizes across the page
+3. Removing the "Admin Stats" heading
 
 ---
 
@@ -14,118 +14,121 @@ Redesign the top stats section of the Admin page to be more scannable:
 
 **File: `src/pages/Admin.tsx`**
 
-#### Change 1: Replace "in last 7 days" with "RL7" (4 places)
+#### Change 1: Remove "Admin Stats" heading (line 55)
 
-| Current Text | New Text |
-|--------------|----------|
-| "Active in last 7 days" | "Active RL7" |
-| "Created in last 7 days" | "Created RL7" |
-| "Created in last 7 days" (entries) | "Created RL7" |
-| "Used in last 7 days" | "Used RL7" |
-
-#### Change 2: Add percentages to user sub-stats
-
-For sub-stats under Users, calculate and display the percentage of total users:
-
-```text
-With entries: 5 (100%)
-Active RL7: 5 (100%)
-Created RL7: 5 (100%)
-```
-
-Helper function to calculate percentage:
+Delete the entire line:
 ```tsx
-const pct = (value: number) => 
-  stats && stats.total_users > 0 
-    ? Math.round((value / stats.total_users) * 100) 
-    : 0;
+<h1 className="font-semibold text-heading">Admin Stats</h1>
 ```
 
-#### Change 3: Reformat to 3-column, 2-row grid
+#### Change 2: Reduce font sizes by one stop
 
-**Current layout (vertical stacking with indentation):**
-```text
-Users: 5
-    With entries: 5
-    Active in last 7 days: 5
-    Created in last 7 days: 5
+| Element | Current | New |
+|---------|---------|-----|
+| Stats row 1 (headers) | Default (14px/16px) | `text-xs` (12px) |
+| Stats row 2 (sub-stats) | `text-sm` | `text-xs` (12px) |
+| Daily stats table | Default | `text-xs` on table |
+| User stats table | Default | `text-xs` on table |
 
-Entries: 47
-    Average per user: 9.4
-    Created in last 7 days: 47
+#### Change 3: Reduce table padding
 
-Saved Meals: 3
-    Users with saved meals: 1
-    Avg per user: 3
-    Used in last 7 days: 1
-```
-
-**New layout (3-column grid with 2 rows):**
-
-Row 1 (headers with totals):
-```text
-[Users: 5]        [Entries: 47]      [Saved Meals: 3]
-```
-
-Row 2 (sub-stats, left-justified in each column):
-```text
-With entries: 5 (100%)    Avg/user: 9.4         Users w/ meals: 1
-Active RL7: 5 (100%)      Created RL7: 47       Avg/user: 3
-Created RL7: 5 (100%)                           Used RL7: 1
-```
+Current table cells use `py-1 pr-4`. Change to:
+- `py-0.5 pr-2` for tighter vertical and horizontal spacing
 
 ---
 
-### Updated Code Structure (lines 52-72)
+### Updated Code Structure
 
+**Lines 53-55 (container start):**
 ```tsx
-{/* Row 1: Headers with totals */}
-<div className="grid grid-cols-3 gap-4 text-muted-foreground">
+return (
+  <div className="p-4 space-y-3">
+    {/* "Admin Stats" heading removed */}
+```
+
+**Lines 57-62 (stats row 1):**
+```tsx
+<div className="grid grid-cols-3 gap-2 text-muted-foreground text-xs">
   <p className="font-medium">Users: {stats?.total_users ?? 0}</p>
   <p className="font-medium">Entries: {stats?.total_entries ?? 0}</p>
   <p className="font-medium">Saved Meals: {stats?.total_saved_meals ?? 0}</p>
 </div>
+```
 
-{/* Row 2: Sub-stats in 3 columns */}
-<div className="grid grid-cols-3 gap-4 text-muted-foreground text-sm">
-  {/* Users column */}
-  <div className="space-y-0.5">
-    <p>With entries: {stats?.users_with_entries ?? 0} ({pct(stats?.users_with_entries ?? 0)}%)</p>
-    <p>Active RL7: {stats?.active_last_7_days ?? 0} ({pct(stats?.active_last_7_days ?? 0)}%)</p>
-    <p>Created RL7: {stats?.users_created_last_7_days ?? 0} ({pct(stats?.users_created_last_7_days ?? 0)}%)</p>
-  </div>
-  
-  {/* Entries column */}
-  <div className="space-y-0.5">
-    <p>Avg/user: {avgEntriesPerUser}</p>
-    <p>Created RL7: {stats?.entries_created_last_7_days ?? 0}</p>
-  </div>
-  
-  {/* Saved Meals column */}
-  <div className="space-y-0.5">
-    <p>Users w/ meals: {stats?.users_with_saved_meals ?? 0}</p>
-    <p>Avg/user: {stats?.avg_saved_meals_per_user ?? 0}</p>
-    <p>Used RL7: {stats?.saved_meals_used_last_7_days ?? 0}</p>
-  </div>
+**Lines 64-85 (stats row 2):**
+```tsx
+<div className="grid grid-cols-3 gap-2 text-muted-foreground text-xs">
+  {/* ... same content, just smaller text */}
 </div>
+```
+
+**Lines 87-109 (daily stats table):**
+```tsx
+<table className="w-auto mt-3 text-xs">
+  <thead>
+    <tr className="border-b">
+      <th className="text-left py-0.5 pr-2 font-medium text-muted-foreground">Date</th>
+      <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Entries</th>
+      <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Users</th>
+      <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">With Entries</th>
+      <th className="text-center py-0.5 font-medium text-muted-foreground">New Users</th>
+    </tr>
+  </thead>
+  <tbody>
+    {stats.daily_stats.slice(0, 3).map((row) => (
+      <tr key={row.stat_date} className="border-b border-border/50">
+        <td className="py-0.5 pr-2">{format(parseISO(row.stat_date), 'MMM-dd')}</td>
+        <td className="text-center py-0.5 pr-2">{row.entry_count}</td>
+        <td className="text-center py-0.5 pr-2">{row.total_users}</td>
+        <td className="text-center py-0.5 pr-2">{row.users_with_entries}</td>
+        <td className="text-center py-0.5">{row.users_created}</td>
+      </tr>
+    ))}
+  </tbody>
+</table>
+```
+
+**Lines 114-132 (user stats table):**
+```tsx
+<table className="w-auto mt-4 text-xs">
+  <thead>
+    <tr className="border-b">
+      <th className="text-left py-0.5 pr-2 font-medium text-muted-foreground">User</th>
+      <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Total Entries</th>
+      <th className="text-center py-0.5 font-medium text-muted-foreground">Today</th>
+    </tr>
+  </thead>
+  <tbody>
+    {userStats.map((user, index) => (
+      <tr key={user.user_id} className="border-b border-border/50">
+        <td className="py-0.5 pr-2">User {index + 1}</td>
+        <td className="text-center py-0.5 pr-2">{user.total_entries}</td>
+        <td className="text-center py-0.5">{user.entries_today}</td>
+      </tr>
+    ))}
+  </tbody>
+</table>
 ```
 
 ---
 
-### Summary
+### Summary of Changes
 
 | Aspect | Before | After |
 |--------|--------|-------|
-| "in last 7 days" text | Full phrase (4 places) | "RL7" abbreviation |
-| User sub-stats | No percentages | Shows (X%) of total users |
-| Layout | Vertical stacking with indentation | 3-column grid, 2 rows |
-| Scannability | Low (vertical scrolling) | High (compact horizontal) |
+| "Admin Stats" heading | Present | Removed |
+| Stats grid font | Default / `text-sm` | `text-xs` |
+| Stats grid gap | `gap-4` | `gap-2` |
+| Table font | Default | `text-xs` |
+| Table cell padding | `py-1 pr-4` | `py-0.5 pr-2` |
+| Table margins | `mt-4` / `mt-6` | `mt-3` / `mt-4` |
+| Container spacing | `space-y-4` | `space-y-3` |
 
 ---
 
-### Technical Notes
-- Uses `grid-cols-3` for consistent column layout
-- Percentage helper function avoids division by zero
-- Sub-stat columns are left-justified as requested
-- Maintains existing responsive behavior (grid will stack naturally on very narrow screens if needed, but works well at all viewport widths shown)
+### Result
+- More compact, data-dense admin view
+- Smaller text throughout (12px instead of 14px)
+- Tighter table cells for better scannability
+- No unnecessary heading taking up vertical space
 
