@@ -1,61 +1,67 @@
 
+## Simplify Smart Text Wrapping: Write-Time Approach
 
-## Fix Smart Text Wrapping for Editable Rows
+### Current State (Remove)
+The current implementation adds complexity at render-time:
+- `addBreakHintToDescription()` function in FoodItemsTable
+- `formatDescriptionWithBreakHint()` JSX helper  
+- Special ref logic for contentEditable
 
-### The Problem
-The `formatDescriptionWithBreakHint` function with `<wbr>` was only applied to the non-editable code path. On the FoodLog page, `editable={true}` is used, so the editable code path runs instead - which uses `contentEditable` with plain text.
-
-### Solution
-Use a **zero-width space character** (`\u200B`) instead of `<wbr>`. This invisible Unicode character:
-- Works in both plain text and HTML contexts
-- Acts as a word-break opportunity for the browser
-- Is invisible and doesn't affect editing or saving (it's a valid text character)
+### New Approach (Simple)
+Insert the zero-width space character (`\u200B`) at the **single point where descriptions are created** - in the edge functions that compose them.
 
 ---
 
 ### Code Changes
 
-**File: `src/components/FoodItemsTable.tsx`**
+**1. Remove runtime complexity from `src/components/FoodItemsTable.tsx`:**
+- Delete `addBreakHintToDescription` function (lines 77-84)
+- Delete `formatDescriptionWithBreakHint` function (lines 86-95)
+- Revert the contentEditable ref to use plain `item.description`
+- Revert the non-editable cell to use plain `item.description`
 
-1. **Create a text-based helper** (works for both editable and display contexts):
-```tsx
-// Insert zero-width space before first parenthesis for smart wrapping
-const addBreakHintToDescription = (description: string): string => {
-  const parenIndex = description.indexOf('(');
-  if (parenIndex === -1) {
-    return description;
-  }
-  // Insert zero-width space before the parenthesis
-  return description.slice(0, parenIndex) + '\u200B' + description.slice(parenIndex);
-};
+**2. Add break hint in `supabase/functions/analyze-food/index.ts` (line 162):**
+```typescript
+// Before:
+description: item.portion ? `${item.name} (${item.portion})` : item.name,
+
+// After:
+description: item.portion ? `${item.name} \u200B(${item.portion})` : item.name,
 ```
 
-2. **Update the editable contentEditable ref** (line 371-372):
-```tsx
-ref={(el) => {
-  if (el && el.textContent !== item.description && document.activeElement !== el) {
-    el.textContent = addBreakHintToDescription(item.description);
-  }
-}}
-```
+**3. Add break hint in `supabase/functions/lookup-upc/index.ts` (lines 118, 221):**
+```typescript
+// Line 118 - Before:
+description: `${productName} (${servingSize})`,
 
-3. **Update the JSX-based helper for non-editable rows** to use the same approach (or keep `<wbr>` since it already works there - either is fine).
+// Line 118 - After:
+description: `${productName} \u200B(${servingSize})`,
+
+// Line 221 - Before:  
+description: `${parsed.name} (${parsed.serving || '1 serving'})`,
+
+// Line 221 - After:
+description: `${parsed.name} \u200B(${parsed.serving || '1 serving'})`,
+```
 
 ---
 
-### Why This Works
+### Why This is Better
 
-| Approach | Editable Works? | Non-Editable Works? |
-|----------|-----------------|---------------------|
-| `<wbr>` HTML element | No (requires JSX/HTML) | Yes |
-| Zero-width space `\u200B` | Yes (plain text) | Yes |
-
-The zero-width space is a standard Unicode character that browsers treat as a valid word-break opportunity, similar to `<wbr>` but compatible with plain text contexts.
+| Aspect | Runtime Approach | Write-Time Approach |
+|--------|------------------|---------------------|
+| Lines of code | ~25 lines in component | 3 one-character additions |
+| Fragility | contentEditable complexity | None - data is just data |
+| Maintenance | Multiple code paths | Single source of truth |
+| Existing data | Works | Won't have break hint |
 
 ---
 
-### Edge Case Consideration
-When the user edits and saves the description, the zero-width space might be saved to the database. This is harmless (invisible character), but if you want to strip it on save, we can add a cleanup step in the save handler.
+### Trade-off: Existing Data
+Food items already in the database won't have the break hint. This is acceptable because:
+- New entries will have it going forward
+- It's purely cosmetic - no functional impact
+- A one-time migration could add it if desired later
 
 ---
 
@@ -63,5 +69,6 @@ When the user edits and saves the description, the zero-width space might be sav
 
 | File | Change |
 |------|--------|
-| `src/components/FoodItemsTable.tsx` | Add `addBreakHintToDescription` helper, apply to editable contentEditable ref |
-
+| `src/components/FoodItemsTable.tsx` | Remove `addBreakHintToDescription`, `formatDescriptionWithBreakHint`, revert ref and cell rendering |
+| `supabase/functions/analyze-food/index.ts` | Add `\u200B` before `(` in description template |
+| `supabase/functions/lookup-upc/index.ts` | Add `\u200B` before `(` in both description templates |
