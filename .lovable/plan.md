@@ -1,42 +1,48 @@
 
 
-## Remove Spaces Around Slashes in P/C/F Display
+## Tighten Vertical Space Around Date Navigation
 
-### Overview
-Remove the spaces around the `/` separators in the Protein/Carbs/Fat column to save ~15-20px of horizontal space, which should prevent wrapping without changing column widths.
+### Current Layout Structure
 
-**Before:** `116 / 158 / 94`  
-**After:** `116/158/94`
-
----
-
-### Changes to `src/components/FoodItemsTable.tsx`
-
-| Location | Line | Before | After |
-|----------|------|--------|-------|
-| Totals row | 237 | `{Math.round(totals.protein)} / {Math.round(totals.carbs)} / {Math.round(totals.fat)}` | `{Math.round(totals.protein)}/{Math.round(totals.carbs)}/{Math.round(totals.fat)}` |
-| Preview macros | 436 | `` `${previewMacros.protein} / ${previewMacros.carbs} / ${previewMacros.fat}` `` | `` `${previewMacros.protein}/${previewMacros.carbs}/${previewMacros.fat}` `` |
-| Editable rows | 437 | `` `${Math.round(item.protein)} / ${Math.round(item.carbs)} / ${Math.round(item.fat)}` `` | `` `${Math.round(item.protein)}/${Math.round(item.carbs)}/${Math.round(item.fat)}` `` |
-| Non-editable rows | 445 | `{Math.round(item.protein)} / {Math.round(item.carbs)} / {Math.round(item.fat)}` | `{Math.round(item.protein)}/{Math.round(item.carbs)}/{Math.round(item.fat)}` |
-
----
-
-### Visual Comparison
-
-```text
-Before (90px column):        After (90px column):
-+------------------+         +------------------+
-| 116 / 158 / 94   |  →      | 116/158/94       |
-| (wraps to 2      |         | (fits on 1 line) |
-|  lines)          |         |                  |
-+------------------+         +------------------+
+```
+<div className="space-y-6">           ← 24px gap between all children
+  <section>FoodInput</section>        ← Child 1
+  <div>Date Navigation</div>          ← Child 2 (24px above, 24px below)
+  <section>FoodItemsTable</section>   ← Child 3
+</div>
 ```
 
+### Solution
+
+Reduce the gap around the date navigation by changing from `space-y-6` (24px) to `space-y-4` (16px). This tightens the entire layout uniformly.
+
+If you want the date row specifically tighter while keeping other gaps at 24px, we can add negative margin to the date navigation div instead.
+
+### Recommended Change
+
+**Option A: Uniform tightening (simple)**
+
+Change line 416 from `space-y-6` to `space-y-4`:
+```tsx
+<div className="space-y-4">
+```
+
+This reduces vertical gaps from 24px to 16px throughout the page.
+
+**Option B: Target only the date row (more precise)**
+
+Keep `space-y-6` but add negative vertical margin to the date navigation div:
+```tsx
+<div className="flex items-center justify-center gap-1 -my-1">
+```
+
+This pulls the date row closer to its neighbors by 4px on each side while keeping other gaps at 24px.
+
 ---
 
-### Files Changed
+### Files to Change
 
-| File | Action |
+| File | Change |
 |------|--------|
-| `src/components/FoodItemsTable.tsx` | Remove spaces around `/` in 4 locations |
+| `src/pages/FoodLog.tsx` | Reduce `space-y-6` to `space-y-4` OR add `-my-1` to date navigation div |
 
