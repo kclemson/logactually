@@ -249,7 +249,7 @@ export default function Auth() {
             {APP_NAME}
           </CardTitle>
           <CardDescription>
-            {APP_DESCRIPTION}
+            Braindump what you ate — AI handles the rest
           </CardDescription>
         </CardHeader>
         <CardContent>
