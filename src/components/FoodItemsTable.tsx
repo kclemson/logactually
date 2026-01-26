@@ -234,7 +234,7 @@ export function FoodItemsTable({
       <span className={cn("px-1 font-semibold", showEntryDividers && "pl-4")}>Total</span>
       <span className="px-1 text-heading text-center">{Math.round(totals.calories)}</span>
       <span className="px-1 text-heading text-center">
-        {Math.round(totals.protein)} / {Math.round(totals.carbs)} / {Math.round(totals.fat)}
+        {Math.round(totals.protein)}/{Math.round(totals.carbs)}/{Math.round(totals.fat)}
       </span>
       {hasDeleteColumn && (
         onDeleteAll ? (
@@ -433,8 +433,8 @@ export function FoodItemsTable({
                   isCaloriesEditing ? "text-focus-ring" : "text-muted-foreground"
                 )}>
                   {previewMacros 
-                    ? `${previewMacros.protein} / ${previewMacros.carbs} / ${previewMacros.fat}`
-                    : `${Math.round(item.protein)} / ${Math.round(item.carbs)} / ${Math.round(item.fat)}`
+                    ? `${previewMacros.protein}/${previewMacros.carbs}/${previewMacros.fat}`
+                    : `${Math.round(item.protein)}/${Math.round(item.carbs)}/${Math.round(item.fat)}`
                   }
                 </span>
               </>
@@ -442,7 +442,7 @@ export function FoodItemsTable({
               <>
                 <span className="px-1 py-1 text-muted-foreground text-center">{item.calories}</span>
                 <span className="px-1 py-1 text-muted-foreground text-center">
-                  {Math.round(item.protein)} / {Math.round(item.carbs)} / {Math.round(item.fat)}
+                  {Math.round(item.protein)}/{Math.round(item.carbs)}/{Math.round(item.fat)}
                 </span>
               </>
             )}
