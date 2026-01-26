@@ -175,11 +175,6 @@ const Trends = () => {
                         stroke="hsl(var(--muted-foreground))"
                         interval="preserveStartEnd"
                       />
-                      <YAxis
-                        tick={{ fontSize: 8 }}
-                        stroke="hsl(var(--muted-foreground))"
-                        width={28}
-                      />
                       <Tooltip
                         contentStyle={{
                           backgroundColor: 'hsl(var(--card))',
@@ -210,13 +205,6 @@ const Trends = () => {
                         stroke="hsl(var(--muted-foreground))"
                         interval="preserveStartEnd"
                       />
-                      <YAxis
-                        tick={{ fontSize: 8 }}
-                        stroke="hsl(var(--muted-foreground))"
-                        width={28}
-                        domain={[0, 100]}
-                        tickFormatter={(value) => `${value}%`}
-                      />
                       <Tooltip
                         contentStyle={{
                           backgroundColor: 'hsl(var(--card))',
@@ -229,8 +217,8 @@ const Trends = () => {
                           return [`${Math.round(value)}% (${Math.round(rawValue)}g)`, name];
                         }}
                       />
-                      <Bar dataKey="carbs" name="Carbs" stackId="macros" fill="hsl(38 92% 50%)" radius={[0, 0, 0, 0]} />
                       <Bar dataKey="protein" name="Protein" stackId="macros" fill="hsl(142 76% 36%)" radius={[0, 0, 0, 0]} />
+                      <Bar dataKey="carbs" name="Carbs" stackId="macros" fill="hsl(38 92% 50%)" radius={[0, 0, 0, 0]} />
                       <Bar dataKey="fat" name="Fat" stackId="macros" fill="hsl(346 77% 49%)" radius={[2, 2, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -256,11 +244,6 @@ const Trends = () => {
                           tick={{ fontSize: 8 }}
                           stroke="hsl(var(--muted-foreground))"
                           interval="preserveStartEnd"
-                        />
-                        <YAxis
-                          tick={{ fontSize: 8 }}
-                          stroke="hsl(var(--muted-foreground))"
-                          width={28}
                         />
                         <Tooltip
                           contentStyle={{
