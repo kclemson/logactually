@@ -1,10 +1,9 @@
 import { useTheme } from 'next-themes';
-import { Moon, Sun, Monitor, Trash2, Pencil, Check, X } from 'lucide-react';
+import { Moon, Sun, Monitor, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { useSavedMeals, useUpdateSavedMeal, useDeleteSavedMeal } from '@/hooks/useSavedMeals';
-import { Input } from '@/components/ui/input';
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
@@ -15,8 +14,6 @@ export default function Settings() {
   const { data: savedMeals, isLoading: mealsLoading } = useSavedMeals();
   const updateMeal = useUpdateSavedMeal();
   const deleteMeal = useDeleteSavedMeal();
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState('');
 
   // Avoid hydration mismatch
   useEffect(() => {
@@ -33,24 +30,6 @@ export default function Settings() {
   const handleThemeChange = (value: 'light' | 'dark' | 'system') => {
     setTheme(value);
     updateSettings({ theme: value });
-  };
-
-  const startEditing = (id: string, currentName: string) => {
-    setEditingId(id);
-    setEditingName(currentName);
-  };
-
-  const cancelEditing = () => {
-    setEditingId(null);
-    setEditingName('');
-  };
-
-  const saveEditing = () => {
-    if (editingId && editingName.trim()) {
-      updateMeal.mutate({ id: editingId, name: editingName.trim() });
-      setEditingId(null);
-      setEditingName('');
-    }
   };
 
   const handleDelete = (id: string, name: string) => {
@@ -82,52 +61,52 @@ export default function Settings() {
             <ul className="space-y-1">
               {savedMeals.map((meal) => (
                 <li key={meal.id} className="flex items-center gap-2 py-1">
-                  {editingId === meal.id ? (
-                    <>
-                      <Input
-                        value={editingName}
-                        onChange={(e) => setEditingName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') saveEditing();
-                          if (e.key === 'Escape') cancelEditing();
-                        }}
-                        className="h-8 flex-1"
-                        autoFocus
-                        spellCheck={false}
-                      />
-                      <button onClick={saveEditing} className="p-1.5 hover:bg-muted rounded" title="Save">
-                        <Check className="h-4 w-4 text-green-600" />
-                      </button>
-                      <button onClick={cancelEditing} className="p-1.5 hover:bg-muted rounded" title="Cancel">
-                        <X className="h-4 w-4 text-muted-foreground" />
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <span className="flex-1 text-sm truncate">
-                        {meal.name}
-                        <span className="text-muted-foreground ml-1">
-                          ({meal.food_items.length} {meal.food_items.length === 1 ? 'item' : 'items'})
-                        </span>
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => startEditing(meal.id, meal.name)}
-                          className="p-1.5 hover:bg-muted rounded"
-                          title="Rename"
-                        >
-                          <Pencil className="h-4 w-4 text-muted-foreground" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(meal.id, meal.name)}
-                          className="p-1.5 hover:bg-muted rounded"
-                          title="Delete"
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </button>
-                      </div>
-                    </>
-                  )}
+                  {/* Click-to-edit meal name */}
+                  <div
+                    contentEditable
+                    suppressContentEditableWarning
+                    spellCheck={false}
+                    onFocus={(e) => {
+                      e.currentTarget.dataset.original = meal.name;
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.textContent = e.currentTarget.dataset.original || meal.name;
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const newName = e.currentTarget.textContent?.trim();
+                        const original = e.currentTarget.dataset.original;
+                        if (newName && newName !== original) {
+                          updateMeal.mutate({ id: meal.id, name: newName });
+                          e.currentTarget.dataset.original = newName;
+                        }
+                        e.currentTarget.blur();
+                      }
+                      if (e.key === 'Escape') {
+                        e.preventDefault();
+                        e.currentTarget.textContent = e.currentTarget.dataset.original || meal.name;
+                        e.currentTarget.blur();
+                      }
+                    }}
+                    className="flex-1 text-sm truncate cursor-text hover:bg-muted/50 focus:bg-focus-bg focus:ring-2 focus:ring-focus-ring focus:outline-none rounded px-1 py-0.5"
+                  >
+                    {meal.name}
+                  </div>
+
+                  {/* Item count - separate column */}
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    {meal.food_items.length} {meal.food_items.length === 1 ? 'item' : 'items'}
+                  </span>
+
+                  {/* Delete button */}
+                  <button
+                    onClick={() => handleDelete(meal.id, meal.name)}
+                    className="p-1.5 hover:bg-muted rounded"
+                    title="Delete"
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </button>
                 </li>
               ))}
             </ul>
