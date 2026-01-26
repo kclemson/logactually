@@ -337,7 +337,7 @@ export function FoodItemsTable({
                       <button
                         onClick={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
                         className={cn(
-                          "absolute inset-0 w-[44px] -left-3 flex items-center justify-center text-muted-foreground/40 hover:text-muted-foreground transition-transform",
+                          "absolute inset-0 w-[44px] -left-3 flex items-center justify-center text-muted-foreground/60 hover:text-muted-foreground transition-transform",
                           isCurrentExpanded && "rotate-90"
                         )}
                       >
@@ -381,7 +381,7 @@ export function FoodItemsTable({
                       <button
                         onClick={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
                         className={cn(
-                          "absolute inset-0 w-[44px] -left-3 flex items-center justify-center text-muted-foreground/40 hover:text-muted-foreground transition-transform",
+                          "absolute inset-0 w-[44px] -left-3 flex items-center justify-center text-muted-foreground/60 hover:text-muted-foreground transition-transform",
                           isCurrentExpanded && "rotate-90"
                         )}
                       >
