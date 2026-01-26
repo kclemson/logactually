@@ -73,7 +73,7 @@ export default function Settings() {
       <section className="space-y-3">
         <h3 className="text-heading text-muted-foreground">Saved Meals</h3>
         
-        <div className="pl-2">
+        <div className="pl-4">
           {mealsLoading ? (
             <p className="text-sm text-muted-foreground">Loading...</p>
           ) : !savedMeals?.length ? (
@@ -137,7 +137,7 @@ export default function Settings() {
       {/* Appearance - set once */}
       <section className="space-y-3">
         <h3 className="text-heading text-muted-foreground">Appearance</h3>
-        <div className="pl-2">
+        <div className="pl-4">
           <div className="flex gap-2 max-w-xs">
             {themeOptions.map(({ value, label, icon: Icon }) => (
               <button
