@@ -138,6 +138,10 @@ export function FoodItemsTable({
       const newDescription = e.currentTarget.textContent || '';
       if (newDescription !== descriptionOriginalRef.current) {
         onUpdateItem?.(index, 'description', newDescription);
+        // Clear portion when description is edited to prevent stale data
+        if (item.portion) {
+          onUpdateItem?.(index, 'portion', '');
+        }
       }
       (e.target as HTMLElement).blur();
     } else if (e.key === 'Escape') {
@@ -173,8 +177,11 @@ export function FoodItemsTable({
     return `Edited: ${fieldLabels.join(', ')}`;
   };
 
-  // Build tooltip for description (just the description text)
+  // Build tooltip for description (include portion if present)
   const getItemTooltip = (item: FoodItem): string => {
+    if (item.portion) {
+      return `${item.description} (${item.portion})`;
+    }
     return item.description;
   };
 
@@ -367,6 +374,9 @@ export function FoodItemsTable({
                     onKeyDown={(e) => handleDescriptionKeyDown(e, index, item)}
                     className="pl-1 py-1 border-0 bg-transparent focus:outline-none line-clamp-2 cursor-text min-w-0 hover:bg-muted/50"
                   />
+                  {item.portion && (
+                    <span className="text-xs text-muted-foreground shrink-0 ml-0.5">({item.portion})</span>
+                  )}
                   {hasAnyEditedFields(item) && (
                     <span className="text-focus-ring font-bold shrink-0 ml-0.5 pr-1" title={formatEditedFields(item) || 'Edited'}>*</span>
                   )}
@@ -395,6 +405,9 @@ export function FoodItemsTable({
                   className="pl-1 pr-0 py-1 line-clamp-2 shrink min-w-0"
                 >
                   {item.description}
+                  {item.portion && (
+                    <span className="text-xs text-muted-foreground ml-0.5">({item.portion})</span>
+                  )}
                   {hasAnyEditedFields(item) && (
                     <span className="text-focus-ring font-bold ml-0.5" title={formatEditedFields(item) || 'Edited'}>*</span>
                   )}

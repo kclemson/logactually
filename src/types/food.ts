@@ -3,7 +3,8 @@ export type EditableField = 'description' | 'calories' | 'protein' | 'carbs' | '
 export interface FoodItem {
   uid: string;
   entryId?: string;  // tracks which entry this item belongs to
-  description: string;  // Combined "Food Name (portion)" e.g. "Cheese Pizza (1 slice)"
+  description: string;  // Food name, e.g. "Cheese Pizza"
+  portion?: string;  // Optional portion size, e.g. "1 slice" - rendered separately in smaller font
   calories: number;
   protein: number;
   carbs: number;
