@@ -1,11 +1,9 @@
 
 
-## Reorganize Charts: Calories + Macros Row, then Protein/Carbs/Fat Row
+## Reduce Chart Widget Padding
 
 ### Overview
-Rearrange the chart layout so that:
-- **Row 1**: Calories chart + Macros Breakdown chart (2 charts side by side)
-- **Row 2**: Protein chart + Carbs chart + Fat chart (3 charts side by side)
+Minimize the internal padding on all four sides of each chart card to create a more compact, information-dense layout.
 
 ---
 
@@ -13,92 +11,32 @@ Rearrange the chart layout so that:
 
 **File: `src/pages/Trends.tsx`**
 
-#### Replace the current chart structure (lines 159-249)
+#### Current Padding Structure
+- `CardHeader`: Default `p-6` from Card component, with only `pb-2` override (so it still has 24px on other sides)
+- `CardContent`: `p-3 pt-0` (12px sides/bottom, 0 top)
 
-Instead of having Macros Breakdown as a standalone card followed by a 2x2 grid, restructure to:
-
-1. **Row 1 (grid-cols-2)**: Calories chart + Macros Breakdown chart
-2. **Row 2 (grid-cols-3)**: Protein + Carbs + Fat charts
-
-```tsx
-<div className="space-y-3">
-  {/* Row 1: Calories + Macros Breakdown */}
-  <div className="grid grid-cols-2 gap-3">
-    {/* Calories Chart */}
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-semibold">Calories</CardTitle>
-      </CardHeader>
-      <CardContent className="p-3 pt-0">
-        <div className="h-24">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="date" tick={{ fontSize: 8 }} stroke="hsl(var(--muted-foreground))" interval="preserveStartEnd" />
-              <YAxis tick={{ fontSize: 8 }} stroke="hsl(var(--muted-foreground))" width={28} />
-              <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} />
-              <Bar dataKey="calories" fill="hsl(var(--primary))" radius={[2, 2, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
-
-    {/* Macros Breakdown Chart (100% stacked) */}
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-semibold">Macros (%)</CardTitle>
-      </CardHeader>
-      <CardContent className="p-3 pt-0">
-        <div className="h-24">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={percentageChartData}>
-              {/* Same stacked bar config but without Legend to save vertical space */}
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
-  </div>
-
-  {/* Row 2: Protein + Carbs + Fat */}
-  <div className="grid grid-cols-3 gap-3">
-    {/* Map over protein, carbs, fat only */}
-    {charts.slice(1).map(({ key, label, color }) => (
-      <Card key={key}>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold">{label}</CardTitle>
-        </CardHeader>
-        <CardContent className="p-3 pt-0">
-          <div className="h-24">
-            {/* Same chart config as before */}
-          </div>
-        </CardContent>
-      </Card>
-    ))}
-  </div>
-</div>
-```
+#### New Padding Structure
+- `CardHeader`: Add `p-2 pb-1` to reduce all header padding (8px, then 4px bottom)
+- `CardContent`: Change from `p-3 pt-0` to `p-2 pt-0` (8px sides/bottom, 0 top)
 
 ---
 
-### Key Adjustments
+### Specific Updates
 
-| Element | Change | Reason |
-|---------|--------|--------|
-| Macros chart height | `h-40` → `h-24` | Match other charts in the row |
-| Macros chart title | "Macros Breakdown (%)" → "Macros (%)" | Shorter title for compact card |
-| Macros chart Legend | Removed | Save vertical space in compact layout |
-| Row 1 | `grid-cols-2` | Calories + Macros side by side |
-| Row 2 | `grid-cols-3` | Protein + Carbs + Fat across |
-| Calories chart | Rendered separately, not via map | First item handled individually |
-| Macro charts (P/C/F) | `charts.slice(1)` | Skip calories, render remaining 3 |
+| Line | Location | Current | New |
+|------|----------|---------|-----|
+| 164 | Calories CardHeader | `className="pb-2"` | `className="p-2 pb-1"` |
+| 167 | Calories CardContent | `className="p-3 pt-0"` | `className="p-2 pt-0"` |
+| 199 | Macros CardHeader | `className="pb-2"` | `className="p-2 pb-1"` |
+| 202 | Macros CardContent | `className="p-3 pt-0"` | `className="p-2 pt-0"` |
+| 246 | Row 2 charts CardHeader | `className="pb-2"` | `className="p-2 pb-1"` |
+| 249 | Row 2 charts CardContent | `className="p-3 pt-0"` | `className="p-2 pt-0"` |
 
 ---
 
 ### Result
-- Row 1: Calories chart | Macros Breakdown chart
-- Row 2: Protein chart | Carbs chart | Fat chart
-- All 5 charts visible in a compact 2-row layout
-- Consistent card styling and sizing across all charts
+- All chart cards will have tighter padding (8px instead of 24px on header, 8px instead of 12px on content)
+- More chart area visible within each card
+- Consistent compact styling across all 5 chart widgets
+- Maintains the minimalist, high-density aesthetic
 
