@@ -1,42 +1,91 @@
 
 
-## Tighten Vertical Space Around Date Navigation
+## Smart Text Wrapping at Parentheses
 
-### Current Layout Structure
+### The Idea
+When a food item description needs to wrap to two lines, prefer breaking before the first `(` so the name stays on line 1 and the portion on line 2:
 
+```text
+Current:                    Proposed:
+┌────────────────────┐      ┌────────────────────┐
+│ Bacon, pan-fried   │      │ Bacon, pan-fried   │
+│ (1 slice)          │      │ (1 slice)          │
+└────────────────────┘      └────────────────────┘
+        ↑                           ↑
+  (random break)              (break at `(`)
 ```
-<div className="space-y-6">           ← 24px gap between all children
-  <section>FoodInput</section>        ← Child 1
-  <div>Date Navigation</div>          ← Child 2 (24px above, 24px below)
-  <section>FoodItemsTable</section>   ← Child 3
-</div>
-```
 
-### Solution
+---
 
-Reduce the gap around the date navigation by changing from `space-y-6` (24px) to `space-y-4` (16px). This tightens the entire layout uniformly.
+### Technical Approach
 
-If you want the date row specifically tighter while keeping other gaps at 24px, we can add negative margin to the date navigation div instead.
+Use HTML's `<wbr>` (Word Break Opportunity) element. This tells the browser "if you need to wrap, prefer wrapping here" - but it won't force a break if everything fits on one line.
 
-### Recommended Change
-
-**Option A: Uniform tightening (simple)**
-
-Change line 416 from `space-y-6` to `space-y-4`:
+**Helper function:**
 ```tsx
-<div className="space-y-4">
+const formatDescriptionWithBreakHint = (description: string) => {
+  const parenIndex = description.indexOf('(');
+  if (parenIndex === -1) {
+    return description; // No parenthesis, return as-is
+  }
+  const namePart = description.slice(0, parenIndex);
+  const portionPart = description.slice(parenIndex);
+  return <>{namePart}<wbr />{portionPart}</>;
+};
 ```
 
-This reduces vertical gaps from 24px to 16px throughout the page.
+---
 
-**Option B: Target only the date row (more precise)**
+### Where to Apply
 
-Keep `space-y-6` but add negative vertical margin to the date navigation div:
+| Mode | Apply? | Reason |
+|------|--------|--------|
+| Non-editable rows | Yes | Simple JSX replacement, no interaction concerns |
+| Editable rows | No | `contentEditable` handles raw text; injecting `<wbr>` would complicate editing and saving |
+
+This keeps the implementation clean and avoids fragility in the editable case.
+
+---
+
+### Code Changes
+
+**File: `src/components/FoodItemsTable.tsx`**
+
+1. Add helper function near top of component (around line 65):
 ```tsx
-<div className="flex items-center justify-center gap-1 -my-1">
+// Format description with word-break hint before first parenthesis
+const formatDescriptionWithBreakHint = (description: string) => {
+  const parenIndex = description.indexOf('(');
+  if (parenIndex === -1) {
+    return description;
+  }
+  const namePart = description.slice(0, parenIndex);
+  const portionPart = description.slice(parenIndex);
+  return <>{namePart}<wbr />{portionPart}</>;
+};
 ```
 
-This pulls the date row closer to its neighbors by 4px on each side while keeping other gaps at 24px.
+2. Update non-editable description cell (around line 396):
+```tsx
+// Before:
+{item.description}
+
+// After:
+{formatDescriptionWithBreakHint(item.description)}
+```
+
+---
+
+### Complexity Assessment
+
+| Aspect | Rating | Notes |
+|--------|--------|-------|
+| Lines of code | ~10 | Small helper function + one usage |
+| Fragility | Low | Only affects display, not data |
+| Edge cases | Minimal | Gracefully handles no-parenthesis case |
+| Maintenance burden | Low | Self-contained, doesn't touch editing logic |
+
+This is a **safe, low-complexity change** that improves visual consistency without touching the more complex editable/contentEditable code paths.
 
 ---
 
@@ -44,5 +93,5 @@ This pulls the date row closer to its neighbors by 4px on each side while keepin
 
 | File | Change |
 |------|--------|
-| `src/pages/FoodLog.tsx` | Reduce `space-y-6` to `space-y-4` OR add `-my-1` to date navigation div |
+| `src/components/FoodItemsTable.tsx` | Add `formatDescriptionWithBreakHint` helper, apply to non-editable description cell |
 
