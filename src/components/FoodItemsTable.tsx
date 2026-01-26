@@ -516,7 +516,7 @@ export function FoodItemsTable({
                           onSaveAsMeal(currentEntryId, currentRawInput ?? null, entryItems);
                         }
                       }}
-                      className="text-sm text-primary hover:underline"
+                      className="text-sm text-blue-600 dark:text-blue-400 underline"
                     >
                       Save as meal
                     </button>
