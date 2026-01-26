@@ -67,15 +67,26 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* User stats - textual format */}
+      {/* User stats table */}
       {userStats && userStats.length > 0 ? (
-        <div className="text-xs text-muted-foreground space-y-0.5">
-          {userStats.map((user, index) => (
-            <p key={user.user_id}>
-              User {index + 1}: {user.total_entries} total entries ({user.entries_today} today)
-            </p>
-          ))}
-        </div>
+        <table className="w-auto text-xs">
+          <thead>
+            <tr className="border-b">
+              <th className="text-left py-0.5 pr-2 font-medium text-muted-foreground">User</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Total Entries</th>
+              <th className="text-center py-0.5 font-medium text-muted-foreground">Today</th>
+            </tr>
+          </thead>
+          <tbody>
+            {userStats.map((user, index) => (
+              <tr key={user.user_id} className="border-b border-border/50">
+                <td className="py-0.5 pr-2">User {index + 1}</td>
+                <td className="text-center py-0.5 pr-2">{user.total_entries}</td>
+                <td className="text-center py-0.5">{user.entries_today}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       ) : (
         <p className="text-muted-foreground text-xs">No users found.</p>
       )}
