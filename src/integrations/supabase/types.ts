@@ -116,6 +116,48 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_meals: {
+        Row: {
+          created_at: string | null
+          food_items: Json
+          id: string
+          input_signature: string | null
+          items_signature: string | null
+          last_used_at: string | null
+          name: string
+          original_input: string | null
+          updated_at: string | null
+          use_count: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          food_items?: Json
+          id?: string
+          input_signature?: string | null
+          items_signature?: string | null
+          last_used_at?: string | null
+          name: string
+          original_input?: string | null
+          updated_at?: string | null
+          use_count?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          food_items?: Json
+          id?: string
+          input_signature?: string | null
+          items_signature?: string | null
+          last_used_at?: string | null
+          name?: string
+          original_input?: string | null
+          updated_at?: string | null
+          use_count?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
