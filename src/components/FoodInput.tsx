@@ -1,8 +1,10 @@
 import { useState, useImperativeHandle, forwardRef, useRef, useCallback } from "react";
-import { Mic, MicOff, Send, Loader2, ScanBarcode } from "lucide-react";
+import { Mic, MicOff, Send, Loader2, ScanBarcode, Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
+import { SavedMealsPopover } from "@/components/SavedMealsPopover";
 import { useScanBarcode } from "@/hooks/useScanBarcode";
 import { extractUpcFromText } from "@/lib/upc-utils";
 import { FoodItem } from "@/types/food";
@@ -22,6 +24,7 @@ interface FoodInputProps {
   onSubmit: (text: string) => void;
   isLoading?: boolean;
   onScanResult?: (foodItem: Omit<FoodItem, "uid" | "entryId">, originalInput: string) => void;
+  onLogSavedMeal?: (foodItems: FoodItem[]) => void;
 }
 
 export interface FoodInputRef {
@@ -41,12 +44,13 @@ const getCameraSupport = (): boolean => {
 };
 
 export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(function FoodInput(
-  { onSubmit, isLoading, onScanResult },
+  { onSubmit, isLoading, onScanResult, onLogSavedMeal },
   ref,
 ) {
   const [text, setText] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [savedMealsOpen, setSavedMealsOpen] = useState(false);
   const [placeholder] = useState(() => PLACEHOLDER_EXAMPLES[Math.floor(Math.random() * PLACEHOLDER_EXAMPLES.length)]);
 
   // Use ref for recognition instance - no re-renders needed
@@ -163,6 +167,13 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(function FoodI
     }
   };
 
+  const handleSelectSavedMeal = (foodItems: FoodItem[]) => {
+    if (onLogSavedMeal) {
+      onLogSavedMeal(foodItems);
+      setSavedMealsOpen(false);
+    }
+  };
+
   const isBusy = isLoading || isScanning;
 
   return (
@@ -198,6 +209,22 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(function FoodI
             <ScanBarcode className="h-4 w-4 mr-1" />
             Bar Code
           </Button>
+        )}
+        {onLogSavedMeal && (
+          <Popover open={savedMealsOpen} onOpenChange={setSavedMealsOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" disabled={isBusy}>
+                <Bookmark className="h-4 w-4 mr-1" />
+                Saved
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72 p-0" align="start">
+              <SavedMealsPopover 
+                onSelectMeal={handleSelectSavedMeal}
+                onClose={() => setSavedMealsOpen(false)}
+              />
+            </PopoverContent>
+          </Popover>
         )}
         <Button onClick={handleSubmit} disabled={!text.trim() || isBusy} size="sm" className="flex-1">
           {isBusy ? (
