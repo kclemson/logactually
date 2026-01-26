@@ -117,8 +117,9 @@ export default function Settings() {
                     >
                       <ul className="text-xs space-y-1">
                         {meal.food_items.map((item) => (
-                          <li key={item.uid}>
-                            {item.description}
+                          <li key={item.uid} className="flex justify-between gap-2">
+                            <span>{item.description}</span>
+                            <span className="text-muted-foreground shrink-0">{item.calories}</span>
                           </li>
                         ))}
                       </ul>
