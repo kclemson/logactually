@@ -156,57 +156,92 @@ const Trends = () => {
           No data for this period
         </div>
       ) : (
-        <div className="space-y-6">
-          {/* Stacked Macros Chart (100%) */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="font-semibold">Macros Breakdown (%)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-40">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={percentageChartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 10 }}
-                      stroke="hsl(var(--muted-foreground))"
-                    />
-                    <YAxis
-                      tick={{ fontSize: 10 }}
-                      stroke="hsl(var(--muted-foreground))"
-                      width={35}
-                      domain={[0, 100]}
-                      tickFormatter={(value) => `${value}%`}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                      formatter={(value: number, name: string, props: any) => {
-                        const rawKey = `${name.toLowerCase()}Raw`;
-                        const rawValue = props.payload[rawKey];
-                        return [`${Math.round(value)}% (${Math.round(rawValue)}g)`, name];
-                      }}
-                    />
-                    <Legend 
-                      wrapperStyle={{ fontSize: 12 }}
-                      iconSize={10}
-                    />
-                    <Bar dataKey="carbs" name="Carbs" stackId="macros" fill="hsl(38 92% 50%)" radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="protein" name="Protein" stackId="macros" fill="hsl(142 76% 36%)" radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="fat" name="Fat" stackId="macros" fill="hsl(346 77% 49%)" radius={[2, 2, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Individual Macro Charts - 2x2 Grid */}
+        <div className="space-y-3">
+          {/* Row 1: Calories + Macros Breakdown */}
           <div className="grid grid-cols-2 gap-3">
-            {charts.map(({ key, label, color }) => (
+            {/* Calories Chart */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-semibold">Calories</CardTitle>
+              </CardHeader>
+              <CardContent className="p-3 pt-0">
+                <div className="h-24">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: 8 }}
+                        stroke="hsl(var(--muted-foreground))"
+                        interval="preserveStartEnd"
+                      />
+                      <YAxis
+                        tick={{ fontSize: 8 }}
+                        stroke="hsl(var(--muted-foreground))"
+                        width={28}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px',
+                        }}
+                      />
+                      <Bar dataKey="calories" fill="hsl(var(--primary))" radius={[2, 2, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Macros Breakdown Chart (100% stacked) */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-semibold">Macros (%)</CardTitle>
+              </CardHeader>
+              <CardContent className="p-3 pt-0">
+                <div className="h-24">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={percentageChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: 8 }}
+                        stroke="hsl(var(--muted-foreground))"
+                        interval="preserveStartEnd"
+                      />
+                      <YAxis
+                        tick={{ fontSize: 8 }}
+                        stroke="hsl(var(--muted-foreground))"
+                        width={28}
+                        domain={[0, 100]}
+                        tickFormatter={(value) => `${value}%`}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px',
+                        }}
+                        formatter={(value: number, name: string, props: any) => {
+                          const rawKey = `${name.toLowerCase()}Raw`;
+                          const rawValue = props.payload[rawKey];
+                          return [`${Math.round(value)}% (${Math.round(rawValue)}g)`, name];
+                        }}
+                      />
+                      <Bar dataKey="carbs" name="Carbs" stackId="macros" fill="hsl(38 92% 50%)" radius={[0, 0, 0, 0]} />
+                      <Bar dataKey="protein" name="Protein" stackId="macros" fill="hsl(142 76% 36%)" radius={[0, 0, 0, 0]} />
+                      <Bar dataKey="fat" name="Fat" stackId="macros" fill="hsl(346 77% 49%)" radius={[2, 2, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Row 2: Protein + Carbs + Fat */}
+          <div className="grid grid-cols-3 gap-3">
+            {charts.slice(1).map(({ key, label, color }) => (
               <Card key={key}>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-semibold">{label}</CardTitle>
