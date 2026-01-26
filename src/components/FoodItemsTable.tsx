@@ -74,6 +74,17 @@ export function FoodItemsTable({
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const descriptionOriginalRef = useRef<string>('');
 
+  // Format description with word-break hint before first parenthesis
+  const formatDescriptionWithBreakHint = (description: string) => {
+    const parenIndex = description.indexOf('(');
+    if (parenIndex === -1) {
+      return description;
+    }
+    const namePart = description.slice(0, parenIndex);
+    const portionPart = description.slice(parenIndex);
+    return <>{namePart}<wbr />{portionPart}</>;
+  };
+
   // Get preview macros when editing calories (uses same helper as save)
   const getPreviewMacros = (item: FoodItem, index: number): ScaledMacros | null => {
     if (editingCell?.index === index && editingCell?.field === 'calories') {
@@ -393,7 +404,7 @@ export function FoodItemsTable({
                   title={getItemTooltip(item)}
                   className="pl-1 pr-0 py-1 line-clamp-2 shrink min-w-0"
                 >
-                  {item.description}
+                  {formatDescriptionWithBreakHint(item.description)}
                   {hasAnyEditedFields(item) && (
                     <span className="text-focus-ring font-bold ml-0.5" title={formatEditedFields(item) || 'Edited'}>*</span>
                   )}
