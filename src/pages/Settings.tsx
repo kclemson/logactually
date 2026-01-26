@@ -184,38 +184,31 @@ export default function Settings() {
         </div>
       </section>
 
-      {/* Export Data */}
+      {/* Export as CSV */}
       <section className="space-y-3">
         <h3 className="text-heading text-muted-foreground flex items-center gap-2">
           <Download className="h-4 w-4" />
-          Export Data
+          Export as CSV
         </h3>
-        <div className="pl-4 space-y-2">
-          <div className="flex flex-col gap-2 max-w-xs">
+        <div className="pl-4">
+          <div className="flex gap-2 max-w-xs">
             <Button
               variant="outline"
               size="sm"
               onClick={exportDailyTotals}
               disabled={isExporting}
-              className="justify-start"
             >
-              <Download className="h-4 w-4 mr-2" />
-              Daily Totals (CSV)
+              Daily Totals
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={exportFoodLog}
               disabled={isExporting}
-              className="justify-start"
             >
-              <Download className="h-4 w-4 mr-2" />
-              Full Food Log (CSV)
+              Food Log
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Export your data for use in spreadsheet apps
-          </p>
         </div>
       </section>
 
