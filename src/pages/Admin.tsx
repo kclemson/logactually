@@ -44,14 +44,14 @@ export default function Admin() {
   return (
     <div className="px-1 py-2 space-y-2">
       {/* Row 1: Headers with totals */}
-      <div className="grid grid-cols-3 gap-1 text-muted-foreground text-xs">
+      <div className="grid grid-cols-[auto_auto_auto] gap-1 text-muted-foreground text-xs">
         <p className="font-medium">Users: {stats?.total_users ?? 0}</p>
         <p className="font-medium">Entries: {stats?.total_entries ?? 0}</p>
         <p className="font-medium">Saved Meals: {stats?.total_saved_meals ?? 0}</p>
       </div>
 
       {/* Row 2: Sub-stats in 3 columns */}
-      <div className="grid grid-cols-3 gap-1 text-muted-foreground text-xs">
+      <div className="grid grid-cols-[auto_auto_auto] gap-1 text-muted-foreground text-xs">
         {/* Users column */}
         <div className="space-y-0">
           <p>
