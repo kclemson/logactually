@@ -243,7 +243,7 @@ export function FoodItemsTable({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-11 w-11 -m-2.5 text-muted-foreground hover:text-destructive md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                className="h-11 w-11 -m-2.5 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
@@ -455,7 +455,7 @@ export function FoodItemsTable({
                 variant="ghost"
                 size="icon"
                 onClick={() => onRemoveItem?.(index)}
-                className="h-11 w-11 -m-2.5 text-muted-foreground hover:text-destructive md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                className="h-11 w-11 -m-2.5 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
@@ -469,7 +469,7 @@ export function FoodItemsTable({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-11 w-11 -m-2.5 text-muted-foreground hover:text-destructive md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                      className="h-11 w-11 -m-2.5 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
