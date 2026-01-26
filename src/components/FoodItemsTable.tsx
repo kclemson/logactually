@@ -74,7 +74,16 @@ export function FoodItemsTable({
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const descriptionOriginalRef = useRef<string>('');
 
-  // Format description with word-break hint before first parenthesis
+  // Insert zero-width space before first parenthesis for smart wrapping (works in plain text)
+  const addBreakHintToDescription = (description: string): string => {
+    const parenIndex = description.indexOf('(');
+    if (parenIndex === -1) {
+      return description;
+    }
+    return description.slice(0, parenIndex) + '\u200B' + description.slice(parenIndex);
+  };
+
+  // Format description with word-break hint before first parenthesis (JSX version)
   const formatDescriptionWithBreakHint = (description: string) => {
     const parenIndex = description.indexOf('(');
     if (parenIndex === -1) {
@@ -366,10 +375,10 @@ export function FoodItemsTable({
                     suppressContentEditableWarning
                     spellCheck={false}
                     title={getItemTooltip(item)}
-                    ref={(el) => {
+                  ref={(el) => {
                       // Only sync content when element exists and is NOT being edited
                       if (el && el.textContent !== item.description && document.activeElement !== el) {
-                        el.textContent = item.description;
+                        el.textContent = addBreakHintToDescription(item.description);
                       }
                     }}
                     onFocus={(e) => handleDescriptionFocus(e, item)}
