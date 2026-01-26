@@ -1,64 +1,60 @@
 
+## Add Items Preview Popover for Saved Meals
 
-## Fix Missing Mobile Insets Across UI Components
+### What We're Building
+A click-to-open popover on the "X items" text that shows the list of food items in that meal. Works on both desktop (click) and mobile (tap).
 
-### Components Requiring Updates
-
-#### 1. FoodItemsTable.tsx - AlertDialogs (2 instances)
-Both "Delete all entries" and "Delete this entry" confirmation dialogs lack mobile inset styling.
-
-**File: `src/components/FoodItemsTable.tsx`**
-
-**Line 259** - Delete All confirmation:
-```tsx
-// FROM:
-<AlertDialogContent>
-
-// TO:
-<AlertDialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-lg">
-```
-
-**Line 489** - Delete Entry confirmation:
-```tsx
-// FROM:
-<AlertDialogContent>
-
-// TO:
-<AlertDialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-lg">
-```
-
-#### 2. Settings.tsx - Delete Meal Popover
-The popover uses `side="left"` which causes overflow on mobile. Change to `side="top"` for better mobile behavior.
+### Implementation
 
 **File: `src/pages/Settings.tsx`**
 
-**Line 123**:
-```tsx
-// FROM:
-<PopoverContent className="w-64 p-4" side="left" align="center">
+Replace the item count span (lines 105-108) with a Popover:
 
-// TO:
-<PopoverContent className="w-64 p-4" side="top" align="end">
+```tsx
+{/* Item count with popover to show items */}
+<Popover>
+  <PopoverTrigger asChild>
+    <span className="text-xs text-muted-foreground shrink-0 cursor-pointer hover:text-foreground transition-colors">
+      {meal.food_items.length} {meal.food_items.length === 1 ? 'item' : 'items'}
+    </span>
+  </PopoverTrigger>
+  <PopoverContent 
+    className="w-48 p-2" 
+    side="top" 
+    align="center"
+    onOpenAutoFocus={(e) => e.preventDefault()}
+  >
+    <ul className="text-xs space-y-0.5">
+      {meal.food_items.map((item) => (
+        <li key={item.uid} className="truncate">
+          {item.description}
+        </li>
+      ))}
+    </ul>
+  </PopoverContent>
+</Popover>
 ```
 
-Changes:
-- `side="top"` - Opens above the trigger instead of to the left (prevents horizontal overflow)
-- `align="end"` - Right-aligns with the trash icon for visual balance
+### Key Details
 
----
+| Aspect | Choice |
+|--------|--------|
+| Interaction | Click/tap (Radix Popover default) - works on both desktop and mobile |
+| Width | `w-48` (192px) - compact but readable |
+| Padding | `p-2` - minimal for a tight list |
+| Position | `side="top"` - consistent with delete popover, avoids edge clipping on mobile |
+| Trigger styling | `cursor-pointer hover:text-foreground` - indicates interactivity |
+| Focus handling | `onOpenAutoFocus={(e) => e.preventDefault()}` - prevents jarring focus shift |
+
+### Mobile Compatibility
+Radix UI's Popover is click-based, which means:
+- **Desktop**: Click to open
+- **Mobile**: Tap to open
+
+This works seamlessly on mobile without any additional configuration. The `side="top"` positioning also prevents the popover from getting clipped at screen edges on narrow viewports.
 
 ### Files to Change
 
-| File | Changes |
-|------|---------|
-| `src/components/FoodItemsTable.tsx` | Add mobile inset classes to both AlertDialogContent instances (lines 259, 489) |
-| `src/pages/Settings.tsx` | Change popover positioning from `side="left"` to `side="top"` (line 123) |
-
----
-
-### Technical Details
-
-The responsive inset pattern works as follows:
-- **Mobile (default)**: `left-4 right-4` creates 16px margins, `translate-x-0` removes centering transform, `w-auto` lets content size naturally, `max-w-[calc(100vw-32px)]` ensures it never exceeds viewport minus margins
-- **Desktop (sm:)**: Restores standard centered positioning with `left-[50%] translate-x-[-50%]` and `max-w-lg` constraint
-
+| File | Change |
+|------|--------|
+| `src/pages/Settings.tsx` | Wrap item count span (lines 105-108) with Popover showing food items list |
