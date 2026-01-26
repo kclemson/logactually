@@ -129,7 +129,7 @@ export function FoodItemsTable({
   };
 
   const handleDescriptionKeyDown = (
-    e: React.KeyboardEvent<HTMLDivElement>,
+    e: React.KeyboardEvent<HTMLSpanElement>,
     index: number,
     item: FoodItem
   ) => {
@@ -152,11 +152,11 @@ export function FoodItemsTable({
     }
   };
 
-  const handleDescriptionFocus = (e: React.FocusEvent<HTMLDivElement>, item: FoodItem) => {
+  const handleDescriptionFocus = (e: React.FocusEvent<HTMLSpanElement>, item: FoodItem) => {
     descriptionOriginalRef.current = item.description;
   };
 
-  const handleDescriptionBlur = (e: React.FocusEvent<HTMLDivElement>) => {
+  const handleDescriptionBlur = (e: React.FocusEvent<HTMLSpanElement>) => {
     // Revert to original on blur (cancel)
     e.currentTarget.textContent = descriptionOriginalRef.current;
   };
@@ -337,7 +337,7 @@ export function FoodItemsTable({
             >
             {/* Description cell (with chevron space when showing entry dividers) */}
             {editable ? (
-              <div className="flex items-baseline min-w-0">
+              <div className="flex min-w-0">
                 {/* Always reserve chevron space when showing entry dividers */}
                 {showEntryDividers && (
                   <div className="w-3 shrink-0 relative flex items-center justify-center self-stretch">
@@ -355,15 +355,15 @@ export function FoodItemsTable({
                   </div>
                 )}
                 <div className={cn(
-                  "flex-1 min-w-0 flex items-baseline rounded",
+                  "flex-1 min-w-0 rounded pl-1 py-1 line-clamp-2",
                   "focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg"
                 )}>
-                  <div
+                  <span
                     contentEditable
                     suppressContentEditableWarning
                     spellCheck={false}
                     title={getItemTooltip(item)}
-                  ref={(el) => {
+                    ref={(el) => {
                       // Only sync content when element exists and is NOT being edited
                       if (el && el.textContent !== item.description && document.activeElement !== el) {
                         el.textContent = item.description;
@@ -372,13 +372,13 @@ export function FoodItemsTable({
                     onFocus={(e) => handleDescriptionFocus(e, item)}
                     onBlur={handleDescriptionBlur}
                     onKeyDown={(e) => handleDescriptionKeyDown(e, index, item)}
-                    className="pl-1 py-1 border-0 bg-transparent focus:outline-none line-clamp-2 cursor-text min-w-0 hover:bg-muted/50"
+                    className="border-0 bg-transparent focus:outline-none cursor-text hover:bg-muted/50"
                   />
-                {item.portion && (
-                    <span className="text-xs text-muted-foreground shrink-0 ml-1 whitespace-nowrap">({item.portion})</span>
+                  {item.portion && (
+                    <span className="text-xs text-muted-foreground whitespace-nowrap"> ({item.portion})</span>
                   )}
                   {hasAnyEditedFields(item) && (
-                    <span className="text-focus-ring font-bold shrink-0 ml-0.5 pr-1" title={formatEditedFields(item) || 'Edited'}>*</span>
+                    <span className="text-focus-ring font-bold" title={formatEditedFields(item) || 'Edited'}> *</span>
                   )}
                 </div>
               </div>
