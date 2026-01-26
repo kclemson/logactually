@@ -116,6 +116,9 @@ export function SaveMealDialog({
           <div className="space-y-2">
             <Label htmlFor="meal-name">Meal name</Label>
             <div className="relative">
+              {isGenerating && (
+                <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+              )}
               <Input
                 id="meal-name"
                 value={name}
@@ -124,10 +127,8 @@ export function SaveMealDialog({
                 placeholder={isGenerating ? "Generating suggested name..." : "e.g., Morning Coffee"}
                 disabled={isSaving || isGenerating}
                 autoFocus={!isGenerating}
+                className={isGenerating ? "pl-9" : ""}
               />
-              {isGenerating && (
-                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
-              )}
             </div>
           </div>
           <div className="text-sm text-muted-foreground">
