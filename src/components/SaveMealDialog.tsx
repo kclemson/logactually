@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -13,7 +13,6 @@ import { Label } from '@/components/ui/label';
 
 import { Loader2 } from 'lucide-react';
 import { FoodItem } from '@/types/food';
-import { useSuggestMealName } from '@/hooks/useSuggestMealName';
 
 interface SaveMealDialogProps {
   open: boolean;
@@ -22,6 +21,8 @@ interface SaveMealDialogProps {
   foodItems: FoodItem[];
   onSave: (name: string) => void;
   isSaving: boolean;
+  suggestedName: string | null;
+  isSuggestingName: boolean;
 }
 
 /**
@@ -43,44 +44,29 @@ export function SaveMealDialog({
   foodItems,
   onSave,
   isSaving,
+  suggestedName,
+  isSuggestingName,
 }: SaveMealDialogProps) {
   const [name, setName] = useState('');
   const [userHasTyped, setUserHasTyped] = useState(false);
-  const { suggestName, isLoading: isSuggesting } = useSuggestMealName();
-  const suggestionRequestedRef = useRef(false);
 
-  // Reset state and fetch AI suggestion when dialog opens
+  // Reset state when dialog opens
   useEffect(() => {
     if (open) {
       setName('');
       setUserHasTyped(false);
-      suggestionRequestedRef.current = false;
     }
   }, [open]);
 
-  // Fetch AI-suggested name when dialog opens
+  // Populate with suggested name when it arrives (if user hasn't typed)
   useEffect(() => {
-    if (!open || suggestionRequestedRef.current || foodItems.length === 0) {
-      return;
+    if (!userHasTyped && suggestedName) {
+      setName(suggestedName);
+    } else if (!userHasTyped && !isSuggestingName && !suggestedName && foodItems.length > 0) {
+      // Fallback to first item if AI fails and finished loading
+      setName(getFallbackName(foodItems));
     }
-
-    suggestionRequestedRef.current = true;
-
-    const fetchSuggestion = async () => {
-      const descriptions = foodItems.map(item => item.description);
-      const suggested = await suggestName(descriptions);
-      
-      // Only set if user hasn't started typing
-      if (suggested && !userHasTyped) {
-        setName(suggested);
-      } else if (!suggested && !userHasTyped) {
-        // Fallback to first item if AI fails
-        setName(getFallbackName(foodItems));
-      }
-    };
-
-    fetchSuggestion();
-  }, [open, foodItems, suggestName, userHasTyped]);
+  }, [suggestedName, isSuggestingName, userHasTyped, foodItems]);
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setName(e.target.value);
@@ -101,7 +87,7 @@ export function SaveMealDialog({
     }
   };
 
-  const isGenerating = isSuggesting && !userHasTyped;
+  const isGenerating = isSuggestingName && !userHasTyped;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
