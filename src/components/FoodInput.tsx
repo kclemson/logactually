@@ -25,7 +25,7 @@ interface FoodInputProps {
   onSubmit: (text: string) => void;
   isLoading?: boolean;
   onScanResult?: (foodItem: Omit<FoodItem, "uid" | "entryId">, originalInput: string) => void;
-  onLogSavedMeal?: (foodItems: FoodItem[]) => void;
+  onLogSavedMeal?: (foodItems: FoodItem[], mealId: string) => void;
 }
 
 export interface FoodInputRef {
@@ -168,9 +168,9 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(function FoodI
     }
   };
 
-  const handleSelectSavedMeal = (foodItems: FoodItem[]) => {
+  const handleSelectSavedMeal = (foodItems: FoodItem[], mealId: string) => {
     if (onLogSavedMeal) {
-      onLogSavedMeal(foodItems);
+      onLogSavedMeal(foodItems, mealId);
       setSavedMealsOpen(false);
     }
   };

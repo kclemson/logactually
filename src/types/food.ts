@@ -26,6 +26,7 @@ export interface FoodEntry {
   total_fat: number;
   created_at: string;
   updated_at: string;
+  source_meal_id: string | null;  // Tracks if entry came from a saved meal
 }
 
 export interface DailyTotals {
