@@ -1,20 +1,8 @@
 
-
-## Improve Chart Tooltip Positioning and Size
+## Make Average Stats Boxes Fit in One Row
 
 ### Overview
-Two improvements to the chart tooltips:
-1. Position tooltip so it doesn't cover the chart bars being hovered
-2. Reduce font size for a more compact, less intrusive appearance
-
----
-
-### Solution Approach
-
-Use Recharts' built-in `offset` prop combined with a shared custom tooltip component. This is the standard, non-fragile approach:
-
-- **`offset` prop**: Increases the distance between the cursor and tooltip (default is 5px, we'll use ~20px)
-- **Custom tooltip component**: Gives us full control over font size and styling in one reusable place
+Shrink the average stats boxes (Avg Calories, Protein, Carbs, Fat) so all 4 fit in a single row on mobile, instead of the current 2x2 grid.
 
 ---
 
@@ -22,87 +10,59 @@ Use Recharts' built-in `offset` prop combined with a shared custom tooltip compo
 
 **File: `src/pages/Trends.tsx`**
 
-#### 1. Create a compact custom tooltip component (add near top of file, after imports)
+#### 1. Change grid to always be 4 columns (line 159)
 
+Current:
 ```tsx
-const CompactTooltip = ({ active, payload, label, formatter }: any) => {
-  if (!active || !payload?.length) return null;
-  
-  return (
-    <div className="rounded-md border border-border bg-card px-2 py-1 shadow-sm">
-      <p className="text-[10px] font-medium text-foreground mb-0.5">{label}</p>
-      {payload.map((entry: any, index: number) => {
-        const displayValue = formatter 
-          ? formatter(entry.value, entry.name, entry, index, entry.payload)
-          : `${entry.name}: ${Math.round(entry.value)}`;
-        return (
-          <p 
-            key={entry.dataKey || index} 
-            className="text-[10px]"
-            style={{ color: entry.color }}
-          >
-            {Array.isArray(displayValue) ? displayValue[0] : displayValue}
-          </p>
-        );
-      })}
-    </div>
-  );
-};
+<div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
 ```
 
-#### 2. Update all Tooltip components to use the custom component with offset
-
-**Calories chart (lines 178-184):**
+New:
 ```tsx
-<Tooltip
-  content={<CompactTooltip />}
-  offset={20}
-  cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
-/>
+<div className="grid grid-cols-4 gap-2">
 ```
 
-**Macros (%) chart (lines 208-219):**
+#### 2. Reduce padding and font sizes in CardContent (lines 162-168)
+
+Current:
 ```tsx
-<Tooltip
-  content={
-    <CompactTooltip
-      formatter={(value: number, name: string, props: any) => {
-        const rawKey = `${name.toLowerCase()}Raw`;
-        const rawValue = props.payload[rawKey];
-        return [`${Math.round(value)}% (${Math.round(rawValue)}g)`];
-      }}
-    />
-  }
-  offset={20}
-  cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
-/>
+<CardContent className="p-4">
+  <p className="text-title">
+    {averages[key as keyof typeof averages]}
+  </p>
+  <p className="text-muted-foreground">
+    Avg {label.split(' ')[0]}
+  </p>
+</CardContent>
 ```
 
-**Row 2 charts (lines 248-254):**
+New:
 ```tsx
-<Tooltip
-  content={<CompactTooltip />}
-  offset={20}
-  cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
-/>
+<CardContent className="p-2">
+  <p className="text-base font-semibold">
+    {averages[key as keyof typeof averages]}
+  </p>
+  <p className="text-[10px] text-muted-foreground">
+    Avg {label.split(' ')[0]}
+  </p>
+</CardContent>
 ```
 
 ---
 
-### Technical Details
+### Summary of Sizing Changes
 
-| Setting | Purpose |
-|---------|---------|
-| `offset={20}` | Pushes tooltip 20px away from cursor, reducing overlap with bars |
-| `cursor={{ fill: 'hsl(var(--muted)/0.3)' }}` | Subtle highlight on hovered bar, helps user see which bar is active |
-| `text-[10px]` | Compact font size (reduced from default ~14-16px) |
-| Tailwind classes | Uses existing design tokens (border, card, foreground) for consistency |
+| Element | Before | After |
+|---------|--------|-------|
+| Grid columns | `grid-cols-2 sm:grid-cols-4` | `grid-cols-4` |
+| Gap | `gap-3` | `gap-2` |
+| Card padding | `p-4` | `p-2` |
+| Number font | `text-title` (large) | `text-base font-semibold` |
+| Label font | default | `text-[10px]` |
 
 ---
 
 ### Result
-- Tooltip appears offset from cursor, not covering the hovered bar
-- Font size reduced significantly for less visual intrusion
-- Single reusable component for consistency across all charts
-- Uses standard Recharts props - no fragile workarounds
-
+- All 4 average stats boxes fit in one horizontal row on mobile
+- Compact appearance that takes up less vertical space
+- Consistent with the app's high-density, mobile-first design aesthetic
