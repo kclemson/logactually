@@ -322,21 +322,21 @@ export function DevToolsPanel() {
 
                 <div className="max-h-80 overflow-y-auto rounded-md border">
                   <table className="w-full text-xs">
-                    <thead className="bg-muted/50 sticky top-0">
+                    <thead className="bg-background sticky top-0">
                       <tr>
-                        <th className="px-1 py-1 text-left font-medium text-[10px]">Input</th>
-                        <th className="px-1 py-1 text-left font-medium text-[10px]">Source</th>
-                        <th className="px-1 py-1 text-left font-medium text-[10px]">Prompt</th>
-                        <th className="px-1 py-1 text-left font-medium text-[10px]">Output</th>
+                        <th className="px-1 py-1 text-left font-medium text-xs">Input</th>
+                        <th className="px-1 py-1 text-left font-medium text-xs">Source</th>
+                        <th className="px-1 py-1 text-left font-medium text-xs">Prompt</th>
+                        <th className="px-1 py-1 text-left font-medium text-xs">Output</th>
                       </tr>
                     </thead>
                     <tbody>
                       {displayResults.map((result, i) => (
                         <tr key={i} className="border-t">
-                          <td className="px-1 py-1 font-mono text-[10px] max-w-[200px] truncate">
+                          <td className="px-1 py-1 font-mono text-xs max-w-[200px] truncate">
                             {result.input}
                           </td>
-                          <td className="px-1 py-1 text-[10px]">
+                          <td className="px-1 py-1 text-xs">
                             <span className={
                               result.source === 'upc-lookup' 
                                 ? 'text-green-600' 
@@ -347,7 +347,7 @@ export function DevToolsPanel() {
                               {result.source === 'upc-lookup' ? 'UPC' : result.source === 'ai-fallback' ? 'AI (fallback)' : 'AI'}
                             </span>
                           </td>
-                          <td className="px-1 py-1 text-[10px]">
+                          <td className="px-1 py-1 text-xs">
                             <span className={
                               result.promptVersion === 'experimental' 
                                 ? 'text-purple-500' 
@@ -356,7 +356,7 @@ export function DevToolsPanel() {
                               {result.promptVersion === 'experimental' ? 'Experimental' : 'Default'}
                             </span>
                           </td>
-                          <td className="px-1 py-1 text-[10px] max-w-[300px]">
+                          <td className="px-1 py-1 text-xs max-w-[300px]">
                             {result.error ? (
                               <span className="text-destructive">{result.error}</span>
                             ) : (
