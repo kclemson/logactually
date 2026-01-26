@@ -211,15 +211,15 @@ const Trends = () => {
               </CardContent>
             </Card>
 
-            {/* Macros Breakdown Chart (100% stacked) */}
+            {/* Macros Breakdown Chart (grouped bars) */}
             <Card>
               <CardHeader className="p-2 pb-1">
-                <CardTitle className="text-sm font-semibold">Macros (%)</CardTitle>
+                <CardTitle className="text-sm font-semibold">Macros (g)</CardTitle>
               </CardHeader>
               <CardContent className="p-2 pt-0">
                 <div className="h-24">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={percentageChartData}>
+                    <BarChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis
                         dataKey="date"
@@ -228,21 +228,13 @@ const Trends = () => {
                         interval="preserveStartEnd"
                       />
                       <Tooltip
-                        content={
-                          <CompactTooltip
-                            formatter={(value: number, name: string, props: any) => {
-                              const rawKey = `${name.toLowerCase()}Raw`;
-                              const rawValue = props.payload[rawKey];
-                              return [`${Math.round(value)}% (${Math.round(rawValue)}g)`];
-                            }}
-                          />
-                        }
+                        content={<CompactTooltip />}
                         offset={20}
                         cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
                       />
-                      <Bar dataKey="fat" name="Fat" stackId="macros" fill="hsl(346 77% 49%)" radius={[0, 0, 0, 0]} />
-                      <Bar dataKey="carbs" name="Carbs" stackId="macros" fill="hsl(38 92% 50%)" radius={[0, 0, 0, 0]} />
-                      <Bar dataKey="protein" name="Protein" stackId="macros" fill="hsl(142 76% 36%)" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="protein" name="Protein" fill="hsl(142 76% 36%)" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="carbs" name="Carbs" fill="hsl(38 92% 50%)" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="fat" name="Fat" fill="hsl(346 77% 49%)" radius={[2, 2, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
