@@ -26,6 +26,7 @@ interface UsageStats {
 
 interface UserStats {
   user_id: string;
+  user_number: number;
   total_entries: number;
   entries_today: number;
 }
