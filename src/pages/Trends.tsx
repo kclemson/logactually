@@ -176,6 +176,8 @@ const Trends = () => {
                         interval="preserveStartEnd"
                       />
                       <Tooltip
+                        position={{ y: 100 }}
+                        wrapperStyle={{ visibility: 'visible' }}
                         contentStyle={{
                           backgroundColor: 'hsl(var(--card))',
                           border: '1px solid hsl(var(--border))',
@@ -206,6 +208,8 @@ const Trends = () => {
                         interval="preserveStartEnd"
                       />
                       <Tooltip
+                        position={{ y: 100 }}
+                        wrapperStyle={{ visibility: 'visible' }}
                         contentStyle={{
                           backgroundColor: 'hsl(var(--card))',
                           border: '1px solid hsl(var(--border))',
@@ -217,9 +221,9 @@ const Trends = () => {
                           return [`${Math.round(value)}% (${Math.round(rawValue)}g)`, name];
                         }}
                       />
-                      <Bar dataKey="protein" name="Protein" stackId="macros" fill="hsl(142 76% 36%)" radius={[0, 0, 0, 0]} />
+                      <Bar dataKey="fat" name="Fat" stackId="macros" fill="hsl(346 77% 49%)" radius={[0, 0, 0, 0]} />
                       <Bar dataKey="carbs" name="Carbs" stackId="macros" fill="hsl(38 92% 50%)" radius={[0, 0, 0, 0]} />
-                      <Bar dataKey="fat" name="Fat" stackId="macros" fill="hsl(346 77% 49%)" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="protein" name="Protein" stackId="macros" fill="hsl(142 76% 36%)" radius={[2, 2, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -246,6 +250,8 @@ const Trends = () => {
                           interval="preserveStartEnd"
                         />
                         <Tooltip
+                          position={{ y: 100 }}
+                          wrapperStyle={{ visibility: 'visible' }}
                           contentStyle={{
                             backgroundColor: 'hsl(var(--card))',
                             border: '1px solid hsl(var(--border))',
