@@ -115,7 +115,7 @@ serve(async (req) => {
 
           return new Response(
             JSON.stringify({
-              description: `${productName} (${servingSize})`,
+              description: `${productName} \u200B(${servingSize})`,
               calories,
               protein,
               carbs,
@@ -218,7 +218,7 @@ If you cannot identify the product, respond with:
 
       return new Response(
         JSON.stringify({
-          description: `${parsed.name} (${parsed.serving || '1 serving'})`,
+          description: `${parsed.name} \u200B(${parsed.serving || '1 serving'})`,
           calories: Math.round(parsed.calories || 0),
           protein: Math.round(parsed.protein || 0),
           carbs: Math.round(parsed.carbs || 0),

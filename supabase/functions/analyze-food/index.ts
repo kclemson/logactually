@@ -159,7 +159,7 @@ serve(async (req) => {
 
     // Merge name and portion into description for client consumption
     const mergedItems: FoodItem[] = parsed.food_items.map(item => ({
-      description: item.portion ? `${item.name} (${item.portion})` : item.name,
+      description: item.portion ? `${item.name} \u200B(${item.portion})` : item.name,
       calories: item.calories || 0,
       protein: item.protein || 0,
       carbs: item.carbs || 0,
