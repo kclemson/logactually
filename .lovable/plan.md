@@ -1,49 +1,15 @@
 
 
-## Smart Text Wrapping at Parentheses
+## Fix Smart Text Wrapping for Editable Rows
 
-### The Idea
-When a food item description needs to wrap to two lines, prefer breaking before the first `(` so the name stays on line 1 and the portion on line 2:
+### The Problem
+The `formatDescriptionWithBreakHint` function with `<wbr>` was only applied to the non-editable code path. On the FoodLog page, `editable={true}` is used, so the editable code path runs instead - which uses `contentEditable` with plain text.
 
-```text
-Current:                    Proposed:
-┌────────────────────┐      ┌────────────────────┐
-│ Bacon, pan-fried   │      │ Bacon, pan-fried   │
-│ (1 slice)          │      │ (1 slice)          │
-└────────────────────┘      └────────────────────┘
-        ↑                           ↑
-  (random break)              (break at `(`)
-```
-
----
-
-### Technical Approach
-
-Use HTML's `<wbr>` (Word Break Opportunity) element. This tells the browser "if you need to wrap, prefer wrapping here" - but it won't force a break if everything fits on one line.
-
-**Helper function:**
-```tsx
-const formatDescriptionWithBreakHint = (description: string) => {
-  const parenIndex = description.indexOf('(');
-  if (parenIndex === -1) {
-    return description; // No parenthesis, return as-is
-  }
-  const namePart = description.slice(0, parenIndex);
-  const portionPart = description.slice(parenIndex);
-  return <>{namePart}<wbr />{portionPart}</>;
-};
-```
-
----
-
-### Where to Apply
-
-| Mode | Apply? | Reason |
-|------|--------|--------|
-| Non-editable rows | Yes | Simple JSX replacement, no interaction concerns |
-| Editable rows | No | `contentEditable` handles raw text; injecting `<wbr>` would complicate editing and saving |
-
-This keeps the implementation clean and avoids fragility in the editable case.
+### Solution
+Use a **zero-width space character** (`\u200B`) instead of `<wbr>`. This invisible Unicode character:
+- Works in both plain text and HTML contexts
+- Acts as a word-break opportunity for the browser
+- Is invisible and doesn't affect editing or saving (it's a valid text character)
 
 ---
 
@@ -51,41 +17,45 @@ This keeps the implementation clean and avoids fragility in the editable case.
 
 **File: `src/components/FoodItemsTable.tsx`**
 
-1. Add helper function near top of component (around line 65):
+1. **Create a text-based helper** (works for both editable and display contexts):
 ```tsx
-// Format description with word-break hint before first parenthesis
-const formatDescriptionWithBreakHint = (description: string) => {
+// Insert zero-width space before first parenthesis for smart wrapping
+const addBreakHintToDescription = (description: string): string => {
   const parenIndex = description.indexOf('(');
   if (parenIndex === -1) {
     return description;
   }
-  const namePart = description.slice(0, parenIndex);
-  const portionPart = description.slice(parenIndex);
-  return <>{namePart}<wbr />{portionPart}</>;
+  // Insert zero-width space before the parenthesis
+  return description.slice(0, parenIndex) + '\u200B' + description.slice(parenIndex);
 };
 ```
 
-2. Update non-editable description cell (around line 396):
+2. **Update the editable contentEditable ref** (line 371-372):
 ```tsx
-// Before:
-{item.description}
-
-// After:
-{formatDescriptionWithBreakHint(item.description)}
+ref={(el) => {
+  if (el && el.textContent !== item.description && document.activeElement !== el) {
+    el.textContent = addBreakHintToDescription(item.description);
+  }
+}}
 ```
+
+3. **Update the JSX-based helper for non-editable rows** to use the same approach (or keep `<wbr>` since it already works there - either is fine).
 
 ---
 
-### Complexity Assessment
+### Why This Works
 
-| Aspect | Rating | Notes |
-|--------|--------|-------|
-| Lines of code | ~10 | Small helper function + one usage |
-| Fragility | Low | Only affects display, not data |
-| Edge cases | Minimal | Gracefully handles no-parenthesis case |
-| Maintenance burden | Low | Self-contained, doesn't touch editing logic |
+| Approach | Editable Works? | Non-Editable Works? |
+|----------|-----------------|---------------------|
+| `<wbr>` HTML element | No (requires JSX/HTML) | Yes |
+| Zero-width space `\u200B` | Yes (plain text) | Yes |
 
-This is a **safe, low-complexity change** that improves visual consistency without touching the more complex editable/contentEditable code paths.
+The zero-width space is a standard Unicode character that browsers treat as a valid word-break opportunity, similar to `<wbr>` but compatible with plain text contexts.
+
+---
+
+### Edge Case Consideration
+When the user edits and saves the description, the zero-width space might be saved to the database. This is harmless (invisible character), but if you want to strip it on save, we can add a cleanup step in the save handler.
 
 ---
 
@@ -93,5 +63,5 @@ This is a **safe, low-complexity change** that improves visual consistency witho
 
 | File | Change |
 |------|--------|
-| `src/components/FoodItemsTable.tsx` | Add `formatDescriptionWithBreakHint` helper, apply to non-editable description cell |
+| `src/components/FoodItemsTable.tsx` | Add `addBreakHintToDescription` helper, apply to editable contentEditable ref |
 
