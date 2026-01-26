@@ -4,6 +4,16 @@ import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { useSavedMeals, useUpdateSavedMeal, useDeleteSavedMeal } from '@/hooks/useSavedMeals';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
@@ -14,6 +24,7 @@ export default function Settings() {
   const { data: savedMeals, isLoading: mealsLoading } = useSavedMeals();
   const updateMeal = useUpdateSavedMeal();
   const deleteMeal = useDeleteSavedMeal();
+  const [mealToDelete, setMealToDelete] = useState<{ id: string; name: string } | null>(null);
 
   // Avoid hydration mismatch
   useEffect(() => {
@@ -33,8 +44,13 @@ export default function Settings() {
   };
 
   const handleDelete = (id: string, name: string) => {
-    if (window.confirm(`Delete "${name}"?`)) {
-      deleteMeal.mutate(id);
+    setMealToDelete({ id, name });
+  };
+
+  const confirmDelete = () => {
+    if (mealToDelete) {
+      deleteMeal.mutate(mealToDelete.id);
+      setMealToDelete(null);
     }
   };
 
@@ -137,6 +153,26 @@ export default function Settings() {
           </div>
         </div>
       </section>
+
+      <AlertDialog open={!!mealToDelete} onOpenChange={(open) => !open && setMealToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete saved meal?</AlertDialogTitle>
+            <AlertDialogDescription>
+              "{mealToDelete?.name}" will be permanently removed. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete} 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
