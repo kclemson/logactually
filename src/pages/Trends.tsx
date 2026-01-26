@@ -156,14 +156,14 @@ const Trends = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-4 gap-2">
         {charts.map(({ key, label }) => (
           <Card key={key} className="text-center">
-            <CardContent className="p-4">
-              <p className="text-title">
+            <CardContent className="p-2">
+              <p className="text-base font-semibold">
                 {averages[key as keyof typeof averages]}
               </p>
-              <p className="text-muted-foreground">
+              <p className="text-[10px] text-muted-foreground">
                 Avg {label.split(' ')[0]}
               </p>
             </CardContent>
