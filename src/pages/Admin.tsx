@@ -51,18 +51,16 @@ export default function Admin() {
       : 0;
 
   return (
-    <div className="p-4 space-y-4">
-      <h1 className="font-semibold text-heading">Admin Stats</h1>
-      
+    <div className="p-4 space-y-3">
       {/* Row 1: Headers with totals */}
-      <div className="grid grid-cols-3 gap-4 text-muted-foreground">
+      <div className="grid grid-cols-3 gap-2 text-muted-foreground text-xs">
         <p className="font-medium">Users: {stats?.total_users ?? 0}</p>
         <p className="font-medium">Entries: {stats?.total_entries ?? 0}</p>
         <p className="font-medium">Saved Meals: {stats?.total_saved_meals ?? 0}</p>
       </div>
 
       {/* Row 2: Sub-stats in 3 columns */}
-      <div className="grid grid-cols-3 gap-4 text-muted-foreground text-sm">
+      <div className="grid grid-cols-3 gap-2 text-muted-foreground text-xs">
         {/* Users column */}
         <div className="space-y-0.5">
           <p>With entries: {stats?.users_with_entries ?? 0} ({pct(stats?.users_with_entries ?? 0)}%)</p>
@@ -85,53 +83,53 @@ export default function Admin() {
       </div>
 
       {stats?.daily_stats && stats.daily_stats.length > 0 ? (
-        <table className="w-auto mt-4">
+        <table className="w-auto mt-3 text-xs">
           <thead>
             <tr className="border-b">
-              <th className="text-left py-1 pr-4 font-medium text-muted-foreground">Date</th>
-              <th className="text-center py-1 pr-4 font-medium text-muted-foreground">Entries</th>
-              <th className="text-center py-1 pr-4 font-medium text-muted-foreground">Users</th>
-              <th className="text-center py-1 pr-4 font-medium text-muted-foreground">With Entries</th>
-              <th className="text-center py-1 font-medium text-muted-foreground">New Users</th>
+              <th className="text-left py-0.5 pr-2 font-medium text-muted-foreground">Date</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Entries</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Users</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">With Entries</th>
+              <th className="text-center py-0.5 font-medium text-muted-foreground">New Users</th>
             </tr>
           </thead>
           <tbody>
             {stats.daily_stats.slice(0, 3).map((row) => (
               <tr key={row.stat_date} className="border-b border-border/50">
-                <td className="py-1 pr-4">{format(parseISO(row.stat_date), 'MMM-dd')}</td>
-                <td className="text-center py-1 pr-4">{row.entry_count}</td>
-                <td className="text-center py-1 pr-4">{row.total_users}</td>
-                <td className="text-center py-1 pr-4">{row.users_with_entries}</td>
-                <td className="text-center py-1">{row.users_created}</td>
+                <td className="py-0.5 pr-2">{format(parseISO(row.stat_date), 'MMM-dd')}</td>
+                <td className="text-center py-0.5 pr-2">{row.entry_count}</td>
+                <td className="text-center py-0.5 pr-2">{row.total_users}</td>
+                <td className="text-center py-0.5 pr-2">{row.users_with_entries}</td>
+                <td className="text-center py-0.5">{row.users_created}</td>
               </tr>
             ))}
           </tbody>
         </table>
       ) : (
-        <p className="text-muted-foreground">No data in the last 14 days.</p>
+        <p className="text-muted-foreground text-xs">No data in the last 14 days.</p>
       )}
 
       {userStats && userStats.length > 0 ? (
-        <table className="w-auto mt-6">
+        <table className="w-auto mt-4 text-xs">
           <thead>
             <tr className="border-b">
-              <th className="text-left py-1 pr-4 font-medium text-muted-foreground">User</th>
-              <th className="text-center py-1 pr-4 font-medium text-muted-foreground">Total Entries</th>
-              <th className="text-center py-1 font-medium text-muted-foreground">Today</th>
+              <th className="text-left py-0.5 pr-2 font-medium text-muted-foreground">User</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Total Entries</th>
+              <th className="text-center py-0.5 font-medium text-muted-foreground">Today</th>
             </tr>
           </thead>
           <tbody>
             {userStats.map((user, index) => (
               <tr key={user.user_id} className="border-b border-border/50">
-                <td className="py-1 pr-4">User {index + 1}</td>
-                <td className="text-center py-1 pr-4">{user.total_entries}</td>
-                <td className="text-center py-1">{user.entries_today}</td>
+                <td className="py-0.5 pr-2">User {index + 1}</td>
+                <td className="text-center py-0.5 pr-2">{user.total_entries}</td>
+                <td className="text-center py-0.5">{user.entries_today}</td>
               </tr>
             ))}
           </tbody>
         </table>
       ) : (
-        <p className="text-muted-foreground text-sm">No users found.</p>
+        <p className="text-muted-foreground text-xs">No users found.</p>
       )}
     </div>
   );
