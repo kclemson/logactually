@@ -149,12 +149,18 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
 
   // Helper to create and save entry from food items
   const createEntryFromItems = useCallback((items: FoodItem[], rawInput: string | null) => {
-    const totals = calculateTotals(items);
+    // Generate UIDs once upfront to ensure consistency between DB and local state
+    const itemsWithUids = items.map(item => ({
+      ...item,
+      uid: crypto.randomUUID(),
+    }));
+    
+    const totals = calculateTotals(itemsWithUids);
     createEntry.mutate(
       {
         eaten_date: dateStr,
         raw_input: rawInput,
-        food_items: items.map(item => ({ ...item, uid: crypto.randomUUID() })),
+        food_items: itemsWithUids,
         total_calories: Math.round(totals.calories),
         total_protein: Math.round(totals.protein * 10) / 10,
         total_carbs: Math.round(totals.carbs * 10) / 10,
@@ -162,9 +168,9 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       },
       {
         onSuccess: (createdEntry) => {
-          const itemsWithEntryId = items.map(item => ({
+          // Reuse the same UIDs, just add entryId
+          const itemsWithEntryId = itemsWithUids.map(item => ({
             ...item,
-            uid: crypto.randomUUID(),
             entryId: createdEntry.id,
           }));
           addNewItems(itemsWithEntryId);
