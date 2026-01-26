@@ -219,7 +219,7 @@ const Trends = () => {
               <CardContent className="p-2 pt-0">
                 <div className="h-24">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData}>
+                    <BarChart data={chartData} barGap={0}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis
                         dataKey="date"
