@@ -161,10 +161,10 @@ const Trends = () => {
           <div className="grid grid-cols-2 gap-3">
             {/* Calories Chart */}
             <Card>
-              <CardHeader className="pb-2">
+              <CardHeader className="p-2 pb-1">
                 <CardTitle className="text-sm font-semibold">Calories</CardTitle>
               </CardHeader>
-              <CardContent className="p-3 pt-0">
+              <CardContent className="p-2 pt-0">
                 <div className="h-24">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData}>
@@ -196,10 +196,10 @@ const Trends = () => {
 
             {/* Macros Breakdown Chart (100% stacked) */}
             <Card>
-              <CardHeader className="pb-2">
+              <CardHeader className="p-2 pb-1">
                 <CardTitle className="text-sm font-semibold">Macros (%)</CardTitle>
               </CardHeader>
-              <CardContent className="p-3 pt-0">
+              <CardContent className="p-2 pt-0">
                 <div className="h-24">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={percentageChartData}>
@@ -243,10 +243,10 @@ const Trends = () => {
           <div className="grid grid-cols-3 gap-3">
             {charts.slice(1).map(({ key, label, color }) => (
               <Card key={key}>
-                <CardHeader className="pb-2">
+                <CardHeader className="p-2 pb-1">
                   <CardTitle className="text-sm font-semibold">{label}</CardTitle>
                 </CardHeader>
-                <CardContent className="p-3 pt-0">
+                <CardContent className="p-2 pt-0">
                   <div className="h-24">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={chartData}>
