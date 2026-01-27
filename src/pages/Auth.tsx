@@ -16,7 +16,7 @@ export default function Auth() {
   
   const [isSignUp, setIsSignUp] = useState(!!inviteFromUrl);
   const [isResetMode, setIsResetMode] = useState(false);
-  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(isResetCallback);
   const [resetSent, setResetSent] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,10 +27,16 @@ export default function Auth() {
 
   // Handle password reset callback
   useEffect(() => {
+    // If we have the reset callback but no user yet, wait for user
+    // If we have both, ensure we're in password update mode
     if (isResetCallback && user) {
       setIsUpdatingPassword(true);
     }
-  }, [isResetCallback, user]);
+    // If user leaves (signs out) while in reset mode, exit reset mode
+    if (!user && isUpdatingPassword && !isResetCallback) {
+      setIsUpdatingPassword(false);
+    }
+  }, [isResetCallback, user, isUpdatingPassword]);
 
   if (loading) {
     return (
