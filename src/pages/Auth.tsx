@@ -54,11 +54,13 @@ export default function Auth() {
       redirectTo: `${window.location.origin}/auth?reset=true`,
     });
     
+    // Log error for debugging but don't expose to user
     if (error) {
-      setErrorMessage(error.message);
-    } else {
-      setResetSent(true);
+      console.error('Password reset error:', error.message);
     }
+    
+    // Always show "success" to prevent account enumeration
+    setResetSent(true);
     setSubmitting(false);
   };
 
@@ -171,8 +173,8 @@ export default function Auth() {
             <CardTitle className="text-2xl font-bold">{APP_NAME}</CardTitle>
             <CardDescription>
               {resetSent 
-                ? "Check your email for a reset link"
-                : "Enter your email to receive a reset link"
+                ? "Check your email"
+                : "Reset your password"
               }
             </CardDescription>
           </CardHeader>
@@ -180,7 +182,7 @@ export default function Auth() {
             {resetSent ? (
               <div className="space-y-4">
                 <div className="rounded-md bg-primary/10 p-3 text-sm text-primary">
-                  Password reset email sent! Check your inbox.
+                  If an account exists for this email, you'll receive a password reset link shortly.
                 </div>
                 <Button 
                   variant="outline" 
