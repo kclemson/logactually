@@ -1,84 +1,77 @@
 
-Goal: Fix the “Meal saved! / Also add to today’s log?” prompt that still won’t dismiss when clicking either button.
 
-What’s actually happening (root cause)
-- In `src/components/CreateMealDialog.tsx`, the prompt `AlertDialog` is controlled by `open={state === 'prompting'}`.
-- Clicking “Yes”/“No” calls `onOpenChange(false)` (parent close), but it does NOT change `state`.
-- Because `CreateMealDialog` stays mounted in both `FoodLog.tsx` and `Settings.tsx` (it is always rendered, just with `open={false}`), the `state` remains `"prompting"`, so the `AlertDialog` stays open forever.
-- The previous fix (adding `onOpenChange` to `AlertDialog`) closes the parent, but still doesn’t guarantee the prompt unmounts because the prompt’s own `open` condition ignores the parent `open` flag.
+## Fix Duplicate Key Bug in FoodItemsTable
 
-Implementation approach (robust, minimal, matches existing modal patterns)
-We’ll fix this in two layers:
-1) Ensure the prompt cannot remain open when the parent dialog is closed (tie prompt visibility to `open` too).
-2) Ensure `CreateMealDialog` unmounts when closed (so internal state can’t “stick”), matching the project’s existing “conditionally render dialogs” pattern and avoiding `useEffect`-based syncing.
+### Problem Summary
 
-Changes to make
+The console warning "Encountered two children with the same key" occurs because the same UID appears in multiple entries stored in the database. This happens due to a race condition when:
 
-1) `src/components/CreateMealDialog.tsx`
-A. Make the AlertDialog open depend on BOTH the component `open` prop and internal `state`
-- Change:
-  - `open={state === 'prompting'}`
-- To:
-  - `open={open && state === 'prompting'}`
+1. User logs a saved meal → new entry is created with fresh UIDs
+2. Before the query cache updates, user deletes an item from a DIFFERENT entry
+3. The deletion logic uses stale boundary indices to slice items from `displayItems`
+4. Items from the NEW entry get incorrectly saved to the OLD entry
+5. Both entries end up with the same UID, causing React key conflicts
 
-This alone prevents the prompt from being open when the parent is closed.
+### Root Cause Analysis
 
-B. Add a single “close everything” helper that also resets internal state
-- Create a `closeAll()` function that:
-  - sets `state` back to `'input'`
-  - clears `createdMeal`, `rawInput`, `name`, `userHasTyped` (optional but recommended)
-  - calls `onOpenChange(false)`
+The bug is in how `getItemsForEntry()` works:
 
-Then update:
-- `handleLogYes` → call `closeAll()` after calling `onMealCreated(...)`
-- `handleLogNo` → call `closeAll()`
-- `AlertDialog`’s `onOpenChange` (when `false`) → call `closeAll()` (treat “dismiss” as “No, just save”)
+```typescript
+const getItemsForEntry = useCallback((entryId: string): FoodItem[] => {
+  const boundary = entryBoundaries.find(b => b.entryId === entryId);
+  if (!boundary) return [];
+  return displayItems.slice(boundary.startIndex, boundary.endIndex + 1);
+}, [entryBoundaries, displayItems]);
+```
 
-This ensures *any* dismissal path closes cleanly:
-- clicking either button
-- clicking outside
-- pressing Escape
+The problem:
+- `entryBoundaries` is computed from `entries` (the raw query data)
+- `displayItems` includes both query items AND locally-added `newItems`
+- When new items are added via `addNewItems()`, `displayItems` grows but `entryBoundaries` uses old indices
+- Slicing `displayItems` with stale boundaries returns wrong items
 
-C. Remove the `useEffect` “reset state when dialog opens”
-- Since we’ll unmount `CreateMealDialog` when closed (next steps), the initial `useState(...)` values are the reset.
-- This aligns with the project’s event-driven preference (avoid `useEffect` syncing) and removes one more moving part.
-- Also remove now-unused imports (`useEffect` on line 1).
+### Solution
 
-2) `src/pages/FoodLog.tsx`
-Conditionally render `CreateMealDialog` so it unmounts when closed
-- Change from always rendering:
-  - `<CreateMealDialog open={createMealDialogOpen} ... />`
-- To:
-  - `{createMealDialogOpen && ( <CreateMealDialog open={true} onOpenChange={setCreateMealDialogOpen} ... /> )}`
-  - or keep `open={createMealDialogOpen}` (either works, but the key is conditional rendering)
+Instead of relying on index-based slicing (which is fragile when arrays change), filter items by their `entryId` property:
 
-This is consistent with how `SaveMealDialog` is already conditionally rendered.
+```typescript
+const getItemsForEntry = useCallback((entryId: string): FoodItem[] => {
+  return displayItems.filter(item => item.entryId === entryId);
+}, [displayItems]);
+```
 
-3) `src/pages/Settings.tsx`
-Apply the same conditional rendering for `CreateMealDialog`
-- Currently it is always rendered with `open={createMealDialogOpen}`.
-- Change to only render it when `createMealDialogOpen` is true.
+This is more robust because:
+- Each item knows which entry it belongs to (via `entryId`)
+- No dependency on array indices or boundary calculations
+- Works correctly even when `displayItems` has pending new items
 
-Verification checklist (what I’ll test after implementing)
-1) Food Log → Saved → Add New Meal → analyze → Save Meal → prompt appears → click “No, just save”:
-   - prompt closes immediately
-   - CreateMealDialog closes
-   - user returns to Food Log
-2) Same flow but click “Yes, log it too”:
-   - prompt closes immediately
-   - CreateMealDialog closes
-   - entry is created in today’s log
-3) While prompt is open: press Escape / click outside:
-   - prompt closes
-   - CreateMealDialog closes (treated like “No”)
-4) Settings → Add meal → save (no prompt):
-   - dialog closes and reopens cleanly without stale state/items
+### Additional Cleanup
 
-Why this will fix the “still reproing” issue
-- Right now, “close” only updates the parent `open` flag, but the prompt’s own open condition is purely `state === 'prompting'`, and `state` never changes.
-- After this change, the prompt can’t stay open when `open` is false, and the component will unmount on close so the internal `state` cannot remain stuck as `"prompting"`.
+Also fix the saved meals to not store stale `entryId` values. When saving a meal via "Save as meal", strip out `entryId` and `uid` from items before saving to `saved_meals`:
 
-Scope / files touched
-- `src/components/CreateMealDialog.tsx` (fix prompt open condition, central close handler, remove effect reset)
-- `src/pages/FoodLog.tsx` (conditionally render CreateMealDialog)
-- `src/pages/Settings.tsx` (conditionally render CreateMealDialog)
+**In `useSaveMeal` mutation:**
+```typescript
+const cleanedItems = foodItems.map(({ uid, entryId, ...rest }) => rest);
+```
+
+This prevents the saved meal from polluting future entries with stale metadata.
+
+### Data Fix
+
+The current database has entries with duplicate UIDs that need cleanup. After the code fix, the user should delete the duplicate entries or edit them to have unique UIDs. I can provide a SQL query to identify and clean up these entries if needed.
+
+### Files to Modify
+
+| File | Change |
+|------|--------|
+| `src/pages/FoodLog.tsx` | Change `getItemsForEntry` to filter by `entryId` instead of slicing by index |
+| `src/hooks/useSavedMeals.ts` | In `useSaveMeal`, strip `uid` and `entryId` from items before saving |
+
+### Technical Note
+
+The `entryBoundaries` array is still needed for:
+- Determining which item is the "last" in an entry (for showing the chevron)
+- Visual grouping/dividers in the table
+
+But it should NOT be used for data operations like getting items to save - that should use the `entryId` property on each item.
+
