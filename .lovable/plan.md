@@ -1,54 +1,65 @@
 
 
-## Fix "Add New Meal" Button Styling
+## Fix AlertDialog Not Closing on Button Click
 
 ### Problem
 
-The current "Add New Meal" button uses `variant="outline"` which creates a full-width bordered button. Combined with:
-- The `border-b` on its container div
-- The popover's own border
-- The `border-b` dividers between meal items
+The "Meal saved!" AlertDialog doesn't close when clicking either button. The issue is a missing `onOpenChange` handler on the `AlertDialog` root component.
 
-This creates a "cacophony of lines" that looks cluttered, especially where rounded and non-rounded corners meet.
+### Root Cause
+
+The Radix UI `AlertDialogCancel` and `AlertDialogAction` components automatically try to close the dialog by calling `onOpenChange(false)` on the parent `AlertDialog`. However, the current implementation only has:
+
+```tsx
+<AlertDialog open={state === 'prompting'}>
+```
+
+Without an `onOpenChange` handler, the component doesn't know how to respond when the buttons try to close it. The `onClick` handlers do run, but Radix's internal close mechanism fails silently.
 
 ### Solution
 
-Style the "Add New Meal" button to match the meal list items - a simple text row with hover background, no border. This keeps visual consistency and reduces line noise.
-
-### Changes
-
-**File: `src/components/SavedMealsPopover.tsx`**
-
-Replace the outlined button with a ghost-styled row that matches the meal items:
+Add an `onOpenChange` handler to the `AlertDialog` that transitions state away from `'prompting'` when the dialog wants to close:
 
 ```tsx
-// Before (lines 80-92):
-{onCreateNew && (
-  <div className="p-2 border-b">
-    <Button variant="outline" size="sm" className="w-full justify-start" ...>
-      <Plus ... /> Add New Meal
-    </Button>
-  </div>
-)}
-
-// After:
-{onCreateNew && (
-  <button
-    onClick={handleCreateNew}
-    className="w-full text-left px-3 py-2 hover:bg-accent transition-colors border-b flex items-center gap-2"
-  >
-    <Plus className="h-4 w-4 text-muted-foreground" />
-    <span className="font-medium">Add New Meal</span>
-  </button>
-)}
+<AlertDialog 
+  open={state === 'prompting'} 
+  onOpenChange={(open) => {
+    if (!open) {
+      // Dialog wants to close - treat as "No, just save"
+      onOpenChange(false);
+    }
+  }}
+>
 ```
 
-Also update the empty state button (lines 60-68) to use `variant="ghost"` instead of `variant="outline"`.
+This ensures that:
+1. When user clicks "No, just save" → Radix calls `onOpenChange(false)` → we call `onOpenChange(false)` to close everything
+2. When user clicks "Yes, log it too" → The `onClick` runs first (calling `onMealCreated`), then Radix closes → we call `onOpenChange(false)`
 
-### Visual Result
+### File to Modify
 
-- No extra border around the button
-- Matches the meal row styling (same padding, same hover effect)
-- Only one divider line between "Add New Meal" and the first saved meal
-- Cleaner, less cluttered appearance
+| File | Change |
+|------|--------|
+| `src/components/CreateMealDialog.tsx` | Add `onOpenChange` handler to AlertDialog (line 290) |
+
+### Implementation
+
+Update line 290 from:
+```tsx
+<AlertDialog open={state === 'prompting'}>
+```
+
+To:
+```tsx
+<AlertDialog 
+  open={state === 'prompting'} 
+  onOpenChange={(isOpen) => {
+    if (!isOpen) {
+      onOpenChange(false);
+    }
+  }}
+>
+```
+
+This is a one-line fix that properly wires up the AlertDialog's close mechanism.
 
