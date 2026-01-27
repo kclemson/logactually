@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
 import {
   Dialog,
@@ -78,16 +78,15 @@ export function CreateMealDialog({
   // Calculate totals for display
   const totals = calculateTotals(displayItems);
 
-  // Reset state when dialog opens
-  useEffect(() => {
-    if (open) {
-      setState('input');
-      setName('');
-      setUserHasTyped(false);
-      setRawInput(null);
-      setCreatedMeal(null);
-    }
-  }, [open]);
+  // Helper to close everything and reset state
+  const closeAll = useCallback(() => {
+    setState('input');
+    setName('');
+    setUserHasTyped(false);
+    setRawInput(null);
+    setCreatedMeal(null);
+    onOpenChange(false);
+  }, [onOpenChange]);
 
   // Handle food analysis submission
   const handleFoodSubmit = async (text: string) => {
@@ -167,12 +166,11 @@ export function CreateMealDialog({
     if (createdMeal) {
       onMealCreated(createdMeal, displayItems);
     }
-    onOpenChange(false);
+    closeAll();
   };
 
   const handleLogNo = () => {
-    // Don't pass items to log, just close
-    onOpenChange(false);
+    closeAll();
   };
 
   // Handle item updates (no auto-save to DB, just local state)
@@ -288,10 +286,10 @@ export function CreateMealDialog({
 
       {/* "Also add to today's log?" prompt */}
       <AlertDialog 
-        open={state === 'prompting'} 
+        open={open && state === 'prompting'} 
         onOpenChange={(isOpen) => {
           if (!isOpen) {
-            onOpenChange(false);
+            closeAll();
           }
         }}
       >

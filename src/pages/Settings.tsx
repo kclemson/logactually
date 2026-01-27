@@ -244,12 +244,14 @@ export default function Settings() {
       </section>
 
       {/* Create New Meal Dialog */}
-      <CreateMealDialog
-        open={createMealDialogOpen}
-        onOpenChange={setCreateMealDialogOpen}
-        onMealCreated={() => {}}
-        showLogPrompt={false}
-      />
+      {createMealDialogOpen && (
+        <CreateMealDialog
+          open={createMealDialogOpen}
+          onOpenChange={setCreateMealDialogOpen}
+          onMealCreated={() => {}}
+          showLogPrompt={false}
+        />
+      )}
 
     </div>
   );
