@@ -1,47 +1,151 @@
 
 
-## Remove Redundant useEffect from Password Reset Flow
+## Harden Admin Access: Remove Dev Mode Bypasses and Add Server-Side Role Checks
 
-### Summary
+### Overview
 
-Remove the `useEffect` hook that manages `isUpdatingPassword` state, since the synchronous initialization (`useState(isResetCallback)`) already handles the primary use case. This aligns with the project's architecture preference for avoiding `useEffect` for state synchronization.
+This plan removes all `import.meta.env.DEV` bypasses for admin functionality and adds server-side role validation to the database functions. After this change, admin access will be controlled exclusively by RBAC via the `user_roles` table.
 
-### Why It's Safe to Remove
+**Non-admin user experience is completely unaffected** - the admin nav link remains hidden throughout (no layout shift), and DevToolsPanel is absolutely positioned.
 
-| Scenario | Current Behavior | After Removal |
-|----------|------------------|---------------|
-| User arrives at `/auth?reset=true` | State initialized to `true` synchronously | Same - works correctly |
-| User signs out while on reset form | Effect clears state | User is redirected to login anyway (no issue) |
-| Auth loads slowly | Effect sets state when user arrives | State already `true` from URL param |
+### Changes Summary
 
-The effect is defensive code that doesn't add meaningful protection given the synchronous initialization.
+| Component | Current Behavior | After Change |
+|-----------|------------------|--------------|
+| `get_usage_stats` | No role check | Throws exception if caller is not admin |
+| `get_user_stats` | No role check | Throws exception if caller is not admin |
+| `Admin.tsx` | DEV mode or admin role | Admin role only; renders `null` while checking |
+| `BottomNav.tsx` | DEV mode or admin role | Admin role only |
+| `Layout.tsx` | DevToolsPanel in DEV only | DevToolsPanel for admin users only |
 
-### Implementation
+### Implementation Details
 
-**File: `src/pages/Auth.tsx`**
+#### 1. Database Migration
 
-Remove lines 26-40 (the entire `useEffect` block):
+Add role validation to both admin RPC functions:
 
-```tsx
-// DELETE THIS BLOCK:
-useEffect(() => {
-  // If we have the reset callback but no user yet, wait for user
-  // If we have both, ensure we're in password update mode
-  if (isResetCallback && user) {
-    setIsUpdatingPassword(true);
-  }
-  // If user leaves (signs out) while in reset mode, exit reset mode
-  if (!user && isUpdatingPassword && !isResetCallback) {
-    setIsUpdatingPassword(false);
-  }
-}, [isResetCallback, user, isUpdatingPassword]);
+```sql
+-- Recreate get_usage_stats with admin check
+CREATE OR REPLACE FUNCTION public.get_usage_stats(user_timezone text DEFAULT 'America/Los_Angeles')
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+DECLARE
+  result json;
+  local_now timestamp;
+  local_today date;
+BEGIN
+  -- Admin role check
+  IF NOT has_role(auth.uid(), 'admin') THEN
+    RAISE EXCEPTION 'Admin access required';
+  END IF;
+  
+  -- ... rest of existing function body
+END;
+$$;
+
+-- Recreate get_user_stats with admin check
+CREATE OR REPLACE FUNCTION public.get_user_stats(user_timezone text DEFAULT 'America/Los_Angeles')
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+DECLARE
+  result json;
+  local_today date;
+BEGIN
+  -- Admin role check
+  IF NOT has_role(auth.uid(), 'admin') THEN
+    RAISE EXCEPTION 'Admin access required';
+  END IF;
+  
+  -- ... rest of existing function body
+END;
+$$;
 ```
 
-Also remove the `useEffect` import if no longer needed (line 1).
+#### 2. `src/pages/Admin.tsx`
+
+Remove DEV bypass and spinner:
+
+```tsx
+// BEFORE (lines 12-22):
+const hasAccess = import.meta.env.DEV || isAdmin;
+
+if (!import.meta.env.DEV && isAdminLoading) {
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="h-6 w-6 animate-spin ..." />
+    </div>
+  );
+}
+
+if (!hasAccess) {
+  return <Navigate to="/" replace />;
+}
+
+// AFTER:
+if (isAdminLoading) {
+  return null;
+}
+
+if (!isAdmin) {
+  return <Navigate to="/" replace />;
+}
+```
+
+#### 3. `src/components/BottomNav.tsx`
+
+Remove DEV bypass:
+
+```tsx
+// BEFORE (line 10):
+const showAdmin = import.meta.env.DEV || isAdmin;
+
+// AFTER:
+const showAdmin = isAdmin;
+```
+
+#### 4. `src/components/Layout.tsx`
+
+Replace DEV check with admin role check:
+
+```tsx
+// BEFORE:
+{import.meta.env.DEV && <DevToolsPanel />}
+
+// AFTER:
+import { useIsAdmin } from '@/hooks/useIsAdmin';
+
+export function Layout() {
+  const { data: isAdmin } = useIsAdmin();
+  
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
+      <main className="mx-auto max-w-lg px-3 pb-20 pt-4 md:pb-8">
+        <Outlet />
+      </main>
+      <BottomNav />
+      {isAdmin && <DevToolsPanel />}
+    </div>
+  );
+}
+```
 
 ### Files to Change
 
 | File | Change |
 |------|--------|
-| `src/pages/Auth.tsx` | Remove `useEffect` hook and potentially the import (~15 lines deleted) |
+| Database migration | Add `has_role(auth.uid(), 'admin')` check to both functions |
+| `src/pages/Admin.tsx` | Remove DEV bypass, replace spinner with `return null` |
+| `src/components/BottomNav.tsx` | Remove DEV bypass |
+| `src/components/Layout.tsx` | Replace DEV check with `useIsAdmin` hook |
+
+### Security Finding Resolution
+
+After implementation, the `admin_stats_no_role_check` finding will be deleted as it will be fully resolved.
 
