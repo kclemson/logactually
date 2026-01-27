@@ -335,12 +335,10 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     return null;
   }, [entryBoundaries]);
 
-  // Get all current items for a specific entry
+  // Get all current items for a specific entry - filter by entryId to avoid index race conditions
   const getItemsForEntry = useCallback((entryId: string): FoodItem[] => {
-    const boundary = entryBoundaries.find(b => b.entryId === entryId);
-    if (!boundary) return [];
-    return displayItems.slice(boundary.startIndex, boundary.endIndex + 1);
-  }, [entryBoundaries, displayItems]);
+    return displayItems.filter(item => item.entryId === entryId);
+  }, [displayItems]);
 
   // Save a single entry to the database
   const saveEntry = useCallback((entryId: string, items: FoodItem[]) => {

@@ -49,7 +49,10 @@ export function useSaveMeal() {
     mutationFn: async ({ name, originalInput, foodItems }: SaveMealParams) => {
       if (!user) throw new Error('Not authenticated');
       
-      // Generate signatures
+      // Strip uid and entryId from items to prevent stale metadata pollution
+      const cleanedItems = foodItems.map(({ uid, entryId, ...rest }) => rest);
+      
+      // Generate signatures (use original items for signature since it only needs description)
       const inputSignature = originalInput ? preprocessText(originalInput) : null;
       const itemsSignature = createItemsSignature(foodItems);
       
@@ -59,7 +62,7 @@ export function useSaveMeal() {
           user_id: user.id,
           name,
           original_input: originalInput,
-          food_items: foodItems as unknown as Json,
+          food_items: cleanedItems as unknown as Json,
           input_signature: inputSignature,
           items_signature: itemsSignature,
         }])
