@@ -287,7 +287,14 @@ export function CreateMealDialog({
       </Dialog>
 
       {/* "Also add to today's log?" prompt */}
-      <AlertDialog open={state === 'prompting'}>
+      <AlertDialog 
+        open={state === 'prompting'} 
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            onOpenChange(false);
+          }
+        }}
+      >
         <AlertDialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>Meal saved!</AlertDialogTitle>
