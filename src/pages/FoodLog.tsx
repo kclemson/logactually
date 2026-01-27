@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { FoodInput, FoodInputRef } from '@/components/FoodInput';
 import { FoodItemsTable } from '@/components/FoodItemsTable';
 import { SaveMealDialog } from '@/components/SaveMealDialog';
+import { CreateMealDialog } from '@/components/CreateMealDialog';
 import { SimilarMealPrompt } from '@/components/SimilarMealPrompt';
 import { Button } from '@/components/ui/button';
 import { useAnalyzeFood } from '@/hooks/useAnalyzeFood';
@@ -14,7 +15,7 @@ import { useEditableFoodItems } from '@/hooks/useEditableFoodItems';
 import { useSavedMeals, useSaveMeal, useLogSavedMeal } from '@/hooks/useSavedMeals';
 import { useSuggestMealName } from '@/hooks/useSuggestMealName';
 import { findSimilarMeals, createItemsSignature, SimilarMealMatch } from '@/lib/text-similarity';
-import { FoodItem, calculateTotals } from '@/types/food';
+import { FoodItem, SavedMeal, calculateTotals } from '@/types/food';
 
 // Wrapper component: extracts date from URL, forces remount via key
 const FoodLog = () => {
@@ -35,13 +36,16 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   const [, setSearchParams] = useSearchParams();
   const [expandedEntryIds, setExpandedEntryIds] = useState<Set<string>>(new Set());
   
-  // State for save meal dialog
+  // State for save meal dialog (from existing entry)
   const [saveMealDialogData, setSaveMealDialogData] = useState<{
     entryId: string;
     rawInput: string | null;
     foodItems: FoodItem[];
   } | null>(null);
   const [suggestedMealName, setSuggestedMealName] = useState<string | null>(null);
+
+  // State for create meal dialog
+  const [createMealDialogOpen, setCreateMealDialogOpen] = useState(false);
 
   // State for similar meal prompt
   const [similarMatch, setSimilarMatch] = useState<SimilarMealMatch | null>(null);
@@ -282,6 +286,12 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     createEntryFromItems(foodItems, null, mealId);
   };
 
+  // Handle meal created from CreateMealDialog - optionally log it
+  const handleMealCreated = (_meal: SavedMeal, foodItems: FoodItem[]) => {
+    // User chose "Yes, log it too" from the dialog prompt
+    createEntryFromItems(foodItems, null, _meal.id);
+  };
+
   // Handle save as meal from FoodItemsTable expando
   const handleSaveAsMeal = async (entryId: string, rawInput: string | null, foodItems: FoodItem[]) => {
     // Open dialog immediately
@@ -434,6 +444,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
           onSubmit={handleSubmit}
           onScanResult={handleScanResult}
           onLogSavedMeal={handleLogSavedMeal}
+          onCreateNewMeal={() => setCreateMealDialogOpen(true)}
           isLoading={isAnalyzing || createEntry.isPending}
         />
         {analyzeError && (
@@ -507,7 +518,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
         )}
       </section>
 
-      {/* Save Meal Dialog */}
+      {/* Save Meal Dialog (from existing entry) */}
       {saveMealDialogData && (
         <SaveMealDialog
           open={!!saveMealDialogData}
@@ -520,6 +531,14 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
           isSuggestingName={isSuggestingName}
         />
       )}
+
+      {/* Create New Meal Dialog */}
+      <CreateMealDialog
+        open={createMealDialogOpen}
+        onOpenChange={setCreateMealDialogOpen}
+        onMealCreated={handleMealCreated}
+        showLogPrompt={true}
+      />
     </div>
   );
 };
