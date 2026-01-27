@@ -58,7 +58,7 @@ export function SavedMealsPopover({ onSelectMeal, onClose, onCreateNew }: SavedM
       <div className="w-72 p-4 space-y-3">
         {onCreateNew && (
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             className="w-full justify-start"
             onClick={handleCreateNew}
@@ -78,17 +78,13 @@ export function SavedMealsPopover({ onSelectMeal, onClose, onCreateNew }: SavedM
     <div className="w-72">
       {/* Add New Meal button - always visible */}
       {onCreateNew && (
-        <div className="p-2 border-b">
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full justify-start"
-            onClick={handleCreateNew}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add New Meal
-          </Button>
-        </div>
+        <button
+          onClick={handleCreateNew}
+          className="w-full text-left px-3 py-2 hover:bg-accent transition-colors border-b flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4 text-muted-foreground" />
+          <span className="font-medium">Add New Meal</span>
+        </button>
       )}
       
       {showSearch && (
