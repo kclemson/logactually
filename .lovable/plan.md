@@ -1,97 +1,81 @@
 
 
-## Secure Password Reset Messaging
+## Fix Password Reset "Change Password" UI Not Showing
 
-### The Problem
-The current password reset flow messaging could potentially reveal whether an email account exists in the system. This is a security concern because attackers could use this to enumerate valid accounts.
+### Root Cause
 
-**Current behavior:**
-- Before: "Enter your email to receive a reset link"
-- After success: "Password reset email sent! Check your inbox."
-- On error: Shows the specific error message
+There's a race condition in the Auth component. When a user clicks the password reset link:
+
+1. They arrive at `/auth?reset=true` with a valid session (Supabase logs them in via the magic link)
+2. The component renders and sees `user` is truthy
+3. The redirect check `if (user && !isUpdatingPassword)` runs immediately
+4. Since `isUpdatingPassword` defaults to `false`, the user is redirected to `/` before the `useEffect` can set it to `true`
 
 ### Solution
-Update the messaging to be intentionally ambiguous about whether the account exists:
 
-1. **Always show the same success message** - regardless of whether the email exists
-2. **Use neutral language** that doesn't confirm or deny account existence
-3. **Suppress Supabase error messages** that might leak account info (still log for debugging)
+Initialize `isUpdatingPassword` based on `isResetCallback` **synchronously during state initialization**, not in an effect.
 
 ### Implementation
 
 **File: `src/pages/Auth.tsx`**
 
-#### 1. Update the CardDescription (line 172-177)
+#### 1. Change the initial state of `isUpdatingPassword` (line 19)
+
 ```tsx
 // FROM:
-<CardDescription>
-  {resetSent 
-    ? "Check your email for a reset link"
-    : "Enter your email to receive a reset link"
-  }
-</CardDescription>
+const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
 // TO:
-<CardDescription>
-  {resetSent 
-    ? "Check your email"
-    : "Reset your password"
-  }
-</CardDescription>
+const [isUpdatingPassword, setIsUpdatingPassword] = useState(isResetCallback);
 ```
 
-#### 2. Update the success message (lines 181-184)
+#### 2. Update the useEffect to handle the user dependency (lines 28-33)
+
+The effect is still useful to catch the case where `user` arrives after initial render:
+
 ```tsx
 // FROM:
-<div className="rounded-md bg-primary/10 p-3 text-sm text-primary">
-  Password reset email sent! Check your inbox.
-</div>
+useEffect(() => {
+  if (isResetCallback && user) {
+    setIsUpdatingPassword(true);
+  }
+}, [isResetCallback, user]);
 
 // TO:
-<div className="rounded-md bg-primary/10 p-3 text-sm text-primary">
-  If an account exists for this email, you'll receive a password reset link shortly.
-</div>
-```
-
-#### 3. Update error handling (lines 48-62)
-Always show success state to prevent enumeration, but log errors for debugging:
-
-```tsx
-const handlePasswordReset = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setSubmitting(true);
-  setErrorMessage(null);
-  
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/auth?reset=true`,
-  });
-  
-  // Log error for debugging but don't expose to user
-  if (error) {
-    console.error('Password reset error:', error.message);
+useEffect(() => {
+  // If we have the reset callback but no user yet, wait for user
+  // If we have both, ensure we're in password update mode
+  if (isResetCallback && user) {
+    setIsUpdatingPassword(true);
   }
-  
-  // Always show "success" to prevent account enumeration
-  setResetSent(true);
-  setSubmitting(false);
-};
+  // If user leaves (signs out) while in reset mode, exit reset mode
+  if (!user && isUpdatingPassword && !isResetCallback) {
+    setIsUpdatingPassword(false);
+  }
+}, [isResetCallback, user, isUpdatingPassword]);
 ```
 
-### Changes Summary
+### How This Fixes the Issue
 
-| Location | Current | Updated |
-|----------|---------|---------|
-| Card subtitle (before) | "Enter your email to receive a reset link" | "Reset your password" |
-| Card subtitle (after) | "Check your email for a reset link" | "Check your email" |
-| Success message | "Password reset email sent! Check your inbox." | "If an account exists for this email, you'll receive a password reset link shortly." |
-| Error handling | Shows error message | Always shows success (logs error for debugging) |
+**Before (broken):**
+```text
+1. User arrives at /auth?reset=true with session
+2. Initial render: isUpdatingPassword = false
+3. Redirect check: user && !isUpdatingPassword → true → REDIRECT to /
+4. useEffect never runs (component unmounted)
+```
 
-### Security Benefit
-Attackers cannot use the password reset form to determine which email addresses have accounts, preventing account enumeration attacks.
+**After (fixed):**
+```text
+1. User arrives at /auth?reset=true with session
+2. Initial render: isUpdatingPassword = true (from isResetCallback)
+3. Redirect check: user && !isUpdatingPassword → false → NO redirect
+4. Password update form is shown
+```
 
 ### Files to Change
 
 | File | Change |
 |------|--------|
-| `src/pages/Auth.tsx` | Update messaging in password reset flow (~4 small edits) |
+| `src/pages/Auth.tsx` | Initialize `isUpdatingPassword` from `isResetCallback` (~2 small edits) |
 
