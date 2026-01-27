@@ -6,8 +6,7 @@ import { useIsAdmin } from '@/hooks/useIsAdmin';
 export function BottomNav() {
   const { data: isAdmin } = useIsAdmin();
   
-  // Show admin if in dev mode OR if user has admin role
-  const showAdmin = import.meta.env.DEV || isAdmin;
+  const showAdmin = isAdmin;
 
   const navItems = [
     { to: '/', icon: PenLine, label: 'Log Food' },
