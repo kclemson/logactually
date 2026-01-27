@@ -2,8 +2,11 @@ import { Outlet } from 'react-router-dom';
 import { Header } from './Header';
 import { BottomNav } from './BottomNav';
 import { DevToolsPanel } from './DevToolsPanel';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 
 export function Layout() {
+  const { data: isAdmin } = useIsAdmin();
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -11,7 +14,7 @@ export function Layout() {
         <Outlet />
       </main>
       <BottomNav />
-      {import.meta.env.DEV && <DevToolsPanel />}
+      {isAdmin && <DevToolsPanel />}
     </div>
   );
 }

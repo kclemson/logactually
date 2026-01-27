@@ -9,19 +9,12 @@ export default function Admin() {
   const { data: stats, isLoading, error } = useAdminStats();
   const { data: userStats } = useAdminUserStats();
 
-  // Allow access if in dev mode OR if user has admin role
-  const hasAccess = import.meta.env.DEV || isAdmin;
-
-  // Show loading only if we're checking admin status (not in dev mode)
-  if (!import.meta.env.DEV && isAdminLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-      </div>
-    );
+  // Render nothing while checking admin status - no spinner, no flash
+  if (isAdminLoading) {
+    return null;
   }
 
-  if (!hasAccess) {
+  if (!isAdmin) {
     return <Navigate to="/" replace />;
   }
 
