@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,19 +24,6 @@ export default function Auth() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
-  // Handle password reset callback
-  useEffect(() => {
-    // If we have the reset callback but no user yet, wait for user
-    // If we have both, ensure we're in password update mode
-    if (isResetCallback && user) {
-      setIsUpdatingPassword(true);
-    }
-    // If user leaves (signs out) while in reset mode, exit reset mode
-    if (!user && isUpdatingPassword && !isResetCallback) {
-      setIsUpdatingPassword(false);
-    }
-  }, [isResetCallback, user, isUpdatingPassword]);
 
   if (loading) {
     return (
