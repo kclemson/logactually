@@ -533,12 +533,14 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       )}
 
       {/* Create New Meal Dialog */}
-      <CreateMealDialog
-        open={createMealDialogOpen}
-        onOpenChange={setCreateMealDialogOpen}
-        onMealCreated={handleMealCreated}
-        showLogPrompt={true}
-      />
+      {createMealDialogOpen && (
+        <CreateMealDialog
+          open={createMealDialogOpen}
+          onOpenChange={setCreateMealDialogOpen}
+          onMealCreated={handleMealCreated}
+          showLogPrompt={true}
+        />
+      )}
     </div>
   );
 };
