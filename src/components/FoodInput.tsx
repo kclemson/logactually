@@ -26,6 +26,8 @@ interface FoodInputProps {
   isLoading?: boolean;
   onScanResult?: (foodItem: Omit<FoodItem, "uid" | "entryId">, originalInput: string) => void;
   onLogSavedMeal?: (foodItems: FoodItem[], mealId: string) => void;
+  onCreateNewMeal?: () => void; // Callback when user clicks "Add New Meal" in saved meals popover
+  placeholder?: string; // Optional override for textarea placeholder
 }
 
 export interface FoodInputRef {
@@ -45,14 +47,17 @@ const getCameraSupport = (): boolean => {
 };
 
 export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(function FoodInput(
-  { onSubmit, isLoading, onScanResult, onLogSavedMeal },
+  { onSubmit, isLoading, onScanResult, onLogSavedMeal, onCreateNewMeal, placeholder: customPlaceholder },
   ref,
 ) {
   const [text, setText] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [savedMealsOpen, setSavedMealsOpen] = useState(false);
-  const [placeholder] = useState(() => PLACEHOLDER_EXAMPLES[Math.floor(Math.random() * PLACEHOLDER_EXAMPLES.length)]);
+  const [defaultPlaceholder] = useState(() => PLACEHOLDER_EXAMPLES[Math.floor(Math.random() * PLACEHOLDER_EXAMPLES.length)]);
+  
+  // Use custom placeholder if provided, otherwise use random default
+  const placeholderText = customPlaceholder ?? defaultPlaceholder;
 
   // Use ref for recognition instance - no re-renders needed
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -182,7 +187,7 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(function FoodI
       <Textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder={placeholder}
+        placeholder={placeholderText}
         className="min-h-[80px] resize-none"
         disabled={isBusy}
         onKeyDown={(e) => {
@@ -223,6 +228,7 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(function FoodI
               <SavedMealsPopover 
                 onSelectMeal={handleSelectSavedMeal}
                 onClose={() => setSavedMealsOpen(false)}
+                onCreateNew={onCreateNewMeal}
               />
             </PopoverContent>
           </Popover>

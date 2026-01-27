@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
-import { Search, Loader2 } from 'lucide-react';
+import { Search, Loader2, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSavedMeals, useLogSavedMeal } from '@/hooks/useSavedMeals';
 import { SavedMeal, FoodItem, calculateTotals } from '@/types/food';
@@ -8,9 +9,10 @@ import { SavedMeal, FoodItem, calculateTotals } from '@/types/food';
 interface SavedMealsPopoverProps {
   onSelectMeal: (foodItems: FoodItem[], mealId: string) => void;
   onClose?: () => void;
+  onCreateNew?: () => void;
 }
 
-export function SavedMealsPopover({ onSelectMeal, onClose }: SavedMealsPopoverProps) {
+export function SavedMealsPopover({ onSelectMeal, onClose, onCreateNew }: SavedMealsPopoverProps) {
   const [search, setSearch] = useState('');
   const { data: savedMeals, isLoading } = useSavedMeals();
   const logMeal = useLogSavedMeal();
@@ -32,6 +34,11 @@ export function SavedMealsPopover({ onSelectMeal, onClose }: SavedMealsPopoverPr
     onClose?.();
   };
 
+  const handleCreateNew = () => {
+    onClose?.();
+    onCreateNew?.();
+  };
+
   // Show search when 10+ meals
   const showSearch = (savedMeals?.length ?? 0) >= 10;
 
@@ -45,17 +52,45 @@ export function SavedMealsPopover({ onSelectMeal, onClose }: SavedMealsPopoverPr
     );
   }
 
+  // Empty state with create button
   if (!savedMeals || savedMeals.length === 0) {
     return (
-      <div className="p-4 text-center text-sm text-muted-foreground">
-        <p>No saved meals yet.</p>
-        <p className="mt-1">Save a meal from your log to see it here.</p>
+      <div className="w-72 p-4 space-y-3">
+        {onCreateNew && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start"
+            onClick={handleCreateNew}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add New Meal
+          </Button>
+        )}
+        <p className="text-sm text-muted-foreground text-center">
+          No saved meals yet. Create one to quickly log it later.
+        </p>
       </div>
     );
   }
 
   return (
     <div className="w-72">
+      {/* Add New Meal button - always visible */}
+      {onCreateNew && (
+        <div className="p-2 border-b">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start"
+            onClick={handleCreateNew}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add New Meal
+          </Button>
+        </div>
+      )}
+      
       {showSearch && (
         <div className="p-2 border-b">
           <div className="relative">

@@ -1,5 +1,5 @@
 import { useTheme } from 'next-themes';
-import { Moon, Sun, Monitor, Trash2, Star, SunMoon, Download } from 'lucide-react';
+import { Moon, Sun, Monitor, Trash2, Star, SunMoon, Download, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { useUserSettings } from '@/hooks/useUserSettings';
@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { useExportData } from '@/hooks/useExportData';
+import { CreateMealDialog } from '@/components/CreateMealDialog';
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
@@ -25,6 +26,7 @@ export default function Settings() {
   const updateMeal = useUpdateSavedMeal();
   const deleteMeal = useDeleteSavedMeal();
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
+  const [createMealDialogOpen, setCreateMealDialogOpen] = useState(false);
 
   // Avoid hydration mismatch
   useEffect(() => {
@@ -55,10 +57,20 @@ export default function Settings() {
 
       {/* Saved Meals - frequently accessed */}
       <section className="space-y-3">
-        <h3 className="text-heading text-muted-foreground flex items-center gap-2">
-          <Star className="h-4 w-4" />
-          Saved Meals
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-heading text-muted-foreground flex items-center gap-2">
+            <Star className="h-4 w-4" />
+            Saved Meals
+          </h3>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setCreateMealDialogOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Add
+          </Button>
+        </div>
         
         <div className="pl-4">
           {mealsLoading ? (
@@ -230,6 +242,14 @@ export default function Settings() {
           </div>
         </div>
       </section>
+
+      {/* Create New Meal Dialog */}
+      <CreateMealDialog
+        open={createMealDialogOpen}
+        onOpenChange={setCreateMealDialogOpen}
+        onMealCreated={() => {}}
+        showLogPrompt={false}
+      />
 
     </div>
   );
