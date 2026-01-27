@@ -1,146 +1,97 @@
 
 
-## Handle "Save as meal" Link for Already-Saved Meals
+## Secure Password Reset Messaging
 
 ### The Problem
-When a user logs a saved meal (via the Saved Meals popover), expanding that entry still shows the "Save as meal" link. This is confusing since the meal is already saved.
+The current password reset flow messaging could potentially reveal whether an email account exists in the system. This is a security concern because attackers could use this to enumerate valid accounts.
 
-### Solution Options Considered
+**Current behavior:**
+- Before: "Enter your email to receive a reset link"
+- After success: "Password reset email sent! Check your inbox."
+- On error: Shows the specific error message
 
-| Approach | Pros | Cons |
-|----------|------|------|
-| **A: Add `source_meal_id` to `food_entries`** | Full tracking, can show meal name, link to settings | Requires database migration, more complex |
-| **B: Hide expando for saved-meal entries** | Simple, no DB change needed | Loses ability to review raw input (which is null anyway for saved meals) |
-| **C: Match items_signature against saved meals** | No DB change, can detect similarity | Expensive to compute on every render, may have false positives |
+### Solution
+Update the messaging to be intentionally ambiguous about whether the account exists:
 
-**Recommended: Option A** - Add a `source_meal_id` column to track when an entry came from a saved meal. This enables showing "Saved meal: [name]" with a link to view saved meals.
+1. **Always show the same success message** - regardless of whether the email exists
+2. **Use neutral language** that doesn't confirm or deny account existence
+3. **Suppress Supabase error messages** that might leak account info (still log for debugging)
 
 ### Implementation
 
-#### 1. Database Migration
-Add an optional `source_meal_id` column to `food_entries`:
+**File: `src/pages/Auth.tsx`**
 
-```sql
-ALTER TABLE public.food_entries
-ADD COLUMN source_meal_id UUID REFERENCES public.saved_meals(id) ON DELETE SET NULL;
+#### 1. Update the CardDescription (line 172-177)
+```tsx
+// FROM:
+<CardDescription>
+  {resetSent 
+    ? "Check your email for a reset link"
+    : "Enter your email to receive a reset link"
+  }
+</CardDescription>
+
+// TO:
+<CardDescription>
+  {resetSent 
+    ? "Check your email"
+    : "Reset your password"
+  }
+</CardDescription>
 ```
 
-#### 2. Update Types
-Update `FoodEntry` interface in `src/types/food.ts`:
+#### 2. Update the success message (lines 181-184)
+```tsx
+// FROM:
+<div className="rounded-md bg-primary/10 p-3 text-sm text-primary">
+  Password reset email sent! Check your inbox.
+</div>
 
-```typescript
-export interface FoodEntry {
-  // ... existing fields
-  source_meal_id: string | null;  // NEW
-}
+// TO:
+<div className="rounded-md bg-primary/10 p-3 text-sm text-primary">
+  If an account exists for this email, you'll receive a password reset link shortly.
+</div>
 ```
 
-#### 3. Update Entry Creation Flow
-Modify `createEntryFromItems` in `src/pages/FoodLog.tsx` to accept an optional `sourceMealId`:
+#### 3. Update error handling (lines 48-62)
+Always show success state to prevent enumeration, but log errors for debugging:
 
-```typescript
-const createEntryFromItems = useCallback((
-  items: FoodItem[], 
-  rawInput: string | null,
-  sourceMealId?: string  // NEW parameter
-) => {
-  // ... existing logic
-  createEntry.mutate({
-    // ... existing fields
-    source_meal_id: sourceMealId ?? null,  // NEW
+```tsx
+const handlePasswordReset = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setSubmitting(true);
+  setErrorMessage(null);
+  
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/auth?reset=true`,
   });
-});
-```
-
-Update `handleUseSaved` and `handleLogSavedMeal` to pass the meal ID:
-
-```typescript
-const handleUseSaved = async () => {
-  if (!similarMatch) return;
-  const foodItems = await logSavedMeal.mutateAsync(similarMatch.meal.id);
-  createEntryFromItems(foodItems, similarMatch.meal.original_input, similarMatch.meal.id);
-  // ...
-};
-
-const handleLogSavedMeal = async (foodItems: FoodItem[], mealId?: string) => {
-  createEntryFromItems(foodItems, null, mealId);
+  
+  // Log error for debugging but don't expose to user
+  if (error) {
+    console.error('Password reset error:', error.message);
+  }
+  
+  // Always show "success" to prevent account enumeration
+  setResetSent(true);
+  setSubmitting(false);
 };
 ```
 
-#### 4. Update SavedMealsPopover
-Pass the meal ID when selecting a saved meal:
+### Changes Summary
 
-```typescript
-// In SavedMealsPopover.tsx
-onSelectMeal: (foodItems: FoodItem[], mealId: string) => void;
+| Location | Current | Updated |
+|----------|---------|---------|
+| Card subtitle (before) | "Enter your email to receive a reset link" | "Reset your password" |
+| Card subtitle (after) | "Check your email for a reset link" | "Check your email" |
+| Success message | "Password reset email sent! Check your inbox." | "If an account exists for this email, you'll receive a password reset link shortly." |
+| Error handling | Shows error message | Always shows success (logs error for debugging) |
 
-const handleSelectMeal = async (meal: SavedMeal) => {
-  const foodItems = await logMeal.mutateAsync(meal.id);
-  onSelectMeal(foodItems, meal.id);  // Pass ID
-  onClose?.();
-};
-```
-
-#### 5. Track Meal Names for Display
-Build a map of entry ID to meal name in `FoodLogContent`:
-
-```typescript
-const entryMealNames = useMemo(() => {
-  const map = new Map<string, string>();
-  entries.forEach(entry => {
-    if (entry.source_meal_id && savedMeals) {
-      const meal = savedMeals.find(m => m.id === entry.source_meal_id);
-      if (meal) map.set(entry.id, meal.name);
-    }
-  });
-  return map;
-}, [entries, savedMeals]);
-```
-
-#### 6. Update FoodItemsTable
-Add new props and conditional rendering:
-
-```typescript
-// New props
-entryMealNames?: Map<string, string>;
-
-// In expanded section (lines 514-538):
-{isLastInEntry && isCurrentExpanded && (
-  <div className="col-span-full pl-6 py-1 space-y-2">
-    {/* Show raw input if present */}
-    {currentRawInput && (
-      <p className="text-muted-foreground whitespace-pre-wrap italic">
-        {currentRawInput}
-      </p>
-    )}
-    
-    {/* Either show "Saved meal: name" OR "Save as meal" link */}
-    {currentMealName ? (
-      <p className="text-sm text-muted-foreground">
-        Saved meal: <span className="font-medium">{currentMealName}</span>
-      </p>
-    ) : onSaveAsMeal && currentEntryId && (
-      <button onClick={...} className="text-sm text-blue-600 underline">
-        Save as meal
-      </button>
-    )}
-  </div>
-)}
-```
+### Security Benefit
+Attackers cannot use the password reset form to determine which email addresses have accounts, preventing account enumeration attacks.
 
 ### Files to Change
 
-| File | Changes |
-|------|---------|
-| Database migration | Add `source_meal_id` column to `food_entries` |
-| `src/types/food.ts` | Add `source_meal_id` to `FoodEntry` interface |
-| `src/hooks/useFoodEntries.ts` | Include `source_meal_id` in create mutation |
-| `src/pages/FoodLog.tsx` | Pass `sourceMealId` through entry creation, build meal name map, pass to table |
-| `src/components/SavedMealsPopover.tsx` | Update callback signature to include meal ID |
-| `src/components/FoodInput.tsx` | Update `onLogSavedMeal` prop signature |
-| `src/components/FoodItemsTable.tsx` | Add `entryMealNames` prop, conditional display logic |
-
-### User Experience Result
-- Entries created from AI analysis: Show "Save as meal" link when expanded
-- Entries created from saved meals: Show "Saved meal: [name]" instead (no confusing "Save as meal" option)
+| File | Change |
+|------|--------|
+| `src/pages/Auth.tsx` | Update messaging in password reset flow (~4 small edits) |
 
