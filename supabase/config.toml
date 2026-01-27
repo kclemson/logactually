@@ -17,6 +17,3 @@ verify_jwt = false
 
 [functions.suggest-meal-name]
 verify_jwt = false
-
-[functions.seed-test-user]
-verify_jwt = false
