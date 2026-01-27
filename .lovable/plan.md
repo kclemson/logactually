@@ -1,65 +1,84 @@
 
+Goal: Fix the “Meal saved! / Also add to today’s log?” prompt that still won’t dismiss when clicking either button.
 
-## Fix AlertDialog Not Closing on Button Click
+What’s actually happening (root cause)
+- In `src/components/CreateMealDialog.tsx`, the prompt `AlertDialog` is controlled by `open={state === 'prompting'}`.
+- Clicking “Yes”/“No” calls `onOpenChange(false)` (parent close), but it does NOT change `state`.
+- Because `CreateMealDialog` stays mounted in both `FoodLog.tsx` and `Settings.tsx` (it is always rendered, just with `open={false}`), the `state` remains `"prompting"`, so the `AlertDialog` stays open forever.
+- The previous fix (adding `onOpenChange` to `AlertDialog`) closes the parent, but still doesn’t guarantee the prompt unmounts because the prompt’s own `open` condition ignores the parent `open` flag.
 
-### Problem
+Implementation approach (robust, minimal, matches existing modal patterns)
+We’ll fix this in two layers:
+1) Ensure the prompt cannot remain open when the parent dialog is closed (tie prompt visibility to `open` too).
+2) Ensure `CreateMealDialog` unmounts when closed (so internal state can’t “stick”), matching the project’s existing “conditionally render dialogs” pattern and avoiding `useEffect`-based syncing.
 
-The "Meal saved!" AlertDialog doesn't close when clicking either button. The issue is a missing `onOpenChange` handler on the `AlertDialog` root component.
+Changes to make
 
-### Root Cause
+1) `src/components/CreateMealDialog.tsx`
+A. Make the AlertDialog open depend on BOTH the component `open` prop and internal `state`
+- Change:
+  - `open={state === 'prompting'}`
+- To:
+  - `open={open && state === 'prompting'}`
 
-The Radix UI `AlertDialogCancel` and `AlertDialogAction` components automatically try to close the dialog by calling `onOpenChange(false)` on the parent `AlertDialog`. However, the current implementation only has:
+This alone prevents the prompt from being open when the parent is closed.
 
-```tsx
-<AlertDialog open={state === 'prompting'}>
-```
+B. Add a single “close everything” helper that also resets internal state
+- Create a `closeAll()` function that:
+  - sets `state` back to `'input'`
+  - clears `createdMeal`, `rawInput`, `name`, `userHasTyped` (optional but recommended)
+  - calls `onOpenChange(false)`
 
-Without an `onOpenChange` handler, the component doesn't know how to respond when the buttons try to close it. The `onClick` handlers do run, but Radix's internal close mechanism fails silently.
+Then update:
+- `handleLogYes` → call `closeAll()` after calling `onMealCreated(...)`
+- `handleLogNo` → call `closeAll()`
+- `AlertDialog`’s `onOpenChange` (when `false`) → call `closeAll()` (treat “dismiss” as “No, just save”)
 
-### Solution
+This ensures *any* dismissal path closes cleanly:
+- clicking either button
+- clicking outside
+- pressing Escape
 
-Add an `onOpenChange` handler to the `AlertDialog` that transitions state away from `'prompting'` when the dialog wants to close:
+C. Remove the `useEffect` “reset state when dialog opens”
+- Since we’ll unmount `CreateMealDialog` when closed (next steps), the initial `useState(...)` values are the reset.
+- This aligns with the project’s event-driven preference (avoid `useEffect` syncing) and removes one more moving part.
+- Also remove now-unused imports (`useEffect` on line 1).
 
-```tsx
-<AlertDialog 
-  open={state === 'prompting'} 
-  onOpenChange={(open) => {
-    if (!open) {
-      // Dialog wants to close - treat as "No, just save"
-      onOpenChange(false);
-    }
-  }}
->
-```
+2) `src/pages/FoodLog.tsx`
+Conditionally render `CreateMealDialog` so it unmounts when closed
+- Change from always rendering:
+  - `<CreateMealDialog open={createMealDialogOpen} ... />`
+- To:
+  - `{createMealDialogOpen && ( <CreateMealDialog open={true} onOpenChange={setCreateMealDialogOpen} ... /> )}`
+  - or keep `open={createMealDialogOpen}` (either works, but the key is conditional rendering)
 
-This ensures that:
-1. When user clicks "No, just save" → Radix calls `onOpenChange(false)` → we call `onOpenChange(false)` to close everything
-2. When user clicks "Yes, log it too" → The `onClick` runs first (calling `onMealCreated`), then Radix closes → we call `onOpenChange(false)`
+This is consistent with how `SaveMealDialog` is already conditionally rendered.
 
-### File to Modify
+3) `src/pages/Settings.tsx`
+Apply the same conditional rendering for `CreateMealDialog`
+- Currently it is always rendered with `open={createMealDialogOpen}`.
+- Change to only render it when `createMealDialogOpen` is true.
 
-| File | Change |
-|------|--------|
-| `src/components/CreateMealDialog.tsx` | Add `onOpenChange` handler to AlertDialog (line 290) |
+Verification checklist (what I’ll test after implementing)
+1) Food Log → Saved → Add New Meal → analyze → Save Meal → prompt appears → click “No, just save”:
+   - prompt closes immediately
+   - CreateMealDialog closes
+   - user returns to Food Log
+2) Same flow but click “Yes, log it too”:
+   - prompt closes immediately
+   - CreateMealDialog closes
+   - entry is created in today’s log
+3) While prompt is open: press Escape / click outside:
+   - prompt closes
+   - CreateMealDialog closes (treated like “No”)
+4) Settings → Add meal → save (no prompt):
+   - dialog closes and reopens cleanly without stale state/items
 
-### Implementation
+Why this will fix the “still reproing” issue
+- Right now, “close” only updates the parent `open` flag, but the prompt’s own open condition is purely `state === 'prompting'`, and `state` never changes.
+- After this change, the prompt can’t stay open when `open` is false, and the component will unmount on close so the internal `state` cannot remain stuck as `"prompting"`.
 
-Update line 290 from:
-```tsx
-<AlertDialog open={state === 'prompting'}>
-```
-
-To:
-```tsx
-<AlertDialog 
-  open={state === 'prompting'} 
-  onOpenChange={(isOpen) => {
-    if (!isOpen) {
-      onOpenChange(false);
-    }
-  }}
->
-```
-
-This is a one-line fix that properly wires up the AlertDialog's close mechanism.
-
+Scope / files touched
+- `src/components/CreateMealDialog.tsx` (fix prompt open condition, central close handler, remove effect reset)
+- `src/pages/FoodLog.tsx` (conditionally render CreateMealDialog)
+- `src/pages/Settings.tsx` (conditionally render CreateMealDialog)
