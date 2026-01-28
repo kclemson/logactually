@@ -79,6 +79,7 @@ interface UpdateSavedRoutineParams {
  */
 export function useUpdateSavedRoutine() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   
   return useMutation({
     mutationFn: async ({ id, name, exerciseSets }: UpdateSavedRoutineParams) => {
@@ -110,8 +111,23 @@ export function useUpdateSavedRoutine() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['saved-routines'] });
+    onSuccess: (updatedRoutine, variables) => {
+      // Update cache in place instead of refetching to preserve list order
+      queryClient.setQueryData(
+        ['saved-routines', user?.id],
+        (oldData: SavedRoutine[] | undefined) => {
+          if (!oldData) return oldData;
+          return oldData.map(routine => 
+            routine.id === variables.id 
+              ? { 
+                  ...routine, 
+                  ...updatedRoutine,
+                  exercise_sets: (updatedRoutine.exercise_sets as unknown as SavedExerciseSet[]) ?? routine.exercise_sets,
+                }
+              : routine
+          );
+        }
+      );
     },
   });
 }
