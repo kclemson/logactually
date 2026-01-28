@@ -1,98 +1,120 @@
 
-## Goal
-1) Ensure Trends defaults to **30 days** on initial load (and stays that way).
-2) Fix the **sets×reps×weight** labels so they actually render on the Weight Trends bars.
+
+## Fix Weight Trend Labels: First Occurrence Only
+
+The current approach has been failing because of confusion about how Recharts passes custom data to the `LabelList` content function. Rather than debugging that further, we'll take a simpler approach that aligns with your preference: **show the label only on the first occurrence of each unique `sets×reps×weight` combination**.
 
 ---
 
-## What’s happening (why labels render “nothing”)
-Right now `renderGroupedLabel` destructures `isRunMiddle`, `runLength`, and `runIndex` from `props`:
+### How The New Logic Works
 
-```ts
-const { x, y, width, value, isRunMiddle, runLength, runIndex } = props;
-if (!isRunMiddle || !value) return null;
+Instead of computing "middle of run" (which requires knowing run boundaries), we compute a simple `showLabel: boolean` during data preparation:
+
+```text
+chartData: [
+  { date: "Jan 4",  label: "3×10×70", weight: 70, showLabel: true },   ← first "3×10×70"
+  { date: "Jan 8",  label: "3×10×70", weight: 70, showLabel: false },  ← already seen
+  { date: "Jan 15", label: "3×10×80", weight: 80, showLabel: true },   ← first "3×10×80"
+  { date: "Jan 21", label: "3×10×70", weight: 70, showLabel: false },  ← already seen
+  { date: "Jan 24", label: "3×10×80", weight: 80, showLabel: false },  ← already seen
+  ...
+]
 ```
 
-In Recharts, a custom `LabelList content` function receives the *full data point* on `props.payload` (the original datum). The extra fields you computed in `chartData` (`isRunMiddle`, `runLength`, `runIndex`) are therefore on **`props.payload`**, not reliably on the top-level props.
-
-So:
-- `isRunMiddle` is currently `undefined`
-- the guard `if (!isRunMiddle ...) return null` triggers for every bar
-- result: **no labels at all** (not a z-index issue)
-
-This matches the symptom: “it doesn’t render anything at all.”
+This is computed during the `chartData.map()` by tracking seen labels in a `Set`.
 
 ---
 
-## Confirming #1 (30-day default)
-We will verify that `selectedPeriod` initializes to 30 in `src/pages/Trends.tsx`:
-```ts
-const [selectedPeriod, setSelectedPeriod] = useState(30);
+### Changes to `src/pages/Trends.tsx`
+
+#### 1. Simplify `renderGroupedLabel`
+
+Replace the complex run-detection logic with a simple check:
+
+```typescript
+const renderGroupedLabel = (props: any) => {
+  const { x, y, width, value } = props;
+  const payload = props.payload;
+  
+  // Only render if this is the first occurrence of this label
+  if (!payload?.showLabel || !value) return null;
+  
+  // Guard against NaN coordinates
+  if (typeof x !== 'number' || typeof width !== 'number') return null;
+  
+  return (
+    <text
+      x={x + width / 2}
+      y={y + 10}
+      fill="#FFFFFF"
+      textAnchor="middle"
+      fontSize={7}
+      fontWeight={500}
+    >
+      {value}
+    </text>
+  );
+};
 ```
-If it’s already 30 (it appears to be), no further code change is needed for #1 beyond ensuring there is no other override (URL param/localStorage/etc.). We’ll quickly confirm there is no other state hydration logic.
+
+#### 2. Simplify `ExerciseChart` data preparation
+
+Replace the run-detection logic with first-occurrence tracking:
+
+```typescript
+const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
+  const chartData = useMemo(() => {
+    const seenLabels = new Set<string>();
+    
+    return exercise.weightData.map((d) => {
+      const label = `${d.sets}×${d.reps}×${d.weight}`;
+      const showLabel = !seenLabels.has(label);
+      
+      if (showLabel) {
+        seenLabels.add(label);
+      }
+      
+      return {
+        ...d,
+        dateLabel: format(new Date(d.date), 'MMM d'),
+        label,
+        showLabel,
+      };
+    });
+  }, [exercise.weightData]);
+
+  // ... rest unchanged
+};
+```
 
 ---
 
-## Fix for #2 (labels not showing): make the label renderer read the right fields and avoid NaN
-### Change `renderGroupedLabel` to:
-1) Pull “run metadata” from `props.payload` (with a safe fallback).
-2) Default missing values to prevent `NaN` coordinates (SVG won’t render `<text>` if `x`/`y` is `NaN`).
-3) Keep the existing “only render for the middle bar of the run” behavior.
+### Why This Will Work
 
-**Implementation approach (robust):**
-- `const entry = props.payload ?? props;`
-- `const isRunMiddle = Boolean(entry.isRunMiddle);`
-- `const runLength = Number(entry.runLength) || 1;`
-- `const runIndex = Number(entry.runIndex) || 0;`
-- Render only if `isRunMiddle` and `value` are present.
-- Compute span center exactly as you already do, but now with guaranteed numeric inputs.
-
-This should immediately restore labels, because the guard will stop returning `null` for every bar.
+| Problem with old approach | Why new approach avoids it |
+|---------------------------|---------------------------|
+| Complex `isRunMiddle` logic that required precise index math | Simple boolean computed during data prep |
+| Uncertainty about `props.payload` structure | We still access `payload.showLabel`, but now it's a simple boolean check |
+| Multiple things that could silently fail | Only one check: `if (!payload?.showLabel)` |
+| Hard to debug | Easy to verify: log `chartData` and see which items have `showLabel: true` |
 
 ---
 
-## Optional (targeted) debug step if anything still fails
-Because this has been attempted multiple times, we’ll add a **one-time** dev-only log to confirm the runtime shape of the props Recharts is sending:
+### Files to Modify
 
-- A module-level boolean flag (so we only log once)
-- `console.debug('LabelList props sample', props)` in dev mode
-
-This lets us confirm whether:
-- `payload` is present
-- `payload.label`, `payload.isRunMiddle`, etc. exist
-- `x/y/width` are numbers
-
-If the labels still don’t show after the payload fix, this log will tell us whether it’s:
-- the guard logic
-- missing `payload`
-- a coordinate issue (NaN/out of bounds)
+| File | Section | Change |
+|------|---------|--------|
+| `src/pages/Trends.tsx` | Lines 57-89 | Replace `renderGroupedLabel` with simplified version |
+| `src/pages/Trends.tsx` | Lines 91-124 | Replace `ExerciseChart` chartData logic with first-occurrence tracking |
 
 ---
 
-## Files to touch
-- `src/pages/Trends.tsx`
-  - Verify `useState(30)` remains the initial value
-  - Update `renderGroupedLabel` to read run metadata from `props.payload` and harden defaults
-  - (Optional) add one-time debug logging guarded by dev mode
+### Expected Result
 
----
+Each Weight Trends chart will show:
+- A **white label** (e.g., "3×10×70") on the **first bar** where that combination appears
+- **No label** on subsequent bars with the same combination
+- Different combinations each get their own first-occurrence label
 
-## Acceptance checks (what you should see)
-1) Refresh `/trends`:
-   - **30 days** button is selected by default.
-2) In Weight Trends:
-   - Each exercise chart shows **white “sets×reps×weight”** text on/near bars (at least on some bars).
-   - No console errors.
-3) Quick sanity checks:
-   - Try a chart with multiple bars on the same date (if present) to confirm the grouping behavior still works.
-   - Check on mobile width as well (labels are small; verify they still appear).
+This matches the "Lat Pulldown" chart in your screenshot: if bars 1-4 are all "3×10×70", only bar 1 shows the label. If bar 5 is "3×10×80", bar 5 shows that label.
 
----
-
-## Notes on the “z-index” theory
-This is very unlikely to be z-index because these are SVG elements rendered by Recharts inside the same SVG stacking context. When labels disappear completely across all bars, it’s almost always:
-- the renderer returning `null`, or
-- `x/y` becoming `NaN` / out of bounds,
-not CSS layering.
-
-This plan directly addresses both of those failure modes.
