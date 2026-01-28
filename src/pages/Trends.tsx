@@ -5,6 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import {
   BarChart,
   Bar,
+  LineChart,
+  Line,
   XAxis,
   CartesianGrid,
   Tooltip,
@@ -12,8 +14,15 @@ import {
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { UtensilsCrossed } from 'lucide-react';
+import { UtensilsCrossed, Dumbbell, ChevronDown } from 'lucide-react';
 import { CollapsibleSection } from '@/components/CollapsibleSection';
+import { FEATURES } from '@/lib/feature-flags';
+import { useWeightTrends, ExerciseTrend } from '@/hooks/useWeightTrends';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
 const CompactTooltip = ({ active, payload, label, formatter }: any) => {
   if (!active || !payload?.length) return null;
@@ -45,8 +54,56 @@ const periods = [
   { label: '90 days', days: 90 },
 ];
 
+const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
+  const chartData = exercise.dailyData.map(d => ({
+    ...d,
+    date: format(new Date(d.date), 'MMM d'),
+  }));
+
+  return (
+    <Card>
+      <CardHeader className="p-2 pb-1">
+        <CardTitle className="text-sm font-semibold flex justify-between">
+          <span>{exercise.description}</span>
+          <span className="text-muted-foreground font-normal text-xs">
+            Max: {exercise.maxWeight} lbs
+          </span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-2 pt-0">
+        <div className="h-24">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 8 }}
+                stroke="hsl(var(--muted-foreground))"
+                interval="preserveStartEnd"
+              />
+              <Tooltip
+                content={<CompactTooltip />}
+                offset={20}
+                cursor={{ stroke: 'hsl(var(--muted)/0.3)' }}
+              />
+              <Line
+                type="monotone"
+                dataKey="maxWeight"
+                stroke="hsl(262 83% 58%)"
+                strokeWidth={2}
+                dot={{ fill: 'hsl(262 83% 58%)', r: 3 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 const Trends = () => {
   const [selectedPeriod, setSelectedPeriod] = useState(7);
+  const [extraExercise, setExtraExercise] = useState<string | null>(null);
 
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ['food-entries-trends', selectedPeriod],
@@ -66,6 +123,14 @@ const Trends = () => {
       return data || [];
     },
   });
+
+  // Weight trends query
+  const { data: weightExercises = [], isLoading: weightLoading } = useWeightTrends(selectedPeriod);
+
+  // Split into top 6 and remaining
+  const top6Exercises = weightExercises.slice(0, 6);
+  const remainingExercises = weightExercises.slice(6);
+  const selectedExtra = remainingExercises.find(e => e.exercise_key === extraExercise);
 
   // Aggregate by date
   const chartData = useMemo(() => {
@@ -262,6 +327,67 @@ const Trends = () => {
           </div>
         )}
       </CollapsibleSection>
+
+      {/* Weight Trends Section */}
+      {FEATURES.WEIGHT_TRACKING && (
+        <CollapsibleSection title="Weight Trends" icon={Dumbbell} defaultOpen={true}>
+          {weightLoading ? (
+            <div className="flex justify-center py-8 -ml-4">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            </div>
+          ) : weightExercises.length === 0 ? (
+            <div className="py-8 text-center text-muted-foreground -ml-4">
+              No weight training data for this period
+            </div>
+          ) : (
+            <div className="space-y-3 -ml-4">
+              {/* Top 6 exercises in 2-column grid */}
+              <div className="grid grid-cols-2 gap-3">
+                {top6Exercises.map(exercise => (
+                  <ExerciseChart key={exercise.exercise_key} exercise={exercise} />
+                ))}
+              </div>
+
+              {/* Dropdown for remaining exercises */}
+              {remainingExercises.length > 0 && (
+                <div className="space-y-3">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="w-full">
+                        {selectedExtra ? selectedExtra.description : 'More exercises...'}
+                        <ChevronDown className="ml-2 h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-56 p-1 bg-popover z-50">
+                      <div className="flex flex-col gap-1">
+                        {remainingExercises.map(ex => (
+                          <Button
+                            key={ex.exercise_key}
+                            variant="ghost"
+                            size="sm"
+                            className="justify-start"
+                            onClick={() => setExtraExercise(ex.exercise_key)}
+                          >
+                            {ex.description}
+                            <span className="ml-auto text-muted-foreground text-xs">
+                              {ex.sessionCount} sessions
+                            </span>
+                          </Button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+
+                  {/* Show selected extra exercise chart */}
+                  {selectedExtra && (
+                    <ExerciseChart exercise={selectedExtra} />
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </CollapsibleSection>
+      )}
     </div>
   );
 };
