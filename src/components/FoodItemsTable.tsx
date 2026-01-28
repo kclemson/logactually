@@ -334,7 +334,7 @@ export function FoodItemsTable({
               className={cn(
                 'grid gap-0.5 items-center group rounded-md',
                 gridCols,
-                isNewItem(item) && "animate-highlight-fade"
+                isNewItem(item) && "animate-outline-fade"
               )}
             >
             {/* Description cell (with chevron space when showing entry dividers) */}
