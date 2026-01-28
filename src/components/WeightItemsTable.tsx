@@ -42,6 +42,7 @@ interface WeightItemsTableProps {
   onDeleteEntry?: (entryId: string) => void;
   onDeleteAll?: () => void;
   totalsPosition?: 'top' | 'bottom';
+  showTotals?: boolean;
   entryRawInputs?: Map<string, string>;
   expandedEntryIds?: Set<string>;
   onToggleEntryExpand?: (entryId: string) => void;
@@ -60,6 +61,7 @@ export function WeightItemsTable({
   onDeleteEntry,
   onDeleteAll,
   totalsPosition = 'top',
+  showTotals = true,
   entryRawInputs,
   expandedEntryIds,
   onToggleEntryExpand,
@@ -230,7 +232,7 @@ export function WeightItemsTable({
   return (
     <div className="space-y-1">
       {/* Totals at top */}
-      {items.length > 0 && totalsPosition === 'top' && <TotalsRow />}
+      {showTotals && items.length > 0 && totalsPosition === 'top' && <TotalsRow />}
 
       {/* Header row */}
       {showHeader && (
@@ -473,7 +475,7 @@ export function WeightItemsTable({
       })}
 
       {/* Totals at bottom */}
-      {items.length > 0 && totalsPosition === 'bottom' && <TotalsRow />}
+      {showTotals && items.length > 0 && totalsPosition === 'bottom' && <TotalsRow />}
     </div>
   );
 }
