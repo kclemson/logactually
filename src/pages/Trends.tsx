@@ -54,13 +54,22 @@ const periods = [
   { label: '90 days', days: 90 },
 ];
 
-const renderSetRepLabel = (props: any) => {
-  const { x, y, width, height, value } = props;
-  if (!value || height < 12) return null;
+const renderGroupedLabel = (props: any) => {
+  const { x, y, width, height, value, payload } = props;
+  
+  // Only render for the middle bar of each run
+  if (!payload?.isRunMiddle || !value || height < 12) return null;
+  
+  const { runLength, runIndex } = payload;
+  
+  // Calculate spanning width (bar width × run length + gaps between bars)
+  const barGap = 4; // Approximate gap between bars
+  const spanWidth = width * runLength + (runLength - 1) * barGap;
+  const spanX = x - (runIndex * (width + barGap)); // Offset to start of run
   
   return (
     <text
-      x={x + width / 2}
+      x={spanX + spanWidth / 2}
       y={y + 10}
       fill="#FFFFFF"
       textAnchor="middle"
@@ -73,11 +82,39 @@ const renderSetRepLabel = (props: any) => {
 };
 
 const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
-  const chartData = exercise.weightData.map(d => ({
-    ...d,
-    dateLabel: format(new Date(d.date), 'MMM d'),
-    label: `${d.sets}×${d.reps}×${d.weight}`,
-  }));
+  // Build chart data with run detection for grouped labels
+  const chartData = exercise.weightData.map((d, i, arr) => {
+    const label = `${d.sets}×${d.reps}×${d.weight}`;
+    
+    // Find the start of this run (look backward for matching labels)
+    let runStart = i;
+    while (runStart > 0) {
+      const prev = arr[runStart - 1];
+      if (`${prev.sets}×${prev.reps}×${prev.weight}` !== label) break;
+      runStart--;
+    }
+    
+    // Find the end of this run (look forward for matching labels)
+    let runEnd = i;
+    while (runEnd < arr.length - 1) {
+      const next = arr[runEnd + 1];
+      if (`${next.sets}×${next.reps}×${next.weight}` !== label) break;
+      runEnd++;
+    }
+    
+    const runLength = runEnd - runStart + 1;
+    const runIndex = i - runStart;
+    const middleIndex = Math.floor((runLength - 1) / 2);
+    
+    return {
+      ...d,
+      dateLabel: format(new Date(d.date), 'MMM d'),
+      label,
+      runIndex,
+      runLength,
+      isRunMiddle: runIndex === middleIndex,
+    };
+  });
 
   return (
     <Card>
@@ -110,7 +147,7 @@ const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
                 fill="hsl(262 83% 58%)"
                 radius={[2, 2, 0, 0]}
               >
-                <LabelList dataKey="label" content={renderSetRepLabel} />
+                <LabelList dataKey="label" content={renderGroupedLabel} />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
