@@ -127,7 +127,7 @@ export default function Admin() {
             </tr>
           </thead>
           <tbody>
-            {stats.daily_stats.slice(0, 3).map((row) => (
+            {stats.daily_stats.slice(0, 7).map((row) => (
               <tr key={row.stat_date} className="border-b border-border/50">
                 <td className="py-0.5 pr-2">{format(parseISO(row.stat_date), "MMM-dd")}</td>
                 <td className="text-center py-0.5 pr-2">{row.entry_count}</td>
