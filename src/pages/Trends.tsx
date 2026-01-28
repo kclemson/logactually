@@ -5,12 +5,11 @@ import { supabase } from '@/integrations/supabase/client';
 import {
   BarChart,
   Bar,
-  LineChart,
-  Line,
   XAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  LabelList,
 } from 'recharts';
 import { Card, CardContent, CardHeader, ChartTitle, ChartSubtitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -55,10 +54,29 @@ const periods = [
   { label: '90 days', days: 90 },
 ];
 
+const renderSetRepLabel = (props: any) => {
+  const { x, y, width, height, value } = props;
+  if (!value || height < 12) return null;
+  
+  return (
+    <text
+      x={x + width / 2}
+      y={y + 10}
+      fill="#FFFFFF"
+      textAnchor="middle"
+      fontSize={7}
+      fontWeight={500}
+    >
+      {value}
+    </text>
+  );
+};
+
 const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
   const chartData = exercise.dailyData.map(d => ({
     ...d,
     date: format(new Date(d.date), 'MMM d'),
+    label: `${d.totalSets}×${d.totalReps}`,
   }));
 
   return (
@@ -72,7 +90,7 @@ const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
       <CardContent className="p-2 pt-0">
         <div className="h-24">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
+            <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis
                 dataKey="date"
@@ -83,16 +101,16 @@ const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
               <Tooltip
                 content={<CompactTooltip />}
                 offset={20}
-                cursor={{ stroke: 'hsl(var(--muted)/0.3)' }}
+                cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
               />
-              <Line
-                type="monotone"
+              <Bar
                 dataKey="maxWeight"
-                stroke="hsl(262 83% 58%)"
-                strokeWidth={2}
-                dot={{ fill: 'hsl(262 83% 58%)', r: 3 }}
-              />
-            </LineChart>
+                fill="hsl(262 83% 58%)"
+                radius={[2, 2, 0, 0]}
+              >
+                <LabelList dataKey="label" content={renderSetRepLabel} />
+              </Bar>
+            </BarChart>
           </ResponsiveContainer>
         </div>
       </CardContent>
