@@ -34,8 +34,11 @@ export function useEditableItems<T extends BaseEditableItem>(
   // New items added locally (not yet saved to DB)
   const [newItems, setNewItems] = useState<T[]>([]);
   
-  // Track new item uids for amber highlight
+  // Track new item uids for highlight (individual items fallback)
   const [newItemUids, setNewItemUids] = useState<Set<string>>(new Set());
+  
+  // Track new entry IDs for grouped highlight (all items from same entry)
+  const [newEntryIds, setNewEntryIds] = useState<Set<string>>(new Set());
 
   // Derive display items from query + pending state
   const displayItems = useMemo(() => {
@@ -87,11 +90,24 @@ export function useEditableItems<T extends BaseEditableItem>(
     return [...fromQuery, ...stillNewItems];
   }, [queryItems, pendingEdits, pendingRemovals, newItems, editableFields]);
 
-  // Add new items and mark them for amber highlighting
+  // Add new items and mark them for highlighting
   const addNewItems = useCallback((items: T[]) => {
     const uids = new Set(items.map(item => item.uid));
+    // Extract unique entry IDs for grouped highlighting
+    const entryIds = new Set(
+      items.map(item => item.entryId).filter((id): id is string => !!id)
+    );
+    
     setNewItems(prev => [...prev, ...items]);
     setNewItemUids(uids);
+    setNewEntryIds(entryIds);
+    
+    // Clear entry highlights after animation duration (2.5s)
+    if (entryIds.size > 0) {
+      setTimeout(() => {
+        setNewEntryIds(new Set());
+      }, 2500);
+    }
   }, []);
 
   // Clear the "new" highlighting
@@ -182,6 +198,7 @@ export function useEditableItems<T extends BaseEditableItem>(
   return {
     displayItems,
     newItemUids,
+    newEntryIds,
     updateItem,
     updateItemBatch,
     removeItem,
