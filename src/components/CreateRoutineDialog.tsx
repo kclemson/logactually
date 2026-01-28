@@ -3,7 +3,6 @@ import { CreateSavedDialog, CreateSavedDialogConfig } from './CreateSavedDialog'
 import { WeightItemsTable } from './WeightItemsTable';
 import { useAnalyzeWeights } from '@/hooks/useAnalyzeWeights';
 import { useSaveRoutine } from '@/hooks/useSavedRoutines';
-import { useSuggestRoutineName } from '@/hooks/useSuggestRoutineName';
 import { useEditableItems } from '@/hooks/useEditableItems';
 import { WeightSet, SavedRoutine, SavedExerciseSet, WeightEditableField } from '@/types/weight';
 
@@ -25,8 +24,8 @@ const WEIGHTS_CONFIG: CreateSavedDialogConfig<WeightSet, SavedRoutine> = {
   logPromptMessage: (name) => `"${name}" has been saved. Would you also like to add it to today's log?`,
   getFallbackName: (items) => {
     if (items.length === 0) return '';
-    const first = items[0].description;
-    return first;
+    const first = items[0];
+    return `${first.description} (${first.sets}×${first.reps} @ ${first.weight_lbs} lbs)`;
   },
   getDescriptions: (items) => items.map(item => item.description),
 };
@@ -44,7 +43,6 @@ export function CreateRoutineDialog({
   
   const { analyzeWeights, isAnalyzing, error } = useAnalyzeWeights();
   const saveRoutine = useSaveRoutine();
-  const { suggestName, isLoading } = useSuggestRoutineName();
   
   const editableItemsResult = useEditableItems<WeightSet>(localItems, WEIGHT_EDITABLE_FIELDS);
 
@@ -145,7 +143,7 @@ export function CreateRoutineDialog({
       showLogPrompt={showLogPrompt}
       analyzeResult={{ analyze, isAnalyzing, error }}
       saveResult={saveResultAdapter}
-      suggestNameResult={{ suggestName, isLoading }}
+      suggestNameResult={{ suggestName: async () => null, isLoading: false }}
       editableItemsResult={editableItemsWithSet}
       renderItemsTable={renderItemsTable}
     />
