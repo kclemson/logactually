@@ -178,6 +178,7 @@ export function SavedRoutineRow({
               items={localItems}
               editable={true}
               showHeader={false}
+              showTotals={false}
               onUpdateItem={handleUpdateItem}
               onRemoveItem={handleRemoveItem}
             />
