@@ -54,12 +54,6 @@ export default function Settings() {
     setMounted(true);
   }, []);
 
-  // Sync theme from database on load
-  useEffect(() => {
-    if (!isLoading && settings.theme && mounted) {
-      setTheme(settings.theme);
-    }
-  }, [isLoading, settings.theme, setTheme, mounted]);
 
   const handleThemeChange = (value: 'light' | 'dark' | 'system') => {
     setTheme(value);
