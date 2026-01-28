@@ -56,27 +56,17 @@ const periods = [
 
 const renderGroupedLabel = (props: any) => {
   const { x, y, width, value } = props;
-  // Recharts puts the data entry on props.payload, not top-level props
-  const entry = props.payload ?? props;
+  const payload = props.payload;
   
-  const isRunMiddle = Boolean(entry.isRunMiddle);
-  const runLength = Number(entry.runLength) || 1;
-  const runIndex = Number(entry.runIndex) || 0;
+  // Only render if this is the first occurrence of this label
+  if (!payload?.showLabel || !value) return null;
   
-  // Only render for the middle bar of each run
-  if (!isRunMiddle || !value) return null;
-  
-  // Prevent NaN coordinates
+  // Guard against NaN coordinates
   if (typeof x !== 'number' || typeof width !== 'number') return null;
-  
-  // Calculate spanning width (bar width × run length + gaps between bars)
-  const barGap = 4;
-  const spanWidth = width * runLength + (runLength - 1) * barGap;
-  const spanX = x - (runIndex * (width + barGap));
   
   return (
     <text
-      x={spanX + spanWidth / 2}
+      x={x + width / 2}
       y={y + 10}
       fill="#FFFFFF"
       textAnchor="middle"
@@ -89,39 +79,26 @@ const renderGroupedLabel = (props: any) => {
 };
 
 const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
-  // Build chart data with run detection for grouped labels
-  const chartData = exercise.weightData.map((d, i, arr) => {
-    const label = `${d.sets}×${d.reps}×${d.weight}`;
+  // Build chart data with first-occurrence tracking for labels
+  const chartData = useMemo(() => {
+    const seenLabels = new Set<string>();
     
-    // Find the start of this run (look backward for matching labels)
-    let runStart = i;
-    while (runStart > 0) {
-      const prev = arr[runStart - 1];
-      if (`${prev.sets}×${prev.reps}×${prev.weight}` !== label) break;
-      runStart--;
-    }
-    
-    // Find the end of this run (look forward for matching labels)
-    let runEnd = i;
-    while (runEnd < arr.length - 1) {
-      const next = arr[runEnd + 1];
-      if (`${next.sets}×${next.reps}×${next.weight}` !== label) break;
-      runEnd++;
-    }
-    
-    const runLength = runEnd - runStart + 1;
-    const runIndex = i - runStart;
-    const middleIndex = Math.floor((runLength - 1) / 2);
-    
-    return {
-      ...d,
-      dateLabel: format(new Date(d.date), 'MMM d'),
-      label,
-      runIndex,
-      runLength,
-      isRunMiddle: runIndex === middleIndex,
-    };
-  });
+    return exercise.weightData.map((d) => {
+      const label = `${d.sets}×${d.reps}×${d.weight}`;
+      const showLabel = !seenLabels.has(label);
+      
+      if (showLabel) {
+        seenLabels.add(label);
+      }
+      
+      return {
+        ...d,
+        dateLabel: format(new Date(d.date), 'MMM d'),
+        label,
+        showLabel,
+      };
+    });
+  }, [exercise.weightData]);
 
   return (
     <Card>
