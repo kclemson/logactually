@@ -1,28 +1,41 @@
 
 
-## Restore Labels on Every Bar, Then Implement First-Occurrence
+## Rotate Weight Trend Labels 90 Degrees
 
-Given that multiple attempts to fix the label rendering have failed, I recommend a two-step approach:
+Now that labels are rendering on every bar, we'll rotate them vertically to improve readability and reduce overlap.
 
-### Step 1: Get Labels Working Again (Every Bar)
+---
 
-**Strategy:** Remove all conditional logic and just render every label unconditionally. This establishes a working baseline.
+### SVG Text Rotation
+
+In SVG, we rotate text using the `transform` attribute with `rotate(angle, centerX, centerY)`. For vertical text reading from bottom-to-top, we use -90 degrees (counter-clockwise).
+
+---
+
+### Changes to `src/pages/Trends.tsx`
+
+Update `renderGroupedLabel` to add rotation:
 
 ```typescript
 const renderGroupedLabel = (props: any) => {
-  const { x, y, width, value } = props;
+  const { x, y, width, height, value } = props;
   
-  // Guard against invalid values
   if (!value || typeof x !== 'number' || typeof width !== 'number') return null;
+  
+  // Center position of the bar
+  const centerX = x + width / 2;
+  const centerY = y + (height || 0) / 2;
   
   return (
     <text
-      x={x + width / 2}
-      y={y + 10}
+      x={centerX}
+      y={centerY}
       fill="#FFFFFF"
       textAnchor="middle"
+      dominantBaseline="middle"
       fontSize={7}
       fontWeight={500}
+      transform={`rotate(-90, ${centerX}, ${centerY})`}
     >
       {value}
     </text>
@@ -30,96 +43,31 @@ const renderGroupedLabel = (props: any) => {
 };
 ```
 
-**Remove** the `showLabel` logic from chartData - just keep it simple:
+---
 
-```typescript
-const chartData = useMemo(() => {
-  return exercise.weightData.map((d) => ({
-    ...d,
-    dateLabel: format(new Date(d.date), 'MMM d'),
-    label: `${d.sets}×${d.reps}×${d.weight}`,
-  }));
-}, [exercise.weightData]);
-```
+### Key Changes
+
+| Before | After |
+|--------|-------|
+| Horizontal text at `y + 10` (near top of bar) | Vertical text centered in bar |
+| `textAnchor="middle"` only | Add `dominantBaseline="middle"` for vertical centering |
+| No transform | `rotate(-90, centerX, centerY)` for vertical orientation |
+| Text reads left-to-right | Text reads bottom-to-top |
 
 ---
 
-### Step 2: Add First-Occurrence Logic (After Step 1 Works)
+### Visual Result
 
-Once labels are confirmed working, implement first-occurrence using a `useRef` to track seen labels **across the render cycle**:
-
-```typescript
-const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
-  const seenLabelsRef = useRef<Set<string>>(new Set());
-  
-  // Reset on data change
-  useEffect(() => {
-    seenLabelsRef.current.clear();
-  }, [exercise.weightData]);
-
-  const chartData = useMemo(() => {
-    return exercise.weightData.map((d) => ({
-      ...d,
-      dateLabel: format(new Date(d.date), 'MMM d'),
-      label: `${d.sets}×${d.reps}×${d.weight}`,
-    }));
-  }, [exercise.weightData]);
-
-  // Custom render that tracks first occurrence
-  const renderLabel = useCallback((props: any) => {
-    const { x, y, width, value } = props;
-    
-    if (!value || typeof x !== 'number' || typeof width !== 'number') return null;
-    
-    // Check if we've seen this label before
-    if (seenLabelsRef.current.has(value)) {
-      return null; // Skip duplicates
-    }
-    seenLabelsRef.current.add(value);
-    
-    return (
-      <text
-        x={x + width / 2}
-        y={y + 10}
-        fill="#FFFFFF"
-        textAnchor="middle"
-        fontSize={7}
-        fontWeight={500}
-      >
-        {value}
-      </text>
-    );
-  }, []);
-
-  // ... rest of component
-};
-```
+- Labels will appear vertically inside each bar
+- Text will read from bottom to top (like a book spine)
+- Less overlap between adjacent bars since text runs parallel to bar height
+- Centered both horizontally and vertically within the bar
 
 ---
 
-### Why This Approach Is Better
+### File to Modify
 
-| Previous Approach | New Approach |
-|-------------------|--------------|
-| Pre-computed `showLabel` boolean in data | Track during render using `useRef` |
-| Relied on Recharts passing `payload.showLabel` correctly | Only relies on `value` which we know works |
-| Complex conditional logic before we verified basics | Step-by-step: first confirm rendering, then add logic |
-
----
-
-### Files to Modify
-
-| File | Change |
-|------|--------|
-| `src/pages/Trends.tsx` | Lines 57-79: Simplify `renderGroupedLabel` to remove conditional |
-| `src/pages/Trends.tsx` | Lines 81-101: Move `renderLabel` inside component, use `useRef` for first-occurrence tracking |
-
----
-
-### Implementation Order
-
-1. **First commit**: Remove all `showLabel` logic, render every label
-2. **Verify**: Confirm labels appear on all bars
-3. **Second commit**: Add `useRef`-based first-occurrence tracking
-4. **Verify**: Confirm only first occurrence of each label shows
+| File | Lines | Change |
+|------|-------|--------|
+| `src/pages/Trends.tsx` | 57-78 | Update `renderGroupedLabel` to add rotation transform |
 
