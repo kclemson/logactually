@@ -1,83 +1,122 @@
 
 
-## Move Delete Account Link to Email Row
+## Collapse Settings Sections by Default
 
-Reposition the "Delete account" hyperlink to appear on the right side of the email row, creating a cleaner layout.
-
----
-
-### Current Layout
-
-```
-┌─────────────────────────────────────┐
-│ Email                               │
-│ user@example.com                    │
-│                                     │
-│ [Change Password]  Delete account   │
-└─────────────────────────────────────┘
-```
-
-### New Layout
-
-```
-┌─────────────────────────────────────┐
-│ Email                Delete account │
-│ user@example.com                    │
-│                                     │
-│ [Change Password]                   │
-└─────────────────────────────────────┘
-```
+Change the default behavior so all Settings page sections start collapsed, while persisting any user-expanded sections.
 
 ---
 
-### Changes to `src/pages/Settings.tsx`
+### Current Behavior
 
-Update the Account section's structure to place the delete link in the email row:
+| Scenario | Result |
+|----------|--------|
+| First visit | All sections open (defaultOpen=true) |
+| Toggle closed | Stays closed (localStorage saves "false") |
+| Return visit | Reads "false" from localStorage |
 
-**Before (lines ~99-113):**
+### Desired Behavior
+
+| Scenario | Result |
+|----------|--------|
+| First visit | All sections collapsed |
+| User expands section | Saves "true" to localStorage |
+| Return visit | Previously expanded sections stay open |
+| User collapses section | Removes from localStorage (back to default) |
+
+---
+
+### Implementation Approach
+
+**Option 1: Change default in Settings.tsx (Simple)**
+
+Pass `defaultOpen={false}` to each `CollapsibleSection` in Settings.tsx:
+
 ```tsx
-<div className="space-y-3">
-  <div className="flex items-center justify-between">
-    <div>
-      <p className="text-xs text-muted-foreground">Email</p>
-      <p className="text-sm">{user?.email}</p>
-    </div>
-  </div>
-  <Button ...>Change Password</Button>
-  <button ...>Delete account</button>
-</div>
+<CollapsibleSection title="Account" icon={User} defaultOpen={false}>
 ```
 
-**After:**
-```tsx
-<div className="space-y-3">
-  <div className="flex items-center justify-between">
-    <div>
-      <p className="text-xs text-muted-foreground">Email</p>
-      <p className="text-sm">{user?.email}</p>
-    </div>
-    <button
-      onClick={() => setDeleteAccountOpen(true)}
-      className="text-sm text-muted-foreground hover:text-destructive hover:underline"
-    >
-      Delete account
-    </button>
-  </div>
-  <Button ...>Change Password</Button>
-</div>
-```
+This works but requires updating 5 places and localStorage will still save "false" values unnecessarily.
+
+**Option 2: Update CollapsibleSection logic (Cleaner)**
+
+Modify the component to:
+1. Only save to localStorage when value differs from default (or only save "true")
+2. On collapse, remove the localStorage key instead of saving "false"
+
+This keeps localStorage cleaner and makes the default behavior more intuitive.
 
 ---
 
-### Visual Result
+### Recommended: Option 2
 
-The "Delete account" link will be vertically centered on the right side of the email display row, keeping its subtle styling while making better use of horizontal space.
+**Changes to `src/components/CollapsibleSection.tsx`:**
+
+1. Change `defaultOpen` prop default from `true` to `false`
+2. Update useEffect to only persist when expanded (or remove key when collapsed to use default)
+
+```typescript
+// Current (line 29)
+defaultOpen = true,
+
+// New
+defaultOpen = false,
+```
+
+```typescript
+// Current useEffect (lines 45-47)
+useEffect(() => {
+  localStorage.setItem(key, String(isOpen));
+}, [key, isOpen]);
+
+// New useEffect - only persist when different from default
+useEffect(() => {
+  if (isOpen !== defaultOpen) {
+    localStorage.setItem(key, String(isOpen));
+  } else {
+    localStorage.removeItem(key);
+  }
+}, [key, isOpen, defaultOpen]);
+```
+
+This means:
+- Collapsed sections (matching default) have no localStorage entry
+- Expanded sections save "true" to localStorage
+- On load: no entry → collapsed; "true" entry → expanded
 
 ---
 
-### File to Modify
+### Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/pages/Settings.tsx` | Move delete account button inside the email row's flex container |
+| `src/components/CollapsibleSection.tsx` | Change default to `false`, update persistence logic |
+
+---
+
+### Behavior After Change
+
+```text
+Fresh visit to Settings:
+┌─────────────────────────────────────┐
+│ ▶ Account                           │  (collapsed)
+│ ▶ Saved Meals                   Add │  (collapsed)
+│ ▶ Saved Routines                Add │  (collapsed)
+│ ▶ Appearance                        │  (collapsed)
+│ ▶ Export to CSV                     │  (collapsed)
+└─────────────────────────────────────┘
+
+After user expands "Account":
+- localStorage: section-account = "true"
+- Next visit: Account stays expanded, others collapsed
+```
+
+---
+
+### Edge Case: Existing Users
+
+Users who have existing localStorage values will retain their current settings because:
+- "true" → section opens (as expected)
+- "false" → section stays closed (as expected)
+
+Over time, as users interact, values will migrate to the cleaner "only store expanded" pattern.
 
