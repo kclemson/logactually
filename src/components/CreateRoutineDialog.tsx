@@ -25,7 +25,7 @@ const WEIGHTS_CONFIG: CreateSavedDialogConfig<WeightSet, SavedRoutine> = {
   getFallbackName: (items) => {
     if (items.length === 0) return '';
     const first = items[0];
-    return `${first.description} (${first.sets}×${first.reps} @ ${first.weight_lbs} lbs)`;
+    return `${first.description} (${first.sets}x${first.reps} @ ${first.weight_lbs} lbs)`;
   },
   getDescriptions: (items) => items.map(item => item.description),
 };
