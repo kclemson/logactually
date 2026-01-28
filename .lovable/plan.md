@@ -1,105 +1,160 @@
 
 
-## Settings Page Updates
+## Add Account Deletion Feature
 
-Address spacing issues and enhance CSV export functionality with weight lifting data support.
-
----
-
-### Issue 1: Reduce Vertical Spacing
-
-The current Settings page uses `space-y-6` (24px gap) between sections, which creates too much visual separation.
-
-**Change in `src/pages/Settings.tsx`:**
-- Line 98: Change `<div className="space-y-6">` to `<div className="space-y-4">`
-- This reduces the gap from 24px to 16px, creating a more cohesive layout
+Add a secure account deletion capability to the Settings page with a low-visual-weight hyperlink trigger and a type-to-confirm dialog requiring users to type "delete" before proceeding.
 
 ---
 
-### Issue 2: Rename and Expand Export Section
+### Architecture Overview
 
-**Current state:**
-- Section title: "Export Food Data"
-- Buttons: "Daily Totals", "Food Log"
+Since `supabase.auth.admin.deleteUser()` requires the service role key (which must never be exposed to the client), we need an edge function to handle the deletion securely.
 
-**New state:**
-- Section title: "Export to CSV"
-- Buttons grouped by data type:
-  - Food: "Food Daily Totals", "Food Log"  
-  - Weights: "Weight Log" (gated by `showWeights` flag)
+```text
+Settings Page
+     │
+     ▼
+"Delete account" hyperlink
+     │
+     ▼
+DeleteAccountDialog
+     │ (requires typing "delete")
+     ▼
+Edge Function: delete-account
+     │ (validates JWT, uses service role)
+     ▼
+supabase.auth.admin.deleteUser()
+     │
+     ▼
+Sign out and redirect to /auth
+```
 
 ---
 
-### Files to Modify
+### Files to Create/Modify
 
-| File | Changes |
-|------|---------|
-| `src/pages/Settings.tsx` | Reduce spacing; update section title; add weight export button |
-| `src/hooks/useExportData.ts` | Add `exportWeightLog` function |
-| `src/lib/csv-export.ts` | Add `exportWeightLog` function with proper typing |
+| File | Change |
+|------|--------|
+| `supabase/functions/delete-account/index.ts` | New edge function to delete user |
+| `supabase/config.toml` | Add config for delete-account function |
+| `src/components/DeleteAccountDialog.tsx` | New dialog with type-to-confirm |
+| `src/pages/Settings.tsx` | Add hyperlink trigger and dialog |
+
+---
+
+### 1. Edge Function: `delete-account`
+
+Securely deletes the authenticated user:
+
+```typescript
+// Validates JWT to get user ID
+const { data: claimsData } = await supabase.auth.getClaims(token);
+const userId = claimsData.claims.sub;
+
+// Use service role client to delete user
+const adminClient = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+);
+
+const { error } = await adminClient.auth.admin.deleteUser(userId);
+```
+
+Security measures:
+- Validates user JWT before deletion
+- Only deletes the authenticated user (cannot delete others)
+- Uses service role key server-side only
+
+---
+
+### 2. DeleteAccountDialog Component
+
+A confirmation dialog that:
+- Explains the consequences (permanent, all data deleted)
+- Requires typing "delete" to enable the delete button
+- Shows loading state during deletion
+- Handles errors gracefully
+
+```typescript
+interface DeleteAccountDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+```
+
+UI layout:
+```text
+┌────────────────────────────────────────┐
+│ Delete Account                      X  │
+├────────────────────────────────────────┤
+│ This will permanently delete your      │
+│ account and all associated data.       │
+│ This action cannot be undone.          │
+│                                        │
+│ Type "delete" to confirm:              │
+│ [................]                     │
+│                                        │
+│ [error message if any]                 │
+│                                        │
+│        [Cancel]  [Delete Account]      │
+│                   (disabled until      │
+│                    "delete" typed)     │
+└────────────────────────────────────────┘
+```
+
+---
+
+### 3. Settings Page Updates
+
+Add a subtle hyperlink-style trigger in the Account section:
+
+```tsx
+<CollapsibleSection title="Account" icon={User}>
+  <div className="space-y-3">
+    {/* Email display */}
+    {/* Change Password button */}
+    
+    {/* Subtle delete account link */}
+    <button
+      onClick={() => setDeleteAccountOpen(true)}
+      className="text-sm text-muted-foreground hover:text-destructive hover:underline"
+    >
+      Delete account
+    </button>
+  </div>
+</CollapsibleSection>
+```
+
+Visual characteristics:
+- Small text (`text-sm`)
+- Muted color (`text-muted-foreground`)
+- No button styling - just text
+- Subtle hover effect (turns red, underlines)
 
 ---
 
 ### Technical Details
 
-**New export function in `src/lib/csv-export.ts`:**
+**Edge function authentication pattern** (same as analyze-food):
+- Extracts JWT from Authorization header
+- Validates with `supabase.auth.getClaims()`
+- Gets user ID from claims
 
-```typescript
-interface WeightSetExport {
-  logged_date: string;
-  created_at: string;
-  exercise_key: string;
-  description: string;
-  sets: number;
-  reps: number;
-  weight_lbs: number;
-  raw_input: string | null;
-}
+**After successful deletion:**
+1. Edge function returns success
+2. Client calls `signOut()` from useAuth
+3. Redirect to /auth page
 
-export function exportWeightLog(sets: WeightSetExport[]) {
-  const headers = ['Date', 'Time', 'Exercise', 'Sets', 'Reps', 'Weight (lbs)', 'Raw Input'];
-  
-  const sorted = [...sets].sort((a, b) => {
-    if (a.logged_date !== b.logged_date) {
-      return a.logged_date.localeCompare(b.logged_date);
-    }
-    return a.created_at.localeCompare(b.created_at);
-  });
-
-  const rows = sorted.map(set => [
-    set.logged_date,
-    format(new Date(set.created_at), 'HH:mm'),
-    set.description,
-    set.sets,
-    set.reps,
-    set.weight_lbs,
-    set.raw_input || '',
-  ]);
-
-  // ... generate and download CSV
-}
-```
-
-**Hook update in `src/hooks/useExportData.ts`:**
-- Add `fetchAllWeightSets()` to query weight_sets table
-- Add `handleExportWeightLog()` wrapper function
-- Export the new function
-
-**Settings page update:**
-- Rename section title to "Export to CSV"
-- Update button labels: "Food Daily Totals", "Food Log"
-- Add conditional "Weight Log" button (shown when `showWeights` is true)
+**Cascade behavior:**
+- Supabase will cascade delete user data based on foreign key constraints
+- RLS policies ensure user only owns their own data
 
 ---
 
-### Visual Layout
+### Security Considerations
 
-```
-┌─────────────────────────────────────┐
-│ ↓ Export to CSV                 ▼   │
-├─────────────────────────────────────┤
-│ [Food Daily Totals] [Food Log]      │
-│ [Weight Log]  ← only if showWeights │
-└─────────────────────────────────────┘
-```
+- Service role key is only used server-side in edge function
+- User can only delete their own account (validated by JWT)
+- Type-to-confirm prevents accidental deletion
+- No recovery mechanism (intentionally permanent)
 
