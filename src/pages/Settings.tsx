@@ -1,5 +1,5 @@
 import { useTheme } from 'next-themes';
-import { Moon, Sun, Monitor, Star, SunMoon, Download, Plus, Dumbbell } from 'lucide-react';
+import { Moon, Sun, Monitor, Star, SunMoon, Download, Plus, Dumbbell, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { useUserSettings } from '@/hooks/useUserSettings';
@@ -14,6 +14,10 @@ import { SavedMealRow } from '@/components/SavedMealRow';
 import { SavedRoutineRow } from '@/components/SavedRoutineRow';
 import { FEATURES } from '@/lib/feature-flags';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
@@ -21,6 +25,15 @@ export default function Settings() {
   const [mounted, setMounted] = useState(false);
   const { data: isAdmin } = useIsAdmin();
   const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
+  const { user } = useAuth();
+  
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   
   // Saved meals
   const { data: savedMeals, isLoading: mealsLoading } = useSavedMeals();
@@ -40,6 +53,51 @@ export default function Settings() {
   
   // Export data
   const { isExporting, exportDailyTotals, exportFoodLog } = useExportData();
+  
+  // Handle password change
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError(null);
+    setPasswordSuccess(null);
+    
+    if (newPassword !== confirmPassword) {
+      setPasswordError("New passwords don't match");
+      return;
+    }
+    
+    if (newPassword.length < 6) {
+      setPasswordError("Password must be at least 6 characters");
+      return;
+    }
+    
+    setIsChangingPassword(true);
+    
+    // Re-authenticate with current password first
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: user?.email || '',
+      password: currentPassword,
+    });
+    
+    if (signInError) {
+      setPasswordError('Current password is incorrect');
+      setIsChangingPassword(false);
+      return;
+    }
+    
+    // Update to new password
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    
+    if (error) {
+      setPasswordError(error.message);
+    } else {
+      setPasswordSuccess('Password updated successfully!');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    }
+    
+    setIsChangingPassword(false);
+  };
 
   // Avoid hydration mismatch
   useEffect(() => {
@@ -90,6 +148,75 @@ export default function Settings() {
 
   return (
     <div className="space-y-6">
+      {/* Account section */}
+      <CollapsibleSection title="Account" icon={User}>
+        <div className="space-y-4">
+          {/* Display email */}
+          <div className="space-y-1">
+            <Label className="text-muted-foreground text-xs">Email</Label>
+            <p className="text-sm">{user?.email}</p>
+          </div>
+          
+          {/* Password change form */}
+          <form onSubmit={handlePasswordChange} className="space-y-3 max-w-xs">
+            <div className="space-y-1">
+              <Label htmlFor="currentPassword" className="text-xs">Current Password</Label>
+              <Input
+                id="currentPassword"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Enter current password"
+                autoComplete="current-password"
+                required
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="newPassword" className="text-xs">New Password</Label>
+              <Input
+                id="newPassword"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password"
+                autoComplete="new-password"
+                minLength={6}
+                required
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="confirmPassword" className="text-xs">Confirm New Password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password"
+                autoComplete="new-password"
+                minLength={6}
+                required
+              />
+            </div>
+            
+            {passwordError && (
+              <p className="text-sm text-destructive">{passwordError}</p>
+            )}
+            {passwordSuccess && (
+              <p className="text-sm text-primary">{passwordSuccess}</p>
+            )}
+            
+            <Button 
+              type="submit" 
+              variant="outline" 
+              size="sm"
+              disabled={isChangingPassword}
+            >
+              {isChangingPassword ? 'Updating...' : 'Change Password'}
+            </Button>
+          </form>
+        </div>
+      </CollapsibleSection>
+
       {/* Saved Meals - frequently accessed */}
       <CollapsibleSection
         title="Saved Meals"
