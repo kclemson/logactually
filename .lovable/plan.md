@@ -1,113 +1,63 @@
 
+## Fix Weight Label Clipping with Chart Top Margin
 
-## Split Weight Label: Above Bar + Inside Bar
+The weight labels (e.g., "160") that appear above the bars are getting clipped because the chart area doesn't have padding at the top to accommodate them.
 
-Instead of stacking all text inside the bar, we'll split the label into two parts:
-1. **Weight (e.g., "160")** - Displayed ABOVE the bar in purple (same color as bar)
-2. **Sets × Reps (e.g., "3×10")** - Displayed INSIDE the bar in white, stacked vertically
+---
+
+### Solution: Add Top Margin to BarChart
+
+Recharts `BarChart` accepts a `margin` prop that adds internal padding. By adding a top margin, we create space for the weight labels above the tallest bars.
 
 ---
 
 ### Changes to `src/pages/Trends.tsx`
 
-Update `renderGroupedLabel` (lines 57-97):
+Update `ExerciseChart` component (line 135):
 
 ```typescript
-const renderGroupedLabel = (props: any) => {
-  const { x, y, width, height, value } = props;
-  
-  if (!value || typeof x !== 'number' || typeof width !== 'number') return null;
-  
-  const centerX = x + width / 2;
-  
-  // Parse the label "3×10×160" into parts
-  const parts = value.split('×');
-  if (parts.length !== 3) return null;
-  
-  const [sets, reps, weight] = parts;
-  
-  // Weight label appears ABOVE the bar in purple
-  const weightY = y - 4; // Position above the bar top
-  
-  // Sets×reps inside the bar (stacked: "3", "×", "10")
-  const insideLines = [sets, '×', reps];
-  const lineHeight = 8;
-  const totalTextHeight = insideLines.length * lineHeight;
-  const startY = y + ((height || 0) - totalTextHeight) / 2 + lineHeight / 2;
-  
-  return (
-    <g>
-      {/* Weight label above bar - purple color matching bar */}
-      <text
-        x={centerX}
-        y={weightY}
-        fill="hsl(262 83% 58%)"
-        textAnchor="middle"
-        fontSize={7}
-        fontWeight={500}
-      >
-        {weight}
-      </text>
-      
-      {/* Sets×reps inside bar - white color */}
-      <text
-        x={centerX}
-        fill="#FFFFFF"
-        textAnchor="middle"
-        fontSize={7}
-        fontWeight={500}
-      >
-        {insideLines.map((line, i) => (
-          <tspan
-            key={i}
-            x={centerX}
-            y={startY + i * lineHeight}
-          >
-            {line}
-          </tspan>
-        ))}
-      </text>
-    </g>
-  );
-};
+<BarChart data={chartData} margin={{ top: 12, right: 0, left: 0, bottom: 0 }}>
 ```
+
+---
+
+### Why 12px Top Margin?
+
+| Element | Height |
+|---------|--------|
+| Weight label font size | 7px |
+| Space above bar (`y - 4`) | 4px |
+| Buffer for descenders | ~1-2px |
+| **Total** | ~12px |
+
+This ensures even the tallest bars have room for their weight labels without being clipped.
 
 ---
 
 ### Visual Result
 
+Before:
 ```
-     160      ← purple text above bar
-  ┌──────┐
-  │  3   │   ← white text inside
-  │  ×   │
-  │  10  │
-  └──────┘
+┌─────────────────────┐
+│    [clipped "160"]  │  ← label cut off
+│ ██████████████████  │
+│ ██████████████████  │
+└─────────────────────┘
 ```
 
----
-
-### Key Changes
-
-| Element | Position | Color |
-|---------|----------|-------|
-| Weight (e.g., "160") | Above bar (`y - 4`) | Purple (`hsl(262 83% 58%)`) - matches bar color |
-| Sets×Reps (e.g., "3×10") | Centered inside bar | White (`#FFFFFF`) |
-
----
-
-### Technical Notes
-
-- Use `<g>` (SVG group) to return multiple text elements
-- Weight positioned at `y - 4` places it just above the bar top (with some padding)
-- Inside text uses same stacking logic but only 3 lines now instead of 5
-- Purple color matches the existing bar fill: `hsl(262 83% 58%)`
+After:
+```
+┌─────────────────────┐
+│        160          │  ← label visible
+│ ██████████████████  │
+│ ██████████████████  │
+└─────────────────────┘
+```
 
 ---
 
 ### File to Modify
 
-| File | Lines | Change |
-|------|-------|--------|
-| `src/pages/Trends.tsx` | 57-97 | Update `renderGroupedLabel` to split weight above, sets×reps inside |
-
+| File | Line | Change |
+|------|------|--------|
+| `src/pages/Trends.tsx` | 135 | Add `margin={{ top: 12, right: 0, left: 0, bottom: 0 }}` to `<BarChart>` |
