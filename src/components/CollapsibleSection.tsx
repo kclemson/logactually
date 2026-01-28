@@ -26,7 +26,7 @@ interface CollapsibleSectionProps {
 export function CollapsibleSection({
   title,
   icon: Icon,
-  defaultOpen = true,
+  defaultOpen = false,
   headerAction,
   children,
   className,
@@ -41,10 +41,14 @@ export function CollapsibleSection({
     return stored !== null ? stored === 'true' : defaultOpen;
   });
 
-  // Persist to localStorage when state changes
+  // Persist to localStorage only when different from default
   useEffect(() => {
-    localStorage.setItem(key, String(isOpen));
-  }, [key, isOpen]);
+    if (isOpen !== defaultOpen) {
+      localStorage.setItem(key, String(isOpen));
+    } else {
+      localStorage.removeItem(key);
+    }
+  }, [key, isOpen, defaultOpen]);
 
   return (
     <section className={cn('space-y-3', className)}>
