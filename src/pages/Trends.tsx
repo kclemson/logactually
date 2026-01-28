@@ -309,7 +309,7 @@ const Trends = () => {
                           offset={20}
                           cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
                         />
-                        <Bar dataKey="calories" fill="hsl(217 91% 60%)" radius={[2, 2, 0, 0]} />
+                        <Bar dataKey="calories" fill="#0033CC" radius={[2, 2, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
