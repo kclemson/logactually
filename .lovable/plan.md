@@ -1,69 +1,96 @@
 
 
-## Add User Display Names to Admin Table
+## Add 'Last Active' Column to User Stats Table
 
 ### Goal
 
-Display friendly names alongside user numbers in the admin table (e.g., "User 1 (KC)").
+Add a column showing when each user last logged a food entry, displayed as a relative or formatted date.
 
-### User Mapping
+### Changes Required
 
-| User # | Display Name |
-|--------|-------------|
-| 1 | KC |
-| 2 | Jared |
-| 3 | Kristy |
-| 4 | Elisabetta1 |
-| 5 | Elisabetta2 |
-| 6 | test |
-| 8 | test2 |
-| 9 | Malcolm |
-| 10 | Jenny |
+| Location | Change |
+|----------|--------|
+| Database function `get_user_stats` | Add `last_active` field with MAX(created_at) from food_entries |
+| `src/hooks/useAdminStats.ts` | Add `last_active` to UserStats interface |
+| `src/pages/Admin.tsx` | Add column header and cell displaying the last active date |
 
-### Implementation
+### Technical Details
 
-| File | Change |
-|------|--------|
-| `src/pages/Admin.tsx` | Add name mapping and update table cell display |
+**1. Database Migration - Update `get_user_stats` function:**
 
-### Code Changes
+```sql
+CREATE OR REPLACE FUNCTION public.get_user_stats(user_timezone text DEFAULT 'America/Los_Angeles'::text)
+ RETURNS json
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+  result json;
+  local_today date;
+BEGIN
+  IF NOT has_role(auth.uid(), 'admin') THEN
+    RAISE EXCEPTION 'Admin access required';
+  END IF;
 
-1. Add a mapping object at the top of the component:
-
-```tsx
-const USER_NAMES: Record<number, string> = {
-  1: "KC",
-  2: "Jared",
-  3: "Kristy",
-  4: "Elisabetta1",
-  5: "Elisabetta2",
-  6: "test",
-  8: "test2",
-  9: "Malcolm",
-  10: "Jenny",
-};
+  local_today := (NOW() AT TIME ZONE user_timezone)::date;
+  
+  SELECT json_agg(row_to_json(t) ORDER BY t.user_number ASC)
+  INTO result
+  FROM (
+    SELECT 
+      p.id as user_id,
+      p.user_number,
+      COUNT(fe.id) as total_entries,
+      COUNT(CASE WHEN fe.eaten_date = local_today THEN 1 END) as entries_today,
+      MAX(fe.created_at) as last_active
+    FROM profiles p
+    LEFT JOIN food_entries fe ON p.id = fe.user_id
+    GROUP BY p.id, p.user_number
+  ) t;
+  
+  RETURN COALESCE(result, '[]'::json);
+END;
+$function$;
 ```
 
-2. Update the table cell rendering (around line 76):
+**2. Update TypeScript Interface (`src/hooks/useAdminStats.ts`):**
 
+```typescript
+interface UserStats {
+  user_id: string;
+  user_number: number;
+  total_entries: number;
+  entries_today: number;
+  last_active: string | null;  // Add this field
+}
+```
+
+**3. Update Admin Table (`src/pages/Admin.tsx`):**
+
+Add table header:
 ```tsx
-// Before
-<td className="py-0.5 pr-2">User {user.user_number}</td>
+<th className="text-center py-0.5 font-medium text-muted-foreground">Last Active</th>
+```
 
-// After
-<td className="py-0.5 pr-2">
-  User {user.user_number}
-  {USER_NAMES[user.user_number] && ` (${USER_NAMES[user.user_number]})`}
+Add table cell with formatted date:
+```tsx
+<td className="text-center py-0.5">
+  {user.last_active 
+    ? format(parseISO(user.last_active), "MMM d")
+    : "—"}
 </td>
 ```
 
 ### Result
 
-The table will display:
-- "User 1 (KC)"
-- "User 2 (Jared)"
-- "User 3 (Kristy)"
-- etc.
+The user stats table will display:
 
-Users without a mapped name will just show "User X" as before.
+| User | Total Entries | Today | Last Active |
+|------|---------------|-------|-------------|
+| User 1 (KC) | 38 | 6 | Jan 27 |
+| User 2 (Jared) | 1 | 0 | Jan 22 |
+| ... | ... | ... | ... |
+
+Users who have never logged an entry will show "—" in the Last Active column.
 
