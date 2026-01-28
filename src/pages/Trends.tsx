@@ -132,7 +132,7 @@ const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
       <CardContent className="p-2 pt-0">
         <div className="h-24">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData}>
+            <BarChart data={chartData} margin={{ top: 12, right: 0, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis
                 dataKey="dateLabel"
