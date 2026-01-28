@@ -17,9 +17,9 @@ interface BaseEditableItem {
  * - queryItems (from React Query) is the source of truth for saved data
  * - pendingEdits stores unsaved field changes (keyed by uid)
  * - pendingRemovals stores uids of items marked for local deletion
- * - newItems stores items added locally (not yet in query)
+ * - newEntryIds tracks entry IDs that should show highlight animation
  * 
- * displayItems = queryItems (filtered/edited) + newItems
+ * displayItems = queryItems (filtered/edited)
  */
 export function useEditableItems<T extends BaseEditableItem>(
   queryItems: T[],
@@ -31,19 +31,12 @@ export function useEditableItems<T extends BaseEditableItem>(
   // Pending removals: Set of uids to hide from display
   const [pendingRemovals, setPendingRemovals] = useState<Set<string>>(new Set());
   
-  // New items added locally (not yet saved to DB)
-  const [newItems, setNewItems] = useState<T[]>([]);
-  
-  // Track new item uids for highlight (individual items fallback)
-  const [newItemUids, setNewItemUids] = useState<Set<string>>(new Set());
-  
   // Track new entry IDs for grouped highlight (all items from same entry)
   const [newEntryIds, setNewEntryIds] = useState<Set<string>>(new Set());
 
   // Derive display items from query + pending state
   const displayItems = useMemo(() => {
-    // Start with query items
-    const fromQuery = queryItems
+    return queryItems
       // Filter out items pending removal
       .filter(item => !pendingRemovals.has(item.uid))
       // Apply any pending edits
@@ -63,76 +56,20 @@ export function useEditableItems<T extends BaseEditableItem>(
         
         return { ...item, ...edits, editedFields } as T;
       });
-    
-    // Filter newItems to exclude any that now exist in queryItems (they've "graduated")
-    const queryUids = new Set(queryItems.map(item => item.uid));
-    const stillNewItems = newItems.filter(item => !queryUids.has(item.uid));
-    
-    // If some items graduated, clean up newItemUids too
-    if (stillNewItems.length !== newItems.length) {
-      const graduatedUids = newItems
-        .filter(item => queryUids.has(item.uid))
-        .map(item => item.uid);
-      
-      if (graduatedUids.length > 0) {
-        // Schedule cleanup of graduated items (can't setState during render)
-        setTimeout(() => {
-          setNewItems(stillNewItems);
-          setNewItemUids(prev => {
-            const next = new Set(prev);
-            graduatedUids.forEach(uid => next.delete(uid));
-            return next;
-          });
-        }, 2500); // Match animation duration before clearing highlights
-      }
-    }
-    
-    return [...fromQuery, ...stillNewItems];
-  }, [queryItems, pendingEdits, pendingRemovals, newItems, editableFields]);
+  }, [queryItems, pendingEdits, pendingRemovals, editableFields]);
 
-  // Add new items and mark them for highlighting
-  const addNewItems = useCallback((items: T[]) => {
-    const uids = new Set(items.map(item => item.uid));
-    // Extract unique entry IDs for grouped highlighting
-    const entryIds = new Set(
-      items.map(item => item.entryId).filter((id): id is string => !!id)
-    );
+  // Mark an entry as new (triggers grouped highlight animation)
+  const markEntryAsNew = useCallback((entryId: string) => {
+    setNewEntryIds(prev => new Set([...prev, entryId]));
     
-    setNewItems(prev => [...prev, ...items]);
-    setNewItemUids(prev => new Set([...prev, ...uids]));
-    setNewEntryIds(prev => new Set([...prev, ...entryIds]));
-    
-    // Clear entry highlights after animation duration (2.5s)
-    if (entryIds.size > 0) {
-      setTimeout(() => {
-        setNewEntryIds(prev => {
-          const next = new Set(prev);
-          entryIds.forEach(id => next.delete(id));
-          return next;
-        });
-      }, 2500);
-    }
-  }, []);
-
-  // Remove new items by entry ID (for rollback on mutation failure)
-  const removeNewItemsByEntry = useCallback((entryId: string) => {
-    setNewItems(prev => prev.filter(item => item.entryId !== entryId));
-    setNewItemUids(prev => {
-      const next = new Set(prev);
-      // Find and remove uids for this entry
-      newItems.filter(item => item.entryId === entryId).forEach(item => next.delete(item.uid));
-      return next;
-    });
-    setNewEntryIds(prev => {
-      const next = new Set(prev);
-      next.delete(entryId);
-      return next;
-    });
-  }, [newItems]);
-
-  // Clear the "new" highlighting
-  const clearNewHighlights = useCallback(() => {
-    setNewItemUids(new Set());
+    // Clear highlight after animation duration (2.5s)
+    setTimeout(() => {
+      setNewEntryIds(prev => {
+        const next = new Set(prev);
+        next.delete(entryId);
+        return next;
+      });
+    }, 2500);
   }, []);
 
   // Update a single field on an item
@@ -174,26 +111,12 @@ export function useEditableItems<T extends BaseEditableItem>(
     const item = displayItems[index];
     if (!item) return;
     
-    // Check if it's a new item (not yet in DB)
-    const isNewItem = newItems.some(ni => ni.uid === item.uid);
-    
-    if (isNewItem) {
-      // Just remove from newItems
-      setNewItems(prev => prev.filter(ni => ni.uid !== item.uid));
-      setNewItemUids(prev => {
-        const next = new Set(prev);
-        next.delete(item.uid);
-        return next;
-      });
-    } else {
-      // Mark for removal from query items
-      setPendingRemovals(prev => {
-        const next = new Set(prev);
-        next.add(item.uid);
-        return next;
-      });
-    }
-  }, [displayItems, newItems]);
+    setPendingRemovals(prev => {
+      const next = new Set(prev);
+      next.add(item.uid);
+      return next;
+    });
+  }, [displayItems]);
 
   // Clear pending state for an item (call after successful save)
   const clearPendingForItem = useCallback((uid: string) => {
@@ -217,14 +140,11 @@ export function useEditableItems<T extends BaseEditableItem>(
 
   return {
     displayItems,
-    newItemUids,
     newEntryIds,
+    markEntryAsNew,
     updateItem,
     updateItemBatch,
     removeItem,
-    addNewItems,
-    removeNewItemsByEntry,
-    clearNewHighlights,
     clearPendingForItem,
     clearAllPending,
   };

@@ -37,7 +37,6 @@ interface FoodItemsTableProps {
   onUpdateItem?: (index: number, field: keyof FoodItem, value: string | number) => void;
   onUpdateItemBatch?: (index: number, updates: Partial<FoodItem>) => void;
   onRemoveItem?: (index: number) => void;
-  newItemUids?: Set<string>;
   newEntryIds?: Set<string>;
   showHeader?: boolean;
   showTotals?: boolean;
@@ -59,7 +58,6 @@ export function FoodItemsTable({
   onUpdateItem,
   onUpdateItemBatch,
   onRemoveItem,
-  newItemUids,
   newEntryIds,
   showHeader = true,
   showTotals = true,
@@ -189,11 +187,6 @@ export function FoodItemsTable({
     return item.description;
   };
 
-  // Check if this is a newly-added row (for amber background)
-  const isNewItem = (item: FoodItem): boolean => {
-    return newItemUids?.has(item.uid) ?? false;
-  };
-
   const calculatedTotals = calculateTotals(items);
   const totals = externalTotals || calculatedTotals;
 
@@ -275,7 +268,7 @@ export function FoodItemsTable({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-11 w-11 -m-2.5 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
@@ -303,14 +296,6 @@ export function FoodItemsTable({
         )
       )}
       </div>
-    );
-  };
-
-  // Get cell classes for description (new-item highlight only)
-  const getDescriptionClasses = (item: FoodItem) => {
-    return cn(
-      "hover:bg-muted/50 focus:bg-muted/50",
-      isNewItem(item) && "animate-highlight-fade"
     );
   };
 
@@ -353,8 +338,6 @@ export function FoodItemsTable({
         
         // Check if this entry should have grouped highlighting
         const entryIsNew = isNewEntry(currentEntryId);
-        // Fallback: use individual highlighting if item has no entryId
-        const useFallbackHighlight = !currentEntryId && isNewItem(item);
         
         return (
           <div key={item.uid || index} className="contents">
@@ -366,9 +349,7 @@ export function FoodItemsTable({
                 entryIsNew && isFirstInEntry && !isLastInEntry && "rounded-t-md animate-outline-fade-top",
                 entryIsNew && !isFirstInEntry && isLastInEntry && "rounded-b-md animate-outline-fade-bottom",
                 entryIsNew && !isFirstInEntry && !isLastInEntry && "animate-outline-fade-middle",
-                entryIsNew && isFirstInEntry && isLastInEntry && "rounded-md animate-outline-fade",
-                // Fallback for items without entryId
-                useFallbackHighlight && "rounded-md animate-outline-fade"
+                entryIsNew && isFirstInEntry && isLastInEntry && "rounded-md animate-outline-fade"
               )}
             >
             {/* Description cell (with chevron space when showing entry dividers) */}
@@ -503,7 +484,7 @@ export function FoodItemsTable({
                 variant="ghost"
                 size="icon"
                 onClick={() => onRemoveItem?.(index)}
-                className="h-11 w-11 -m-2.5 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
@@ -517,7 +498,7 @@ export function FoodItemsTable({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-11 w-11 -m-2.5 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                      className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>

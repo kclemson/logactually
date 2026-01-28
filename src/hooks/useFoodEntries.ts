@@ -163,6 +163,7 @@ export function useFoodEntries(date?: string) {
   return {
     entries: query.data || [],
     isLoading: query.isLoading,
+    isFetching: query.isFetching,
     error: query.error,
     createEntry,
     updateEntry,
