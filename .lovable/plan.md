@@ -1,64 +1,72 @@
 
 
-## Fix Chart Clipping on Mobile - Food and Weight Trends
+## Unify Chart Title Styling with ChartTitle/ChartSubtitle Components
 
-Both the Food Trends and Weight Trends sections have `-ml-4` (negative left margin) classes that push content outside the visible container, causing clipping on mobile screens.
-
----
-
-### Root Cause
-
-The `-ml-4` class was applied to align content visually but doesn't account for the container's edge on mobile, causing left-side clipping.
+Create centralized typography components in `card.tsx` for consistent chart headers across Food and Weight Trends.
 
 ---
 
-### All Locations to Fix
+### Target Styling (from Weight charts)
 
-| Line | Element | Current Class | Fix |
-|------|---------|---------------|-----|
-| 209 | Average stats grid | `grid grid-cols-4 gap-2 -ml-4` | Remove `-ml-4` |
-| 225 | Food loading spinner | `flex justify-center py-8 -ml-4` | Remove `-ml-4` |
-| 229 | Food empty state | `py-8 text-center text-muted-foreground -ml-4` | Remove `-ml-4` |
-| 233 | Food charts container | `space-y-3 -ml-4` | Remove `-ml-4` |
-| 338 | Weight loading spinner | `flex justify-center py-8 -ml-4` | Remove `-ml-4` |
-| 342 | Weight empty state | `py-8 text-center text-muted-foreground -ml-4` | Remove `-ml-4` |
-| 346 | Weight charts container | `space-y-3 -ml-4` | Remove `-ml-4` |
+| Component | Classes |
+|-----------|---------|
+| ChartTitle | `text-xs font-semibold leading-none tracking-tight` |
+| ChartSubtitle | `text-[10px] text-muted-foreground font-normal` |
 
 ---
 
-### Additional Weight Trends Improvements
+### Changes
 
-While fixing the clipping, also update the `ExerciseChart` header to handle long exercise names better:
+**1. Add components to `src/components/ui/card.tsx`**
 
-**Current (lines 66-72):**
+```tsx
+const ChartTitle = React.forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTMLHeadingElement>>(
+  ({ className, ...props }, ref) => (
+    <h4 ref={ref} className={cn("text-xs font-semibold leading-none tracking-tight", className)} {...props} />
+  ),
+);
+ChartTitle.displayName = "ChartTitle";
+
+const ChartSubtitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
+  ({ className, ...props }, ref) => (
+    <p ref={ref} className={cn("text-[10px] text-muted-foreground font-normal", className)} {...props} />
+  ),
+);
+ChartSubtitle.displayName = "ChartSubtitle";
+```
+
+Update exports to include both new components.
+
+---
+
+**2. Update `src/pages/Trends.tsx`**
+
+| Location | Current | New |
+|----------|---------|-----|
+| Import | `CardTitle` | Add `ChartTitle, ChartSubtitle` |
+| Line 67 | `<CardTitle className="text-xs font-semibold flex flex-col gap-0.5">` | `<div className="flex flex-col gap-0.5">` with `<ChartTitle>` and `<ChartSubtitle>` |
+| Line 239 | `<CardTitle className="text-sm font-semibold">Calories</CardTitle>` | `<ChartTitle>Calories</ChartTitle>` |
+| Line 267 | `<CardTitle className="text-sm font-semibold">Macros (g)</CardTitle>` | `<ChartTitle>Macros (g)</ChartTitle>` |
+| Line 300 | `<CardTitle className="text-sm font-semibold">{label}</CardTitle>` | `<ChartTitle>{label}</ChartTitle>` |
+
+---
+
+### ExerciseChart Header Update
+
 ```tsx
 <CardHeader className="p-2 pb-1">
-  <CardTitle className="text-sm font-semibold flex justify-between">
-    <span>{exercise.description}</span>
-    <span className="text-muted-foreground font-normal text-xs">
-      Max: {exercise.maxWeight} lbs
-    </span>
-  </CardTitle>
+  <div className="flex flex-col gap-0.5">
+    <ChartTitle className="truncate">{exercise.description}</ChartTitle>
+    <ChartSubtitle>Max: {exercise.maxWeight} lbs</ChartSubtitle>
+  </div>
 </CardHeader>
 ```
 
-**New:**
-```tsx
-<CardHeader className="p-2 pb-1">
-  <CardTitle className="text-xs font-semibold flex flex-col gap-0.5">
-    <span className="truncate">{exercise.description}</span>
-    <span className="text-muted-foreground font-normal text-[10px]">
-      Max: {exercise.maxWeight} lbs
-    </span>
-  </CardTitle>
-</CardHeader>
-```
+---
 
-Changes:
-- `text-sm` → `text-xs` for tighter title
-- `flex justify-between` → `flex flex-col gap-0.5` for vertical stacking
-- Add `truncate` to prevent long names from overflowing
-- `text-xs` → `text-[10px]` for the max weight subtitle
+### Visual Result
+
+All chart headers across Food and Weight Trends will use the same `text-xs` sizing, with optional `ChartSubtitle` for secondary information like "Max: 70 lbs".
 
 ---
 
@@ -66,5 +74,6 @@ Changes:
 
 | File | Changes |
 |------|---------|
-| `src/pages/Trends.tsx` | Remove all 7 instances of `-ml-4`, update ExerciseChart header layout |
+| `src/components/ui/card.tsx` | Add ChartTitle and ChartSubtitle components |
+| `src/pages/Trends.tsx` | Import and use new components, remove inline styling overrides |
 
