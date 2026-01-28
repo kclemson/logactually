@@ -1,72 +1,50 @@
 
 
-## Unify Chart Title Styling with ChartTitle/ChartSubtitle Components
+## Replace RYG Color Scheme with Neutral Complementary Colors
 
-Create centralized typography components in `card.tsx` for consistent chart headers across Food and Weight Trends.
-
----
-
-### Target Styling (from Weight charts)
-
-| Component | Classes |
-|-----------|---------|
-| ChartTitle | `text-xs font-semibold leading-none tracking-tight` |
-| ChartSubtitle | `text-[10px] text-muted-foreground font-normal` |
+The current Red-Yellow-Green scheme implies value judgments that aren't appropriate for nutritional components. We'll use a palette of visually distinct, neutral colors.
 
 ---
 
-### Changes
+### Proposed Color Palette
 
-**1. Add components to `src/components/ui/card.tsx`**
+| Macro | New Color | HSL Value | Rationale |
+|-------|-----------|-----------|-----------|
+| Protein | Teal | `hsl(173 80% 40%)` | Cool, distinct, no value connotation |
+| Carbs | Purple | `hsl(262 83% 58%)` | Matches weight chart line, visually distinct |
+| Fat | Sky Blue | `hsl(199 89% 48%)` | Bright but neutral, complements teal and purple |
 
-```tsx
-const ChartTitle = React.forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTMLHeadingElement>>(
-  ({ className, ...props }, ref) => (
-    <h4 ref={ref} className={cn("text-xs font-semibold leading-none tracking-tight", className)} {...props} />
-  ),
-);
-ChartTitle.displayName = "ChartTitle";
+This palette:
+- Uses cool-to-warm spectrum without traffic light associations
+- Maintains high contrast between all three colors
+- Works well in both light and dark themes
+- Keeps Calories as blue (`hsl(217 91% 60%)`) for consistency
 
-const ChartSubtitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
-  ({ className, ...props }, ref) => (
-    <p ref={ref} className={cn("text-[10px] text-muted-foreground font-normal", className)} {...props} />
-  ),
-);
-ChartSubtitle.displayName = "ChartSubtitle";
+---
+
+### Locations to Update
+
+All changes in `src/pages/Trends.tsx`:
+
+| Line | Current | New |
+|------|---------|-----|
+| 185 | `hsl(142 76% 36%)` (green) | `hsl(173 80% 40%)` (teal) |
+| 186 | `hsl(38 92% 50%)` (yellow) | `hsl(262 83% 58%)` (purple) |
+| 187 | `hsl(346 77% 49%)` (red) | `hsl(199 89% 48%)` (sky blue) |
+| 283 | `fill="hsl(142 76% 36%)"` | `fill="hsl(173 80% 40%)"` |
+| 284 | `fill="hsl(38 92% 50%)"` | `fill="hsl(262 83% 58%)"` |
+| 285 | `fill="hsl(346 77% 49%)"` | `fill="hsl(199 89% 48%)"` |
+
+---
+
+### Visual Preview
+
 ```
-
-Update exports to include both new components.
-
----
-
-**2. Update `src/pages/Trends.tsx`**
-
-| Location | Current | New |
-|----------|---------|-----|
-| Import | `CardTitle` | Add `ChartTitle, ChartSubtitle` |
-| Line 67 | `<CardTitle className="text-xs font-semibold flex flex-col gap-0.5">` | `<div className="flex flex-col gap-0.5">` with `<ChartTitle>` and `<ChartSubtitle>` |
-| Line 239 | `<CardTitle className="text-sm font-semibold">Calories</CardTitle>` | `<ChartTitle>Calories</ChartTitle>` |
-| Line 267 | `<CardTitle className="text-sm font-semibold">Macros (g)</CardTitle>` | `<ChartTitle>Macros (g)</ChartTitle>` |
-| Line 300 | `<CardTitle className="text-sm font-semibold">{label}</CardTitle>` | `<ChartTitle>{label}</ChartTitle>` |
-
----
-
-### ExerciseChart Header Update
-
-```tsx
-<CardHeader className="p-2 pb-1">
-  <div className="flex flex-col gap-0.5">
-    <ChartTitle className="truncate">{exercise.description}</ChartTitle>
-    <ChartSubtitle>Max: {exercise.maxWeight} lbs</ChartSubtitle>
-  </div>
-</CardHeader>
+Before (RYG):          After (Neutral):
+[Protein] Green        [Protein] Teal
+[Carbs]   Yellow       [Carbs]   Purple  
+[Fat]     Red          [Fat]     Sky Blue
 ```
-
----
-
-### Visual Result
-
-All chart headers across Food and Weight Trends will use the same `text-xs` sizing, with optional `ChartSubtitle` for secondary information like "Max: 70 lbs".
 
 ---
 
@@ -74,6 +52,5 @@ All chart headers across Food and Weight Trends will use the same `text-xs` sizi
 
 | File | Changes |
 |------|---------|
-| `src/components/ui/card.tsx` | Add ChartTitle and ChartSubtitle components |
-| `src/pages/Trends.tsx` | Import and use new components, remove inline styling overrides |
+| `src/pages/Trends.tsx` | Update 6 color values (3 in charts array, 3 in grouped bar chart) |
 
