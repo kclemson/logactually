@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { UtensilsCrossed, Dumbbell, ChevronDown } from 'lucide-react';
 import { CollapsibleSection } from '@/components/CollapsibleSection';
 import { FEATURES } from '@/lib/feature-flags';
-import { useWeightTrends, ExerciseTrend } from '@/hooks/useWeightTrends';
+import { useWeightTrends, ExerciseTrend, WeightPoint } from '@/hooks/useWeightTrends';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import {
   Popover,
@@ -73,10 +73,10 @@ const renderSetRepLabel = (props: any) => {
 };
 
 const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
-  const chartData = exercise.dailyData.map(d => ({
+  const chartData = exercise.weightData.map(d => ({
     ...d,
-    date: format(new Date(d.date), 'MMM d'),
-    label: `${d.totalSets}×${d.totalReps}`,
+    dateLabel: format(new Date(d.date), 'MMM d'),
+    label: `${d.sets}×${d.reps}`,
   }));
 
   return (
@@ -93,18 +93,20 @@ const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis
-                dataKey="date"
+                dataKey="dateLabel"
                 tick={{ fontSize: 8 }}
                 stroke="hsl(var(--muted-foreground))"
                 interval="preserveStartEnd"
               />
               <Tooltip
-                content={<CompactTooltip />}
+                content={<CompactTooltip formatter={(value: number, name: string) => 
+                  name === 'weight' ? `${value} lbs` : value
+                } />}
                 offset={20}
                 cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
               />
               <Bar
-                dataKey="maxWeight"
+                dataKey="weight"
                 fill="hsl(262 83% 58%)"
                 radius={[2, 2, 0, 0]}
               >
