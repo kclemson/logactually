@@ -116,7 +116,7 @@ const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
   const chartData = useMemo(() => {
     return exercise.weightData.map((d) => ({
       ...d,
-      dateLabel: format(new Date(d.date), 'MMM d'),
+      dateLabel: format(new Date(`${d.date}T12:00:00`), 'MMM d'),
       label: `${d.sets}×${d.reps}×${d.weight}`,
     }));
   }, [exercise.weightData]);
@@ -214,7 +214,7 @@ const Trends = () => {
     });
 
     return Object.entries(byDate).map(([date, totals]) => ({
-      date: format(new Date(date), 'MMM d'),
+      date: format(new Date(`${date}T12:00:00`), 'MMM d'),
       ...totals,
     }));
   }, [entries]);
