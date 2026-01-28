@@ -257,9 +257,9 @@ export function FoodItemsTable({
         <span className="px-1 text-heading text-center">{Math.round(totals.calories)}</span>
         <span className="px-1 text-heading text-center">
           <div>{Math.round(totals.protein)}/{Math.round(totals.carbs)}/{Math.round(totals.fat)}</div>
-          <div className="text-xs text-muted-foreground">
-            {proteinPct}%/{carbsPct}%/{fatPct}%
-          </div>
+        <div className="text-xs text-muted-foreground font-normal">
+          {proteinPct}%/{carbsPct}%/{fatPct}%
+        </div>
         </span>
       {hasDeleteColumn && (
         onDeleteAll ? (
