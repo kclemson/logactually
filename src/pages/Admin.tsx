@@ -84,8 +84,10 @@ export default function Admin() {
           <thead>
             <tr className="border-b">
               <th className="text-left py-0.5 pr-2 font-medium text-muted-foreground">User</th>
-              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Total Logged Items</th>
-              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Items Logged Today</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Food Logged</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Food Today</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Weight Logged</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Weight Today</th>
               <th className="text-center py-0.5 font-medium text-muted-foreground">Last Active</th>
             </tr>
           </thead>
@@ -98,6 +100,8 @@ export default function Admin() {
                 </td>
                 <td className="text-center py-0.5 pr-2">{user.total_entries}</td>
                 <td className="text-center py-0.5 pr-2">{user.entries_today}</td>
+                <td className="text-center py-0.5 pr-2">{user.total_weight_entries ?? 0}</td>
+                <td className="text-center py-0.5 pr-2">{user.weight_today ?? 0}</td>
                 <td className="text-center py-0.5">
                   {user.last_active ? format(parseISO(user.last_active), "MMM d") : "—"}
                 </td>
@@ -115,7 +119,8 @@ export default function Admin() {
           <thead>
             <tr className="border-b">
               <th className="text-left py-0.5 pr-2 font-medium text-muted-foreground">Date</th>
-              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Logged Items</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Food Logged</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Weight Logged</th>
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Users</th>
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Users w/Logged Items</th>
               <th className="text-center py-0.5 font-medium text-muted-foreground">New Users</th>
@@ -126,6 +131,7 @@ export default function Admin() {
               <tr key={row.stat_date} className="border-b border-border/50">
                 <td className="py-0.5 pr-2">{format(parseISO(row.stat_date), "MMM-dd")}</td>
                 <td className="text-center py-0.5 pr-2">{row.entry_count}</td>
+                <td className="text-center py-0.5 pr-2">{row.weight_count ?? 0}</td>
                 <td className="text-center py-0.5 pr-2">{row.total_users}</td>
                 <td className="text-center py-0.5 pr-2">{row.users_with_entries}</td>
                 <td className="text-center py-0.5">{row.users_created}</td>

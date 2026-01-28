@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 interface DailyStats {
   stat_date: string;
   entry_count: number;
+  weight_count: number;
   total_users: number;
   users_with_entries: number;
   users_created: number;
@@ -29,6 +30,8 @@ interface UserStats {
   user_number: number;
   total_entries: number;
   entries_today: number;
+  total_weight_entries: number;
+  weight_today: number;
   last_active: string | null;
 }
 
