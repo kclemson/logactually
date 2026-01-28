@@ -139,6 +139,8 @@ const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
                 tick={{ fontSize: 8 }}
                 stroke="hsl(var(--muted-foreground))"
                 interval="preserveStartEnd"
+                tickMargin={2}
+                height={16}
               />
               <Tooltip
                 content={<CompactTooltip formatter={(value: number, name: string) => 
@@ -317,13 +319,15 @@ const Trends = () => {
                 <CardContent className="p-2 pt-0">
                   <div className="h-24">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={chartData}>
+                      <BarChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis
                           dataKey="date"
                           tick={{ fontSize: 8 }}
                           stroke="hsl(var(--muted-foreground))"
                           interval="preserveStartEnd"
+                          tickMargin={2}
+                          height={16}
                         />
                         <Tooltip
                           content={<CompactTooltip />}
@@ -345,13 +349,15 @@ const Trends = () => {
                 <CardContent className="p-2 pt-0">
                   <div className="h-24">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={chartData}>
+                      <BarChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis
                           dataKey="date"
                           tick={{ fontSize: 8 }}
                           stroke="hsl(var(--muted-foreground))"
                           interval="preserveStartEnd"
+                          tickMargin={2}
+                          height={16}
                         />
                         <Tooltip
                           content={<CompactTooltip formatter={(value, name) => 
@@ -380,13 +386,15 @@ const Trends = () => {
                   <CardContent className="p-2 pt-0">
                     <div className="h-24">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={chartData}>
+                        <BarChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
                           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                           <XAxis
                             dataKey="date"
                             tick={{ fontSize: 8 }}
                             stroke="hsl(var(--muted-foreground))"
                             interval="preserveStartEnd"
+                            tickMargin={2}
+                            height={16}
                           />
                           <Tooltip
                             content={<CompactTooltip />}
