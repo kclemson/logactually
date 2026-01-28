@@ -29,6 +29,7 @@ interface UserStats {
   user_number: number;
   total_entries: number;
   entries_today: number;
+  last_active: string | null;
 }
 
 export function useAdminStats() {

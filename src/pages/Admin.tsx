@@ -85,7 +85,8 @@ export default function Admin() {
             <tr className="border-b">
               <th className="text-left py-0.5 pr-2 font-medium text-muted-foreground">User</th>
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Total Entries</th>
-              <th className="text-center py-0.5 font-medium text-muted-foreground">Today</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Today</th>
+              <th className="text-center py-0.5 font-medium text-muted-foreground">Last Active</th>
             </tr>
           </thead>
           <tbody>
@@ -96,7 +97,10 @@ export default function Admin() {
                   {USER_NAMES[user.user_number] && ` (${USER_NAMES[user.user_number]})`}
                 </td>
                 <td className="text-center py-0.5 pr-2">{user.total_entries}</td>
-                <td className="text-center py-0.5">{user.entries_today}</td>
+                <td className="text-center py-0.5 pr-2">{user.entries_today}</td>
+                <td className="text-center py-0.5">
+                  {user.last_active ? format(parseISO(user.last_active), "MMM d") : "—"}
+                </td>
               </tr>
             ))}
           </tbody>
