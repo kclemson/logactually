@@ -1,39 +1,29 @@
 
+## Show Last 7 Days in Daily Stats Table
 
-## Prevent User Column from Wrapping
-
-Add `whitespace-nowrap` to the User column to prevent long usernames from wrapping to multiple lines.
-
----
-
-### Problem
-
-Names like "User 4 (Elisabetta1)" and "User 5 (Elisabetta2)" wrap to two lines because the column has no constraint preventing text wrap.
+Change the daily stats table from showing the last 3 days to showing the last 7 days.
 
 ---
 
-### Solution
-
-Add `whitespace-nowrap` class to both the header and data cells of the User column. This is simpler and more robust than setting a fixed min-width since it adapts to any username length.
+### Change
 
 **File: `src/pages/Admin.tsx`**
 
-```tsx
-// Line 86: Add whitespace-nowrap to header
-<th className="text-left py-0.5 pr-2 font-medium text-muted-foreground whitespace-nowrap">User</th>
+Line 130 - update the slice limit:
 
-// Line 97: Add whitespace-nowrap to data cell
-<td className="py-0.5 pr-2 whitespace-nowrap">
+```tsx
+// Before
+{stats.daily_stats.slice(0, 3).map((row) => (
+
+// After  
+{stats.daily_stats.slice(0, 7).map((row) => (
 ```
 
 ---
 
-### Why This Works
+### Note
 
-- `whitespace-nowrap` prevents the text from breaking to a new line
-- The table uses `w-auto` which allows columns to shrink/grow naturally
-- The numeric columns (Food Logged, Weight Logged, etc.) will compress slightly to accommodate the wider User column
-- This approach is self-adjusting—it works for any username length
+The database function `get_usage_stats` already fetches 14 days of data, so no backend changes are needed - we're just displaying more of the already-available data.
 
 ---
 
@@ -41,5 +31,4 @@ Add `whitespace-nowrap` class to both the header and data cells of the User colu
 
 | File | Change |
 |------|--------|
-| `src/pages/Admin.tsx` | Add `whitespace-nowrap` to User column header (line 86) and data cells (line 97) |
-
+| `src/pages/Admin.tsx` | Change `.slice(0, 3)` to `.slice(0, 7)` on line 130 |
