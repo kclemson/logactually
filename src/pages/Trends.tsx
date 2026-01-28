@@ -213,10 +213,26 @@ const Trends = () => {
       byDate[date].fat += Number(entry.total_fat);
     });
 
-    return Object.entries(byDate).map(([date, totals]) => ({
-      date: format(new Date(`${date}T12:00:00`), 'MMM d'),
-      ...totals,
-    }));
+    return Object.entries(byDate).map(([date, totals]) => {
+      // Calculate calorie contribution from each macro
+      const proteinCals = totals.protein * 4;
+      const carbsCals = totals.carbs * 4;
+      const fatCals = totals.fat * 9;
+      const totalMacroCals = proteinCals + carbsCals + fatCals;
+      
+      // Calculate percentages
+      const proteinPct = totalMacroCals > 0 ? Math.round((proteinCals / totalMacroCals) * 100) : 0;
+      const carbsPct = totalMacroCals > 0 ? Math.round((carbsCals / totalMacroCals) * 100) : 0;
+      const fatPct = totalMacroCals > 0 ? Math.round((fatCals / totalMacroCals) * 100) : 0;
+      
+      return {
+        date: format(new Date(`${date}T12:00:00`), 'MMM d'),
+        ...totals,
+        proteinPct,
+        carbsPct,
+        fatPct,
+      };
+    });
   }, [entries]);
 
   // Calculate averages
@@ -321,15 +337,15 @@ const Trends = () => {
                 </CardContent>
               </Card>
 
-              {/* Macros Breakdown Chart (grouped bars) */}
+              {/* Macro Split Chart (100% stacked by calorie %) */}
               <Card>
                 <CardHeader className="p-2 pb-1">
-                  <ChartTitle>Macros (g)</ChartTitle>
+                  <ChartTitle>Macro Split (%)</ChartTitle>
                 </CardHeader>
                 <CardContent className="p-2 pt-0">
                   <div className="h-24">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={chartData} barGap={0}>
+                      <BarChart data={chartData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis
                           dataKey="date"
@@ -338,13 +354,15 @@ const Trends = () => {
                           interval="preserveStartEnd"
                         />
                         <Tooltip
-                          content={<CompactTooltip />}
+                          content={<CompactTooltip formatter={(value, name) => 
+                            `${name}: ${value}%`
+                          } />}
                           offset={20}
                           cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
                         />
-                        <Bar dataKey="protein" name="Protein" fill="#43EBD7" radius={[2, 2, 0, 0]} />
-                        <Bar dataKey="carbs" name="Carbs" fill="#9933FF" radius={[2, 2, 0, 0]} />
-                        <Bar dataKey="fat" name="Fat" fill="#00CCFF" radius={[2, 2, 0, 0]} />
+                        <Bar dataKey="proteinPct" name="Protein" stackId="macros" fill="#43EBD7" />
+                        <Bar dataKey="carbsPct" name="Carbs" stackId="macros" fill="#9933FF" />
+                        <Bar dataKey="fatPct" name="Fat" stackId="macros" fill="#00CCFF" radius={[2, 2, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
