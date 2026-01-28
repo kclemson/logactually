@@ -1,113 +1,58 @@
 
 
-## Add Resizable Columns to DevToolsPanel Results Table
+## Improve Calories Chart Color in Dark Mode
 
-### Goal
+### Problem
 
-Allow developers to drag column borders to resize column widths in the test results table, making it easier to view long Input and Source Note content.
+The Calories bar chart uses `hsl(var(--primary))` which becomes bright white (`210 40% 98%`) in dark mode, creating a harsh, jarring contrast against the dark background.
 
-### Approach
+### Solution
 
-Implement a lightweight, custom resizable columns solution using React state and mouse events. This avoids adding new dependencies and keeps the DevToolsPanel self-contained.
+Replace the dynamic `--primary` color with a dedicated chart color that looks good in both light and dark themes. A blue tone will:
+- Visually distinguish calories from the macro colors (green/orange/red)
+- Match the app's existing blue accent (focus-ring, buttons)
+- Provide good contrast without being harsh
+
+### Recommended Color
+
+**Blue: `hsl(217 91% 60%)`** - This matches the existing `--focus-ring` color and provides a vibrant but balanced look in both themes.
+
+Alternative options if you prefer:
+- Softer blue: `hsl(217 70% 55%)`
+- Cyan/teal: `hsl(190 80% 45%)`
+- Slate: `hsl(215 25% 55%)`
 
 ### Changes
 
 | File | Change |
 |------|--------|
-| `src/components/DevToolsPanel.tsx` | Add column resize handles and state management |
+| `src/pages/Trends.tsx` | Update Calories bar fill color from `hsl(var(--primary))` to a fixed blue |
 
-### Implementation Details
+### Implementation
 
-**1. Add column width state**
-
-Track each column's width in state, with sensible defaults:
+Update the `charts` array definition (line 138):
 
 ```tsx
-const [columnWidths, setColumnWidths] = useState({
-  input: 200,
-  source: 60,
-  prompt: 80,
-  output: 250,
-  sourceNote: 200,
-});
+const charts = [
+  { key: 'calories', label: 'Calories', color: 'hsl(217 91% 60%)' },  // Blue
+  { key: 'protein', label: 'Protein (g)', color: 'hsl(142 76% 36%)' },
+  { key: 'carbs', label: 'Carbs (g)', color: 'hsl(38 92% 50%)' },
+  { key: 'fat', label: 'Fat (g)', color: 'hsl(346 77% 49%)' },
+];
 ```
 
-**2. Add resize handle component**
-
-Create a draggable resize handle that appears at the right edge of each header cell:
+And update the Calories chart Bar fill (line 207):
 
 ```tsx
-const ResizeHandle = ({ columnKey }: { columnKey: string }) => {
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    const startX = e.clientX;
-    const startWidth = columnWidths[columnKey];
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const delta = moveEvent.clientX - startX;
-      const newWidth = Math.max(50, startWidth + delta);
-      setColumnWidths(prev => ({ ...prev, [columnKey]: newWidth }));
-    };
-
-    const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  };
-
-  return (
-    <div
-      onMouseDown={handleMouseDown}
-      className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-primary/50"
-    />
-  );
-};
+<Bar dataKey="calories" fill="hsl(217 91% 60%)" radius={[2, 2, 0, 0]} />
 ```
 
-**3. Update table headers**
+### Visual Result
 
-Wrap each header cell in a relative container and add the resize handle:
+| Theme | Before | After |
+|-------|--------|-------|
+| Dark | Bright white bars (jarring) | Blue bars (cohesive) |
+| Light | Dark navy bars | Blue bars (slightly lighter, still readable) |
 
-```tsx
-<th className="relative px-1 py-1" style={{ width: columnWidths.input }}>
-  <span className="font-medium text-xs">Input</span>
-  <ResizeHandle columnKey="input" />
-</th>
-```
-
-**4. Apply widths to data cells**
-
-Use inline styles on `<td>` elements to match header widths:
-
-```tsx
-<td style={{ width: columnWidths.input, maxWidth: columnWidths.input }}>
-  ...
-</td>
-```
-
-**5. Table layout**
-
-Set `table-layout: fixed` on the table to ensure column widths are respected:
-
-```tsx
-<table className="w-full text-xs" style={{ tableLayout: 'fixed' }}>
-```
-
-### Visual Behavior
-
-- Drag handles appear as a thin vertical line on the right edge of each column header
-- Handles highlight on hover (subtle blue/primary color)
-- Cursor changes to `col-resize` when hovering over handles
-- Minimum column width of 50px prevents columns from becoming too narrow
-- Widths persist during the session (could optionally add localStorage persistence later)
-
-### Technical Notes
-
-- Uses `table-layout: fixed` for predictable column sizing
-- No external dependencies required
-- Uses document-level mouse events for smooth dragging even when cursor leaves the handle
-- Cleanup handlers prevent memory leaks
+The blue matches the app's button/accent color, creating visual consistency across the interface.
 
