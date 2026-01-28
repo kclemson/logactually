@@ -1,26 +1,26 @@
 
 
-## Add Editable Hex Color Constants
+## Reorder Macro Split Stacked Bars
 
-Create a centralized `CHART_COLORS` constant at the top of Trends.tsx using hex RGB format for easy manual editing.
+Change the stacking order so protein appears at the top and fat at the bottom of each column.
 
 ---
 
-### What You'll Get
+### How Stacking Works in Recharts
 
-A clearly commented section at the top of the file where you can change any color:
+In Recharts stacked bar charts, the **first** `<Bar>` component renders at the **bottom** of the stack, and subsequent bars stack on top. The `radius` prop for rounded corners should be on the **topmost** bar.
 
-```typescript
-// Chart color palette (hex RGB format for easy editing)
-const CHART_COLORS = {
-  calories: '#0033CC',  // Deep Blue
-  protein: '#115E83',   // Steel Blue
-  carbs: '#00D4FF',     // Bright Cyan
-  fat: '#B8F4FF',       // Light Cyan
-} as const;
-```
+---
 
-To change a color, simply update the hex value (e.g., change `'#115E83'` to `'#FF5733'`).
+### Current Order (bottom to top)
+1. Protein (bottom)
+2. Carbs (middle)
+3. Fat (top) - has rounded corners
+
+### New Order (bottom to top)
+1. Fat (bottom)
+2. Carbs (middle)
+3. Protein (top) - move rounded corners here
 
 ---
 
@@ -28,43 +28,40 @@ To change a color, simply update the hex value (e.g., change `'#115E83'` to `'#F
 
 | File | Change |
 |------|--------|
-| `src/pages/Trends.tsx` | Add CHART_COLORS constant after imports, update charts array and Macro Split bars to reference it |
+| `src/pages/Trends.tsx` | Reverse order of Bar components in Macro Split chart |
 
 ---
 
-### Code Changes
+### Code Change (lines 374-376)
 
-**1. Add color constants after imports (insert after line 25):**
-```typescript
-// Chart color palette (hex RGB format for easy editing)
-const CHART_COLORS = {
-  calories: '#0033CC',  // Deep Blue
-  protein: '#115E83',   // Steel Blue
-  carbs: '#00D4FF',     // Bright Cyan
-  fat: '#B8F4FF',       // Light Cyan
-} as const;
-```
-
-**2. Update charts array (line 262-267):**
-```typescript
-const charts = [
-  { key: 'calories', label: 'Calories', color: CHART_COLORS.calories },
-  { key: 'protein', label: 'Protein (g)', color: CHART_COLORS.protein },
-  { key: 'carbs', label: 'Carbs (g)', color: CHART_COLORS.carbs },
-  { key: 'fat', label: 'Fat (g)', color: CHART_COLORS.fat },
-];
-```
-
-**3. Update Macro Split bars (lines 369-371):**
-```typescript
+**Before:**
+```tsx
 <Bar dataKey="proteinPct" name="Protein" stackId="macros" fill={CHART_COLORS.protein} />
 <Bar dataKey="carbsPct" name="Carbs" stackId="macros" fill={CHART_COLORS.carbs} />
 <Bar dataKey="fatPct" name="Fat" stackId="macros" fill={CHART_COLORS.fat} radius={[2, 2, 0, 0]} />
 ```
 
+**After:**
+```tsx
+<Bar dataKey="fatPct" name="Fat" stackId="macros" fill={CHART_COLORS.fat} />
+<Bar dataKey="carbsPct" name="Carbs" stackId="macros" fill={CHART_COLORS.carbs} />
+<Bar dataKey="proteinPct" name="Protein" stackId="macros" fill={CHART_COLORS.protein} radius={[2, 2, 0, 0]} />
+```
+
 ---
 
-### Result
+### Visual Result
 
-All chart colors will be controlled from a single location at the top of the file. Change any hex value and all related charts update automatically.
+```
+Before:          After:
+┌──────┐         ┌──────┐
+│ Fat  │         │Protein│  ← top (dark)
+├──────┤         ├──────┤
+│Carbs │         │Carbs │  ← middle
+├──────┤         ├──────┤
+│Protein│        │ Fat  │  ← bottom (light)
+└──────┘         └──────┘
+```
+
+Protein (darker blue) will now be at the top, fat (lightest cyan) at the bottom.
 
