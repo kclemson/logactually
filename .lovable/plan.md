@@ -1,99 +1,84 @@
 
 
-## Add "Save as Routine" Entry Point
+## Remove AI Routine Name Suggestion
 
-Users need a way to save their logged exercises as a reusable routine. Following the existing pattern from the food logging feature, we'll add a "Save as routine" link in the expanded entry section of the weight log.
-
----
-
-### Overview
-
-| File | Action | Purpose |
-|------|--------|---------|
-| `src/components/SaveRoutineDialog.tsx` | **Create** | Dialog to name and save a routine from existing entry |
-| `src/components/WeightItemsTable.tsx` | **Modify** | Add "Save as routine" link in expanded section |
-| `src/pages/WeightLog.tsx` | **Modify** | Handle save routine flow with dialog state |
+Replace the AI-generated routine name with an immediate, formatted default name.
 
 ---
 
-### User Flow
+### Default Name Format
 
-1. User logs exercises (e.g., "3x10 lat pulldown at 65lbs")
-2. User clicks the chevron to expand the entry
-3. User sees raw input and a "Save as routine" link
-4. Clicking opens `SaveRoutineDialog` with AI-suggested name
-5. User confirms the name and saves
-6. Routine is now available in the "Saved" popover
+For the first exercise in the routine:
+```
+Lat Pulldown (3×10 @ 65 lbs)
+```
+
+---
+
+### Changes Summary
+
+| File | Action | Description |
+|------|--------|-------------|
+| `src/hooks/useSuggestRoutineName.ts` | **Delete** | Remove unused hook |
+| `src/components/SaveRoutineDialog.tsx` | **Modify** | Remove AI props, compute default name from exercises |
+| `src/pages/WeightLog.tsx` | **Modify** | Remove hook usage, simplify dialog state |
+| `src/components/CreateRoutineDialog.tsx` | **Modify** | Remove hook, update fallback name format, pass no-op |
 
 ---
 
 ### Technical Details
 
-**1. SaveRoutineDialog Component**
+**1. SaveRoutineDialog.tsx**
 
-Mirror the `SaveMealDialog` pattern:
+Remove props:
+- `suggestedName`
+- `isSuggestingName`
 
+Add helper function:
 ```tsx
-interface SaveRoutineDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  rawInput: string | null;
-  exerciseSets: WeightSet[];
-  onSave: (name: string) => void;
-  isSaving: boolean;
-  suggestedName: string | null;
-  isSuggestingName: boolean;
+function getDefaultName(exerciseSets: WeightSet[]): string {
+  if (exerciseSets.length === 0) return '';
+  const first = exerciseSets[0];
+  return `${first.description} (${first.sets}×${first.reps} @ ${first.weight_lbs} lbs)`;
 }
 ```
 
-Features:
-- Input field for routine name
-- Shows exercise count and preview
-- Loading spinner while AI generates name
-- Auto-focus input when name is ready
-- Enter key to save, Escape to cancel
-
-**2. WeightItemsTable Updates**
-
-Add new props:
+Initialize name immediately when dialog opens using `useEffect`:
 ```tsx
-interface WeightItemsTableProps {
-  // ... existing props
-  onSaveAsRoutine?: (entryId: string, rawInput: string | null, exerciseSets: WeightSet[]) => void;
-  entryRoutineNames?: Map<string, string>;  // For entries already from routines
-}
+useEffect(() => {
+  if (open) {
+    setName(getDefaultName(exerciseSets));
+    setUserHasTyped(false);
+  }
+}, [open, exerciseSets]);
 ```
 
-In the expanded section (after raw input display):
-- If entry is from a saved routine: Show "Saved routine: {name}"
-- Otherwise: Show "Save as routine" link
+Remove all loading spinner UI and "Generating suggested name..." states.
 
-**3. WeightLog Integration**
+**2. WeightLog.tsx**
 
-Add state management:
+- Remove import: `useSuggestRoutineName`
+- Remove state: `suggestedRoutineName`
+- Simplify `handleSaveAsRoutine` to just set dialog data (no AI call)
+- Remove `suggestedName` and `isSuggestingName` props from SaveRoutineDialog
+
+**3. CreateRoutineDialog.tsx**
+
+- Remove import: `useSuggestRoutineName`
+- Update `WEIGHTS_CONFIG.getFallbackName` to use new format:
 ```tsx
-const [saveRoutineDialogData, setSaveRoutineDialogData] = useState<{
-  entryId: string;
-  rawInput: string | null;
-  exerciseSets: WeightSet[];
-} | null>(null);
-const [suggestedRoutineName, setSuggestedRoutineName] = useState<string | null>(null);
+getFallbackName: (items) => {
+  if (items.length === 0) return '';
+  const first = items[0];
+  return `${first.description} (${first.sets}×${first.reps} @ ${first.weight_lbs} lbs)`;
+},
+```
+- Pass no-op to `suggestNameResult`:
+```tsx
+suggestNameResult={{ suggestName: async () => null, isLoading: false }}
 ```
 
-Add handlers:
-- `handleSaveAsRoutine`: Opens dialog, fires AI name suggestion in parallel
-- `handleSaveRoutineConfirm`: Calls `useSaveRoutine` mutation
+**4. Delete useSuggestRoutineName.ts**
 
-Pass to WeightItemsTable:
-- `onSaveAsRoutine={handleSaveAsRoutine}`
-
----
-
-### Files Summary
-
-| File | Changes |
-|------|---------|
-| `src/components/SaveRoutineDialog.tsx` | Create - mirror SaveMealDialog for routines |
-| `src/components/WeightItemsTable.tsx` | Add `onSaveAsRoutine` prop, render "Save as routine" link |
-| `src/pages/WeightLog.tsx` | Add dialog state, name suggestion, save handlers |
+File is no longer used.
 
