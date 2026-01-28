@@ -225,8 +225,8 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
           <PopoverTrigger asChild>
             <button
               className={cn(
-                "flex items-center gap-1.5 px-2 py-1 text-lg font-medium hover:underline",
-                isTodaySelected ? "text-blue-600 dark:text-blue-400" : "text-blue-600 dark:text-blue-400"
+                "flex items-center gap-1.5 px-2 py-1 text-heading hover:underline",
+                "text-blue-600 dark:text-blue-400"
               )}
             >
               <CalendarIcon className="h-4 w-4" />

@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { format, addDays, subDays, isToday, parseISO } from 'date-fns';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { format, addDays, subDays, isToday, parseISO, isFuture } from 'date-fns';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LogInput, LogInputRef } from '@/components/LogInput';
 import { FoodItemsTable } from '@/components/FoodItemsTable';
@@ -9,6 +9,8 @@ import { SaveMealDialog } from '@/components/SaveMealDialog';
 import { CreateMealDialog } from '@/components/CreateMealDialog';
 import { SimilarMealPrompt } from '@/components/SimilarMealPrompt';
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAnalyzeFood } from '@/hooks/useAnalyzeFood';
 import { useFoodEntries } from '@/hooks/useFoodEntries';
 import { useEditableFoodItems } from '@/hooks/useEditableItems';
@@ -34,6 +36,7 @@ interface FoodLogContentProps {
 
 const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   const [, setSearchParams] = useSearchParams();
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [expandedEntryIds, setExpandedEntryIds] = useState<Set<string>>(new Set());
   
   // State for save meal dialog (from existing entry)
@@ -85,6 +88,18 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     } else {
       setSearchParams({ date: nextDate }, { replace: true });
     }
+  };
+
+  const handleDateSelect = (date: Date | undefined) => {
+    if (!date) return;
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    if (dateStr === todayStr) {
+      setSearchParams({}, { replace: true });
+    } else {
+      setSearchParams({ date: dateStr }, { replace: true });
+    }
+    setCalendarOpen(false);
   };
 
   // Flatten all entries into a single items array with entry tracking
@@ -501,12 +516,42 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
           <ChevronLeft className="h-5 w-5" />
         </Button>
         
-        <div className="flex items-center gap-3 min-w-[180px] justify-center">
-        <span className="text-heading">
-          {format(selectedDate, 'EEEE (MMM d)')}
-          {isTodaySelected && ' - Today'}
-        </span>
-        </div>
+        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+          <PopoverTrigger asChild>
+            <button
+              className={cn(
+                "flex items-center gap-1.5 px-2 py-1 text-heading hover:underline",
+                "text-blue-600 dark:text-blue-400"
+              )}
+            >
+              <CalendarIcon className="h-4 w-4" />
+              {format(selectedDate, isTodaySelected ? "'Today,' MMM d" : 'EEE, MMM d')}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="center">
+            <div className="p-2 border-b">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-center text-blue-600 dark:text-blue-400"
+                onClick={() => {
+                  setSearchParams({}, { replace: true });
+                  setCalendarOpen(false);
+                }}
+              >
+                Go to Today
+              </Button>
+            </div>
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={handleDateSelect}
+              disabled={(date) => isFuture(date)}
+              initialFocus
+              className="pointer-events-auto"
+            />
+          </PopoverContent>
+        </Popover>
         
         <Button
           variant="ghost"

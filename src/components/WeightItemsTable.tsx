@@ -41,6 +41,7 @@ interface WeightItemsTableProps {
   entryBoundaries?: EntryBoundary[];
   onDeleteEntry?: (entryId: string) => void;
   onDeleteAll?: () => void;
+  totalsPosition?: 'top' | 'bottom';
 }
 
 export function WeightItemsTable({
@@ -53,6 +54,7 @@ export function WeightItemsTable({
   entryBoundaries,
   onDeleteEntry,
   onDeleteAll,
+  totalsPosition = 'top',
 }: WeightItemsTableProps) {
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const descriptionOriginalRef = useRef<string>('');
@@ -161,7 +163,9 @@ export function WeightItemsTable({
 
   const TotalsRow = () => (
     <div className={cn(
-      'grid gap-0.5 items-center group pt-1.5 border-t-2 border-slate-300 dark:border-slate-600',
+      'grid gap-0.5 items-center group',
+      totalsPosition === 'top' && 'bg-slate-200 dark:bg-slate-700 rounded py-1.5 border border-slate-300 dark:border-slate-600',
+      totalsPosition === 'bottom' && 'pt-1.5 border-t-2 border-slate-300 dark:border-slate-600',
       gridCols
     )}>
       <span className={cn("px-1 font-semibold", showEntryDividers && "pl-4")}>Total</span>
@@ -216,6 +220,9 @@ export function WeightItemsTable({
 
   return (
     <div className="space-y-1">
+      {/* Totals at top */}
+      {items.length > 0 && totalsPosition === 'top' && <TotalsRow />}
+
       {/* Header row */}
       {showHeader && (
         <div className={cn('grid gap-0.5 text-muted-foreground items-center text-xs', gridCols)}>
@@ -423,7 +430,7 @@ export function WeightItemsTable({
       })}
 
       {/* Totals at bottom */}
-      {items.length > 0 && <TotalsRow />}
+      {items.length > 0 && totalsPosition === 'bottom' && <TotalsRow />}
     </div>
   );
 }
