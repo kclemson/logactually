@@ -16,6 +16,7 @@ import { FEATURES } from '@/lib/feature-flags';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useAuth } from '@/hooks/useAuth';
 import { ChangePasswordDialog } from '@/components/ChangePasswordDialog';
+import { DeleteAccountDialog } from '@/components/DeleteAccountDialog';
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
@@ -27,6 +28,7 @@ export default function Settings() {
   
   // Password change dialog
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   
   // Saved meals
   const { data: savedMeals, isLoading: mealsLoading } = useSavedMeals();
@@ -112,6 +114,12 @@ export default function Settings() {
           >
             Change Password
           </Button>
+          <button
+            onClick={() => setDeleteAccountOpen(true)}
+            className="text-sm text-muted-foreground hover:text-destructive hover:underline"
+          >
+            Delete account
+          </button>
         </div>
       </CollapsibleSection>
 
@@ -270,6 +278,14 @@ export default function Settings() {
           onOpenChange={setCreateRoutineDialogOpen}
           onRoutineCreated={() => {}}
           showLogPrompt={false}
+        />
+      )}
+
+      {/* Delete Account Dialog */}
+      {deleteAccountOpen && (
+        <DeleteAccountDialog
+          open={deleteAccountOpen}
+          onOpenChange={setDeleteAccountOpen}
         />
       )}
 
