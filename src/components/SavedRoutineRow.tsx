@@ -170,7 +170,7 @@ export function SavedRoutineRow({
 
       {/* Expanded items table */}
       {isExpanded && (
-        <div className="pl-8 mt-1">
+        <div className="pl-6 mt-1">
           {localItems.length === 0 ? (
             <p className="text-xs text-muted-foreground py-1">No exercises</p>
           ) : (
