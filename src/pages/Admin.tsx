@@ -52,13 +52,13 @@ export default function Admin() {
       <div className="grid grid-cols-[auto_auto_auto] gap-x-1 gap-y-0.5 text-muted-foreground text-xs">
         {/* Row 1: Headers */}
         <p className="font-medium">Users: {stats?.total_users ?? 0}</p>
-        <p className="font-medium">Entries: {stats?.total_entries ?? 0}</p>
+        <p className="font-medium">Logged Items: {stats?.total_entries ?? 0}</p>
         <p className="font-medium">Saved Meals: {stats?.total_saved_meals ?? 0}</p>
 
         {/* Row 2: Sub-stats */}
         <div className="space-y-0">
           <p>
-            w/entries: {stats?.users_with_entries ?? 0} ({pct(stats?.users_with_entries ?? 0)}%)
+            w/logged items: {stats?.users_with_entries ?? 0} ({pct(stats?.users_with_entries ?? 0)}%)
           </p>
           <p>
             Active RL7: {stats?.active_last_7_days ?? 0} ({pct(stats?.active_last_7_days ?? 0)}%)
@@ -84,8 +84,8 @@ export default function Admin() {
           <thead>
             <tr className="border-b">
               <th className="text-left py-0.5 pr-2 font-medium text-muted-foreground">User</th>
-              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Total Entries</th>
-              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Entries Today</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Total Logged Items</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Items Logged Today</th>
               <th className="text-center py-0.5 font-medium text-muted-foreground">Last Active</th>
             </tr>
           </thead>
@@ -115,9 +115,9 @@ export default function Admin() {
           <thead>
             <tr className="border-b">
               <th className="text-left py-0.5 pr-2 font-medium text-muted-foreground">Date</th>
-              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Entries</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Logged Items</th>
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Users</th>
-              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Users w/Entries</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Users w/Logged Items</th>
               <th className="text-center py-0.5 font-medium text-muted-foreground">New Users</th>
             </tr>
           </thead>
