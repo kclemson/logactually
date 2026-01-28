@@ -12,7 +12,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, ChartTitle, ChartSubtitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { UtensilsCrossed, Dumbbell, ChevronDown } from 'lucide-react';
 import { CollapsibleSection } from '@/components/CollapsibleSection';
@@ -64,12 +64,10 @@ const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
   return (
     <Card>
       <CardHeader className="p-2 pb-1">
-        <CardTitle className="text-xs font-semibold flex flex-col gap-0.5">
-          <span className="truncate">{exercise.description}</span>
-          <span className="text-muted-foreground font-normal text-[10px]">
-            Max: {exercise.maxWeight} lbs
-          </span>
-        </CardTitle>
+        <div className="flex flex-col gap-0.5">
+          <ChartTitle className="truncate">{exercise.description}</ChartTitle>
+          <ChartSubtitle>Max: {exercise.maxWeight} lbs</ChartSubtitle>
+        </div>
       </CardHeader>
       <CardContent className="p-2 pt-0">
         <div className="h-24">
@@ -236,7 +234,7 @@ const Trends = () => {
               {/* Calories Chart */}
               <Card>
                 <CardHeader className="p-2 pb-1">
-                  <CardTitle className="text-sm font-semibold">Calories</CardTitle>
+                  <ChartTitle>Calories</ChartTitle>
                 </CardHeader>
                 <CardContent className="p-2 pt-0">
                   <div className="h-24">
@@ -264,7 +262,7 @@ const Trends = () => {
               {/* Macros Breakdown Chart (grouped bars) */}
               <Card>
                 <CardHeader className="p-2 pb-1">
-                  <CardTitle className="text-sm font-semibold">Macros (g)</CardTitle>
+                  <ChartTitle>Macros (g)</ChartTitle>
                 </CardHeader>
                 <CardContent className="p-2 pt-0">
                   <div className="h-24">
@@ -297,7 +295,7 @@ const Trends = () => {
               {charts.slice(1).map(({ key, label, color }) => (
                 <Card key={key}>
                   <CardHeader className="p-2 pb-1">
-                    <CardTitle className="text-sm font-semibold">{label}</CardTitle>
+                    <ChartTitle>{label}</ChartTitle>
                   </CardHeader>
                   <CardContent className="p-2 pt-0">
                     <div className="h-24">

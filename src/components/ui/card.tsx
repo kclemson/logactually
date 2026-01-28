@@ -40,4 +40,18 @@ const CardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
 );
 CardFooter.displayName = "CardFooter";
 
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent };
+const ChartTitle = React.forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTMLHeadingElement>>(
+  ({ className, ...props }, ref) => (
+    <h4 ref={ref} className={cn("text-xs font-semibold leading-none tracking-tight", className)} {...props} />
+  ),
+);
+ChartTitle.displayName = "ChartTitle";
+
+const ChartSubtitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
+  ({ className, ...props }, ref) => (
+    <p ref={ref} className={cn("text-[10px] text-muted-foreground font-normal", className)} {...props} />
+  ),
+);
+ChartSubtitle.displayName = "ChartSubtitle";
+
+export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent, ChartTitle, ChartSubtitle };
