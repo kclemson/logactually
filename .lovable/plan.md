@@ -1,55 +1,113 @@
 
 
-## Add Source Note Column to DevToolsPanel
+## Add Resizable Columns to DevToolsPanel Results Table
 
 ### Goal
 
-Display the AI's `source_note` field (the data source/estimation explanation) as a visible column in the test results table, making it easier to review without hovering.
+Allow developers to drag column borders to resize column widths in the test results table, making it easier to view long Input and Source Note content.
 
-### Current State
+### Approach
 
-- The `source_note` is already retrieved from the database and available in the `FoodItemOutput` interface
-- It's currently only visible as a tooltip when hovering over a food item row
-- The confidence level is shown as a colored dot (green/yellow/red)
+Implement a lightweight, custom resizable columns solution using React state and mouse events. This avoids adding new dependencies and keeps the DevToolsPanel self-contained.
 
 ### Changes
 
 | File | Change |
 |------|--------|
-| `src/components/DevToolsPanel.tsx` | Add a new "Source Note" column after the Output column |
+| `src/components/DevToolsPanel.tsx` | Add column resize handles and state management |
 
 ### Implementation Details
 
-**1. Add column header (line 340)**
+**1. Add column width state**
 
-Add a new `<th>` for "Source Note" after the "Output" header.
+Track each column's width in state, with sensible defaults:
 
-**2. Add column data (after line 396)**
-
-For each result row, add a new `<td>` that displays the `source_note` values from each food item. Since a result can have multiple food items, we'll show them stacked (like the output column does).
-
-The column will:
-- Show each item's `source_note` on its own line
-- Use muted styling since it's supplementary info
-- Truncate long notes with a title attribute for full text on hover
-- Show "—" if no source note is provided
-
-### Code Structure
-
-```text
-Table columns (current):
-[Input] [Source] [Prompt] [Output]
-
-Table columns (new):
-[Input] [Source] [Prompt] [Output] [Source Note]
+```tsx
+const [columnWidths, setColumnWidths] = useState({
+  input: 200,
+  source: 60,
+  prompt: 80,
+  output: 250,
+  sourceNote: 200,
+});
 ```
 
-### Visual Result
+**2. Add resize handle component**
 
-The new column will display text like:
-- "Based on standard Activia vanilla single-serve cup."
-- "A 'handful' is typically estimated as 1 ounce..."
-- "—" (when no note provided)
+Create a draggable resize handle that appears at the right edge of each header cell:
 
-This makes it easy to quickly scan the AI's reasoning without needing to hover over each row.
+```tsx
+const ResizeHandle = ({ columnKey }: { columnKey: string }) => {
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = columnWidths[columnKey];
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const delta = moveEvent.clientX - startX;
+      const newWidth = Math.max(50, startWidth + delta);
+      setColumnWidths(prev => ({ ...prev, [columnKey]: newWidth }));
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  return (
+    <div
+      onMouseDown={handleMouseDown}
+      className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-primary/50"
+    />
+  );
+};
+```
+
+**3. Update table headers**
+
+Wrap each header cell in a relative container and add the resize handle:
+
+```tsx
+<th className="relative px-1 py-1" style={{ width: columnWidths.input }}>
+  <span className="font-medium text-xs">Input</span>
+  <ResizeHandle columnKey="input" />
+</th>
+```
+
+**4. Apply widths to data cells**
+
+Use inline styles on `<td>` elements to match header widths:
+
+```tsx
+<td style={{ width: columnWidths.input, maxWidth: columnWidths.input }}>
+  ...
+</td>
+```
+
+**5. Table layout**
+
+Set `table-layout: fixed` on the table to ensure column widths are respected:
+
+```tsx
+<table className="w-full text-xs" style={{ tableLayout: 'fixed' }}>
+```
+
+### Visual Behavior
+
+- Drag handles appear as a thin vertical line on the right edge of each column header
+- Handles highlight on hover (subtle blue/primary color)
+- Cursor changes to `col-resize` when hovering over handles
+- Minimum column width of 50px prevents columns from becoming too narrow
+- Widths persist during the session (could optionally add localStorage persistence later)
+
+### Technical Notes
+
+- Uses `table-layout: fixed` for predictable column sizing
+- No external dependencies required
+- Uses document-level mouse events for smooth dragging even when cursor leaves the handle
+- Cleanup handlers prevent memory leaks
 
