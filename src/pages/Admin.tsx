@@ -74,7 +74,7 @@ export default function Admin() {
         <div className="space-y-0">
           <p>Users w/SM: {stats?.users_with_saved_meals ?? 0}</p>
           <p>Avg SM/user: {stats?.avg_saved_meals_per_user ?? 0}</p>
-          <p>Used RL7: {stats?.saved_meals_used_last_7_days ?? 0}</p>
+          <p>SM used RL7: {stats?.saved_meals_used_last_7_days ?? 0}</p>
         </div>
       </div>
 
