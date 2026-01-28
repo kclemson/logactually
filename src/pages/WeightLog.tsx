@@ -5,13 +5,14 @@ import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-reac
 import { cn } from '@/lib/utils';
 import { LogInput, LogInputRef } from '@/components/LogInput';
 import { WeightItemsTable } from '@/components/WeightItemsTable';
+import { CreateRoutineDialog } from '@/components/CreateRoutineDialog';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAnalyzeWeights } from '@/hooks/useAnalyzeWeights';
 import { useWeightEntries } from '@/hooks/useWeightEntries';
 import { useEditableItems } from '@/hooks/useEditableItems';
-import { WeightSet, WeightEditableField } from '@/types/weight';
+import { WeightSet, WeightEditableField, SavedExerciseSet } from '@/types/weight';
 
 const WEIGHT_EDITABLE_FIELDS: WeightEditableField[] = ['description', 'sets', 'reps', 'weight_lbs'];
 
@@ -34,6 +35,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   const [, setSearchParams] = useSearchParams();
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [expandedEntryIds, setExpandedEntryIds] = useState<Set<string>>(new Set());
+  const [createRoutineDialogOpen, setCreateRoutineDialogOpen] = useState(false);
   
   // Track pending entry ID to extend loading state until rows are visible
   const [pendingEntryId, setPendingEntryId] = useState<string | null>(null);
@@ -190,6 +192,19 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
     }
   };
 
+  // Handle logging a saved routine
+  const handleLogSavedRoutine = useCallback((exerciseSets: SavedExerciseSet[], routineId: string) => {
+    // Convert SavedExerciseSet to the format createEntryFromExercises expects
+    const exercises = exerciseSets.map(set => ({
+      exercise_key: set.exercise_key,
+      description: set.description,
+      sets: set.sets,
+      reps: set.reps,
+      weight_lbs: set.weight_lbs,
+    }));
+    createEntryFromExercises(exercises, `From saved routine`);
+  }, [createEntryFromExercises]);
+
   // Auto-save handler for single field updates
   const handleItemUpdate = useCallback((index: number, field: keyof WeightSet, value: string | number) => {
     updateItem(index, field, value);
@@ -229,6 +244,8 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
           ref={weightInputRef}
           onSubmit={handleSubmit}
           isLoading={isAnalyzing || createEntry.isPending || (isFetching && !!pendingEntryId)}
+          onLogSavedRoutine={handleLogSavedRoutine}
+          onCreateNewRoutine={() => setCreateRoutineDialogOpen(true)}
         />
         {analyzeError && (
           <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive mt-3">
@@ -312,6 +329,19 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
         <div className="text-center text-muted-foreground py-8">
           No exercises logged for this day
         </div>
+      )}
+
+      {/* Create Routine Dialog */}
+      {createRoutineDialogOpen && (
+        <CreateRoutineDialog
+          open={createRoutineDialogOpen}
+          onOpenChange={setCreateRoutineDialogOpen}
+          onRoutineCreated={(routine, exerciseSets) => {
+            // Log the routine immediately if user chooses
+            handleLogSavedRoutine(exerciseSets, routine.id);
+          }}
+          showLogPrompt={true}
+        />
       )}
     </div>
   );

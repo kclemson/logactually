@@ -6,9 +6,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { SavedMealsPopover } from "@/components/SavedMealsPopover";
+import { SavedRoutinesPopover } from "@/components/SavedRoutinesPopover";
 import { useScanBarcode } from "@/hooks/useScanBarcode";
 import { extractUpcFromText } from "@/lib/upc-utils";
 import { FoodItem } from "@/types/food";
+import { SavedExerciseSet } from "@/types/weight";
 
 // Mode-specific configurations
 export type LogMode = 'food' | 'weights';
@@ -66,10 +68,14 @@ interface LogInputProps {
   isLoading?: boolean;
   /** Food mode only: handler for barcode scan results */
   onScanResult?: (foodItem: Omit<FoodItem, "uid" | "entryId">, originalInput: string) => void;
-  /** Handler for logging saved items (meals or routines) */
+  /** Food mode: handler for logging saved meals */
   onLogSavedMeal?: (foodItems: FoodItem[], mealId: string) => void;
-  /** Callback when user clicks "Add New" in saved popover */
+  /** Food mode: callback when user clicks "Add New" in saved meals popover */
   onCreateNewMeal?: () => void;
+  /** Weights mode: handler for logging saved routines */
+  onLogSavedRoutine?: (exerciseSets: SavedExerciseSet[], routineId: string) => void;
+  /** Weights mode: callback when user clicks "Add New" in saved routines popover */
+  onCreateNewRoutine?: () => void;
   /** Optional override for textarea placeholder */
   placeholder?: string;
 }
@@ -94,7 +100,7 @@ const getCameraSupport = (): boolean => {
 };
 
 export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput(
-  { mode, onSubmit, isLoading, onScanResult, onLogSavedMeal, onCreateNewMeal, placeholder: customPlaceholder },
+  { mode, onSubmit, isLoading, onScanResult, onLogSavedMeal, onCreateNewMeal, onLogSavedRoutine, onCreateNewRoutine, placeholder: customPlaceholder },
   ref,
 ) {
   const config = MODE_CONFIGS[mode];
@@ -233,9 +239,16 @@ export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput
     }
   };
 
+  const handleSelectSavedRoutine = (exerciseSets: SavedExerciseSet[], routineId: string) => {
+    if (onLogSavedRoutine) {
+      onLogSavedRoutine(exerciseSets, routineId);
+      setSavedMealsOpen(false);
+    }
+  };
+
   const isBusy = isLoading || isScanning;
   const showBarcode = config.showBarcodeScanner && cameraSupported && mode === 'food';
-  const showSaved = config.showSavedButton && onLogSavedMeal;
+  const showSaved = config.showSavedButton && (mode === 'food' ? onLogSavedMeal : onLogSavedRoutine);
 
   return (
     <div className="space-y-3">
@@ -280,11 +293,19 @@ export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-72 p-0" align="start">
-              <SavedMealsPopover
-                onSelectMeal={handleSelectSavedMeal}
-                onClose={() => setSavedMealsOpen(false)}
-                onCreateNew={onCreateNewMeal}
-              />
+              {mode === 'food' ? (
+                <SavedMealsPopover
+                  onSelectMeal={handleSelectSavedMeal}
+                  onClose={() => setSavedMealsOpen(false)}
+                  onCreateNew={onCreateNewMeal}
+                />
+              ) : (
+                <SavedRoutinesPopover
+                  onSelectRoutine={handleSelectSavedRoutine}
+                  onClose={() => setSavedMealsOpen(false)}
+                  onCreateNew={onCreateNewRoutine}
+                />
+              )}
             </PopoverContent>
           </Popover>
         )}
