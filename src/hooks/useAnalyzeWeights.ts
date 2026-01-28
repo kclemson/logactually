@@ -1,0 +1,47 @@
+import { useState, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { AnalyzedExercise } from '@/types/weight';
+
+interface AnalyzeWeightsResult {
+  exercises: AnalyzedExercise[];
+}
+
+export function useAnalyzeWeights() {
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const analyzeWeights = useCallback(async (rawInput: string): Promise<AnalyzeWeightsResult | null> => {
+    setIsAnalyzing(true);
+    setError(null);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Not authenticated');
+      }
+
+      const { data, error: fnError } = await supabase.functions.invoke('analyze-weights', {
+        body: { rawInput },
+      });
+
+      if (fnError) {
+        throw fnError;
+      }
+
+      if (!data?.exercises || !Array.isArray(data.exercises)) {
+        throw new Error('Invalid response from analyze-weights');
+      }
+
+      return { exercises: data.exercises };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to analyze workout';
+      setError(message);
+      console.error('Analyze weights error:', err);
+      return null;
+    } finally {
+      setIsAnalyzing(false);
+    }
+  }, []);
+
+  return { analyzeWeights, isAnalyzing, error };
+}

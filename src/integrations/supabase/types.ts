@@ -190,6 +190,51 @@ export type Database = {
         }
         Relationships: []
       }
+      weight_sets: {
+        Row: {
+          created_at: string
+          description: string
+          entry_id: string
+          exercise_key: string
+          id: string
+          logged_date: string
+          raw_input: string | null
+          reps: number
+          sets: number
+          updated_at: string
+          user_id: string
+          weight_lbs: number
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          entry_id: string
+          exercise_key: string
+          id?: string
+          logged_date?: string
+          raw_input?: string | null
+          reps: number
+          sets: number
+          updated_at?: string
+          user_id: string
+          weight_lbs: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          entry_id?: string
+          exercise_key?: string
+          id?: string
+          logged_date?: string
+          raw_input?: string | null
+          reps?: number
+          sets?: number
+          updated_at?: string
+          user_id?: string
+          weight_lbs?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

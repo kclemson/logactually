@@ -5,8 +5,10 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Layout } from "@/components/Layout";
+import { FEATURES } from "@/lib/feature-flags";
 import Auth from "./pages/Auth";
 import FoodLog from "./pages/FoodLog";
+import WeightLog from "./pages/WeightLog";
 import Trends from "./pages/Trends";
 import History from "./pages/History";
 import Admin from "./pages/Admin";
@@ -31,6 +33,9 @@ const App = () => (
                 }
               >
                 <Route path="/" element={<FoodLog />} />
+                {FEATURES.WEIGHT_TRACKING && (
+                  <Route path="/weights" element={<WeightLog />} />
+                )}
                 <Route path="/trends" element={<Trends />} />
                 <Route path="/history" element={<History />} />
                 <Route path="/settings" element={<Settings />} />

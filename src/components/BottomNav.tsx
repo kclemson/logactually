@@ -1,15 +1,18 @@
 import { NavLink } from 'react-router-dom';
-import { PenLine, CalendarDays, TrendingUp, Settings, Shield } from 'lucide-react';
+import { PenLine, CalendarDays, TrendingUp, Settings, Shield, Dumbbell } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { FEATURES } from '@/lib/feature-flags';
 
 export function BottomNav() {
   const { data: isAdmin } = useIsAdmin();
   
   const showAdmin = isAdmin;
+  const showWeights = FEATURES.WEIGHT_TRACKING;
 
   const navItems = [
     { to: '/', icon: PenLine, label: 'Log Food' },
+    ...(showWeights ? [{ to: '/weights', icon: Dumbbell, label: 'Log Weights' }] : []),
     { to: '/history', icon: CalendarDays, label: 'Calendar' },
     { to: '/trends', icon: TrendingUp, label: 'Trends' },
     { to: '/settings', icon: Settings, label: 'Settings' },
