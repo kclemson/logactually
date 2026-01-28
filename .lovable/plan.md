@@ -1,37 +1,36 @@
 
 
-## Minimal Fix: Remove Height Restriction
+## Fix Calories Bar Color
 
-Remove only the `height < 12` check from `renderGroupedLabel` to test if that's causing the missing labels.
+The Calories chart is using the wrong color. It's hardcoded to `hsl(217 91% 60%)` (a lighter blue) instead of the intended `#0033CC` (deep blue).
 
 ---
 
-### Current Code (line 60)
+### Issue
+
+| Location | Current Color | Expected Color |
+|----------|---------------|----------------|
+| Line 312, Calories Bar | `hsl(217 91% 60%)` | `#0033CC` |
+
+---
+
+### Fix
+
+**File: `src/pages/Trends.tsx`**
+
+Update line 312:
 
 ```typescript
-if (!payload?.isRunMiddle || !value || height < 12) return null;
-```
+// Current
+<Bar dataKey="calories" fill="hsl(217 91% 60%)" radius={[2, 2, 0, 0]} />
 
-### Updated Code
-
-```typescript
-if (!payload?.isRunMiddle || !value) return null;
+// Updated
+<Bar dataKey="calories" fill="#0033CC" radius={[2, 2, 0, 0]} />
 ```
 
 ---
 
-### File to Modify
+### Note
 
-| File | Change |
-|------|--------|
-| `src/pages/Trends.tsx` | Remove `height < 12` from the condition on line 60 |
-
----
-
-### What This Tests
-
-- If labels appear after this change → the height check was too restrictive
-- If labels still missing → the issue is elsewhere (run detection, isRunMiddle logic, or payload passing)
-
-No other changes - same label position (`y + 10`), same font size, same spanning calculation.
+The `charts` array already has the correct color defined (`#0033CC`) - it's just not being used for this specific chart which was created separately for the 2-column layout.
 
