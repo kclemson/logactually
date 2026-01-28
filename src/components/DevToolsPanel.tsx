@@ -37,6 +37,8 @@ interface RunResponse {
   results: TestResult[];
 }
 
+type ColumnKey = 'input' | 'source' | 'prompt' | 'output' | 'sourceNote';
+
 export function DevToolsPanel() {
   const [isOpen, setIsOpen] = useState(false);
   const [promptVersion, setPromptVersion] = useState<'default' | 'experimental'>('default');
@@ -49,8 +51,42 @@ export function DevToolsPanel() {
   const [isRunning, setIsRunning] = useState(false);
   const [runId, setRunId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [columnWidths, setColumnWidths] = useState({
+    input: 200,
+    source: 60,
+    prompt: 80,
+    output: 250,
+    sourceNote: 200,
+  });
 
   const { lookupUpc } = useScanBarcode();
+
+  const handleResizeMouseDown = (columnKey: ColumnKey) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = columnWidths[columnKey];
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const delta = moveEvent.clientX - startX;
+      const newWidth = Math.max(50, startWidth + delta);
+      setColumnWidths(prev => ({ ...prev, [columnKey]: newWidth }));
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const ResizeHandle = ({ columnKey }: { columnKey: ColumnKey }) => (
+    <div
+      onMouseDown={handleResizeMouseDown(columnKey)}
+      className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-primary/50"
+    />
+  );
 
   // Fetch historical results from database
   const { data: historicalResults } = useQuery({
@@ -330,24 +366,39 @@ export function DevToolsPanel() {
                   </span>
                 </div>
 
-                <div className="max-h-80 overflow-y-auto rounded-md border">
-                  <table className="w-full text-xs">
+                <div className="max-h-80 overflow-x-auto overflow-y-auto rounded-md border">
+                  <table className="text-xs" style={{ tableLayout: 'fixed', minWidth: '100%' }}>
                     <thead className="bg-background sticky top-0">
                       <tr>
-                        <th className="px-1 py-1 text-left font-medium text-xs">Input</th>
-                        <th className="px-1 py-1 text-left font-medium text-xs">Source</th>
-                        <th className="px-1 py-1 text-left font-medium text-xs">Prompt</th>
-                        <th className="px-1 py-1 text-left font-medium text-xs">Output</th>
-                        <th className="px-1 py-1 text-left font-medium text-xs">Source Note</th>
+                        <th className="relative px-1 py-1 text-left" style={{ width: columnWidths.input }}>
+                          <span className="font-medium text-xs">Input</span>
+                          <ResizeHandle columnKey="input" />
+                        </th>
+                        <th className="relative px-1 py-1 text-left" style={{ width: columnWidths.source }}>
+                          <span className="font-medium text-xs">Source</span>
+                          <ResizeHandle columnKey="source" />
+                        </th>
+                        <th className="relative px-1 py-1 text-left" style={{ width: columnWidths.prompt }}>
+                          <span className="font-medium text-xs">Prompt</span>
+                          <ResizeHandle columnKey="prompt" />
+                        </th>
+                        <th className="relative px-1 py-1 text-left" style={{ width: columnWidths.output }}>
+                          <span className="font-medium text-xs">Output</span>
+                          <ResizeHandle columnKey="output" />
+                        </th>
+                        <th className="relative px-1 py-1 text-left" style={{ width: columnWidths.sourceNote }}>
+                          <span className="font-medium text-xs">Source Note</span>
+                          <ResizeHandle columnKey="sourceNote" />
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {displayResults.map((result, i) => (
                         <tr key={i} className="border-t">
-                          <td className="px-1 py-1 font-mono text-xs max-w-[200px] truncate">
+                          <td className="px-1 py-1 font-mono text-xs truncate" style={{ width: columnWidths.input, maxWidth: columnWidths.input }}>
                             {result.input}
                           </td>
-                          <td className="px-1 py-1 text-xs">
+                          <td className="px-1 py-1 text-xs" style={{ width: columnWidths.source, maxWidth: columnWidths.source }}>
                             <span className={
                               result.source === 'upc-lookup' 
                                 ? 'text-green-600' 
@@ -358,7 +409,7 @@ export function DevToolsPanel() {
                               {result.source === 'upc-lookup' ? 'UPC' : result.source === 'ai-fallback' ? 'AI (fallback)' : 'AI'}
                             </span>
                           </td>
-                          <td className="px-1 py-1 text-xs">
+                          <td className="px-1 py-1 text-xs" style={{ width: columnWidths.prompt, maxWidth: columnWidths.prompt }}>
                             <span className={
                               result.promptVersion === 'experimental' 
                                 ? 'text-purple-500' 
@@ -367,14 +418,13 @@ export function DevToolsPanel() {
                               {result.promptVersion === 'experimental' ? 'Experimental' : 'Default'}
                             </span>
                           </td>
-                          <td className="px-1 py-1 text-xs max-w-[300px]">
+                          <td className="px-1 py-1 text-xs" style={{ width: columnWidths.output, maxWidth: columnWidths.output }}>
                             {result.error ? (
                               <span className="text-destructive">{result.error}</span>
                             ) : (
                               <div className="space-y-0.5">
                                 {result.output?.food_items?.map((f, idx) => (
                                   <div key={idx} className="flex items-center gap-1 truncate" title={f.source_note || undefined}>
-                                    {/* Confidence indicator dot */}
                                     <span 
                                       className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${
                                         f.confidence === 'high' 
@@ -395,7 +445,7 @@ export function DevToolsPanel() {
                               </div>
                             )}
                           </td>
-                          <td className="px-1 py-1 text-xs text-muted-foreground max-w-[200px]">
+                          <td className="px-1 py-1 text-xs text-muted-foreground" style={{ width: columnWidths.sourceNote, maxWidth: columnWidths.sourceNote }}>
                             {result.error ? null : (
                               <div className="space-y-0.5">
                                 {result.output?.food_items?.map((f, idx) => (
