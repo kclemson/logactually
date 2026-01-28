@@ -63,7 +63,10 @@ const periods = [
 ];
 
 const renderGroupedLabel = (props: any) => {
-  const { x, y, width, height, value } = props;
+  const { x, y, width, height, value, payload } = props;
+  
+  // Skip rendering if showLabel is false (threshold-based visibility)
+  if (payload && payload.showLabel === false) return null;
   
   if (!value || typeof x !== 'number' || typeof width !== 'number') return null;
   
@@ -122,10 +125,16 @@ const renderGroupedLabel = (props: any) => {
 
 const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
   const chartData = useMemo(() => {
-    return exercise.weightData.map((d) => ({
+    const dataLength = exercise.weightData.length;
+    // Calculate how often to show labels based on column count
+    const labelInterval = dataLength <= 8 ? 1 : dataLength <= 16 ? 2 : 3;
+    
+    return exercise.weightData.map((d, index) => ({
       ...d,
       dateLabel: format(new Date(`${d.date}T12:00:00`), 'MMM d'),
       label: `${d.sets}×${d.reps}×${d.weight}`,
+      // Show label on interval OR always on last column
+      showLabel: index % labelInterval === 0 || index === dataLength - 1,
     }));
   }, [exercise.weightData]);
 
@@ -151,9 +160,10 @@ const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
                 height={16}
               />
               <Tooltip
-                content={<CompactTooltip formatter={(value: number, name: string) => 
-                  name === 'weight' ? `${value} lbs` : value
-                } />}
+                content={<CompactTooltip formatter={(value: number, name: string, entry: any) => {
+                  const { sets, reps, weight } = entry.payload;
+                  return `${sets} sets × ${reps} reps @ ${weight} lbs`;
+                }} />}
                 offset={20}
                 cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
               />
