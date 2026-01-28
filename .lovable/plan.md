@@ -1,92 +1,40 @@
 
 
-## Use Optimistic Updates to Prevent List Reordering
+## Replace × Character with x in Routine Names
 
-Instead of refetching the entire saved meals list after an edit, directly update the cached data in place using React Query's `setQueryData`. This preserves list order and eliminates the network round-trip.
-
----
-
-### Current Flow (Causes Jump)
-
-```
-Edit → Mutation → invalidateQueries → Full DB Refetch → New Order
-```
-
-### New Flow (No Jump)
-
-```
-Edit → Mutation → setQueryData (update in place) → Same Order
-```
+The default names for saved routines use the Unicode multiplication sign `×` (U+00D7) which has inconsistent spacing compared to a regular lowercase `x`. This causes visual layout issues as shown in the screenshot.
 
 ---
 
-### Implementation
+### Current State
 
-**Step 1: Modify `useUpdateSavedMeal` in `useSavedMeals.ts`**
-
-Replace `invalidateQueries` with `setQueryData` that surgically updates the specific meal:
-
-```typescript
-export function useUpdateSavedMeal() {
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
-  
-  return useMutation({
-    mutationFn: async ({ id, name, foodItems }: UpdateSavedMealParams) => {
-      // ... existing mutation logic ...
-      return data;
-    },
-    onSuccess: (updatedMeal, variables) => {
-      // Update cache in place instead of refetching
-      queryClient.setQueryData(
-        ['saved-meals', user?.id],
-        (oldData: SavedMeal[] | undefined) => {
-          if (!oldData) return oldData;
-          return oldData.map(meal => 
-            meal.id === variables.id 
-              ? { 
-                  ...meal, 
-                  ...updatedMeal,
-                  food_items: (updatedMeal.food_items as unknown as FoodItem[]) ?? meal.food_items,
-                }
-              : meal
-          );
-        }
-      );
-    },
-  });
-}
-```
-
-**Step 2: Apply same pattern to `useSavedRoutines.ts`**
-
-Update `useUpdateSavedRoutine` with the same optimistic update approach.
+The `×` character appears in these locations:
+- `SaveRoutineDialog.tsx` line 32: `${first.sets}×${first.reps}`
+- `SaveRoutineDialog.tsx` line 101: `{set.sets}×{set.reps}`
+- `CreateRoutineDialog.tsx` line 28: `${first.sets}×${first.reps}`
 
 ---
 
-### Technical Details
+### Solution
 
-| Hook | Current Approach | New Approach |
-|------|-----------------|--------------|
-| `useUpdateSavedMeal` | `invalidateQueries` → refetch | `setQueryData` → update in place |
-| `useUpdateSavedRoutine` | `invalidateQueries` → refetch | `setQueryData` → update in place |
+Replace all instances of `×` with the regular lowercase letter `x`.
 
-The mutation already returns the updated row via `.select().single()`, so we have all the data needed to update the cache without a separate fetch.
-
----
-
-### Benefits
-
-1. **No list jumping** - items stay in their current position
-2. **Faster feedback** - no network round-trip for UI update
-3. **Reduced server load** - one less query per edit
+**Before:** `Seated Calf Extension (3×10 @ 180 lbs)`
+**After:** `Seated Calf Extension (3x10 @ 180 lbs)`
 
 ---
 
 ### Files to Modify
 
-| File | Change |
-|------|--------|
-| `src/hooks/useSavedMeals.ts` | Replace `invalidateQueries` with `setQueryData` in `useUpdateSavedMeal` |
-| `src/hooks/useSavedRoutines.ts` | Replace `invalidateQueries` with `setQueryData` in `useUpdateSavedRoutine` |
+| File | Line | Change |
+|------|------|--------|
+| `src/components/SaveRoutineDialog.tsx` | 32 | `${first.sets}×${first.reps}` → `${first.sets}x${first.reps}` |
+| `src/components/SaveRoutineDialog.tsx` | 101 | `{set.sets}×{set.reps}` → `{set.sets}x{set.reps}` |
+| `src/components/CreateRoutineDialog.tsx` | 28 | `${first.sets}×${first.reps}` → `${first.sets}x${first.reps}` |
+
+---
+
+### Note
+
+This change only affects newly created routine names going forward. Existing saved routines with `×` in their names will retain the old character unless the user manually edits them.
 
