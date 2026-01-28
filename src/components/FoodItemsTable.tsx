@@ -234,18 +234,33 @@ export function FoodItemsTable({
   const hasDeleteColumn = editable || hasEntryDeletion;
   const gridCols = getGridCols(!!hasDeleteColumn);
 
-  const TotalsRow = () => (
-    <div className={cn(
-      'grid gap-0.5 items-center group',
-      totalsPosition === 'top' && 'bg-slate-200 dark:bg-slate-700 rounded py-1.5 border border-slate-300 dark:border-slate-600',
-      totalsPosition === 'bottom' && 'pt-1.5 border-t-2 border-slate-300 dark:border-slate-600',
-      gridCols
-    )}>
-      <span className={cn("px-1 font-semibold", showEntryDividers && "pl-4")}>Total</span>
-      <span className="px-1 text-heading text-center">{Math.round(totals.calories)}</span>
-      <span className="px-1 text-heading text-center">
-        {Math.round(totals.protein)}/{Math.round(totals.carbs)}/{Math.round(totals.fat)}
-      </span>
+  const TotalsRow = () => {
+    // Calculate calorie contribution from each macro
+    const proteinCals = totals.protein * 4;
+    const carbsCals = totals.carbs * 4;
+    const fatCals = totals.fat * 9;
+    const totalMacroCals = proteinCals + carbsCals + fatCals;
+    
+    // Calculate percentages (handle zero case)
+    const proteinPct = totalMacroCals > 0 ? Math.round((proteinCals / totalMacroCals) * 100) : 0;
+    const carbsPct = totalMacroCals > 0 ? Math.round((carbsCals / totalMacroCals) * 100) : 0;
+    const fatPct = totalMacroCals > 0 ? Math.round((fatCals / totalMacroCals) * 100) : 0;
+
+    return (
+      <div className={cn(
+        'grid gap-0.5 items-center group',
+        totalsPosition === 'top' && 'bg-slate-200 dark:bg-slate-700 rounded py-1.5 border border-slate-300 dark:border-slate-600',
+        totalsPosition === 'bottom' && 'pt-1.5 border-t-2 border-slate-300 dark:border-slate-600',
+        gridCols
+      )}>
+        <span className={cn("px-1 font-semibold", showEntryDividers && "pl-4")}>Total</span>
+        <span className="px-1 text-heading text-center">{Math.round(totals.calories)}</span>
+        <span className="px-1 text-heading text-center">
+          <div>{Math.round(totals.protein)}/{Math.round(totals.carbs)}/{Math.round(totals.fat)}</div>
+          <div className="text-xs text-muted-foreground">
+            {proteinPct}%/{carbsPct}%/{fatPct}%
+          </div>
+        </span>
       {hasDeleteColumn && (
         onDeleteAll ? (
           <AlertDialog>
@@ -280,8 +295,9 @@ export function FoodItemsTable({
           <span></span>
         )
       )}
-    </div>
-  );
+      </div>
+    );
+  };
 
   // Get cell classes for description (new-item highlight only)
   const getDescriptionClasses = (item: FoodItem) => {
