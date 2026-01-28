@@ -1,93 +1,125 @@
 
+## Column Headers for Expanded Saved Items
 
-## Add Inline Labels for Expanded Saved Items
+Since saved meal/routine items in Settings have `showHeader={false}` but are editable, there's currently no context for the numeric columns. Your new approach is better: add a small header row above the first item only.
 
-When saved meals or routines are expanded in the Settings page, the numeric columns lack context since headers are hidden. This plan adds small inline labels to clarify each value.
+---
+
+### Why the Current Implementation Didn't Work
+
+The `showInlineLabels` logic was only added to the non-editable render path:
+```tsx
+// Line 478-487 - non-editable branch
+) : (
+  <>
+    <span className="...">
+      {item.calories}
+      {showInlineLabels && <span className="text-[10px] ml-0.5">cal</span>}
+    </span>
+  </>
+)
+```
+
+But `SavedMealRow` passes `editable={true}`, so the editable branch (lines 443-477) is used instead, which has no inline label logic.
+
+---
+
+### New Approach: Mini Header Row
+
+Instead of inline labels on every row, add a compact header row above the first item only when:
+- `showHeader={false}` (main header is hidden)
+- `showInlineLabels={true}` (we want context labels)
+
+This gives context without cluttering every row, and avoids the 16px mobile font issue since headers aren't editable inputs.
 
 ---
 
 ### Design
 
-**Food Items (FoodItemsTable):**
+**Food Items:**
 ```
-Banana Bread (no nuts raisins)     250 cal     4P/41C/9F
+                        Cal       P/C/F
+French bread five...    380      14/42/18    [trash]
 ```
-- Add "cal" suffix after calories
-- P/C/F already has context from the format
 
-**Weight Items (WeightItemsTable):**
+**Weight Items:**
 ```
-Seated Leg Press     3 sets     10 reps     160 lbs
+                       Sets    Reps    Lbs
+Seated Leg Press        3       10     160    [trash]
 ```
-- Add "sets" suffix after sets value
-- Add "reps" suffix after reps value  
-- Add "lbs" suffix after weight value
+
+Headers will use:
+- `text-[10px]` size (very small)
+- `text-muted-foreground` color  
+- Center-aligned to match data columns
+- Same grid layout as data rows
 
 ---
 
-### Implementation Approach
+### Implementation
 
-Add a new optional prop `showInlineLabels?: boolean` to both table components:
-- When `true`, append small muted labels after each numeric value
-- Default to `false` to preserve existing behavior on main log pages
-- Pass `showInlineLabels={true}` from SavedMealRow and SavedRoutineRow
+**Step 1: FoodItemsTable.tsx**
+
+Add a mini header that renders when `showInlineLabels && !showHeader`:
+
+```tsx
+{/* Mini header when main header is hidden but labels requested */}
+{!showHeader && showInlineLabels && items.length > 0 && (
+  <div className={cn('grid gap-0.5 items-center text-[10px] text-muted-foreground', gridCols)}>
+    <span></span>
+    <span className="px-1 text-center">Cal</span>
+    <span className="px-1 text-center">P/C/F</span>
+    {hasDeleteColumn && <span></span>}
+  </div>
+)}
+```
+
+**Step 2: WeightItemsTable.tsx**
+
+Same pattern:
+
+```tsx
+{/* Mini header when main header is hidden but labels requested */}
+{!showHeader && showInlineLabels && items.length > 0 && (
+  <div className={cn('grid gap-0.5 items-center text-[10px] text-muted-foreground', gridCols)}>
+    <span></span>
+    <span className="px-1 text-center">Sets</span>
+    <span className="px-1 text-center">Reps</span>
+    <span className="px-1 text-center">Lbs</span>
+    {hasDeleteColumn && <span></span>}
+  </div>
+)}
+```
+
+**Step 3: Remove existing inline label code**
+
+Remove the inline label spans from:
+- `FoodItemsTable.tsx` lines 481-482
+- `WeightItemsTable.tsx` lines 299-301, 312-314, 325-327
+
+And remove the column width adjustments that were added for inline labels.
 
 ---
 
-### Technical Details
+### Files to Modify
 
-**Files to Modify:**
-
-| File | Change |
-|------|--------|
-| `src/components/FoodItemsTable.tsx` | Add `showInlineLabels` prop; when true, render "cal" after calories value |
-| `src/components/WeightItemsTable.tsx` | Add `showInlineLabels` prop; when true, render "sets", "reps", "lbs" suffixes |
-| `src/components/SavedMealRow.tsx` | Pass `showInlineLabels={true}` to FoodItemsTable |
-| `src/components/SavedRoutineRow.tsx` | Pass `showInlineLabels={true}` to WeightItemsTable |
-
-**Grid Column Width Adjustments:**
-
-When `showInlineLabels` is true, columns need more space:
-- FoodItemsTable: `grid-cols-[1fr_65px_90px]` (calories column 50px → 65px for "cal" suffix)
-- WeightItemsTable: `grid-cols-[1fr_55px_55px_70px]` (sets 45→55, reps 45→55, weight 60→70)
-
-**Label Styling:**
-```tsx
-<span className="text-[10px] text-muted-foreground ml-0.5">cal</span>
-```
-- 10px font size (smaller than main text)
-- Muted color to de-emphasize
-- Small left margin for spacing
+| File | Changes |
+|------|---------|
+| `src/components/FoodItemsTable.tsx` | Add mini header row; remove inline label spans; revert grid column widths |
+| `src/components/WeightItemsTable.tsx` | Add mini header row; remove inline label spans; revert grid column widths |
 
 ---
 
-### Code Snippets
+### Visual Result
 
-**FoodItemsTable (calories column):**
-```tsx
-<span className="px-1 py-1 text-muted-foreground text-center">
-  {item.calories}
-  {showInlineLabels && <span className="text-[10px] ml-0.5">cal</span>}
-</span>
+```
+> Red Baron french bread pizza          1 item    [trash]
+                             Cal     P/C/F
+  French bread five...       380    14/42/18     [trash]
+
+v Seated Leg Press (3×10 @ 160 lbs)   1 exercise  [trash]
+                            Sets    Reps     Lbs
+  Seated Leg Press            3       10     160   [trash]
 ```
 
-**WeightItemsTable (sets/reps/weight columns):**
-```tsx
-<span className="px-1 py-1 text-center">
-  {item.sets}
-  {showInlineLabels && <span className="text-[10px] text-muted-foreground ml-0.5">sets</span>}
-</span>
-```
-
-**SavedMealRow usage:**
-```tsx
-<FoodItemsTable
-  items={localItems}
-  editable={true}
-  showHeader={false}
-  showTotals={false}
-  showInlineLabels={true}
-  ...
-/>
-```
-
+The compact header provides context without the font-size issues from editable inline labels.
