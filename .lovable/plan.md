@@ -1,80 +1,117 @@
 
 
-## Add Account Section to Settings
+## Move Password Change to Dialog
 
-Add a new "Account" section at the top of the Settings page that displays the logged-in user's email and provides an in-app password change form with the existing 6-character minimum requirement.
+Replace the inline password change form in the Account section with a "Change Password" button that opens a dedicated dialog.
+
+---
+
+### Changes Overview
+
+1. **Create new component**: `src/components/ChangePasswordDialog.tsx`
+2. **Update Settings page**: Replace inline form with button + dialog
+
+---
+
+### New File: `src/components/ChangePasswordDialog.tsx`
+
+A self-contained dialog component that:
+- Manages its own password state (currentPassword, newPassword, confirmPassword)
+- Handles validation and submission
+- Resets state when closed (via conditional rendering pattern)
+
+```typescript
+interface ChangePasswordDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  userEmail: string;
+}
+```
+
+The dialog will contain:
+- Current Password input
+- New Password input  
+- Confirm New Password input
+- Error/success messages
+- Cancel and Submit buttons
 
 ---
 
 ### Changes to `src/pages/Settings.tsx`
 
-**1. Add new imports:**
-```typescript
-import { User } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-```
+**1. Simplify Account section:**
 
-**2. Add state and handlers for password change:**
-- `currentPassword`, `newPassword`, `confirmPassword` state
-- `passwordError`, `passwordSuccess` for feedback messages
-- `isChangingPassword` loading state
-- `handlePasswordChange` function that:
-  - Validates passwords match
-  - Validates minimum 6 characters
-  - Re-authenticates with current password for security
-  - Updates to new password via `supabase.auth.updateUser()`
-
-**3. Add Account section UI (placed at top, before Saved Meals):**
-- Email display (read-only)
-- Password change form with three fields:
-  - Current Password
-  - New Password
-  - Confirm New Password
-- Error/success feedback
-- Submit button with loading state
-
----
-
-### Visual Layout
-
+Before:
 ```
 ┌─────────────────────────────────────┐
 │ 👤 Account                      ▼   │
 ├─────────────────────────────────────┤
-│ Email                               │
-│ user@example.com                    │
-│                                     │
-│ Current Password                    │
-│ [••••••••••••••]                    │
-│                                     │
-│ New Password                        │
-│ [••••••••••••••]                    │
-│                                     │
-│ Confirm New Password                │
-│ [••••••••••••••]                    │
-│                                     │
+│ Email: user@example.com             │
+│ Current Password: [............]    │
+│ New Password: [............]        │
+│ Confirm: [............]             │
 │ [Change Password]                   │
 └─────────────────────────────────────┘
 ```
 
+After:
+```
+┌─────────────────────────────────────┐
+│ 👤 Account                      ▼   │
+├─────────────────────────────────────┤
+│ Email: user@example.com             │
+│ [Change Password]  ← button         │
+└─────────────────────────────────────┘
+```
+
+**2. Remove password state from Settings** (moves to dialog component)
+
+**3. Add dialog state and render:**
+```typescript
+const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+
+// In render:
+{changePasswordOpen && (
+  <ChangePasswordDialog
+    open={changePasswordOpen}
+    onOpenChange={setChangePasswordOpen}
+    userEmail={user?.email || ''}
+  />
+)}
+```
+
 ---
 
-### Security Flow
+### Dialog UI Layout
 
-1. User enters current password, new password, and confirmation
-2. Client validates: passwords match + minimum 6 characters
-3. Re-authenticate with current password (prevents unauthorized changes)
-4. If successful, update password via Supabase Auth
-5. Clear form and show success message
+```
+┌────────────────────────────────────────┐
+│ Change Password                     X  │
+├────────────────────────────────────────┤
+│ Enter your current password and choose │
+│ a new password.                        │
+│                                        │
+│ Current Password                       │
+│ [••••••••••••••]                       │
+│                                        │
+│ New Password                           │
+│ [••••••••••••••]                       │
+│                                        │
+│ Confirm New Password                   │
+│ [••••••••••••••]                       │
+│                                        │
+│ [error/success message if any]         │
+│                                        │
+│              [Cancel]  [Update]        │
+└────────────────────────────────────────┘
+```
 
 ---
 
-### File to Modify
+### Files to Create/Modify
 
 | File | Change |
 |------|--------|
-| `src/pages/Settings.tsx` | Add Account section with email display and password change form |
+| `src/components/ChangePasswordDialog.tsx` | New component with password form and logic |
+| `src/pages/Settings.tsx` | Replace inline form with button + dialog |
 
