@@ -1,34 +1,69 @@
 
 
-## Adjust Macro Percentage Font Size to 9px
+## Add User Display Names to Admin Table
 
 ### Goal
 
-Increase the percentage text size from 8px to 9px for better readability while still maintaining the subtle hierarchy.
+Display friendly names alongside user numbers in the admin table (e.g., "User 1 (KC)").
 
-### Change
+### User Mapping
 
-| File | Change |
-|------|--------|
-| `src/components/FoodItemsTable.tsx` | Change `text-[8px]` to `text-[9px]` on the percentage div |
+| User # | Display Name |
+|--------|-------------|
+| 1 | KC |
+| 2 | Jared |
+| 3 | Kristy |
+| 4 | Elisabetta1 |
+| 5 | Elisabetta2 |
+| 6 | test |
+| 8 | test2 |
+| 9 | Malcolm |
+| 10 | Jenny |
 
 ### Implementation
 
-Update line 260 in TotalsRow:
+| File | Change |
+|------|--------|
+| `src/pages/Admin.tsx` | Add name mapping and update table cell display |
+
+### Code Changes
+
+1. Add a mapping object at the top of the component:
+
+```tsx
+const USER_NAMES: Record<number, string> = {
+  1: "KC",
+  2: "Jared",
+  3: "Kristy",
+  4: "Elisabetta1",
+  5: "Elisabetta2",
+  6: "test",
+  8: "test2",
+  9: "Malcolm",
+  10: "Jenny",
+};
+```
+
+2. Update the table cell rendering (around line 76):
 
 ```tsx
 // Before
-<div className="text-[8px] text-muted-foreground font-normal">
-  {proteinPct}%/{carbsPct}%/{fatPct}%
-</div>
+<td className="py-0.5 pr-2">User {user.user_number}</td>
 
 // After
-<div className="text-[9px] text-muted-foreground font-normal">
-  {proteinPct}%/{carbsPct}%/{fatPct}%
-</div>
+<td className="py-0.5 pr-2">
+  User {user.user_number}
+  {USER_NAMES[user.user_number] && ` (${USER_NAMES[user.user_number]})`}
+</td>
 ```
 
-### Visual Result
+### Result
 
-The percentages will be slightly more readable at 9px while still appearing smaller than the gram values above, maintaining the visual hierarchy.
+The table will display:
+- "User 1 (KC)"
+- "User 2 (Jared)"
+- "User 3 (Kristy)"
+- etc.
+
+Users without a mapped name will just show "User X" as before.
 
