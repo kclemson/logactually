@@ -1,30 +1,31 @@
 
 
-## Improve Chart Tooltip Contrast
+## Simplify Weight Chart Labels with Threshold-Based Visibility
 
-Add a distinct background color to chart tooltips so the blue/purple text is readable against it.
+When weight charts have many columns, simplify the display by only showing labels on every Nth bar, while keeping full details accessible via hover tooltip.
 
 ---
 
-### Problem
+### Current Problem
 
-The chart tooltips currently use `bg-card` which is now the same soft warm gray (`220 14% 96%`) as the page background. When the tooltip text uses chart colors (blues and purples), there's poor contrast and readability.
+1. **Label overload**: When charts have many columns (like the Lat Pulldown with 20+ bars), every bar shows sets/reps/weight labels, creating visual clutter
+2. **Incomplete tooltips**: Hovering only shows "Weight: X lbs" but not sets and reps
 
 ---
 
 ### Solution
 
-Use a crisp white background (`#FFFFFF`) for the chart tooltips specifically. This provides excellent contrast with all the blue and purple text colors used in the charts:
+**Part 1: Threshold-based label visibility**
+- If a chart has more than N columns (e.g., 8), only show labels on every Xth column
+- Suggested thresholds:
+  - 1-8 columns: Show all labels
+  - 9-16 columns: Show labels on every 2nd column
+  - 17+ columns: Show labels on every 3rd column
+- Pass the column index and total count to the label renderer so it can decide whether to render
 
-| Chart Color | Hex | Contrast on White |
-|-------------|-----|-------------------|
-| Calories | `#0033CC` | Excellent |
-| Protein | `#115E83` | Excellent |
-| Carbs | `#00D4FF` | Good |
-| Fat | `#B8F4FF` | Fair (light cyan) |
-| Weight (purple) | `hsl(262 83% 58%)` | Excellent |
-
-For dark mode, the tooltip will use a dark background that also contrasts well.
+**Part 2: Enhanced tooltip with sets/reps**
+- Update the tooltip formatter for weight charts to show all three values: sets, reps, and weight
+- Format: "3 sets × 10 reps @ 70 lbs" or similar
 
 ---
 
@@ -32,30 +33,72 @@ For dark mode, the tooltip will use a dark background that also contrasts well.
 
 | File | Change |
 |------|--------|
-| `src/pages/Trends.tsx` | Update `CompactTooltip` background to use fixed white |
+| `src/pages/Trends.tsx` | Update `renderGroupedLabel` to accept column count and conditionally render; Update tooltip formatter to include sets/reps |
 
 ---
 
-### Code Change (lines 38-39)
+### Technical Approach
 
-**Before:**
+**1. Modify ExerciseChart to calculate label interval:**
+
 ```tsx
-<div className="rounded-md border border-border bg-card px-2 py-1 shadow-sm">
-  <p className="text-[10px] font-medium text-foreground mb-0.5">{label}</p>
+const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
+  const chartData = useMemo(() => {
+    const dataLength = exercise.weightData.length;
+    // Calculate how often to show labels
+    const labelInterval = dataLength <= 8 ? 1 : dataLength <= 16 ? 2 : 3;
+    
+    return exercise.weightData.map((d, index) => ({
+      ...d,
+      dateLabel: format(new Date(`${d.date}T12:00:00`), 'MMM d'),
+      label: `${d.sets}×${d.reps}×${d.weight}`,
+      showLabel: index % labelInterval === 0 || index === dataLength - 1,
+    }));
+  }, [exercise.weightData]);
+  // ...
+}
 ```
 
-**After:**
+**2. Update renderGroupedLabel to respect showLabel flag:**
+
 ```tsx
-<div className="rounded-md border border-border/50 bg-white dark:bg-slate-800 px-2 py-1 shadow-md">
-  <p className="text-[10px] font-medium text-slate-900 dark:text-slate-100 mb-0.5">{label}</p>
+const renderGroupedLabel = (props: any) => {
+  const { x, y, width, height, value, payload } = props;
+  
+  // Skip rendering if showLabel is false
+  if (!payload?.showLabel) return null;
+  
+  if (!value || typeof x !== 'number' || typeof width !== 'number') return null;
+  // ... rest of existing logic
+};
+```
+
+**3. Update tooltip formatter to show all details:**
+
+```tsx
+<Tooltip
+  content={<CompactTooltip formatter={(value: number, name: string, entry: any) => {
+    const { sets, reps, weight } = entry.payload;
+    return `${sets} sets × ${reps} reps @ ${weight} lbs`;
+  }} />}
+  // ...
+/>
 ```
 
 ---
 
 ### Visual Result
 
-- Light mode: White tooltip background with colored text (excellent contrast)
-- Dark mode: Dark slate tooltip background with colored text (good contrast)
-- Slightly stronger shadow (`shadow-md`) to make the tooltip pop from the background
-- Softer border (`border-border/50`) to not compete visually
+- **Sparse charts** (≤8 columns): All labels visible as before
+- **Medium charts** (9-16 columns): Labels on every 2nd bar, plus the last bar
+- **Dense charts** (17+ columns): Labels on every 3rd bar, plus the last bar
+- **Tooltips**: Always show full details (sets, reps, weight) on hover for any bar
+
+---
+
+### Edge Cases Handled
+
+1. **Always show last column**: Even with intervals, the last bar always gets a label so users can see the most recent data
+2. **All data in tooltip**: Regardless of label visibility, hovering shows complete information
+3. **Small charts unaffected**: Charts with few columns continue to show all labels
 
