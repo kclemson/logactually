@@ -94,14 +94,19 @@ export default function Admin() {
           <tbody>
             {userStats.map((user) => (
               <tr key={user.user_id} className="border-b border-border/50">
-                <td className="py-0.5 pr-2 whitespace-nowrap">
+                <td className={`py-0.5 pr-2 whitespace-nowrap ${
+                  user.entries_today > 0 || 
+                  (user.weight_today ?? 0) > 0 || 
+                  (user.last_active && isToday(parseISO(user.last_active))) 
+                    ? "text-green-500" : ""
+                }`}>
                   User {user.user_number}
                   {USER_NAMES[user.user_number] && ` (${USER_NAMES[user.user_number]})`}
                 </td>
                 <td className="text-center py-0.5 pr-2">{user.total_entries}</td>
-                <td className="text-center py-0.5 pr-2">{user.entries_today}</td>
+                <td className={`text-center py-0.5 pr-2 ${user.entries_today > 0 ? "text-green-500" : ""}`}>{user.entries_today}</td>
                 <td className="text-center py-0.5 pr-2">{user.total_weight_entries ?? 0}</td>
-                <td className="text-center py-0.5 pr-2">{user.weight_today ?? 0}</td>
+                <td className={`text-center py-0.5 pr-2 ${(user.weight_today ?? 0) > 0 ? "text-green-500" : ""}`}>{user.weight_today ?? 0}</td>
                 <td className={`text-center py-0.5 ${user.last_active && isToday(parseISO(user.last_active)) ? "text-green-500" : ""}`}>
                   {user.last_active ? format(parseISO(user.last_active), "MMM d") : "—"}
                 </td>
