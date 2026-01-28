@@ -38,7 +38,7 @@ const CompactTooltip = ({ active, payload, label, formatter }: any) => {
   return (
     <div className="rounded-md border border-border/50 bg-white dark:bg-slate-800 px-2 py-1 shadow-md">
       <p className="text-[10px] font-medium text-slate-900 dark:text-slate-100 mb-0.5">{label}</p>
-      {payload.map((entry: any, index: number) => {
+      {payload.slice().reverse().map((entry: any, index: number) => {
         const displayValue = formatter 
           ? formatter(entry.value, entry.name, entry, index, entry.payload)
           : `${entry.name}: ${Math.round(entry.value)}`;
