@@ -8,6 +8,7 @@ interface DailyProgress {
   maxWeight: number;
   totalVolume: number;
   totalSets: number;
+  totalReps: number;
 }
 
 export interface ExerciseTrend {
@@ -66,12 +67,14 @@ export function useWeightTrends(days: number) {
           existing.maxWeight = Math.max(existing.maxWeight, weight);
           existing.totalVolume += volume;
           existing.totalSets += row.sets;
+          existing.totalReps += row.reps;
         } else {
           trend.dailyData.push({
             date: row.logged_date,
             maxWeight: weight,
             totalVolume: volume,
             totalSets: row.sets,
+            totalReps: row.reps,
           });
         }
       });
