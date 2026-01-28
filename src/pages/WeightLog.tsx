@@ -6,12 +6,15 @@ import { cn } from '@/lib/utils';
 import { LogInput, LogInputRef } from '@/components/LogInput';
 import { WeightItemsTable } from '@/components/WeightItemsTable';
 import { CreateRoutineDialog } from '@/components/CreateRoutineDialog';
+import { SaveRoutineDialog } from '@/components/SaveRoutineDialog';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAnalyzeWeights } from '@/hooks/useAnalyzeWeights';
 import { useWeightEntries } from '@/hooks/useWeightEntries';
 import { useEditableItems } from '@/hooks/useEditableItems';
+import { useSaveRoutine } from '@/hooks/useSavedRoutines';
+import { useSuggestRoutineName } from '@/hooks/useSuggestRoutineName';
 import { WeightSet, WeightEditableField, SavedExerciseSet } from '@/types/weight';
 
 const WEIGHT_EDITABLE_FIELDS: WeightEditableField[] = ['description', 'sets', 'reps', 'weight_lbs'];
@@ -37,6 +40,14 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   const [expandedEntryIds, setExpandedEntryIds] = useState<Set<string>>(new Set());
   const [createRoutineDialogOpen, setCreateRoutineDialogOpen] = useState(false);
   
+  // Save as Routine dialog state
+  const [saveRoutineDialogData, setSaveRoutineDialogData] = useState<{
+    entryId: string;
+    rawInput: string | null;
+    exerciseSets: WeightSet[];
+  } | null>(null);
+  const [suggestedRoutineName, setSuggestedRoutineName] = useState<string | null>(null);
+  
   // Track pending entry ID to extend loading state until rows are visible
   const [pendingEntryId, setPendingEntryId] = useState<string | null>(null);
   
@@ -46,6 +57,8 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   
   const { weightSets, isFetching, createEntry, updateSet, deleteSet, deleteEntry, deleteAllByDate } = useWeightEntries(dateStr);
   const { analyzeWeights, isAnalyzing, error: analyzeError } = useAnalyzeWeights();
+  const saveRoutineMutation = useSaveRoutine();
+  const { suggestName, isLoading: isSuggestingName } = useSuggestRoutineName();
   
   const weightInputRef = useRef<LogInputRef>(null);
 
@@ -235,6 +248,44 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
     deleteAllByDate.mutate(dateStr);
   };
 
+  // Handle "Save as routine" from expanded entry
+  const handleSaveAsRoutine = useCallback(async (entryId: string, rawInput: string | null, exerciseSets: WeightSet[]) => {
+    setSaveRoutineDialogData({ entryId, rawInput, exerciseSets });
+    setSuggestedRoutineName(null);
+    
+    // Fire AI name suggestion in parallel
+    const descriptions = exerciseSets.map(set => set.description);
+    const suggested = await suggestName(descriptions);
+    setSuggestedRoutineName(suggested);
+  }, [suggestName]);
+
+  // Handle saving the routine
+  const handleSaveRoutineConfirm = useCallback((name: string) => {
+    if (!saveRoutineDialogData) return;
+    
+    const exerciseSets: SavedExerciseSet[] = saveRoutineDialogData.exerciseSets.map(set => ({
+      exercise_key: set.exercise_key,
+      description: set.description,
+      sets: set.sets,
+      reps: set.reps,
+      weight_lbs: set.weight_lbs,
+    }));
+    
+    saveRoutineMutation.mutate(
+      {
+        name,
+        originalInput: saveRoutineDialogData.rawInput,
+        exerciseSets,
+      },
+      {
+        onSuccess: () => {
+          setSaveRoutineDialogData(null);
+          setSuggestedRoutineName(null);
+        },
+      }
+    );
+  }, [saveRoutineDialogData, saveRoutineMutation]);
+
   return (
     <div className="space-y-4">
       {/* Weight Input Section */}
@@ -322,6 +373,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
           entryRawInputs={entryRawInputs}
           expandedEntryIds={expandedEntryIds}
           onToggleEntryExpand={handleToggleEntryExpand}
+          onSaveAsRoutine={handleSaveAsRoutine}
         />
       )}
 
@@ -341,6 +393,25 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
             handleLogSavedRoutine(exerciseSets, routine.id);
           }}
           showLogPrompt={true}
+        />
+      )}
+
+      {/* Save as Routine Dialog */}
+      {saveRoutineDialogData && (
+        <SaveRoutineDialog
+          open={!!saveRoutineDialogData}
+          onOpenChange={(open) => {
+            if (!open) {
+              setSaveRoutineDialogData(null);
+              setSuggestedRoutineName(null);
+            }
+          }}
+          rawInput={saveRoutineDialogData.rawInput}
+          exerciseSets={saveRoutineDialogData.exerciseSets}
+          onSave={handleSaveRoutineConfirm}
+          isSaving={saveRoutineMutation.isPending}
+          suggestedName={suggestedRoutineName}
+          isSuggestingName={isSuggestingName}
         />
       )}
     </div>
