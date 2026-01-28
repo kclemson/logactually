@@ -64,9 +64,9 @@ const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
   return (
     <Card>
       <CardHeader className="p-2 pb-1">
-        <CardTitle className="text-sm font-semibold flex justify-between">
-          <span>{exercise.description}</span>
-          <span className="text-muted-foreground font-normal text-xs">
+        <CardTitle className="text-xs font-semibold flex flex-col gap-0.5">
+          <span className="truncate">{exercise.description}</span>
+          <span className="text-muted-foreground font-normal text-[10px]">
             Max: {exercise.maxWeight} lbs
           </span>
         </CardTitle>
@@ -206,7 +206,7 @@ const Trends = () => {
 
       {/* Food Trends Section */}
       <CollapsibleSection title="Food Trends" icon={UtensilsCrossed} defaultOpen={true}>
-        <div className="grid grid-cols-4 gap-2 -ml-4">
+        <div className="grid grid-cols-4 gap-2">
           {charts.map(({ key, label }) => (
             <Card key={key} className="text-center">
               <CardContent className="p-2">
@@ -222,15 +222,15 @@ const Trends = () => {
         </div>
 
         {isLoading ? (
-          <div className="flex justify-center py-8 -ml-4">
+          <div className="flex justify-center py-8">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           </div>
         ) : chartData.length === 0 ? (
-          <div className="py-8 text-center text-muted-foreground -ml-4">
+          <div className="py-8 text-center text-muted-foreground">
             No data for this period
           </div>
         ) : (
-          <div className="space-y-3 -ml-4">
+          <div className="space-y-3">
             {/* Row 1: Calories + Macros Breakdown */}
             <div className="grid grid-cols-2 gap-3">
               {/* Calories Chart */}
@@ -335,15 +335,15 @@ const Trends = () => {
       {showWeights && (
         <CollapsibleSection title="Weight Trends" icon={Dumbbell} defaultOpen={true}>
           {weightLoading ? (
-            <div className="flex justify-center py-8 -ml-4">
+            <div className="flex justify-center py-8">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
             </div>
           ) : weightExercises.length === 0 ? (
-            <div className="py-8 text-center text-muted-foreground -ml-4">
+            <div className="py-8 text-center text-muted-foreground">
               No weight training data for this period
             </div>
           ) : (
-            <div className="space-y-3 -ml-4">
+            <div className="space-y-3">
               {/* Top 6 exercises in 2-column grid */}
               <div className="grid grid-cols-2 gap-3">
                 {top6Exercises.map(exercise => (
