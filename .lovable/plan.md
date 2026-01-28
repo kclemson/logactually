@@ -1,24 +1,19 @@
 
 
-## Change Protein Color to Super Light Blue
+## Update Macro Chart Colors to New Hex Palette
 
-Replace the green protein color with a light blue that's distinct from the deeper Calories blue.
+Replace the current HSL colors with the user's specified hex color palette for all macro charts.
 
 ---
 
-### Updated Color Palette
+### New Color Palette
 
-| Macro | Current | New | HSL Value |
-|-------|---------|-----|-----------|
-| Calories | Blue | Blue (no change) | `hsl(217 91% 60%)` |
-| Protein | Green | Light Blue | `hsl(200 80% 70%)` |
-| Carbs | Purple | Purple (no change) | `hsl(262 83% 58%)` |
-| Fat | Teal | Teal (no change) | `hsl(173 80% 40%)` |
-
-The light blue (`hsl(200 80% 70%)`) has:
-- Similar hue to Calories blue (200 vs 217) but shifted slightly toward cyan
-- Much higher lightness (70% vs 60%) making it distinctly "light"
-- Clear visual separation from the deeper Calories blue while staying in the blue family
+| Macro | Hex Code | Visual |
+|-------|----------|--------|
+| Calories | `#0033CC` | Deep blue |
+| Protein | `#43EBD7` | Teal/turquoise |
+| Carbs | `#9933FF` | Purple |
+| Fat | `#00CCFF` | Cyan/light blue |
 
 ---
 
@@ -26,10 +21,20 @@ The light blue (`hsl(200 80% 70%)`) has:
 
 All changes in `src/pages/Trends.tsx`:
 
-| Line | Current | New |
-|------|---------|-----|
-| 184 | `hsl(142 76% 36%)` (green) | `hsl(200 80% 70%)` (light blue) |
-| 282 | `fill="hsl(142 76% 36%)"` | `fill="hsl(200 80% 70%)"` |
+**Charts configuration array (lines 183-186):**
+| Line | Macro | Current | New |
+|------|-------|---------|-----|
+| 183 | Calories | `hsl(217 91% 60%)` | `#0033CC` |
+| 184 | Protein | `hsl(200 80% 70%)` | `#43EBD7` |
+| 185 | Carbs | `hsl(262 83% 58%)` | `#9933FF` |
+| 186 | Fat | `hsl(173 80% 40%)` | `#00CCFF` |
+
+**Grouped bar chart components (lines 282-284):**
+| Line | Macro | Current | New |
+|------|-------|---------|-----|
+| 282 | Protein | `hsl(200 80% 70%)` | `#43EBD7` |
+| 283 | Carbs | `hsl(262 83% 58%)` | `#9933FF` |
+| 284 | Fat | `hsl(173 80% 40%)` | `#00CCFF` |
 
 ---
 
@@ -37,5 +42,5 @@ All changes in `src/pages/Trends.tsx`:
 
 | File | Changes |
 |------|---------|
-| `src/pages/Trends.tsx` | Update 2 protein color values |
+| `src/pages/Trends.tsx` | Update 7 color values to new hex codes |
 
