@@ -1,47 +1,55 @@
 
 
-## Make Expansion Chevron Larger and More Touch-Friendly
+## Add Source Note Column to DevToolsPanel
 
-### Problem
+### Goal
 
-The `›` chevron that expands food entries is too small to see and tap easily on mobile devices. While the touch target is 44px wide, the visual chevron character is very small.
+Display the AI's `source_note` field (the data source/estimation explanation) as a visible column in the test results table, making it easier to review without hovering.
 
-### Solution
+### Current State
 
-Increase the chevron's visual size by adding explicit font sizing. The current implementation uses a Unicode character which inherits the default (small) text size.
+- The `source_note` is already retrieved from the database and available in the `FoodItemOutput` interface
+- It's currently only visible as a tooltip when hovering over a food item row
+- The confidence level is shown as a colored dot (green/yellow/red)
 
 ### Changes
 
 | File | Change |
 |------|--------|
-| `src/components/FoodItemsTable.tsx` | Add `text-xl` class to make the chevron character larger and more visible |
+| `src/components/DevToolsPanel.tsx` | Add a new "Source Note" column after the Output column |
 
 ### Implementation Details
 
-There are **two identical chevron buttons** in the file (one for editable mode, one for read-only mode). Both need to be updated:
+**1. Add column header (line 340)**
 
-**Lines 347-355** (editable mode) and **Lines 392-401** (read-only mode):
+Add a new `<th>` for "Source Note" after the "Output" header.
 
-Update the button className from:
-```tsx
-className={cn(
-  "absolute inset-0 w-[44px] -left-3 flex items-center justify-center text-muted-foreground/60 hover:text-muted-foreground transition-transform",
-  isCurrentExpanded && "rotate-90"
-)}
+**2. Add column data (after line 396)**
+
+For each result row, add a new `<td>` that displays the `source_note` values from each food item. Since a result can have multiple food items, we'll show them stacked (like the output column does).
+
+The column will:
+- Show each item's `source_note` on its own line
+- Use muted styling since it's supplementary info
+- Truncate long notes with a title attribute for full text on hover
+- Show "—" if no source note is provided
+
+### Code Structure
+
+```text
+Table columns (current):
+[Input] [Source] [Prompt] [Output]
+
+Table columns (new):
+[Input] [Source] [Prompt] [Output] [Source Note]
 ```
 
-To:
-```tsx
-className={cn(
-  "absolute inset-0 w-[44px] -left-3 flex items-center justify-center text-muted-foreground/60 hover:text-muted-foreground transition-transform text-xl",
-  isCurrentExpanded && "rotate-90"
-)}
-```
+### Visual Result
 
-### Result
+The new column will display text like:
+- "Based on standard Activia vanilla single-serve cup."
+- "A 'handful' is typically estimated as 1 ounce..."
+- "—" (when no note provided)
 
-- The `›` character will be ~20px tall instead of ~14px (the default)
-- Much easier to see on mobile screens
-- Touch target remains the same 44px (already accessibility-compliant)
-- Maintains the existing rotation animation when expanded
+This makes it easy to quickly scan the AI's reasoning without needing to hover over each row.
 
