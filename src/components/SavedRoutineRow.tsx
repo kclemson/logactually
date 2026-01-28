@@ -179,6 +179,7 @@ export function SavedRoutineRow({
               editable={true}
               showHeader={false}
               showTotals={false}
+              showInlineLabels={true}
               onUpdateItem={handleUpdateItem}
               onRemoveItem={handleRemoveItem}
             />

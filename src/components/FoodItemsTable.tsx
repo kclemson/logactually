@@ -50,6 +50,8 @@ interface FoodItemsTableProps {
   onToggleEntryExpand?: (entryId: string) => void;
   onSaveAsMeal?: (entryId: string, rawInput: string | null, foodItems: FoodItem[]) => void;
   entryMealNames?: Map<string, string>;
+  /** When true, show inline labels after numeric values (e.g., "250 cal") */
+  showInlineLabels?: boolean;
 }
 
 export function FoodItemsTable({
@@ -71,6 +73,7 @@ export function FoodItemsTable({
   onToggleEntryExpand,
   onSaveAsMeal,
   entryMealNames,
+  showInlineLabels = false,
 }: FoodItemsTableProps) {
   // Local editing state - only saved on Enter
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
@@ -197,11 +200,13 @@ export function FoodItemsTable({
   const showEntryDividers = entryBoundaries && entryBoundaries.length > 0;
 
   // Grid columns: Description | Calories | P/C/F (combined) | Delete
+  // When showInlineLabels is true, widen calories column for "cal" suffix
   const getGridCols = (showDelete: boolean) => {
+    const calCol = showInlineLabels ? '65px' : '50px';
     if (showDelete) {
-      return `grid-cols-[1fr_50px_90px_24px]`;
+      return `grid-cols-[1fr_${calCol}_90px_24px]`;
     }
-    return `grid-cols-[1fr_50px_90px]`;
+    return `grid-cols-[1fr_${calCol}_90px]`;
   };
 
   // For entry-deletion mode, check if this index is the last item in its entry
@@ -472,7 +477,10 @@ export function FoodItemsTable({
               </>
             ) : (
               <>
-                <span className="px-1 py-1 text-muted-foreground text-center">{item.calories}</span>
+                <span className="px-1 py-1 text-muted-foreground text-center">
+                  {item.calories}
+                  {showInlineLabels && <span className="text-[10px] ml-0.5">cal</span>}
+                </span>
                 <span className="px-1 py-1 text-muted-foreground text-center">
                   {Math.round(item.protein)}/{Math.round(item.carbs)}/{Math.round(item.fat)}
                 </span>

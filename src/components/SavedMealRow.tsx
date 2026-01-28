@@ -188,6 +188,7 @@ export function SavedMealRow({
               editable={true}
               showHeader={false}
               showTotals={false}
+              showInlineLabels={true}
               onUpdateItem={handleUpdateItem}
               onUpdateItemBatch={handleUpdateItemBatch}
               onRemoveItem={handleRemoveItem}
