@@ -1,30 +1,26 @@
 
 
-## Increase Indentation for Expanded Saved Meal/Routine Items
+## Reduce Indentation for Saved Meals/Routines Parent Rows
 
-The expanded item rows in saved meals and saved routines need more visual indentation to create a clearer parent-child hierarchy.
+The parent saved meal/routine rows are currently indented too much from the section header due to padding being applied at multiple levels.
 
 ---
 
-### Current State
+### Current Indentation Chain
 
-Both `SavedMealRow.tsx` and `SavedRoutineRow.tsx` have `pl-6` (24px) on the expanded table container:
-```tsx
-<div className="pl-6 mt-1">
-  <FoodItemsTable ... />
-</div>
-```
+1. `CollapsibleSection.tsx` line 77: Content has `pl-4` (16px)
+2. `SavedMealRow` parent row: No additional padding, but chevron takes ~20px
+3. `SavedMealRow` expanded items: `pl-8` (32px) relative to parent
 
-However, the visual hierarchy isn't clear enough because:
-1. The chevron takes up space (~20px including padding)
-2. The item rows start immediately after the 24px padding
-3. Result: items appear roughly aligned with the parent name
+Result: Parent rows start 16px from header, child items start 48px from header. This feels too nested.
 
 ---
 
 ### Solution
 
-Increase the left padding from `pl-6` (24px) to `pl-8` (32px) or `pl-10` (40px) to create more noticeable indentation that clearly shows the items are nested under the parent row.
+**Remove** the `pl-4` from CollapsibleSection's children container. This brings parent rows closer to the section header, and the chevron icon provides natural visual hierarchy.
+
+Then **reduce** the expanded items padding from `pl-8` to `pl-6` to maintain a subtle but clear parent-child relationship.
 
 ---
 
@@ -32,22 +28,24 @@ Increase the left padding from `pl-6` (24px) to `pl-8` (32px) or `pl-10` (40px) 
 
 | File | Line | Change |
 |------|------|--------|
-| `src/components/SavedMealRow.tsx` | 182 | Change `pl-6` to `pl-8` |
-| `src/components/SavedRoutineRow.tsx` | 173 | Change `pl-6` to `pl-8` |
+| `src/components/CollapsibleSection.tsx` | 77 | Remove `pl-4` from children container |
+| `src/components/SavedMealRow.tsx` | 182 | Change `pl-8` to `pl-6` |
+| `src/components/SavedRoutineRow.tsx` | 173 | Change `pl-8` to `pl-6` |
 
 ---
 
 ### Visual Result
 
 ```text
-Before (pl-6 = 24px):
-  > Yogurt+strawberries        2 items  [trash]
-    Vanilla Yogurt               90     4/16/2
+Before:
+    ☆ Saved Meals ∨                    + Add
+        > Yogurt+strawberries          2 items  [trash]
+            Vanilla Yogurt             90     4/16/2
 
-After (pl-8 = 32px):
-  > Yogurt+strawberries        2 items  [trash]
-      Vanilla Yogurt             90     4/16/2
+After:
+☆ Saved Meals ∨                        + Add
+> Yogurt+strawberries                  2 items  [trash]
+    Vanilla Yogurt                     90     4/16/2
 ```
 
-The extra 8px of indentation will make the nested relationship more visually apparent.
-
+Parent rows now start at the left edge (aligned with the section chevron), and child items have a moderate indent that clearly shows nesting.
