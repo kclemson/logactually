@@ -1,51 +1,93 @@
 
 
-## Reduce Indentation for Saved Meals/Routines Parent Rows
+## Add Inline Labels for Expanded Saved Items
 
-The parent saved meal/routine rows are currently indented too much from the section header due to padding being applied at multiple levels.
-
----
-
-### Current Indentation Chain
-
-1. `CollapsibleSection.tsx` line 77: Content has `pl-4` (16px)
-2. `SavedMealRow` parent row: No additional padding, but chevron takes ~20px
-3. `SavedMealRow` expanded items: `pl-8` (32px) relative to parent
-
-Result: Parent rows start 16px from header, child items start 48px from header. This feels too nested.
+When saved meals or routines are expanded in the Settings page, the numeric columns lack context since headers are hidden. This plan adds small inline labels to clarify each value.
 
 ---
 
-### Solution
+### Design
 
-**Remove** the `pl-4` from CollapsibleSection's children container. This brings parent rows closer to the section header, and the chevron icon provides natural visual hierarchy.
+**Food Items (FoodItemsTable):**
+```
+Banana Bread (no nuts raisins)     250 cal     4P/41C/9F
+```
+- Add "cal" suffix after calories
+- P/C/F already has context from the format
 
-Then **reduce** the expanded items padding from `pl-8` to `pl-6` to maintain a subtle but clear parent-child relationship.
+**Weight Items (WeightItemsTable):**
+```
+Seated Leg Press     3 sets     10 reps     160 lbs
+```
+- Add "sets" suffix after sets value
+- Add "reps" suffix after reps value  
+- Add "lbs" suffix after weight value
 
 ---
 
-### Changes
+### Implementation Approach
 
-| File | Line | Change |
-|------|------|--------|
-| `src/components/CollapsibleSection.tsx` | 77 | Remove `pl-4` from children container |
-| `src/components/SavedMealRow.tsx` | 182 | Change `pl-8` to `pl-6` |
-| `src/components/SavedRoutineRow.tsx` | 173 | Change `pl-8` to `pl-6` |
+Add a new optional prop `showInlineLabels?: boolean` to both table components:
+- When `true`, append small muted labels after each numeric value
+- Default to `false` to preserve existing behavior on main log pages
+- Pass `showInlineLabels={true}` from SavedMealRow and SavedRoutineRow
 
 ---
 
-### Visual Result
+### Technical Details
 
-```text
-Before:
-    ☆ Saved Meals ∨                    + Add
-        > Yogurt+strawberries          2 items  [trash]
-            Vanilla Yogurt             90     4/16/2
+**Files to Modify:**
 
-After:
-☆ Saved Meals ∨                        + Add
-> Yogurt+strawberries                  2 items  [trash]
-    Vanilla Yogurt                     90     4/16/2
+| File | Change |
+|------|--------|
+| `src/components/FoodItemsTable.tsx` | Add `showInlineLabels` prop; when true, render "cal" after calories value |
+| `src/components/WeightItemsTable.tsx` | Add `showInlineLabels` prop; when true, render "sets", "reps", "lbs" suffixes |
+| `src/components/SavedMealRow.tsx` | Pass `showInlineLabels={true}` to FoodItemsTable |
+| `src/components/SavedRoutineRow.tsx` | Pass `showInlineLabels={true}` to WeightItemsTable |
+
+**Grid Column Width Adjustments:**
+
+When `showInlineLabels` is true, columns need more space:
+- FoodItemsTable: `grid-cols-[1fr_65px_90px]` (calories column 50px → 65px for "cal" suffix)
+- WeightItemsTable: `grid-cols-[1fr_55px_55px_70px]` (sets 45→55, reps 45→55, weight 60→70)
+
+**Label Styling:**
+```tsx
+<span className="text-[10px] text-muted-foreground ml-0.5">cal</span>
+```
+- 10px font size (smaller than main text)
+- Muted color to de-emphasize
+- Small left margin for spacing
+
+---
+
+### Code Snippets
+
+**FoodItemsTable (calories column):**
+```tsx
+<span className="px-1 py-1 text-muted-foreground text-center">
+  {item.calories}
+  {showInlineLabels && <span className="text-[10px] ml-0.5">cal</span>}
+</span>
 ```
 
-Parent rows now start at the left edge (aligned with the section chevron), and child items have a moderate indent that clearly shows nesting.
+**WeightItemsTable (sets/reps/weight columns):**
+```tsx
+<span className="px-1 py-1 text-center">
+  {item.sets}
+  {showInlineLabels && <span className="text-[10px] text-muted-foreground ml-0.5">sets</span>}
+</span>
+```
+
+**SavedMealRow usage:**
+```tsx
+<FoodItemsTable
+  items={localItems}
+  editable={true}
+  showHeader={false}
+  showTotals={false}
+  showInlineLabels={true}
+  ...
+/>
+```
+
