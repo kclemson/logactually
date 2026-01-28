@@ -24,6 +24,14 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 
+// Chart color palette (hex RGB format for easy editing)
+const CHART_COLORS = {
+  calories: '#0033CC',  // Deep Blue
+  protein: '#115E83',   // Steel Blue
+  carbs: '#00D4FF',     // Bright Cyan
+  fat: '#B8F4FF',       // Light Cyan
+} as const;
+
 const CompactTooltip = ({ active, payload, label, formatter }: any) => {
   if (!active || !payload?.length) return null;
   
@@ -261,10 +269,10 @@ const Trends = () => {
   }, [chartData]);
 
   const charts = [
-    { key: 'calories', label: 'Calories', color: '#0033CC' },
-    { key: 'protein', label: 'Protein (g)', color: '#115E83' },
-    { key: 'carbs', label: 'Carbs (g)', color: '#00D4FF' },
-    { key: 'fat', label: 'Fat (g)', color: '#B8F4FF' },
+    { key: 'calories', label: 'Calories', color: CHART_COLORS.calories },
+    { key: 'protein', label: 'Protein (g)', color: CHART_COLORS.protein },
+    { key: 'carbs', label: 'Carbs (g)', color: CHART_COLORS.carbs },
+    { key: 'fat', label: 'Fat (g)', color: CHART_COLORS.fat },
   ];
 
   return (
@@ -366,9 +374,9 @@ const Trends = () => {
                           offset={20}
                           cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
                         />
-                        <Bar dataKey="proteinPct" name="Protein" stackId="macros" fill="#115E83" />
-                        <Bar dataKey="carbsPct" name="Carbs" stackId="macros" fill="#00D4FF" />
-                        <Bar dataKey="fatPct" name="Fat" stackId="macros" fill="#B8F4FF" radius={[2, 2, 0, 0]} />
+                        <Bar dataKey="proteinPct" name="Protein" stackId="macros" fill={CHART_COLORS.protein} />
+                        <Bar dataKey="carbsPct" name="Carbs" stackId="macros" fill={CHART_COLORS.carbs} />
+                        <Bar dataKey="fatPct" name="Fat" stackId="macros" fill={CHART_COLORS.fat} radius={[2, 2, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
