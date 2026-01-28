@@ -1,125 +1,92 @@
 
-## Column Headers for Expanded Saved Items
 
-Since saved meal/routine items in Settings have `showHeader={false}` but are editable, there's currently no context for the numeric columns. Your new approach is better: add a small header row above the first item only.
+## Use Optimistic Updates to Prevent List Reordering
 
----
-
-### Why the Current Implementation Didn't Work
-
-The `showInlineLabels` logic was only added to the non-editable render path:
-```tsx
-// Line 478-487 - non-editable branch
-) : (
-  <>
-    <span className="...">
-      {item.calories}
-      {showInlineLabels && <span className="text-[10px] ml-0.5">cal</span>}
-    </span>
-  </>
-)
-```
-
-But `SavedMealRow` passes `editable={true}`, so the editable branch (lines 443-477) is used instead, which has no inline label logic.
+Instead of refetching the entire saved meals list after an edit, directly update the cached data in place using React Query's `setQueryData`. This preserves list order and eliminates the network round-trip.
 
 ---
 
-### New Approach: Mini Header Row
+### Current Flow (Causes Jump)
 
-Instead of inline labels on every row, add a compact header row above the first item only when:
-- `showHeader={false}` (main header is hidden)
-- `showInlineLabels={true}` (we want context labels)
-
-This gives context without cluttering every row, and avoids the 16px mobile font issue since headers aren't editable inputs.
-
----
-
-### Design
-
-**Food Items:**
 ```
-                        Cal       P/C/F
-French bread five...    380      14/42/18    [trash]
+Edit → Mutation → invalidateQueries → Full DB Refetch → New Order
 ```
 
-**Weight Items:**
-```
-                       Sets    Reps    Lbs
-Seated Leg Press        3       10     160    [trash]
-```
+### New Flow (No Jump)
 
-Headers will use:
-- `text-[10px]` size (very small)
-- `text-muted-foreground` color  
-- Center-aligned to match data columns
-- Same grid layout as data rows
+```
+Edit → Mutation → setQueryData (update in place) → Same Order
+```
 
 ---
 
 ### Implementation
 
-**Step 1: FoodItemsTable.tsx**
+**Step 1: Modify `useUpdateSavedMeal` in `useSavedMeals.ts`**
 
-Add a mini header that renders when `showInlineLabels && !showHeader`:
+Replace `invalidateQueries` with `setQueryData` that surgically updates the specific meal:
 
-```tsx
-{/* Mini header when main header is hidden but labels requested */}
-{!showHeader && showInlineLabels && items.length > 0 && (
-  <div className={cn('grid gap-0.5 items-center text-[10px] text-muted-foreground', gridCols)}>
-    <span></span>
-    <span className="px-1 text-center">Cal</span>
-    <span className="px-1 text-center">P/C/F</span>
-    {hasDeleteColumn && <span></span>}
-  </div>
-)}
+```typescript
+export function useUpdateSavedMeal() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  
+  return useMutation({
+    mutationFn: async ({ id, name, foodItems }: UpdateSavedMealParams) => {
+      // ... existing mutation logic ...
+      return data;
+    },
+    onSuccess: (updatedMeal, variables) => {
+      // Update cache in place instead of refetching
+      queryClient.setQueryData(
+        ['saved-meals', user?.id],
+        (oldData: SavedMeal[] | undefined) => {
+          if (!oldData) return oldData;
+          return oldData.map(meal => 
+            meal.id === variables.id 
+              ? { 
+                  ...meal, 
+                  ...updatedMeal,
+                  food_items: (updatedMeal.food_items as unknown as FoodItem[]) ?? meal.food_items,
+                }
+              : meal
+          );
+        }
+      );
+    },
+  });
+}
 ```
 
-**Step 2: WeightItemsTable.tsx**
+**Step 2: Apply same pattern to `useSavedRoutines.ts`**
 
-Same pattern:
+Update `useUpdateSavedRoutine` with the same optimistic update approach.
 
-```tsx
-{/* Mini header when main header is hidden but labels requested */}
-{!showHeader && showInlineLabels && items.length > 0 && (
-  <div className={cn('grid gap-0.5 items-center text-[10px] text-muted-foreground', gridCols)}>
-    <span></span>
-    <span className="px-1 text-center">Sets</span>
-    <span className="px-1 text-center">Reps</span>
-    <span className="px-1 text-center">Lbs</span>
-    {hasDeleteColumn && <span></span>}
-  </div>
-)}
-```
+---
 
-**Step 3: Remove existing inline label code**
+### Technical Details
 
-Remove the inline label spans from:
-- `FoodItemsTable.tsx` lines 481-482
-- `WeightItemsTable.tsx` lines 299-301, 312-314, 325-327
+| Hook | Current Approach | New Approach |
+|------|-----------------|--------------|
+| `useUpdateSavedMeal` | `invalidateQueries` → refetch | `setQueryData` → update in place |
+| `useUpdateSavedRoutine` | `invalidateQueries` → refetch | `setQueryData` → update in place |
 
-And remove the column width adjustments that were added for inline labels.
+The mutation already returns the updated row via `.select().single()`, so we have all the data needed to update the cache without a separate fetch.
+
+---
+
+### Benefits
+
+1. **No list jumping** - items stay in their current position
+2. **Faster feedback** - no network round-trip for UI update
+3. **Reduced server load** - one less query per edit
 
 ---
 
 ### Files to Modify
 
-| File | Changes |
-|------|---------|
-| `src/components/FoodItemsTable.tsx` | Add mini header row; remove inline label spans; revert grid column widths |
-| `src/components/WeightItemsTable.tsx` | Add mini header row; remove inline label spans; revert grid column widths |
+| File | Change |
+|------|--------|
+| `src/hooks/useSavedMeals.ts` | Replace `invalidateQueries` with `setQueryData` in `useUpdateSavedMeal` |
+| `src/hooks/useSavedRoutines.ts` | Replace `invalidateQueries` with `setQueryData` in `useUpdateSavedRoutine` |
 
----
-
-### Visual Result
-
-```
-> Red Baron french bread pizza          1 item    [trash]
-                             Cal     P/C/F
-  French bread five...       380    14/42/18     [trash]
-
-v Seated Leg Press (3×10 @ 160 lbs)   1 exercise  [trash]
-                            Sets    Reps     Lbs
-  Seated Leg Press            3       10     160   [trash]
-```
-
-The compact header provides context without the font-size issues from editable inline labels.
