@@ -1,164 +1,156 @@
 
 
-## Highlight Days with Data in Date Picker
+## Convert Macros Chart to 100% Stacked Column (Calorie Percentages)
 
-Add visual indicators in the date picker calendar to show which days have logged data.
-
----
-
-### Current State
-
-The Calendar component in both Log Food and Log Weights pages shows a plain calendar with no indication of which dates have data logged.
-
-### Desired Result
-
-- **Log Food**: Days with food entries show in a distinct color (e.g., blue text)
-- **Log Weights**: Days with weight entries show in a distinct color (e.g., purple text)
+Replace the current grouped bar chart for "Macros (g)" with a 100% stacked bar chart that shows each macro as a percentage of that day's total caloric contribution.
 
 ---
 
-### Technical Approach
+### Current vs Desired
 
-Use react-day-picker's `modifiers` and `modifiersClassNames` props to apply custom styling to dates with data. The Calendar component already uses DayPicker.
-
-**react-day-picker v8 supports:**
-```tsx
-<DayPicker
-  modifiers={{ hasData: [date1, date2, date3] }}
-  modifiersClassNames={{ hasData: "text-blue-600" }}
-/>
-```
+| Current | Desired |
+|---------|---------|
+| Grouped bars showing grams (P/C/F side by side) | Stacked bars showing % of calories |
+| Height varies based on total grams | All bars same height (100%) |
+| Hard to compare relative proportions | Easy to see "what % came from protein/carbs/fat" |
 
 ---
 
-### Data Fetching Strategy
+### Calculation Logic
 
-Create a new hook that fetches dates with data for the visible month range. Query is lightweight since we only need the date column:
-
-**For Food (FoodLog):**
-```sql
-SELECT DISTINCT eaten_date FROM food_entries
-WHERE eaten_date >= 'month-start' AND eaten_date <= 'month-end'
-```
-
-**For Weights (WeightLog):**
-```sql
-SELECT DISTINCT logged_date FROM weight_sets
-WHERE logged_date >= 'month-start' AND logged_date <= 'month-end'
-```
-
----
-
-### Implementation Plan
-
-**1. Create `src/hooks/useDatesWithData.ts`**
-
-A new hook to fetch dates with entries for a given month:
+Use the same formula as the FoodItemsTable totals row (lines 241-251):
 
 ```typescript
-export function useFoodDatesWithData(month: Date) {
-  const monthStart = startOfMonth(month);
-  const monthEnd = endOfMonth(month);
+// Convert grams to calories
+const proteinCals = protein * 4;
+const carbsCals = carbs * 4;
+const fatCals = fat * 9;
+const totalMacroCals = proteinCals + carbsCals + fatCals;
+
+// Calculate percentages
+const proteinPct = totalMacroCals > 0 ? Math.round((proteinCals / totalMacroCals) * 100) : 0;
+const carbsPct = totalMacroCals > 0 ? Math.round((carbsCals / totalMacroCals) * 100) : 0;
+const fatPct = totalMacroCals > 0 ? Math.round((fatCals / totalMacroCals) * 100) : 0;
+```
+
+---
+
+### Implementation Changes
+
+**File: `src/pages/Trends.tsx`**
+
+**1. Update chartData calculation (lines 199-220)**
+
+Add percentage fields to each day's data:
+
+```typescript
+return Object.entries(byDate).map(([date, totals]) => {
+  // Calculate calorie contribution from each macro
+  const proteinCals = totals.protein * 4;
+  const carbsCals = totals.carbs * 4;
+  const fatCals = totals.fat * 9;
+  const totalMacroCals = proteinCals + carbsCals + fatCals;
   
-  return useQuery({
-    queryKey: ['food-dates', format(monthStart, 'yyyy-MM')],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('food_entries')
-        .select('eaten_date')
-        .gte('eaten_date', format(monthStart, 'yyyy-MM-dd'))
-        .lte('eaten_date', format(monthEnd, 'yyyy-MM-dd'));
-      
-      // Return unique dates as Date objects
-      const dates = [...new Set(data?.map(e => e.eaten_date) ?? [])];
-      return dates.map(d => new Date(`${d}T12:00:00`)); // Avoid timezone shift
-    },
-  });
-}
-
-export function useWeightDatesWithData(month: Date) {
-  // Similar for weight_sets table using logged_date
-}
+  // Calculate percentages
+  const proteinPct = totalMacroCals > 0 ? Math.round((proteinCals / totalMacroCals) * 100) : 0;
+  const carbsPct = totalMacroCals > 0 ? Math.round((carbsCals / totalMacroCals) * 100) : 0;
+  const fatPct = totalMacroCals > 0 ? Math.round((fatCals / totalMacroCals) * 100) : 0;
+  
+  return {
+    date: format(new Date(`${date}T12:00:00`), 'MMM d'),
+    ...totals,
+    proteinPct,
+    carbsPct,
+    fatPct,
+  };
+});
 ```
 
-**2. Update `src/pages/FoodLog.tsx`**
+**2. Replace the Macros chart (lines 324-353)**
 
-Track the currently displayed calendar month and pass modifiers:
+Change from grouped bars to stacked bars with `stackId`:
 
 ```tsx
-const [calendarMonth, setCalendarMonth] = useState(new Date());
-const { data: datesWithFood = [] } = useFoodDatesWithData(calendarMonth);
-
-<Calendar
-  mode="single"
-  selected={selectedDate}
-  onSelect={handleDateSelect}
-  onMonthChange={setCalendarMonth}
-  disabled={(date) => isFuture(date)}
-  modifiers={{ hasData: datesWithFood }}
-  modifiersClassNames={{ hasData: "text-blue-600 dark:text-blue-400 font-semibold" }}
-  initialFocus
-  className="pointer-events-auto"
-/>
+<Card>
+  <CardHeader className="p-2 pb-1">
+    <ChartTitle>Macro Split (%)</ChartTitle>
+  </CardHeader>
+  <CardContent className="p-2 pt-0">
+    <div className="h-24">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={chartData} stackOffset="none">
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+          <XAxis
+            dataKey="date"
+            tick={{ fontSize: 8 }}
+            stroke="hsl(var(--muted-foreground))"
+            interval="preserveStartEnd"
+          />
+          <Tooltip
+            content={<CompactTooltip formatter={(value, name) => 
+              `${name}: ${value}%`
+            } />}
+            offset={20}
+            cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
+          />
+          <Bar dataKey="proteinPct" name="Protein" stackId="macros" fill="#43EBD7" />
+          <Bar dataKey="carbsPct" name="Carbs" stackId="macros" fill="#9933FF" />
+          <Bar dataKey="fatPct" name="Fat" stackId="macros" fill="#00CCFF" radius={[2, 2, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  </CardContent>
+</Card>
 ```
 
-**3. Update `src/pages/WeightLog.tsx`**
-
-Same pattern with weight data:
-
-```tsx
-const [calendarMonth, setCalendarMonth] = useState(new Date());
-const { data: datesWithWeights = [] } = useWeightDatesWithData(calendarMonth);
-
-<Calendar
-  modifiers={{ hasData: datesWithWeights }}
-  modifiersClassNames={{ hasData: "text-purple-600 dark:text-purple-400 font-semibold" }}
-  // ... other props
-/>
-```
+Key changes:
+- All three bars share `stackId="macros"` to stack them
+- Only the top bar (Fat) gets rounded corners
+- Tooltip shows percentages with "%" suffix
+- Title changes from "Macros (g)" to "Macro Split (%)"
 
 ---
 
 ### Visual Result
 
 ```text
-┌─────────────────────────────────────┐
-│           January 2026              │
-│  Su  Mo  Tu  We  Th  Fr  Sa         │
-│                  1   2   3          │
-│   4   5   6   7   8   9  10         │
-│  11  12  13  14  15  16  17         │  (14, 21, 28 in blue = has food data)
-│  18  19  20  21  22  23  24         │
-│  25  26  27 [28]                    │
-└─────────────────────────────────────┘
+Before (grouped bars):         After (100% stacked):
+                               
+ |  ▌ ▌       ▌                |  ███████████████████
+ |  ▌ ▌ ▌     ▌ ▌              |  ███████████████████
+ |  ▌ ▌ ▌ ▌   ▌ ▌ ▌            |  ███████████████████
+ +------------------           +--------------------
+    Jan 22  Jan 23                Jan 22   Jan 23
+                               
+   P C F  grouped               [Protein][Carbs][Fat]
+   Hard to compare %            Easy to see % split
+```
+
+Each stacked column will always reach exactly 100% (or close to it after rounding), making it easy to compare macro ratios day-to-day.
+
+---
+
+### Files to Modify
+
+| File | Change |
+|------|--------|
+| `src/pages/Trends.tsx` | Add percentage fields to chartData, convert macros chart to stacked bars |
+
+---
+
+### Tooltip Display
+
+The tooltip will show:
+```
+Jan 28
+Protein: 32%
+Carbs: 48%
+Fat: 20%
 ```
 
 ---
 
-### Files to Create/Modify
+### Edge Case: Zero Calories
 
-| File | Change |
-|------|--------|
-| `src/hooks/useDatesWithData.ts` | New hook with `useFoodDatesWithData` and `useWeightDatesWithData` |
-| `src/pages/FoodLog.tsx` | Add calendar month state, fetch food dates, pass modifiers |
-| `src/pages/WeightLog.tsx` | Add calendar month state, fetch weight dates, pass modifiers |
-
----
-
-### Edge Cases
-
-| Case | Handling |
-|------|----------|
-| Month navigation | `onMonthChange` callback updates state, triggers new query |
-| Initial load | Default to current month |
-| Timezone | Use `T12:00:00` when parsing dates to avoid off-by-one errors |
-| Selected date styling | Selected day styling (`day_selected`) takes precedence, which is correct |
-
----
-
-### Performance
-
-- Query runs once per month navigation (cached by react-query)
-- Only fetches date column, no heavy data
-- Data is reused if user navigates back to same month
+When a day has zero macro calories (rare), all percentages will be 0%. The bar will be empty, which is correct behavior.
 
