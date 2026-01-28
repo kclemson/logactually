@@ -89,7 +89,15 @@ export function useUpdateSavedRoutine() {
       }
       
       if (exerciseSets !== undefined) {
-        updates.exercise_sets = exerciseSets as unknown as Json;
+        // Strip runtime metadata before saving (in case any slipped through)
+        const cleanedSets = exerciseSets.map(({ exercise_key, description, sets, reps, weight_lbs }) => ({
+          exercise_key,
+          description,
+          sets,
+          reps,
+          weight_lbs,
+        }));
+        updates.exercise_sets = cleanedSets as unknown as Json;
       }
       
       const { data, error } = await supabase

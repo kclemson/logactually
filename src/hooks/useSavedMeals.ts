@@ -99,7 +99,9 @@ export function useUpdateSavedMeal() {
       }
       
       if (foodItems !== undefined) {
-        updates.food_items = foodItems as unknown as Json;
+        // Strip runtime metadata (uid, entryId, editedFields) before saving
+        const cleanedItems = foodItems.map(({ uid, entryId, editedFields, ...rest }) => rest);
+        updates.food_items = cleanedItems as unknown as Json;
         updates.items_signature = createItemsSignature(foodItems);
       }
       
