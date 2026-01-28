@@ -55,12 +55,10 @@ const periods = [
 ];
 
 const renderGroupedLabel = (props: any) => {
-  const { x, y, width, height, value, payload } = props;
+  const { x, y, width, value, isRunMiddle, runLength, runIndex } = props;
   
   // Only render for the middle bar of each run
-  if (!payload?.isRunMiddle || !value) return null;
-  
-  const { runLength, runIndex } = payload;
+  if (!isRunMiddle || !value) return null;
   
   // Calculate spanning width (bar width × run length + gaps between bars)
   const barGap = 4; // Approximate gap between bars
@@ -158,7 +156,7 @@ const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
 };
 
 const Trends = () => {
-  const [selectedPeriod, setSelectedPeriod] = useState(7);
+  const [selectedPeriod, setSelectedPeriod] = useState(30);
   const [extraExercise, setExtraExercise] = useState<string | null>(null);
   const { data: isAdmin } = useIsAdmin();
   const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
