@@ -85,7 +85,7 @@ export default function Admin() {
             <tr className="border-b">
               <th className="text-left py-0.5 pr-2 font-medium text-muted-foreground">User</th>
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Total Entries</th>
-              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Today</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Entries Today</th>
               <th className="text-center py-0.5 font-medium text-muted-foreground">Last Active</th>
             </tr>
           </thead>
