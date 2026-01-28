@@ -200,13 +200,11 @@ export function FoodItemsTable({
   const showEntryDividers = entryBoundaries && entryBoundaries.length > 0;
 
   // Grid columns: Description | Calories | P/C/F (combined) | Delete
-  // When showInlineLabels is true, widen calories column for "cal" suffix
   const getGridCols = (showDelete: boolean) => {
-    const calCol = showInlineLabels ? '65px' : '50px';
     if (showDelete) {
-      return `grid-cols-[1fr_${calCol}_90px_24px]`;
+      return 'grid-cols-[1fr_50px_90px_24px]';
     }
-    return `grid-cols-[1fr_${calCol}_90px]`;
+    return 'grid-cols-[1fr_50px_90px]';
   };
 
   // For entry-deletion mode, check if this index is the last item in its entry
@@ -322,6 +320,16 @@ export function FoodItemsTable({
           <span className={cn("px-1", showEntryDividers && "pl-4")}></span>
           <span className="px-1 text-center">Calories</span>
           <span className="px-1 text-center">Protein/Carbs/Fat</span>
+          {hasDeleteColumn && <span></span>}
+        </div>
+      )}
+
+      {/* Mini header when main header is hidden but labels requested */}
+      {!showHeader && showInlineLabels && items.length > 0 && (
+        <div className={cn('grid gap-0.5 items-center text-[10px] text-muted-foreground', gridCols)}>
+          <span></span>
+          <span className="px-1 text-center">Cal</span>
+          <span className="px-1 text-center">P/C/F</span>
           {hasDeleteColumn && <span></span>}
         </div>
       )}
@@ -479,7 +487,6 @@ export function FoodItemsTable({
               <>
                 <span className="px-1 py-1 text-muted-foreground text-center">
                   {item.calories}
-                  {showInlineLabels && <span className="text-[10px] ml-0.5">cal</span>}
                 </span>
                 <span className="px-1 py-1 text-muted-foreground text-center">
                   {Math.round(item.protein)}/{Math.round(item.carbs)}/{Math.round(item.fat)}

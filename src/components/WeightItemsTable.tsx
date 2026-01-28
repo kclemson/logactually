@@ -143,14 +143,10 @@ export function WeightItemsTable({
   const showEntryDividers = entryBoundaries && entryBoundaries.length > 0;
 
   // Grid: Description | Sets | Reps | Weight | Delete
-  // When showInlineLabels is true, widen columns for suffixes
   const getGridCols = (showDelete: boolean) => {
-    const setsCol = showInlineLabels ? '55px' : '45px';
-    const repsCol = showInlineLabels ? '55px' : '45px';
-    const weightCol = showInlineLabels ? '70px' : '60px';
     return showDelete
-      ? `grid-cols-[1fr_${setsCol}_${repsCol}_${weightCol}_24px]`
-      : `grid-cols-[1fr_${setsCol}_${repsCol}_${weightCol}]`;
+      ? 'grid-cols-[1fr_45px_45px_60px_24px]'
+      : 'grid-cols-[1fr_45px_45px_60px]';
   };
 
   const isLastItemInEntry = (index: number): EntryBoundary | null => {
@@ -245,6 +241,17 @@ export function WeightItemsTable({
       {showHeader && (
         <div className={cn('grid gap-0.5 text-muted-foreground items-center text-xs', gridCols)}>
           <span className={cn("px-1", showEntryDividers && "pl-4")}></span>
+          <span className="px-1 text-center">Sets</span>
+          <span className="px-1 text-center">Reps</span>
+          <span className="px-1 text-center">Lbs</span>
+          {hasDeleteColumn && <span></span>}
+        </div>
+      )}
+
+      {/* Mini header when main header is hidden but labels requested */}
+      {!showHeader && showInlineLabels && items.length > 0 && (
+        <div className={cn('grid gap-0.5 items-center text-[10px] text-muted-foreground', gridCols)}>
+          <span></span>
           <span className="px-1 text-center">Sets</span>
           <span className="px-1 text-center">Reps</span>
           <span className="px-1 text-center">Lbs</span>
@@ -372,7 +379,6 @@ export function WeightItemsTable({
               ) : (
                 <span className="px-1 py-1 text-center">
                   {item.sets}
-                  {showInlineLabels && <span className="text-[10px] text-muted-foreground ml-0.5">sets</span>}
                 </span>
               )}
 
@@ -403,7 +409,6 @@ export function WeightItemsTable({
               ) : (
                 <span className="px-1 py-1 text-center">
                   {item.reps}
-                  {showInlineLabels && <span className="text-[10px] text-muted-foreground ml-0.5">reps</span>}
                 </span>
               )}
 
@@ -434,7 +439,6 @@ export function WeightItemsTable({
               ) : (
                 <span className="px-1 py-1 text-center">
                   {item.weight_lbs}
-                  {showInlineLabels && <span className="text-[10px] text-muted-foreground ml-0.5">lbs</span>}
                 </span>
               )}
 
