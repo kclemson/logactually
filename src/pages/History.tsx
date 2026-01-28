@@ -18,6 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { FEATURES } from '@/lib/feature-flags';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 
 interface DaySummary {
   date: string;
@@ -33,6 +34,8 @@ interface WeightDaySummary {
 const History = () => {
   const navigate = useNavigate();
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const { data: isAdmin } = useIsAdmin();
+  const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
 
   // Fetch entries for the visible month range
   const monthStart = startOfMonth(currentMonth);
@@ -92,7 +95,7 @@ const History = () => {
         exerciseCount: count,
       }));
     },
-    enabled: FEATURES.WEIGHT_TRACKING,
+    enabled: showWeights,
   });
 
   // Build calendar grid
@@ -173,7 +176,7 @@ const History = () => {
           const isTodayDate = isToday(day);
           const isFutureDate = day > new Date();
           const hasEntries = !!summary;
-          const hasWeights = FEATURES.WEIGHT_TRACKING && !!weightByDate.get(dateStr);
+          const hasWeights = showWeights && !!weightByDate.get(dateStr);
 
           return (
             <button

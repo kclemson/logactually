@@ -16,11 +16,14 @@ import { CreateMealDialog } from '@/components/CreateMealDialog';
 import { CreateRoutineDialog } from '@/components/CreateRoutineDialog';
 import { CollapsibleSection } from '@/components/CollapsibleSection';
 import { FEATURES } from '@/lib/feature-flags';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
   const { settings, updateSettings, isLoading } = useUserSettings();
   const [mounted, setMounted] = useState(false);
+  const { data: isAdmin } = useIsAdmin();
+  const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
   
   // Saved meals
   const { data: savedMeals, isLoading: mealsLoading } = useSavedMeals();
@@ -193,8 +196,8 @@ export default function Settings() {
         )}
       </CollapsibleSection>
 
-      {/* Saved Routines - weight tracking (gated by feature flag) */}
-      {FEATURES.WEIGHT_TRACKING && (
+      {/* Saved Routines - weight tracking (gated by feature flag or admin) */}
+      {showWeights && (
         <CollapsibleSection
           title="Saved Routines"
           icon={Dumbbell}
