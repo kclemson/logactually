@@ -166,18 +166,41 @@ serve(async (req) => {
       throw new Error("Invalid response structure: missing exercises array");
     }
 
-    // Validate each exercise
+    // Normalize and validate each exercise
+    const normalizedExercises = [];
     for (const exercise of parsed.exercises) {
       if (!exercise.exercise_key || !exercise.description) {
+        console.error("[analyze-weights] Invalid exercise missing fields:", exercise);
         throw new Error("Invalid exercise: missing required fields");
       }
-      if (typeof exercise.sets !== "number" || typeof exercise.reps !== "number" || typeof exercise.weight_lbs !== "number") {
-        throw new Error("Invalid exercise: sets, reps, and weight_lbs must be numbers");
+      
+      // Coerce string numbers to actual numbers (AI sometimes returns "3" instead of 3)
+      const sets = Number(exercise.sets);
+      const reps = Number(exercise.reps);
+      const weight_lbs = Number(exercise.weight_lbs);
+      
+      // Validate after coercion
+      if (isNaN(sets) || isNaN(reps) || isNaN(weight_lbs)) {
+        console.error("[analyze-weights] Invalid numeric values:", { sets: exercise.sets, reps: exercise.reps, weight_lbs: exercise.weight_lbs });
+        throw new Error("Could not parse sets, reps, or weight from your input. Please include weight (e.g., '3x10 squats at 135 lbs')");
       }
+      
+      if (sets <= 0 || reps <= 0) {
+        console.error("[analyze-weights] Invalid sets/reps:", { sets, reps });
+        throw new Error("Sets and reps must be positive numbers");
+      }
+      
+      normalizedExercises.push({
+        exercise_key: String(exercise.exercise_key),
+        description: String(exercise.description),
+        sets: Math.round(sets),
+        reps: Math.round(reps),
+        weight_lbs: Math.round(weight_lbs * 10) / 10, // Round to 1 decimal
+      });
     }
 
     return new Response(
-      JSON.stringify({ exercises: parsed.exercises }),
+      JSON.stringify({ exercises: normalizedExercises }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
