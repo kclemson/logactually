@@ -1,25 +1,16 @@
 
 
-## Reduce Macro Percentage Font Size
+## Adjust Macro Percentage Font Size to 9px
 
 ### Goal
 
-Make the percentage text (16%/59%/25%) even smaller by going two font size steps below `text-xs`.
-
-### Current vs Target
-
-| State | Class | Size |
-|-------|-------|------|
-| Current | `text-xs` | 12px (0.75rem) |
-| Target | `text-[8px]` | 8px |
-
-Tailwind's smallest built-in class is `text-xs` (12px), so we'll use a custom size class to go smaller.
+Increase the percentage text size from 8px to 9px for better readability while still maintaining the subtle hierarchy.
 
 ### Change
 
 | File | Change |
 |------|--------|
-| `src/components/FoodItemsTable.tsx` | Change `text-xs` to `text-[8px]` on the percentage div |
+| `src/components/FoodItemsTable.tsx` | Change `text-[8px]` to `text-[9px]` on the percentage div |
 
 ### Implementation
 
@@ -27,17 +18,17 @@ Update line 260 in TotalsRow:
 
 ```tsx
 // Before
-<div className="text-xs text-muted-foreground font-normal">
+<div className="text-[8px] text-muted-foreground font-normal">
   {proteinPct}%/{carbsPct}%/{fatPct}%
 </div>
 
 // After
-<div className="text-[8px] text-muted-foreground font-normal">
+<div className="text-[9px] text-muted-foreground font-normal">
   {proteinPct}%/{carbsPct}%/{fatPct}%
 </div>
 ```
 
 ### Visual Result
 
-The percentages will appear noticeably smaller than the gram values above them, creating a stronger visual hierarchy where the percentages serve as subtle supplementary information.
+The percentages will be slightly more readable at 9px while still appearing smaller than the gram values above, maintaining the visual hierarchy.
 
