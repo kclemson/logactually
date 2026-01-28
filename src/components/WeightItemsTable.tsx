@@ -45,6 +45,8 @@ interface WeightItemsTableProps {
   entryRawInputs?: Map<string, string>;
   expandedEntryIds?: Set<string>;
   onToggleEntryExpand?: (entryId: string) => void;
+  /** Callback when user wants to save an entry as a routine */
+  onSaveAsRoutine?: (entryId: string, rawInput: string | null, exerciseSets: WeightSet[]) => void;
 }
 
 export function WeightItemsTable({
@@ -61,6 +63,7 @@ export function WeightItemsTable({
   entryRawInputs,
   expandedEntryIds,
   onToggleEntryExpand,
+  onSaveAsRoutine,
 }: WeightItemsTableProps) {
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const descriptionOriginalRef = useRef<string>('');
@@ -446,10 +449,22 @@ export function WeightItemsTable({
             {/* Expanded content section */}
             {showEntryDividers && isLastInEntry && isCurrentExpanded && currentRawInput && (
               <div className={cn('grid gap-0.5', gridCols)}>
-                <div className="col-span-full pl-6 py-1">
+                <div className="col-span-full pl-6 py-1 space-y-1">
                   <p className="text-muted-foreground whitespace-pre-wrap italic">
                     {currentRawInput}
                   </p>
+                  {onSaveAsRoutine && (
+                    <button
+                      onClick={() => {
+                        // Gather all exercises in this entry
+                        const entryExercises = items.filter(i => i.entryId === currentEntryId);
+                        onSaveAsRoutine(currentEntryId!, currentRawInput, entryExercises);
+                      }}
+                      className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      Save as routine
+                    </button>
+                  )}
                 </div>
               </div>
             )}
