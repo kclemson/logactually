@@ -1,7 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useAdminStats, useAdminUserStats } from "@/hooks/useAdminStats";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isToday } from "date-fns";
 
 const USER_NAMES: Record<number, string> = {
   1: "KC",
@@ -102,7 +102,7 @@ export default function Admin() {
                 <td className="text-center py-0.5 pr-2">{user.entries_today}</td>
                 <td className="text-center py-0.5 pr-2">{user.total_weight_entries ?? 0}</td>
                 <td className="text-center py-0.5 pr-2">{user.weight_today ?? 0}</td>
-                <td className="text-center py-0.5">
+                <td className={`text-center py-0.5 ${user.last_active && isToday(parseISO(user.last_active)) ? "text-green-500" : ""}`}>
                   {user.last_active ? format(parseISO(user.last_active), "MMM d") : "—"}
                 </td>
               </tr>
