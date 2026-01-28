@@ -8,7 +8,7 @@ export function BottomNav() {
   const { data: isAdmin } = useIsAdmin();
   
   const showAdmin = isAdmin;
-  const showWeights = FEATURES.WEIGHT_TRACKING;
+  const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
 
   const navItems = [
     { to: '/', icon: PenLine, label: 'Log Food' },
