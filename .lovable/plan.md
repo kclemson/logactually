@@ -1,26 +1,31 @@
 
 
-## Reorder Macro Split Stacked Bars
+## Soften the Light Mode Background
 
-Change the stacking order so protein appears at the top and fat at the bottom of each column.
-
----
-
-### How Stacking Works in Recharts
-
-In Recharts stacked bar charts, the **first** `<Bar>` component renders at the **bottom** of the stack, and subsequent bars stack on top. The `radius` prop for rounded corners should be on the **topmost** bar.
+Replace the pure white background with a gentler, warmer off-white that's easier on the eyes.
 
 ---
 
-### Current Order (bottom to top)
-1. Protein (bottom)
-2. Carbs (middle)
-3. Fat (top) - has rounded corners
+### Current State
 
-### New Order (bottom to top)
-1. Fat (bottom)
-2. Carbs (middle)
-3. Protein (top) - move rounded corners here
+The light mode uses pure white (`0 0% 100%` = `#FFFFFF`) for:
+- `--background` (main page background)
+- `--card` (card surfaces)
+- `--popover` (dropdown menus, dialogs)
+
+---
+
+### Recommended Options
+
+Here are three softer alternatives (all in HSL format as required by the design system):
+
+| Option | HSL Value | Hex Equivalent | Description |
+|--------|-----------|----------------|-------------|
+| **A - Warm Gray** | `220 14% 96%` | `#F4F5F7` | Subtle cool-gray tint, very common in modern apps |
+| **B - Warm Cream** | `40 20% 97%` | `#F9F8F5` | Slight warm/cream undertone, cozy feel |
+| **C - Cool Blue-Gray** | `210 20% 98%` | `#F8FAFB` | Very subtle blue tint, matches the app's blue accent |
+
+**Recommendation**: Option A (`220 14% 96%`) — provides noticeable relief from pure white while staying neutral and professional.
 
 ---
 
@@ -28,40 +33,49 @@ In Recharts stacked bar charts, the **first** `<Bar>` component renders at the *
 
 | File | Change |
 |------|--------|
-| `src/pages/Trends.tsx` | Reverse order of Bar components in Macro Split chart |
+| `src/index.css` | Update `--background`, `--card`, and `--popover` in the `:root` section |
 
 ---
 
-### Code Change (lines 374-376)
+### Code Changes (lines 27, 30, 33)
 
 **Before:**
-```tsx
-<Bar dataKey="proteinPct" name="Protein" stackId="macros" fill={CHART_COLORS.protein} />
-<Bar dataKey="carbsPct" name="Carbs" stackId="macros" fill={CHART_COLORS.carbs} />
-<Bar dataKey="fatPct" name="Fat" stackId="macros" fill={CHART_COLORS.fat} radius={[2, 2, 0, 0]} />
+```css
+--background: 0 0% 100%;
+...
+--card: 0 0% 100%;
+...
+--popover: 0 0% 100%;
 ```
 
-**After:**
-```tsx
-<Bar dataKey="fatPct" name="Fat" stackId="macros" fill={CHART_COLORS.fat} />
-<Bar dataKey="carbsPct" name="Carbs" stackId="macros" fill={CHART_COLORS.carbs} />
-<Bar dataKey="proteinPct" name="Protein" stackId="macros" fill={CHART_COLORS.protein} radius={[2, 2, 0, 0]} />
+**After (Option A - Warm Gray):**
+```css
+--background: 220 14% 96%;
+...
+--card: 0 0% 100%;      /* Keep cards white for contrast */
+...
+--popover: 0 0% 100%;   /* Keep popovers white for clarity */
+```
+
+Alternatively, if you want cards to blend with the background:
+```css
+--background: 220 14% 96%;
+--card: 220 14% 98%;    /* Slightly lighter than background */
+--popover: 0 0% 100%;   /* Keep popovers crisp white */
 ```
 
 ---
 
 ### Visual Result
 
-```
-Before:          After:
-┌──────┐         ┌──────┐
-│ Fat  │         │Protein│  ← top (dark)
-├──────┤         ├──────┤
-│Carbs │         │Carbs │  ← middle
-├──────┤         ├──────┤
-│Protein│        │ Fat  │  ← bottom (light)
-└──────┘         └──────┘
-```
+The page will have a soft gray-blue tint instead of harsh white. Cards can either stay white (for contrast) or match the background (for a more unified look).
 
-Protein (darker blue) will now be at the top, fat (lightest cyan) at the bottom.
+---
+
+### Your Choice
+
+Would you like me to:
+1. **Just the background** — Keep cards and popovers white for contrast
+2. **Background + cards** — Both use the soft gray, popovers stay white
+3. **All surfaces** — Everything gets the soft treatment
 
