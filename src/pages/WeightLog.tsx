@@ -1,6 +1,8 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Navigate } from 'react-router-dom';
 import { format, addDays, subDays, isToday, parseISO, isFuture } from 'date-fns';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { FEATURES } from '@/lib/feature-flags';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LogInput, LogInputRef } from '@/components/LogInput';
@@ -21,6 +23,18 @@ const WEIGHT_EDITABLE_FIELDS: WeightEditableField[] = ['description', 'sets', 'r
 // Wrapper component: extracts date from URL, forces remount via key
 const WeightLog = () => {
   const [searchParams] = useSearchParams();
+  const { data: isAdmin, isLoading: isAdminLoading } = useIsAdmin();
+  
+  // Access check: allow if feature flag is on OR user is admin
+  if (!FEATURES.WEIGHT_TRACKING && !isAdminLoading && !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+  
+  // Show nothing while checking admin status (prevents flash)
+  if (!FEATURES.WEIGHT_TRACKING && isAdminLoading) {
+    return null;
+  }
+  
   const dateParam = searchParams.get('date');
   const dateKey = dateParam || format(new Date(), 'yyyy-MM-dd');
   
