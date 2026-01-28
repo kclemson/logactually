@@ -1,7 +1,7 @@
 
-## Show Last 7 Days in Daily Stats Table
+## Color "Last Active" Green When Today
 
-Change the daily stats table from showing the last 3 days to showing the last 7 days.
+Add conditional green text color to the "Last Active" column when the date matches the current day.
 
 ---
 
@@ -9,21 +9,26 @@ Change the daily stats table from showing the last 3 days to showing the last 7 
 
 **File: `src/pages/Admin.tsx`**
 
-Line 130 - update the slice limit:
+Lines 105-107 - Add `isToday` import and conditional styling:
 
 ```tsx
-// Before
-{stats.daily_stats.slice(0, 3).map((row) => (
+// Line 4: Add isToday import
+import { format, parseISO, isToday } from "date-fns";
 
-// After  
-{stats.daily_stats.slice(0, 7).map((row) => (
+// Lines 105-107: Add conditional green color
+<td className={`text-center py-0.5 ${user.last_active && isToday(parseISO(user.last_active)) ? "text-green-500" : ""}`}>
+  {user.last_active ? format(parseISO(user.last_active), "MMM d") : "—"}
+</td>
 ```
 
 ---
 
-### Note
+### How It Works
 
-The database function `get_usage_stats` already fetches 14 days of data, so no backend changes are needed - we're just displaying more of the already-available data.
+1. Import `isToday` from `date-fns` (already using this library)
+2. Parse the `last_active` timestamp and check if it matches today's date
+3. If true, apply `text-green-500` class for green text
+4. Otherwise, use default text color
 
 ---
 
@@ -31,4 +36,4 @@ The database function `get_usage_stats` already fetches 14 days of data, so no b
 
 | File | Change |
 |------|--------|
-| `src/pages/Admin.tsx` | Change `.slice(0, 3)` to `.slice(0, 7)` on line 130 |
+| `src/pages/Admin.tsx` | Add `isToday` import (line 4), add conditional green color to Last Active cell (lines 105-107) |
