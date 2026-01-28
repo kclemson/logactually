@@ -1,100 +1,116 @@
 
+## Remove Chart Borders and Update Color Palette
 
-## Reduce Vertical Padding Below Chart X-Axis Labels
-
-Remove unnecessary whitespace below the X-axis date labels to make the charts more compact.
-
----
-
-### Root Cause
-
-Recharts XAxis has default values that create extra space:
-- Default `height` reserves space for tick labels + padding
-- Default `tickMargin` adds space between axis line and labels
-- The `BarChart` without explicit `margin` uses Recharts defaults (which includes bottom margin)
+Make two visual improvements to the Trends page charts.
 
 ---
 
-### Solution
+### Change 1: Remove Chart Card Borders
 
-Add two XAxis properties to minimize bottom spacing:
+Currently all chart cards use the standard `Card` component which has `border` in its className. Override this by adding `border-0 shadow-none` to remove the visual borders and shadows from chart cards.
 
-```tsx
-<XAxis
-  dataKey="date"
-  tick={{ fontSize: 8 }}
-  stroke="hsl(var(--muted-foreground))"
-  interval="preserveStartEnd"
-  tickMargin={2}    // Reduce gap between axis line and labels (default ~5)
-  height={16}       // Minimize reserved height for axis (default ~30)
-/>
-```
+**Affected Cards:**
+- Average stats row (4 cards)
+- Calories chart
+- Macro Split chart
+- Protein/Carbs/Fat charts (3 cards)
+- Exercise charts (ExerciseChart component)
 
-Also add explicit `margin` to BarChart components that don't have it:
+**Implementation:**
+
+Add `className="border-0 shadow-none"` to each chart Card:
 
 ```tsx
-<BarChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+// Average stats cards
+<Card key={key} className="text-center border-0 shadow-none">
+
+// Chart cards
+<Card className="border-0 shadow-none">
+
+// ExerciseChart component
+<Card className="border-0 shadow-none">
 ```
 
 ---
 
-### Changes Summary
+### Change 2: Update Color Palette
 
-| Chart Location | Current | Change |
-|----------------|---------|--------|
-| All XAxis components | No tickMargin/height | Add `tickMargin={2}` and `height={16}` |
-| Food BarCharts (Calories, Macro Split, P/C/F) | No margin prop | Add `margin={{ top: 4, right: 0, left: 0, bottom: 0 }}` |
-| ExerciseChart BarChart | Already has margin | Keep existing (top: 12 for weight labels above bars) |
+Replace current colors with the complementary 4-color palette from the reference image.
+
+**Current Colors:**
+| Macro | Current Color |
+|-------|---------------|
+| Calories | #0033CC (Deep Blue) |
+| Protein | #43EBD7 (Teal) |
+| Carbs | #9933FF (Purple) |
+| Fat | #00CCFF (Cyan) |
+
+**New Colors (from reference image, left to right):**
+| Macro | New Color | Description |
+|-------|-----------|-------------|
+| Calories | #0033CC | Deep Blue (keep) |
+| Protein | #115E83 | Steel Blue |
+| Carbs | #00D4FF | Bright Cyan |
+| Fat | #B8F4FF | Light Cyan |
+
+These colors work on both light and dark backgrounds as shown in the reference image.
 
 ---
 
 ### Files to Modify
 
-| File | Lines | Change |
-|------|-------|--------|
-| `src/pages/Trends.tsx` | 322-326 | Calories chart XAxis - add tickMargin/height |
-| `src/pages/Trends.tsx` | 320 | Calories BarChart - add margin |
-| `src/pages/Trends.tsx` | 350-354 | Macro Split chart XAxis - add tickMargin/height |
-| `src/pages/Trends.tsx` | 348 | Macro Split BarChart - add margin |
-| `src/pages/Trends.tsx` | 385-389 | P/C/F charts XAxis - add tickMargin/height |
-| `src/pages/Trends.tsx` | 383 | P/C/F BarChart - add margin |
-| `src/pages/Trends.tsx` | 137-141 | ExerciseChart XAxis - add tickMargin/height |
-
----
-
-### Before/After
-
-```text
-Before:                          After:
-┌────────────────────┐           ┌────────────────────┐
-│  Calories          │           │  Calories          │
-│  ▐█▌ ▐█▌ ▐█▌       │           │  ▐█▌ ▐█▌ ▐█▌       │
-│  ▐█▌ ▐█▌ ▐█▌       │           │  ▐█▌ ▐█▌ ▐█▌       │
-│  Jan 22   Jan 28   │           │  Jan 22   Jan 28   │
-│                    │  ←gap     └────────────────────┘
-└────────────────────┘           (gap removed)
-```
+| File | Change |
+|------|--------|
+| `src/pages/Trends.tsx` | Remove borders from all Card components, update `charts` array colors, update Macro Split chart bar colors |
 
 ---
 
 ### Code Changes
 
-**XAxis updates (apply to all 7 XAxis components):**
+**1. Update charts array (line 263-268):**
 ```tsx
-<XAxis
-  dataKey="date"
-  tick={{ fontSize: 8 }}
-  stroke="hsl(var(--muted-foreground))"
-  interval="preserveStartEnd"
-  tickMargin={2}
-  height={16}
-/>
+const charts = [
+  { key: 'calories', label: 'Calories', color: '#0033CC' },
+  { key: 'protein', label: 'Protein (g)', color: '#115E83' },
+  { key: 'carbs', label: 'Carbs (g)', color: '#00D4FF' },
+  { key: 'fat', label: 'Fat (g)', color: '#B8F4FF' },
+];
 ```
 
-**BarChart margin updates (food charts only):**
+**2. Update Macro Split stacked bars (lines 369-371):**
 ```tsx
-<BarChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+<Bar dataKey="proteinPct" name="Protein" stackId="macros" fill="#115E83" />
+<Bar dataKey="carbsPct" name="Carbs" stackId="macros" fill="#00D4FF" />
+<Bar dataKey="fatPct" name="Fat" stackId="macros" fill="#B8F4FF" radius={[2, 2, 0, 0]} />
 ```
 
-This will significantly reduce the wasted vertical space in all chart cards while keeping the labels readable.
+**3. Add border-0 shadow-none to all chart Cards:**
+- Line 289: Average stats cards
+- Line 315: Calories chart card
+- Line 345: Macro Split chart card
+- Line 382: P/C/F chart cards
+- Line 125 (ExerciseChart): Exercise chart card
 
+---
+
+### Visual Result
+
+Before (many bordered boxes):
+```
+┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐
+│ Avg Cal │ │ Avg Pro │ │ Avg Crb │ │ Avg Fat │
+└─────────┘ └─────────┘ └─────────┘ └─────────┘
+┌─────────────────┐ ┌─────────────────┐
+│   Calories      │ │   Macro Split   │
+└─────────────────┘ └─────────────────┘
+```
+
+After (cleaner, borderless):
+```
+  Avg Cal    Avg Pro    Avg Crb    Avg Fat
+  
+  Calories             Macro Split
+  ▐█▌ ▐█▌ ▐█▌          ████████████
+```
+
+Color palette shifts from purple/teal mix to a harmonious blue-cyan gradient that works in both light and dark modes.
