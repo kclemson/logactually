@@ -106,6 +106,12 @@ export default function Settings() {
               <p className="text-xs text-muted-foreground">Email</p>
               <p className="text-sm">{user?.email}</p>
             </div>
+            <button
+              onClick={() => setDeleteAccountOpen(true)}
+              className="text-sm text-muted-foreground hover:text-destructive hover:underline"
+            >
+              Delete account
+            </button>
           </div>
           <Button
             variant="outline"
@@ -114,12 +120,6 @@ export default function Settings() {
           >
             Change Password
           </Button>
-          <button
-            onClick={() => setDeleteAccountOpen(true)}
-            className="text-sm text-muted-foreground hover:text-destructive hover:underline"
-          >
-            Delete account
-          </button>
         </div>
       </CollapsibleSection>
 
