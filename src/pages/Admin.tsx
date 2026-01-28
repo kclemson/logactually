@@ -3,6 +3,18 @@ import { useAdminStats, useAdminUserStats } from "@/hooks/useAdminStats";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { format, parseISO } from "date-fns";
 
+const USER_NAMES: Record<number, string> = {
+  1: "KC",
+  2: "Jared",
+  3: "Kristy",
+  4: "Elisabetta1",
+  5: "Elisabetta2",
+  6: "test",
+  8: "test2",
+  9: "Malcolm",
+  10: "Jenny",
+};
+
 export default function Admin() {
   // All hooks must be called before any conditional returns
   const { data: isAdmin, isLoading: isAdminLoading } = useIsAdmin();
@@ -79,7 +91,10 @@ export default function Admin() {
           <tbody>
             {userStats.map((user) => (
               <tr key={user.user_id} className="border-b border-border/50">
-                <td className="py-0.5 pr-2">User {user.user_number}</td>
+                <td className="py-0.5 pr-2">
+                  User {user.user_number}
+                  {USER_NAMES[user.user_number] && ` (${USER_NAMES[user.user_number]})`}
+                </td>
                 <td className="text-center py-0.5 pr-2">{user.total_entries}</td>
                 <td className="text-center py-0.5">{user.entries_today}</td>
               </tr>
