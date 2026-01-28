@@ -1,106 +1,50 @@
 
 
-## Enable Weight Tracking UI for Admins Across All Pages
+## Fix "Log Weights" Navigation Alignment
 
-The previous change only enabled the WeightLog page and nav item for admins. Several other pages still check `FEATURES.WEIGHT_TRACKING` directly without considering admin status.
+The "Log Weights" label wraps to two lines on mobile, causing the icon to appear higher and the text to be misaligned compared to other single-word nav items.
 
 ---
 
-### Problem
+### Problem Analysis
 
-Three additional locations still gate weight-related UI behind only the feature flag:
+| Item | Label | Lines | Issue |
+|------|-------|-------|-------|
+| Log Food | "Log Food" | 2 | Also wraps, but both words similar length |
+| Log Weights | "Log Weights" | 2 | "Weights" is longer, causing uneven wrap |
+| Calendar | "Calendar" | 1 | Single word - aligned correctly |
+| Trends | "Trends" | 1 | Single word - aligned correctly |
 
-| Location | Issue |
-|----------|-------|
-| `History.tsx` | Weight query disabled; dumbbell icon hidden |
-| `Trends.tsx` | Weight Trends section not rendered |
-| `Settings.tsx` | Saved Routines section not rendered |
+The icon appears higher because the two-line text below it takes more vertical space, but the container aligns items to center.
 
 ---
 
 ### Solution
 
-Add `useIsAdmin` hook to each page and update conditionals to: `FEATURES.WEIGHT_TRACKING || isAdmin`
+Add `text-center` to the label span to ensure wrapped text is horizontally centered:
+
+**File: `src/components/BottomNav.tsx`**
+
+```tsx
+// Line 38: Add text-center class
+<span className="text-xs text-center">{label}</span>
+```
+
+This ensures that when labels wrap to multiple lines, each line is centered within the span, matching the icon alignment above it.
 
 ---
 
-### Changes
+### Why This Works
 
-**1. History.tsx**
-
-Add admin check for the weight entries query and dumbbell display:
-
-```tsx
-import { useIsAdmin } from '@/hooks/useIsAdmin';
-
-const History = () => {
-  const { data: isAdmin } = useIsAdmin();
-  const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
-  
-  // ...
-  
-  // Line 95: Update query enabled condition
-  const { data: weightSummaries = [] } = useQuery({
-    // ...
-    enabled: showWeights,  // Was: FEATURES.WEIGHT_TRACKING
-  });
-  
-  // Line 176: Update hasWeights check
-  const hasWeights = showWeights && !!weightByDate.get(dateStr);  // Was: FEATURES.WEIGHT_TRACKING && ...
-```
-
-**2. Trends.tsx**
-
-Add admin check for the Weight Trends section:
-
-```tsx
-import { useIsAdmin } from '@/hooks/useIsAdmin';
-
-const Trends = () => {
-  const { data: isAdmin } = useIsAdmin();
-  const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
-  
-  // ...
-  
-  // Line 332: Update conditional render
-  {showWeights && (  // Was: FEATURES.WEIGHT_TRACKING &&
-    <CollapsibleSection title="Weight Trends" ...>
-```
-
-**3. Settings.tsx**
-
-Add admin check for the Saved Routines section:
-
-```tsx
-import { useIsAdmin } from '@/hooks/useIsAdmin';
-
-export default function Settings() {
-  const { data: isAdmin } = useIsAdmin();
-  const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
-  
-  // ...
-  
-  // Line 197: Update conditional render
-  {showWeights && (  // Was: FEATURES.WEIGHT_TRACKING &&
-    <CollapsibleSection title="Saved Routines" ...>
-```
-
----
-
-### Pattern
-
-All files follow the same pattern:
-1. Import `useIsAdmin` hook
-2. Create `showWeights` variable: `FEATURES.WEIGHT_TRACKING || isAdmin`
-3. Replace direct `FEATURES.WEIGHT_TRACKING` checks with `showWeights`
+- `items-center` on the flex container centers children horizontally
+- But when text wraps, the default `text-align: left` causes lines to align left within the span
+- Adding `text-center` ensures wrapped text lines are centered within their container
 
 ---
 
 ### Files Summary
 
-| File | Changes |
-|------|---------|
-| `src/pages/History.tsx` | Add hook, update query `enabled` and `hasWeights` check |
-| `src/pages/Trends.tsx` | Add hook, update Weight Trends section conditional |
-| `src/pages/Settings.tsx` | Add hook, update Saved Routines section conditional |
+| File | Change |
+|------|--------|
+| `src/components/BottomNav.tsx` | Add `text-center` class to label span |
 
