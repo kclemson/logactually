@@ -53,8 +53,6 @@ export default function Settings() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-title">Settings</h2>
-
       {/* Saved Meals - frequently accessed */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
