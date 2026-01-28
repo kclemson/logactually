@@ -1,20 +1,14 @@
 
 
-## Rotate Weight Trend Labels 90 Degrees
+## Stack Labels Vertically with Centered Rows
 
-Now that labels are rendering on every bar, we'll rotate them vertically to improve readability and reduce overlap.
-
----
-
-### SVG Text Rotation
-
-In SVG, we rotate text using the `transform` attribute with `rotate(angle, centerX, centerY)`. For vertical text reading from bottom-to-top, we use -90 degrees (counter-clockwise).
+Replace the rotated text with vertically stacked `<tspan>` elements. Each row will be horizontally centered by setting `x={centerX}` on every `<tspan>`.
 
 ---
 
 ### Changes to `src/pages/Trends.tsx`
 
-Update `renderGroupedLabel` to add rotation:
+Update `renderGroupedLabel` (lines 57-79):
 
 ```typescript
 const renderGroupedLabel = (props: any) => {
@@ -22,22 +16,39 @@ const renderGroupedLabel = (props: any) => {
   
   if (!value || typeof x !== 'number' || typeof width !== 'number') return null;
   
-  // Center position of the bar
   const centerX = x + width / 2;
-  const centerY = y + (height || 0) / 2;
+  
+  // Parse the label "3×10×160" into parts
+  const parts = value.split('×');
+  if (parts.length !== 3) return null;
+  
+  const [sets, reps, weight] = parts;
+  
+  // Build the stacked format: ["3", "×", "10", "×", "160"]
+  const lines = [sets, '×', reps, '×', weight];
+  const lineHeight = 8; // pixels between lines
+  
+  // Calculate starting Y to center the 5 lines vertically in the bar
+  const totalTextHeight = lines.length * lineHeight;
+  const startY = y + ((height || 0) - totalTextHeight) / 2 + lineHeight / 2;
   
   return (
     <text
       x={centerX}
-      y={centerY}
       fill="#FFFFFF"
       textAnchor="middle"
-      dominantBaseline="middle"
       fontSize={7}
       fontWeight={500}
-      transform={`rotate(-90, ${centerX}, ${centerY})`}
     >
-      {value}
+      {lines.map((line, i) => (
+        <tspan
+          key={i}
+          x={centerX}
+          y={startY + i * lineHeight}
+        >
+          {line}
+        </tspan>
+      ))}
     </text>
   );
 };
@@ -45,23 +56,28 @@ const renderGroupedLabel = (props: any) => {
 
 ---
 
-### Key Changes
+### How Horizontal Centering Works
 
-| Before | After |
-|--------|-------|
-| Horizontal text at `y + 10` (near top of bar) | Vertical text centered in bar |
-| `textAnchor="middle"` only | Add `dominantBaseline="middle"` for vertical centering |
-| No transform | `rotate(-90, centerX, centerY)` for vertical orientation |
-| Text reads left-to-right | Text reads bottom-to-top |
+| Attribute | Purpose |
+|-----------|---------|
+| `textAnchor="middle"` on `<text>` | Sets default centering behavior |
+| `x={centerX}` on each `<tspan>` | Centers each row at the bar's horizontal center |
+
+Each `<tspan>` gets its own `x` coordinate, so even though they have different text widths (like "3" vs "160"), they all anchor to the same center point.
 
 ---
 
 ### Visual Result
 
-- Labels will appear vertically inside each bar
-- Text will read from bottom to top (like a book spine)
-- Less overlap between adjacent bars since text runs parallel to bar height
-- Centered both horizontally and vertically within the bar
+```
+┌──────┐
+│  3   │  ← centered
+│  ×   │  ← centered  
+│  10  │  ← centered
+│  ×   │  ← centered
+│ 160  │  ← centered (wider, but still centered)
+└──────┘
+```
 
 ---
 
@@ -69,5 +85,5 @@ const renderGroupedLabel = (props: any) => {
 
 | File | Lines | Change |
 |------|-------|--------|
-| `src/pages/Trends.tsx` | 57-78 | Update `renderGroupedLabel` to add rotation transform |
+| `src/pages/Trends.tsx` | 57-79 | Replace rotated text with stacked `<tspan>` elements |
 
