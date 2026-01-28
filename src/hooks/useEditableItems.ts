@@ -99,16 +99,36 @@ export function useEditableItems<T extends BaseEditableItem>(
     );
     
     setNewItems(prev => [...prev, ...items]);
-    setNewItemUids(uids);
-    setNewEntryIds(entryIds);
+    setNewItemUids(prev => new Set([...prev, ...uids]));
+    setNewEntryIds(prev => new Set([...prev, ...entryIds]));
     
     // Clear entry highlights after animation duration (2.5s)
     if (entryIds.size > 0) {
       setTimeout(() => {
-        setNewEntryIds(new Set());
+        setNewEntryIds(prev => {
+          const next = new Set(prev);
+          entryIds.forEach(id => next.delete(id));
+          return next;
+        });
       }, 2500);
     }
   }, []);
+
+  // Remove new items by entry ID (for rollback on mutation failure)
+  const removeNewItemsByEntry = useCallback((entryId: string) => {
+    setNewItems(prev => prev.filter(item => item.entryId !== entryId));
+    setNewItemUids(prev => {
+      const next = new Set(prev);
+      // Find and remove uids for this entry
+      newItems.filter(item => item.entryId === entryId).forEach(item => next.delete(item.uid));
+      return next;
+    });
+    setNewEntryIds(prev => {
+      const next = new Set(prev);
+      next.delete(entryId);
+      return next;
+    });
+  }, [newItems]);
 
   // Clear the "new" highlighting
   const clearNewHighlights = useCallback(() => {
@@ -203,6 +223,7 @@ export function useEditableItems<T extends BaseEditableItem>(
     updateItemBatch,
     removeItem,
     addNewItems,
+    removeNewItemsByEntry,
     clearNewHighlights,
     clearPendingForItem,
     clearAllPending,

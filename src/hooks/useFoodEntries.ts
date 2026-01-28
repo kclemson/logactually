@@ -49,6 +49,7 @@ export function useFoodEntries(date?: string) {
 
   const createEntry = useMutation({
     mutationFn: async (entry: {
+      id?: string; // Optional client-generated ID for optimistic highlighting
       eaten_date: string;
       raw_input: string | null;
       food_items: FoodItem[];
@@ -64,6 +65,7 @@ export function useFoodEntries(date?: string) {
       const { data, error } = await supabase
         .from('food_entries')
         .insert({
+          ...(entry.id && { id: entry.id }), // Use client-provided ID if present
           user_id: userData.user.id,
           eaten_date: entry.eaten_date,
           raw_input: entry.raw_input,

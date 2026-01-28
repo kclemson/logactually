@@ -129,6 +129,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     updateItemBatch,
     removeItem,
     addNewItems,
+    removeNewItemsByEntry,
   } = useEditableFoodItems(allItems);
 
   // Calculate display totals based on current edit state
@@ -166,15 +167,21 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
 
   // Helper to create and save entry from food items
   const createEntryFromItems = useCallback((items: FoodItem[], rawInput: string | null, sourceMealId?: string) => {
-    // Generate UIDs once upfront to ensure consistency between DB and local state
+    // Generate entry ID and UIDs upfront to ensure consistency and enable optimistic highlighting
+    const entryId = crypto.randomUUID();
     const itemsWithUids = items.map(item => ({
       ...item,
       uid: crypto.randomUUID(),
+      entryId, // Add entryId immediately for grouped highlighting
     }));
+    
+    // Set highlights BEFORE mutation to prevent flash of unstyled rows
+    addNewItems(itemsWithUids);
     
     const totals = calculateTotals(itemsWithUids);
     createEntry.mutate(
       {
+        id: entryId, // Pass client-generated ID to database
         eaten_date: dateStr,
         raw_input: rawInput,
         food_items: itemsWithUids,
@@ -185,18 +192,16 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
         source_meal_id: sourceMealId ?? null,
       },
       {
-        onSuccess: (createdEntry) => {
-          // Reuse the same UIDs, just add entryId
-          const itemsWithEntryId = itemsWithUids.map(item => ({
-            ...item,
-            entryId: createdEntry.id,
-          }));
-          addNewItems(itemsWithEntryId);
+        onSuccess: () => {
           foodInputRef.current?.clear();
+        },
+        onError: () => {
+          // Rollback optimistic state on failure
+          removeNewItemsByEntry(entryId);
         },
       }
     );
-  }, [createEntry, dateStr, addNewItems]);
+  }, [createEntry, dateStr, addNewItems, removeNewItemsByEntry]);
 
   const handleSubmit = async (text: string) => {
     const result = await analyzeFood(text);
@@ -258,13 +263,21 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
 
   // Handle direct scan results (when barcode lookup succeeds)
   const handleScanResult = async (foodItem: Omit<FoodItem, 'uid' | 'entryId'>, originalInput: string) => {
+    // Generate entry ID and UID upfront for optimistic highlighting
+    const entryId = crypto.randomUUID();
     const itemWithUid = {
       ...foodItem,
       uid: crypto.randomUUID(),
+      entryId,
     };
+    
+    // Set highlights BEFORE mutation
+    addNewItems([itemWithUid]);
+    
     const totals = calculateTotals([itemWithUid]);
     createEntry.mutate(
       {
+        id: entryId,
         eaten_date: dateStr,
         raw_input: originalInput,
         food_items: [itemWithUid],
@@ -274,9 +287,11 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
         total_fat: Math.round(totals.fat * 10) / 10,
       },
       {
-        onSuccess: (createdEntry) => {
-          const itemWithEntryId = { ...itemWithUid, entryId: createdEntry.id };
-          addNewItems([itemWithEntryId]);
+        onSuccess: () => {
+          // Input already cleared by barcode scanner
+        },
+        onError: () => {
+          removeNewItemsByEntry(entryId);
         },
       }
     );
