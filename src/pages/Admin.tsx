@@ -83,7 +83,7 @@ export default function Admin() {
         <table className="w-auto text-xs">
           <thead>
             <tr className="border-b">
-              <th className="text-left py-0.5 pr-2 font-medium text-muted-foreground">User</th>
+              <th className="text-left py-0.5 pr-2 font-medium text-muted-foreground whitespace-nowrap">User</th>
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Food Logged</th>
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Food Today</th>
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Weight Logged</th>
@@ -94,7 +94,7 @@ export default function Admin() {
           <tbody>
             {userStats.map((user) => (
               <tr key={user.user_id} className="border-b border-border/50">
-                <td className="py-0.5 pr-2">
+                <td className="py-0.5 pr-2 whitespace-nowrap">
                   User {user.user_number}
                   {USER_NAMES[user.user_number] && ` (${USER_NAMES[user.user_number]})`}
                 </td>
