@@ -38,6 +38,7 @@ interface FoodItemsTableProps {
   onUpdateItemBatch?: (index: number, updates: Partial<FoodItem>) => void;
   onRemoveItem?: (index: number) => void;
   newItemUids?: Set<string>;
+  newEntryIds?: Set<string>;
   showHeader?: boolean;
   showTotals?: boolean;
   totalsPosition?: 'top' | 'bottom';
@@ -59,6 +60,7 @@ export function FoodItemsTable({
   onUpdateItemBatch,
   onRemoveItem,
   newItemUids,
+  newEntryIds,
   showHeader = true,
   showTotals = true,
   totalsPosition = 'bottom',
@@ -234,6 +236,11 @@ export function FoodItemsTable({
   const hasDeleteColumn = editable || hasEntryDeletion;
   const gridCols = getGridCols(!!hasDeleteColumn);
 
+  // Check if an entry ID is in the "new" set for grouped highlighting
+  const isNewEntry = (entryId: string | null): boolean => {
+    return entryId ? (newEntryIds?.has(entryId) ?? false) : false;
+  };
+
   const TotalsRow = () => {
     // Calculate calorie contribution from each macro
     const proteinCals = totals.protein * 4;
@@ -344,13 +351,24 @@ export function FoodItemsTable({
         const isCaloriesEditing = editingCell?.index === index && editingCell?.field === 'calories';
         const previewMacros = getPreviewMacros(item, index);
         
+        // Check if this entry should have grouped highlighting
+        const entryIsNew = isNewEntry(currentEntryId);
+        // Fallback: use individual highlighting if item has no entryId
+        const useFallbackHighlight = !currentEntryId && isNewItem(item);
+        
         return (
           <div key={item.uid || index} className="contents">
             <div
               className={cn(
-                'grid gap-0.5 items-center group rounded-md',
+                'grid gap-0.5 items-center group',
                 gridCols,
-                isNewItem(item) && "animate-outline-fade"
+                // Grouped highlight: apply segmented outline to create connected visual
+                entryIsNew && isFirstInEntry && !isLastInEntry && "rounded-t-md animate-outline-fade-top",
+                entryIsNew && !isFirstInEntry && isLastInEntry && "rounded-b-md animate-outline-fade-bottom",
+                entryIsNew && !isFirstInEntry && !isLastInEntry && "animate-outline-fade-middle",
+                entryIsNew && isFirstInEntry && isLastInEntry && "rounded-md animate-outline-fade",
+                // Fallback for items without entryId
+                useFallbackHighlight && "rounded-md animate-outline-fade"
               )}
             >
             {/* Description cell (with chevron space when showing entry dividers) */}

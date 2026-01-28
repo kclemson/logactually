@@ -124,6 +124,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   const { 
     displayItems,
     newItemUids,
+    newEntryIds,
     updateItem,
     updateItemBatch,
     removeItem,
@@ -499,6 +500,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
             onUpdateItemBatch={handleItemUpdateBatch}
             onRemoveItem={handleItemRemove}
             newItemUids={newItemUids}
+            newEntryIds={newEntryIds}
             totals={displayTotals}
             totalsPosition="top"
             showTotals={true}

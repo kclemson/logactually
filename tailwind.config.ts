@@ -96,11 +96,38 @@ export default {
             boxShadow: "inset 0 0 0 2px transparent",
           },
         },
+        "outline-fade-top": {
+          "0%, 80%": {
+            boxShadow: "inset 2px 2px 0 0 hsl(217 91% 60%), inset -2px 0 0 0 hsl(217 91% 60%)",
+          },
+          "100%": {
+            boxShadow: "inset 2px 2px 0 0 transparent, inset -2px 0 0 0 transparent",
+          },
+        },
+        "outline-fade-middle": {
+          "0%, 80%": {
+            boxShadow: "inset 2px 0 0 0 hsl(217 91% 60%), inset -2px 0 0 0 hsl(217 91% 60%)",
+          },
+          "100%": {
+            boxShadow: "inset 2px 0 0 0 transparent, inset -2px 0 0 0 transparent",
+          },
+        },
+        "outline-fade-bottom": {
+          "0%, 80%": {
+            boxShadow: "inset 2px -2px 0 0 hsl(217 91% 60%), inset -2px 0 0 0 hsl(217 91% 60%)",
+          },
+          "100%": {
+            boxShadow: "inset 2px -2px 0 0 transparent, inset -2px 0 0 0 transparent",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "outline-fade": "outline-fade 2.5s ease-out forwards",
+        "outline-fade-top": "outline-fade-top 2.5s ease-out forwards",
+        "outline-fade-middle": "outline-fade-middle 2.5s ease-out forwards",
+        "outline-fade-bottom": "outline-fade-bottom 2.5s ease-out forwards",
       },
     },
   },
