@@ -122,7 +122,7 @@ const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
   }, [exercise.weightData]);
 
   return (
-    <Card>
+    <Card className="border-0 shadow-none">
       <CardHeader className="p-2 pb-1">
         <div className="flex flex-col gap-0.5">
           <ChartTitle className="truncate">{exercise.description}</ChartTitle>
@@ -262,9 +262,9 @@ const Trends = () => {
 
   const charts = [
     { key: 'calories', label: 'Calories', color: '#0033CC' },
-    { key: 'protein', label: 'Protein (g)', color: '#43EBD7' },
-    { key: 'carbs', label: 'Carbs (g)', color: '#9933FF' },
-    { key: 'fat', label: 'Fat (g)', color: '#00CCFF' },
+    { key: 'protein', label: 'Protein (g)', color: '#115E83' },
+    { key: 'carbs', label: 'Carbs (g)', color: '#00D4FF' },
+    { key: 'fat', label: 'Fat (g)', color: '#B8F4FF' },
   ];
 
   return (
@@ -286,7 +286,7 @@ const Trends = () => {
       <CollapsibleSection title="Food Trends" icon={UtensilsCrossed} defaultOpen={true}>
         <div className="grid grid-cols-4 gap-2">
           {charts.map(({ key, label }) => (
-            <Card key={key} className="text-center">
+            <Card key={key} className="text-center border-0 shadow-none">
               <CardContent className="p-2">
                 <p className="text-base font-semibold">
                   {averages[key as keyof typeof averages]}
@@ -312,7 +312,7 @@ const Trends = () => {
             {/* Row 1: Calories + Macros Breakdown */}
             <div className="grid grid-cols-2 gap-3">
               {/* Calories Chart */}
-              <Card>
+              <Card className="border-0 shadow-none">
                 <CardHeader className="p-2 pb-1">
                   <ChartTitle>Calories</ChartTitle>
                 </CardHeader>
@@ -342,7 +342,7 @@ const Trends = () => {
               </Card>
 
               {/* Macro Split Chart (100% stacked by calorie %) */}
-              <Card>
+              <Card className="border-0 shadow-none">
                 <CardHeader className="p-2 pb-1">
                   <ChartTitle>Macro Split (%)</ChartTitle>
                 </CardHeader>
@@ -366,9 +366,9 @@ const Trends = () => {
                           offset={20}
                           cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
                         />
-                        <Bar dataKey="proteinPct" name="Protein" stackId="macros" fill="#43EBD7" />
-                        <Bar dataKey="carbsPct" name="Carbs" stackId="macros" fill="#9933FF" />
-                        <Bar dataKey="fatPct" name="Fat" stackId="macros" fill="#00CCFF" radius={[2, 2, 0, 0]} />
+                        <Bar dataKey="proteinPct" name="Protein" stackId="macros" fill="#115E83" />
+                        <Bar dataKey="carbsPct" name="Carbs" stackId="macros" fill="#00D4FF" />
+                        <Bar dataKey="fatPct" name="Fat" stackId="macros" fill="#B8F4FF" radius={[2, 2, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -379,7 +379,7 @@ const Trends = () => {
             {/* Row 2: Protein + Carbs + Fat */}
             <div className="grid grid-cols-3 gap-3">
               {charts.slice(1).map(({ key, label, color }) => (
-                <Card key={key}>
+                <Card key={key} className="border-0 shadow-none">
                   <CardHeader className="p-2 pb-1">
                     <ChartTitle>{label}</ChartTitle>
                   </CardHeader>
