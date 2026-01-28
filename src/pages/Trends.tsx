@@ -59,22 +59,39 @@ const renderGroupedLabel = (props: any) => {
   
   if (!value || typeof x !== 'number' || typeof width !== 'number') return null;
   
-  // Center position of the bar
   const centerX = x + width / 2;
-  const centerY = y + (height || 0) / 2;
+  
+  // Parse the label "3×10×160" into parts
+  const parts = value.split('×');
+  if (parts.length !== 3) return null;
+  
+  const [sets, reps, weight] = parts;
+  
+  // Build the stacked format: ["3", "×", "10", "×", "160"]
+  const lines = [sets, '×', reps, '×', weight];
+  const lineHeight = 8;
+  
+  // Calculate starting Y to center the 5 lines vertically in the bar
+  const totalTextHeight = lines.length * lineHeight;
+  const startY = y + ((height || 0) - totalTextHeight) / 2 + lineHeight / 2;
   
   return (
     <text
       x={centerX}
-      y={centerY}
       fill="#FFFFFF"
       textAnchor="middle"
-      dominantBaseline="middle"
       fontSize={7}
       fontWeight={500}
-      transform={`rotate(-90, ${centerX}, ${centerY})`}
     >
-      {value}
+      {lines.map((line, i) => (
+        <tspan
+          key={i}
+          x={centerX}
+          y={startY + i * lineHeight}
+        >
+          {line}
+        </tspan>
+      ))}
     </text>
   );
 };
