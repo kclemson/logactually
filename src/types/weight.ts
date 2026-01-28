@@ -17,6 +17,7 @@ export interface WeightSet {
   sets: number;
   reps: number;
   weight_lbs: number;
+  rawInput?: string | null; // Only present on first set of entry
   editedFields?: WeightEditableField[];
 }
 
