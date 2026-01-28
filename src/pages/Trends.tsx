@@ -58,7 +58,7 @@ const renderGroupedLabel = (props: any) => {
   const { x, y, width, height, value, payload } = props;
   
   // Only render for the middle bar of each run
-  if (!payload?.isRunMiddle || !value || height < 12) return null;
+  if (!payload?.isRunMiddle || !value) return null;
   
   const { runLength, runIndex } = payload;
   
