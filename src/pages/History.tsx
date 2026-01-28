@@ -12,16 +12,22 @@ import {
   startOfWeek,
   endOfWeek,
 } from 'date-fns';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Dumbbell } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { FEATURES } from '@/lib/feature-flags';
 
 interface DaySummary {
   date: string;
   totalCalories: number;
   entryCount: number;
+}
+
+interface WeightDaySummary {
+  date: string;
+  exerciseCount: number;
 }
 
 const History = () => {
@@ -63,6 +69,32 @@ const History = () => {
     },
   });
 
+  // Weight entries query (feature-gated)
+  const { data: weightSummaries = [] } = useQuery({
+    queryKey: ['weight-entries-summary', format(monthStart, 'yyyy-MM')],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('weight_sets')
+        .select('logged_date')
+        .gte('logged_date', format(monthStart, 'yyyy-MM-dd'))
+        .lte('logged_date', format(monthEnd, 'yyyy-MM-dd'));
+
+      if (error) throw error;
+
+      // Count unique entries per date
+      const countMap = new Map<string, number>();
+      (data || []).forEach((entry) => {
+        countMap.set(entry.logged_date, (countMap.get(entry.logged_date) || 0) + 1);
+      });
+
+      return Array.from(countMap.entries()).map(([date, count]) => ({
+        date,
+        exerciseCount: count,
+      }));
+    },
+    enabled: FEATURES.WEIGHT_TRACKING,
+  });
+
   // Build calendar grid
   const calendarDays = useMemo(() => {
     const start = startOfWeek(monthStart, { weekStartsOn: 0 });
@@ -76,6 +108,13 @@ const History = () => {
     daySummaries.forEach((s) => map.set(s.date, s));
     return map;
   }, [daySummaries]);
+
+  // Map weight summaries by date
+  const weightByDate = useMemo(() => {
+    const map = new Map<string, WeightDaySummary>();
+    weightSummaries.forEach((s) => map.set(s.date, s));
+    return map;
+  }, [weightSummaries]);
 
   const handleDayClick = (date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
@@ -134,6 +173,7 @@ const History = () => {
           const isTodayDate = isToday(day);
           const isFutureDate = day > new Date();
           const hasEntries = !!summary;
+          const hasWeights = FEATURES.WEIGHT_TRACKING && !!weightByDate.get(dateStr);
 
           return (
             <button
@@ -144,8 +184,10 @@ const History = () => {
                 "flex flex-col items-center justify-center p-2 min-h-[68px] rounded-xl transition-colors",
                 isFutureDate && "bg-muted/20 text-muted-foreground/50 cursor-default",
                 !isCurrentMonth && !isFutureDate && "bg-muted/30 hover:bg-muted/50 text-muted-foreground/60 cursor-pointer",
-                isCurrentMonth && !isFutureDate && !hasEntries && "bg-muted/40 hover:bg-muted/60 cursor-pointer",
-                hasEntries && !isFutureDate && "bg-rose-100 hover:bg-rose-200 dark:bg-rose-900/20 dark:hover:bg-rose-800/30",
+                isCurrentMonth && !isFutureDate && !hasEntries && !hasWeights && "bg-muted/40 hover:bg-muted/60 cursor-pointer",
+                hasEntries && !hasWeights && !isFutureDate && "bg-rose-100 hover:bg-rose-200 dark:bg-rose-900/20 dark:hover:bg-rose-800/30",
+                hasWeights && !hasEntries && !isFutureDate && "bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/20 dark:hover:bg-purple-800/30",
+                hasWeights && hasEntries && !isFutureDate && "bg-gradient-to-br from-rose-100 to-purple-100 hover:from-rose-200 hover:to-purple-200 dark:from-rose-900/20 dark:to-purple-900/20 dark:hover:from-rose-800/30 dark:hover:to-purple-800/30",
                 isTodayDate && "ring-2 ring-primary ring-inset",
               )}
             >
@@ -166,6 +208,11 @@ const History = () => {
               >
                 {format(day, 'd')}
               </span>
+
+              {/* Weight indicator */}
+              {hasWeights && isCurrentMonth && (
+                <Dumbbell className="h-3 w-3 text-purple-500 dark:text-purple-400" />
+              )}
             </button>
           );
         })}
