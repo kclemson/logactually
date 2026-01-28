@@ -135,7 +135,7 @@ const Trends = () => {
   }, [chartData]);
 
   const charts = [
-    { key: 'calories', label: 'Calories', color: 'hsl(var(--primary))' },
+    { key: 'calories', label: 'Calories', color: 'hsl(217 91% 60%)' },
     { key: 'protein', label: 'Protein (g)', color: 'hsl(142 76% 36%)' },
     { key: 'carbs', label: 'Carbs (g)', color: 'hsl(38 92% 50%)' },
     { key: 'fat', label: 'Fat (g)', color: 'hsl(346 77% 49%)' },
@@ -204,7 +204,7 @@ const Trends = () => {
                         offset={20}
                         cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
                       />
-                      <Bar dataKey="calories" fill="hsl(var(--primary))" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="calories" fill="hsl(217 91% 60%)" radius={[2, 2, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
