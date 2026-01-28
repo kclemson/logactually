@@ -60,6 +60,9 @@ export function CreateMealDialog({
   const [rawInput, setRawInput] = useState<string | null>(null);
   const [createdMeal, setCreatedMeal] = useState<SavedMeal | null>(null);
   
+  // Local items state for this dialog (not tied to DB)
+  const [localItems, setLocalItems] = useState<FoodItem[]>([]);
+  
   const foodInputRef = useRef<LogInputRef>(null);
   
   const { analyzeFood, isAnalyzing, error: analyzeError } = useAnalyzeFood();
@@ -72,8 +75,7 @@ export function CreateMealDialog({
     updateItem,
     updateItemBatch,
     removeItem,
-    addNewItems,
-  } = useEditableFoodItems([]);
+  } = useEditableFoodItems(localItems);
 
   // Calculate totals for display
   const totals = calculateTotals(displayItems);
@@ -85,6 +87,7 @@ export function CreateMealDialog({
     setUserHasTyped(false);
     setRawInput(null);
     setCreatedMeal(null);
+    setLocalItems([]);
     onOpenChange(false);
   }, [onOpenChange]);
 
@@ -96,12 +99,12 @@ export function CreateMealDialog({
     const result = await analyzeFood(text);
     
     if (result) {
-      // Add items with UIDs
+      // Add items with UIDs to local state
       const itemsWithUids = result.food_items.map(item => ({
         ...item,
         uid: crypto.randomUUID(),
       }));
-      addNewItems(itemsWithUids);
+      setLocalItems(itemsWithUids);
       setState('editing');
       
       // Suggest a name in the background

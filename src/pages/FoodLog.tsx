@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { format, addDays, subDays, isToday, parseISO } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -54,12 +54,15 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     items: FoodItem[];
   } | null>(null);
   
+  // Track pending entry ID to extend loading state until rows are visible
+  const [pendingEntryId, setPendingEntryId] = useState<string | null>(null);
+  
   // Date is stable for this component instance - derived from props, no state needed
   const dateStr = initialDate;
   const selectedDate = parseISO(initialDate);
   const isTodaySelected = isToday(selectedDate);
   
-  const { entries, createEntry, updateEntry, deleteEntry, deleteAllByDate } = useFoodEntries(dateStr);
+  const { entries, isFetching, createEntry, updateEntry, deleteEntry, deleteAllByDate } = useFoodEntries(dateStr);
   const { analyzeFood, isAnalyzing, error: analyzeError } = useAnalyzeFood();
   const { data: savedMeals } = useSavedMeals();
   const saveMeal = useSaveMeal();
@@ -123,17 +126,28 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   // Derive display items from query data + pending local edits
   const { 
     displayItems,
-    newItemUids,
     newEntryIds,
+    markEntryAsNew,
     updateItem,
     updateItemBatch,
     removeItem,
-    addNewItems,
-    removeNewItemsByEntry,
   } = useEditableFoodItems(allItems);
 
   // Calculate display totals based on current edit state
   const displayTotals = calculateTotals(displayItems);
+  
+  // Check if pending entry is now visible in the entries list
+  const pendingEntryVisible = pendingEntryId 
+    ? entries.some(e => e.id === pendingEntryId)
+    : false;
+  
+  // When pending entry becomes visible, trigger highlight and clear loading
+  useEffect(() => {
+    if (pendingEntryVisible && pendingEntryId) {
+      markEntryAsNew(pendingEntryId);
+      setPendingEntryId(null);
+    }
+  }, [pendingEntryVisible, pendingEntryId, markEntryAsNew]);
   // Build map of entryId -> raw_input for inline expansion
   const entryRawInputs = useMemo(() => {
     const map = new Map<string, string>();
@@ -167,21 +181,21 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
 
   // Helper to create and save entry from food items
   const createEntryFromItems = useCallback((items: FoodItem[], rawInput: string | null, sourceMealId?: string) => {
-    // Generate entry ID and UIDs upfront to ensure consistency and enable optimistic highlighting
+    // Generate entry ID and UIDs upfront
     const entryId = crypto.randomUUID();
     const itemsWithUids = items.map(item => ({
       ...item,
       uid: crypto.randomUUID(),
-      entryId, // Add entryId immediately for grouped highlighting
+      entryId,
     }));
     
-    // Set highlights BEFORE mutation to prevent flash of unstyled rows
-    addNewItems(itemsWithUids);
+    // Track that we're waiting for this entry to appear
+    setPendingEntryId(entryId);
     
     const totals = calculateTotals(itemsWithUids);
     createEntry.mutate(
       {
-        id: entryId, // Pass client-generated ID to database
+        id: entryId,
         eaten_date: dateStr,
         raw_input: rawInput,
         food_items: itemsWithUids,
@@ -196,12 +210,11 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
           foodInputRef.current?.clear();
         },
         onError: () => {
-          // Rollback optimistic state on failure
-          removeNewItemsByEntry(entryId);
+          setPendingEntryId(null);
         },
       }
     );
-  }, [createEntry, dateStr, addNewItems, removeNewItemsByEntry]);
+  }, [createEntry, dateStr]);
 
   const handleSubmit = async (text: string) => {
     const result = await analyzeFood(text);
@@ -263,7 +276,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
 
   // Handle direct scan results (when barcode lookup succeeds)
   const handleScanResult = async (foodItem: Omit<FoodItem, 'uid' | 'entryId'>, originalInput: string) => {
-    // Generate entry ID and UID upfront for optimistic highlighting
+    // Generate entry ID and UID upfront
     const entryId = crypto.randomUUID();
     const itemWithUid = {
       ...foodItem,
@@ -271,8 +284,8 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       entryId,
     };
     
-    // Set highlights BEFORE mutation
-    addNewItems([itemWithUid]);
+    // Track that we're waiting for this entry
+    setPendingEntryId(entryId);
     
     const totals = calculateTotals([itemWithUid]);
     createEntry.mutate(
@@ -291,7 +304,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
           // Input already cleared by barcode scanner
         },
         onError: () => {
-          removeNewItemsByEntry(entryId);
+          setPendingEntryId(null);
         },
       }
     );
@@ -460,7 +473,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
           onScanResult={handleScanResult}
           onLogSavedMeal={handleLogSavedMeal}
           onCreateNewMeal={() => setCreateMealDialogOpen(true)}
-          isLoading={isAnalyzing || createEntry.isPending}
+          isLoading={isAnalyzing || createEntry.isPending || (isFetching && !!pendingEntryId)}
         />
         {analyzeError && (
           <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive mt-3">
@@ -514,7 +527,6 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
             onUpdateItem={handleItemUpdate}
             onUpdateItemBatch={handleItemUpdateBatch}
             onRemoveItem={handleItemRemove}
-            newItemUids={newItemUids}
             newEntryIds={newEntryIds}
             totals={displayTotals}
             totalsPosition="top"
