@@ -55,15 +55,24 @@ const periods = [
 ];
 
 const renderGroupedLabel = (props: any) => {
-  const { x, y, width, value, isRunMiddle, runLength, runIndex } = props;
+  const { x, y, width, value } = props;
+  // Recharts puts the data entry on props.payload, not top-level props
+  const entry = props.payload ?? props;
+  
+  const isRunMiddle = Boolean(entry.isRunMiddle);
+  const runLength = Number(entry.runLength) || 1;
+  const runIndex = Number(entry.runIndex) || 0;
   
   // Only render for the middle bar of each run
   if (!isRunMiddle || !value) return null;
   
+  // Prevent NaN coordinates
+  if (typeof x !== 'number' || typeof width !== 'number') return null;
+  
   // Calculate spanning width (bar width × run length + gaps between bars)
-  const barGap = 4; // Approximate gap between bars
+  const barGap = 4;
   const spanWidth = width * runLength + (runLength - 1) * barGap;
-  const spanX = x - (runIndex * (width + barGap)); // Offset to start of run
+  const spanX = x - (runIndex * (width + barGap));
   
   return (
     <text
