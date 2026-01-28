@@ -1,119 +1,242 @@
 
-## Fix: Eliminate Flash of Individual Outlines
 
-### The Problem
+## Simplify Highlighting: Remove Optimistic UI + Fix Delete Flicker
 
-When adding a saved meal with multiple items, there's a brief flash of individual outlines around each row before the unified grouped outline appears.
+### Overview
 
-### Root Cause
+This plan removes the complex optimistic `newItems` array that causes timing bugs, replaces it with an extended button loading state for feedback, and fixes the delete icon color flicker.
 
-The timing sequence creates a race condition:
+---
 
-1. `createEntry.mutate()` succeeds and React Query cache updates
-2. Component re-renders with new `allItems` and `entryBoundaries` 
-3. At this point, `newEntryIds` is still empty (set in `onSuccess` hasn't run yet)
-4. Without `newEntryIds`, no highlight animation is applied
-5. Then `onSuccess` callback fires, calling `addNewItems()` which sets `newEntryIds`
-6. Another re-render occurs, now with the grouped outline
+### Part 1: Remove `newItems` Array
 
-The flash occurs in step 3-4 because there's a render where:
-- The rows exist (from query data)
-- But `newEntryIds` hasn't been populated yet
+**Files to modify:**
 
-Additionally, `newItemUids` still triggers the `animate-highlight-fade` animation on description cells, which may contribute to the visual inconsistency.
+#### `src/hooks/useEditableItems.ts`
 
-### Solution
+Remove the optimistic item storage completely:
 
-Set `newEntryIds` optimistically BEFORE the mutation succeeds, using the entry ID that will be created. Since we're generating UIDs upfront anyway, we can also generate the entry ID upfront and pass it to the mutation.
+- Delete `newItems` state (line 35)
+- Delete `newItemUids` state (line 38) 
+- Delete `addNewItems` function (lines 94-115)
+- Delete `removeNewItemsByEntry` function (lines 118-131)
+- Delete `clearNewHighlights` function (lines 134-136)
+- Simplify `displayItems` to only process query items (no merging with `newItems`)
+- Keep `newEntryIds` state and add a simple `markEntryAsNew(entryId)` function that:
+  - Adds the entryId to `newEntryIds`
+  - Sets a 2.5s timeout to remove it (for animation duration)
 
-However, looking at the current flow, the `entryId` comes from `createdEntry.id` which is the database-generated UUID. We can't know this ahead of time unless we generate it client-side.
-
-**Alternative approach**: Generate the entry ID client-side before the mutation:
-
+**Updated return object:**
 ```typescript
-const entryId = crypto.randomUUID();
-// Use this for both the mutation and addNewItems
+return {
+  displayItems,        // Just processed query items
+  newEntryIds,         // Still needed for grouped highlighting
+  markEntryAsNew,      // New: simple function to set highlight
+  updateItem,
+  updateItemBatch,
+  removeItem,
+  clearPendingForItem,
+  clearAllPending,
+};
 ```
 
-This requires the database to accept client-provided IDs (which it should, since `id` has a default).
+---
 
-### Files to Modify
+### Part 2: Extend Loading State Until Rows Visible
 
-#### 1. `src/pages/FoodLog.tsx`
+**Files to modify:**
 
-In `createEntryFromItems`:
+#### `src/hooks/useFoodEntries.ts`
+
+Expose `isFetching` from the query:
+
+```typescript
+return {
+  entries: query.data || [],
+  isLoading: query.isLoading,
+  isFetching: query.isFetching,  // Add this
+  error: query.error,
+  createEntry,
+  updateEntry,
+  deleteEntry,
+  deleteAllByDate,
+};
+```
+
+#### `src/pages/FoodLog.tsx`
+
+1. Track the "pending" entry ID to know when rows have appeared:
+
+```typescript
+const [pendingEntryId, setPendingEntryId] = useState<string | null>(null);
+```
+
+2. Check if pending entry exists in current entries:
+
+```typescript
+const pendingEntryVisible = pendingEntryId 
+  ? entries.some(e => e.id === pendingEntryId)
+  : false;
+```
+
+3. Clear pending when entry becomes visible:
+
+```typescript
+useEffect(() => {
+  if (pendingEntryVisible && pendingEntryId) {
+    markEntryAsNew(pendingEntryId);  // Trigger highlight animation
+    setPendingEntryId(null);
+  }
+}, [pendingEntryVisible, pendingEntryId, markEntryAsNew]);
+```
+
+4. Update `createEntryFromItems`:
 
 ```typescript
 const createEntryFromItems = useCallback((items, rawInput, sourceMealId) => {
-  // Generate entry ID upfront (client-side)
   const entryId = crypto.randomUUID();
-  
   const itemsWithUids = items.map(item => ({
     ...item,
     uid: crypto.randomUUID(),
-    entryId, // Add entryId immediately
+    entryId,
   }));
   
-  // Set highlights BEFORE mutation
-  addNewItems(itemsWithUids);
+  // Track that we're waiting for this entry
+  setPendingEntryId(entryId);
   
   createEntry.mutate({
-    id: entryId, // Pass client-generated ID
-    // ... rest of mutation data
+    id: entryId,
+    eaten_date: dateStr,
+    raw_input: rawInput,
+    food_items: itemsWithUids,
+    // ... totals
+    source_meal_id: sourceMealId ?? null,
   }, {
     onSuccess: () => {
       foodInputRef.current?.clear();
     },
     onError: () => {
-      // Remove items on error (they weren't saved)
-      // Could add rollback logic here
-    }
+      setPendingEntryId(null);  // Clear on failure
+    },
   });
-}, [...]);
+}, [createEntry, dateStr]);
 ```
 
-This ensures `newEntryIds` is populated BEFORE query data updates, eliminating the flash.
-
-#### 2. Verify database accepts client-provided ID
-
-The `food_entries` table likely has `id uuid default gen_random_uuid()`, which means passing an explicit ID should work. If not, we may need to verify this.
-
-#### 3. Remove redundant `newItemUids` highlight (optional)
-
-Since we're now using entry-based grouping, the individual `animate-highlight-fade` on description cells (line 313 in FoodItemsTable) could be cleaned up. However, this may be desired for the amber background effect, so we should keep it but ensure it doesn't conflict with the outline animation.
-
-### Implementation Order
-
-1. Update `createEntryFromItems` in `FoodLog.tsx` to:
-   - Generate `entryId` client-side
-   - Add `entryId` to items before calling `addNewItems`
-   - Call `addNewItems` BEFORE the mutation
-   - Pass the client-generated `id` to the mutation
-
-2. Same pattern for `handleScanResult` (single item case)
-
-3. Verify mutations work with client-provided IDs
-
-### Edge Case: Error Handling
-
-If the mutation fails after we've already added items to local state, we need to clean them up. Add error handling:
+5. Compute extended loading state:
 
 ```typescript
-onError: () => {
-  // Items were added optimistically but save failed
-  // Clear them from local state
-  setNewItems(prev => prev.filter(i => i.entryId !== entryId));
-  setNewEntryIds(prev => {
-    const next = new Set(prev);
-    next.delete(entryId);
-    return next;
-  });
-}
+// Button shows "Adding..." while:
+// - AI is analyzing, OR
+// - Mutation is pending, OR  
+// - Query is refetching AND we have a pending entry
+const isAddingFood = isAnalyzing || createEntry.isPending || (isFetching && !!pendingEntryId);
 ```
 
-This requires exposing a `removeNewItems` function from the hook, or calling existing `removeItem` for each.
+6. Pass to `LogInput`:
+
+```typescript
+<LogInput
+  isLoading={isAddingFood}
+  // ... rest
+/>
+```
+
+7. Remove `addNewItems` and `removeNewItemsByEntry` calls - no longer needed.
+
+---
+
+### Part 3: Fix Delete Icon Flicker
+
+**Root cause:** The button has `-m-2.5` negative margin expanding its hit area, combined with `hover:text-destructive` and `md:opacity-0 md:group-hover:opacity-100`. At certain mouse positions near the edge, the browser rapidly toggles which element is "hovered."
+
+**File to modify:** `src/components/FoodItemsTable.tsx`
+
+**Fix approach:** Use padding instead of negative margin, and add `relative z-10` to ensure consistent hit detection.
+
+**Line 506 (individual item delete):**
+```typescript
+// Before:
+className="h-11 w-11 -m-2.5 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+
+// After:
+className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+```
+
+**Line 278 (totals row delete) and Line 520 (entry delete):**
+Apply the same fix - remove negative margin, use smaller explicit size.
+
+---
+
+### Part 4: Cleanup - Remove Unused Code
+
+#### `src/components/FoodItemsTable.tsx`
+
+- Remove `newItemUids` prop from interface (line 40)
+- Remove `newItemUids` destructuring (line 62)
+- Remove `isNewItem` function (lines 193-195)
+- Remove `animate-highlight-fade` from description classes (line 313)
+- Keep all the `newEntryIds` / entry-based grouping logic (this still works)
+
+#### `tailwind.config.ts`
+
+No changes needed - the outline-fade animations are still used.
+
+---
+
+### Sequence Diagram
+
+```text
+User clicks "Add Food"
+        │
+        ▼
+┌─────────────────────────────┐
+│ Button shows "Adding..."    │
+│ setPendingEntryId(newId)    │
+│ createEntry.mutate(...)     │
+└─────────────────────────────┘
+        │
+        ▼
+   Mutation completes
+   Query invalidates
+   Query refetches
+        │
+        ▼
+┌─────────────────────────────┐
+│ entries now includes new    │
+│ pendingEntryVisible = true  │
+└─────────────────────────────┘
+        │
+        ▼
+┌─────────────────────────────┐
+│ useEffect fires:            │
+│ - markEntryAsNew(entryId)   │
+│ - setPendingEntryId(null)   │
+└─────────────────────────────┘
+        │
+        ▼
+┌─────────────────────────────┐
+│ Button returns to normal    │
+│ New rows render with        │
+│ grouped outline animation   │
+└─────────────────────────────┘
+```
+
+---
 
 ### Visual Result
 
-Before: Flash of unstyled rows → then grouped outline appears
-After: Grouped outline appears immediately (no flash)
+| Before | After |
+|--------|-------|
+| Items flash with individual outlines, then switch to grouped | Rows appear directly with grouped outline |
+| Delete icon flickers red/gray on hover | Smooth color transition |
+| "Adding..." disappears before rows visible | "Adding..." stays until rows render |
+
+---
+
+### Technical Notes
+
+- The `pendingEntryId` pattern is simpler than optimistic UI because we only track *one* piece of state (an ID), not a parallel data array
+- Using React Query's `isFetching` is the standard way to know when a refetch is in progress
+- The highlight animation still works via `newEntryIds` + `markEntryAsNew()`, just triggered at a different time (when entry appears in query vs. when mutation starts)
+- No changes to database schema or mutations needed
+
