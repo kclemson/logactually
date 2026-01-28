@@ -1,36 +1,75 @@
 
 
-## Fix Calories Bar Color
+## Fix Default Period and Missing Weight Labels
 
-The Calories chart is using the wrong color. It's hardcoded to `hsl(217 91% 60%)` (a lighter blue) instead of the intended `#0033CC` (deep blue).
-
----
-
-### Issue
-
-| Location | Current Color | Expected Color |
-|----------|---------------|----------------|
-| Line 312, Calories Bar | `hsl(217 91% 60%)` | `#0033CC` |
+Two changes needed to fix the reported issues.
 
 ---
 
-### Fix
+### Issue #1: Default View Should Be 30 Days
 
-**File: `src/pages/Trends.tsx`**
+**Current code (line 161):**
+```typescript
+const [selectedPeriod, setSelectedPeriod] = useState(7);
+```
 
-Update line 312:
+**Fix:** Change to `useState(30)`
+
+---
+
+### Issue #2: Sets×Reps×Weight Labels Not Showing
+
+The labels aren't appearing because the custom properties (`isRunMiddle`, `runLength`, `runIndex`) aren't being accessed correctly from the Recharts props.
+
+**Root Cause:** In Recharts `LabelList` with `content`, the data point properties are spread directly into props - not nested inside `payload`. The current code checks `payload?.isRunMiddle`, but it should check `props` directly OR the properties might be nested differently.
+
+**Diagnosis approach:** Looking at Recharts documentation and examples, when using `LabelList` on a `Bar`, the props passed to the custom content function include:
+- `x`, `y`, `width`, `height` - positioning
+- `value` - the value from `dataKey`
+- The data entry properties are accessible directly in props
+
+**Fix:** Access the custom properties directly from props instead of from `payload`:
 
 ```typescript
-// Current
-<Bar dataKey="calories" fill="hsl(217 91% 60%)" radius={[2, 2, 0, 0]} />
-
-// Updated
-<Bar dataKey="calories" fill="#0033CC" radius={[2, 2, 0, 0]} />
+const renderGroupedLabel = (props: any) => {
+  const { x, y, width, value, isRunMiddle, runLength, runIndex } = props;
+  
+  // Only render for the middle bar of each run
+  if (!isRunMiddle || !value) return null;
+  
+  // Calculate spanning width
+  const barGap = 4;
+  const spanWidth = width * runLength + (runLength - 1) * barGap;
+  const spanX = x - (runIndex * (width + barGap));
+  
+  return (
+    <text
+      x={spanX + spanWidth / 2}
+      y={y + 10}
+      fill="#FFFFFF"
+      textAnchor="middle"
+      fontSize={7}
+      fontWeight={500}
+    >
+      {value}
+    </text>
+  );
+};
 ```
 
 ---
 
-### Note
+### Files to Modify
 
-The `charts` array already has the correct color defined (`#0033CC`) - it's just not being used for this specific chart which was created separately for the 2-column layout.
+| File | Line | Change |
+|------|------|--------|
+| `src/pages/Trends.tsx` | 161 | Change `useState(7)` to `useState(30)` |
+| `src/pages/Trends.tsx` | 57-81 | Update `renderGroupedLabel` to access props directly |
+
+---
+
+### Summary of Changes
+
+1. **Line 161:** `useState(30)` for 30-day default
+2. **Lines 57-81:** Destructure `isRunMiddle`, `runLength`, `runIndex` directly from props instead of from `payload`
 
