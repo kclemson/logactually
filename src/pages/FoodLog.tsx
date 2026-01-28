@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { format, addDays, subDays, isToday, parseISO, isFuture } from 'date-fns';
+import { format, addDays, subDays, isToday, parseISO, isFuture, startOfMonth } from 'date-fns';
+import { useFoodDatesWithData } from '@/hooks/useDatesWithData';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LogInput, LogInputRef } from '@/components/LogInput';
@@ -37,6 +38,7 @@ interface FoodLogContentProps {
 const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   const [, setSearchParams] = useSearchParams();
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(new Date()));
   const [expandedEntryIds, setExpandedEntryIds] = useState<Set<string>>(new Set());
   
   // State for save meal dialog (from existing entry)
@@ -66,6 +68,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   const isTodaySelected = isToday(selectedDate);
   
   const { entries, isFetching, createEntry, updateEntry, deleteEntry, deleteAllByDate } = useFoodEntries(dateStr);
+  const { data: datesWithFood = [] } = useFoodDatesWithData(calendarMonth);
   const { analyzeFood, isAnalyzing, error: analyzeError } = useAnalyzeFood();
   const { data: savedMeals } = useSavedMeals();
   const saveMeal = useSaveMeal();
@@ -546,7 +549,10 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
               mode="single"
               selected={selectedDate}
               onSelect={handleDateSelect}
+              onMonthChange={setCalendarMonth}
               disabled={(date) => isFuture(date)}
+              modifiers={{ hasData: datesWithFood }}
+              modifiersClassNames={{ hasData: "text-blue-600 dark:text-blue-400 font-semibold" }}
               initialFocus
               className="pointer-events-auto"
             />

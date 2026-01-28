@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useSearchParams, Navigate } from 'react-router-dom';
-import { format, addDays, subDays, isToday, parseISO, isFuture } from 'date-fns';
+import { format, addDays, subDays, isToday, parseISO, isFuture, startOfMonth } from 'date-fns';
+import { useWeightDatesWithData } from '@/hooks/useDatesWithData';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { FEATURES } from '@/lib/feature-flags';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
@@ -50,6 +51,7 @@ interface WeightLogContentProps {
 const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   const [, setSearchParams] = useSearchParams();
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(new Date()));
   const [expandedEntryIds, setExpandedEntryIds] = useState<Set<string>>(new Set());
   const [createRoutineDialogOpen, setCreateRoutineDialogOpen] = useState(false);
   
@@ -68,6 +70,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   const isTodaySelected = isToday(selectedDate);
   
   const { weightSets, isFetching, createEntry, updateSet, deleteSet, deleteEntry, deleteAllByDate } = useWeightEntries(dateStr);
+  const { data: datesWithWeights = [] } = useWeightDatesWithData(calendarMonth);
   const { analyzeWeights, isAnalyzing, error: analyzeError } = useAnalyzeWeights();
   const saveRoutineMutation = useSaveRoutine();
   
@@ -345,7 +348,10 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
               mode="single"
               selected={selectedDate}
               onSelect={handleDateSelect}
+              onMonthChange={setCalendarMonth}
               disabled={(date) => isFuture(date)}
+              modifiers={{ hasData: datesWithWeights }}
+              modifiersClassNames={{ hasData: "text-purple-600 dark:text-purple-400 font-semibold" }}
               initialFocus
               className="pointer-events-auto"
             />
