@@ -374,9 +374,9 @@ const Trends = () => {
                           offset={20}
                           cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
                         />
-                        <Bar dataKey="proteinPct" name="Protein" stackId="macros" fill={CHART_COLORS.protein} />
+                        <Bar dataKey="fatPct" name="Fat" stackId="macros" fill={CHART_COLORS.fat} />
                         <Bar dataKey="carbsPct" name="Carbs" stackId="macros" fill={CHART_COLORS.carbs} />
-                        <Bar dataKey="fatPct" name="Fat" stackId="macros" fill={CHART_COLORS.fat} radius={[2, 2, 0, 0]} />
+                        <Bar dataKey="proteinPct" name="Protein" stackId="macros" fill={CHART_COLORS.protein} radius={[2, 2, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
