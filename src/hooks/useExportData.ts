@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { FoodEntry, FoodItem } from '@/types/food';
-import { exportDailyTotals, exportFoodLog } from '@/lib/csv-export';
+import { exportDailyTotals, exportFoodLog, exportWeightLog as exportWeightLogCSV, WeightSetExport } from '@/lib/csv-export';
 
 export function useExportData() {
   const [isExporting, setIsExporting] = useState(false);
@@ -34,6 +34,26 @@ export function useExportData() {
     });
   };
 
+  const fetchAllWeightSets = async (): Promise<WeightSetExport[]> => {
+    const { data, error } = await supabase
+      .from('weight_sets')
+      .select('logged_date, created_at, description, sets, reps, weight_lbs, raw_input')
+      .order('logged_date', { ascending: true })
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    return (data || []).map((row) => ({
+      logged_date: row.logged_date,
+      created_at: row.created_at,
+      description: row.description,
+      sets: row.sets,
+      reps: row.reps,
+      weight_lbs: Number(row.weight_lbs),
+      raw_input: row.raw_input,
+    }));
+  };
+
   const handleExportDailyTotals = async () => {
     setIsExporting(true);
     try {
@@ -58,9 +78,22 @@ export function useExportData() {
     }
   };
 
+  const handleExportWeightLog = async () => {
+    setIsExporting(true);
+    try {
+      const sets = await fetchAllWeightSets();
+      exportWeightLogCSV(sets);
+    } catch (error) {
+      console.error('Export failed:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return {
     isExporting,
     exportDailyTotals: handleExportDailyTotals,
     exportFoodLog: handleExportFoodLog,
+    exportWeightLog: handleExportWeightLog,
   };
 }

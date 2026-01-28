@@ -105,3 +105,48 @@ export function exportFoodLog(entries: FoodEntry[]) {
   const timestamp = format(new Date(), 'yyyy-MM-dd');
   downloadCSV(csv, `food-log-${timestamp}.csv`);
 }
+
+/**
+ * Weight set data for CSV export
+ */
+export interface WeightSetExport {
+  logged_date: string;
+  created_at: string;
+  description: string;
+  sets: number;
+  reps: number;
+  weight_lbs: number;
+  raw_input: string | null;
+}
+
+/**
+ * Export weight log - one row per exercise set
+ */
+export function exportWeightLog(sets: WeightSetExport[]) {
+  const headers = ['Date', 'Time', 'Exercise', 'Sets', 'Reps', 'Weight (lbs)', 'Raw Input'];
+
+  const sorted = [...sets].sort((a, b) => {
+    if (a.logged_date !== b.logged_date) {
+      return a.logged_date.localeCompare(b.logged_date);
+    }
+    return a.created_at.localeCompare(b.created_at);
+  });
+
+  const rows = sorted.map((set) => [
+    set.logged_date,
+    format(new Date(set.created_at), 'HH:mm'),
+    set.description,
+    set.sets,
+    set.reps,
+    set.weight_lbs,
+    set.raw_input || '',
+  ]);
+
+  const csv = [
+    headers.join(','),
+    ...rows.map((row) => row.map(escapeCSV).join(',')),
+  ].join('\n');
+
+  const timestamp = format(new Date(), 'yyyy-MM-dd');
+  downloadCSV(csv, `weight-log-${timestamp}.csv`);
+}
