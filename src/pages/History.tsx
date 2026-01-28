@@ -193,7 +193,7 @@ const History = () => {
             >
               {/* Row 1: Calorie count (always takes space) */}
               <span className={cn(
-                "text-sm font-medium",
+                "text-xs",
                 hasEntries && isCurrentMonth 
                   ? "text-rose-500 dark:text-rose-400" 
                   : "invisible"
