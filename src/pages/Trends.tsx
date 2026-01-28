@@ -55,19 +55,24 @@ const periods = [
 ];
 
 const renderGroupedLabel = (props: any) => {
-  const { x, y, width, value } = props;
+  const { x, y, width, height, value } = props;
   
-  // Guard against invalid values
   if (!value || typeof x !== 'number' || typeof width !== 'number') return null;
+  
+  // Center position of the bar
+  const centerX = x + width / 2;
+  const centerY = y + (height || 0) / 2;
   
   return (
     <text
-      x={x + width / 2}
-      y={y + 10}
+      x={centerX}
+      y={centerY}
       fill="#FFFFFF"
       textAnchor="middle"
+      dominantBaseline="middle"
       fontSize={7}
       fontWeight={500}
+      transform={`rotate(-90, ${centerX}, ${centerY})`}
     >
       {value}
     </text>
