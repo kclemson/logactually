@@ -181,7 +181,7 @@ const History = () => {
               onClick={() => handleDayClick(day)}
               disabled={isFutureDate}
               className={cn(
-                "flex flex-col items-center justify-center p-2 min-h-[68px] rounded-xl transition-colors",
+                "grid grid-rows-3 items-center justify-items-center p-2 min-h-[68px] rounded-xl transition-colors",
                 isFutureDate && "bg-muted/20 text-muted-foreground/50 cursor-default",
                 !isCurrentMonth && !isFutureDate && "bg-muted/30 hover:bg-muted/50 text-muted-foreground/60 cursor-pointer",
                 isCurrentMonth && !isFutureDate && !hasEntries && !hasWeights && "bg-muted/40 hover:bg-muted/60 cursor-pointer",
@@ -191,14 +191,19 @@ const History = () => {
                 isTodayDate && "ring-2 ring-primary ring-inset",
               )}
             >
-              {/* Calorie count - above day number */}
-              {hasEntries && isCurrentMonth && (
-                <span className="text-rose-500 dark:text-rose-400 font-medium">
-                  {Math.round(summary.totalCalories).toLocaleString()}
-                </span>
-              )}
+              {/* Row 1: Calorie count (always takes space) */}
+              <span className={cn(
+                "text-sm font-medium",
+                hasEntries && isCurrentMonth 
+                  ? "text-rose-500 dark:text-rose-400" 
+                  : "invisible"
+              )}>
+                {hasEntries && isCurrentMonth 
+                  ? `${Math.round(summary.totalCalories).toLocaleString()} cal` 
+                  : "\u00A0"}
+              </span>
               
-              {/* Day number - centered */}
+              {/* Row 2: Day number (always centered in middle row) */}
               <span
                 className={cn(
                   "font-medium",
@@ -209,10 +214,13 @@ const History = () => {
                 {format(day, 'd')}
               </span>
 
-              {/* Weight indicator */}
-              {hasWeights && isCurrentMonth && (
+              {/* Row 3: Weight indicator (always takes space) */}
+              <span className={cn(
+                "h-3 w-3 flex items-center justify-center",
+                !(hasWeights && isCurrentMonth) && "invisible"
+              )}>
                 <Dumbbell className="h-3 w-3 text-purple-500 dark:text-purple-400" />
-              )}
+              </span>
             </button>
           );
         })}
