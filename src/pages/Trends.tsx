@@ -76,7 +76,7 @@ const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
   const chartData = exercise.weightData.map(d => ({
     ...d,
     dateLabel: format(new Date(d.date), 'MMM d'),
-    label: `${d.sets}×${d.reps}`,
+    label: `${d.sets}×${d.reps}×${d.weight}`,
   }));
 
   return (
