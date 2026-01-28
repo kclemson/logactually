@@ -35,6 +35,7 @@ export function useWeightEntries(date: string) {
         sets: row.sets,
         reps: row.reps,
         weight_lbs: Number(row.weight_lbs),
+        rawInput: row.raw_input,
       }));
     },
     enabled: !!user,

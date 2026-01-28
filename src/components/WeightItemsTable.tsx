@@ -42,6 +42,9 @@ interface WeightItemsTableProps {
   onDeleteEntry?: (entryId: string) => void;
   onDeleteAll?: () => void;
   totalsPosition?: 'top' | 'bottom';
+  entryRawInputs?: Map<string, string>;
+  expandedEntryIds?: Set<string>;
+  onToggleEntryExpand?: (entryId: string) => void;
 }
 
 export function WeightItemsTable({
@@ -55,6 +58,9 @@ export function WeightItemsTable({
   onDeleteEntry,
   onDeleteAll,
   totalsPosition = 'top',
+  entryRawInputs,
+  expandedEntryIds,
+  onToggleEntryExpand,
 }: WeightItemsTableProps) {
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const descriptionOriginalRef = useRef<string>('');
@@ -240,6 +246,9 @@ export function WeightItemsTable({
         const isLastInEntry = !!isLastItemInEntry(index);
         const currentEntryId = getEntryIdForItem(index);
         const entryIsNew = isNewEntry(currentEntryId);
+        const isCurrentExpanded = currentEntryId ? expandedEntryIds?.has(currentEntryId) : false;
+        const currentRawInput = currentEntryId ? entryRawInputs?.get(currentEntryId) : null;
+        const hasRawInput = !!currentRawInput;
 
         return (
           <div key={item.uid || index} className="contents">
@@ -256,7 +265,21 @@ export function WeightItemsTable({
               {/* Description cell */}
               {editable ? (
                 <div className="flex min-w-0">
-                  {showEntryDividers && <div className="w-3 shrink-0" />}
+                  {showEntryDividers && (
+                    <div className="w-4 shrink-0 relative flex items-center justify-center self-stretch">
+                      {isLastInEntry && hasRawInput ? (
+                        <button
+                          onClick={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
+                          className={cn(
+                            "absolute inset-0 w-[44px] -left-3 flex items-center justify-center text-muted-foreground/60 hover:text-muted-foreground transition-transform text-xl",
+                            isCurrentExpanded && "rotate-90"
+                          )}
+                        >
+                          ›
+                        </button>
+                      ) : null}
+                    </div>
+                  )}
                   <div className={cn(
                     "flex-1 min-w-0 rounded pl-1 py-1 line-clamp-2",
                     "focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg"
@@ -283,7 +306,21 @@ export function WeightItemsTable({
                 </div>
               ) : (
                 <div className="flex items-baseline min-w-0">
-                  {showEntryDividers && <div className="w-3 shrink-0" />}
+                  {showEntryDividers && (
+                    <div className="w-4 shrink-0 relative flex items-center justify-center self-stretch">
+                      {isLastInEntry && hasRawInput ? (
+                        <button
+                          onClick={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
+                          className={cn(
+                            "absolute inset-0 w-[44px] -left-3 flex items-center justify-center text-muted-foreground/60 hover:text-muted-foreground transition-transform text-xl",
+                            isCurrentExpanded && "rotate-90"
+                          )}
+                        >
+                          ›
+                        </button>
+                      ) : null}
+                    </div>
+                  )}
                   <span 
                     title={item.description}
                     className="pl-1 pr-0 py-1 line-clamp-2 shrink min-w-0"
@@ -423,8 +460,19 @@ export function WeightItemsTable({
                 ) : (
                   <span></span>
                 )
-              )}
+                )}
             </div>
+            
+            {/* Expanded content section */}
+            {showEntryDividers && isLastInEntry && isCurrentExpanded && currentRawInput && (
+              <div className={cn('grid gap-0.5', gridCols)}>
+                <div className="col-span-full pl-6 py-1">
+                  <p className="text-muted-foreground whitespace-pre-wrap italic">
+                    {currentRawInput}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         );
       })}

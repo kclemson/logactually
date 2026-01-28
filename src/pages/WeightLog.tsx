@@ -33,6 +33,7 @@ interface WeightLogContentProps {
 const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   const [, setSearchParams] = useSearchParams();
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [expandedEntryIds, setExpandedEntryIds] = useState<Set<string>>(new Set());
   
   // Track pending entry ID to extend loading state until rows are visible
   const [pendingEntryId, setPendingEntryId] = useState<string | null>(null);
@@ -97,6 +98,27 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
 
     return { allItems: items, entryBoundaries: boundaries };
   }, [weightSets]);
+
+  // Build raw inputs map from weight sets
+  const entryRawInputs = useMemo(() => {
+    const map = new Map<string, string>();
+    weightSets.forEach(set => {
+      if (set.rawInput && !map.has(set.entryId)) {
+        map.set(set.entryId, set.rawInput);
+      }
+    });
+    return map;
+  }, [weightSets]);
+
+  // Toggle entry expansion
+  const handleToggleEntryExpand = useCallback((entryId: string) => {
+    setExpandedEntryIds(prev => {
+      const next = new Set(prev);
+      if (next.has(entryId)) next.delete(entryId);
+      else next.add(entryId);
+      return next;
+    });
+  }, []);
 
   // Derive display items from query data + pending local edits
   const { 
@@ -280,6 +302,9 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
           entryBoundaries={entryBoundaries}
           onDeleteEntry={handleDeleteEntry}
           onDeleteAll={handleDeleteAll}
+          entryRawInputs={entryRawInputs}
+          expandedEntryIds={expandedEntryIds}
+          onToggleEntryExpand={handleToggleEntryExpand}
         />
       )}
 
