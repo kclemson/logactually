@@ -1,100 +1,164 @@
 
 
-## Fix Timezone Bug in Weight Trends Chart
+## Highlight Days with Data in Date Picker
 
-The Leg Press chart is showing "Jan 27" when the data is actually from Jan 28 due to a JavaScript timezone parsing bug.
+Add visual indicators in the date picker calendar to show which days have logged data.
 
 ---
 
-### Root Cause
+### Current State
 
-When parsing a date string like `"2026-01-28"` with `new Date()`, JavaScript interprets it as midnight UTC. For users in western timezones (like Pacific Time, UTC-8), this UTC time converts to the **previous day** in local time:
+The Calendar component in both Log Food and Log Weights pages shows a plain calendar with no indication of which dates have data logged.
 
+### Desired Result
+
+- **Log Food**: Days with food entries show in a distinct color (e.g., blue text)
+- **Log Weights**: Days with weight entries show in a distinct color (e.g., purple text)
+
+---
+
+### Technical Approach
+
+Use react-day-picker's `modifiers` and `modifiersClassNames` props to apply custom styling to dates with data. The Calendar component already uses DayPicker.
+
+**react-day-picker v8 supports:**
+```tsx
+<DayPicker
+  modifiers={{ hasData: [date1, date2, date3] }}
+  modifiersClassNames={{ hasData: "text-blue-600" }}
+/>
 ```
-"2026-01-28" → 2026-01-28T00:00:00Z (UTC midnight)
-                    ↓ (in Pacific Time)
-              2026-01-27T16:00:00 (Jan 27!)
+
+---
+
+### Data Fetching Strategy
+
+Create a new hook that fetches dates with data for the visible month range. Query is lightweight since we only need the date column:
+
+**For Food (FoodLog):**
+```sql
+SELECT DISTINCT eaten_date FROM food_entries
+WHERE eaten_date >= 'month-start' AND eaten_date <= 'month-end'
 ```
 
-This affects line 119 in `src/pages/Trends.tsx`:
+**For Weights (WeightLog):**
+```sql
+SELECT DISTINCT logged_date FROM weight_sets
+WHERE logged_date >= 'month-start' AND logged_date <= 'month-end'
+```
+
+---
+
+### Implementation Plan
+
+**1. Create `src/hooks/useDatesWithData.ts`**
+
+A new hook to fetch dates with entries for a given month:
+
 ```typescript
-dateLabel: format(new Date(d.date), 'MMM d'),
+export function useFoodDatesWithData(month: Date) {
+  const monthStart = startOfMonth(month);
+  const monthEnd = endOfMonth(month);
+  
+  return useQuery({
+    queryKey: ['food-dates', format(monthStart, 'yyyy-MM')],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('food_entries')
+        .select('eaten_date')
+        .gte('eaten_date', format(monthStart, 'yyyy-MM-dd'))
+        .lte('eaten_date', format(monthEnd, 'yyyy-MM-dd'));
+      
+      // Return unique dates as Date objects
+      const dates = [...new Set(data?.map(e => e.eaten_date) ?? [])];
+      return dates.map(d => new Date(`${d}T12:00:00`)); // Avoid timezone shift
+    },
+  });
+}
+
+export function useWeightDatesWithData(month: Date) {
+  // Similar for weight_sets table using logged_date
+}
 ```
 
-The same issue exists on line 217 for food trends.
+**2. Update `src/pages/FoodLog.tsx`**
 
----
+Track the currently displayed calendar month and pass modifiers:
 
-### Database Verification
+```tsx
+const [calendarMonth, setCalendarMonth] = useState(new Date());
+const { data: datesWithFood = [] } = useFoodDatesWithData(calendarMonth);
 
-| logged_date | exercise_key | weight_lbs |
-|-------------|--------------|------------|
-| 2026-01-28  | leg_press    | 160        |
-| 2026-01-25  | leg_press    | 180        |
-| 2026-01-23  | leg_press    | 180        |
+<Calendar
+  mode="single"
+  selected={selectedDate}
+  onSelect={handleDateSelect}
+  onMonthChange={setCalendarMonth}
+  disabled={(date) => isFuture(date)}
+  modifiers={{ hasData: datesWithFood }}
+  modifiersClassNames={{ hasData: "text-blue-600 dark:text-blue-400 font-semibold" }}
+  initialFocus
+  className="pointer-events-auto"
+/>
+```
 
-**There is no Leg Press on Jan 27.** The bar showing "Jan 27, 160 lbs" is actually the Jan 28 entry mislabeled due to the timezone bug.
+**3. Update `src/pages/WeightLog.tsx`**
 
----
+Same pattern with weight data:
 
-### Solution
+```tsx
+const [calendarMonth, setCalendarMonth] = useState(new Date());
+const { data: datesWithWeights = [] } = useWeightDatesWithData(calendarMonth);
 
-Add a time component when parsing to avoid timezone shifts. Using noon (`T12:00:00`) ensures the date stays correct regardless of timezone:
-
-```typescript
-// Before (buggy)
-dateLabel: format(new Date(d.date), 'MMM d'),
-
-// After (fixed)
-dateLabel: format(new Date(`${d.date}T12:00:00`), 'MMM d'),
+<Calendar
+  modifiers={{ hasData: datesWithWeights }}
+  modifiersClassNames={{ hasData: "text-purple-600 dark:text-purple-400 font-semibold" }}
+  // ... other props
+/>
 ```
 
 ---
 
-### Files to Modify
+### Visual Result
 
-| File | Lines | Change |
-|------|-------|--------|
-| `src/pages/Trends.tsx` | 119 | Fix weight trends date parsing |
-| `src/pages/Trends.tsx` | 217 | Fix food trends date parsing |
-
----
-
-### Changes
-
-**Line 119 (ExerciseChart):**
-```typescript
-// Current
-dateLabel: format(new Date(d.date), 'MMM d'),
-
-// Fixed
-dateLabel: format(new Date(`${d.date}T12:00:00`), 'MMM d'),
-```
-
-**Line 217 (food chartData):**
-```typescript
-// Current
-date: format(new Date(date), 'MMM d'),
-
-// Fixed
-date: format(new Date(`${date}T12:00:00`), 'MMM d'),
+```text
+┌─────────────────────────────────────┐
+│           January 2026              │
+│  Su  Mo  Tu  We  Th  Fr  Sa         │
+│                  1   2   3          │
+│   4   5   6   7   8   9  10         │
+│  11  12  13  14  15  16  17         │  (14, 21, 28 in blue = has food data)
+│  18  19  20  21  22  23  24         │
+│  25  26  27 [28]                    │
+└─────────────────────────────────────┘
 ```
 
 ---
 
-### Why This Works
+### Files to Create/Modify
 
-By specifying `T12:00:00` (noon local time), the date parsing stays in local timezone context rather than UTC. Even with timezone offsets up to +/- 12 hours, the date will remain on the correct calendar day.
+| File | Change |
+|------|--------|
+| `src/hooks/useDatesWithData.ts` | New hook with `useFoodDatesWithData` and `useWeightDatesWithData` |
+| `src/pages/FoodLog.tsx` | Add calendar month state, fetch food dates, pass modifiers |
+| `src/pages/WeightLog.tsx` | Add calendar month state, fetch weight dates, pass modifiers |
 
 ---
 
-### After Fix
+### Edge Cases
 
-The Leg Press chart will correctly show:
-- Jan 28: 160 lbs (today's entry)
-- Jan 25: 180 lbs
-- Jan 23: 180 lbs
-- etc.
+| Case | Handling |
+|------|----------|
+| Month navigation | `onMonthChange` callback updates state, triggers new query |
+| Initial load | Default to current month |
+| Timezone | Use `T12:00:00` when parsing dates to avoid off-by-one errors |
+| Selected date styling | Selected day styling (`day_selected`) takes precedence, which is correct |
 
-And the Log Weights page for Jan 27 will correctly show no Leg Press entries (because there aren't any).
+---
+
+### Performance
+
+- Query runs once per month navigation (cached by react-query)
+- Only fetches date column, no heavy data
+- Data is reused if user navigates back to same month
 
