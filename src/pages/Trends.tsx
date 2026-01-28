@@ -56,13 +56,9 @@ const periods = [
 
 const renderGroupedLabel = (props: any) => {
   const { x, y, width, value } = props;
-  const payload = props.payload;
   
-  // Only render if this is the first occurrence of this label
-  if (!payload?.showLabel || !value) return null;
-  
-  // Guard against NaN coordinates
-  if (typeof x !== 'number' || typeof width !== 'number') return null;
+  // Guard against invalid values
+  if (!value || typeof x !== 'number' || typeof width !== 'number') return null;
   
   return (
     <text
@@ -79,25 +75,12 @@ const renderGroupedLabel = (props: any) => {
 };
 
 const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
-  // Build chart data with first-occurrence tracking for labels
   const chartData = useMemo(() => {
-    const seenLabels = new Set<string>();
-    
-    return exercise.weightData.map((d) => {
-      const label = `${d.sets}×${d.reps}×${d.weight}`;
-      const showLabel = !seenLabels.has(label);
-      
-      if (showLabel) {
-        seenLabels.add(label);
-      }
-      
-      return {
-        ...d,
-        dateLabel: format(new Date(d.date), 'MMM d'),
-        label,
-        showLabel,
-      };
-    });
+    return exercise.weightData.map((d) => ({
+      ...d,
+      dateLabel: format(new Date(d.date), 'MMM d'),
+      label: `${d.sets}×${d.reps}×${d.weight}`,
+    }));
   }, [exercise.weightData]);
 
   return (
