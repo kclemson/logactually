@@ -1,8 +1,8 @@
 
 
-## Adjust Fat/Protein Colors for Better Distinction
+## Change Protein Color to Super Light Blue
 
-The current sky blue (`hsl(199 89% 48%)`) for Fat is too similar to the Calories blue (`hsl(217 91% 60%)`). We'll swap Protein to green and Fat to teal for better visual distinction.
+Replace the green protein color with a light blue that's distinct from the deeper Calories blue.
 
 ---
 
@@ -11,15 +11,14 @@ The current sky blue (`hsl(199 89% 48%)`) for Fat is too similar to the Calories
 | Macro | Current | New | HSL Value |
 |-------|---------|-----|-----------|
 | Calories | Blue | Blue (no change) | `hsl(217 91% 60%)` |
-| Protein | Teal | Green | `hsl(142 76% 36%)` |
+| Protein | Green | Light Blue | `hsl(200 80% 70%)` |
 | Carbs | Purple | Purple (no change) | `hsl(262 83% 58%)` |
-| Fat | Sky Blue | Teal | `hsl(173 80% 40%)` |
+| Fat | Teal | Teal (no change) | `hsl(173 80% 40%)` |
 
-This creates clear visual separation:
-- **Calories**: Blue (warm-ish blue)
-- **Protein**: Green (distinctly different hue)
-- **Carbs**: Purple (cool, mid-spectrum)
-- **Fat**: Teal (cool, between blue and green but distinct from both)
+The light blue (`hsl(200 80% 70%)`) has:
+- Similar hue to Calories blue (200 vs 217) but shifted slightly toward cyan
+- Much higher lightness (70% vs 60%) making it distinctly "light"
+- Clear visual separation from the deeper Calories blue while staying in the blue family
 
 ---
 
@@ -27,12 +26,10 @@ This creates clear visual separation:
 
 All changes in `src/pages/Trends.tsx`:
 
-| Line | Macro | Current | New |
-|------|-------|---------|-----|
-| 184 | Protein | `hsl(173 80% 40%)` | `hsl(142 76% 36%)` |
-| 186 | Fat | `hsl(199 89% 48%)` | `hsl(173 80% 40%)` |
-| 282 | Protein | `hsl(173 80% 40%)` | `hsl(142 76% 36%)` |
-| 284 | Fat | `hsl(199 89% 48%)` | `hsl(173 80% 40%)` |
+| Line | Current | New |
+|------|---------|-----|
+| 184 | `hsl(142 76% 36%)` (green) | `hsl(200 80% 70%)` (light blue) |
+| 282 | `fill="hsl(142 76% 36%)"` | `fill="hsl(200 80% 70%)"` |
 
 ---
 
@@ -40,5 +37,5 @@ All changes in `src/pages/Trends.tsx`:
 
 | File | Changes |
 |------|---------|
-| `src/pages/Trends.tsx` | Update 4 color values (2 in charts array, 2 in grouped bar chart) |
+| `src/pages/Trends.tsx` | Update 2 protein color values |
 
