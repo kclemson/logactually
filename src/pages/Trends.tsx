@@ -67,32 +67,48 @@ const renderGroupedLabel = (props: any) => {
   
   const [sets, reps, weight] = parts;
   
-  // Build the stacked format: ["3", "×", "10", "×", "160"]
-  const lines = [sets, '×', reps, '×', weight];
-  const lineHeight = 8;
+  // Weight label appears ABOVE the bar in purple
+  const weightY = y - 4;
   
-  // Calculate starting Y to center the 5 lines vertically in the bar
-  const totalTextHeight = lines.length * lineHeight;
+  // Sets×reps inside the bar (stacked: "3", "×", "10")
+  const insideLines = [sets, '×', reps];
+  const lineHeight = 8;
+  const totalTextHeight = insideLines.length * lineHeight;
   const startY = y + ((height || 0) - totalTextHeight) / 2 + lineHeight / 2;
   
   return (
-    <text
-      x={centerX}
-      fill="#FFFFFF"
-      textAnchor="middle"
-      fontSize={7}
-      fontWeight={500}
-    >
-      {lines.map((line, i) => (
-        <tspan
-          key={i}
-          x={centerX}
-          y={startY + i * lineHeight}
-        >
-          {line}
-        </tspan>
-      ))}
-    </text>
+    <g>
+      {/* Weight label above bar - purple color matching bar */}
+      <text
+        x={centerX}
+        y={weightY}
+        fill="hsl(262 83% 58%)"
+        textAnchor="middle"
+        fontSize={7}
+        fontWeight={500}
+      >
+        {weight}
+      </text>
+      
+      {/* Sets×reps inside bar - white color */}
+      <text
+        x={centerX}
+        fill="#FFFFFF"
+        textAnchor="middle"
+        fontSize={7}
+        fontWeight={500}
+      >
+        {insideLines.map((line, i) => (
+          <tspan
+            key={i}
+            x={centerX}
+            y={startY + i * lineHeight}
+          >
+            {line}
+          </tspan>
+        ))}
+      </text>
+    </g>
   );
 };
 
