@@ -29,7 +29,7 @@ interface SaveRoutineDialogProps {
 function getDefaultName(exerciseSets: WeightSet[]): string {
   if (exerciseSets.length === 0) return '';
   const first = exerciseSets[0];
-  return `${first.description} (${first.sets}×${first.reps} @ ${first.weight_lbs} lbs)`;
+  return `${first.description} (${first.sets}x${first.reps} @ ${first.weight_lbs} lbs)`;
 }
 
 export function SaveRoutineDialog({
@@ -98,7 +98,7 @@ export function SaveRoutineDialog({
             <ul className="list-disc list-inside space-y-0.5">
               {exerciseSets.slice(0, 5).map((set, i) => (
                 <li key={i} className="truncate">
-                  {set.description} ({set.sets}×{set.reps} @ {set.weight_lbs}lbs)
+                  {set.description} ({set.sets}x{set.reps} @ {set.weight_lbs}lbs)
                 </li>
               ))}
               {exerciseSets.length > 5 && (
