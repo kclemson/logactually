@@ -184,7 +184,7 @@ const History = () => {
               onClick={() => handleDayClick(day)}
               disabled={isFutureDate}
               className={cn(
-                "grid grid-rows-3 items-center justify-items-center p-2 min-h-[68px] rounded-xl transition-colors",
+                "grid grid-rows-3 items-center justify-items-center p-1.5 min-h-[64px] rounded-xl transition-colors",
                 isFutureDate && "bg-muted/20 text-muted-foreground/50 cursor-default",
                 !isCurrentMonth && !isFutureDate && "bg-muted/30 hover:bg-muted/50 text-muted-foreground/60 cursor-pointer",
                 isCurrentMonth && !isFutureDate && !hasEntries && !hasWeights && "bg-muted/40 hover:bg-muted/60 cursor-pointer",
@@ -196,13 +196,13 @@ const History = () => {
             >
               {/* Row 1: Calorie count (always takes space) */}
               <span className={cn(
-                "text-xs",
+                "text-[10px]",
                 hasEntries && isCurrentMonth 
-                  ? "text-rose-500 dark:text-rose-400" 
+                  ? "text-blue-500 dark:text-blue-400" 
                   : "invisible"
               )}>
                 {hasEntries && isCurrentMonth 
-                  ? `${Math.round(summary.totalCalories).toLocaleString()} cal` 
+                  ? `${Math.round(summary.totalCalories).toLocaleString()}cal` 
                   : "\u00A0"}
               </span>
               
