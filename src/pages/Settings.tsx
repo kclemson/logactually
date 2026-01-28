@@ -45,7 +45,7 @@ export default function Settings() {
   const [expandedRoutineIds, setExpandedRoutineIds] = useState<Set<string>>(new Set());
   
   // Export data
-  const { isExporting, exportDailyTotals, exportFoodLog } = useExportData();
+  const { isExporting, exportDailyTotals, exportFoodLog, exportWeightLog } = useExportData();
 
   // Avoid hydration mismatch
   useEffect(() => {
@@ -95,7 +95,7 @@ export default function Settings() {
   ] as const;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Account section */}
       <CollapsibleSection title="Account" icon={User}>
         <div className="space-y-3">
@@ -213,15 +213,15 @@ export default function Settings() {
       </CollapsibleSection>
 
       {/* Export as CSV */}
-      <CollapsibleSection title="Export Food Data" icon={Download}>
-        <div className="flex gap-2 max-w-xs">
+      <CollapsibleSection title="Export to CSV" icon={Download}>
+        <div className="flex flex-wrap gap-2 max-w-md">
           <Button
             variant="outline"
             size="sm"
             onClick={exportDailyTotals}
             disabled={isExporting}
           >
-            Daily Totals
+            Food Daily Totals
           </Button>
           <Button
             variant="outline"
@@ -231,6 +231,16 @@ export default function Settings() {
           >
             Food Log
           </Button>
+          {showWeights && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportWeightLog}
+              disabled={isExporting}
+            >
+              Weight Log
+            </Button>
+          )}
         </div>
       </CollapsibleSection>
 
