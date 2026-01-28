@@ -48,6 +48,8 @@ interface WeightItemsTableProps {
   onToggleEntryExpand?: (entryId: string) => void;
   /** Callback when user wants to save an entry as a routine */
   onSaveAsRoutine?: (entryId: string, rawInput: string | null, exerciseSets: WeightSet[]) => void;
+  /** When true, show inline labels after numeric values (e.g., "3 sets") */
+  showInlineLabels?: boolean;
 }
 
 export function WeightItemsTable({
@@ -66,6 +68,7 @@ export function WeightItemsTable({
   expandedEntryIds,
   onToggleEntryExpand,
   onSaveAsRoutine,
+  showInlineLabels = false,
 }: WeightItemsTableProps) {
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const descriptionOriginalRef = useRef<string>('');
@@ -140,10 +143,14 @@ export function WeightItemsTable({
   const showEntryDividers = entryBoundaries && entryBoundaries.length > 0;
 
   // Grid: Description | Sets | Reps | Weight | Delete
+  // When showInlineLabels is true, widen columns for suffixes
   const getGridCols = (showDelete: boolean) => {
+    const setsCol = showInlineLabels ? '55px' : '45px';
+    const repsCol = showInlineLabels ? '55px' : '45px';
+    const weightCol = showInlineLabels ? '70px' : '60px';
     return showDelete
-      ? `grid-cols-[1fr_45px_45px_60px_24px]`
-      : `grid-cols-[1fr_45px_45px_60px]`;
+      ? `grid-cols-[1fr_${setsCol}_${repsCol}_${weightCol}_24px]`
+      : `grid-cols-[1fr_${setsCol}_${repsCol}_${weightCol}]`;
   };
 
   const isLastItemInEntry = (index: number): EntryBoundary | null => {
@@ -363,7 +370,10 @@ export function WeightItemsTable({
                   className={getNumberInputClasses(editingCell?.index === index && editingCell?.field === 'sets')}
                 />
               ) : (
-                <span className="px-1 py-1 text-center">{item.sets}</span>
+                <span className="px-1 py-1 text-center">
+                  {item.sets}
+                  {showInlineLabels && <span className="text-[10px] text-muted-foreground ml-0.5">sets</span>}
+                </span>
               )}
 
               {/* Reps */}
@@ -391,7 +401,10 @@ export function WeightItemsTable({
                   className={getNumberInputClasses(editingCell?.index === index && editingCell?.field === 'reps')}
                 />
               ) : (
-                <span className="px-1 py-1 text-center">{item.reps}</span>
+                <span className="px-1 py-1 text-center">
+                  {item.reps}
+                  {showInlineLabels && <span className="text-[10px] text-muted-foreground ml-0.5">reps</span>}
+                </span>
               )}
 
               {/* Weight */}
@@ -419,7 +432,10 @@ export function WeightItemsTable({
                   className={getNumberInputClasses(editingCell?.index === index && editingCell?.field === 'weight_lbs')}
                 />
               ) : (
-                <span className="px-1 py-1 text-center">{item.weight_lbs}</span>
+                <span className="px-1 py-1 text-center">
+                  {item.weight_lbs}
+                  {showInlineLabels && <span className="text-[10px] text-muted-foreground ml-0.5">lbs</span>}
+                </span>
               )}
 
               {/* Delete */}
