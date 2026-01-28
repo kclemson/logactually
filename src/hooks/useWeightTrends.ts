@@ -3,12 +3,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format, subDays, startOfDay } from 'date-fns';
 
-interface DailyProgress {
+export interface WeightPoint {
   date: string;
-  maxWeight: number;
-  totalVolume: number;
-  totalSets: number;
-  totalReps: number;
+  weight: number;
+  sets: number;
+  reps: number;
 }
 
 export interface ExerciseTrend {
@@ -16,7 +15,7 @@ export interface ExerciseTrend {
   description: string;
   sessionCount: number;
   maxWeight: number;
-  dailyData: DailyProgress[];
+  weightData: WeightPoint[];
 }
 
 export function useWeightTrends(days: number) {
@@ -44,45 +43,51 @@ export function useWeightTrends(days: number) {
       const exerciseMap = new Map<string, ExerciseTrend>();
 
       (data || []).forEach(row => {
-        const key = row.exercise_key;
+        const exerciseKey = row.exercise_key;
         const weight = Number(row.weight_lbs);
-        const volume = row.sets * row.reps * weight;
 
-        if (!exerciseMap.has(key)) {
-          exerciseMap.set(key, {
-            exercise_key: key,
+        if (!exerciseMap.has(exerciseKey)) {
+          exerciseMap.set(exerciseKey, {
+            exercise_key: exerciseKey,
             description: row.description,
             sessionCount: 0,
             maxWeight: 0,
-            dailyData: [],
+            weightData: [],
           });
         }
 
-        const trend = exerciseMap.get(key)!;
+        const trend = exerciseMap.get(exerciseKey)!;
         trend.maxWeight = Math.max(trend.maxWeight, weight);
 
-        // Aggregate by date
-        const existing = trend.dailyData.find(d => d.date === row.logged_date);
+        // Aggregate by date + weight (composite key)
+        const compositeKey = `${row.logged_date}_${weight}`;
+        const existing = trend.weightData.find(
+          d => d.date === row.logged_date && d.weight === weight
+        );
         if (existing) {
-          existing.maxWeight = Math.max(existing.maxWeight, weight);
-          existing.totalVolume += volume;
-          existing.totalSets += row.sets;
-          existing.totalReps += row.reps;
+          existing.sets += row.sets;
+          existing.reps += row.reps;
         } else {
-          trend.dailyData.push({
+          trend.weightData.push({
             date: row.logged_date,
-            maxWeight: weight,
-            totalVolume: volume,
-            totalSets: row.sets,
-            totalReps: row.reps,
+            weight,
+            sets: row.sets,
+            reps: row.reps,
           });
         }
       });
 
-      // Count sessions and sort by frequency
+      // Sort weight data by date, then by weight ascending
       const results = Array.from(exerciseMap.values());
       results.forEach(ex => {
-        ex.sessionCount = ex.dailyData.length;
+        ex.weightData.sort((a, b) => {
+          const dateCompare = a.date.localeCompare(b.date);
+          if (dateCompare !== 0) return dateCompare;
+          return a.weight - b.weight;
+        });
+        // Count unique dates as sessions
+        const uniqueDates = new Set(ex.weightData.map(d => d.date));
+        ex.sessionCount = uniqueDates.size;
       });
 
       return results.sort((a, b) => b.sessionCount - a.sessionCount);
