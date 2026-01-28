@@ -89,6 +89,7 @@ interface UpdateSavedMealParams {
  */
 export function useUpdateSavedMeal() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   
   return useMutation({
     mutationFn: async ({ id, name, foodItems }: UpdateSavedMealParams) => {
@@ -115,8 +116,23 @@ export function useUpdateSavedMeal() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['saved-meals'] });
+    onSuccess: (updatedMeal, variables) => {
+      // Update cache in place instead of refetching to preserve list order
+      queryClient.setQueryData(
+        ['saved-meals', user?.id],
+        (oldData: SavedMeal[] | undefined) => {
+          if (!oldData) return oldData;
+          return oldData.map(meal => 
+            meal.id === variables.id 
+              ? { 
+                  ...meal, 
+                  ...updatedMeal,
+                  food_items: (updatedMeal.food_items as unknown as FoodItem[]) ?? meal.food_items,
+                }
+              : meal
+          );
+        }
+      );
     },
   });
 }
