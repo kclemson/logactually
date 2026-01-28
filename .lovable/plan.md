@@ -1,34 +1,50 @@
 
-## Color "Last Active" Green When Today
 
-Add conditional green text color to the "Last Active" column when the date matches the current day.
+## Add Green Highlighting for Active User Rows
+
+Add conditional green text coloring to "Food Today", "Weight Today" columns when values are greater than 0, and highlight the username if any activity occurred today.
 
 ---
 
-### Change
+### Changes
 
 **File: `src/pages/Admin.tsx`**
 
-Lines 105-107 - Add `isToday` import and conditional styling:
+Update three cells in the user stats table to conditionally apply green text:
 
 ```tsx
-// Line 4: Add isToday import
-import { format, parseISO, isToday } from "date-fns";
+// Line 97: Username - green if any activity today
+<td className={`py-0.5 pr-2 whitespace-nowrap ${
+  user.entries_today > 0 || 
+  (user.weight_today ?? 0) > 0 || 
+  (user.last_active && isToday(parseISO(user.last_active))) 
+    ? "text-green-500" : ""
+}`}>
+  User {user.user_number}
+  {USER_NAMES[user.user_number] && ` (${USER_NAMES[user.user_number]})`}
+</td>
 
-// Lines 105-107: Add conditional green color
-<td className={`text-center py-0.5 ${user.last_active && isToday(parseISO(user.last_active)) ? "text-green-500" : ""}`}>
-  {user.last_active ? format(parseISO(user.last_active), "MMM d") : "—"}
+// Line 102: Food Today - green if > 0
+<td className={`text-center py-0.5 pr-2 ${user.entries_today > 0 ? "text-green-500" : ""}`}>
+  {user.entries_today}
+</td>
+
+// Line 104: Weight Today - green if > 0
+<td className={`text-center py-0.5 pr-2 ${(user.weight_today ?? 0) > 0 ? "text-green-500" : ""}`}>
+  {user.weight_today ?? 0}
 </td>
 ```
 
 ---
 
-### How It Works
+### Logic Summary
 
-1. Import `isToday` from `date-fns` (already using this library)
-2. Parse the `last_active` timestamp and check if it matches today's date
-3. If true, apply `text-green-500` class for green text
-4. Otherwise, use default text color
+| Column | Condition for Green |
+|--------|---------------------|
+| User | `entries_today > 0` OR `weight_today > 0` OR `last_active is today` |
+| Food Today | `entries_today > 0` |
+| Weight Today | `weight_today > 0` |
+| Last Active | `last_active is today` (already implemented) |
 
 ---
 
@@ -36,4 +52,5 @@ import { format, parseISO, isToday } from "date-fns";
 
 | File | Change |
 |------|--------|
-| `src/pages/Admin.tsx` | Add `isToday` import (line 4), add conditional green color to Last Active cell (lines 105-107) |
+| `src/pages/Admin.tsx` | Add conditional `text-green-500` to Username (line 97), Food Today (line 102), and Weight Today (line 104) cells |
+
