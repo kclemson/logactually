@@ -18,6 +18,7 @@ import { UtensilsCrossed, Dumbbell, ChevronDown } from 'lucide-react';
 import { CollapsibleSection } from '@/components/CollapsibleSection';
 import { FEATURES } from '@/lib/feature-flags';
 import { useWeightTrends, ExerciseTrend } from '@/hooks/useWeightTrends';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 import {
   Popover,
   PopoverContent,
@@ -104,6 +105,8 @@ const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
 const Trends = () => {
   const [selectedPeriod, setSelectedPeriod] = useState(7);
   const [extraExercise, setExtraExercise] = useState<string | null>(null);
+  const { data: isAdmin } = useIsAdmin();
+  const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
 
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ['food-entries-trends', selectedPeriod],
@@ -329,7 +332,7 @@ const Trends = () => {
       </CollapsibleSection>
 
       {/* Weight Trends Section */}
-      {FEATURES.WEIGHT_TRACKING && (
+      {showWeights && (
         <CollapsibleSection title="Weight Trends" icon={Dumbbell} defaultOpen={true}>
           {weightLoading ? (
             <div className="flex justify-center py-8 -ml-4">
