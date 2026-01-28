@@ -1,99 +1,91 @@
 
 
-## Switch Weight Trends to Column Charts with Sets x Reps Labels
+## Show Separate Bars for Each Weight on Same Day
 
-Convert the weight trends charts from line charts to bar/column charts and add small "3x10" (sets × reps) labels on each column.
+Currently, the chart aggregates all sets for an exercise on the same day into one bar. This loses important information when you use different weights in the same session. We'll change it to show separate columns for each unique weight value.
 
 ---
 
-### Changes Overview
+### Current vs New Behavior
+
+```text
+CURRENT (aggregated by date):
+Jan 27: ▓▓▓▓ "3×20" @ max 70lbs (loses the 60lb vs 70lb distinction)
+
+NEW (separate by date + weight):
+Jan 27: ▓▓ "2×10" @ 60lbs  |  ▓▓ "1×10" @ 70lbs
+```
+
+---
+
+### Data Structure Changes
+
+**Current `DailyProgress`:**
+- Groups by date only
+- Shows max weight, combined sets/reps
+
+**New `WeightPoint`:**
+- Groups by date AND weight
+- Each unique (date, weight) combination gets its own bar
+- Preserves the actual sets×reps for that specific weight
+
+---
+
+### Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/hooks/useWeightTrends.ts` | Add `totalReps` field to `DailyProgress` interface and aggregate it |
-| `src/pages/Trends.tsx` | Convert `ExerciseChart` from `LineChart` to `BarChart`, add `LabelList` import, add custom label renderer |
+| `src/hooks/useWeightTrends.ts` | Change aggregation from "by date" to "by date + weight" |
+| `src/pages/Trends.tsx` | Update chart to handle multiple bars per date |
 
 ---
 
-### 1. Update useWeightTrends Hook
+### Hook Changes (`useWeightTrends.ts`)
 
-Add reps tracking to the `DailyProgress` interface so we can display "sets × reps" on each bar:
+1. Rename `DailyProgress` to `WeightPoint` with updated fields:
+   - `date`: string
+   - `weight`: number (the actual weight, not max)
+   - `sets`: number  
+   - `reps`: number
 
-**Interface change:**
+2. Update aggregation logic:
+   - Create composite key: `${row.logged_date}_${row.weight_lbs}`
+   - If same date AND same weight, combine sets/reps
+   - If same date but different weight, create new data point
+
+3. Sort data points by date, then by weight (ascending) for consistent ordering
+
+---
+
+### Chart Changes (`Trends.tsx`)
+
+1. Update `ExerciseChart` to handle the new data structure:
+   - Each data point now represents a specific weight, not a day
+   - Label shows "sets×reps" as before
+   - Tooltip can show the actual weight value
+
+2. X-axis consideration:
+   - Multiple bars can share the same date label
+   - Bars will naturally group visually by date
+
+---
+
+### Example Data Transformation
+
+**Raw database rows:**
+```text
+Jan 27 | Lat Pulldown | 2 sets | 10 reps | 60 lbs
+Jan 27 | Lat Pulldown | 1 set  | 10 reps | 70 lbs
+```
+
+**New chart data:**
 ```typescript
-interface DailyProgress {
-  date: string;
-  maxWeight: number;
-  totalVolume: number;
-  totalSets: number;
-  totalReps: number;  // NEW: track total reps for label display
-}
+[
+  { date: 'Jan 27', weight: 60, sets: 2, reps: 10, label: '2×10' },
+  { date: 'Jan 27', weight: 70, sets: 1, reps: 10, label: '1×10' }
+]
 ```
 
-**Aggregation logic update:**
-- Initialize `totalReps: row.reps` when creating a new daily entry
-- Add `existing.totalReps += row.reps` when aggregating
-
----
-
-### 2. Update ExerciseChart Component
-
-**Import changes:**
-- Add `LabelList` to recharts imports
-
-**Chart structure changes:**
-- Replace `LineChart` → `BarChart`
-- Replace `Line` → `Bar`
-- Add `LabelList` inside `Bar` with custom content renderer
-- Adjust cursor style from `stroke` to `fill` (bar chart style)
-
-**Custom label renderer:**
-A small function that renders "3×10" style text inside each bar:
-- Uses `x`, `y`, `width`, `height` from LabelList props
-- Positions text centered horizontally, slightly below top of bar
-- Uses contrasting white color against the purple bar (`#FFFFFF`)
-- Very small font size (7px) to fit within narrow bars
-
-**Visual specification:**
-```
-┌─────────┐
-│  3×10   │  ← small white text near top of bar
-│         │
-│         │
-│         │
-│   85    │  ← weight value (shown in tooltip only)
-└─────────┘
-```
-
----
-
-### 3. Label Formatting
-
-The label will show simplified "sets × reps" format:
-- Example: `3×10` for 3 sets of 10 reps
-- If multiple exercises on same day, shows totals: `6×20` (combined sets × combined reps)
-- Uses `×` character (multiplication sign) for clarity
-
----
-
-### Technical Details
-
-**Color contrast:** 
-- Bar fill: `hsl(262 83% 58%)` (purple, existing weight theme)
-- Label text: `#FFFFFF` (white) for maximum contrast
-
-**Label positioning:**
-- `position="inside"` to place text within the bar
-- Custom content uses bar geometry to center text
-
-**Updated chart data structure:**
-```typescript
-const chartData = exercise.dailyData.map(d => ({
-  date: format(new Date(d.date), 'MMM d'),
-  maxWeight: d.maxWeight,
-  totalSets: d.totalSets,
-  totalReps: d.totalReps,
-  label: `${d.totalSets}×${d.totalReps}`,  // Pre-formatted label
-}));
-```
+**Visual result:**
+Two adjacent bars for Jan 27, one shorter (60lbs) and one taller (70lbs), each with its own sets×reps label.
 
