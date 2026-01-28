@@ -1,8 +1,8 @@
 
 
-## Saved Routines - Phase 2 Implementation
+## Add "Save as Routine" Entry Point
 
-Phase 1 completed: database, types, hooks, and CreateRoutineDialog. Now we need to wire up the UI.
+Users need a way to save their logged exercises as a reusable routine. Following the existing pattern from the food logging feature, we'll add a "Save as routine" link in the expanded entry section of the weight log.
 
 ---
 
@@ -10,117 +10,82 @@ Phase 1 completed: database, types, hooks, and CreateRoutineDialog. Now we need 
 
 | File | Action | Purpose |
 |------|--------|---------|
-| `src/components/SavedRoutinesPopover.tsx` | **Create** | Popover for selecting saved routines |
-| `src/components/LogInput.tsx` | **Modify** | Render SavedRoutinesPopover in weights mode |
-| `src/pages/WeightLog.tsx` | **Modify** | Pass routine logging callbacks to LogInput |
-| `src/pages/Settings.tsx` | **Modify** | Add "Saved Routines" management section |
+| `src/components/SaveRoutineDialog.tsx` | **Create** | Dialog to name and save a routine from existing entry |
+| `src/components/WeightItemsTable.tsx` | **Modify** | Add "Save as routine" link in expanded section |
+| `src/pages/WeightLog.tsx` | **Modify** | Handle save routine flow with dialog state |
 
 ---
 
-### 1. SavedRoutinesPopover Component
+### User Flow
 
-Mirror the existing `SavedMealsPopover` pattern:
+1. User logs exercises (e.g., "3x10 lat pulldown at 65lbs")
+2. User clicks the chevron to expand the entry
+3. User sees raw input and a "Save as routine" link
+4. Clicking opens `SaveRoutineDialog` with AI-suggested name
+5. User confirms the name and saves
+6. Routine is now available in the "Saved" popover
+
+---
+
+### Technical Details
+
+**1. SaveRoutineDialog Component**
+
+Mirror the `SaveMealDialog` pattern:
 
 ```tsx
-interface SavedRoutinesPopoverProps {
-  onSelectRoutine: (exerciseSets: SavedExerciseSet[], routineId: string) => void;
-  onClose?: () => void;
-  onCreateNew?: () => void;
+interface SaveRoutineDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  rawInput: string | null;
+  exerciseSets: WeightSet[];
+  onSave: (name: string) => void;
+  isSaving: boolean;
+  suggestedName: string | null;
+  isSuggestingName: boolean;
 }
 ```
 
 Features:
-- List routines sorted by use_count
-- Show exercise count per routine
-- Search filter when 10+ routines
-- "Add New Routine" button at top
-- Loading spinner when selecting
+- Input field for routine name
+- Shows exercise count and preview
+- Loading spinner while AI generates name
+- Auto-focus input when name is ready
+- Enter key to save, Escape to cancel
 
----
+**2. WeightItemsTable Updates**
 
-### 2. LogInput Updates
-
-Add new props for routine mode:
-
+Add new props:
 ```tsx
-interface LogInputProps {
+interface WeightItemsTableProps {
   // ... existing props
-  
-  /** Weights mode: handler for logging saved routines */
-  onLogSavedRoutine?: (exerciseSets: SavedExerciseSet[], routineId: string) => void;
-  /** Weights mode: callback when user clicks "Add New" */
-  onCreateNewRoutine?: () => void;
+  onSaveAsRoutine?: (entryId: string, rawInput: string | null, exerciseSets: WeightSet[]) => void;
+  entryRoutineNames?: Map<string, string>;  // For entries already from routines
 }
 ```
 
-Conditional rendering in the "Saved" button popover:
-- `mode === 'food'` → `SavedMealsPopover`
-- `mode === 'weights'` → `SavedRoutinesPopover`
+In the expanded section (after raw input display):
+- If entry is from a saved routine: Show "Saved routine: {name}"
+- Otherwise: Show "Save as routine" link
 
----
+**3. WeightLog Integration**
 
-### 3. WeightLog Integration
-
-Add state for CreateRoutineDialog and pass callbacks to LogInput:
-
+Add state management:
 ```tsx
-const [createRoutineDialogOpen, setCreateRoutineDialogOpen] = useState(false);
-
-// Handle logging a saved routine
-const handleLogSavedRoutine = (exerciseSets: SavedExerciseSet[], routineId: string) => {
-  createEntryFromExercises(exerciseSets, `From routine: ${routineId}`);
-};
-
-<LogInput
-  mode="weights"
-  onLogSavedRoutine={handleLogSavedRoutine}
-  onCreateNewRoutine={() => setCreateRoutineDialogOpen(true)}
-  // ... other props
-/>
-
-{createRoutineDialogOpen && (
-  <CreateRoutineDialog
-    open={createRoutineDialogOpen}
-    onOpenChange={setCreateRoutineDialogOpen}
-    onRoutineCreated={(routine) => {
-      // Optionally log immediately
-    }}
-    showLogPrompt={true}
-  />
-)}
+const [saveRoutineDialogData, setSaveRoutineDialogData] = useState<{
+  entryId: string;
+  rawInput: string | null;
+  exerciseSets: WeightSet[];
+} | null>(null);
+const [suggestedRoutineName, setSuggestedRoutineName] = useState<string | null>(null);
 ```
 
----
+Add handlers:
+- `handleSaveAsRoutine`: Opens dialog, fires AI name suggestion in parallel
+- `handleSaveRoutineConfirm`: Calls `useSaveRoutine` mutation
 
-### 4. Settings Page Updates
-
-Add a "Saved Routines" section gated by `FEATURES.WEIGHT_TRACKING`:
-
-```tsx
-import { FEATURES } from '@/lib/feature-flags';
-import { useSavedRoutines, useUpdateSavedRoutine, useDeleteSavedRoutine } from '@/hooks/useSavedRoutines';
-import { CreateRoutineDialog } from '@/components/CreateRoutineDialog';
-import { Dumbbell } from 'lucide-react';
-
-// Inside Settings component:
-{FEATURES.WEIGHT_TRACKING && (
-  <CollapsibleSection
-    title="Saved Routines"
-    icon={Dumbbell}
-    headerAction={
-      <Button variant="outline" size="sm" onClick={() => setCreateRoutineDialogOpen(true)}>
-        <Plus className="h-4 w-4 mr-1" />
-        Add
-      </Button>
-    }
-  >
-    {/* Same pattern as Saved Meals: */}
-    {/* - Editable names (contentEditable) */}
-    {/* - Exercise count popover preview */}
-    {/* - Delete with confirmation popover */}
-  </CollapsibleSection>
-)}
-```
+Pass to WeightItemsTable:
+- `onSaveAsRoutine={handleSaveAsRoutine}`
 
 ---
 
@@ -128,8 +93,7 @@ import { Dumbbell } from 'lucide-react';
 
 | File | Changes |
 |------|---------|
-| `src/components/SavedRoutinesPopover.tsx` | Create - copy SavedMealsPopover pattern, adapt for routines |
-| `src/components/LogInput.tsx` | Add `onLogSavedRoutine`, `onCreateNewRoutine` props; conditionally render popover by mode |
-| `src/pages/WeightLog.tsx` | Add CreateRoutineDialog state, pass callbacks to LogInput |
-| `src/pages/Settings.tsx` | Add "Saved Routines" CollapsibleSection gated by feature flag |
+| `src/components/SaveRoutineDialog.tsx` | Create - mirror SaveMealDialog for routines |
+| `src/components/WeightItemsTable.tsx` | Add `onSaveAsRoutine` prop, render "Save as routine" link |
+| `src/pages/WeightLog.tsx` | Add dialog state, name suggestion, save handlers |
 
