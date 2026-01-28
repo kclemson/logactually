@@ -338,6 +338,7 @@ export function DevToolsPanel() {
                         <th className="px-1 py-1 text-left font-medium text-xs">Source</th>
                         <th className="px-1 py-1 text-left font-medium text-xs">Prompt</th>
                         <th className="px-1 py-1 text-left font-medium text-xs">Output</th>
+                        <th className="px-1 py-1 text-left font-medium text-xs">Source Note</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -389,6 +390,17 @@ export function DevToolsPanel() {
                                     <span className="truncate">
                                       {f.description} ({f.calories} cal)
                                     </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-1 py-1 text-xs text-muted-foreground max-w-[200px]">
+                            {result.error ? null : (
+                              <div className="space-y-0.5">
+                                {result.output?.food_items?.map((f, idx) => (
+                                  <div key={idx} className="truncate" title={f.source_note || undefined}>
+                                    {f.source_note || "—"}
                                   </div>
                                 ))}
                               </div>
