@@ -1,68 +1,70 @@
 
 
-## Calendar Calorie Display Improvements
+## Fix Chart Clipping on Mobile - Food and Weight Trends
 
-Two issues to fix:
-1. The "cal" label is causing text to wrap, making cells taller than rounded squares
-2. Red text implies something is wrong - should use blue for neutral reference
+Both the Food Trends and Weight Trends sections have `-ml-4` (negative left margin) classes that push content outside the visible container, causing clipping on mobile screens.
 
 ---
 
-### Current State
+### Root Cause
 
-- Font size: `text-xs` (12px)
-- Format: `1,428 cal` (with space before "cal")
-- Color: `text-rose-500 dark:text-rose-400` (red)
-- Cell has `p-2` padding
+The `-ml-4` class was applied to align content visually but doesn't account for the container's edge on mobile, causing left-side clipping.
 
 ---
 
-### Changes
+### All Locations to Fix
 
-**1. Reduce font size and tighten format**
-- Change from `text-xs` to `text-[10px]` for a more compact display
-- Remove space before "cal" to save horizontal space: `1,428cal`
-
-**2. Change color from red to blue**
-- Use `text-blue-500 dark:text-blue-400` to match the focus/link color convention
-- Blue is neutral/informational rather than warning/error
-
-**3. Reduce cell padding**
-- Change from `p-2` to `p-1.5` to give more room for content
-
----
-
-### Code Changes
-
-| Line | Current | New |
-|------|---------|-----|
-| 187 | `p-2 min-h-[68px]` | `p-1.5 min-h-[64px]` |
-| 199 | `text-xs` | `text-[10px]` |
-| 201 | `text-rose-500 dark:text-rose-400` | `text-blue-500 dark:text-blue-400` |
-| 205 | `${...} cal` | `${...}cal` (no space) |
+| Line | Element | Current Class | Fix |
+|------|---------|---------------|-----|
+| 209 | Average stats grid | `grid grid-cols-4 gap-2 -ml-4` | Remove `-ml-4` |
+| 225 | Food loading spinner | `flex justify-center py-8 -ml-4` | Remove `-ml-4` |
+| 229 | Food empty state | `py-8 text-center text-muted-foreground -ml-4` | Remove `-ml-4` |
+| 233 | Food charts container | `space-y-3 -ml-4` | Remove `-ml-4` |
+| 338 | Weight loading spinner | `flex justify-center py-8 -ml-4` | Remove `-ml-4` |
+| 342 | Weight empty state | `py-8 text-center text-muted-foreground -ml-4` | Remove `-ml-4` |
+| 346 | Weight charts container | `space-y-3 -ml-4` | Remove `-ml-4` |
 
 ---
 
-### Visual Result
+### Additional Weight Trends Improvements
 
-Before:
-```
-1,428
- cal     <- wraps to second line
- 22
+While fixing the clipping, also update the `ExerciseChart` header to handle long exercise names better:
+
+**Current (lines 66-72):**
+```tsx
+<CardHeader className="p-2 pb-1">
+  <CardTitle className="text-sm font-semibold flex justify-between">
+    <span>{exercise.description}</span>
+    <span className="text-muted-foreground font-normal text-xs">
+      Max: {exercise.maxWeight} lbs
+    </span>
+  </CardTitle>
+</CardHeader>
 ```
 
-After:
+**New:**
+```tsx
+<CardHeader className="p-2 pb-1">
+  <CardTitle className="text-xs font-semibold flex flex-col gap-0.5">
+    <span className="truncate">{exercise.description}</span>
+    <span className="text-muted-foreground font-normal text-[10px]">
+      Max: {exercise.maxWeight} lbs
+    </span>
+  </CardTitle>
+</CardHeader>
 ```
-1,428cal  <- single line, smaller, blue
-   22
-```
+
+Changes:
+- `text-sm` → `text-xs` for tighter title
+- `flex justify-between` → `flex flex-col gap-0.5` for vertical stacking
+- Add `truncate` to prevent long names from overflowing
+- `text-xs` → `text-[10px]` for the max weight subtitle
 
 ---
 
-### File to Modify
+### Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/pages/History.tsx` | Reduce font size, padding, remove space before "cal", change color to blue |
+| `src/pages/Trends.tsx` | Remove all 7 instances of `-ml-4`, update ExerciseChart header layout |
 
