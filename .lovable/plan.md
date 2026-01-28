@@ -1,87 +1,98 @@
 
 
-## Enable Weight Tracking for Admin Accounts
+## Enable Weight Tracking UI for Admins Across All Pages
 
-Allow admin users to access the weight tracking feature in production, without requiring dev mode.
-
----
-
-### Overview
-
-| File | Action | Purpose |
-|------|--------|---------|
-| `src/components/BottomNav.tsx` | **Modify** | Show "Log Weights" nav item for admins OR dev mode |
-| `src/App.tsx` | **Modify** | Always register `/weights` route (access controlled at page level) |
-| `src/pages/WeightLog.tsx` | **Modify** | Add access check - redirect non-admins when feature flag is off |
+The previous change only enabled the WeightLog page and nav item for admins. Several other pages still check `FEATURES.WEIGHT_TRACKING` directly without considering admin status.
 
 ---
 
-### Approach
+### Problem
 
-Follow the same pattern as the Admin page:
-- Route is always registered in App.tsx
-- Page component handles access control (redirect if not authorized)
-- Navigation shows/hides based on access rights
+Three additional locations still gate weight-related UI behind only the feature flag:
+
+| Location | Issue |
+|----------|-------|
+| `History.tsx` | Weight query disabled; dumbbell icon hidden |
+| `Trends.tsx` | Weight Trends section not rendered |
+| `Settings.tsx` | Saved Routines section not rendered |
 
 ---
 
-### Technical Details
+### Solution
 
-**1. BottomNav.tsx**
+Add `useIsAdmin` hook to each page and update conditionals to: `FEATURES.WEIGHT_TRACKING || isAdmin`
 
-Change `showWeights` to include admin check:
+---
 
-```tsx
-const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
-```
+### Changes
 
-This shows the nav item if:
-- Feature flag is enabled (dev mode), OR
-- User is an admin
+**1. History.tsx**
 
-**2. App.tsx**
-
-Remove the conditional wrapper around the weights route:
+Add admin check for the weight entries query and dumbbell display:
 
 ```tsx
-// Before
-{FEATURES.WEIGHT_TRACKING && (
-  <Route path="/weights" element={<WeightLog />} />
-)}
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 
-// After
-<Route path="/weights" element={<WeightLog />} />
-```
-
-This ensures the route exists for admins even when the feature flag is off.
-
-**3. WeightLog.tsx**
-
-Add access control at the top of the component (similar to Admin.tsx pattern):
-
-```tsx
-import { Navigate } from "react-router-dom";
-import { useIsAdmin } from "@/hooks/useIsAdmin";
-import { FEATURES } from "@/lib/feature-flags";
-
-export default function WeightLog() {
-  const { data: isAdmin, isLoading: isAdminLoading } = useIsAdmin();
+const History = () => {
+  const { data: isAdmin } = useIsAdmin();
+  const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
   
-  // ... existing hooks ...
-
-  // Access check: allow if feature flag is on OR user is admin
-  if (!FEATURES.WEIGHT_TRACKING && !isAdminLoading && !isAdmin) {
-    return <Navigate to="/" replace />;
-  }
+  // ...
   
-  // Show nothing while checking admin status (prevents flash)
-  if (!FEATURES.WEIGHT_TRACKING && isAdminLoading) {
-    return null;
-  }
-
-  // ... rest of component ...
-}
+  // Line 95: Update query enabled condition
+  const { data: weightSummaries = [] } = useQuery({
+    // ...
+    enabled: showWeights,  // Was: FEATURES.WEIGHT_TRACKING
+  });
+  
+  // Line 176: Update hasWeights check
+  const hasWeights = showWeights && !!weightByDate.get(dateStr);  // Was: FEATURES.WEIGHT_TRACKING && ...
 ```
+
+**2. Trends.tsx**
+
+Add admin check for the Weight Trends section:
+
+```tsx
+import { useIsAdmin } from '@/hooks/useIsAdmin';
+
+const Trends = () => {
+  const { data: isAdmin } = useIsAdmin();
+  const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
+  
+  // ...
+  
+  // Line 332: Update conditional render
+  {showWeights && (  // Was: FEATURES.WEIGHT_TRACKING &&
+    <CollapsibleSection title="Weight Trends" ...>
+```
+
+**3. Settings.tsx**
+
+Add admin check for the Saved Routines section:
+
+```tsx
+import { useIsAdmin } from '@/hooks/useIsAdmin';
+
+export default function Settings() {
+  const { data: isAdmin } = useIsAdmin();
+  const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
+  
+  // ...
+  
+  // Line 197: Update conditional render
+  {showWeights && (  // Was: FEATURES.WEIGHT_TRACKING &&
+    <CollapsibleSection title="Saved Routines" ...>
+```
+
+---
+
+### Pattern
+
+All files follow the same pattern:
+1. Import `useIsAdmin` hook
+2. Create `showWeights` variable: `FEATURES.WEIGHT_TRACKING || isAdmin`
+3. Replace direct `FEATURES.WEIGHT_TRACKING` checks with `showWeights`
 
 ---
 
@@ -89,7 +100,7 @@ export default function WeightLog() {
 
 | File | Changes |
 |------|---------|
-| `src/components/BottomNav.tsx` | Update `showWeights` to `FEATURES.WEIGHT_TRACKING \|\| isAdmin` |
-| `src/App.tsx` | Remove conditional wrapper from `/weights` route |
-| `src/pages/WeightLog.tsx` | Add `useIsAdmin` check, redirect non-admins when flag is off |
+| `src/pages/History.tsx` | Add hook, update query `enabled` and `hasWeights` check |
+| `src/pages/Trends.tsx` | Add hook, update Weight Trends section conditional |
+| `src/pages/Settings.tsx` | Add hook, update Saved Routines section conditional |
 
