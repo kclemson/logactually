@@ -182,7 +182,7 @@ const Trends = () => {
 
   const charts = [
     { key: 'calories', label: 'Calories', color: 'hsl(217 91% 60%)' },
-    { key: 'protein', label: 'Protein (g)', color: 'hsl(142 76% 36%)' },
+    { key: 'protein', label: 'Protein (g)', color: 'hsl(200 80% 70%)' },
     { key: 'carbs', label: 'Carbs (g)', color: 'hsl(262 83% 58%)' },
     { key: 'fat', label: 'Fat (g)', color: 'hsl(173 80% 40%)' },
   ];
@@ -280,7 +280,7 @@ const Trends = () => {
                           offset={20}
                           cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
                         />
-                        <Bar dataKey="protein" name="Protein" fill="hsl(142 76% 36%)" radius={[2, 2, 0, 0]} />
+                        <Bar dataKey="protein" name="Protein" fill="hsl(200 80% 70%)" radius={[2, 2, 0, 0]} />
                         <Bar dataKey="carbs" name="Carbs" fill="hsl(262 83% 58%)" radius={[2, 2, 0, 0]} />
                         <Bar dataKey="fat" name="Fat" fill="hsl(173 80% 40%)" radius={[2, 2, 0, 0]} />
                       </BarChart>
