@@ -6,15 +6,14 @@ import {
   BarChart,
   Bar,
   XAxis,
-  YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { UtensilsCrossed } from 'lucide-react';
+import { CollapsibleSection } from '@/components/CollapsibleSection';
 
 const CompactTooltip = ({ active, payload, label, formatter }: any) => {
   if (!active || !payload?.length) return null;
@@ -92,25 +91,6 @@ const Trends = () => {
     }));
   }, [entries]);
 
-  // Calculate percentage data for 100% stacked chart
-  const percentageChartData = useMemo(() => {
-    return chartData.map((day) => {
-      const total = day.carbs + day.protein + day.fat;
-      if (total === 0) {
-        return { date: day.date, carbs: 0, protein: 0, fat: 0, carbsRaw: 0, proteinRaw: 0, fatRaw: 0 };
-      }
-      return {
-        date: day.date,
-        carbs: (day.carbs / total) * 100,
-        protein: (day.protein / total) * 100,
-        fat: (day.fat / total) * 100,
-        carbsRaw: day.carbs,
-        proteinRaw: day.protein,
-        fatRaw: day.fat,
-      };
-    });
-  }, [chartData]);
-
   // Calculate averages
   const averages = useMemo(() => {
     if (chartData.length === 0)
@@ -156,98 +136,39 @@ const Trends = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-4 gap-2">
-        {charts.map(({ key, label }) => (
-          <Card key={key} className="text-center">
-            <CardContent className="p-2">
-              <p className="text-base font-semibold">
-                {averages[key as keyof typeof averages]}
-              </p>
-              <p className="text-[10px] text-muted-foreground">
-                Avg {label.split(' ')[0]}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {isLoading ? (
-        <div className="flex justify-center py-8">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-        </div>
-      ) : chartData.length === 0 ? (
-        <div className="py-8 text-center text-muted-foreground">
-          No data for this period
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {/* Row 1: Calories + Macros Breakdown */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* Calories Chart */}
-            <Card>
-              <CardHeader className="p-2 pb-1">
-                <CardTitle className="text-sm font-semibold">Calories</CardTitle>
-              </CardHeader>
-              <CardContent className="p-2 pt-0">
-                <div className="h-24">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis
-                        dataKey="date"
-                        tick={{ fontSize: 8 }}
-                        stroke="hsl(var(--muted-foreground))"
-                        interval="preserveStartEnd"
-                      />
-                      <Tooltip
-                        content={<CompactTooltip />}
-                        offset={20}
-                        cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
-                      />
-                      <Bar dataKey="calories" fill="hsl(217 91% 60%)" radius={[2, 2, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+      {/* Food Trends Section */}
+      <CollapsibleSection title="Food Trends" icon={UtensilsCrossed} defaultOpen={true}>
+        <div className="grid grid-cols-4 gap-2 -ml-4">
+          {charts.map(({ key, label }) => (
+            <Card key={key} className="text-center">
+              <CardContent className="p-2">
+                <p className="text-base font-semibold">
+                  {averages[key as keyof typeof averages]}
+                </p>
+                <p className="text-[10px] text-muted-foreground">
+                  Avg {label.split(' ')[0]}
+                </p>
               </CardContent>
             </Card>
+          ))}
+        </div>
 
-            {/* Macros Breakdown Chart (grouped bars) */}
-            <Card>
-              <CardHeader className="p-2 pb-1">
-                <CardTitle className="text-sm font-semibold">Macros (g)</CardTitle>
-              </CardHeader>
-              <CardContent className="p-2 pt-0">
-                <div className="h-24">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData} barGap={0}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis
-                        dataKey="date"
-                        tick={{ fontSize: 8 }}
-                        stroke="hsl(var(--muted-foreground))"
-                        interval="preserveStartEnd"
-                      />
-                      <Tooltip
-                        content={<CompactTooltip />}
-                        offset={20}
-                        cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
-                      />
-                      <Bar dataKey="protein" name="Protein" fill="hsl(142 76% 36%)" radius={[2, 2, 0, 0]} />
-                      <Bar dataKey="carbs" name="Carbs" fill="hsl(38 92% 50%)" radius={[2, 2, 0, 0]} />
-                      <Bar dataKey="fat" name="Fat" fill="hsl(346 77% 49%)" radius={[2, 2, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
+        {isLoading ? (
+          <div className="flex justify-center py-8 -ml-4">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           </div>
-
-          {/* Row 2: Protein + Carbs + Fat */}
-          <div className="grid grid-cols-3 gap-3">
-            {charts.slice(1).map(({ key, label, color }) => (
-              <Card key={key}>
+        ) : chartData.length === 0 ? (
+          <div className="py-8 text-center text-muted-foreground -ml-4">
+            No data for this period
+          </div>
+        ) : (
+          <div className="space-y-3 -ml-4">
+            {/* Row 1: Calories + Macros Breakdown */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Calories Chart */}
+              <Card>
                 <CardHeader className="p-2 pb-1">
-                  <CardTitle className="text-sm font-semibold">{label}</CardTitle>
+                  <CardTitle className="text-sm font-semibold">Calories</CardTitle>
                 </CardHeader>
                 <CardContent className="p-2 pt-0">
                   <div className="h-24">
@@ -265,20 +186,82 @@ const Trends = () => {
                           offset={20}
                           cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
                         />
-                        <Bar
-                          dataKey={key}
-                          fill={color}
-                          radius={[2, 2, 0, 0]}
-                        />
+                        <Bar dataKey="calories" fill="hsl(217 91% 60%)" radius={[2, 2, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
                 </CardContent>
               </Card>
-            ))}
+
+              {/* Macros Breakdown Chart (grouped bars) */}
+              <Card>
+                <CardHeader className="p-2 pb-1">
+                  <CardTitle className="text-sm font-semibold">Macros (g)</CardTitle>
+                </CardHeader>
+                <CardContent className="p-2 pt-0">
+                  <div className="h-24">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={chartData} barGap={0}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis
+                          dataKey="date"
+                          tick={{ fontSize: 8 }}
+                          stroke="hsl(var(--muted-foreground))"
+                          interval="preserveStartEnd"
+                        />
+                        <Tooltip
+                          content={<CompactTooltip />}
+                          offset={20}
+                          cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
+                        />
+                        <Bar dataKey="protein" name="Protein" fill="hsl(142 76% 36%)" radius={[2, 2, 0, 0]} />
+                        <Bar dataKey="carbs" name="Carbs" fill="hsl(38 92% 50%)" radius={[2, 2, 0, 0]} />
+                        <Bar dataKey="fat" name="Fat" fill="hsl(346 77% 49%)" radius={[2, 2, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Row 2: Protein + Carbs + Fat */}
+            <div className="grid grid-cols-3 gap-3">
+              {charts.slice(1).map(({ key, label, color }) => (
+                <Card key={key}>
+                  <CardHeader className="p-2 pb-1">
+                    <CardTitle className="text-sm font-semibold">{label}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-2 pt-0">
+                    <div className="h-24">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={chartData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                          <XAxis
+                            dataKey="date"
+                            tick={{ fontSize: 8 }}
+                            stroke="hsl(var(--muted-foreground))"
+                            interval="preserveStartEnd"
+                          />
+                          <Tooltip
+                            content={<CompactTooltip />}
+                            offset={20}
+                            cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
+                          />
+                          <Bar
+                            dataKey={key}
+                            fill={color}
+                            radius={[2, 2, 0, 0]}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </CollapsibleSection>
     </div>
   );
 };

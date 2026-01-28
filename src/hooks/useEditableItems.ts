@@ -1,7 +1,14 @@
 import { useState, useMemo, useCallback } from 'react';
 import { FoodItem, EditableField } from '@/types/food';
 
-const EDITABLE_FIELDS: EditableField[] = ['description', 'calories', 'protein', 'carbs', 'fat'];
+/**
+ * Base interface for any editable item.
+ * Items must have a unique `uid` and optionally an `entryId` for grouping.
+ */
+interface BaseEditableItem {
+  uid: string;
+  entryId?: string;
+}
 
 /**
  * Hook that derives display items from query data + local pending edits.
@@ -14,15 +21,18 @@ const EDITABLE_FIELDS: EditableField[] = ['description', 'calories', 'protein', 
  * 
  * displayItems = queryItems (filtered/edited) + newItems
  */
-export function useEditableFoodItems(queryItems: FoodItem[]) {
+export function useEditableItems<T extends BaseEditableItem>(
+  queryItems: T[],
+  editableFields: (keyof T)[]
+) {
   // Pending edits: Map<uid, partial updates>
-  const [pendingEdits, setPendingEdits] = useState<Map<string, Partial<FoodItem>>>(new Map());
+  const [pendingEdits, setPendingEdits] = useState<Map<string, Partial<T>>>(new Map());
   
   // Pending removals: Set of uids to hide from display
   const [pendingRemovals, setPendingRemovals] = useState<Set<string>>(new Set());
   
   // New items added locally (not yet saved to DB)
-  const [newItems, setNewItems] = useState<FoodItem[]>([]);
+  const [newItems, setNewItems] = useState<T[]>([]);
   
   // Track new item uids for amber highlight
   const [newItemUids, setNewItemUids] = useState<Set<string>>(new Set());
@@ -39,14 +49,16 @@ export function useEditableFoodItems(queryItems: FoodItem[]) {
         if (!edits) return item;
         
         // Merge edits and track edited fields
-        const editedFields: EditableField[] = [...(item.editedFields || [])];
-        for (const field of Object.keys(edits)) {
-          if (EDITABLE_FIELDS.includes(field as EditableField) && !editedFields.includes(field as EditableField)) {
-            editedFields.push(field as EditableField);
+        type WithEditedFields = T & { editedFields?: (keyof T)[] };
+        const existingEdited = (item as WithEditedFields).editedFields || [];
+        const editedFields: (keyof T)[] = [...existingEdited];
+        for (const field of Object.keys(edits) as (keyof T)[]) {
+          if (editableFields.includes(field) && !editedFields.includes(field)) {
+            editedFields.push(field);
           }
         }
         
-        return { ...item, ...edits, editedFields };
+        return { ...item, ...edits, editedFields } as T;
       });
     
     // Filter newItems to exclude any that now exist in queryItems (they've "graduated")
@@ -73,10 +85,10 @@ export function useEditableFoodItems(queryItems: FoodItem[]) {
     }
     
     return [...fromQuery, ...stillNewItems];
-  }, [queryItems, pendingEdits, pendingRemovals, newItems]);
+  }, [queryItems, pendingEdits, pendingRemovals, newItems, editableFields]);
 
-  // Add new items (from AI analysis) and mark them for amber highlighting
-  const addNewItems = useCallback((items: FoodItem[]) => {
+  // Add new items and mark them for amber highlighting
+  const addNewItems = useCallback((items: T[]) => {
     const uids = new Set(items.map(item => item.uid));
     setNewItems(prev => [...prev, ...items]);
     setNewItemUids(uids);
@@ -90,7 +102,7 @@ export function useEditableFoodItems(queryItems: FoodItem[]) {
   // Update a single field on an item
   const updateItem = useCallback((
     index: number,
-    field: keyof FoodItem,
+    field: keyof T,
     value: string | number
   ) => {
     // Find the item at this index in displayItems
@@ -100,7 +112,7 @@ export function useEditableFoodItems(queryItems: FoodItem[]) {
     setPendingEdits(prev => {
       const next = new Map(prev);
       const existing = next.get(item.uid) || {};
-      next.set(item.uid, { ...existing, [field]: value });
+      next.set(item.uid, { ...existing, [field]: value } as Partial<T>);
       return next;
     });
   }, [displayItems]);
@@ -108,7 +120,7 @@ export function useEditableFoodItems(queryItems: FoodItem[]) {
   // Batch update multiple fields at once (atomic operation)
   const updateItemBatch = useCallback((
     index: number,
-    updates: Partial<FoodItem>
+    updates: Partial<T>
   ) => {
     const item = displayItems[index];
     if (!item) return;
@@ -178,4 +190,16 @@ export function useEditableFoodItems(queryItems: FoodItem[]) {
     clearPendingForItem,
     clearAllPending,
   };
+}
+
+// ----- Backwards compatibility for FoodItem -----
+
+const FOOD_EDITABLE_FIELDS: EditableField[] = ['description', 'calories', 'protein', 'carbs', 'fat'];
+
+/**
+ * Backwards-compatible hook specifically for FoodItems.
+ * Wraps the generic useEditableItems with food-specific field configuration.
+ */
+export function useEditableFoodItems(queryItems: FoodItem[]) {
+  return useEditableItems<FoodItem>(queryItems, FOOD_EDITABLE_FIELDS);
 }

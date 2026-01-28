@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { format, addDays, subDays, isToday, parseISO } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { FoodInput, FoodInputRef } from '@/components/FoodInput';
+import { LogInput, LogInputRef } from '@/components/LogInput';
 import { FoodItemsTable } from '@/components/FoodItemsTable';
 import { SaveMealDialog } from '@/components/SaveMealDialog';
 import { CreateMealDialog } from '@/components/CreateMealDialog';
@@ -11,7 +11,7 @@ import { SimilarMealPrompt } from '@/components/SimilarMealPrompt';
 import { Button } from '@/components/ui/button';
 import { useAnalyzeFood } from '@/hooks/useAnalyzeFood';
 import { useFoodEntries } from '@/hooks/useFoodEntries';
-import { useEditableFoodItems } from '@/hooks/useEditableFoodItems';
+import { useEditableFoodItems } from '@/hooks/useEditableItems';
 import { useSavedMeals, useSaveMeal, useLogSavedMeal } from '@/hooks/useSavedMeals';
 import { useSuggestMealName } from '@/hooks/useSuggestMealName';
 import { findSimilarMeals, createItemsSignature, SimilarMealMatch } from '@/lib/text-similarity';
@@ -66,7 +66,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   const logSavedMeal = useLogSavedMeal();
   const { suggestName, isLoading: isSuggestingName } = useSuggestMealName();
   
-  const foodInputRef = useRef<FoodInputRef>(null);
+  const foodInputRef = useRef<LogInputRef>(null);
 
   // Navigation updates URL directly - triggers remount via wrapper's key
   const goToPreviousDay = () => {
@@ -437,7 +437,8 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     <div className="space-y-4">
       {/* Food Input Section - At top */}
       <section>
-        <FoodInput
+        <LogInput
+          mode="food"
           ref={foodInputRef}
           onSubmit={handleSubmit}
           onScanResult={handleScanResult}

@@ -21,10 +21,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { FoodInput, FoodInputRef } from '@/components/FoodInput';
+import { LogInput, LogInputRef } from '@/components/LogInput';
 import { FoodItemsTable } from '@/components/FoodItemsTable';
 import { useAnalyzeFood } from '@/hooks/useAnalyzeFood';
-import { useEditableFoodItems } from '@/hooks/useEditableFoodItems';
+import { useEditableFoodItems } from '@/hooks/useEditableItems';
 import { useSaveMeal } from '@/hooks/useSavedMeals';
 import { useSuggestMealName } from '@/hooks/useSuggestMealName';
 import { FoodItem, SavedMeal, calculateTotals } from '@/types/food';
@@ -60,7 +60,7 @@ export function CreateMealDialog({
   const [rawInput, setRawInput] = useState<string | null>(null);
   const [createdMeal, setCreatedMeal] = useState<SavedMeal | null>(null);
   
-  const foodInputRef = useRef<FoodInputRef>(null);
+  const foodInputRef = useRef<LogInputRef>(null);
   
   const { analyzeFood, isAnalyzing, error: analyzeError } = useAnalyzeFood();
   const saveMeal = useSaveMeal();
@@ -232,7 +232,8 @@ export function CreateMealDialog({
             {(state === 'input' || state === 'analyzing') && (
               <div className="space-y-2">
                 <Label>Ingredients</Label>
-                <FoodInput
+                <LogInput
+                  mode="food"
                   ref={foodInputRef}
                   onSubmit={handleFoodSubmit}
                   isLoading={isAnalyzing}

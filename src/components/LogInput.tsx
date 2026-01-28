@@ -10,7 +10,10 @@ import { useScanBarcode } from "@/hooks/useScanBarcode";
 import { extractUpcFromText } from "@/lib/upc-utils";
 import { FoodItem } from "@/types/food";
 
-const PLACEHOLDER_EXAMPLES = [
+// Mode-specific configurations
+export type LogMode = 'food' | 'weights';
+
+const FOOD_PLACEHOLDER_EXAMPLES = [
   "Describe what you ate, such as: McDs egg mcmuffin and like half the hash brown",
   "Describe what you ate, such as: grande oat milk latte from Starbucks and most of a banana",
   "Describe what you ate, such as: Chipotle bowl with chicken and extra guac",
@@ -21,18 +24,62 @@ const PLACEHOLDER_EXAMPLES = [
   "Describe what you ate, such as: a slice of banana bread from this recipe: https://natashaskitchen.com/banana-bread-recipe-video/",
 ];
 
-interface FoodInputProps {
-  onSubmit: (text: string) => void;
-  isLoading?: boolean;
-  onScanResult?: (foodItem: Omit<FoodItem, "uid" | "entryId">, originalInput: string) => void;
-  onLogSavedMeal?: (foodItems: FoodItem[], mealId: string) => void;
-  onCreateNewMeal?: () => void; // Callback when user clicks "Add New Meal" in saved meals popover
-  placeholder?: string; // Optional override for textarea placeholder
+const WEIGHTS_PLACEHOLDER_EXAMPLES = [
+  "Describe your workout: 3 sets of 10 reps lat pulldown at 100 lbs",
+  "Describe your workout: bench press 4x8 at 135",
+  "Describe your workout: squats 5x5 at 185 lbs, then leg press 3x12 at 200",
+  "Describe your workout: bicep curls 3x12 at 25 lbs",
+  "Describe your workout: chest fly machine 3x10, then shoulder press 3x8",
+  "Describe your workout: leg extensions and hamstring curls, 3 sets each",
+  "Describe your workout: cable rows 4x10 at 80 lbs",
+];
+
+interface LogModeConfig {
+  placeholders: string[];
+  showBarcodeScanner: boolean;
+  showSavedButton: boolean;
+  submitLabel: string;
+  submitLabelShort: string;
 }
 
-export interface FoodInputRef {
+const MODE_CONFIGS: Record<LogMode, LogModeConfig> = {
+  food: {
+    placeholders: FOOD_PLACEHOLDER_EXAMPLES,
+    showBarcodeScanner: true,
+    showSavedButton: true,
+    submitLabel: 'Add Food',
+    submitLabelShort: 'Add',
+  },
+  weights: {
+    placeholders: WEIGHTS_PLACEHOLDER_EXAMPLES,
+    showBarcodeScanner: false,
+    showSavedButton: true,
+    submitLabel: 'Add Exercise',
+    submitLabelShort: 'Add',
+  },
+};
+
+interface LogInputProps {
+  /** Mode determines placeholders and available features */
+  mode: LogMode;
+  onSubmit: (text: string) => void;
+  isLoading?: boolean;
+  /** Food mode only: handler for barcode scan results */
+  onScanResult?: (foodItem: Omit<FoodItem, "uid" | "entryId">, originalInput: string) => void;
+  /** Handler for logging saved items (meals or routines) */
+  onLogSavedMeal?: (foodItems: FoodItem[], mealId: string) => void;
+  /** Callback when user clicks "Add New" in saved popover */
+  onCreateNewMeal?: () => void;
+  /** Optional override for textarea placeholder */
+  placeholder?: string;
+}
+
+export interface LogInputRef {
   clear: () => void;
 }
+
+// Backwards compatibility alias
+export type FoodInputRef = LogInputRef;
 
 // Check support once at module level (read-only, no state update during render)
 const getSpeechRecognitionSupport = (): boolean => {
@@ -46,19 +93,21 @@ const getCameraSupport = (): boolean => {
   return !!navigator.mediaDevices?.getUserMedia;
 };
 
-export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(function FoodInput(
-  { onSubmit, isLoading, onScanResult, onLogSavedMeal, onCreateNewMeal, placeholder: customPlaceholder },
+export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput(
+  { mode, onSubmit, isLoading, onScanResult, onLogSavedMeal, onCreateNewMeal, placeholder: customPlaceholder },
   ref,
 ) {
+  const config = MODE_CONFIGS[mode];
+  
   const [text, setText] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [savedMealsOpen, setSavedMealsOpen] = useState(false);
   const [defaultPlaceholder] = useState(
-    () => PLACEHOLDER_EXAMPLES[Math.floor(Math.random() * PLACEHOLDER_EXAMPLES.length)],
+    () => config.placeholders[Math.floor(Math.random() * config.placeholders.length)],
   );
 
-  // Use custom placeholder if provided, otherwise use random default
+  // Use custom placeholder if provided, otherwise use random default from mode config
   const placeholderText = customPlaceholder ?? defaultPlaceholder;
 
   // Use ref for recognition instance - no re-renders needed
@@ -129,23 +178,25 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(function FoodI
     const trimmed = text.trim();
     if (!trimmed || isBusy) return;
 
-    // Check for UPC pattern - route to database lookup instead of AI
-    const upc = extractUpcFromText(trimmed);
+    // Food mode: Check for UPC pattern - route to database lookup instead of AI
+    if (mode === 'food') {
+      const upc = extractUpcFromText(trimmed);
 
-    if (upc && onScanResult) {
-      console.log("Detected UPC in text input, routing to lookup-upc:", upc);
-      const result = await lookupUpc(upc);
+      if (upc && onScanResult) {
+        console.log("Detected UPC in text input, routing to lookup-upc:", upc);
+        const result = await lookupUpc(upc);
 
-      if (result.success) {
-        const foodItem = createFoodItemFromScan(result.data);
-        onScanResult(foodItem, trimmed);
-        setText("");
-        return;
+        if (result.success) {
+          const foodItem = createFoodItemFromScan(result.data);
+          onScanResult(foodItem, trimmed);
+          setText("");
+          return;
+        }
+        // If not found in database, fall through to analyze-food
       }
-      // If not found in database, fall through to analyze-food
     }
 
-    // Normal food description - use analyze-food
+    // Normal submission
     onSubmit(trimmed);
   };
 
@@ -183,6 +234,8 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(function FoodI
   };
 
   const isBusy = isLoading || isScanning;
+  const showBarcode = config.showBarcodeScanner && cameraSupported && mode === 'food';
+  const showSaved = config.showSavedButton && onLogSavedMeal;
 
   return (
     <div className="space-y-3">
@@ -212,13 +265,13 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(function FoodI
             Voice
           </Button>
         )}
-        {cameraSupported && (
+        {showBarcode && (
           <Button variant="outline" size="sm" className="px-2" onClick={() => setScannerOpen(true)} disabled={isBusy}>
             <ScanBarcode className="h-4 w-4 mr-1" />
             Scan
           </Button>
         )}
-        {onLogSavedMeal && (
+        {showSaved && (
           <Popover open={savedMealsOpen} onOpenChange={setSavedMealsOpen}>
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className="px-2" disabled={isBusy}>
@@ -245,14 +298,19 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(function FoodI
           ) : (
             <>
               <Send className="mr-1 h-4 w-4" />
-              <span className="hidden sm:inline">Add Food</span>
-              <span className="sm:hidden">Add</span>
+              <span className="hidden sm:inline">{config.submitLabel}</span>
+              <span className="sm:hidden">{config.submitLabelShort}</span>
             </>
           )}
         </Button>
       </div>
 
-      <BarcodeScanner open={scannerOpen} onClose={() => setScannerOpen(false)} onScan={handleBarcodeScan} />
+      {showBarcode && (
+        <BarcodeScanner open={scannerOpen} onClose={() => setScannerOpen(false)} onScan={handleBarcodeScan} />
+      )}
     </div>
   );
 });
+
+// Backwards compatibility alias
+export const FoodInput = LogInput;
