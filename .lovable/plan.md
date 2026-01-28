@@ -1,58 +1,75 @@
 
+## Switch New Row Highlight from Background Fill to Blue Outline
 
-## Improve Calories Chart Color in Dark Mode
+### Current Behavior
 
-### Problem
+Newly added food rows display with a solid blue background (`hsl(var(--new-item))`) that fades to transparent over 2.5 seconds.
 
-The Calories bar chart uses `hsl(var(--primary))` which becomes bright white (`210 40% 98%`) in dark mode, creating a harsh, jarring contrast against the dark background.
+### Proposed Change
 
-### Solution
-
-Replace the dynamic `--primary` color with a dedicated chart color that looks good in both light and dark themes. A blue tone will:
-- Visually distinguish calories from the macro colors (green/orange/red)
-- Match the app's existing blue accent (focus-ring, buttons)
-- Provide good contrast without being harsh
-
-### Recommended Color
-
-**Blue: `hsl(217 91% 60%)`** - This matches the existing `--focus-ring` color and provides a vibrant but balanced look in both themes.
-
-Alternative options if you prefer:
-- Softer blue: `hsl(217 70% 55%)`
-- Cyan/teal: `hsl(190 80% 45%)`
-- Slate: `hsl(215 25% 55%)`
+Replace the filled background animation with a visible blue **outline/border** around the newly added row(s). The outline will:
+- Use a consistent blue color in both light and dark themes: `hsl(217 91% 60%)` (matches `--focus-ring`)
+- Fade out after the same 2.5s timer
+- Wrap the entire row with rounded corners for a clean "pill" appearance
 
 ### Changes
 
 | File | Change |
 |------|--------|
-| `src/pages/Trends.tsx` | Update Calories bar fill color from `hsl(var(--primary))` to a fixed blue |
+| `tailwind.config.ts` | Create new `outline-fade` keyframe animation using `box-shadow` instead of `backgroundColor` |
+| `src/components/FoodItemsTable.tsx` | Replace `animate-highlight-fade` with new `animate-outline-fade` class |
 
-### Implementation
+### Implementation Details
 
-Update the `charts` array definition (line 138):
+**1. Update Tailwind keyframes (tailwind.config.ts)**
 
-```tsx
-const charts = [
-  { key: 'calories', label: 'Calories', color: 'hsl(217 91% 60%)' },  // Blue
-  { key: 'protein', label: 'Protein (g)', color: 'hsl(142 76% 36%)' },
-  { key: 'carbs', label: 'Carbs (g)', color: 'hsl(38 92% 50%)' },
-  { key: 'fat', label: 'Fat (g)', color: 'hsl(346 77% 49%)' },
-];
-```
-
-And update the Calories chart Bar fill (line 207):
+Replace the `highlight-fade` keyframe with a new `outline-fade` that uses `box-shadow` to create an inset-like outline effect:
 
 ```tsx
-<Bar dataKey="calories" fill="hsl(217 91% 60%)" radius={[2, 2, 0, 0]} />
+keyframes: {
+  // ... existing keyframes
+  "outline-fade": {
+    "0%, 80%": {
+      boxShadow: "inset 0 0 0 2px hsl(217 91% 60%)",
+    },
+    "100%": {
+      boxShadow: "inset 0 0 0 2px transparent",
+    },
+  },
+},
+animation: {
+  // ... existing animations
+  "outline-fade": "outline-fade 2.5s ease-out forwards",
+},
 ```
+
+Using `box-shadow: inset` instead of `border` avoids layout shift since box-shadow doesn't affect element dimensions.
+
+**2. Update FoodItemsTable.tsx**
+
+Replace `animate-highlight-fade` with the new `animate-outline-fade` class on the row wrapper:
+
+```tsx
+// Line 337
+isNewItem(item) && "animate-outline-fade"
+```
+
+**3. Remove the old highlight-fade keyframe** (cleanup)
+
+Since we're switching approaches entirely, remove the now-unused `highlight-fade` keyframe and animation from `tailwind.config.ts`.
 
 ### Visual Result
 
-| Theme | Before | After |
-|-------|--------|-------|
-| Dark | Bright white bars (jarring) | Blue bars (cohesive) |
-| Light | Dark navy bars | Blue bars (slightly lighter, still readable) |
+| Aspect | Before | After |
+|--------|--------|-------|
+| Style | Solid blue background fill | Blue border/outline around row |
+| Color | `hsl(217 70% 75%)` (varies slightly by theme) | `hsl(217 91% 60%)` (same in both themes) |
+| Fade | Background fades to transparent | Outline fades to transparent |
+| Duration | 2.5 seconds | 2.5 seconds (unchanged) |
+| Shape | Rounded row with fill | Rounded row with 2px border |
 
-The blue matches the app's button/accent color, creating visual consistency across the interface.
+### Technical Notes
 
+- Using `box-shadow: inset` creates a border effect without affecting layout or grid sizing
+- The fixed HSL value (`217 91% 60%`) ensures identical appearance in light and dark modes
+- The 80% hold time keeps the outline fully visible for most of the animation before fading
