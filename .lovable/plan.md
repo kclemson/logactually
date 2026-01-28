@@ -1,43 +1,73 @@
 
 
-## Reverse Tooltip Order to Match Visual Stack (Top-First)
+## Remove Theme Sync useEffect
 
-A simple one-line change: reverse the payload array before rendering so the tooltip shows items in "top of bar first" order.
-
----
-
-### Approach
-
-The `payload` array comes from Recharts in the order the `<Bar>` components are defined (Fat → Carbs → Protein). Since Protein is visually on top, we just reverse the array so the tooltip reads Protein → Carbs → Fat.
+The `useEffect` on lines 57-62 in `Settings.tsx` is unnecessary and causes the flicker. It should be removed entirely.
 
 ---
 
-### File to Modify
+### Why It Exists (And Shouldn't)
 
-| File | Change |
-|------|--------|
-| `src/pages/Trends.tsx` | Add `.slice().reverse()` to payload before mapping |
+It was likely added to sync the database theme preference to `next-themes`, but:
+- `next-themes` already persists to localStorage automatically
+- `handleThemeChange` already saves to BOTH localStorage (via `setTheme`) AND database (via `updateSettings`)
+- This useEffect creates a race condition: localStorage applies instantly, then DB overwrites it
 
 ---
 
-### Code Change (line 41)
+### Changes
 
-**Before:**
+**1. Settings.tsx - Delete the problematic useEffect**
+
+Remove lines 57-62:
 ```tsx
-{payload.map((entry: any, index: number) => {
+// Sync theme from database on load  ← DELETE THIS BLOCK
+useEffect(() => {
+  if (!isLoading && settings.theme && mounted) {
+    setTheme(settings.theme);
+  }
+}, [isLoading, settings.theme, setTheme, mounted]);
 ```
 
-**After:**
+**2. Layout.tsx - Add one-time sync for new devices**
+
+This handles the case where a user logs in on a new device (empty localStorage):
+
 ```tsx
-{payload.slice().reverse().map((entry: any, index: number) => {
+import { useEffect, useRef } from 'react';
+import { useTheme } from 'next-themes';
+import { useUserSettings } from '@/hooks/useUserSettings';
+
+export function Layout() {
+  const { data: isAdmin } = useIsAdmin();
+  const { settings, isLoading } = useUserSettings();
+  const { setTheme } = useTheme();
+  const hasSyncedRef = useRef(false);
+
+  // One-time sync: only if localStorage is empty
+  useEffect(() => {
+    if (hasSyncedRef.current || isLoading) return;
+    
+    const storedTheme = localStorage.getItem('theme');
+    if (!storedTheme && settings.theme) {
+      setTheme(settings.theme);
+    }
+    hasSyncedRef.current = true;
+  }, [isLoading, settings.theme, setTheme]);
+
+  return (
+    // ... rest unchanged
+  );
+}
 ```
 
 ---
 
-### Why This Works
+### Result
 
-- The visual bar stacking stays exactly the same (Fat at bottom, Protein on top with rounded corners)
-- The tooltip order flips to show the top bar first
-- `.slice()` creates a shallow copy so we don't mutate the original array
-- No complexity added - just a simple array reversal
+| Scenario | Before | After |
+|----------|--------|-------|
+| Navigate to Settings | Flickers as DB overwrites localStorage | No flicker |
+| Change theme | Works (saves to both) | Works (unchanged) |
+| New device login | Theme from DB applied | Theme from DB applied (once) |
 
