@@ -74,7 +74,7 @@ export function CollapsibleSection({
           isOpen ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
         )}
       >
-        <div className="pl-4">{children}</div>
+        <div>{children}</div>
       </div>
     </section>
   );
