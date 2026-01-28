@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getExerciseReferenceForPrompt } from "../_shared/exercises.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,22 +14,21 @@ Analyze the following workout description and extract individual exercises with 
 Workout description: "{{rawInput}}"
 
 For each exercise, provide:
-- exercise_key: a canonical snake_case identifier for the exercise (e.g., "lat_pulldown", "bench_press", "squat", "deadlift", "bicep_curl"). Use consistent keys so the same exercise always gets the same key, regardless of how the user describes it.
+- exercise_key: a canonical snake_case identifier. PREFER using keys from the reference list below when the user's input matches. You may create new keys for exercises not in the list.
 - description: a user-friendly name for the exercise (e.g., "Lat Pulldown", "Bench Press")
 - sets: number of sets performed (integer)
 - reps: number of reps per set (integer)
 - weight_lbs: weight in pounds (number)
 
+CANONICAL EXERCISE REFERENCE (prefer these keys when applicable):
+{{exerciseReference}}
+
 Handle common patterns like:
 - "3x10 lat pulldown at 100 lbs" → 3 sets, 10 reps, 100 lbs
 - "bench press 4 sets of 8 reps at 135" → 4 sets, 8 reps, 135 lbs
 - "3 sets 10 reps squats 225" → 3 sets, 10 reps, 225 lbs
-
-Normalize exercise names to canonical keys:
-- "lat pulldowns", "lat pull-down", "pulldowns" → "lat_pulldown"
-- "bench", "bench press", "flat bench" → "bench_press"
-- "squats", "back squat", "barbell squat" → "squat"
-- "curls", "bicep curls", "arm curls" → "bicep_curl"
+- "the machine where you pull the bar down to your chest" → lat_pulldown
+- "leg pushing machine where you sit at an angle" → leg_press
 
 Default to lbs for weight if no unit is specified.
 
@@ -93,7 +93,9 @@ serve(async (req) => {
     }
 
     // Build the prompt
-    const prompt = ANALYZE_WEIGHTS_PROMPT.replace("{{rawInput}}", rawInput);
+    const prompt = ANALYZE_WEIGHTS_PROMPT
+      .replace("{{rawInput}}", rawInput)
+      .replace("{{exerciseReference}}", getExerciseReferenceForPrompt());
 
     console.log(`[analyze-weights] Processing: "${rawInput.substring(0, 100)}..."`);
     const startTime = Date.now();
