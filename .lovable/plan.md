@@ -1,14 +1,16 @@
 
 
-## Stack Labels Vertically with Centered Rows
+## Split Weight Label: Above Bar + Inside Bar
 
-Replace the rotated text with vertically stacked `<tspan>` elements. Each row will be horizontally centered by setting `x={centerX}` on every `<tspan>`.
+Instead of stacking all text inside the bar, we'll split the label into two parts:
+1. **Weight (e.g., "160")** - Displayed ABOVE the bar in purple (same color as bar)
+2. **Sets × Reps (e.g., "3×10")** - Displayed INSIDE the bar in white, stacked vertically
 
 ---
 
 ### Changes to `src/pages/Trends.tsx`
 
-Update `renderGroupedLabel` (lines 57-79):
+Update `renderGroupedLabel` (lines 57-97):
 
 ```typescript
 const renderGroupedLabel = (props: any) => {
@@ -24,60 +26,82 @@ const renderGroupedLabel = (props: any) => {
   
   const [sets, reps, weight] = parts;
   
-  // Build the stacked format: ["3", "×", "10", "×", "160"]
-  const lines = [sets, '×', reps, '×', weight];
-  const lineHeight = 8; // pixels between lines
+  // Weight label appears ABOVE the bar in purple
+  const weightY = y - 4; // Position above the bar top
   
-  // Calculate starting Y to center the 5 lines vertically in the bar
-  const totalTextHeight = lines.length * lineHeight;
+  // Sets×reps inside the bar (stacked: "3", "×", "10")
+  const insideLines = [sets, '×', reps];
+  const lineHeight = 8;
+  const totalTextHeight = insideLines.length * lineHeight;
   const startY = y + ((height || 0) - totalTextHeight) / 2 + lineHeight / 2;
   
   return (
-    <text
-      x={centerX}
-      fill="#FFFFFF"
-      textAnchor="middle"
-      fontSize={7}
-      fontWeight={500}
-    >
-      {lines.map((line, i) => (
-        <tspan
-          key={i}
-          x={centerX}
-          y={startY + i * lineHeight}
-        >
-          {line}
-        </tspan>
-      ))}
-    </text>
+    <g>
+      {/* Weight label above bar - purple color matching bar */}
+      <text
+        x={centerX}
+        y={weightY}
+        fill="hsl(262 83% 58%)"
+        textAnchor="middle"
+        fontSize={7}
+        fontWeight={500}
+      >
+        {weight}
+      </text>
+      
+      {/* Sets×reps inside bar - white color */}
+      <text
+        x={centerX}
+        fill="#FFFFFF"
+        textAnchor="middle"
+        fontSize={7}
+        fontWeight={500}
+      >
+        {insideLines.map((line, i) => (
+          <tspan
+            key={i}
+            x={centerX}
+            y={startY + i * lineHeight}
+          >
+            {line}
+          </tspan>
+        ))}
+      </text>
+    </g>
   );
 };
 ```
 
 ---
 
-### How Horizontal Centering Works
-
-| Attribute | Purpose |
-|-----------|---------|
-| `textAnchor="middle"` on `<text>` | Sets default centering behavior |
-| `x={centerX}` on each `<tspan>` | Centers each row at the bar's horizontal center |
-
-Each `<tspan>` gets its own `x` coordinate, so even though they have different text widths (like "3" vs "160"), they all anchor to the same center point.
-
----
-
 ### Visual Result
 
 ```
-┌──────┐
-│  3   │  ← centered
-│  ×   │  ← centered  
-│  10  │  ← centered
-│  ×   │  ← centered
-│ 160  │  ← centered (wider, but still centered)
-└──────┘
+     160      ← purple text above bar
+  ┌──────┐
+  │  3   │   ← white text inside
+  │  ×   │
+  │  10  │
+  └──────┘
 ```
+
+---
+
+### Key Changes
+
+| Element | Position | Color |
+|---------|----------|-------|
+| Weight (e.g., "160") | Above bar (`y - 4`) | Purple (`hsl(262 83% 58%)`) - matches bar color |
+| Sets×Reps (e.g., "3×10") | Centered inside bar | White (`#FFFFFF`) |
+
+---
+
+### Technical Notes
+
+- Use `<g>` (SVG group) to return multiple text elements
+- Weight positioned at `y - 4` places it just above the bar top (with some padding)
+- Inside text uses same stacking logic but only 3 lines now instead of 5
+- Purple color matches the existing bar fill: `hsl(262 83% 58%)`
 
 ---
 
@@ -85,5 +109,5 @@ Each `<tspan>` gets its own `x` coordinate, so even though they have different t
 
 | File | Lines | Change |
 |------|-------|--------|
-| `src/pages/Trends.tsx` | 57-79 | Replace rotated text with stacked `<tspan>` elements |
+| `src/pages/Trends.tsx` | 57-97 | Update `renderGroupedLabel` to split weight above, sets×reps inside |
 
