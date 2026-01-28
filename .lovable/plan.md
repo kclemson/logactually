@@ -1,156 +1,100 @@
 
 
-## Convert Macros Chart to 100% Stacked Column (Calorie Percentages)
+## Reduce Vertical Padding Below Chart X-Axis Labels
 
-Replace the current grouped bar chart for "Macros (g)" with a 100% stacked bar chart that shows each macro as a percentage of that day's total caloric contribution.
-
----
-
-### Current vs Desired
-
-| Current | Desired |
-|---------|---------|
-| Grouped bars showing grams (P/C/F side by side) | Stacked bars showing % of calories |
-| Height varies based on total grams | All bars same height (100%) |
-| Hard to compare relative proportions | Easy to see "what % came from protein/carbs/fat" |
+Remove unnecessary whitespace below the X-axis date labels to make the charts more compact.
 
 ---
 
-### Calculation Logic
+### Root Cause
 
-Use the same formula as the FoodItemsTable totals row (lines 241-251):
-
-```typescript
-// Convert grams to calories
-const proteinCals = protein * 4;
-const carbsCals = carbs * 4;
-const fatCals = fat * 9;
-const totalMacroCals = proteinCals + carbsCals + fatCals;
-
-// Calculate percentages
-const proteinPct = totalMacroCals > 0 ? Math.round((proteinCals / totalMacroCals) * 100) : 0;
-const carbsPct = totalMacroCals > 0 ? Math.round((carbsCals / totalMacroCals) * 100) : 0;
-const fatPct = totalMacroCals > 0 ? Math.round((fatCals / totalMacroCals) * 100) : 0;
-```
+Recharts XAxis has default values that create extra space:
+- Default `height` reserves space for tick labels + padding
+- Default `tickMargin` adds space between axis line and labels
+- The `BarChart` without explicit `margin` uses Recharts defaults (which includes bottom margin)
 
 ---
 
-### Implementation Changes
+### Solution
 
-**File: `src/pages/Trends.tsx`**
-
-**1. Update chartData calculation (lines 199-220)**
-
-Add percentage fields to each day's data:
-
-```typescript
-return Object.entries(byDate).map(([date, totals]) => {
-  // Calculate calorie contribution from each macro
-  const proteinCals = totals.protein * 4;
-  const carbsCals = totals.carbs * 4;
-  const fatCals = totals.fat * 9;
-  const totalMacroCals = proteinCals + carbsCals + fatCals;
-  
-  // Calculate percentages
-  const proteinPct = totalMacroCals > 0 ? Math.round((proteinCals / totalMacroCals) * 100) : 0;
-  const carbsPct = totalMacroCals > 0 ? Math.round((carbsCals / totalMacroCals) * 100) : 0;
-  const fatPct = totalMacroCals > 0 ? Math.round((fatCals / totalMacroCals) * 100) : 0;
-  
-  return {
-    date: format(new Date(`${date}T12:00:00`), 'MMM d'),
-    ...totals,
-    proteinPct,
-    carbsPct,
-    fatPct,
-  };
-});
-```
-
-**2. Replace the Macros chart (lines 324-353)**
-
-Change from grouped bars to stacked bars with `stackId`:
+Add two XAxis properties to minimize bottom spacing:
 
 ```tsx
-<Card>
-  <CardHeader className="p-2 pb-1">
-    <ChartTitle>Macro Split (%)</ChartTitle>
-  </CardHeader>
-  <CardContent className="p-2 pt-0">
-    <div className="h-24">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={chartData} stackOffset="none">
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-          <XAxis
-            dataKey="date"
-            tick={{ fontSize: 8 }}
-            stroke="hsl(var(--muted-foreground))"
-            interval="preserveStartEnd"
-          />
-          <Tooltip
-            content={<CompactTooltip formatter={(value, name) => 
-              `${name}: ${value}%`
-            } />}
-            offset={20}
-            cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
-          />
-          <Bar dataKey="proteinPct" name="Protein" stackId="macros" fill="#43EBD7" />
-          <Bar dataKey="carbsPct" name="Carbs" stackId="macros" fill="#9933FF" />
-          <Bar dataKey="fatPct" name="Fat" stackId="macros" fill="#00CCFF" radius={[2, 2, 0, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  </CardContent>
-</Card>
+<XAxis
+  dataKey="date"
+  tick={{ fontSize: 8 }}
+  stroke="hsl(var(--muted-foreground))"
+  interval="preserveStartEnd"
+  tickMargin={2}    // Reduce gap between axis line and labels (default ~5)
+  height={16}       // Minimize reserved height for axis (default ~30)
+/>
 ```
 
-Key changes:
-- All three bars share `stackId="macros"` to stack them
-- Only the top bar (Fat) gets rounded corners
-- Tooltip shows percentages with "%" suffix
-- Title changes from "Macros (g)" to "Macro Split (%)"
+Also add explicit `margin` to BarChart components that don't have it:
+
+```tsx
+<BarChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+```
 
 ---
 
-### Visual Result
+### Changes Summary
 
-```text
-Before (grouped bars):         After (100% stacked):
-                               
- |  ▌ ▌       ▌                |  ███████████████████
- |  ▌ ▌ ▌     ▌ ▌              |  ███████████████████
- |  ▌ ▌ ▌ ▌   ▌ ▌ ▌            |  ███████████████████
- +------------------           +--------------------
-    Jan 22  Jan 23                Jan 22   Jan 23
-                               
-   P C F  grouped               [Protein][Carbs][Fat]
-   Hard to compare %            Easy to see % split
-```
-
-Each stacked column will always reach exactly 100% (or close to it after rounding), making it easy to compare macro ratios day-to-day.
+| Chart Location | Current | Change |
+|----------------|---------|--------|
+| All XAxis components | No tickMargin/height | Add `tickMargin={2}` and `height={16}` |
+| Food BarCharts (Calories, Macro Split, P/C/F) | No margin prop | Add `margin={{ top: 4, right: 0, left: 0, bottom: 0 }}` |
+| ExerciseChart BarChart | Already has margin | Keep existing (top: 12 for weight labels above bars) |
 
 ---
 
 ### Files to Modify
 
-| File | Change |
-|------|--------|
-| `src/pages/Trends.tsx` | Add percentage fields to chartData, convert macros chart to stacked bars |
+| File | Lines | Change |
+|------|-------|--------|
+| `src/pages/Trends.tsx` | 322-326 | Calories chart XAxis - add tickMargin/height |
+| `src/pages/Trends.tsx` | 320 | Calories BarChart - add margin |
+| `src/pages/Trends.tsx` | 350-354 | Macro Split chart XAxis - add tickMargin/height |
+| `src/pages/Trends.tsx` | 348 | Macro Split BarChart - add margin |
+| `src/pages/Trends.tsx` | 385-389 | P/C/F charts XAxis - add tickMargin/height |
+| `src/pages/Trends.tsx` | 383 | P/C/F BarChart - add margin |
+| `src/pages/Trends.tsx` | 137-141 | ExerciseChart XAxis - add tickMargin/height |
 
 ---
 
-### Tooltip Display
+### Before/After
 
-The tooltip will show:
-```
-Jan 28
-Protein: 32%
-Carbs: 48%
-Fat: 20%
+```text
+Before:                          After:
+┌────────────────────┐           ┌────────────────────┐
+│  Calories          │           │  Calories          │
+│  ▐█▌ ▐█▌ ▐█▌       │           │  ▐█▌ ▐█▌ ▐█▌       │
+│  ▐█▌ ▐█▌ ▐█▌       │           │  ▐█▌ ▐█▌ ▐█▌       │
+│  Jan 22   Jan 28   │           │  Jan 22   Jan 28   │
+│                    │  ←gap     └────────────────────┘
+└────────────────────┘           (gap removed)
 ```
 
 ---
 
-### Edge Case: Zero Calories
+### Code Changes
 
-When a day has zero macro calories (rare), all percentages will be 0%. The bar will be empty, which is correct behavior.
+**XAxis updates (apply to all 7 XAxis components):**
+```tsx
+<XAxis
+  dataKey="date"
+  tick={{ fontSize: 8 }}
+  stroke="hsl(var(--muted-foreground))"
+  interval="preserveStartEnd"
+  tickMargin={2}
+  height={16}
+/>
+```
+
+**BarChart margin updates (food charts only):**
+```tsx
+<BarChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+```
+
+This will significantly reduce the wasted vertical space in all chart cards while keeping the labels readable.
 
