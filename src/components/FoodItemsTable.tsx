@@ -372,7 +372,8 @@ export function FoodItemsTable({
                   </div>
                 )}
                 <div className={cn(
-                  "flex-1 min-w-0 rounded pl-1 py-1 line-clamp-2",
+                  "flex-1 min-w-0 rounded pl-1 py-1",
+                  "overflow-hidden max-h-[3rem]",
                   "focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg"
                 )}>
                   <span
@@ -395,7 +396,7 @@ export function FoodItemsTable({
                     <span className="text-xs text-muted-foreground whitespace-nowrap"> ({item.portion})</span>
                   )}
                   {hasAnyEditedFields(item) && (
-                    <span className="text-focus-ring font-bold" title={formatEditedFields(item) || 'Edited'}> *</span>
+                    <span className="text-focus-ring font-bold whitespace-nowrap" title={formatEditedFields(item) || 'Edited'}> *</span>
                   )}
                 </div>
               </div>
