@@ -1,38 +1,43 @@
 
 
-## Remove Bold Styling from Macro Percentages
+## Reduce Macro Percentage Font Size
 
-### Issue
+### Goal
 
-The macro percentages (16%/59%/25%) inherit `font-semibold` from the parent `text-heading` class, making them appear bolded when they should be regular weight gray text.
+Make the percentage text (16%/59%/25%) even smaller by going two font size steps below `text-xs`.
 
-### Fix
+### Current vs Target
 
-Add `font-normal` to the percentage div to override the inherited font weight.
+| State | Class | Size |
+|-------|-------|------|
+| Current | `text-xs` | 12px (0.75rem) |
+| Target | `text-[8px]` | 8px |
+
+Tailwind's smallest built-in class is `text-xs` (12px), so we'll use a custom size class to go smaller.
 
 ### Change
 
 | File | Change |
 |------|--------|
-| `src/components/FoodItemsTable.tsx` | Add `font-normal` class to the percentage div |
+| `src/components/FoodItemsTable.tsx` | Change `text-xs` to `text-[8px]` on the percentage div |
 
 ### Implementation
 
-Update line 262 in TotalsRow:
+Update line 260 in TotalsRow:
 
 ```tsx
 // Before
-<div className="text-xs text-muted-foreground">
+<div className="text-xs text-muted-foreground font-normal">
   {proteinPct}%/{carbsPct}%/{fatPct}%
 </div>
 
 // After
-<div className="text-xs text-muted-foreground font-normal">
+<div className="text-[8px] text-muted-foreground font-normal">
   {proteinPct}%/{carbsPct}%/{fatPct}%
 </div>
 ```
 
 ### Visual Result
 
-The gram values (50/187/36) will remain bold/semibold, while the percentages below (16%/59%/25%) will display in regular weight gray text, creating clear visual hierarchy.
+The percentages will appear noticeably smaller than the gram values above them, creating a stronger visual hierarchy where the percentages serve as subtle supplementary information.
 
