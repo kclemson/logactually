@@ -172,6 +172,42 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_routines: {
+        Row: {
+          created_at: string
+          exercise_sets: Json
+          id: string
+          last_used_at: string | null
+          name: string
+          original_input: string | null
+          updated_at: string
+          use_count: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          exercise_sets?: Json
+          id?: string
+          last_used_at?: string | null
+          name: string
+          original_input?: string | null
+          updated_at?: string
+          use_count?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          exercise_sets?: Json
+          id?: string
+          last_used_at?: string | null
+          name?: string
+          original_input?: string | null
+          updated_at?: string
+          use_count?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string

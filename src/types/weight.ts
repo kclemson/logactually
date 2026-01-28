@@ -62,3 +62,29 @@ export interface AnalyzedExercise {
   reps: number;
   weight_lbs: number;
 }
+
+/**
+ * Type for exercise sets stored in a saved routine (without client-side metadata)
+ */
+export interface SavedExerciseSet {
+  exercise_key: string;
+  description: string;
+  sets: number;
+  reps: number;
+  weight_lbs: number;
+}
+
+/**
+ * Saved routine for quick logging of common workouts
+ */
+export interface SavedRoutine {
+  id: string;
+  user_id: string;
+  name: string;
+  original_input: string | null;
+  exercise_sets: SavedExerciseSet[];
+  use_count: number;
+  last_used_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
