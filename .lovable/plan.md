@@ -1,199 +1,109 @@
 
 
-## Implement Duplicate Exercise Detection and Merge
+## Refine Duplicate Exercise Prompt UI
 
 ### Overview
 
-Add runtime detection for exercises that share the same description but have different `exercise_key` values. Show a subtle inline prompt only when duplicates are detected, allowing users to merge them with a single tap.
+Tone down the duplicate exercise prompt to feel like a natural part of the charts UI rather than an alarming warning. Match the typography of chart titles/subtitles and remove the yellow warning styling.
 
 ---
 
-### Files to Create
+### Current vs. Proposed
 
-**1. `src/hooks/useMergeExercises.ts`**
-
-A mutation hook that updates all `weight_sets` rows to consolidate duplicate exercise keys:
-
-```typescript
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-
-export function useMergeExercises() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async ({ keepKey, mergeKeys }: { 
-      keepKey: string; 
-      mergeKeys: string[] 
-    }) => {
-      const { error } = await supabase
-        .from('weight_sets')
-        .update({ exercise_key: keepKey })
-        .in('exercise_key', mergeKeys);
-        
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['weight-trends'] });
-    },
-  });
-}
-```
-
----
-
-**2. `src/components/DuplicateExercisePrompt.tsx`**
-
-A subtle card component that:
-- Shows which exercise has duplicates
-- Provides "Merge" and "Dismiss" actions
-- Uses muted/warning styling to be noticeable but not intrusive
-
-```typescript
-interface DuplicateGroup {
-  description: string;
-  exercises: ExerciseTrend[];
-  winner: ExerciseTrend;  // The one with most sessions
-  losers: ExerciseTrend[]; // The ones to merge into winner
-}
-
-interface DuplicateExercisePromptProps {
-  groups: DuplicateGroup[];
-  onMerge: (group: DuplicateGroup) => void;
-  onDismiss: () => void;
-}
-```
-
-**UI Design:**
-- Small card with amber/warning background tint
-- Icon + text: "2 exercises may be duplicates"
-- Shows the affected exercise description
-- Two buttons: "Merge" (primary) and "Dismiss" (ghost)
+| Aspect | Current | Proposed |
+|--------|---------|----------|
+| Border | Yellow warning border | No border (like chart cards) |
+| Background | `bg-warning/10` (yellow tint) | `bg-muted/30` (subtle gray) |
+| Icon | AlertTriangle (warning) | None |
+| Title size | `text-sm font-medium` | `text-xs font-semibold` (matches ChartTitle) |
+| Subtitle size | `text-xs` | `text-[10px]` (matches ChartSubtitle) |
+| Overall feel | Alarming | Informational, blends with charts |
 
 ---
 
 ### File to Modify
 
-**`src/pages/Trends.tsx`**
+**`src/components/DuplicateExercisePrompt.tsx`**
 
-**Add detection logic (after `weightExercises` query):**
+**Changes:**
 
-```typescript
-// Detect duplicate exercises (same description, different keys)
-const duplicateGroups = useMemo(() => {
-  const byDescription = new Map<string, ExerciseTrend[]>();
-  
-  weightExercises.forEach(ex => {
-    const normalized = ex.description.toLowerCase().trim();
-    const group = byDescription.get(normalized) || [];
-    group.push(ex);
-    byDescription.set(normalized, group);
-  });
-  
-  // Filter to only groups with 2+ exercises, then structure for UI
-  return [...byDescription.entries()]
-    .filter(([_, exs]) => exs.length > 1)
-    .map(([description, exercises]) => {
-      // Winner = most sessions
-      const sorted = [...exercises].sort((a, b) => b.sessionCount - a.sessionCount);
-      return {
-        description,
-        exercises,
-        winner: sorted[0],
-        losers: sorted.slice(1),
-      };
-    });
-}, [weightExercises]);
-```
+1. Remove the `AlertTriangle` import and icon
+2. Change card styling from warning to subtle:
+   - `border-warning bg-warning/10` → `border-0 shadow-none bg-muted/30`
+3. Match chart typography:
+   - Title: `text-sm font-medium text-warning-foreground` → `text-xs font-semibold`
+   - Subtitle: `text-xs text-muted-foreground` → `text-[10px] text-muted-foreground`
+4. Adjust padding to be more compact (like chart cards)
+5. Make buttons even smaller/subtler
 
-**Add dismiss state:**
+**Updated component structure:**
 
-```typescript
-const [dismissedDuplicates, setDismissedDuplicates] = useState(() => 
-  localStorage.getItem('dismissed-duplicate-exercises') === 'true'
-);
-```
-
-**Add merge handler:**
-
-```typescript
-const mergeMutation = useMergeExercises();
-
-const handleMerge = (group: DuplicateGroup) => {
-  mergeMutation.mutate({
-    keepKey: group.winner.exercise_key,
-    mergeKeys: group.losers.map(ex => ex.exercise_key),
-  });
-};
-
-const handleDismiss = () => {
-  localStorage.setItem('dismissed-duplicate-exercises', 'true');
-  setDismissedDuplicates(true);
-};
-```
-
-**Render prompt conditionally (inside Weight Trends section, before the chart grid):**
-
-```typescript
-{duplicateGroups.length > 0 && !dismissedDuplicates && (
-  <DuplicateExercisePrompt
-    groups={duplicateGroups}
-    onMerge={handleMerge}
-    onDismiss={handleDismiss}
-    isPending={mergeMutation.isPending}
-  />
-)}
+```tsx
+<Card className="border-0 shadow-none bg-muted/30 rounded-md">
+  <CardContent className="p-2">
+    <div className="flex flex-col gap-1">
+      <p className="text-xs font-semibold">
+        {totalDuplicates === 1 
+          ? "1 exercise may have duplicates"
+          : `${totalDuplicates} exercises may have duplicates`
+        }
+      </p>
+      <p className="text-[10px] text-muted-foreground truncate">
+        "{firstGroup.winner.description}" appears under {firstGroup.exercises.length} entries
+      </p>
+      <div className="flex gap-2 mt-1">
+        <Button size="sm" variant="secondary" className="h-6 text-[10px] px-2">
+          <Merge className="h-3 w-3 mr-1" />
+          {isPending ? "Merging..." : "Merge"}
+        </Button>
+        <Button size="sm" variant="ghost" className="h-6 text-[10px] px-2">
+          <X className="h-3 w-3 mr-1" />
+          Dismiss
+        </Button>
+      </div>
+    </div>
+  </CardContent>
+</Card>
 ```
 
 ---
 
-### User Flow
+### Multiple Duplicates Behavior
 
-```text
-User opens Trends
-       |
-       v
-  Fetch weight data
-       |
-       v
-  Compute duplicateGroups (O(n))
-       |
-       v
-  duplicates found AND not dismissed?
-       |
-   +---+---+
-   No      Yes
-   |        |
-   v        v
-(nothing)  Show DuplicateExercisePrompt
-              |
-        +-----+-----+
-        |           |
-     [Merge]    [Dismiss]
-        |           |
-        v           v
-   Update DB     Save to localStorage
-   rows to use   Hide prompt
-   winner key
-        |
-        v
-   Invalidate query
-   Charts consolidate
+Currently, when multiple duplicate groups exist:
+- Shows "N exercises may have duplicates" in the title
+- Shows details for the first group only
+- "Merge" button only acts on the first group
+
+**Enhanced approach for multiple duplicates:**
+
+When there are multiple groups, show them in a stacked list so users can address each one:
+
+```tsx
+{groups.map((group, index) => (
+  <div key={group.description} className="flex items-center justify-between gap-2">
+    <p className="text-[10px] text-muted-foreground truncate flex-1">
+      "{group.winner.description}" ({group.exercises.length} entries)
+    </p>
+    <Button size="sm" variant="secondary" className="h-5 text-[10px] px-2 shrink-0">
+      Merge
+    </Button>
+  </div>
+))}
 ```
+
+This way each duplicate group has its own inline merge button, and when merged, it disappears from the list.
 
 ---
 
 ### Summary
 
-| File | Action | Lines (approx) |
-|------|--------|----------------|
-| `src/hooks/useMergeExercises.ts` | Create | ~25 |
-| `src/components/DuplicateExercisePrompt.tsx` | Create | ~60 |
-| `src/pages/Trends.tsx` | Modify | +35 |
+| Change | Details |
+|--------|---------|
+| Remove warning styling | No yellow border/background, no warning icon |
+| Match typography | Use `text-xs font-semibold` for title, `text-[10px]` for subtitle |
+| Compact layout | Smaller padding (`p-2`), smaller buttons (`h-6`) |
+| Multiple duplicates | Show each group with its own merge button in a list |
 
-- Detection runs only when exercise data changes (memoized)
-- O(n) performance - negligible for 25 exercises
-- UI only appears when duplicates exist AND user hasn't dismissed
-- Single tap merges all instances to the most-used key
-- Dismissible to avoid nagging users who prefer separate charts
+The result will feel like a natural extension of the charts section rather than an alarming alert.
 
