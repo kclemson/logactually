@@ -1,47 +1,42 @@
 
 
-## Make "try the demo" Link Stand Out
+## Update "try the demo" Link Styling
 
 ### Overview
 
-Add default underline styling to the "try the demo" link so it visually stands out as a clickable action, not just on hover.
+Remove the default underline from the demo link and use a blue color to make it stand out, creating visual consistency with the "Sign Up" link which also uses hover-underline.
 
 ---
 
-### Current State (line 332-333)
-
-```tsx
-className="text-primary underline-offset-4 hover:underline disabled:opacity-50"
-```
-
-The link only shows underline on hover, making it look like plain text until interaction.
-
----
-
-### Proposed Change
-
-Add `underline` to the default state:
+### Current State (line 334)
 
 ```tsx
 className="text-primary underline underline-offset-4 hover:no-underline disabled:opacity-50"
 ```
 
+---
+
+### Proposed Change
+
+```tsx
+className="text-blue-500 underline-offset-4 hover:underline disabled:opacity-50"
+```
+
 This makes the link:
-- Underlined by default (stands out as clickable)
-- Removes underline on hover (subtle interaction feedback)
-- Matches common hyperlink patterns users expect
+- Blue color by default (`text-blue-500`) - stands out from the muted text
+- No underline by default - matches the "Sign Up" link pattern
+- Underline on hover - consistent interaction feedback
 
 ---
 
-### Alternative Option
+### Visual Result
 
-If you'd prefer to keep hover-underline but add more emphasis:
-
-```tsx
-className="text-primary font-medium underline-offset-4 hover:underline disabled:opacity-50"
+```
+Don't have an account? Sign Up     ← text-primary, hover:underline
+Or try the demo — no account needed   ← text-blue-500, hover:underline
 ```
 
-This makes it bold/medium weight instead of underlined.
+Both links now have the same underline behavior (hover only), but the demo link uses blue to differentiate it.
 
 ---
 
@@ -49,5 +44,5 @@ This makes it bold/medium weight instead of underlined.
 
 | File | Change |
 |------|--------|
-| `src/pages/Auth.tsx` | Add `underline` class to demo link (line 332) |
+| `src/pages/Auth.tsx` | Update demo link class: remove `underline`, change `text-primary` to `text-blue-500` |
 
