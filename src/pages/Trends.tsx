@@ -1,120 +1,90 @@
-import { useState, useMemo } from 'react';
-import { format, subDays, startOfDay } from 'date-fns';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  LabelList,
-} from 'recharts';
-import { Card, CardContent, CardHeader, ChartTitle, ChartSubtitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { UtensilsCrossed, Dumbbell, ChevronDown } from 'lucide-react';
-import { CollapsibleSection } from '@/components/CollapsibleSection';
-import { FEATURES } from '@/lib/feature-flags';
-import { useWeightTrends, ExerciseTrend, WeightPoint } from '@/hooks/useWeightTrends';
-import { useIsAdmin } from '@/hooks/useIsAdmin';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { useState, useMemo } from "react";
+import { format, subDays, startOfDay } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { BarChart, Bar, XAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from "recharts";
+import { Card, CardContent, CardHeader, ChartTitle, ChartSubtitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { UtensilsCrossed, Dumbbell, ChevronDown } from "lucide-react";
+import { CollapsibleSection } from "@/components/CollapsibleSection";
+import { FEATURES } from "@/lib/feature-flags";
+import { useWeightTrends, ExerciseTrend, WeightPoint } from "@/hooks/useWeightTrends";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 // Chart color palette (hex RGB format for easy editing)
 const CHART_COLORS = {
-  calories: '#0033CC',  // Deep Blue
-  protein: '#115E83',   // Steel Blue
-  carbs: '#00D4FF',     // Bright Cyan
-  fat: '#B8F4FF',       // Light Cyan
+  calories: "#0033CC", // Deep Blue
+  protein: "#115E83", // Steel Blue
+  carbs: "#00D4FF", // Bright Cyan
+  fat: "#66FFFF", // Light Cyan
 } as const;
 
 const CompactTooltip = ({ active, payload, label, formatter }: any) => {
   if (!active || !payload?.length) return null;
-  
+
   return (
     <div className="rounded-md border border-border/50 bg-white dark:bg-slate-800 px-2 py-1 shadow-md">
       <p className="text-[10px] font-medium text-slate-900 dark:text-slate-100 mb-0.5">{label}</p>
-      {payload.slice().reverse().map((entry: any, index: number) => {
-        const displayValue = formatter 
-          ? formatter(entry.value, entry.name, entry, index, entry.payload)
-          : `${entry.name}: ${Math.round(entry.value)}`;
-        return (
-          <p 
-            key={entry.dataKey || index} 
-            className="text-[10px]"
-            style={{ color: entry.color }}
-          >
-            {Array.isArray(displayValue) ? displayValue[0] : displayValue}
-          </p>
-        );
-      })}
+      {payload
+        .slice()
+        .reverse()
+        .map((entry: any, index: number) => {
+          const displayValue = formatter
+            ? formatter(entry.value, entry.name, entry, index, entry.payload)
+            : `${entry.name}: ${Math.round(entry.value)}`;
+          return (
+            <p key={entry.dataKey || index} className="text-[10px]" style={{ color: entry.color }}>
+              {Array.isArray(displayValue) ? displayValue[0] : displayValue}
+            </p>
+          );
+        })}
     </div>
   );
 };
 
 const periods = [
-  { label: '7 days', days: 7 },
-  { label: '30 days', days: 30 },
-  { label: '90 days', days: 90 },
+  { label: "7 days", days: 7 },
+  { label: "30 days", days: 30 },
+  { label: "90 days", days: 90 },
 ];
 
 const renderGroupedLabel = (props: any) => {
   const { x, y, width, height, value, payload } = props;
-  
+
   // Skip rendering if showLabel is false (threshold-based visibility)
   if (payload && payload.showLabel === false) return null;
-  
-  if (!value || typeof x !== 'number' || typeof width !== 'number') return null;
-  
+
+  if (!value || typeof x !== "number" || typeof width !== "number") return null;
+
   const centerX = x + width / 2;
-  
+
   // Parse the label "3×10×160" into parts
-  const parts = value.split('×');
+  const parts = value.split("×");
   if (parts.length !== 3) return null;
-  
+
   const [sets, reps, weight] = parts;
-  
+
   // Weight label appears ABOVE the bar in purple
   const weightY = y - 4;
-  
+
   // Sets×reps inside the bar (stacked: "3", "×", "10")
-  const insideLines = [sets, '×', reps];
+  const insideLines = [sets, "×", reps];
   const lineHeight = 8;
   const totalTextHeight = insideLines.length * lineHeight;
   const startY = y + ((height || 0) - totalTextHeight) / 2 + lineHeight / 2;
-  
+
   return (
     <g>
       {/* Weight label above bar - purple color matching bar */}
-      <text
-        x={centerX}
-        y={weightY}
-        fill="hsl(262 83% 58%)"
-        textAnchor="middle"
-        fontSize={7}
-        fontWeight={500}
-      >
+      <text x={centerX} y={weightY} fill="hsl(262 83% 58%)" textAnchor="middle" fontSize={7} fontWeight={500}>
         {weight}
       </text>
-      
+
       {/* Sets×reps inside bar - white color */}
-      <text
-        x={centerX}
-        fill="#FFFFFF"
-        textAnchor="middle"
-        fontSize={7}
-        fontWeight={500}
-      >
+      <text x={centerX} fill="#FFFFFF" textAnchor="middle" fontSize={7} fontWeight={500}>
         {insideLines.map((line, i) => (
-          <tspan
-            key={i}
-            x={centerX}
-            y={startY + i * lineHeight}
-          >
+          <tspan key={i} x={centerX} y={startY + i * lineHeight}>
             {line}
           </tspan>
         ))}
@@ -128,10 +98,10 @@ const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
     const dataLength = exercise.weightData.length;
     // Calculate how often to show labels based on column count
     const labelInterval = dataLength <= 8 ? 1 : dataLength <= 16 ? 2 : 3;
-    
+
     return exercise.weightData.map((d, index) => ({
       ...d,
-      dateLabel: format(new Date(`${d.date}T12:00:00`), 'MMM d'),
+      dateLabel: format(new Date(`${d.date}T12:00:00`), "MMM d"),
       label: `${d.sets}×${d.reps}×${d.weight}`,
       // Show label on interval OR always on last column
       showLabel: index % labelInterval === 0 || index === dataLength - 1,
@@ -160,18 +130,18 @@ const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
                 height={16}
               />
               <Tooltip
-                content={<CompactTooltip formatter={(value: number, name: string, entry: any) => {
-                  const { sets, reps, weight } = entry.payload;
-                  return `${sets} sets × ${reps} reps @ ${weight} lbs`;
-                }} />}
+                content={
+                  <CompactTooltip
+                    formatter={(value: number, name: string, entry: any) => {
+                      const { sets, reps, weight } = entry.payload;
+                      return `${sets} sets × ${reps} reps @ ${weight} lbs`;
+                    }}
+                  />
+                }
                 offset={20}
-                cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
+                cursor={{ fill: "hsl(var(--muted)/0.3)" }}
               />
-              <Bar
-                dataKey="weight"
-                fill="hsl(262 83% 58%)"
-                radius={[2, 2, 0, 0]}
-              >
+              <Bar dataKey="weight" fill="hsl(262 83% 58%)" radius={[2, 2, 0, 0]}>
                 <LabelList dataKey="label" content={renderGroupedLabel} />
               </Bar>
             </BarChart>
@@ -189,18 +159,15 @@ const Trends = () => {
   const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
 
   const { data: entries = [], isLoading } = useQuery({
-    queryKey: ['food-entries-trends', selectedPeriod],
+    queryKey: ["food-entries-trends", selectedPeriod],
     queryFn: async () => {
-      const startDate = format(
-        subDays(startOfDay(new Date()), selectedPeriod - 1),
-        'yyyy-MM-dd'
-      );
+      const startDate = format(subDays(startOfDay(new Date()), selectedPeriod - 1), "yyyy-MM-dd");
 
       const { data, error } = await supabase
-        .from('food_entries')
-        .select('eaten_date, total_calories, total_protein, total_carbs, total_fat')
-        .gte('eaten_date', startDate)
-        .order('eaten_date', { ascending: true });
+        .from("food_entries")
+        .select("eaten_date, total_calories, total_protein, total_carbs, total_fat")
+        .gte("eaten_date", startDate)
+        .order("eaten_date", { ascending: true });
 
       if (error) throw error;
       return data || [];
@@ -213,14 +180,11 @@ const Trends = () => {
   // Split into top 6 and remaining
   const top6Exercises = weightExercises.slice(0, 6);
   const remainingExercises = weightExercises.slice(6);
-  const selectedExtra = remainingExercises.find(e => e.exercise_key === extraExercise);
+  const selectedExtra = remainingExercises.find((e) => e.exercise_key === extraExercise);
 
   // Aggregate by date
   const chartData = useMemo(() => {
-    const byDate: Record<
-      string,
-      { calories: number; protein: number; carbs: number; fat: number }
-    > = {};
+    const byDate: Record<string, { calories: number; protein: number; carbs: number; fat: number }> = {};
 
     entries.forEach((entry) => {
       const date = entry.eaten_date;
@@ -239,14 +203,14 @@ const Trends = () => {
       const carbsCals = totals.carbs * 4;
       const fatCals = totals.fat * 9;
       const totalMacroCals = proteinCals + carbsCals + fatCals;
-      
+
       // Calculate percentages
       const proteinPct = totalMacroCals > 0 ? Math.round((proteinCals / totalMacroCals) * 100) : 0;
       const carbsPct = totalMacroCals > 0 ? Math.round((carbsCals / totalMacroCals) * 100) : 0;
       const fatPct = totalMacroCals > 0 ? Math.round((fatCals / totalMacroCals) * 100) : 0;
-      
+
       return {
-        date: format(new Date(`${date}T12:00:00`), 'MMM d'),
+        date: format(new Date(`${date}T12:00:00`), "MMM d"),
         ...totals,
         proteinPct,
         carbsPct,
@@ -257,8 +221,7 @@ const Trends = () => {
 
   // Calculate averages
   const averages = useMemo(() => {
-    if (chartData.length === 0)
-      return { calories: 0, protein: 0, carbs: 0, fat: 0 };
+    if (chartData.length === 0) return { calories: 0, protein: 0, carbs: 0, fat: 0 };
 
     const sum = chartData.reduce(
       (acc, day) => ({
@@ -267,7 +230,7 @@ const Trends = () => {
         carbs: acc.carbs + day.carbs,
         fat: acc.fat + day.fat,
       }),
-      { calories: 0, protein: 0, carbs: 0, fat: 0 }
+      { calories: 0, protein: 0, carbs: 0, fat: 0 },
     );
 
     return {
@@ -279,10 +242,10 @@ const Trends = () => {
   }, [chartData]);
 
   const charts = [
-    { key: 'calories', label: 'Calories', color: CHART_COLORS.calories },
-    { key: 'protein', label: 'Protein (g)', color: CHART_COLORS.protein },
-    { key: 'carbs', label: 'Carbs (g)', color: CHART_COLORS.carbs },
-    { key: 'fat', label: 'Fat (g)', color: CHART_COLORS.fat },
+    { key: "calories", label: "Calories", color: CHART_COLORS.calories },
+    { key: "protein", label: "Protein (g)", color: CHART_COLORS.protein },
+    { key: "carbs", label: "Carbs (g)", color: CHART_COLORS.carbs },
+    { key: "fat", label: "Fat (g)", color: CHART_COLORS.fat },
   ];
 
   return (
@@ -291,7 +254,7 @@ const Trends = () => {
         {periods.map(({ label, days }) => (
           <Button
             key={days}
-            variant={selectedPeriod === days ? 'default' : 'outline'}
+            variant={selectedPeriod === days ? "default" : "outline"}
             size="sm"
             onClick={() => setSelectedPeriod(days)}
           >
@@ -306,12 +269,8 @@ const Trends = () => {
           {charts.map(({ key, label }) => (
             <Card key={key} className="text-center border-0 shadow-none">
               <CardContent className="p-2">
-                <p className="text-base font-semibold">
-                  {averages[key as keyof typeof averages]}
-                </p>
-                <p className="text-[10px] text-muted-foreground">
-                  Avg {label.split(' ')[0]}
-                </p>
+                <p className="text-base font-semibold">{averages[key as keyof typeof averages]}</p>
+                <p className="text-[10px] text-muted-foreground">Avg {label.split(" ")[0]}</p>
               </CardContent>
             </Card>
           ))}
@@ -322,9 +281,7 @@ const Trends = () => {
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           </div>
         ) : chartData.length === 0 ? (
-          <div className="py-8 text-center text-muted-foreground">
-            No data for this period
-          </div>
+          <div className="py-8 text-center text-muted-foreground">No data for this period</div>
         ) : (
           <div className="space-y-3">
             {/* Row 1: Calories + Macros Breakdown */}
@@ -347,11 +304,7 @@ const Trends = () => {
                           tickMargin={2}
                           height={16}
                         />
-                        <Tooltip
-                          content={<CompactTooltip />}
-                          offset={20}
-                          cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
-                        />
+                        <Tooltip content={<CompactTooltip />} offset={20} cursor={{ fill: "hsl(var(--muted)/0.3)" }} />
                         <Bar dataKey="calories" fill="#0033CC" radius={[2, 2, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -378,15 +331,19 @@ const Trends = () => {
                           height={16}
                         />
                         <Tooltip
-                          content={<CompactTooltip formatter={(value, name) => 
-                            `${name}: ${value}%`
-                          } />}
+                          content={<CompactTooltip formatter={(value, name) => `${name}: ${value}%`} />}
                           offset={20}
-                          cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
+                          cursor={{ fill: "hsl(var(--muted)/0.3)" }}
                         />
                         <Bar dataKey="fatPct" name="Fat" stackId="macros" fill={CHART_COLORS.fat} />
                         <Bar dataKey="carbsPct" name="Carbs" stackId="macros" fill={CHART_COLORS.carbs} />
-                        <Bar dataKey="proteinPct" name="Protein" stackId="macros" fill={CHART_COLORS.protein} radius={[2, 2, 0, 0]} />
+                        <Bar
+                          dataKey="proteinPct"
+                          name="Protein"
+                          stackId="macros"
+                          fill={CHART_COLORS.protein}
+                          radius={[2, 2, 0, 0]}
+                        />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -417,13 +374,9 @@ const Trends = () => {
                           <Tooltip
                             content={<CompactTooltip />}
                             offset={20}
-                            cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
+                            cursor={{ fill: "hsl(var(--muted)/0.3)" }}
                           />
-                          <Bar
-                            dataKey={key}
-                            fill={color}
-                            radius={[2, 2, 0, 0]}
-                          />
+                          <Bar dataKey={key} fill={color} radius={[2, 2, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
@@ -443,14 +396,12 @@ const Trends = () => {
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
             </div>
           ) : weightExercises.length === 0 ? (
-            <div className="py-8 text-center text-muted-foreground">
-              No weight training data for this period
-            </div>
+            <div className="py-8 text-center text-muted-foreground">No weight training data for this period</div>
           ) : (
             <div className="space-y-3">
               {/* Top 6 exercises in 2-column grid */}
               <div className="grid grid-cols-2 gap-3">
-                {top6Exercises.map(exercise => (
+                {top6Exercises.map((exercise) => (
                   <ExerciseChart key={exercise.exercise_key} exercise={exercise} />
                 ))}
               </div>
@@ -461,13 +412,13 @@ const Trends = () => {
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="outline" size="sm" className="w-full">
-                        {selectedExtra ? selectedExtra.description : 'More exercises...'}
+                        {selectedExtra ? selectedExtra.description : "More exercises..."}
                         <ChevronDown className="ml-2 h-4 w-4" />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-56 p-1 bg-popover z-50">
                       <div className="flex flex-col gap-1">
-                        {remainingExercises.map(ex => (
+                        {remainingExercises.map((ex) => (
                           <Button
                             key={ex.exercise_key}
                             variant="ghost"
@@ -476,9 +427,7 @@ const Trends = () => {
                             onClick={() => setExtraExercise(ex.exercise_key)}
                           >
                             {ex.description}
-                            <span className="ml-auto text-muted-foreground text-xs">
-                              {ex.sessionCount} sessions
-                            </span>
+                            <span className="ml-auto text-muted-foreground text-xs">{ex.sessionCount} sessions</span>
                           </Button>
                         ))}
                       </div>
@@ -486,9 +435,7 @@ const Trends = () => {
                   </Popover>
 
                   {/* Show selected extra exercise chart */}
-                  {selectedExtra && (
-                    <ExerciseChart exercise={selectedExtra} />
-                  )}
+                  {selectedExtra && <ExerciseChart exercise={selectedExtra} />}
                 </div>
               )}
             </div>
