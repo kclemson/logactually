@@ -40,16 +40,9 @@ export function SaveRoutineDialog({
   onSave,
   isSaving,
 }: SaveRoutineDialogProps) {
-  const [name, setName] = useState('');
+  // State is fresh on each mount since dialog unmounts when closed
+  const [name, setName] = useState(() => getDefaultName(exerciseSets));
   const [userHasTyped, setUserHasTyped] = useState(false);
-
-  // Initialize name when dialog opens
-  useEffect(() => {
-    if (open) {
-      setName(getDefaultName(exerciseSets));
-      setUserHasTyped(false);
-    }
-  }, [open, exerciseSets]);
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setName(e.target.value);
