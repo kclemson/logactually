@@ -1,9 +1,18 @@
 
 
-## Simplify Close Button Navigation
+## Add "Made by" Link to Help Page
 
 ### Overview
-Update the close button on the Help page to always navigate to the home page (`/`) instead of trying to go back in history.
+Add a horizontally centered link at the bottom of the Help page that says "made by kcloadletter.com" and links to https://www.kcloadletter.com.
+
+---
+
+### Design
+Based on the reference image, the link should be:
+- Muted/subtle text color (using `text-muted-foreground`)
+- Small text size (`text-sm`)
+- Horizontally centered
+- Opens in a new tab for external links
 
 ---
 
@@ -11,20 +20,24 @@ Update the close button on the Help page to always navigate to the home page (`/
 
 **File:** `src/pages/Help.tsx`
 
-Update line 76 to change `navigate(-1)` to `navigate('/')`:
+Add a new section at the bottom of the page after the Feedback section:
 
 ```tsx
-<button
-  onClick={() => navigate('/')}
-  className="absolute right-0 top-0 p-2 -mr-2 -mt-2 text-muted-foreground hover:text-foreground transition-colors"
-  aria-label="Close help"
->
-  <X className="h-5 w-5" />
-</button>
+{/* Made by link */}
+<div className="pt-4 text-center">
+  <a
+    href="https://www.kcloadletter.com"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+  >
+    made by kcloadletter.com
+  </a>
+</div>
 ```
 
 ---
 
 ### Files to Modify
-1. `src/pages/Help.tsx` - Change `navigate(-1)` to `navigate('/')`
+1. `src/pages/Help.tsx` - Add centered "made by" link at the bottom
 
