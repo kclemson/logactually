@@ -154,7 +154,10 @@ const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
 };
 
 const Trends = () => {
-  const [selectedPeriod, setSelectedPeriod] = useState(30);
+const [selectedPeriod, setSelectedPeriod] = useState(() => {
+    const saved = localStorage.getItem('trends-period');
+    return saved && [7, 30, 90].includes(Number(saved)) ? Number(saved) : 30;
+  });
   const [extraExercise, setExtraExercise] = useState<string | null>(null);
   const { data: isAdmin } = useIsAdmin();
   const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
@@ -257,7 +260,10 @@ const Trends = () => {
             key={days}
             variant={selectedPeriod === days ? "default" : "outline"}
             size="sm"
-            onClick={() => setSelectedPeriod(days)}
+            onClick={() => {
+              localStorage.setItem('trends-period', String(days));
+              setSelectedPeriod(days);
+            }}
           >
             {label}
           </Button>
