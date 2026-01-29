@@ -1,10 +1,10 @@
 
 
-## Add Total Training Volume Chart
+## Add Volume Labels with "k" Format
 
 ### Overview
 
-Add a new chart to Weight Trends showing total training volume (sets × reps × weight) by day, similar to how Calories shows daily totals in Food Trends.
+Add labels above each bar in the Total Volume chart, formatted to show thousands (e.g., "18k" instead of "18010").
 
 ---
 
@@ -14,113 +14,54 @@ Add a new chart to Weight Trends showing total training volume (sets × reps × 
 
 ---
 
-### Change 1: Add trainingVolume Color to CHART_COLORS
+### Change 1: Add a Label Formatter Helper
 
-**Lines 19-25** - Add the darker purple color with your preferred naming:
+Add a simple function to format large numbers to "Xk" format:
 
 ```typescript
-const CHART_COLORS = {
-  calories: "#0033CC",
-  protein: "#115E83",
-  carbs: "#00B4D8",
-  fat: "#90E0EF",
-  trainingVolume: "hsl(262 70% 45%)", // Darker purple for volume chart, visible on both themes
-} as const;
+const formatVolumeLabel = (value: number) => {
+  return `${Math.round(value / 1000)}k`;
+};
 ```
 
 ---
 
-### Change 2: Add volumeByDay Memo
+### Change 2: Update volumeByDay to include formatted label
 
-**After line 248** (after `handleDismissGroup`) - Add new memo to aggregate volume:
+Modify the `volumeByDay` memo to add a `label` field:
 
 ```typescript
-// Aggregate total volume by day across all exercises
-const volumeByDay = useMemo(() => {
-  const byDate: Record<string, number> = {};
-
-  weightExercises.forEach((exercise) => {
-    exercise.weightData.forEach((point) => {
-      // point.weight is in lbs, calculate volume in lbs
-      const volumeLbs = point.sets * point.reps * point.weight;
-      byDate[point.date] = (byDate[point.date] || 0) + volumeLbs;
-    });
-  });
-
-  return Object.entries(byDate)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, volumeLbs]) => ({
-      date: format(new Date(`${date}T12:00:00`), "MMM d"),
-      volume: settings.weightUnit === "kg" 
-        ? Math.round(volumeLbs * LBS_TO_KG) 
-        : Math.round(volumeLbs),
-    }));
-}, [weightExercises, settings.weightUnit]);
+.map(([date, volumeLbs]) => {
+  const volume = settings.weightUnit === "kg" 
+    ? Math.round(volumeLbs * LBS_TO_KG) 
+    : Math.round(volumeLbs);
+  return {
+    date: format(new Date(`${date}T12:00:00`), "MMM d"),
+    volume,
+    label: `${Math.round(volume / 1000)}k`,
+  };
+})
 ```
 
 ---
 
-### Change 3: Add Volume Chart to Weight Trends Section
+### Change 3: Add LabelList to the Volume Bar
 
-**Lines 470-479** - Insert the volume chart at the top of the Weight Trends section, before the duplicate prompt:
+Add `LabelList` import usage and increase top margin for labels:
 
 ```tsx
-<div className="space-y-3">
-  {/* Total Volume Chart */}
-  {volumeByDay.length > 0 && (
-    <Card className="border-0 shadow-none">
-      <CardHeader className="p-2 pb-1">
-        <ChartTitle>Total Volume ({settings.weightUnit})</ChartTitle>
-      </CardHeader>
-      <CardContent className="p-2 pt-0">
-        <div className="h-24">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={volumeByDay} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
-              <XAxis
-                dataKey="date"
-                tick={{ fontSize: 8 }}
-                stroke="hsl(var(--muted-foreground))"
-                interval="preserveStartEnd"
-                tickMargin={2}
-                height={16}
-              />
-              <Tooltip
-                content={
-                  <CompactTooltip
-                    formatter={(value: number) => `${value.toLocaleString()} ${settings.weightUnit}`}
-                  />
-                }
-                offset={20}
-                cursor={{ fill: "hsl(var(--muted)/0.3)" }}
-              />
-              <Bar dataKey="volume" fill={CHART_COLORS.trainingVolume} radius={[2, 2, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
-  )}
-
-  {/* Duplicate exercise prompt - existing code continues... */}
-```
-
----
-
-### Result Layout
-
-```text
-Weight Trends
-┌─────────────────────────────────────────┐
-│  Total Volume (lbs)                     │  ← NEW: Full-width chart
-│  [Bar chart showing daily volume]       │
-└─────────────────────────────────────────┘
-
-┌─── Duplicate prompt (if any) ───────────┐
-
-┌──────────────────┐ ┌──────────────────┐
-│  Lat Pulldown    │ │  Bench Press     │  ← Existing 2-col grid
-│  [exercise chart]│ │  [exercise chart]│
-└──────────────────┘ └──────────────────┘
+<BarChart data={volumeByDay} margin={{ top: 12, right: 0, left: 0, bottom: 0 }}>
+  {/* ... XAxis and Tooltip ... */}
+  <Bar dataKey="volume" fill={CHART_COLORS.trainingVolume} radius={[2, 2, 0, 0]}>
+    <LabelList 
+      dataKey="label" 
+      position="top" 
+      fill={CHART_COLORS.trainingVolume}
+      fontSize={7}
+      fontWeight={500}
+    />
+  </Bar>
+</BarChart>
 ```
 
 ---
@@ -129,9 +70,8 @@ Weight Trends
 
 | Change | Details |
 |--------|---------|
-| New color | `trainingVolume: "hsl(262 70% 45%)"` - darker purple visible on both themes |
-| Data memo | `volumeByDay` aggregates sets × reps × weight per day across all exercises |
-| Unit conversion | Converts to kg when `settings.weightUnit === 'kg'` |
-| Chart position | Full-width at top of Weight Trends, before duplicate prompt |
-| Tooltip | Shows formatted volume with unit (e.g., "15,420 lbs") |
+| Label format | Volume shown as "18k" not "18010" |
+| Label position | Above each bar using `position="top"` |
+| Label styling | Same purple color as bar, 7px font, 500 weight |
+| Top margin | Increased to 12px to make room for labels |
 
