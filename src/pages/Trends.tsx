@@ -17,7 +17,7 @@ const CHART_COLORS = {
   calories: "#0033CC",
   protein: "#115E83",
   carbs: "#00B4D8",
-  fat: "#A7D3FF",
+  fat: "#90E0EF",
 } as const;
 
 const CompactTooltip = ({ active, payload, label, formatter }: any) => {
