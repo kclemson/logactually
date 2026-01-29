@@ -1,52 +1,41 @@
 
 
-## Fix Voice Button UX
+## Remove Pulse Animation from Voice Button
 
 ### Overview
 
-Keep the `Mic` icon showing in both states, change the label text to "Stop" when recording, and add a subtle pulse animation to make the active recording state clear.
+Remove the `animate-pulse` class from the voice button while keeping the red background and "Stop" label during recording.
 
 ---
 
-### File to Modify
+### Files to Modify
 
-**`src/components/LogInput.tsx`**
+1. **`src/components/LogInput.tsx`**
+2. **`src/components/FoodInput.tsx`**
 
 ---
 
 ### Changes
 
-**1. Update the button (lines 296-305)**
+**LogInput.tsx (line 301)**
 
 ```typescript
 // Before
-<Button
-  variant="outline"
-  size="sm"
-  onClick={toggleListening}
-  disabled={isBusy}
-  className={cn("px-2", isListening && "bg-destructive text-destructive-foreground")}
->
-  {isListening ? <MicOff className="h-4 w-4 mr-1" /> : <Mic className="h-4 w-4 mr-1" />}
-  Voice
-</Button>
+className={cn("px-2", isListening && "bg-destructive text-destructive-foreground animate-pulse")}
 
 // After
-<Button
-  variant="outline"
-  size="sm"
-  onClick={toggleListening}
-  disabled={isBusy}
-  className={cn("px-2", isListening && "bg-destructive text-destructive-foreground animate-pulse")}
->
-  <Mic className="h-4 w-4 mr-1" />
-  {isListening ? "Stop" : "Voice"}
-</Button>
+className={cn("px-2", isListening && "bg-destructive text-destructive-foreground")}
 ```
 
-**2. Remove unused import (line 2)**
+**FoodInput.tsx (line 209)**
 
-Remove `MicOff` from the lucide-react imports since it's no longer used.
+```typescript
+// Before
+className={cn("px-2", isListening && "bg-destructive text-destructive-foreground animate-pulse")}
+
+// After
+className={cn("px-2", isListening && "bg-destructive text-destructive-foreground")}
+```
 
 ---
 
@@ -55,20 +44,13 @@ Remove `MicOff` from the lucide-react imports since it's no longer used.
 | State | Icon | Label | Background | Animation |
 |-------|------|-------|------------|-----------|
 | Idle | Mic | "Voice" | Default outline | None |
-| Recording | Mic | "Stop" | Red (`bg-destructive`) | Pulse |
-
-Users will clearly see:
-- The red pulsing button indicates active recording
-- "Stop" text provides a clear action to end recording
-- The microphone icon stays consistent (no confusing "muted" appearance)
+| Recording | Mic | "Stop" | Red | None |
 
 ---
 
 ### Summary
 
-- 1 file modified
-- Icon always shows `Mic` (never `MicOff`)
-- Label changes from "Voice" to "Stop" when recording
-- Pulse animation added for visual feedback
-- Removes unused `MicOff` import
+- 2 files modified
+- Remove `animate-pulse` from both button classNames
+- Keeps the clear red background + "Stop" text feedback
 
