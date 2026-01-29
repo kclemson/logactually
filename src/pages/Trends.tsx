@@ -13,6 +13,8 @@ import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import type { WeightUnit } from "@/lib/weight-units";
+import { useMergeExercises } from "@/hooks/useMergeExercises";
+import { DuplicateExercisePrompt, type DuplicateGroup } from "@/components/DuplicateExercisePrompt";
 
 // Chart color palette (hex RGB format for easy editing)
 const CHART_COLORS = {
@@ -166,14 +168,18 @@ const ExerciseChart = ({ exercise, unit }: { exercise: ExerciseTrend; unit: Weig
 };
 
 const Trends = () => {
-const [selectedPeriod, setSelectedPeriod] = useState(() => {
+  const [selectedPeriod, setSelectedPeriod] = useState(() => {
     const saved = localStorage.getItem('trends-period');
     return saved && [7, 30, 90].includes(Number(saved)) ? Number(saved) : 30;
   });
   const [extraExercise, setExtraExercise] = useState<string | null>(null);
+  const [dismissedDuplicates, setDismissedDuplicates] = useState(() => 
+    localStorage.getItem('dismissed-duplicate-exercises') === 'true'
+  );
   const { data: isAdmin } = useIsAdmin();
   const { settings } = useUserSettings();
   const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
+  const mergeMutation = useMergeExercises();
 
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ["food-entries-trends", selectedPeriod],
@@ -193,6 +199,44 @@ const [selectedPeriod, setSelectedPeriod] = useState(() => {
 
   // Weight trends query
   const { data: weightExercises = [], isLoading: weightLoading } = useWeightTrends(selectedPeriod);
+
+  // Detect duplicate exercises (same description, different keys)
+  const duplicateGroups = useMemo((): DuplicateGroup[] => {
+    const byDescription = new Map<string, ExerciseTrend[]>();
+    
+    weightExercises.forEach(ex => {
+      const normalized = ex.description.toLowerCase().trim();
+      const group = byDescription.get(normalized) || [];
+      group.push(ex);
+      byDescription.set(normalized, group);
+    });
+    
+    // Filter to only groups with 2+ exercises, then structure for UI
+    return [...byDescription.entries()]
+      .filter(([_, exs]) => exs.length > 1)
+      .map(([description, exercises]) => {
+        // Winner = most sessions
+        const sorted = [...exercises].sort((a, b) => b.sessionCount - a.sessionCount);
+        return {
+          description,
+          exercises,
+          winner: sorted[0],
+          losers: sorted.slice(1),
+        };
+      });
+  }, [weightExercises]);
+
+  const handleMerge = (group: DuplicateGroup) => {
+    mergeMutation.mutate({
+      keepKey: group.winner.exercise_key,
+      mergeKeys: group.losers.map(ex => ex.exercise_key),
+    });
+  };
+
+  const handleDismiss = () => {
+    localStorage.setItem('dismissed-duplicate-exercises', 'true');
+    setDismissedDuplicates(true);
+  };
 
   // Split into top 25 and remaining
   const top25Exercises = weightExercises.slice(0, 25);
@@ -413,11 +457,21 @@ const [selectedPeriod, setSelectedPeriod] = useState(() => {
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
             </div>
           ) : weightExercises.length === 0 ? (
-            <div className="py-8 text-center text-muted-foreground">No weight training data for this period</div>
-          ) : (
-            <div className="space-y-3">
-              {/* Top 6 exercises in 2-column grid */}
-              <div className="grid grid-cols-2 gap-3">
+          <div className="py-8 text-center text-muted-foreground">No weight training data for this period</div>
+        ) : (
+          <div className="space-y-3">
+            {/* Duplicate exercise prompt */}
+            {duplicateGroups.length > 0 && !dismissedDuplicates && (
+              <DuplicateExercisePrompt
+                groups={duplicateGroups}
+                onMerge={handleMerge}
+                onDismiss={handleDismiss}
+                isPending={mergeMutation.isPending}
+              />
+            )}
+
+            {/* Top 25 exercises in 2-column grid */}
+            <div className="grid grid-cols-2 gap-3">
                 {top25Exercises.map((exercise) => (
                   <ExerciseChart key={exercise.exercise_key} exercise={exercise} unit={settings.weightUnit} />
                 ))}
