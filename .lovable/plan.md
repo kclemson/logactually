@@ -1,107 +1,62 @@
 
 
-## Add Demo Data Population Button to Admin Page
+## Add "End Demo" Button to Demo Banner
 
 ### Overview
 
-Add a button to the Admin page that triggers the `populate-demo-data` edge function with sensible defaults. Include loading state feedback and success/error messaging.
-
----
-
-### UI Design
-
-Add a small "Admin Actions" section at the bottom of the Admin page with:
-- A "Populate Demo Data" button
-- Loading spinner while running
-- Success message showing summary (entries created)
-- Error message if something fails
+Add an "End demo" button next to the existing "Create Account" button in the DemoBanner. This will sign the user out and redirect them to the auth page without the "create account" intent framing.
 
 ---
 
 ### Implementation
 
-**1. Add state for button interaction**
+**DemoBanner.tsx Changes**
+
+1. Add a new `handleEndDemo` handler that signs out and navigates to `/auth`
+2. Add a ghost-style "End demo" button next to "Create Account"
 
 ```tsx
-const [isPopulating, setIsPopulating] = useState(false);
-const [populateResult, setPopulateResult] = useState<{
-  success: boolean;
-  message: string;
-} | null>(null);
-```
-
-**2. Create handler function**
-
-```tsx
-const handlePopulateDemoData = async () => {
-  setIsPopulating(true);
-  setPopulateResult(null);
-  
-  try {
-    const { data, error } = await supabase.functions.invoke('populate-demo-data', {
-      body: {
-        clearExisting: true,  // Fresh start each time
-      }
-    });
-    
-    if (error) throw error;
-    
-    setPopulateResult({
-      success: true,
-      message: `Created ${data.summary.foodEntries} food entries, ${data.summary.weightSets} weight sets, ${data.summary.savedMeals} saved meals, ${data.summary.savedRoutines} saved routines`
-    });
-  } catch (err) {
-    setPopulateResult({
-      success: false,
-      message: err instanceof Error ? err.message : 'Failed to populate demo data'
-    });
-  } finally {
-    setIsPopulating(false);
-  }
+const handleEndDemo = async () => {
+  await signOut();
+  navigate('/auth');
 };
 ```
 
-**3. Add UI section**
+**Updated UI Layout**
 
 ```tsx
-{/* Admin Actions */}
-<div className="space-y-2 pt-4 border-t">
-  <p className="font-medium text-xs text-muted-foreground">Admin Actions</p>
-  <div className="flex items-center gap-2">
-    <Button
-      size="sm"
-      variant="outline"
-      onClick={handlePopulateDemoData}
-      disabled={isPopulating}
-      className="text-xs"
-    >
-      {isPopulating ? (
-        <>
-          <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent mr-1" />
-          Populating...
-        </>
-      ) : (
-        'Populate Demo Data'
-      )}
-    </Button>
-  </div>
-  {populateResult && (
-    <p className={`text-xs ${populateResult.success ? 'text-green-500' : 'text-destructive'}`}>
-      {populateResult.message}
-    </p>
-  )}
+<div className="flex items-center gap-2">
+  <Button 
+    variant="ghost" 
+    size="sm" 
+    onClick={handleEndDemo}
+    className="h-7 text-xs text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-800/50"
+  >
+    End demo
+  </Button>
+  <Button 
+    variant="outline" 
+    size="sm" 
+    onClick={handleCreateAccount}
+    className="h-7 text-xs border-amber-300 dark:border-amber-700 hover:bg-amber-200 dark:hover:bg-amber-800/50"
+  >
+    Create Account
+  </Button>
 </div>
 ```
 
 ---
 
-### Required Imports
+### Visual Result
 
-```tsx
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  You're viewing a demo              [End demo] [Create Account] │
+└─────────────────────────────────────────────────────────────────┘
 ```
+
+- "End demo" uses ghost variant (subtle, text-only look)
+- "Create Account" remains outline variant (more prominent CTA)
 
 ---
 
@@ -109,5 +64,5 @@ import { supabase } from "@/integrations/supabase/client";
 
 | File | Change |
 |------|--------|
-| `src/pages/Admin.tsx` | Add imports, state, handler, and UI section for demo data population button |
+| `src/components/DemoBanner.tsx` | Add `handleEndDemo` function and "End demo" button |
 
