@@ -62,7 +62,7 @@ const ExerciseChart = ({ exercise, unit }: { exercise: ExerciseTrend; unit: Weig
     const labelInterval = dataLength <= 12 ? 1 : dataLength <= 20 ? 2 : 3;
 
     return exercise.weightData.map((d, index) => {
-      const displayWeight = unit === 'kg' ? Math.round(d.weight * LBS_TO_KG) : d.weight;
+      const displayWeight = unit === "kg" ? Math.round(d.weight * LBS_TO_KG) : d.weight;
       return {
         ...d,
         weight: displayWeight,
@@ -74,9 +74,7 @@ const ExerciseChart = ({ exercise, unit }: { exercise: ExerciseTrend; unit: Weig
     });
   }, [exercise.weightData, unit]);
 
-  const maxWeightDisplay = unit === 'kg' 
-    ? Math.round(exercise.maxWeight * LBS_TO_KG) 
-    : exercise.maxWeight;
+  const maxWeightDisplay = unit === "kg" ? Math.round(exercise.maxWeight * LBS_TO_KG) : exercise.maxWeight;
 
   // Label renderer with closure access to chartData for showLabel lookup
   const renderLabel = (props: any) => {
@@ -129,7 +127,9 @@ const ExerciseChart = ({ exercise, unit }: { exercise: ExerciseTrend; unit: Weig
       <CardHeader className="p-2 pb-1">
         <div className="flex flex-col gap-0.5">
           <ChartTitle className="truncate">{exercise.description}</ChartTitle>
-          <ChartSubtitle>Max: {maxWeightDisplay} {unit}</ChartSubtitle>
+          <ChartSubtitle>
+            Max: {maxWeightDisplay} {unit}
+          </ChartSubtitle>
         </div>
       </CardHeader>
       <CardContent className="p-2 pt-0">
@@ -144,18 +144,18 @@ const ExerciseChart = ({ exercise, unit }: { exercise: ExerciseTrend; unit: Weig
                 tickMargin={2}
                 height={16}
               />
-                <Tooltip
-                  content={
-                    <CompactTooltip
-                      formatter={(value: number, name: string, entry: any) => {
-                        const { sets, reps, weight } = entry.payload;
-                        return `${sets} sets × ${reps} reps @ ${weight} ${unit}`;
-                      }}
-                    />
-                  }
-                  offset={20}
-                  cursor={{ fill: "hsl(var(--muted)/0.3)" }}
-                />
+              <Tooltip
+                content={
+                  <CompactTooltip
+                    formatter={(value: number, name: string, entry: any) => {
+                      const { sets, reps, weight } = entry.payload;
+                      return `${sets} sets × ${reps} reps @ ${weight} ${unit}`;
+                    }}
+                  />
+                }
+                offset={20}
+                cursor={{ fill: "hsl(var(--muted)/0.3)" }}
+              />
               <Bar dataKey="weight" fill="hsl(262 83% 58%)" radius={[2, 2, 0, 0]}>
                 <LabelList dataKey="label" content={renderLabel} />
               </Bar>
@@ -169,13 +169,13 @@ const ExerciseChart = ({ exercise, unit }: { exercise: ExerciseTrend; unit: Weig
 
 const Trends = () => {
   const [selectedPeriod, setSelectedPeriod] = useState(() => {
-    const saved = localStorage.getItem('trends-period');
+    const saved = localStorage.getItem("trends-period");
     return saved && [7, 30, 90].includes(Number(saved)) ? Number(saved) : 30;
   });
   const [extraExercise, setExtraExercise] = useState<string | null>(null);
   const [dismissedDuplicates, setDismissedDuplicates] = useState<string[]>(() => {
     try {
-      const saved = localStorage.getItem('dismissed-duplicate-exercises');
+      const saved = localStorage.getItem("dismissed-duplicate-exercises");
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -209,14 +209,14 @@ const Trends = () => {
   // Filter out already-dismissed groups
   const duplicateGroups = useMemo((): DuplicateGroup[] => {
     const byDescription = new Map<string, ExerciseTrend[]>();
-    
-    weightExercises.forEach(ex => {
+
+    weightExercises.forEach((ex) => {
       const normalized = ex.description.toLowerCase().trim();
       const group = byDescription.get(normalized) || [];
       group.push(ex);
       byDescription.set(normalized, group);
     });
-    
+
     // Filter to only groups with 2+ exercises, then structure for UI
     return [...byDescription.entries()]
       .filter(([_, exs]) => exs.length > 1)
@@ -236,13 +236,13 @@ const Trends = () => {
   const handleMerge = (group: DuplicateGroup) => {
     mergeMutation.mutate({
       keepKey: group.winner.exercise_key,
-      mergeKeys: group.losers.map(ex => ex.exercise_key),
+      mergeKeys: group.losers.map((ex) => ex.exercise_key),
     });
   };
 
   const handleDismissGroup = (description: string) => {
     const updated = [...dismissedDuplicates, description];
-    localStorage.setItem('dismissed-duplicate-exercises', JSON.stringify(updated));
+    localStorage.setItem("dismissed-duplicate-exercises", JSON.stringify(updated));
     setDismissedDuplicates(updated);
   };
 
@@ -326,7 +326,7 @@ const Trends = () => {
             variant={selectedPeriod === days ? "default" : "outline"}
             size="sm"
             onClick={() => {
-              localStorage.setItem('trends-period', String(days));
+              localStorage.setItem("trends-period", String(days));
               setSelectedPeriod(days);
             }}
           >
@@ -459,27 +459,27 @@ const Trends = () => {
 
       {/* Weight Trends Section */}
       {showWeights && (
-        <CollapsibleSection title="Weight Trends" icon={Dumbbell} defaultOpen={true}>
+        <CollapsibleSection title="Weights Trends" icon={Dumbbell} defaultOpen={true}>
           {weightLoading ? (
             <div className="flex justify-center py-8">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
             </div>
           ) : weightExercises.length === 0 ? (
-          <div className="py-8 text-center text-muted-foreground">No weight training data for this period</div>
-        ) : (
-          <div className="space-y-3">
-            {/* Duplicate exercise prompt */}
-            {duplicateGroups.length > 0 && (
-              <DuplicateExercisePrompt
-                groups={duplicateGroups}
-                onMerge={handleMerge}
-                onDismissGroup={handleDismissGroup}
-                isPending={mergeMutation.isPending}
-              />
-            )}
+            <div className="py-8 text-center text-muted-foreground">No weight training data for this period</div>
+          ) : (
+            <div className="space-y-3">
+              {/* Duplicate exercise prompt */}
+              {duplicateGroups.length > 0 && (
+                <DuplicateExercisePrompt
+                  groups={duplicateGroups}
+                  onMerge={handleMerge}
+                  onDismissGroup={handleDismissGroup}
+                  isPending={mergeMutation.isPending}
+                />
+              )}
 
-            {/* Top 25 exercises in 2-column grid */}
-            <div className="grid grid-cols-2 gap-3">
+              {/* Top 25 exercises in 2-column grid */}
+              <div className="grid grid-cols-2 gap-3">
                 {top25Exercises.map((exercise) => (
                   <ExerciseChart key={exercise.exercise_key} exercise={exercise} unit={settings.weightUnit} />
                 ))}
