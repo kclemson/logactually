@@ -1,48 +1,48 @@
 
 
-## Enable Weight Tracking for All Users
+## Allow Two-Line Wrapping in Prompt Eval Results Table
 
 ### Overview
-The weight logging feature is currently gated behind development mode (`import.meta.env.DEV`) which means it only shows for developers locally or for admin users in production. To make it available to all users, the feature flag needs to be enabled.
+Update the "Input" and "Source Note" columns in the DevToolsPanel results table to wrap to two lines instead of truncating with an ellipsis, making long content readable without hovering.
 
 ---
 
 ### Changes
 
-**File:** `src/lib/feature-flags.ts`
+**File:** `src/components/DevToolsPanel.tsx`
 
-Update the `WEIGHT_TRACKING` flag from development-only to enabled for everyone:
+1. **Input column cell (line 398-400)**
+   - Remove `truncate` class
+   - Add `line-clamp-2` for 2-line limit with ellipsis overflow
+   - Add `break-words` to allow word wrapping
 
-```tsx
-// Before (line 9)
-WEIGHT_TRACKING: import.meta.env.DEV,
-
-// After
-WEIGHT_TRACKING: true,
-```
+2. **Source Note column cell (line 452)**
+   - Change `truncate` to `line-clamp-2 break-words`
 
 ---
 
-### What This Enables
+### Technical Details
 
-Once the flag is set to `true`, all users will see:
+The `line-clamp-2` utility (built into Tailwind) limits content to 2 lines and adds an ellipsis (`...`) if the text overflows. This is a better fit than `truncate` (single line) since you want to read more of the text but still cap it at a reasonable height.
 
-1. **"Log Weights" tab** in the bottom navigation (between "Log Food" and "Calendar")
-2. **"Weight Trends" section** on the Trends page showing exercise charts
-
----
-
-### No Other Changes Required
-
-The navigation (`BottomNav.tsx`) and Trends page already have the correct logic:
+**Before:**
 ```tsx
-const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
+<td className="px-1 py-1 font-mono text-xs truncate" ...>
+  {result.input}
+</td>
 ```
 
-Once `FEATURES.WEIGHT_TRACKING` becomes `true`, all users will have access.
+**After:**
+```tsx
+<td className="px-1 py-1 font-mono text-xs" ...>
+  <div className="line-clamp-2 break-words">{result.input}</div>
+</td>
+```
+
+Same pattern for the Source Note column.
 
 ---
 
 ### Files to Modify
-1. `src/lib/feature-flags.ts` - Change `WEIGHT_TRACKING` from `import.meta.env.DEV` to `true`
+1. `src/components/DevToolsPanel.tsx` - Update Input and Source Note cell styling
 
