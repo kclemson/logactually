@@ -18,6 +18,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 import { DeleteAccountDialog } from "@/components/DeleteAccountDialog";
 import { useReadOnlyContext } from "@/contexts/ReadOnlyContext";
+import { DEMO_EMAIL } from "@/lib/demo-mode";
 
 export default function Settings() {
   const { user, signOut } = useAuth();
@@ -28,6 +29,7 @@ export default function Settings() {
   const { data: isAdmin } = useIsAdmin();
   const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
   const { isReadOnly } = useReadOnlyContext();
+  const isDemoUser = user?.email === DEMO_EMAIL;
 
   // Password change dialog
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
@@ -102,7 +104,7 @@ export default function Settings() {
               <p className="text-xs text-muted-foreground">Email</p>
               <p className="text-sm">{user?.email}</p>
             </div>
-            {!isReadOnly && (
+            {!isDemoUser && (
               <button
                 onClick={() => setDeleteAccountOpen(true)}
                 className="text-sm text-muted-foreground hover:text-destructive hover:underline"
