@@ -194,9 +194,9 @@ const [selectedPeriod, setSelectedPeriod] = useState(() => {
   // Weight trends query
   const { data: weightExercises = [], isLoading: weightLoading } = useWeightTrends(selectedPeriod);
 
-  // Split into top 6 and remaining
-  const top6Exercises = weightExercises.slice(0, 6);
-  const remainingExercises = weightExercises.slice(6);
+  // Split into top 25 and remaining
+  const top25Exercises = weightExercises.slice(0, 25);
+  const remainingExercises = weightExercises.slice(25);
   const selectedExtra = remainingExercises.find((e) => e.exercise_key === extraExercise);
 
   // Aggregate by date
@@ -418,7 +418,7 @@ const [selectedPeriod, setSelectedPeriod] = useState(() => {
             <div className="space-y-3">
               {/* Top 6 exercises in 2-column grid */}
               <div className="grid grid-cols-2 gap-3">
-                {top6Exercises.map((exercise) => (
+                {top25Exercises.map((exercise) => (
                   <ExerciseChart key={exercise.exercise_key} exercise={exercise} unit={settings.weightUnit} />
                 ))}
               </div>
