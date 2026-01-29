@@ -1,86 +1,59 @@
 
 
-## Move Column Headers Below Total Row in FoodItemsTable
+## Make Input Textarea Taller
 
 ### Overview
 
-Reorder the FoodItemsTable layout to match WeightItemsTable, where the column headers appear directly above the data rows (below the totals row) rather than above the totals.
-
----
-
-### Current vs. Desired Layout
-
-| Current (Food) | Desired (Food) | WeightItemsTable |
-|----------------|----------------|------------------|
-| Headers | **Totals** | Totals |
-| Totals | **Headers** | Headers |
-| Data rows | **Data rows** | Data rows |
+Increase the minimum height of the input textarea on the food and weights log pages by one row (~20px) to reduce scrollbar appearance with longer placeholder text.
 
 ---
 
 ### File to Modify
 
-**`src/components/FoodItemsTable.tsx`**
+**`src/components/LogInput.tsx`**
 
 ---
 
 ### Change
 
-Swap the order of the header row and top-positioned totals row (lines 359-380):
+Update line 285 - increase the `min-h` class from `80px` to `100px`:
 
 ```typescript
-// Before (current order):
-{/* Header row */}
-{showHeader && (
-  <div className={...}>...</div>
-)}
+// Before
+<Textarea
+  value={text}
+  onChange={(e) => setText(e.target.value)}
+  placeholder={placeholderText}
+  className="min-h-[80px] resize-none"
+  disabled={isBusy}
+  ...
+/>
 
-{/* Mini header when main header is hidden but labels requested */}
-{!showHeader && showInlineLabels && items.length > 0 && (
-  <div className={...}>...</div>
-)}
-
-{/* Totals at top */}
-{showTotals && totalsPosition === 'top' && <TotalsRow />}
-
-{/* Data rows */}
-{items.map(...)}
-
-
-// After (new order matching WeightItemsTable):
-{/* Totals at top */}
-{showTotals && totalsPosition === 'top' && <TotalsRow />}
-
-{/* Header row */}
-{showHeader && (
-  <div className={...}>...</div>
-)}
-
-{/* Mini header when main header is hidden but labels requested */}
-{!showHeader && showInlineLabels && items.length > 0 && (
-  <div className={...}>...</div>
-)}
-
-{/* Data rows */}
-{items.map(...)}
+// After
+<Textarea
+  value={text}
+  onChange={(e) => setText(e.target.value)}
+  placeholder={placeholderText}
+  className="min-h-[100px] resize-none"
+  disabled={isBusy}
+  ...
+/>
 ```
 
 ---
 
-### Result
+### Why This Works
 
-The FoodItemsTable will now display:
-1. **Total row** (highlighted bar with aggregated values)
-2. **Column headers** (Calories, Protein/Carbs/Fat labels)
-3. **Data rows** (individual food items)
-
-This matches the WeightItemsTable layout the user prefers.
+- The `min-h-[80px]` currently accommodates ~3 lines of text
+- Bumping to `min-h-[100px]` adds ~1 more row (~20px with standard line height)
+- This applies to both food and weights pages since they share the same `LogInput` component
+- The base `Textarea` component's default `min-h-[80px]` is overridden by the className passed from `LogInput`
 
 ---
 
 ### Summary
 
 - 1 file modified
-- Reordering of 3 JSX blocks (no content changes)
-- No functional changes, purely visual layout adjustment
+- 1 class value change (`80px` → `100px`)
+- Affects both food and weights log input areas
 
