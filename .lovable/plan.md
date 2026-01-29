@@ -1,56 +1,49 @@
 
 
-## Remove Pulse Animation from Voice Button
+## Increase Exercise Chart Threshold to 25
 
 ### Overview
 
-Remove the `animate-pulse` class from the voice button while keeping the red background and "Stop" label during recording.
+Change the default number of exercise charts displayed on the Trends page from 6 to 25, so users see more of their logged exercises without needing to use the dropdown.
 
 ---
 
-### Files to Modify
+### File to Modify
 
-1. **`src/components/LogInput.tsx`**
-2. **`src/components/FoodInput.tsx`**
+**`src/pages/Trends.tsx`**
 
 ---
 
 ### Changes
 
-**LogInput.tsx (line 301)**
+**Update the slice threshold (lines 197-198)**
 
 ```typescript
 // Before
-className={cn("px-2", isListening && "bg-destructive text-destructive-foreground animate-pulse")}
+const top6Exercises = weightExercises.slice(0, 6);
+const remainingExercises = weightExercises.slice(6);
 
 // After
-className={cn("px-2", isListening && "bg-destructive text-destructive-foreground")}
+const top25Exercises = weightExercises.slice(0, 25);
+const remainingExercises = weightExercises.slice(25);
 ```
 
-**FoodInput.tsx (line 209)**
+**Update the variable reference in JSX (line 277)**
 
 ```typescript
 // Before
-className={cn("px-2", isListening && "bg-destructive text-destructive-foreground animate-pulse")}
+{top6Exercises.map((exercise) => (
 
 // After
-className={cn("px-2", isListening && "bg-destructive text-destructive-foreground")}
+{top25Exercises.map((exercise) => (
 ```
-
----
-
-### Result
-
-| State | Icon | Label | Background | Animation |
-|-------|------|-------|------------|-----------|
-| Idle | Mic | "Voice" | Default outline | None |
-| Recording | Mic | "Stop" | Red | None |
 
 ---
 
 ### Summary
 
-- 2 files modified
-- Remove `animate-pulse` from both button classNames
-- Keeps the clear red background + "Stop" text feedback
+- 1 file modified
+- 2 lines changed (variable name and slice value)
+- Users now see up to 25 exercise charts by default
+- "More exercises" dropdown only appears if user has logged 26+ different exercises
 
