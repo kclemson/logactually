@@ -32,6 +32,10 @@ const HELP_CONTENT = {
         text: "Want to work with your data in another app? Export to CSV in Settings.",
         highlights: ["Export to CSV"],
       },
+      {
+        text: "Pin this app to your phone's home screen for quick access — tap Share (or your browser menu), then \"Add to Home Screen.\"",
+        highlights: ["Pin this app"],
+      },
     ],
   },
   feedback: {
