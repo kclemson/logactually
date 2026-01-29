@@ -1,43 +1,52 @@
 
 
-## Shorten Navigation Labels
+## Add Training Volume Tooltip
 
 ### Overview
 
-Update the bottom navigation labels to be more concise so they fit comfortably on one row, especially on narrow mobile screens.
+Add a native `title` attribute to the training volume number in the totals row, providing a simple browser tooltip that explains what training volume means.
 
 ---
 
-### Changes
+### File to Modify
 
-**File:** `src/components/BottomNav.tsx`
-
-| Current Label | New Label |
-|---------------|-----------|
-| Log Food | Food |
-| Log Weights | Weights |
+**`src/components/WeightItemsTable.tsx`**
 
 ---
 
-### Code Change
+### Change
 
-Lines 12-13 in the `navItems` array:
+Update lines 230-232 - add a `title` attribute to the volume span:
 
 ```typescript
 // Before
-{ to: '/', icon: Utensils, label: 'Log Food' },
-...(showWeights ? [{ to: '/weights', icon: Dumbbell, label: 'Log Weights' }] : []),
+<span className="px-1 text-heading text-center text-xs">
+  {Math.round(totals.volume).toLocaleString()}
+</span>
 
-// After  
-{ to: '/', icon: Utensils, label: 'Food' },
-...(showWeights ? [{ to: '/weights', icon: Dumbbell, label: 'Weights' }] : []),
+// After
+<span 
+  className="px-1 text-heading text-center text-xs"
+  title="Training volume – the total weight lifted (sets × reps × weight)"
+>
+  {Math.round(totals.volume).toLocaleString()}
+</span>
 ```
+
+---
+
+### Result
+
+When users hover over the volume number (e.g., "18,010"), they'll see a tooltip explaining:
+- What the term "training volume" means
+- How it's calculated
 
 ---
 
 ### Summary
 
 - 1 file modified
-- 2 strings changed
-- No functional changes
+- 1 line changed
+- No new dependencies
+- Matches existing pattern used in FoodItemsTable for description tooltips
 
