@@ -8,6 +8,7 @@ export interface WeightPoint {
   weight: number;
   sets: number;
   reps: number;
+  volume: number;  // Pre-calculated volume for accurate aggregation
 }
 
 export interface ExerciseTrend {
@@ -67,12 +68,14 @@ export function useWeightTrends(days: number) {
         if (existing) {
           existing.sets += row.sets;
           existing.reps += row.reps;
+          existing.volume += row.sets * row.reps * weight;
         } else {
           trend.weightData.push({
             date: row.logged_date,
             weight,
             sets: row.sets,
             reps: row.reps,
+            volume: row.sets * row.reps * weight,
           });
         }
       });
