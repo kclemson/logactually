@@ -253,9 +253,8 @@ const Trends = () => {
 
     weightExercises.forEach((exercise) => {
       exercise.weightData.forEach((point) => {
-        // point.weight is in lbs, calculate volume in lbs
-        const volumeLbs = point.sets * point.reps * point.weight;
-        byDate[point.date] = (byDate[point.date] || 0) + volumeLbs;
+        // Use pre-calculated volume (correctly accumulated per-row)
+        byDate[point.date] = (byDate[point.date] || 0) + point.volume;
       });
     });
 
