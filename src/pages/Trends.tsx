@@ -22,7 +22,7 @@ const CHART_COLORS = {
   protein: "#115E83",
   carbs: "#00B4D8",
   fat: "#90E0EF",
-  trainingVolume: "hsl(262 70% 45%)", // Darker purple for volume chart, visible on both themes
+  trainingVolume: "hsl(262 83% 58%)", // Bright purple matching exercise charts (kept separate const for future adjustment)
 } as const;
 
 const CompactTooltip = ({ active, payload, label, formatter }: any) => {
