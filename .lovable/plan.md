@@ -1,55 +1,27 @@
 
-## Tune Weight Chart Label Thresholds & Remove Grid Lines
+## Fix Chart Title Clipping for Descenders
 
-Two changes to improve the Weight Trends chart appearance:
+### Problem
+The "g" in "Seated Leg Press" is being cut off because `ChartTitle` uses `leading-none` (line-height: 1.0), which doesn't provide enough vertical space for descender characters (g, y, p, q, j).
 
----
+### Solution
+Increase the line-height on `ChartTitle` from `leading-none` to `leading-tight` (line-height: 1.25) which provides adequate space for descenders without significantly increasing the overall chart header height.
 
-### Change 1: Adjust Label Thresholds
+### File to Modify
 
-**Current logic (line 56):**
+**src/components/ui/card.tsx** (line 45)
+
+Change:
 ```tsx
-const labelInterval = dataLength <= 8 ? 1 : dataLength <= 16 ? 2 : 3;
+<h4 ref={ref} className={cn("text-xs font-semibold leading-none tracking-tight", className)} {...props} />
 ```
 
-**New logic:**
+To:
 ```tsx
-const labelInterval = dataLength <= 12 ? 1 : dataLength <= 20 ? 2 : 3;
+<h4 ref={ref} className={cn("text-xs font-semibold leading-tight tracking-tight", className)} {...props} />
 ```
 
-| Column Count | Old Behavior | New Behavior |
-|--------------|--------------|--------------|
-| 1-8 bars | Every label | Every label |
-| 9-12 bars | Every 2nd | Every label |
-| 13-16 bars | Every 2nd | Every 2nd |
-| 17-20 bars | Every 3rd | Every 2nd |
-| 21+ bars | Every 3rd | Every 3rd |
-
----
-
-### Change 2: Remove Dashed Grid Lines from Weight Charts
-
-**Current (line 125):**
-```tsx
-<CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-```
-
-**Fix:** Simply remove this line from the `ExerciseChart` component.
-
-This removes the dashed horizontal lines in the background of weight charts while keeping them in the food charts (if desired).
-
----
-
-### Files to Modify
-
-**src/pages/Trends.tsx**
-- Line 56: Update threshold from `8` to `12` and from `16` to `20`
-- Line 125: Delete the `<CartesianGrid ... />` line
-
----
-
-### Result
-
-- Weight charts with 12 or fewer bars will show all labels
-- Weight charts will have a cleaner look without the dashed grid lines
-- Food charts remain unchanged (keep their grid lines)
+### Impact
+- Fixes clipping on all chart titles with descender letters
+- Minimal visual change (~2-3px extra height per title)
+- Consistent typography that properly displays all characters
