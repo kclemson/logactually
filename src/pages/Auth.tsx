@@ -19,6 +19,7 @@ export default function Auth() {
   const [resetSent, setResetSent] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -77,6 +78,12 @@ export default function Auth() {
     e.preventDefault();
     setSubmitting(true);
     setErrorMessage(null);
+
+    if (isSignUp && password !== confirmPassword) {
+      setErrorMessage("Passwords do not match.");
+      setSubmitting(false);
+      return;
+    }
 
     const { error } = isSignUp 
       ? await signUp(email, password)
@@ -271,6 +278,22 @@ export default function Auth() {
                 minLength={6}
               />
             </div>
+            {isSignUp && (
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  placeholder="Confirm your password"
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  minLength={6}
+                />
+              </div>
+            )}
             <Button type="submit" className="w-full" disabled={submitting}>
               {submitting ? 'Loading...' : isSignUp ? 'Sign Up' : 'Sign In'}
             </Button>
@@ -279,7 +302,11 @@ export default function Auth() {
             {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
             <button
               type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
+              onClick={() => {
+                setIsSignUp(!isSignUp);
+                setConfirmPassword('');
+                setErrorMessage(null);
+              }}
               className="text-primary underline-offset-4 hover:underline"
             >
               {isSignUp ? 'Sign In' : 'Sign Up'}
