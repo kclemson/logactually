@@ -1,68 +1,53 @@
 
 
-## Add Volume Labels with "k" Format
+## Fix Voice Button Hover State While Recording
 
-### Overview
+### Problem
 
-Add labels above each bar in the Total Volume chart, formatted to show thousands (e.g., "18k" instead of "18010").
+When voice recording is active (`isListening` is true), the button should stay red. Currently:
+- **Without hover**: Button is red (correct)
+- **With hover**: The `outline` variant's hover styles (`hover:bg-accent`) override the red background
+- **On mobile**: Since there's no "un-hover", the button never appears red after tapping
+
+### Root Cause
+
+The button uses `variant="outline"` which includes hover styles:
+```css
+hover:bg-accent hover:text-accent-foreground
+```
+
+These hover styles override the conditional `bg-destructive text-destructive-foreground` classes because hover states take precedence in the cascade.
+
+### Solution
+
+Override the hover styles when recording is active by adding `hover:bg-destructive hover:text-destructive-foreground` alongside the base destructive styles.
 
 ---
 
 ### File to Modify
 
-**`src/pages/Trends.tsx`**
+**`src/components/LogInput.tsx`**
 
 ---
 
-### Change 1: Add a Label Formatter Helper
+### Change
 
-Add a simple function to format large numbers to "Xk" format:
+**Line 301** - Add hover overrides to the className:
 
-```typescript
-const formatVolumeLabel = (value: number) => {
-  return `${Math.round(value / 1000)}k`;
-};
-```
-
----
-
-### Change 2: Update volumeByDay to include formatted label
-
-Modify the `volumeByDay` memo to add a `label` field:
-
-```typescript
-.map(([date, volumeLbs]) => {
-  const volume = settings.weightUnit === "kg" 
-    ? Math.round(volumeLbs * LBS_TO_KG) 
-    : Math.round(volumeLbs);
-  return {
-    date: format(new Date(`${date}T12:00:00`), "MMM d"),
-    volume,
-    label: `${Math.round(volume / 1000)}k`,
-  };
-})
-```
-
----
-
-### Change 3: Add LabelList to the Volume Bar
-
-Add `LabelList` import usage and increase top margin for labels:
-
+From:
 ```tsx
-<BarChart data={volumeByDay} margin={{ top: 12, right: 0, left: 0, bottom: 0 }}>
-  {/* ... XAxis and Tooltip ... */}
-  <Bar dataKey="volume" fill={CHART_COLORS.trainingVolume} radius={[2, 2, 0, 0]}>
-    <LabelList 
-      dataKey="label" 
-      position="top" 
-      fill={CHART_COLORS.trainingVolume}
-      fontSize={7}
-      fontWeight={500}
-    />
-  </Bar>
-</BarChart>
+className={cn("px-2", isListening && "bg-destructive text-destructive-foreground")}
 ```
+
+To:
+```tsx
+className={cn(
+  "px-2", 
+  isListening && "bg-destructive text-destructive-foreground hover:bg-destructive hover:text-destructive-foreground"
+)}
+```
+
+This ensures that when recording is active, the button stays red regardless of hover state.
 
 ---
 
@@ -70,8 +55,7 @@ Add `LabelList` import usage and increase top margin for labels:
 
 | Change | Details |
 |--------|---------|
-| Label format | Volume shown as "18k" not "18010" |
-| Label position | Above each bar using `position="top"` |
-| Label styling | Same purple color as bar, 7px font, 500 weight |
-| Top margin | Increased to 12px to make room for labels |
+| Fix | Add `hover:bg-destructive hover:text-destructive-foreground` when `isListening` |
+| Result | Button stays red while recording, on both desktop and mobile |
+| No behavior change | Just visual consistency |
 
