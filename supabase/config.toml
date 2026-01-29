@@ -23,3 +23,9 @@ verify_jwt = false
 
 [functions.delete-account]
 verify_jwt = false
+
+[functions.create-demo-user]
+verify_jwt = false
+
+[functions.populate-demo-data]
+verify_jwt = false
