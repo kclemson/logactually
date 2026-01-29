@@ -53,7 +53,7 @@ const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
   const chartData = useMemo(() => {
     const dataLength = exercise.weightData.length;
     // Calculate how often to show labels based on column count
-    const labelInterval = dataLength <= 8 ? 1 : dataLength <= 16 ? 2 : 3;
+    const labelInterval = dataLength <= 12 ? 1 : dataLength <= 20 ? 2 : 3;
 
     return exercise.weightData.map((d, index) => ({
       ...d,
@@ -122,7 +122,6 @@ const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
         <div className="h-24">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} margin={{ top: 12, right: 0, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis
                 dataKey="dateLabel"
                 tick={{ fontSize: 8 }}
