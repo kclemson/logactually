@@ -173,9 +173,14 @@ const Trends = () => {
     return saved && [7, 30, 90].includes(Number(saved)) ? Number(saved) : 30;
   });
   const [extraExercise, setExtraExercise] = useState<string | null>(null);
-  const [dismissedDuplicates, setDismissedDuplicates] = useState(() => 
-    localStorage.getItem('dismissed-duplicate-exercises') === 'true'
-  );
+  const [dismissedDuplicates, setDismissedDuplicates] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('dismissed-duplicate-exercises');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const { data: isAdmin } = useIsAdmin();
   const { settings } = useUserSettings();
   const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
@@ -201,6 +206,7 @@ const Trends = () => {
   const { data: weightExercises = [], isLoading: weightLoading } = useWeightTrends(selectedPeriod);
 
   // Detect duplicate exercises (same description, different keys)
+  // Filter out already-dismissed groups
   const duplicateGroups = useMemo((): DuplicateGroup[] => {
     const byDescription = new Map<string, ExerciseTrend[]>();
     
@@ -214,6 +220,7 @@ const Trends = () => {
     // Filter to only groups with 2+ exercises, then structure for UI
     return [...byDescription.entries()]
       .filter(([_, exs]) => exs.length > 1)
+      .filter(([description]) => !dismissedDuplicates.includes(description))
       .map(([description, exercises]) => {
         // Winner = most sessions
         const sorted = [...exercises].sort((a, b) => b.sessionCount - a.sessionCount);
@@ -224,7 +231,7 @@ const Trends = () => {
           losers: sorted.slice(1),
         };
       });
-  }, [weightExercises]);
+  }, [weightExercises, dismissedDuplicates]);
 
   const handleMerge = (group: DuplicateGroup) => {
     mergeMutation.mutate({
@@ -233,9 +240,10 @@ const Trends = () => {
     });
   };
 
-  const handleDismiss = () => {
-    localStorage.setItem('dismissed-duplicate-exercises', 'true');
-    setDismissedDuplicates(true);
+  const handleDismissGroup = (description: string) => {
+    const updated = [...dismissedDuplicates, description];
+    localStorage.setItem('dismissed-duplicate-exercises', JSON.stringify(updated));
+    setDismissedDuplicates(updated);
   };
 
   // Split into top 25 and remaining
@@ -461,11 +469,11 @@ const Trends = () => {
         ) : (
           <div className="space-y-3">
             {/* Duplicate exercise prompt */}
-            {duplicateGroups.length > 0 && !dismissedDuplicates && (
+            {duplicateGroups.length > 0 && (
               <DuplicateExercisePrompt
                 groups={duplicateGroups}
                 onMerge={handleMerge}
-                onDismiss={handleDismiss}
+                onDismissGroup={handleDismissGroup}
                 isPending={mergeMutation.isPending}
               />
             )}
