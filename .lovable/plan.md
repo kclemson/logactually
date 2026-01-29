@@ -1,9 +1,8 @@
 
-
-## Extract Help Page Strings for Easy Editing
+## Add Close Button to Help Page
 
 ### Overview
-Move all user-facing strings from the Help page into a dedicated constants object at the top of the file. This makes them easy to find and edit without digging through JSX.
+Add an X (close) button to the Help page that navigates back to the previous page, providing an intuitive way to dismiss the help content.
 
 ---
 
@@ -11,41 +10,35 @@ Move all user-facing strings from the Help page into a dedicated constants objec
 
 **File:** `src/pages/Help.tsx`
 
-Add a `HELP_CONTENT` object at the top of the file containing all editable strings:
+Add a close button at the top-right of the page that uses `useNavigate(-1)` to go back:
 
 ```tsx
-const HELP_CONTENT = {
-  tips: {
-    title: 'Tips',
-    items: [
-      {
-        text: 'Log food and weight lifting now. More tracking types coming soon.',
-        highlights: ['food', 'weight lifting'],
-      },
-      {
-        text: 'Just braindump your inputs however you want — the AI figures out the formatting.',
-        highlights: ['braindump'],
-      },
-      {
-        text: 'Editing calories auto-scales protein, carbs, and fat proportionally.',
-        highlights: ['calories'],
-      },
-    ],
-  },
-  feedback: {
-    title: 'Feedback',
-    placeholder: 'Feature requests, bugs, or ideas...',
-    submitButton: 'Send Feedback',
-    submittingButton: 'Sending...',
-    successMessage: 'Thanks for the feedback!',
-  },
-};
-```
+import { useNavigate } from 'react-router-dom';
+import { X } from 'lucide-react';
 
-The component will then render from this object, applying the highlight styling to specified words automatically.
+export default function Help() {
+  const navigate = useNavigate();
+  // ... existing state
+
+  return (
+    <div className="space-y-6 relative">
+      {/* Close button */}
+      <button
+        onClick={() => navigate(-1)}
+        className="absolute right-0 top-0 p-2 -mr-2 -mt-2 text-muted-foreground hover:text-foreground"
+        aria-label="Close help"
+      >
+        <X className="h-5 w-5" />
+      </button>
+
+      {/* Tips Section - existing */}
+      {/* Feedback Section - existing */}
+    </div>
+  );
+}
+```
 
 ---
 
 ### Files to Modify
-1. `src/pages/Help.tsx` - Extract strings to a constants object at the top
-
+1. `src/pages/Help.tsx` - Add close button with back navigation
