@@ -52,8 +52,8 @@ const periods = [
 const renderGroupedLabel = (props: any) => {
   const { x, y, width, height, value, payload } = props;
 
-  // Skip rendering if showLabel is false (threshold-based visibility)
-  if (payload && payload.showLabel === false) return null;
+  // Only render if showLabel is explicitly true (threshold-based visibility)
+  if (!payload?.showLabel) return null;
 
   if (!value || typeof x !== "number" || typeof width !== "number") return null;
 
