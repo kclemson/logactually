@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { PenLine, CalendarDays, TrendingUp, Settings, Shield, Dumbbell } from 'lucide-react';
+import { Utensils, CalendarDays, TrendingUp, Settings, Shield, Dumbbell } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { FEATURES } from '@/lib/feature-flags';
@@ -11,7 +11,7 @@ export function BottomNav() {
   const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
 
   const navItems = [
-    { to: '/', icon: PenLine, label: 'Log Food' },
+    { to: '/', icon: Utensils, label: 'Log Food' },
     ...(showWeights ? [{ to: '/weights', icon: Dumbbell, label: 'Log Weights' }] : []),
     { to: '/history', icon: CalendarDays, label: 'Calendar' },
     { to: '/trends', icon: TrendingUp, label: 'Trends' },
@@ -25,17 +25,17 @@ export function BottomNav() {
             <NavLink
               key={to}
               to={to}
-              className={({ isActive }) =>
-                cn(
-                  'flex flex-1 flex-col items-center gap-1 py-2.5 transition-colors',
-                  isActive
-                    ? 'text-primary'
-                    : 'text-muted-foreground hover:text-foreground'
-                )
-              }
+            className={({ isActive }) =>
+              cn(
+                'flex flex-1 flex-col items-center pt-2 pb-1.5 h-14 transition-colors',
+                isActive
+                  ? 'text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              )
+            }
             >
               <Icon className="h-4 w-4" />
-              <span className="text-xs text-center">{label}</span>
+              <span className="text-xs text-center leading-tight mt-1">{label}</span>
             </NavLink>
         ))}
       </div>
