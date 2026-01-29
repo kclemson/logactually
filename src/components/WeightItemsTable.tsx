@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 
 type EditableFieldKey = 'description' | 'sets' | 'reps' | 'weight_lbs';
 
@@ -70,6 +71,8 @@ export function WeightItemsTable({
   onSaveAsRoutine,
   showInlineLabels = false,
 }: WeightItemsTableProps) {
+  const { isReadOnly, triggerOverlay } = useReadOnlyContext();
+  
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const descriptionOriginalRef = useRef<string>('');
 
@@ -80,6 +83,15 @@ export function WeightItemsTable({
   ) => {
     if (e.key === 'Enter') {
       e.preventDefault();
+      
+      // Block save for read-only users
+      if (isReadOnly) {
+        triggerOverlay();
+        setEditingCell(null);
+        (e.target as HTMLElement).blur();
+        return;
+      }
+      
       if (editingCell && editingCell.value !== editingCell.originalValue) {
         onUpdateItem?.(index, field, editingCell.value);
       }
@@ -98,6 +110,15 @@ export function WeightItemsTable({
   ) => {
     if (e.key === 'Enter') {
       e.preventDefault();
+      
+      // Block save for read-only users
+      if (isReadOnly) {
+        triggerOverlay();
+        e.currentTarget.textContent = descriptionOriginalRef.current;
+        (e.target as HTMLElement).blur();
+        return;
+      }
+      
       const newDescription = e.currentTarget.textContent || '';
       if (newDescription !== descriptionOriginalRef.current) {
         onUpdateItem?.(index, 'description', newDescription);

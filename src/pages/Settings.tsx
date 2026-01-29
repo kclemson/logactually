@@ -17,6 +17,7 @@ import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useAuth } from "@/hooks/useAuth";
 import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 import { DeleteAccountDialog } from "@/components/DeleteAccountDialog";
+import { useReadOnlyContext } from "@/contexts/ReadOnlyContext";
 
 export default function Settings() {
   const { user, signOut } = useAuth();
@@ -26,6 +27,7 @@ export default function Settings() {
   const [mounted, setMounted] = useState(false);
   const { data: isAdmin } = useIsAdmin();
   const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
+  const { isReadOnly } = useReadOnlyContext();
 
   // Password change dialog
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
@@ -100,17 +102,21 @@ export default function Settings() {
               <p className="text-xs text-muted-foreground">Email</p>
               <p className="text-sm">{user?.email}</p>
             </div>
-            <button
-              onClick={() => setDeleteAccountOpen(true)}
-              className="text-sm text-muted-foreground hover:text-destructive hover:underline"
-            >
-              Delete account
-            </button>
+            {!isReadOnly && (
+              <button
+                onClick={() => setDeleteAccountOpen(true)}
+                className="text-sm text-muted-foreground hover:text-destructive hover:underline"
+              >
+                Delete account
+              </button>
+            )}
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setChangePasswordOpen(true)}>
-              Change Password
-            </Button>
+            {!isReadOnly && (
+              <Button variant="outline" size="sm" onClick={() => setChangePasswordOpen(true)}>
+                Change Password
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -131,10 +137,12 @@ export default function Settings() {
         title="Saved Meals"
         icon={Star}
         headerAction={
-          <Button variant="outline" size="sm" onClick={() => setCreateMealDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" />
-            Add
-          </Button>
+          !isReadOnly && (
+            <Button variant="outline" size="sm" onClick={() => setCreateMealDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-1" />
+              Add
+            </Button>
+          )
         }
       >
         {mealsLoading ? (
@@ -165,10 +173,12 @@ export default function Settings() {
           title="Saved Routines"
           icon={Dumbbell}
           headerAction={
-            <Button variant="outline" size="sm" onClick={() => setCreateRoutineDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-1" />
-              Add
-            </Button>
+            !isReadOnly && (
+              <Button variant="outline" size="sm" onClick={() => setCreateRoutineDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-1" />
+                Add
+              </Button>
+            )
           }
         >
           {routinesLoading ? (
@@ -216,16 +226,21 @@ export default function Settings() {
       {/* Export as CSV */}
       <CollapsibleSection title="Export to CSV" icon={Download}>
         <div className="flex flex-wrap gap-2 max-w-md">
-          <Button variant="outline" size="sm" onClick={exportDailyTotals} disabled={isExporting}>
+          <Button variant="outline" size="sm" onClick={exportDailyTotals} disabled={isExporting || isReadOnly}>
             Food Daily Totals
           </Button>
-          <Button variant="outline" size="sm" onClick={exportFoodLog} disabled={isExporting}>
+          <Button variant="outline" size="sm" onClick={exportFoodLog} disabled={isExporting || isReadOnly}>
             Food Log
           </Button>
           {showWeights && (
-            <Button variant="outline" size="sm" onClick={exportWeightLog} disabled={isExporting}>
+            <Button variant="outline" size="sm" onClick={exportWeightLog} disabled={isExporting || isReadOnly}>
               Weights Log
             </Button>
+          )}
+          {isReadOnly && (
+            <p className="w-full text-xs text-muted-foreground mt-1">
+              Create an account to export your data
+            </p>
           )}
         </div>
       </CollapsibleSection>

@@ -92,6 +92,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_read_only: boolean
           settings: Json | null
           updated_at: string
           user_number: number
@@ -99,6 +100,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id: string
+          is_read_only?: boolean
           settings?: Json | null
           updated_at?: string
           user_number: number
@@ -106,6 +108,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          is_read_only?: boolean
           settings?: Json | null
           updated_at?: string
           user_number?: number
@@ -299,10 +302,16 @@ export type Database = {
     Functions: {
       get_usage_stats:
         | { Args: { exclude_user_id?: string }; Returns: Json }
-        | { Args: { user_timezone?: string }; Returns: Json }
+        | {
+            Args: { include_read_only?: boolean; user_timezone?: string }
+            Returns: Json
+          }
       get_user_stats:
         | { Args: { exclude_user_id?: string }; Returns: Json }
-        | { Args: { user_timezone?: string }; Returns: Json }
+        | {
+            Args: { include_read_only?: boolean; user_timezone?: string }
+            Returns: Json
+          }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -310,6 +319,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_read_only_user: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"

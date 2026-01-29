@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 
 type EditableFieldKey = 'description' | 'calories';
 
@@ -75,6 +76,9 @@ export function FoodItemsTable({
   entryMealNames,
   showInlineLabels = false,
 }: FoodItemsTableProps) {
+  // Read-only mode blocks saves
+  const { isReadOnly, triggerOverlay } = useReadOnlyContext();
+
   // Local editing state - only saved on Enter
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const descriptionOriginalRef = useRef<string>('');
@@ -101,6 +105,15 @@ export function FoodItemsTable({
   ) => {
     if (e.key === 'Enter') {
       e.preventDefault();
+      
+      // Block save for read-only users
+      if (isReadOnly) {
+        triggerOverlay();
+        setEditingCell(null);
+        (e.target as HTMLElement).blur();
+        return;
+      }
+      
       // Save the edit
       if (editingCell && editingCell.value !== editingCell.originalValue) {
         // If editing calories, batch all 4 fields with scaled values in one atomic call
@@ -140,6 +153,15 @@ export function FoodItemsTable({
   ) => {
     if (e.key === 'Enter') {
       e.preventDefault();
+      
+      // Block save for read-only users
+      if (isReadOnly) {
+        triggerOverlay();
+        e.currentTarget.textContent = descriptionOriginalRef.current;
+        (e.target as HTMLElement).blur();
+        return;
+      }
+      
       const newDescription = e.currentTarget.textContent || '';
       if (newDescription !== descriptionOriginalRef.current) {
         onUpdateItem?.(index, 'description', newDescription);
