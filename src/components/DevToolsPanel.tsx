@@ -395,8 +395,8 @@ export function DevToolsPanel() {
                     <tbody>
                       {displayResults.map((result, i) => (
                         <tr key={i} className="border-t">
-                          <td className="px-1 py-1 font-mono text-xs truncate" style={{ width: columnWidths.input, maxWidth: columnWidths.input }}>
-                            {result.input}
+                          <td className="px-1 py-1 font-mono text-xs" style={{ width: columnWidths.input, maxWidth: columnWidths.input }} title={result.input}>
+                            <div className="line-clamp-2 break-words">{result.input}</div>
                           </td>
                           <td className="px-1 py-1 text-xs" style={{ width: columnWidths.source, maxWidth: columnWidths.source }}>
                             <span className={
@@ -449,7 +449,7 @@ export function DevToolsPanel() {
                             {result.error ? null : (
                               <div className="space-y-0.5">
                                 {result.output?.food_items?.map((f, idx) => (
-                                  <div key={idx} className="truncate" title={f.source_note || undefined}>
+                                  <div key={idx} className="line-clamp-2 break-words" title={f.source_note || undefined}>
                                     {f.source_note || "—"}
                                   </div>
                                 ))}
