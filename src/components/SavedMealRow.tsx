@@ -103,7 +103,17 @@ export function SavedMealRow({
             e.currentTarget.dataset.original = meal.name;
           }}
           onBlur={(e) => {
-            e.currentTarget.textContent = e.currentTarget.dataset.original || meal.name;
+            const newName = (e.currentTarget.textContent || '').trim();
+            const original = e.currentTarget.dataset.original || meal.name;
+            
+            if (!newName) {
+              // Revert if empty
+              e.currentTarget.textContent = original;
+            } else if (newName !== original) {
+              // Save valid name
+              onUpdateMeal({ id: meal.id, name: newName });
+              e.currentTarget.dataset.original = newName;
+            }
           }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {

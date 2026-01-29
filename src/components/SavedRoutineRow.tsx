@@ -94,7 +94,17 @@ export function SavedRoutineRow({
             e.currentTarget.dataset.original = routine.name;
           }}
           onBlur={(e) => {
-            e.currentTarget.textContent = e.currentTarget.dataset.original || routine.name;
+            const newName = (e.currentTarget.textContent || '').trim();
+            const original = e.currentTarget.dataset.original || routine.name;
+            
+            if (!newName) {
+              // Revert if empty
+              e.currentTarget.textContent = original;
+            } else if (newName !== original) {
+              // Save valid name
+              onUpdateRoutine({ id: routine.id, name: newName });
+              e.currentTarget.dataset.original = newName;
+            }
           }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {

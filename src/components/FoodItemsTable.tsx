@@ -183,9 +183,29 @@ export function FoodItemsTable({
     descriptionOriginalRef.current = item.description;
   };
 
-  const handleDescriptionBlur = (e: React.FocusEvent<HTMLSpanElement>) => {
-    // Revert to original on blur (cancel)
-    e.currentTarget.textContent = descriptionOriginalRef.current;
+  const handleDescriptionBlur = (
+    e: React.FocusEvent<HTMLSpanElement>,
+    index: number,
+    item: FoodItem
+  ) => {
+    // Read-only mode always reverts
+    if (isReadOnly) {
+      e.currentTarget.textContent = descriptionOriginalRef.current;
+      return;
+    }
+    
+    const newDescription = (e.currentTarget.textContent || '').trim();
+    
+    // Revert if empty, otherwise save
+    if (!newDescription) {
+      e.currentTarget.textContent = descriptionOriginalRef.current;
+    } else if (newDescription !== descriptionOriginalRef.current) {
+      onUpdateItem?.(index, 'description', newDescription);
+      // Clear portion when description is edited to prevent stale data
+      if (item.portion) {
+        onUpdateItem?.(index, 'portion', '');
+      }
+    }
   };
 
   // Check if any field was user-edited (row-level indicator)
@@ -423,7 +443,7 @@ export function FoodItemsTable({
                       }
                     }}
                     onFocus={(e) => handleDescriptionFocus(e, item)}
-                    onBlur={handleDescriptionBlur}
+                    onBlur={(e) => handleDescriptionBlur(e, index, item)}
                     onKeyDown={(e) => handleDescriptionKeyDown(e, index, item)}
                     className="border-0 bg-transparent focus:outline-none cursor-text hover:bg-muted/50"
                   />
@@ -490,7 +510,28 @@ export function FoodItemsTable({
                     setEditingCell({ ...editingCell, value: parseInt(e.target.value, 10) || 0 });
                   }
                 }}
-                  onBlur={() => setEditingCell(null)}
+                  onBlur={() => {
+                    // Save on blur if value changed and valid (non-zero)
+                    if (editingCell && editingCell.value !== editingCell.originalValue && !isReadOnly) {
+                      const numValue = Number(editingCell.value);
+                      if (numValue > 0) {
+                        const scaled = scaleMacrosByCalories(
+                          item.calories,
+                          item.protein,
+                          item.carbs,
+                          item.fat,
+                          numValue
+                        );
+                        onUpdateItemBatch?.(index, {
+                          calories: scaled.calories,
+                          protein: scaled.protein,
+                          carbs: scaled.carbs,
+                          fat: scaled.fat,
+                        });
+                      }
+                    }
+                    setEditingCell(null);
+                  }}
                   onKeyDown={(e) => handleKeyDown(e, index, 'calories')}
                   className={getCaloriesClasses(item, isCaloriesEditing)}
                 />
