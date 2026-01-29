@@ -17,6 +17,7 @@ import { useAnalyzeWeights } from '@/hooks/useAnalyzeWeights';
 import { useWeightEntries } from '@/hooks/useWeightEntries';
 import { useEditableItems } from '@/hooks/useEditableItems';
 import { useSaveRoutine } from '@/hooks/useSavedRoutines';
+import { useUserSettings } from '@/hooks/useUserSettings';
 import { WeightSet, WeightEditableField, SavedExerciseSet } from '@/types/weight';
 
 const WEIGHT_EDITABLE_FIELDS: WeightEditableField[] = ['description', 'sets', 'reps', 'weight_lbs'];
@@ -73,6 +74,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   const { data: datesWithWeights = [] } = useWeightDatesWithData(calendarMonth);
   const { analyzeWeights, isAnalyzing, error: analyzeError } = useAnalyzeWeights();
   const saveRoutineMutation = useSaveRoutine();
+  const { settings } = useUserSettings();
   
   const weightInputRef = useRef<LogInputRef>(null);
 
@@ -384,6 +386,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
           expandedEntryIds={expandedEntryIds}
           onToggleEntryExpand={handleToggleEntryExpand}
           onSaveAsRoutine={handleSaveAsRoutine}
+          weightUnit={settings.weightUnit}
         />
       )}
 

@@ -16,6 +16,7 @@ import {
 import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
+import { type WeightUnit, formatWeight, parseWeightToLbs, getWeightUnitLabel } from '@/lib/weight-units';
 
 type EditableFieldKey = 'description' | 'sets' | 'reps' | 'weight_lbs';
 
@@ -51,6 +52,8 @@ interface WeightItemsTableProps {
   onSaveAsRoutine?: (entryId: string, rawInput: string | null, exerciseSets: WeightSet[]) => void;
   /** When true, show inline labels after numeric values (e.g., "3 sets") */
   showInlineLabels?: boolean;
+  /** Weight unit preference for display (lbs or kg) */
+  weightUnit?: WeightUnit;
 }
 
 export function WeightItemsTable({
@@ -70,6 +73,7 @@ export function WeightItemsTable({
   onToggleEntryExpand,
   onSaveAsRoutine,
   showInlineLabels = false,
+  weightUnit = 'lbs',
 }: WeightItemsTableProps) {
   const { isReadOnly, triggerOverlay } = useReadOnlyContext();
   
@@ -151,14 +155,15 @@ export function WeightItemsTable({
     return `Edited: ${fieldLabels.join(', ')}`;
   };
 
-  // Calculate totals
+  // Calculate totals - volume stays in stored unit for consistency, convert for display
   const totals = useMemo(() => {
+    const volumeLbs = items.reduce((sum, item) => sum + (item.sets * item.reps * item.weight_lbs), 0);
     return {
       sets: items.reduce((sum, item) => sum + item.sets, 0),
       reps: items.reduce((sum, item) => sum + (item.sets * item.reps), 0),
-      volume: items.reduce((sum, item) => sum + (item.sets * item.reps * item.weight_lbs), 0),
+      volume: weightUnit === 'kg' ? volumeLbs * 0.453592 : volumeLbs,
     };
-  }, [items]);
+  }, [items, weightUnit]);
 
   const hasEntryDeletion = entryBoundaries && onDeleteEntry;
   const showEntryDividers = entryBoundaries && entryBoundaries.length > 0;
@@ -264,7 +269,7 @@ export function WeightItemsTable({
           <span className={cn("px-1", showEntryDividers && "pl-4")}></span>
           <span className="px-1 text-center">Sets</span>
           <span className="px-1 text-center">Reps</span>
-          <span className="px-1 text-center">Lbs</span>
+          <span className="px-1 text-center">{getWeightUnitLabel(weightUnit)}</span>
           {hasDeleteColumn && <span></span>}
         </div>
       )}
@@ -275,7 +280,7 @@ export function WeightItemsTable({
           <span></span>
           <span className="px-1 text-center">Sets</span>
           <span className="px-1 text-center">Reps</span>
-          <span className="px-1 text-center">Lbs</span>
+          <span className="px-1 text-center">{getWeightUnitLabel(weightUnit)}</span>
           {hasDeleteColumn && <span></span>}
         </div>
       )}
@@ -437,29 +442,57 @@ export function WeightItemsTable({
               {editable ? (
                 <Input
                   type="number"
+                  step={weightUnit === 'kg' ? '0.5' : '1'}
                   value={
                     editingCell?.index === index && editingCell?.field === 'weight_lbs'
                       ? String(editingCell.value)
-                      : item.weight_lbs
+                      : formatWeight(item.weight_lbs, weightUnit, weightUnit === 'kg' ? 1 : 0)
                   }
-                  onFocus={() => setEditingCell({
-                    index,
-                    field: 'weight_lbs',
-                    value: item.weight_lbs,
-                    originalValue: item.weight_lbs
-                  })}
+                  onFocus={() => {
+                    // Convert stored lbs to display unit for editing
+                    const displayValue = weightUnit === 'kg' 
+                      ? parseFloat(formatWeight(item.weight_lbs, 'kg', 1))
+                      : item.weight_lbs;
+                    setEditingCell({
+                      index,
+                      field: 'weight_lbs',
+                      value: displayValue,
+                      originalValue: displayValue
+                    });
+                  }}
                   onChange={(e) => {
                     if (editingCell) {
                       setEditingCell({ ...editingCell, value: parseFloat(e.target.value) || 0 });
                     }
                   }}
-                  onKeyDown={(e) => handleKeyDown(e, index, 'weight_lbs')}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (isReadOnly) {
+                        triggerOverlay();
+                        setEditingCell(null);
+                        (e.target as HTMLElement).blur();
+                        return;
+                      }
+                      if (editingCell && editingCell.value !== editingCell.originalValue) {
+                        // Convert user input back to lbs for storage
+                        const lbsValue = parseWeightToLbs(editingCell.value as number, weightUnit);
+                        onUpdateItem?.(index, 'weight_lbs', lbsValue);
+                      }
+                      setEditingCell(null);
+                      (e.target as HTMLElement).blur();
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      setEditingCell(null);
+                      (e.target as HTMLElement).blur();
+                    }
+                  }}
                   onBlur={() => setEditingCell(null)}
                   className={getNumberInputClasses(editingCell?.index === index && editingCell?.field === 'weight_lbs')}
                 />
               ) : (
                 <span className="px-1 py-1 text-center">
-                  {item.weight_lbs}
+                  {formatWeight(item.weight_lbs, weightUnit, weightUnit === 'kg' ? 1 : 0)}
                 </span>
               )}
 
