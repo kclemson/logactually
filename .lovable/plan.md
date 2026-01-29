@@ -1,55 +1,66 @@
 
-
-## Create Demo User Account
+## Update Welcome Dialog for Demo Users
 
 ### Overview
 
-Create the demo user account (`demo@logactually.com`) with the password `demodemo` and mark it as read-only. This will enable the "try the demo" functionality on the auth page.
+Modify the ReadOnlyOverlay component to show different button configurations depending on the overlay mode:
+- **Welcome mode** (first load): Show only "OK" button (no "Create Free Account")
+- **Blocked mode** (after trying to save): Show both "OK" and "Create Free Account" buttons
 
 ---
 
-### Implementation Steps
+### Current State
 
-**Step 1: Create the user via Supabase Admin API**
-
-Use the Supabase admin function to create a user with:
-- Email: `demo@logactually.com`
-- Password: `demodemo`
-- Email confirmed: `true` (so they can log in immediately)
-
-**Step 2: Set profile to read-only**
-
-After the user is created (the `handle_new_user` trigger automatically creates their profile), run a migration to update the profile:
-
-```sql
-UPDATE profiles 
-SET is_read_only = true 
-WHERE id = (SELECT id FROM auth.users WHERE email = 'demo@logactually.com');
+The dialog currently shows both buttons regardless of mode:
+```tsx
+<DialogFooter className="flex-col gap-2 sm:flex-row">
+  <Button variant="outline" onClick={dismissOverlay} className="w-full sm:w-auto">
+    Keep Browsing
+  </Button>
+  <Button onClick={handleCreateAccount} className="w-full sm:w-auto">
+    Create Free Account
+  </Button>
+</DialogFooter>
 ```
 
 ---
 
-### Technical Notes
+### Proposed Changes
 
-- The `handle_new_user` database trigger automatically creates a profile row when a new user is created
-- Setting `is_read_only = true` ensures all RLS policies block write operations for this user
-- The demo credentials in `src/lib/demo-mode.ts` already match: `demo@logactually.com` / `demodemo`
+**1. Rename "Keep Browsing" to "OK"**
+
+Change the button text from "Keep Browsing" to "OK".
+
+**2. Conditionally show "Create Free Account" button**
+
+Only show the "Create Free Account" button when `overlayMode === 'blocked'` (when user tries to save).
+
+```tsx
+<DialogFooter className="flex-col gap-2 sm:flex-row">
+  <Button variant="outline" onClick={dismissOverlay} className="w-full sm:w-auto">
+    OK
+  </Button>
+  {!isWelcome && (
+    <Button onClick={handleCreateAccount} className="w-full sm:w-auto">
+      Create Free Account
+    </Button>
+  )}
+</DialogFooter>
+```
 
 ---
 
-### Verification
+### Result
 
-After implementation, clicking "try the demo" on the auth page should:
-1. Successfully log in as the demo user
-2. Redirect to the main app
-3. Show the read-only banner (if implemented)
+| Mode | Buttons Shown |
+|------|---------------|
+| Welcome (first load) | "OK" only |
+| Blocked (after save attempt) | "OK" + "Create Free Account" |
 
 ---
 
 ### Files Changed
 
-| Location | Change |
-|----------|--------|
-| Database (auth.users) | Create user via admin API |
-| Database (profiles) | Migration to set `is_read_only = true` |
-
+| File | Change |
+|------|--------|
+| `src/components/ReadOnlyOverlay.tsx` | Rename button to "OK", conditionally render "Create Free Account" |
