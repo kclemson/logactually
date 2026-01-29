@@ -24,6 +24,10 @@ const HELP_CONTENT = {
         text: "Select the > next to a row to see what the original input was - and save it as a meal or weight lifting routine for easy access in the future.",
         highlights: ["save it"],
       },
+      {
+        text: "Want to work with your data in another app? Export to CSV in Settings.",
+        highlights: ["Export to CSV"],
+      },
     ],
   },
   feedback: {
@@ -76,7 +80,7 @@ export default function Help() {
     <div className="space-y-6 relative">
       {/* Close button */}
       <button
-        onClick={() => navigate('/')}
+        onClick={() => navigate("/")}
         className="absolute right-0 top-0 p-2 -mr-2 -mt-2 text-muted-foreground hover:text-foreground transition-colors"
         aria-label="Close help"
       >
