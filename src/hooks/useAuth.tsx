@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!isMounted) return;
       
-      console.log('Auth state change:', event, !!session);
+      // Auth state change logging removed for production
       
       // Only clear auth state on explicit sign out
       if (event === 'SIGNED_OUT') {
@@ -102,7 +102,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // No session returned BUT we have a cached user
           // This happens when refresh token was rotated by another device
           // Keep the cached session - user stays logged in
-          console.warn('getSession returned null but cached user exists - preserving session');
+          if (import.meta.env.DEV) {
+            console.warn('getSession returned null but cached user exists - preserving session');
+          }
           initialCheckComplete = true;
           setLoading(false);
         } else {
@@ -150,7 +152,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       // Log but don't throw - we still want to clear local state
       // This handles 403 "session_not_found" errors when session is already invalid
-      console.warn('Sign out API call failed:', error);
+      if (import.meta.env.DEV) {
+        console.warn('Sign out API call failed:', error);
+      }
     }
     
     // ALWAYS clear local state, even if API failed
