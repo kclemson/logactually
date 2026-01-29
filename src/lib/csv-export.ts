@@ -122,8 +122,10 @@ export interface WeightSetExport {
 /**
  * Export weight log - one row per exercise set
  */
+const LBS_TO_KG = 0.453592;
+
 export function exportWeightLog(sets: WeightSetExport[]) {
-  const headers = ['Date', 'Time', 'Exercise', 'Sets', 'Reps', 'Weight (lbs)', 'Raw Input'];
+  const headers = ['Date', 'Time', 'Exercise', 'Sets', 'Reps', 'Weight (lbs)', 'Weight (kg)', 'Raw Input'];
 
   const sorted = [...sets].sort((a, b) => {
     if (a.logged_date !== b.logged_date) {
@@ -139,6 +141,7 @@ export function exportWeightLog(sets: WeightSetExport[]) {
     set.sets,
     set.reps,
     set.weight_lbs,
+    Math.round(set.weight_lbs * LBS_TO_KG),
     set.raw_input || '',
   ]);
 
