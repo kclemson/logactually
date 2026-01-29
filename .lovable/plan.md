@@ -1,10 +1,10 @@
 
 
-## Make Input Textarea Taller
+## Fix Voice Button UX
 
 ### Overview
 
-Increase the minimum height of the input textarea on the food and weights log pages by one row (~20px) to reduce scrollbar appearance with longer placeholder text.
+Keep the `Mic` icon showing in both states, change the label text to "Stop" when recording, and add a subtle pulse animation to make the active recording state clear.
 
 ---
 
@@ -14,46 +14,61 @@ Increase the minimum height of the input textarea on the food and weights log pa
 
 ---
 
-### Change
+### Changes
 
-Update line 285 - increase the `min-h` class from `80px` to `100px`:
+**1. Update the button (lines 296-305)**
 
 ```typescript
 // Before
-<Textarea
-  value={text}
-  onChange={(e) => setText(e.target.value)}
-  placeholder={placeholderText}
-  className="min-h-[80px] resize-none"
+<Button
+  variant="outline"
+  size="sm"
+  onClick={toggleListening}
   disabled={isBusy}
-  ...
-/>
+  className={cn("px-2", isListening && "bg-destructive text-destructive-foreground")}
+>
+  {isListening ? <MicOff className="h-4 w-4 mr-1" /> : <Mic className="h-4 w-4 mr-1" />}
+  Voice
+</Button>
 
 // After
-<Textarea
-  value={text}
-  onChange={(e) => setText(e.target.value)}
-  placeholder={placeholderText}
-  className="min-h-[100px] resize-none"
+<Button
+  variant="outline"
+  size="sm"
+  onClick={toggleListening}
   disabled={isBusy}
-  ...
-/>
+  className={cn("px-2", isListening && "bg-destructive text-destructive-foreground animate-pulse")}
+>
+  <Mic className="h-4 w-4 mr-1" />
+  {isListening ? "Stop" : "Voice"}
+</Button>
 ```
+
+**2. Remove unused import (line 2)**
+
+Remove `MicOff` from the lucide-react imports since it's no longer used.
 
 ---
 
-### Why This Works
+### Result
 
-- The `min-h-[80px]` currently accommodates ~3 lines of text
-- Bumping to `min-h-[100px]` adds ~1 more row (~20px with standard line height)
-- This applies to both food and weights pages since they share the same `LogInput` component
-- The base `Textarea` component's default `min-h-[80px]` is overridden by the className passed from `LogInput`
+| State | Icon | Label | Background | Animation |
+|-------|------|-------|------------|-----------|
+| Idle | Mic | "Voice" | Default outline | None |
+| Recording | Mic | "Stop" | Red (`bg-destructive`) | Pulse |
+
+Users will clearly see:
+- The red pulsing button indicates active recording
+- "Stop" text provides a clear action to end recording
+- The microphone icon stays consistent (no confusing "muted" appearance)
 
 ---
 
 ### Summary
 
 - 1 file modified
-- 1 class value change (`80px` → `100px`)
-- Affects both food and weights log input areas
+- Icon always shows `Mic` (never `MicOff`)
+- Label changes from "Voice" to "Stop" when recording
+- Pulse animation added for visual feedback
+- Removes unused `MicOff` import
 
