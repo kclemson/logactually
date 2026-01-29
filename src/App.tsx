@@ -12,6 +12,7 @@ import Trends from "./pages/Trends";
 import History from "./pages/History";
 import Admin from "./pages/Admin";
 import Settings from "./pages/Settings";
+import Help from "./pages/Help";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
                 <Route path="/trends" element={<Trends />} />
                 <Route path="/history" element={<History />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/help" element={<Help />} />
                 <Route path="/admin" element={<Admin />} />
               </Route>
               <Route path="*" element={<NotFound />} />

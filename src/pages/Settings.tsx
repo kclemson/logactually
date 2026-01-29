@@ -19,12 +19,13 @@ import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 import { DeleteAccountDialog } from "@/components/DeleteAccountDialog";
 
 export default function Settings() {
+  const { user, signOut } = useAuth();
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const { theme, setTheme } = useTheme();
   const { settings, updateSettings, isLoading } = useUserSettings();
   const [mounted, setMounted] = useState(false);
   const { data: isAdmin } = useIsAdmin();
   const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
-  const { user } = useAuth();
 
   // Password change dialog
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
@@ -106,9 +107,22 @@ export default function Settings() {
               Delete account
             </button>
           </div>
-          <Button variant="outline" size="sm" onClick={() => setChangePasswordOpen(true)}>
-            Change Password
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setChangePasswordOpen(true)}>
+              Change Password
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                setIsSigningOut(true);
+                await signOut();
+              }}
+              disabled={isSigningOut}
+            >
+              {isSigningOut ? 'Signing out...' : 'Sign Out'}
+            </Button>
+          </div>
         </div>
       </CollapsibleSection>
 
