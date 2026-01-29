@@ -76,7 +76,7 @@ export default function Help() {
     <div className="space-y-6 relative">
       {/* Close button */}
       <button
-        onClick={() => navigate(-1)}
+        onClick={() => navigate('/')}
         className="absolute right-0 top-0 p-2 -mr-2 -mt-2 text-muted-foreground hover:text-foreground transition-colors"
         aria-label="Close help"
       >
