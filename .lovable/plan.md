@@ -1,56 +1,73 @@
 
 
-## Remove Production Console Logs from Auth
+## Remove Invite Code Requirement
 
 ### Overview
-Remove debug console logs from the authentication hook that are appearing in production. Keep error logs but wrap them in development-only checks, or convert the debug log to only run in development mode.
+Remove the invite code requirement from the signup flow, allowing anyone to create an account with just email and password.
 
 ---
 
 ### Changes
 
-**File:** `src/hooks/useAuth.tsx`
+**File:** `src/pages/Auth.tsx`
 
-1. **Line 58** - Remove or wrap the "Auth state change" console.log in a dev check:
-   ```tsx
-   // Before
-   console.log('Auth state change:', event, !!session);
-   
-   // After - remove entirely (preferred) or wrap:
-   if (import.meta.env.DEV) {
-     console.log('Auth state change:', event, !!session);
-   }
-   ```
+1. **Remove invite-related state variables** (lines 14, 23):
+   - Remove `inviteFromUrl` (line 14)
+   - Remove `inviteCode` state (line 23)
+   - Change `isSignUp` default from `!!inviteFromUrl` to `false` (line 17)
 
-2. **Line 105** - Wrap the session warning in a dev check:
-   ```tsx
-   // Before
-   console.warn('getSession returned null but cached user exists - preserving session');
-   
-   // After
-   if (import.meta.env.DEV) {
-     console.warn('getSession returned null but cached user exists - preserving session');
-   }
-   ```
+2. **Remove invite validation logic** (lines 83-100):
+   - Remove the entire block that validates the invite code via the edge function
 
-3. **Line 153** - Keep as-is (actual error that should be logged) or wrap in dev check:
-   ```tsx
-   // Optionally wrap in dev check if you don't want any production logs
-   if (import.meta.env.DEV) {
-     console.warn('Sign out API call failed:', error);
-   }
-   ```
+3. **Remove invite code input field** (lines 295-306):
+   - Remove the entire `{isSignUp && (...)}` block containing the invite code input
 
 ---
 
-### Recommendation
-The cleanest approach is to:
-- **Remove** line 58 entirely (it's purely for debugging)
-- **Wrap** lines 105 and 153 with `import.meta.env.DEV` checks (they're useful for debugging edge cases but not needed in production)
-- **Keep** lines 49 and 115 as-is (these are actual errors users might need to know about, though they could also be wrapped)
+### Code After Changes
+
+**Simplified state (lines 17-26):**
+```tsx
+const [isSignUp, setIsSignUp] = useState(false);
+const [isResetMode, setIsResetMode] = useState(false);
+const [isUpdatingPassword, setIsUpdatingPassword] = useState(isResetCallback);
+const [resetSent, setResetSent] = useState(false);
+const [email, setEmail] = useState('');
+const [password, setPassword] = useState('');
+const [submitting, setSubmitting] = useState(false);
+const [errorMessage, setErrorMessage] = useState<string | null>(null);
+const [successMessage, setSuccessMessage] = useState<string | null>(null);
+```
+
+**Simplified handleSubmit (lines 78-111):**
+```tsx
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setSubmitting(true);
+  setErrorMessage(null);
+
+  const { error } = isSignUp 
+    ? await signUp(email, password)
+    : await signIn(email, password);
+
+  if (error) {
+    setErrorMessage(error.message);
+  }
+
+  setSubmitting(false);
+};
+```
+
+**Form without invite code field** - Remove lines 295-306 entirely (the invite code input block)
+
+---
+
+### Optional Cleanup
+
+The `validate-invite` edge function at `supabase/functions/validate-invite/index.ts` will no longer be needed. You can optionally delete it later, but leaving it won't cause any issues since it simply won't be called.
 
 ---
 
 ### Files to Modify
-1. `src/hooks/useAuth.tsx` - Remove or wrap console statements with `import.meta.env.DEV` checks
+1. `src/pages/Auth.tsx` - Remove invite-related state, validation logic, and input field
 
