@@ -1,65 +1,102 @@
 
 
-## Apply Weight Unit Setting to Weight Log Display
+## Add Pull-to-Refresh for PWA
 
 ### Overview
 
-Update the `WeightItemsTable` component to respect the user's weight unit preference (lbs vs kg). Currently the values are hardcoded to display in pounds even when the user has selected kilograms in Settings.
+Add a pull-to-refresh gesture that triggers a page data refresh, providing a native-like experience when using the app as an installed PWA on iPhone.
 
 ---
 
-### Changes Required
+### How It Works
 
-**1. WeightItemsTable.tsx - Add weight unit support**
-
-Accept a new `weightUnit` prop and use conversion utilities:
-
-| Location | Current | Updated |
-|----------|---------|---------|
-| Props interface | - | Add `weightUnit?: WeightUnit` |
-| Column header (line 267, 278) | `"Lbs"` | Dynamic: `getWeightUnitLabel(weightUnit)` |
-| Display values | `item.weight_lbs` | `formatWeight(item.weight_lbs, weightUnit, 0)` |
-| Totals volume | `totals.volume` | Convert using the unit |
-| Input handling | Save value directly | Convert kg input to lbs via `parseWeightToLbs()` |
-
-**2. WeightLog.tsx - Pass weight unit to table**
-
-```typescript
-import { useUserSettings } from '@/hooks/useUserSettings';
-import type { WeightUnit } from '@/lib/weight-units';
-
-// In component:
-const { settings } = useUserSettings();
-
-// Pass to table:
-<WeightItemsTable
-  items={displayItems}
-  weightUnit={settings.weightUnit}
-  // ... other props
-/>
-```
-
----
-
-### Conversion Logic
-
-The database stores all weights in pounds (`weight_lbs`). Display conversion:
+When you're at the top of the page and drag down, a refresh indicator appears. Releasing triggers a data refetch for the current page.
 
 ```text
-Display (kg setting):  weight_lbs × 0.453592 = displayed kg
-Input (kg setting):    user_input × 2.20462 = stored lbs
+     ↓ Pull down
+┌─────────────────────┐
+│    ↻ Refreshing...  │  ← Indicator appears
+├─────────────────────┤
+│                     │
+│   [Page content]    │
+│                     │
+└─────────────────────┘
 ```
-
-For precision:
-- lbs: Display as whole numbers (0 decimals)
-- kg: Display with 1 decimal place for accuracy
 
 ---
 
-### Files Changed
+### Implementation
+
+**1. Create a reusable PullToRefresh component**
+
+A wrapper component that:
+- Listens for touch events (touchstart, touchmove, touchend)
+- Only activates when page is scrolled to top (window.scrollY === 0)
+- Shows a visual indicator during pull (spinner icon with progress)
+- Calls the provided `onRefresh` callback when released past threshold
+- Works only on mobile/touch devices (no effect on desktop)
+
+**2. Integrate into Layout**
+
+Wrap the main content area with the PullToRefresh component, connected to React Query's global invalidation:
+
+```typescript
+// In Layout.tsx
+import { useQueryClient } from '@tanstack/react-query';
+
+const queryClient = useQueryClient();
+
+const handleRefresh = async () => {
+  await queryClient.invalidateQueries();
+};
+
+return (
+  <PullToRefresh onRefresh={handleRefresh}>
+    <main>...</main>
+  </PullToRefresh>
+);
+```
+
+**3. Visual feedback**
+
+- Show a rotating refresh icon (Lucide's `RefreshCw`)
+- Subtle animation as user pulls down
+- "Refreshing..." state while data loads
+
+---
+
+### Technical Details
+
+**Touch gesture logic:**
+- Track `touchstart` Y position
+- On `touchmove`, calculate delta and show indicator proportionally
+- Only activate when `window.scrollY === 0` (at page top)
+- Release threshold: ~60px pull distance
+- Prevent default scroll bounce on iOS during pull
+
+**Mobile-only:**
+- Use `useIsMobile()` hook to enable only on touch devices
+- Desktop users unaffected (no visual changes)
+
+**Query invalidation:**
+- `queryClient.invalidateQueries()` refetches all active queries
+- This refreshes food entries, weight entries, saved meals, etc.
+
+---
+
+### Files to Create/Modify
 
 | File | Change |
 |------|--------|
-| `src/components/WeightItemsTable.tsx` | Add `weightUnit` prop, convert display/input values, dynamic header |
-| `src/pages/WeightLog.tsx` | Import `useUserSettings`, pass `weightUnit` to table |
+| `src/components/PullToRefresh.tsx` | New component handling touch gestures and refresh indicator |
+| `src/components/Layout.tsx` | Wrap main content with PullToRefresh, wire up queryClient |
+
+---
+
+### Edge Cases Handled
+
+1. **Scroll position**: Only triggers when at the very top of the page
+2. **Nested scrolling**: Won't interfere with scrollable components within the page
+3. **Rapid pulls**: Debounced to prevent multiple simultaneous refreshes
+4. **iOS bounce**: Prevents the native iOS overscroll bounce during pull gesture
 
