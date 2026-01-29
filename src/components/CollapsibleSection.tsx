@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ChevronDown, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -41,14 +41,17 @@ export function CollapsibleSection({
     return stored !== null ? stored === 'true' : defaultOpen;
   });
 
-  // Persist to localStorage only when different from default
-  useEffect(() => {
-    if (isOpen !== defaultOpen) {
-      localStorage.setItem(key, String(isOpen));
+  // Event-driven persist to localStorage
+  const handleToggle = () => {
+    const newValue = !isOpen;
+    setIsOpen(newValue);
+    
+    if (newValue !== defaultOpen) {
+      localStorage.setItem(key, String(newValue));
     } else {
       localStorage.removeItem(key);
     }
-  }, [key, isOpen, defaultOpen]);
+  };
 
   return (
     <section className={cn('space-y-3', className)}>
@@ -56,7 +59,7 @@ export function CollapsibleSection({
       <div className="flex items-center justify-between">
         <button
           type="button"
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={handleToggle}
           className="flex items-center gap-2 text-heading text-muted-foreground hover:text-foreground transition-colors"
         >
           <Icon className="h-4 w-4" />

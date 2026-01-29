@@ -47,16 +47,9 @@ export function SaveMealDialog({
   suggestedName,
   isSuggestingName,
 }: SaveMealDialogProps) {
+  // State is fresh on each mount since dialog unmounts when closed
   const [name, setName] = useState('');
   const [userHasTyped, setUserHasTyped] = useState(false);
-
-  // Reset state when dialog opens
-  useEffect(() => {
-    if (open) {
-      setName('');
-      setUserHasTyped(false);
-    }
-  }, [open]);
 
   // Populate with suggested name when it arrives (if user hasn't typed)
   useEffect(() => {
