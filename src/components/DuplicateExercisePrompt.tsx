@@ -1,4 +1,4 @@
-import { AlertTriangle, Merge, X } from "lucide-react";
+import { Merge, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { ExerciseTrend } from "@/hooks/useWeightTrends";
@@ -25,46 +25,48 @@ export function DuplicateExercisePrompt({
 }: DuplicateExercisePromptProps) {
   if (groups.length === 0) return null;
 
-  const firstGroup = groups[0];
   const totalDuplicates = groups.length;
 
   return (
-    <Card className="border-warning bg-warning/10">
-      <CardContent className="p-3">
-        <div className="flex items-start gap-2">
-          <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-warning-foreground">
+    <Card className="border-0 shadow-none bg-muted/30 rounded-md">
+      <CardContent className="p-2">
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold leading-tight">
               {totalDuplicates === 1 
                 ? "1 exercise may have duplicates"
                 : `${totalDuplicates} exercises may have duplicates`
               }
             </p>
-            <p className="text-xs text-muted-foreground mt-0.5 truncate">
-              "{firstGroup.winner.description}" appears under {firstGroup.exercises.length} different entries
-            </p>
-            <div className="flex gap-2 mt-2">
-              <Button 
-                size="sm" 
-                variant="default"
-                className="h-7 text-xs"
-                onClick={() => onMerge(firstGroup)}
-                disabled={isPending}
-              >
-                <Merge className="h-3 w-3 mr-1" />
-                {isPending ? "Merging..." : "Merge"}
-              </Button>
-              <Button 
-                size="sm" 
-                variant="ghost"
-                className="h-7 text-xs"
-                onClick={onDismiss}
-                disabled={isPending}
-              >
-                <X className="h-3 w-3 mr-1" />
-                Dismiss
-              </Button>
-            </div>
+            <Button 
+              size="sm" 
+              variant="ghost"
+              className="h-5 w-5 p-0"
+              onClick={onDismiss}
+              disabled={isPending}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+          
+          <div className="flex flex-col gap-1">
+            {groups.map((group) => (
+              <div key={group.description} className="flex items-center justify-between gap-2">
+                <p className="text-[10px] text-muted-foreground truncate flex-1">
+                  "{group.winner.description}" ({group.exercises.length} entries)
+                </p>
+                <Button 
+                  size="sm" 
+                  variant="secondary"
+                  className="h-5 text-[10px] px-2 shrink-0"
+                  onClick={() => onMerge(group)}
+                  disabled={isPending}
+                >
+                  <Merge className="h-2.5 w-2.5 mr-1" />
+                  Merge
+                </Button>
+              </div>
+            ))}
           </div>
         </div>
       </CardContent>
