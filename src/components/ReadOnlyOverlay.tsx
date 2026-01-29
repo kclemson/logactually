@@ -47,11 +47,13 @@ export function ReadOnlyOverlay() {
         </DialogHeader>
         <DialogFooter className="flex-col gap-2 sm:flex-row">
           <Button variant="outline" onClick={dismissOverlay} className="w-full sm:w-auto">
-            Keep Browsing
+            OK
           </Button>
-          <Button onClick={handleCreateAccount} className="w-full sm:w-auto">
-            Create Free Account
-          </Button>
+          {!isWelcome && (
+            <Button onClick={handleCreateAccount} className="w-full sm:w-auto">
+              Create Free Account
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
