@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { APP_NAME, APP_DESCRIPTION } from '@/lib/constants';
+import { DEMO_EMAIL, DEMO_PASSWORD } from '@/lib/demo-mode';
 
 export default function Auth() {
   const { user, signUp, signIn, loading } = useAuth();
@@ -21,6 +22,7 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [isDemoLoading, setIsDemoLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -94,6 +96,16 @@ export default function Auth() {
     }
 
     setSubmitting(false);
+  };
+
+  const handleTryDemo = async () => {
+    setIsDemoLoading(true);
+    setErrorMessage(null);
+    const { error } = await signIn(DEMO_EMAIL, DEMO_PASSWORD);
+    if (error) {
+      setErrorMessage('Demo temporarily unavailable. Please try again later.');
+    }
+    setIsDemoLoading(false);
   };
 
   // Password update form (after clicking reset link)
@@ -309,8 +321,21 @@ export default function Auth() {
               }}
               className="text-primary underline-offset-4 hover:underline"
             >
-              {isSignUp ? 'Sign In' : 'Sign Up'}
+            {isSignUp ? 'Sign In' : 'Sign Up'}
             </button>
+          </div>
+          <div className="mt-6 pt-6 border-t border-border">
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={handleTryDemo}
+              disabled={submitting || isDemoLoading}
+            >
+              {isDemoLoading ? 'Loading demo...' : 'Try Demo'}
+            </Button>
+            <p className="text-xs text-muted-foreground text-center mt-2">
+              Explore with sample data — no account needed
+            </p>
           </div>
         </CardContent>
       </Card>

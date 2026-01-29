@@ -11,6 +11,7 @@ import { useScanBarcode } from "@/hooks/useScanBarcode";
 import { extractUpcFromText } from "@/lib/upc-utils";
 import { FoodItem } from "@/types/food";
 import { SavedExerciseSet } from "@/types/weight";
+import { useReadOnlyContext } from "@/contexts/ReadOnlyContext";
 
 // Mode-specific configurations
 export type LogMode = 'food' | 'weights';
@@ -124,6 +125,7 @@ export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput
   const cameraSupported = getCameraSupport();
 
   const { lookupUpc, createFoodItemFromScan, isScanning } = useScanBarcode();
+  const { isReadOnly, triggerOverlay } = useReadOnlyContext();
 
   // Expose clear method to parent
   useImperativeHandle(ref, () => ({
@@ -183,6 +185,12 @@ export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput
   const handleSubmit = async () => {
     const trimmed = text.trim();
     if (!trimmed || isBusy) return;
+
+    // Block submit for read-only users
+    if (isReadOnly) {
+      triggerOverlay();
+      return;
+    }
 
     // Food mode: Check for UPC pattern - route to database lookup instead of AI
     if (mode === 'food') {
