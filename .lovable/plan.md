@@ -1,68 +1,77 @@
 
 
-## Fix Placeholder Not Updating When Weight Unit Changes
+## Remove AI Meal Name Suggestion Feature
 
-### The Problem
+### Overview
 
-The placeholder text is captured once when the `LogInput` component mounts using `useState`:
-
-```typescript
-const placeholders = getPlaceholders(mode, weightUnit);  // ✅ Updates when weightUnit changes
-
-const [defaultPlaceholder] = useState(
-  () => placeholders[Math.floor(Math.random() * placeholders.length)],  // ❌ Only runs on mount
-);
-```
-
-When you change from lbs to kg in Settings, the component doesn't remount - it just receives a new `weightUnit` prop. But `useState` initializers only run once, so the old "lbs" placeholder persists.
+Remove the AI-powered meal name generation that runs when saving a meal. Instead, the name field will immediately show a fallback name (first food item's description) so users can save instantly without waiting.
 
 ---
 
-### The Solution
+### Files to Modify/Delete
 
-Use `useMemo` instead of `useState` to derive the placeholder. This ensures it recalculates when `weightUnit` changes:
-
-```typescript
-// Memoize the random index so it's stable per session
-// but the actual placeholder updates when unit changes
-const randomIndex = useMemo(
-  () => Math.floor(Math.random() * placeholders.length),
-  [] // Stable random index per component instance
-);
-
-// Now derive the placeholder from the current placeholders array
-const defaultPlaceholder = placeholders[randomIndex % placeholders.length];
-```
-
-This approach:
-- Keeps the same random selection position (so "example 3" stays "example 3")
-- But now pulls from the correct array (lbs vs kg) based on current settings
-- Uses modulo to handle edge cases where arrays have different lengths
+| File | Action | Description |
+|------|--------|-------------|
+| `src/hooks/useSuggestMealName.ts` | **Delete** | The hook that calls the edge function |
+| `supabase/functions/suggest-meal-name/` | **Delete** | The edge function directory |
+| `src/components/SaveMealDialog.tsx` | **Simplify** | Remove AI suggestion props and loading states |
+| `src/components/CreateSavedDialog.tsx` | **Simplify** | Remove suggestName logic and loading UI |
+| `src/components/CreateMealDialog.tsx` | **Simplify** | Remove useSuggestMealName hook |
+| `src/pages/FoodLog.tsx` | **Simplify** | Remove suggestName usage and related state |
 
 ---
 
-### File to Modify
+### Implementation Details
 
-| File | Change |
-|------|--------|
-| `src/components/LogInput.tsx` | Replace `useState` for `defaultPlaceholder` with `useMemo`-derived value |
+**1. SaveMealDialog.tsx**
+
+Remove:
+- `suggestedName` and `isSuggestingName` props
+- `useEffect` that waits for AI suggestion
+- Loading spinner and "Generating suggested meal name..." UI
+- `isGenerating` derived state
+
+Replace with:
+- Initialize `name` directly with `getFallbackName(foodItems)` on mount
+
+**2. CreateSavedDialog.tsx**
+
+Remove:
+- `suggestNameResult` prop entirely from interface
+- The background name suggestion logic in `handleSubmit` (lines 138-147)
+- `isGeneratingName` derived state
+- Loading spinner UI in the name input field (lines 232-250)
+
+Replace with:
+- Set name to `config.getFallbackName(result)` immediately after analysis completes
+
+**3. CreateMealDialog.tsx**
+
+Remove:
+- `useSuggestMealName` import and hook call
+- `suggestNameResult` prop passed to CreateSavedDialog
+
+**4. FoodLog.tsx**
+
+Remove:
+- `useSuggestMealName` import (line 19)
+- `suggestName, isLoading: isSuggestingName` from hook destructure (line 76)
+- `suggestedMealName` state and setter (line 50)
+- AI name suggestion call in `handleSaveAsMeal` (lines 349-351)
+- `suggestedName` and `isSuggestingName` props from SaveMealDialog
+
+**5. Delete files**
+
+- `src/hooks/useSuggestMealName.ts` - No longer needed
+- `supabase/functions/suggest-meal-name/index.ts` - Edge function no longer called
 
 ---
 
-### Code Change
+### Behavior After Changes
 
-**Before (lines 130-132):**
-```typescript
-const [defaultPlaceholder] = useState(
-  () => placeholders[Math.floor(Math.random() * placeholders.length)],
-);
-```
-
-**After:**
-```typescript
-// Stable random index per component instance
-const [randomIndex] = useState(() => Math.floor(Math.random() * 100));
-// Derive placeholder from current placeholders (updates when weightUnit changes)
-const defaultPlaceholder = placeholders[randomIndex % placeholders.length];
-```
+When saving a meal:
+1. Dialog opens immediately
+2. Name field is pre-populated with the first item's description (cleaned of portion info)
+3. User can edit the name or accept the default
+4. No waiting, no loading spinners for name generation
 
