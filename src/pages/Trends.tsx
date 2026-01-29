@@ -14,10 +14,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 
 // Chart color palette (hex RGB format for easy editing)
 const CHART_COLORS = {
-  calories: "#0033CC", // Deep Blue
-  protein: "#115E83", // Steel Blue
-  carbs: "#00D4FF", // Bright Cyan
-  fat: "#A7D3FF", // Light Cyan
+  calories: "#0033CC",
+  protein: "#115E83",
+  carbs: "#00B4D8",
+  fat: "#A7D3FF",
 } as const;
 
 const CompactTooltip = ({ active, payload, label, formatter }: any) => {
