@@ -1,67 +1,144 @@
 
-## Add Saved Meals/Routines Columns to Admin User Table
+
+## Add Help Page with Feedback Form
 
 ### Overview
-Add columns showing saved meals and saved routines count per user, while making the username display more compact.
+Create a Help page accessible from the header, move Sign Out to Settings, and add a feedback system with database storage viewable on the Admin page.
 
 ---
 
 ### Changes Required
 
-#### 1. Database Function Update
-**Update `get_user_stats` to include saved meals/routines counts**
+#### 1. Database Table for Feedback
+Create a `feedback` table to store user submissions:
 
 ```sql
--- Add to the SELECT in get_user_stats function
-COUNT(DISTINCT sm.id) as saved_meals_count,
-COUNT(DISTINCT sr.id) as saved_routines_count
+create table public.feedback (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null,
+  message text not null,
+  created_at timestamptz not null default now()
+);
 
--- Add LEFT JOINs
-LEFT JOIN saved_meals sm ON p.id = sm.user_id
-LEFT JOIN saved_routines sr ON p.id = sr.user_id
+alter table public.feedback enable row level security;
+
+-- Users can insert their own feedback
+create policy "Users can insert own feedback"
+  on public.feedback for insert
+  with check (auth.uid() = user_id);
+
+-- Admins can view all feedback
+create policy "Admins can view all feedback"
+  on public.feedback for select
+  using (has_role(auth.uid(), 'admin'));
 ```
 
-#### 2. TypeScript Interface Update
-**File:** `src/hooks/useAdminStats.ts`
+#### 2. Header Changes
+**File:** `src/components/Header.tsx`
 
-Add to `UserStats` interface:
+- Remove sign out button and related state
+- Add "Help" link with `HelpCircle` icon pointing to `/help`
+
 ```tsx
-saved_meals_count: number;
-saved_routines_count: number;
+// Before: Sign out button
+// After: Help link
+<Link to="/help" className="text-muted-foreground hover:text-foreground min-h-[44px] px-2 -mr-2 flex items-center gap-1">
+  <HelpCircle className="h-4 w-4" />
+  <span>Help</span>
+</Link>
 ```
 
-#### 3. Admin Page UI Updates
+#### 3. Settings Page - Add Sign Out
+**File:** `src/pages/Settings.tsx`
+
+Add Sign Out button to the Account section (after Change Password):
+
+```tsx
+// Inside Account CollapsibleSection, after Change Password button
+<Button 
+  variant="outline" 
+  size="sm" 
+  onClick={handleSignOut}
+  disabled={isSigningOut}
+>
+  {isSigningOut ? 'Signing out...' : 'Sign Out'}
+</Button>
+```
+
+#### 4. New Help Page
+**File:** `src/pages/Help.tsx`
+
+Compact page with:
+- 4 bullet points covering key features
+- Simple textarea form for feedback
+- Submit button that saves to database
+
+```text
++----------------------------------+
+|  Tips                            |
+|                                  |
+|  • Log food & weights now,       |
+|    more tracking types coming    |
+|                                  |
+|  • Braindump your inputs -       |
+|    AI handles the formatting     |
+|                                  |
+|  • Editing calories auto-scales  |
+|    protein, carbs & fat          |
+|                                  |
+|  Feedback                        |
+|  +----------------------------+  |
+|  | [textarea]                 |  |
+|  +----------------------------+  |
+|  [Send Feedback]                 |
++----------------------------------+
+```
+
+#### 5. Add Route
+**File:** `src/App.tsx`
+
+```tsx
+import Help from "./pages/Help";
+// ...
+<Route path="/help" element={<Help />} />
+```
+
+#### 6. Admin Page - Feedback Section
 **File:** `src/pages/Admin.tsx`
 
-**Username display logic change:**
-```tsx
-// Before
-User {user.user_number}
-{USER_NAMES[user.user_number] && ` (${USER_NAMES[user.user_number]})`}
+Add a collapsible section at the bottom showing recent feedback:
 
-// After - use name if available, otherwise "User X"
-{USER_NAMES[user.user_number] ?? `User ${user.user_number}`}
+```tsx
+{/* Feedback section */}
+{feedback && feedback.length > 0 && (
+  <div className="space-y-1">
+    <p className="font-medium text-xs text-muted-foreground">Recent Feedback</p>
+    {feedback.map((f) => (
+      <div key={f.id} className="text-xs border-b border-border/50 py-1">
+        <span className="text-muted-foreground">
+          {USER_NAMES[f.user_number] ?? `User ${f.user_number}`} • {format(...)}
+        </span>
+        <p>{f.message}</p>
+      </div>
+    ))}
+  </div>
+)}
 ```
 
-**Add two new columns:**
-- Header: "SM" (Saved Meals) and "SR" (Saved Routines)
-- Cells: `{user.saved_meals_count}` and `{user.saved_routines_count}`
+#### 7. New Hook for Feedback
+**File:** `src/hooks/useFeedback.ts`
+
+- `useSubmitFeedback` - mutation to insert feedback
+- `useAdminFeedback` - query for admin to view all feedback (joins with profiles for user_number)
 
 ---
 
-### Column Width Savings
-- "User 1 (KC)" → "KC" saves ~7 characters per row
-- "User 10 (Jenny)" → "Jenny" saves ~9 characters per row
-- Unknown users remain "User X" (no change in width for those)
+### Files to Create/Modify
+1. **Database migration** - Create `feedback` table with RLS
+2. **Create:** `src/pages/Help.tsx` - New help page with form
+3. **Create:** `src/hooks/useFeedback.ts` - Feedback hooks
+4. **Modify:** `src/components/Header.tsx` - Replace sign out with help link
+5. **Modify:** `src/pages/Settings.tsx` - Add sign out button to Account section
+6. **Modify:** `src/pages/Admin.tsx` - Add feedback display section
+7. **Modify:** `src/App.tsx` - Add help route
 
-### New Table Structure
-| User | Food Logged | Food Today | Weight Logged | Weight Today | SM | SR | Last Active |
-|------|-------------|------------|---------------|--------------|----|----|-------------|
-| KC   | 44          | 4          | 82            | 10           | 5  | 2  | Jan 28      |
-
----
-
-### Files to Modify
-1. **Database migration** - Update `get_user_stats` function
-2. **`src/hooks/useAdminStats.ts`** - Add new fields to interface
-3. **`src/pages/Admin.tsx`** - Update username display + add columns
