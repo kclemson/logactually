@@ -11,8 +11,8 @@ export function BottomNav() {
   const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
 
   const navItems = [
-    { to: '/', icon: Utensils, label: 'Log Food' },
-    ...(showWeights ? [{ to: '/weights', icon: Dumbbell, label: 'Log Weights' }] : []),
+    { to: '/', icon: Utensils, label: 'Food' },
+    ...(showWeights ? [{ to: '/weights', icon: Dumbbell, label: 'Weights' }] : []),
     { to: '/history', icon: CalendarDays, label: 'Calendar' },
     { to: '/trends', icon: TrendingUp, label: 'Trends' },
     { to: '/settings', icon: Settings, label: 'Settings' },
