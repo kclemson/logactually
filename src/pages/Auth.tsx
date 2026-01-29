@@ -11,16 +11,14 @@ import { APP_NAME, APP_DESCRIPTION } from '@/lib/constants';
 export default function Auth() {
   const { user, signUp, signIn, loading } = useAuth();
   const [searchParams] = useSearchParams();
-  const inviteFromUrl = searchParams.get('invite');
   const isResetCallback = searchParams.get('reset') === 'true';
   
-  const [isSignUp, setIsSignUp] = useState(!!inviteFromUrl);
+  const [isSignUp, setIsSignUp] = useState(false);
   const [isResetMode, setIsResetMode] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(isResetCallback);
   const [resetSent, setResetSent] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [inviteCode, setInviteCode] = useState(inviteFromUrl || '');
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -79,25 +77,6 @@ export default function Auth() {
     e.preventDefault();
     setSubmitting(true);
     setErrorMessage(null);
-
-    if (isSignUp) {
-      // Validate invite code via backend
-      const { data, error: invokeError } = await supabase.functions.invoke('validate-invite', {
-        body: { inviteCode }
-      });
-
-      if (invokeError) {
-        setErrorMessage('Failed to validate invite code. Please try again.');
-        setSubmitting(false);
-        return;
-      }
-
-      if (!data?.valid) {
-        setErrorMessage('Invalid invite code. Please enter a valid invite code to sign up.');
-        setSubmitting(false);
-        return;
-      }
-    }
 
     const { error } = isSignUp 
       ? await signUp(email, password)
@@ -292,19 +271,6 @@ export default function Auth() {
                 minLength={6}
               />
             </div>
-            {isSignUp && (
-              <div className="space-y-2">
-                <Label htmlFor="inviteCode">Invite Code</Label>
-                <Input
-                  id="inviteCode"
-                  type="text"
-                  placeholder="Enter your invite code"
-                  value={inviteCode}
-                  onChange={(e) => setInviteCode(e.target.value)}
-                  required
-                />
-              </div>
-            )}
             <Button type="submit" className="w-full" disabled={submitting}>
               {submitting ? 'Loading...' : isSignUp ? 'Sign Up' : 'Sign In'}
             </Button>
