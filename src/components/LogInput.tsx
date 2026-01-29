@@ -282,7 +282,7 @@ export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder={placeholderText}
-        className="min-h-[80px] resize-none"
+        className="min-h-[100px] resize-none"
         disabled={isBusy}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey) {
