@@ -259,14 +259,18 @@ const Trends = () => {
       });
     });
 
-    return Object.entries(byDate)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, volumeLbs]) => ({
+  return Object.entries(byDate)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, volumeLbs]) => {
+      const volume = settings.weightUnit === "kg" 
+        ? Math.round(volumeLbs * LBS_TO_KG) 
+        : Math.round(volumeLbs);
+      return {
         date: format(new Date(`${date}T12:00:00`), "MMM d"),
-        volume: settings.weightUnit === "kg" 
-          ? Math.round(volumeLbs * LBS_TO_KG) 
-          : Math.round(volumeLbs),
-      }));
+        volume,
+        label: `${Math.round(volume / 1000)}k`,
+      };
+    });
   }, [weightExercises, settings.weightUnit]);
 
   // Split into top 25 and remaining
@@ -500,25 +504,33 @@ const Trends = () => {
                   <CardContent className="p-2 pt-0">
                     <div className="h-24">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={volumeByDay} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
-                          <XAxis
-                            dataKey="date"
-                            tick={{ fontSize: 8 }}
-                            stroke="hsl(var(--muted-foreground))"
-                            interval="preserveStartEnd"
-                            tickMargin={2}
-                            height={16}
+                      <BarChart data={volumeByDay} margin={{ top: 12, right: 0, left: 0, bottom: 0 }}>
+                        <XAxis
+                          dataKey="date"
+                          tick={{ fontSize: 8 }}
+                          stroke="hsl(var(--muted-foreground))"
+                          interval="preserveStartEnd"
+                          tickMargin={2}
+                          height={16}
+                        />
+                        <Tooltip
+                          content={
+                            <CompactTooltip
+                              formatter={(value: number) => `${value.toLocaleString()} ${settings.weightUnit}`}
+                            />
+                          }
+                          offset={20}
+                          cursor={{ fill: "hsl(var(--muted)/0.3)" }}
+                        />
+                        <Bar dataKey="volume" fill={CHART_COLORS.trainingVolume} radius={[2, 2, 0, 0]}>
+                          <LabelList 
+                            dataKey="label" 
+                            position="top" 
+                            fill={CHART_COLORS.trainingVolume}
+                            fontSize={7}
+                            fontWeight={500}
                           />
-                          <Tooltip
-                            content={
-                              <CompactTooltip
-                                formatter={(value: number) => `${value.toLocaleString()} ${settings.weightUnit}`}
-                              />
-                            }
-                            offset={20}
-                            cursor={{ fill: "hsl(var(--muted)/0.3)" }}
-                          />
-                          <Bar dataKey="volume" fill={CHART_COLORS.trainingVolume} radius={[2, 2, 0, 0]} />
+                        </Bar>
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
