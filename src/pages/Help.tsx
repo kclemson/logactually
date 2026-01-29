@@ -13,7 +13,7 @@ const HELP_CONTENT = {
     title: "Tips",
     items: [
       {
-        text: "Braindump your inputs however you want (via text, voice, or scan a barcode) — the AI figures out the formatting.",
+        text: "Braindump your inputs however you want (via text, voice, or scan a barcode) — the AI figures out the formatting and does the math.",
         highlights: ["braindump"],
       },
       {
@@ -23,6 +23,10 @@ const HELP_CONTENT = {
       {
         text: "Select the > next to a row to see what the original input was - and save it as a meal or weight lifting routine for easy access in the future.",
         highlights: ["save it"],
+      },
+      {
+        text: "Select "Trends" to see charts of your progress over time.",
+        highlights: ["charts"],
       },
       {
         text: "Want to work with your data in another app? Export to CSV in Settings.",
