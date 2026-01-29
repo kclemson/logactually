@@ -1,77 +1,66 @@
 
 
-## Remove AI Meal Name Suggestion Feature
+## Export Weight Log with Both Lbs and Kg Columns
 
 ### Overview
 
-Remove the AI-powered meal name generation that runs when saving a meal. Instead, the name field will immediately show a fallback name (first food item's description) so users can save instantly without waiting.
+Instead of conditionally exporting based on user preference, always include both weight columns in the CSV. This makes the export universally useful and doesn't require passing settings around.
 
 ---
 
-### Files to Modify/Delete
+### File to Modify
 
-| File | Action | Description |
-|------|--------|-------------|
-| `src/hooks/useSuggestMealName.ts` | **Delete** | The hook that calls the edge function |
-| `supabase/functions/suggest-meal-name/` | **Delete** | The edge function directory |
-| `src/components/SaveMealDialog.tsx` | **Simplify** | Remove AI suggestion props and loading states |
-| `src/components/CreateSavedDialog.tsx` | **Simplify** | Remove suggestName logic and loading UI |
-| `src/components/CreateMealDialog.tsx` | **Simplify** | Remove useSuggestMealName hook |
-| `src/pages/FoodLog.tsx` | **Simplify** | Remove suggestName usage and related state |
+| File | Changes |
+|------|---------|
+| `src/lib/csv-export.ts` | Add both `Weight (lbs)` and `Weight (kg)` columns |
 
 ---
 
-### Implementation Details
+### Implementation
 
-**1. SaveMealDialog.tsx**
+**Current headers:**
+```typescript
+['Date', 'Time', 'Exercise', 'Sets', 'Reps', 'Weight (lbs)', 'Raw Input']
+```
 
-Remove:
-- `suggestedName` and `isSuggestingName` props
-- `useEffect` that waits for AI suggestion
-- Loading spinner and "Generating suggested meal name..." UI
-- `isGenerating` derived state
+**New headers:**
+```typescript
+['Date', 'Time', 'Exercise', 'Sets', 'Reps', 'Weight (lbs)', 'Weight (kg)', 'Raw Input']
+```
 
-Replace with:
-- Initialize `name` directly with `getFallbackName(foodItems)` on mount
+**Row mapping update:**
+```typescript
+const LBS_TO_KG = 0.453592;
 
-**2. CreateSavedDialog.tsx**
-
-Remove:
-- `suggestNameResult` prop entirely from interface
-- The background name suggestion logic in `handleSubmit` (lines 138-147)
-- `isGeneratingName` derived state
-- Loading spinner UI in the name input field (lines 232-250)
-
-Replace with:
-- Set name to `config.getFallbackName(result)` immediately after analysis completes
-
-**3. CreateMealDialog.tsx**
-
-Remove:
-- `useSuggestMealName` import and hook call
-- `suggestNameResult` prop passed to CreateSavedDialog
-
-**4. FoodLog.tsx**
-
-Remove:
-- `useSuggestMealName` import (line 19)
-- `suggestName, isLoading: isSuggestingName` from hook destructure (line 76)
-- `suggestedMealName` state and setter (line 50)
-- AI name suggestion call in `handleSaveAsMeal` (lines 349-351)
-- `suggestedName` and `isSuggestingName` props from SaveMealDialog
-
-**5. Delete files**
-
-- `src/hooks/useSuggestMealName.ts` - No longer needed
-- `supabase/functions/suggest-meal-name/index.ts` - Edge function no longer called
+const rows = sorted.map((set) => [
+  set.logged_date,
+  format(new Date(set.created_at), 'HH:mm'),
+  set.description,
+  set.sets,
+  set.reps,
+  set.weight_lbs,                              // Original lbs value
+  Math.round(set.weight_lbs * LBS_TO_KG),      // Converted kg value
+  set.raw_input || '',
+]);
+```
 
 ---
 
-### Behavior After Changes
+### Result
 
-When saving a meal:
-1. Dialog opens immediately
-2. Name field is pre-populated with the first item's description (cleaned of portion info)
-3. User can edit the name or accept the default
-4. No waiting, no loading spinners for name generation
+Sample CSV output:
+```
+Date,Time,Exercise,Sets,Reps,Weight (lbs),Weight (kg),Raw Input
+2024-01-15,09:30,Bench Press,3,10,135,61,bench press 3x10 at 135
+2024-01-15,09:45,Lat Pulldown,4,12,100,45,lat pulldown 4x12 at 100
+```
+
+---
+
+### Benefits
+
+- No settings dependency needed
+- Export is self-contained and complete
+- Users can filter/use whichever column they prefer
+- Simpler code - no parameter passing required
 
