@@ -331,7 +331,7 @@ export default function Auth() {
                 type="button"
                 onClick={handleTryDemo}
                 disabled={submitting || isDemoLoading}
-                className="text-primary underline underline-offset-4 hover:no-underline disabled:opacity-50"
+                className="text-blue-500 underline-offset-4 hover:underline disabled:opacity-50"
               >
                 {isDemoLoading ? 'loading demo...' : 'try the demo'}
               </button>
