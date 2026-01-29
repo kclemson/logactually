@@ -1,22 +1,22 @@
-import { useTheme } from 'next-themes';
-import { Moon, Sun, Monitor, Star, SunMoon, Download, Plus, Dumbbell, User } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useEffect, useState } from 'react';
-import { useUserSettings } from '@/hooks/useUserSettings';
-import { useSavedMeals, useUpdateSavedMeal, useDeleteSavedMeal } from '@/hooks/useSavedMeals';
-import { useSavedRoutines, useUpdateSavedRoutine, useDeleteSavedRoutine } from '@/hooks/useSavedRoutines';
-import { Button } from '@/components/ui/button';
-import { useExportData } from '@/hooks/useExportData';
-import { CreateMealDialog } from '@/components/CreateMealDialog';
-import { CreateRoutineDialog } from '@/components/CreateRoutineDialog';
-import { CollapsibleSection } from '@/components/CollapsibleSection';
-import { SavedMealRow } from '@/components/SavedMealRow';
-import { SavedRoutineRow } from '@/components/SavedRoutineRow';
-import { FEATURES } from '@/lib/feature-flags';
-import { useIsAdmin } from '@/hooks/useIsAdmin';
-import { useAuth } from '@/hooks/useAuth';
-import { ChangePasswordDialog } from '@/components/ChangePasswordDialog';
-import { DeleteAccountDialog } from '@/components/DeleteAccountDialog';
+import { useTheme } from "next-themes";
+import { Moon, Sun, Monitor, Star, SunMoon, Download, Plus, Dumbbell, User } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
+import { useUserSettings } from "@/hooks/useUserSettings";
+import { useSavedMeals, useUpdateSavedMeal, useDeleteSavedMeal } from "@/hooks/useSavedMeals";
+import { useSavedRoutines, useUpdateSavedRoutine, useDeleteSavedRoutine } from "@/hooks/useSavedRoutines";
+import { Button } from "@/components/ui/button";
+import { useExportData } from "@/hooks/useExportData";
+import { CreateMealDialog } from "@/components/CreateMealDialog";
+import { CreateRoutineDialog } from "@/components/CreateRoutineDialog";
+import { CollapsibleSection } from "@/components/CollapsibleSection";
+import { SavedMealRow } from "@/components/SavedMealRow";
+import { SavedRoutineRow } from "@/components/SavedRoutineRow";
+import { FEATURES } from "@/lib/feature-flags";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useAuth } from "@/hooks/useAuth";
+import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
+import { DeleteAccountDialog } from "@/components/DeleteAccountDialog";
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
@@ -25,11 +25,11 @@ export default function Settings() {
   const { data: isAdmin } = useIsAdmin();
   const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
   const { user } = useAuth();
-  
+
   // Password change dialog
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
-  
+
   // Saved meals
   const { data: savedMeals, isLoading: mealsLoading } = useSavedMeals();
   const updateMeal = useUpdateSavedMeal();
@@ -37,7 +37,7 @@ export default function Settings() {
   const [openMealPopoverId, setOpenMealPopoverId] = useState<string | null>(null);
   const [createMealDialogOpen, setCreateMealDialogOpen] = useState(false);
   const [expandedMealIds, setExpandedMealIds] = useState<Set<string>>(new Set());
-  
+
   // Saved routines (weight tracking)
   const { data: savedRoutines, isLoading: routinesLoading } = useSavedRoutines();
   const updateRoutine = useUpdateSavedRoutine();
@@ -45,7 +45,7 @@ export default function Settings() {
   const [openRoutinePopoverId, setOpenRoutinePopoverId] = useState<string | null>(null);
   const [createRoutineDialogOpen, setCreateRoutineDialogOpen] = useState(false);
   const [expandedRoutineIds, setExpandedRoutineIds] = useState<Set<string>>(new Set());
-  
+
   // Export data
   const { isExporting, exportDailyTotals, exportFoodLog, exportWeightLog } = useExportData();
 
@@ -54,14 +54,13 @@ export default function Settings() {
     setMounted(true);
   }, []);
 
-
-  const handleThemeChange = (value: 'light' | 'dark' | 'system') => {
+  const handleThemeChange = (value: "light" | "dark" | "system") => {
     setTheme(value);
     updateSettings({ theme: value });
   };
 
   const toggleMealExpand = (id: string) => {
-    setExpandedMealIds(prev => {
+    setExpandedMealIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
@@ -73,7 +72,7 @@ export default function Settings() {
   };
 
   const toggleRoutineExpand = (id: string) => {
-    setExpandedRoutineIds(prev => {
+    setExpandedRoutineIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
@@ -85,9 +84,9 @@ export default function Settings() {
   };
 
   const themeOptions = [
-    { value: 'light', label: 'Light', icon: Sun },
-    { value: 'dark', label: 'Dark', icon: Moon },
-    { value: 'system', label: 'System', icon: Monitor },
+    { value: "light", label: "Light", icon: Sun },
+    { value: "dark", label: "Dark", icon: Moon },
+    { value: "system", label: "System", icon: Monitor },
   ] as const;
 
   return (
@@ -107,11 +106,7 @@ export default function Settings() {
               Delete account
             </button>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setChangePasswordOpen(true)}
-          >
+          <Button variant="outline" size="sm" onClick={() => setChangePasswordOpen(true)}>
             Change Password
           </Button>
         </div>
@@ -122,11 +117,7 @@ export default function Settings() {
         title="Saved Meals"
         icon={Star}
         headerAction={
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setCreateMealDialogOpen(true)}
-          >
+          <Button variant="outline" size="sm" onClick={() => setCreateMealDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-1" />
             Add
           </Button>
@@ -160,11 +151,7 @@ export default function Settings() {
           title="Saved Routines"
           icon={Dumbbell}
           headerAction={
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setCreateRoutineDialogOpen(true)}
-            >
+            <Button variant="outline" size="sm" onClick={() => setCreateRoutineDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-1" />
               Add
             </Button>
@@ -202,9 +189,7 @@ export default function Settings() {
               onClick={() => handleThemeChange(value)}
               className={cn(
                 "flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 transition-colors",
-                mounted && theme === value
-                  ? "border-primary bg-primary/5"
-                  : "border-border hover:bg-muted/50"
+                mounted && theme === value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50",
               )}
             >
               <Icon className="h-4 w-4" />
@@ -217,30 +202,15 @@ export default function Settings() {
       {/* Export as CSV */}
       <CollapsibleSection title="Export to CSV" icon={Download}>
         <div className="flex flex-wrap gap-2 max-w-md">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={exportDailyTotals}
-            disabled={isExporting}
-          >
+          <Button variant="outline" size="sm" onClick={exportDailyTotals} disabled={isExporting}>
             Food Daily Totals
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={exportFoodLog}
-            disabled={isExporting}
-          >
+          <Button variant="outline" size="sm" onClick={exportFoodLog} disabled={isExporting}>
             Food Log
           </Button>
           {showWeights && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={exportWeightLog}
-              disabled={isExporting}
-            >
-              Weight Log
+            <Button variant="outline" size="sm" onClick={exportWeightLog} disabled={isExporting}>
+              Weights Log
             </Button>
           )}
         </div>
@@ -261,7 +231,7 @@ export default function Settings() {
         <ChangePasswordDialog
           open={changePasswordOpen}
           onOpenChange={setChangePasswordOpen}
-          userEmail={user?.email || ''}
+          userEmail={user?.email || ""}
         />
       )}
 
@@ -276,13 +246,7 @@ export default function Settings() {
       )}
 
       {/* Delete Account Dialog */}
-      {deleteAccountOpen && (
-        <DeleteAccountDialog
-          open={deleteAccountOpen}
-          onOpenChange={setDeleteAccountOpen}
-        />
-      )}
-
+      {deleteAccountOpen && <DeleteAccountDialog open={deleteAccountOpen} onOpenChange={setDeleteAccountOpen} />}
     </div>
   );
 }
