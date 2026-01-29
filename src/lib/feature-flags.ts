@@ -6,5 +6,5 @@
  */
 export const FEATURES = {
   /** Weight training logging and trends */
-  WEIGHT_TRACKING: import.meta.env.DEV,
+  WEIGHT_TRACKING: true,
 } as const;
