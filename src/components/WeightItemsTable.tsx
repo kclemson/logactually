@@ -139,8 +139,24 @@ export function WeightItemsTable({
     descriptionOriginalRef.current = item.description;
   };
 
-  const handleDescriptionBlur = (e: React.FocusEvent<HTMLSpanElement>) => {
-    e.currentTarget.textContent = descriptionOriginalRef.current;
+  const handleDescriptionBlur = (
+    e: React.FocusEvent<HTMLSpanElement>,
+    index: number
+  ) => {
+    // Read-only mode always reverts
+    if (isReadOnly) {
+      e.currentTarget.textContent = descriptionOriginalRef.current;
+      return;
+    }
+    
+    const newDescription = (e.currentTarget.textContent || '').trim();
+    
+    // Revert if empty, otherwise save
+    if (!newDescription) {
+      e.currentTarget.textContent = descriptionOriginalRef.current;
+    } else if (newDescription !== descriptionOriginalRef.current) {
+      onUpdateItem?.(index, 'description', newDescription);
+    }
   };
 
   const hasAnyEditedFields = (item: WeightSet): boolean => {
@@ -340,7 +356,7 @@ export function WeightItemsTable({
                         }
                       }}
                       onFocus={(e) => handleDescriptionFocus(e, item)}
-                      onBlur={handleDescriptionBlur}
+                      onBlur={(e) => handleDescriptionBlur(e, index)}
                       onKeyDown={(e) => handleDescriptionKeyDown(e, index)}
                       className="border-0 bg-transparent focus:outline-none cursor-text hover:bg-muted/50"
                     />
@@ -399,7 +415,16 @@ export function WeightItemsTable({
                     }
                   }}
                   onKeyDown={(e) => handleKeyDown(e, index, 'sets')}
-                  onBlur={() => setEditingCell(null)}
+                  onBlur={() => {
+                    // Save on blur if value changed and valid (positive)
+                    if (editingCell && editingCell.value !== editingCell.originalValue && !isReadOnly) {
+                      const numValue = Number(editingCell.value);
+                      if (numValue > 0) {
+                        onUpdateItem?.(index, 'sets', editingCell.value);
+                      }
+                    }
+                    setEditingCell(null);
+                  }}
                   className={getNumberInputClasses(editingCell?.index === index && editingCell?.field === 'sets')}
                 />
               ) : (
@@ -429,7 +454,16 @@ export function WeightItemsTable({
                     }
                   }}
                   onKeyDown={(e) => handleKeyDown(e, index, 'reps')}
-                  onBlur={() => setEditingCell(null)}
+                  onBlur={() => {
+                    // Save on blur if value changed and valid (positive)
+                    if (editingCell && editingCell.value !== editingCell.originalValue && !isReadOnly) {
+                      const numValue = Number(editingCell.value);
+                      if (numValue > 0) {
+                        onUpdateItem?.(index, 'reps', editingCell.value);
+                      }
+                    }
+                    setEditingCell(null);
+                  }}
                   className={getNumberInputClasses(editingCell?.index === index && editingCell?.field === 'reps')}
                 />
               ) : (
@@ -487,7 +521,18 @@ export function WeightItemsTable({
                       (e.target as HTMLElement).blur();
                     }
                   }}
-                  onBlur={() => setEditingCell(null)}
+                  onBlur={() => {
+                    // Save on blur if value changed and valid (positive)
+                    if (editingCell && editingCell.value !== editingCell.originalValue && !isReadOnly) {
+                      const numValue = Number(editingCell.value);
+                      if (numValue > 0) {
+                        // Convert user input back to lbs for storage
+                        const lbsValue = parseWeightToLbs(numValue, weightUnit);
+                        onUpdateItem?.(index, 'weight_lbs', lbsValue);
+                      }
+                    }
+                    setEditingCell(null);
+                  }}
                   className={getNumberInputClasses(editingCell?.index === index && editingCell?.field === 'weight_lbs')}
                 />
               ) : (
