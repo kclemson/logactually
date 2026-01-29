@@ -1,48 +1,55 @@
 
 
-## Update "try the demo" Link Styling
+## Create Demo User Account
 
 ### Overview
 
-Remove the default underline from the demo link and use a blue color to make it stand out, creating visual consistency with the "Sign Up" link which also uses hover-underline.
+Create the demo user account (`demo@logactually.com`) with the password `demodemo` and mark it as read-only. This will enable the "try the demo" functionality on the auth page.
 
 ---
 
-### Current State (line 334)
+### Implementation Steps
 
-```tsx
-className="text-primary underline underline-offset-4 hover:no-underline disabled:opacity-50"
+**Step 1: Create the user via Supabase Admin API**
+
+Use the Supabase admin function to create a user with:
+- Email: `demo@logactually.com`
+- Password: `demodemo`
+- Email confirmed: `true` (so they can log in immediately)
+
+**Step 2: Set profile to read-only**
+
+After the user is created (the `handle_new_user` trigger automatically creates their profile), run a migration to update the profile:
+
+```sql
+UPDATE profiles 
+SET is_read_only = true 
+WHERE id = (SELECT id FROM auth.users WHERE email = 'demo@logactually.com');
 ```
 
 ---
 
-### Proposed Change
+### Technical Notes
 
-```tsx
-className="text-blue-500 underline-offset-4 hover:underline disabled:opacity-50"
-```
-
-This makes the link:
-- Blue color by default (`text-blue-500`) - stands out from the muted text
-- No underline by default - matches the "Sign Up" link pattern
-- Underline on hover - consistent interaction feedback
+- The `handle_new_user` database trigger automatically creates a profile row when a new user is created
+- Setting `is_read_only = true` ensures all RLS policies block write operations for this user
+- The demo credentials in `src/lib/demo-mode.ts` already match: `demo@logactually.com` / `demodemo`
 
 ---
 
-### Visual Result
+### Verification
 
-```
-Don't have an account? Sign Up     ← text-primary, hover:underline
-Or try the demo — no account needed   ← text-blue-500, hover:underline
-```
-
-Both links now have the same underline behavior (hover only), but the demo link uses blue to differentiate it.
+After implementation, clicking "try the demo" on the auth page should:
+1. Successfully log in as the demo user
+2. Redirect to the main app
+3. Show the read-only banner (if implemented)
 
 ---
 
 ### Files Changed
 
-| File | Change |
-|------|--------|
-| `src/pages/Auth.tsx` | Update demo link class: remove `underline`, change `text-primary` to `text-blue-500` |
+| Location | Change |
+|----------|--------|
+| Database (auth.users) | Create user via admin API |
+| Database (profiles) | Migration to set `is_read_only = true` |
 
