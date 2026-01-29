@@ -12,6 +12,7 @@ import { extractUpcFromText } from "@/lib/upc-utils";
 import { FoodItem } from "@/types/food";
 import { SavedExerciseSet } from "@/types/weight";
 import { useReadOnlyContext } from "@/contexts/ReadOnlyContext";
+import type { WeightUnit } from "@/lib/weight-units";
 
 // Mode-specific configurations
 export type LogMode = 'food' | 'weights';
@@ -27,7 +28,7 @@ const FOOD_PLACEHOLDER_EXAMPLES = [
   "Describe what you ate, such as: a slice of banana bread from this recipe: https://natashaskitchen.com/banana-bread-recipe-video/",
 ];
 
-const WEIGHTS_PLACEHOLDER_EXAMPLES = [
+const WEIGHTS_PLACEHOLDER_EXAMPLES_LBS = [
   "Describe your workout: 3 sets of 10 reps lat pulldown at 100 lbs",
   "Describe your workout: bench press 4x8 at 135",
   "Describe your workout: squats 5x5 at 185 lbs, then leg press 3x12 at 200",
@@ -37,8 +38,17 @@ const WEIGHTS_PLACEHOLDER_EXAMPLES = [
   "Describe your workout: cable rows 4x10 at 80 lbs",
 ];
 
+const WEIGHTS_PLACEHOLDER_EXAMPLES_KG = [
+  "Describe your workout: 3 sets of 10 reps lat pulldown at 45 kg",
+  "Describe your workout: bench press 4x8 at 60 kg",
+  "Describe your workout: squats 5x5 at 85 kg, then leg press 3x12 at 90 kg",
+  "Describe your workout: bicep curls 3x12 at 12 kg",
+  "Describe your workout: chest fly machine 3x10, then shoulder press 3x8",
+  "Describe your workout: leg extensions and hamstring curls, 3 sets each",
+  "Describe your workout: cable rows 4x10 at 35 kg",
+];
+
 interface LogModeConfig {
-  placeholders: string[];
   showBarcodeScanner: boolean;
   showSavedButton: boolean;
   submitLabel: string;
@@ -47,20 +57,24 @@ interface LogModeConfig {
 
 const MODE_CONFIGS: Record<LogMode, LogModeConfig> = {
   food: {
-    placeholders: FOOD_PLACEHOLDER_EXAMPLES,
     showBarcodeScanner: true,
     showSavedButton: true,
     submitLabel: 'Add Food',
     submitLabelShort: 'Add',
   },
   weights: {
-    placeholders: WEIGHTS_PLACEHOLDER_EXAMPLES,
     showBarcodeScanner: false,
     showSavedButton: true,
     submitLabel: 'Add Exercise',
     submitLabelShort: 'Add',
   },
 };
+
+// Helper to get placeholders based on mode and weight unit
+function getPlaceholders(mode: LogMode, weightUnit?: WeightUnit): string[] {
+  if (mode === 'food') return FOOD_PLACEHOLDER_EXAMPLES;
+  return weightUnit === 'kg' ? WEIGHTS_PLACEHOLDER_EXAMPLES_KG : WEIGHTS_PLACEHOLDER_EXAMPLES_LBS;
+}
 
 interface LogInputProps {
   /** Mode determines placeholders and available features */
@@ -79,6 +93,8 @@ interface LogInputProps {
   onCreateNewRoutine?: () => void;
   /** Optional override for textarea placeholder */
   placeholder?: string;
+  /** Weights mode: user's preferred weight unit for placeholder examples */
+  weightUnit?: WeightUnit;
 }
 
 export interface LogInputRef {
@@ -101,17 +117,18 @@ const getCameraSupport = (): boolean => {
 };
 
 export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput(
-  { mode, onSubmit, isLoading, onScanResult, onLogSavedMeal, onCreateNewMeal, onLogSavedRoutine, onCreateNewRoutine, placeholder: customPlaceholder },
+  { mode, onSubmit, isLoading, onScanResult, onLogSavedMeal, onCreateNewMeal, onLogSavedRoutine, onCreateNewRoutine, placeholder: customPlaceholder, weightUnit },
   ref,
 ) {
   const config = MODE_CONFIGS[mode];
+  const placeholders = getPlaceholders(mode, weightUnit);
   
   const [text, setText] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [savedMealsOpen, setSavedMealsOpen] = useState(false);
   const [defaultPlaceholder] = useState(
-    () => config.placeholders[Math.floor(Math.random() * config.placeholders.length)],
+    () => placeholders[Math.floor(Math.random() * placeholders.length)],
   );
 
   // Use custom placeholder if provided, otherwise use random default from mode config
