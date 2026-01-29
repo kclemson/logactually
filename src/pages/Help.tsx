@@ -4,6 +4,53 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useSubmitFeedback } from '@/hooks/useFeedback';
 
+// ============================================
+// EDITABLE CONTENT - Modify strings here
+// ============================================
+const HELP_CONTENT = {
+  tips: {
+    title: 'Tips',
+    items: [
+      {
+        text: 'Log food and weight lifting now. More tracking types coming soon.',
+        highlights: ['food', 'weight lifting'],
+      },
+      {
+        text: 'Just braindump your inputs however you want — the AI figures out the formatting.',
+        highlights: ['braindump'],
+      },
+      {
+        text: 'Editing calories auto-scales protein, carbs, and fat proportionally.',
+        highlights: ['calories'],
+      },
+    ],
+  },
+  feedback: {
+    title: 'Feedback',
+    placeholder: 'Feature requests, bugs, or ideas...',
+    submitButton: 'Send Feedback',
+    submittingButton: 'Sending...',
+    successMessage: 'Thanks for the feedback!',
+  },
+};
+// ============================================
+
+function highlightText(text: string, highlights: string[]) {
+  if (!highlights.length) return text;
+  
+  const pattern = new RegExp(`(${highlights.map(h => h.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi');
+  const parts = text.split(pattern);
+  
+  return parts.map((part, i) => {
+    const isHighlight = highlights.some(h => h.toLowerCase() === part.toLowerCase());
+    return isHighlight ? (
+      <span key={i} className="text-foreground">{part}</span>
+    ) : (
+      part
+    );
+  });
+}
+
 export default function Help() {
   const [message, setMessage] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -27,21 +74,15 @@ export default function Help() {
       <section>
         <div className="flex items-center gap-2 mb-3">
           <Lightbulb className="h-4 w-4 text-muted-foreground" />
-          <h2 className="text-sm font-medium">Tips</h2>
+          <h2 className="text-sm font-medium">{HELP_CONTENT.tips.title}</h2>
         </div>
         <ul className="space-y-3 text-sm text-muted-foreground">
-          <li className="flex gap-2">
-            <span className="text-foreground">•</span>
-            <span>Log <span className="text-foreground">food</span> and <span className="text-foreground">weight lifting</span> now. More tracking types coming soon.</span>
-          </li>
-          <li className="flex gap-2">
-            <span className="text-foreground">•</span>
-            <span>Just <span className="text-foreground">braindump</span> your inputs however you want — the AI figures out the formatting.</span>
-          </li>
-          <li className="flex gap-2">
-            <span className="text-foreground">•</span>
-            <span>Editing <span className="text-foreground">calories</span> auto-scales protein, carbs, and fat proportionally.</span>
-          </li>
+          {HELP_CONTENT.tips.items.map((item, index) => (
+            <li key={index} className="flex gap-2">
+              <span className="text-foreground">•</span>
+              <span>{highlightText(item.text, item.highlights)}</span>
+            </li>
+          ))}
         </ul>
       </section>
 
@@ -49,15 +90,15 @@ export default function Help() {
       <section>
         <div className="flex items-center gap-2 mb-3">
           <MessageSquare className="h-4 w-4 text-muted-foreground" />
-          <h2 className="text-sm font-medium">Feedback</h2>
+          <h2 className="text-sm font-medium">{HELP_CONTENT.feedback.title}</h2>
         </div>
         
         {submitted ? (
-          <p className="text-sm text-muted-foreground">Thanks for the feedback!</p>
+          <p className="text-sm text-muted-foreground">{HELP_CONTENT.feedback.successMessage}</p>
         ) : (
           <div className="space-y-2">
             <Textarea
-              placeholder="Feature requests, bugs, or ideas..."
+              placeholder={HELP_CONTENT.feedback.placeholder}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               className="min-h-[80px] text-sm resize-none"
@@ -68,7 +109,7 @@ export default function Help() {
               onClick={handleSubmit}
               disabled={!message.trim() || submitFeedback.isPending}
             >
-              {submitFeedback.isPending ? 'Sending...' : 'Send Feedback'}
+              {submitFeedback.isPending ? HELP_CONTENT.feedback.submittingButton : HELP_CONTENT.feedback.submitButton}
             </Button>
           </div>
         )}
