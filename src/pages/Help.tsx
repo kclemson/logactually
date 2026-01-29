@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Lightbulb, MessageSquare } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Lightbulb, MessageSquare, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useSubmitFeedback } from "@/hooks/useFeedback";
@@ -54,6 +55,7 @@ function highlightText(text: string, highlights: string[]) {
 }
 
 export default function Help() {
+  const navigate = useNavigate();
   const [message, setMessage] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const submitFeedback = useSubmitFeedback();
@@ -71,7 +73,16 @@ export default function Help() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {/* Close button */}
+      <button
+        onClick={() => navigate(-1)}
+        className="absolute right-0 top-0 p-2 -mr-2 -mt-2 text-muted-foreground hover:text-foreground transition-colors"
+        aria-label="Close help"
+      >
+        <X className="h-5 w-5" />
+      </button>
+
       {/* Tips Section */}
       <section>
         <div className="flex items-center gap-2 mb-3">
