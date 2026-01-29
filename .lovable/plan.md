@@ -1,27 +1,98 @@
 
-## Fix Chart Title Clipping for Descenders
 
-### Problem
-The "g" in "Seated Leg Press" is being cut off because `ChartTitle` uses `leading-none` (line-height: 1.0), which doesn't provide enough vertical space for descender characters (g, y, p, q, j).
+## Update Bottom Navigation: Food Icon & Vertical Layout
 
-### Solution
-Increase the line-height on `ChartTitle` from `leading-none` to `leading-tight` (line-height: 1.25) which provides adequate space for descenders without significantly increasing the overall chart header height.
+Two changes to improve the bottom navigation styling and clarity.
 
-### File to Modify
+---
 
-**src/components/ui/card.tsx** (line 45)
+### Change 1: Food-Representative Icon
 
-Change:
+Replace the generic `PenLine` icon for "Log Food" with `Utensils` (fork and knife), which clearly represents food/eating.
+
+**File:** `src/components/BottomNav.tsx`
+
 ```tsx
-<h4 ref={ref} className={cn("text-xs font-semibold leading-none tracking-tight", className)} {...props} />
+// Before (line 2)
+import { PenLine, CalendarDays, TrendingUp, Settings, Shield, Dumbbell } from 'lucide-react';
+
+// After
+import { Utensils, CalendarDays, TrendingUp, Settings, Shield, Dumbbell } from 'lucide-react';
 ```
 
-To:
 ```tsx
-<h4 ref={ref} className={cn("text-xs font-semibold leading-tight tracking-tight", className)} {...props} />
+// Before (line 14)
+{ to: '/', icon: PenLine, label: 'Log Food' },
+
+// After
+{ to: '/', icon: Utensils, label: 'Log Food' },
 ```
 
-### Impact
-- Fixes clipping on all chart titles with descender letters
-- Minimal visual change (~2-3px extra height per title)
-- Consistent typography that properly displays all characters
+---
+
+### Change 2: Top-Aligned Icons with Multi-Line Labels
+
+Update the layout so icons are always pinned to the top with labels below that can wrap to two lines on narrow screens (e.g., "Log\nFood" and "Log\nWeights").
+
+**Current layout:**
+- Uses `items-center` which vertically centers icon+text as a group
+- Uses `gap-1` between icon and text
+
+**New layout:**
+- Pin icons to top with `justify-start` and `pt-2` for top padding
+- Allow labels to wrap naturally with multi-line support
+- Set a fixed height for consistent nav appearance
+
+**File:** `src/components/BottomNav.tsx`
+
+```tsx
+// Before (lines 28-34)
+className={({ isActive }) =>
+  cn(
+    'flex flex-1 flex-col items-center gap-1 py-2.5 transition-colors',
+    isActive
+      ? 'text-primary'
+      : 'text-muted-foreground hover:text-foreground'
+  )
+}
+
+// After
+className={({ isActive }) =>
+  cn(
+    'flex flex-1 flex-col items-center pt-2 pb-1.5 h-14 transition-colors',
+    isActive
+      ? 'text-primary'
+      : 'text-muted-foreground hover:text-foreground'
+  )
+}
+```
+
+```tsx
+// Before (line 38)
+<span className="text-xs text-center">{label}</span>
+
+// After - add mt-1 spacing and leading-tight for multi-line support
+<span className="text-xs text-center leading-tight mt-1">{label}</span>
+```
+
+---
+
+### Visual Result
+
+| Before | After |
+|--------|-------|
+| Icon + label vertically centered | Icons at top, labels below |
+| "Log Food" single line | "Log Food" can wrap to "Log" + "Food" |
+| Single-word labels same | Calendar/Trends/Settings unchanged |
+| PenLine icon | Utensils (fork+knife) icon |
+
+---
+
+### Files to Modify
+
+**src/components/BottomNav.tsx**
+- Line 2: Replace `PenLine` import with `Utensils`
+- Line 14: Update icon reference from `PenLine` to `Utensils`
+- Lines 28-34: Update className for top-aligned layout with fixed height
+- Line 38: Update label styling for multi-line support
+
