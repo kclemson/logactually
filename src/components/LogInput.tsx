@@ -1,5 +1,5 @@
 import { useState, useImperativeHandle, forwardRef, useRef, useCallback } from "react";
-import { Mic, MicOff, Send, Loader2, ScanBarcode, Star } from "lucide-react";
+import { Mic, Send, Loader2, ScanBarcode, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
@@ -298,10 +298,10 @@ export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput
             size="sm"
             onClick={toggleListening}
             disabled={isBusy}
-            className={cn("px-2", isListening && "bg-destructive text-destructive-foreground")}
+            className={cn("px-2", isListening && "bg-destructive text-destructive-foreground animate-pulse")}
           >
-            {isListening ? <MicOff className="h-4 w-4 mr-1" /> : <Mic className="h-4 w-4 mr-1" />}
-            Voice
+            <Mic className="h-4 w-4 mr-1" />
+            {isListening ? "Stop" : "Voice"}
           </Button>
         )}
         {showBarcode && (
