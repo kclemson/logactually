@@ -1,5 +1,6 @@
 import { useTheme } from "next-themes";
-import { Moon, Sun, Monitor, Star, SunMoon, Download, Plus, Dumbbell, User } from "lucide-react";
+import { Moon, Sun, Monitor, Star, Download, Plus, Dumbbell, User, Settings2 } from "lucide-react";
+import type { WeightUnit } from "@/lib/weight-units";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { useUserSettings } from "@/hooks/useUserSettings";
@@ -93,6 +94,15 @@ export default function Settings() {
     { value: "dark", label: "Dark", icon: Moon },
     { value: "system", label: "System", icon: Monitor },
   ] as const;
+
+  const weightUnitOptions: { value: WeightUnit; label: string }[] = [
+    { value: "lbs", label: "Lbs" },
+    { value: "kg", label: "Kg" },
+  ];
+
+  const handleWeightUnitChange = (value: WeightUnit) => {
+    updateSettings({ weightUnit: value });
+  };
 
   return (
     <div className="space-y-4">
@@ -206,22 +216,46 @@ export default function Settings() {
         </CollapsibleSection>
       )}
 
-      {/* Appearance - set once */}
-      <CollapsibleSection title="Appearance" icon={SunMoon}>
-        <div className="flex gap-2 max-w-xs">
-          {themeOptions.map(({ value, label, icon: Icon }) => (
-            <button
-              key={value}
-              onClick={() => handleThemeChange(value)}
-              className={cn(
-                "flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 transition-colors",
-                mounted && theme === value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50",
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              <span className="text-sm">{label}</span>
-            </button>
-          ))}
+      {/* Preferences - theme and units */}
+      <CollapsibleSection title="Preferences" icon={Settings2}>
+        <div className="space-y-4">
+          <div>
+            <p className="text-xs text-muted-foreground mb-2">Theme</p>
+            <div className="flex gap-2 max-w-xs">
+              {themeOptions.map(({ value, label, icon: Icon }) => (
+                <button
+                  key={value}
+                  onClick={() => handleThemeChange(value)}
+                  className={cn(
+                    "flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 transition-colors",
+                    mounted && theme === value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50",
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="text-sm">{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          {showWeights && (
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">Weight Units</p>
+              <div className="flex gap-2 max-w-[160px]">
+                {weightUnitOptions.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => handleWeightUnitChange(value)}
+                    className={cn(
+                      "flex flex-1 items-center justify-center rounded-lg border px-3 py-2 transition-colors",
+                      settings.weightUnit === value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50",
+                    )}
+                  >
+                    <span className="text-sm">{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </CollapsibleSection>
 
