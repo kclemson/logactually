@@ -12,16 +12,16 @@ const HELP_CONTENT = {
     title: 'Tips',
     items: [
       {
-        text: 'Log food and weight lifting now. More tracking types coming soon.',
-        highlights: ['food', 'weight lifting'],
-      },
-      {
-        text: 'Just braindump your inputs however you want — the AI figures out the formatting.',
+        text: 'Braindump your inputs however you want (via text, voice, or scan a barcode) — the AI figures out the formatting.',
         highlights: ['braindump'],
       },
       {
-        text: 'Editing calories auto-scales protein, carbs, and fat proportionally.',
-        highlights: ['calories'],
+        text: 'Once a food item's logged, click or tap on it to make changes. Editing calories auto-scales protein, carbs, and fat proportionally.',
+        highlights: ['editing calories'],
+      },
+      {
+        text: 'Select the > next to a row to see what the original input was - and save it as a meal or weight lifting routine for easy access in the future.',
+        highlights: ['save it'],
       },
     ],
   },
