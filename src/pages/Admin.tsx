@@ -132,18 +132,18 @@ export default function Admin() {
         <table className="w-auto text-xs">
           <thead>
             <tr className="border-b">
-              <th className="text-left py-0.5 pr-2 font-medium text-muted-foreground">Date</th>
-              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Food Logged</th>
-              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Weight Logged</th>
-              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Users</th>
-              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Users w/Logged Items</th>
-              <th className="text-center py-0.5 font-medium text-muted-foreground">New Users</th>
+              <th className="text-left py-0.5 pr-2 font-medium text-muted-foreground whitespace-nowrap">Date</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground whitespace-nowrap">Food</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground whitespace-nowrap">Wt</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground whitespace-nowrap">Users</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground whitespace-nowrap">Active</th>
+              <th className="text-center py-0.5 font-medium text-muted-foreground whitespace-nowrap">New</th>
             </tr>
           </thead>
           <tbody>
             {stats.daily_stats.slice(0, 7).map((row) => (
               <tr key={row.stat_date} className="border-b border-border/50">
-                <td className="py-0.5 pr-2">{format(parseISO(row.stat_date), "MMM-dd")}</td>
+                <td className="py-0.5 pr-2 whitespace-nowrap">{format(parseISO(row.stat_date), "M/d")}</td>
                 <td className="text-center py-0.5 pr-2">{row.entry_count}</td>
                 <td className="text-center py-0.5 pr-2">{row.weight_count ?? 0}</td>
                 <td className="text-center py-0.5 pr-2">{row.total_users}</td>
