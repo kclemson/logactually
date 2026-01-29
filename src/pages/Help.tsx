@@ -25,7 +25,7 @@ const HELP_CONTENT = {
         highlights: ["save it"],
       },
       {
-        text: "Select "Trends" to see charts of your progress over time.",
+        text: "Select \"Trends\" to see charts of your progress over time.",
         highlights: ["charts"],
       },
       {
