@@ -1,48 +1,32 @@
 
 
-## Allow Two-Line Wrapping in Prompt Eval Results Table
+## Add "Pin to Home Screen" Tip to Help Page
 
 ### Overview
-Update the "Input" and "Source Note" columns in the DevToolsPanel results table to wrap to two lines instead of truncating with an ellipsis, making long content readable without hovering.
+Add a new bullet point to the Tips section explaining how users can install the app to their phone's home screen for a native app-like experience.
 
 ---
 
 ### Changes
 
-**File:** `src/components/DevToolsPanel.tsx`
+**File:** `src/pages/Help.tsx`
 
-1. **Input column cell (line 398-400)**
-   - Remove `truncate` class
-   - Add `line-clamp-2` for 2-line limit with ellipsis overflow
-   - Add `break-words` to allow word wrapping
+Add a new item to the `HELP_CONTENT.tips.items` array (around line 22):
 
-2. **Source Note column cell (line 452)**
-   - Change `truncate` to `line-clamp-2 break-words`
+```tsx
+{
+  text: "Pin this app to your phone's home screen for quick access — tap Share (or your browser menu), then \"Add to Home Screen.\"",
+  highlights: ["Pin this app"],
+},
+```
 
 ---
 
-### Technical Details
-
-The `line-clamp-2` utility (built into Tailwind) limits content to 2 lines and adds an ellipsis (`...`) if the text overflows. This is a better fit than `truncate` (single line) since you want to read more of the text but still cap it at a reasonable height.
-
-**Before:**
-```tsx
-<td className="px-1 py-1 font-mono text-xs truncate" ...>
-  {result.input}
-</td>
-```
-
-**After:**
-```tsx
-<td className="px-1 py-1 font-mono text-xs" ...>
-  <div className="line-clamp-2 break-words">{result.input}</div>
-</td>
-```
-
-Same pattern for the Source Note column.
+### Placement
+The tip will be added at the end of the existing tips list, after the "Export to CSV" tip. This feels like a natural place since it's about app usage/setup rather than core logging features.
 
 ---
 
 ### Files to Modify
-1. `src/components/DevToolsPanel.tsx` - Update Input and Source Note cell styling
+1. `src/pages/Help.tsx` - Add new tip item to HELP_CONTENT.tips.items array
 
