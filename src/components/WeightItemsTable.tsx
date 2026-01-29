@@ -227,7 +227,10 @@ export function WeightItemsTable({
       <span className={cn("px-1 font-semibold", showEntryDividers && "pl-4")}>Total</span>
       <span className="px-1 text-heading text-center">{totals.sets}</span>
       <span className="px-1 text-heading text-center">{totals.reps}</span>
-      <span className="px-1 text-heading text-center text-xs">
+      <span 
+        className="px-1 text-heading text-center text-xs"
+        title="Training volume – the total weight lifted (sets × reps × weight)"
+      >
         {Math.round(totals.volume).toLocaleString()}
       </span>
       {hasDeleteColumn && (
