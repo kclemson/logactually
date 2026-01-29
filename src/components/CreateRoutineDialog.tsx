@@ -143,7 +143,6 @@ export function CreateRoutineDialog({
       showLogPrompt={showLogPrompt}
       analyzeResult={{ analyze, isAnalyzing, error }}
       saveResult={saveResultAdapter}
-      suggestNameResult={{ suggestName: async () => null, isLoading: false }}
       editableItemsResult={editableItemsWithSet}
       renderItemsTable={renderItemsTable}
     />
