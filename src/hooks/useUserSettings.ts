@@ -2,12 +2,16 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
+import type { WeightUnit } from '@/lib/weight-units';
+
 export interface UserSettings {
   theme: 'light' | 'dark' | 'system';
+  weightUnit: WeightUnit;
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
   theme: 'system',
+  weightUnit: 'lbs',
 };
 
 export function useUserSettings() {
