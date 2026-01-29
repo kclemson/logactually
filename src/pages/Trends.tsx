@@ -17,7 +17,7 @@ const CHART_COLORS = {
   calories: "#0033CC", // Deep Blue
   protein: "#115E83", // Steel Blue
   carbs: "#00D4FF", // Bright Cyan
-  fat: "#66FFFF", // Light Cyan
+  fat: "#99CCFF", // Light Cyan
 } as const;
 
 const CompactTooltip = ({ active, payload, label, formatter }: any) => {
