@@ -16,7 +16,6 @@ import { useAnalyzeFood } from '@/hooks/useAnalyzeFood';
 import { useFoodEntries } from '@/hooks/useFoodEntries';
 import { useEditableFoodItems } from '@/hooks/useEditableItems';
 import { useSavedMeals, useSaveMeal, useLogSavedMeal } from '@/hooks/useSavedMeals';
-import { useSuggestMealName } from '@/hooks/useSuggestMealName';
 import { findSimilarMeals, createItemsSignature, SimilarMealMatch } from '@/lib/text-similarity';
 import { FoodItem, SavedMeal, calculateTotals } from '@/types/food';
 
@@ -47,7 +46,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     rawInput: string | null;
     foodItems: FoodItem[];
   } | null>(null);
-  const [suggestedMealName, setSuggestedMealName] = useState<string | null>(null);
+  
 
   // State for create meal dialog
   const [createMealDialogOpen, setCreateMealDialogOpen] = useState(false);
@@ -73,7 +72,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   const { data: savedMeals } = useSavedMeals();
   const saveMeal = useSaveMeal();
   const logSavedMeal = useLogSavedMeal();
-  const { suggestName, isLoading: isSuggestingName } = useSuggestMealName();
+  
   
   const foodInputRef = useRef<LogInputRef>(null);
 
@@ -340,15 +339,8 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   };
 
   // Handle save as meal from FoodItemsTable expando
-  const handleSaveAsMeal = async (entryId: string, rawInput: string | null, foodItems: FoodItem[]) => {
-    // Open dialog immediately
+  const handleSaveAsMeal = (entryId: string, rawInput: string | null, foodItems: FoodItem[]) => {
     setSaveMealDialogData({ entryId, rawInput, foodItems });
-    setSuggestedMealName(null);
-    
-    // Fire AI request in parallel (not blocking dialog open)
-    const descriptions = foodItems.map(item => item.description);
-    const suggested = await suggestName(descriptions);
-    setSuggestedMealName(suggested);
   };
 
   // Handle saving the meal
@@ -606,8 +598,6 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
           foodItems={saveMealDialogData.foodItems}
           onSave={handleSaveMealConfirm}
           isSaving={saveMeal.isPending}
-          suggestedName={suggestedMealName}
-          isSuggestingName={isSuggestingName}
         />
       )}
 

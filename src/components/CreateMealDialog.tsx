@@ -3,7 +3,6 @@ import { CreateSavedDialog, CreateSavedDialogConfig } from './CreateSavedDialog'
 import { FoodItemsTable } from './FoodItemsTable';
 import { useAnalyzeFood } from '@/hooks/useAnalyzeFood';
 import { useSaveMeal } from '@/hooks/useSavedMeals';
-import { useSuggestMealName } from '@/hooks/useSuggestMealName';
 import { useEditableFoodItems } from '@/hooks/useEditableItems';
 import { FoodItem, SavedMeal, calculateTotals } from '@/types/food';
 
@@ -43,7 +42,6 @@ export function CreateMealDialog({
   
   const { analyzeFood, isAnalyzing, error } = useAnalyzeFood();
   const saveMeal = useSaveMeal();
-  const { suggestName, isLoading } = useSuggestMealName();
   
   const editableItemsResult = useEditableFoodItems(localItems);
 
@@ -134,7 +132,6 @@ export function CreateMealDialog({
       showLogPrompt={showLogPrompt}
       analyzeResult={{ analyze, isAnalyzing, error }}
       saveResult={saveResultAdapter}
-      suggestNameResult={{ suggestName, isLoading }}
       editableItemsResult={editableItemsWithSet}
       renderItemsTable={renderItemsTable}
     />

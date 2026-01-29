@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -21,8 +21,6 @@ interface SaveMealDialogProps {
   foodItems: FoodItem[];
   onSave: (name: string) => void;
   isSaving: boolean;
-  suggestedName: string | null;
-  isSuggestingName: boolean;
 }
 
 /**
@@ -44,26 +42,12 @@ export function SaveMealDialog({
   foodItems,
   onSave,
   isSaving,
-  suggestedName,
-  isSuggestingName,
 }: SaveMealDialogProps) {
-  // State is fresh on each mount since dialog unmounts when closed
-  const [name, setName] = useState('');
-  const [userHasTyped, setUserHasTyped] = useState(false);
-
-  // Populate with suggested name when it arrives (if user hasn't typed)
-  useEffect(() => {
-    if (!userHasTyped && suggestedName) {
-      setName(suggestedName);
-    } else if (!userHasTyped && !isSuggestingName && !suggestedName && foodItems.length > 0) {
-      // Fallback to first item if AI fails and finished loading
-      setName(getFallbackName(foodItems));
-    }
-  }, [suggestedName, isSuggestingName, userHasTyped, foodItems]);
+  // Initialize with fallback name - state resets on each mount since dialog unmounts when closed
+  const [name, setName] = useState(() => getFallbackName(foodItems));
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setName(e.target.value);
-    setUserHasTyped(true);
   };
 
   const handleSave = () => {
@@ -80,8 +64,6 @@ export function SaveMealDialog({
     }
   };
 
-  const isGenerating = isSuggestingName && !userHasTyped;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md">
@@ -94,29 +76,16 @@ export function SaveMealDialog({
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="meal-name">Meal name</Label>
-            <div className="relative">
-              {isGenerating && (
-                <div className="absolute left-3 top-0 bottom-0 flex items-center pointer-events-none">
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                </div>
-              )}
-              <Input
-                id="meal-name"
-                value={name}
-                onChange={handleNameChange}
-                onKeyDown={handleKeyDown}
-                placeholder=""
-                disabled={isSaving || isGenerating}
-                autoFocus={!isGenerating}
-                className={isGenerating ? "pl-10" : ""}
-                spellCheck={false}
-              />
-              {isGenerating && (
-                <div className="absolute left-10 top-0 bottom-0 flex items-center pointer-events-none text-muted-foreground italic">
-                  <span>Generating suggested meal name...</span>
-                </div>
-              )}
-            </div>
+            <Input
+              id="meal-name"
+              value={name}
+              onChange={handleNameChange}
+              onKeyDown={handleKeyDown}
+              placeholder=""
+              disabled={isSaving}
+              autoFocus
+              spellCheck={false}
+            />
           </div>
           <div className="text-sm text-muted-foreground">
             <p className="font-medium mb-1">Items ({foodItems.length}):</p>
@@ -134,7 +103,7 @@ export function SaveMealDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={!name.trim() || isSaving || isGenerating}>
+          <Button onClick={handleSave} disabled={!name.trim() || isSaving}>
             {isSaving ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-1" />
