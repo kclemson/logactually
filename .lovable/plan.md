@@ -1,51 +1,31 @@
 
-## Persist Trends Period Selection with localStorage
+## Prevent Date Column Text Wrapping in Admin Page
 
-A minimal change to remember the user's period selection across page refreshes.
+### Problem
+The Date column in the daily stats table wraps "Jan-28" to two lines ("Jan-" / "28") on narrow screens.
+
+### Solution
+Add `whitespace-nowrap` class to the date cell to prevent text wrapping.
 
 ---
 
 ### Implementation
 
-**File:** `src/pages/Trends.tsx`
+**File:** `src/pages/Admin.tsx`
 
-**1. Update useState initializer to read from localStorage (line 157)**
-
-```tsx
-// Before
-const [selectedPeriod, setSelectedPeriod] = useState(30);
-
-// After
-const [selectedPeriod, setSelectedPeriod] = useState(() => {
-  const saved = localStorage.getItem('trends-period');
-  return saved && [7, 30, 90].includes(Number(saved)) ? Number(saved) : 30;
-});
-```
-
-**2. Add localStorage write in button click handler (line 260)**
+**Line 146** - Add `whitespace-nowrap` to the date cell:
 
 ```tsx
 // Before
-onClick={() => setSelectedPeriod(days)}
+<td className="py-0.5 pr-2">{format(parseISO(row.stat_date), "MMM-dd")}</td>
 
 // After
-onClick={() => {
-  localStorage.setItem('trends-period', String(days));
-  setSelectedPeriod(days);
-}}
+<td className="py-0.5 pr-2 whitespace-nowrap">{format(parseISO(row.stat_date), "MMM-dd")}</td>
 ```
 
 ---
 
-### How It Works
-
-- **First visit**: No localStorage entry → defaults to 30 days
-- **User changes period**: Saves choice to localStorage + updates state
-- **Page refresh**: Reads saved value from localStorage on mount
-- **Invalid value**: Falls back to 30 days (validates against allowed values)
-
----
-
-### Files to Modify
-
-- `src/pages/Trends.tsx` (2 small edits)
+### What Stays the Same
+- Date format remains `"MMM-dd"` (e.g., "Jan-28")
+- Column header "Date" unchanged
+- All other styling unchanged
