@@ -27,7 +27,7 @@ export function BottomNav() {
               to={to}
             className={({ isActive }) =>
               cn(
-                'flex flex-1 flex-col items-center pt-2 pb-1.5 h-14 transition-colors',
+                'flex flex-1 flex-col items-center gap-1 py-2.5 transition-colors',
                 isActive
                   ? 'text-primary'
                   : 'text-muted-foreground hover:text-foreground'
@@ -35,7 +35,7 @@ export function BottomNav() {
             }
             >
               <Icon className="h-4 w-4" />
-              <span className="text-xs text-center leading-tight mt-1">{label}</span>
+              <span className="text-xs text-center">{label}</span>
             </NavLink>
         ))}
       </div>
