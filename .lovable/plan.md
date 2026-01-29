@@ -1,52 +1,58 @@
 
 
-## Update End Demo Button Styling
+## Apply Weight Unit Setting to Weight Log Display
 
 ### Overview
 
-Change the "End demo" button from ghost variant to outline variant to match the "Create Account" button styling.
+Update the `WeightItemsTable` component to respect the user's weight unit preference (lbs vs kg). Currently the values are hardcoded to display in pounds even when the user has selected kilograms in Settings.
 
 ---
 
-### Change
+### Changes Required
 
-Update the "End demo" button in `DemoBanner.tsx`:
+**1. WeightItemsTable.tsx - Add weight unit support**
 
-**Before:**
-```tsx
-<Button 
-  variant="ghost" 
-  size="sm" 
-  onClick={handleEndDemo}
-  className="h-7 text-xs text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-800/50"
->
-  End demo
-</Button>
-```
+Accept a new `weightUnit` prop and use conversion utilities:
 
-**After:**
-```tsx
-<Button 
-  variant="outline" 
-  size="sm" 
-  onClick={handleEndDemo}
-  className="h-7 text-xs border-amber-300 dark:border-amber-700 hover:bg-amber-200 dark:hover:bg-amber-800/50"
->
-  End demo
-</Button>
+| Location | Current | Updated |
+|----------|---------|---------|
+| Props interface | - | Add `weightUnit?: WeightUnit` |
+| Column header (line 267, 278) | `"Lbs"` | Dynamic: `getWeightUnitLabel(weightUnit)` |
+| Display values | `item.weight_lbs` | `formatWeight(item.weight_lbs, weightUnit, 0)` |
+| Totals volume | `totals.volume` | Convert using the unit |
+| Input handling | Save value directly | Convert kg input to lbs via `parseWeightToLbs()` |
+
+**2. WeightLog.tsx - Pass weight unit to table**
+
+```typescript
+import { useUserSettings } from '@/hooks/useUserSettings';
+import type { WeightUnit } from '@/lib/weight-units';
+
+// In component:
+const { settings } = useUserSettings();
+
+// Pass to table:
+<WeightItemsTable
+  items={displayItems}
+  weightUnit={settings.weightUnit}
+  // ... other props
+/>
 ```
 
 ---
 
-### Visual Result
+### Conversion Logic
 
-Both buttons will now appear as outlined buttons with consistent styling:
+The database stores all weights in pounds (`weight_lbs`). Display conversion:
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│  You're viewing a demo           [End demo] [Create Account]   │
-└─────────────────────────────────────────────────────────────────┘
+Display (kg setting):  weight_lbs × 0.453592 = displayed kg
+Input (kg setting):    user_input × 2.20462 = stored lbs
 ```
+
+For precision:
+- lbs: Display as whole numbers (0 decimals)
+- kg: Display with 1 decimal place for accuracy
 
 ---
 
@@ -54,5 +60,6 @@ Both buttons will now appear as outlined buttons with consistent styling:
 
 | File | Change |
 |------|--------|
-| `src/components/DemoBanner.tsx` | Change End demo button from `variant="ghost"` to `variant="outline"` and add border styling |
+| `src/components/WeightItemsTable.tsx` | Add `weightUnit` prop, convert display/input values, dynamic header |
+| `src/pages/WeightLog.tsx` | Import `useUserSettings`, pass `weightUnit` to table |
 
