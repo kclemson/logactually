@@ -1,66 +1,171 @@
 
 
-## Export Weight Log with Both Lbs and Kg Columns
+## Implement Save-on-Blur for Inline Editing
 
 ### Overview
 
-Instead of conditionally exporting based on user preference, always include both weight columns in the CSV. This makes the export universally useful and doesn't require passing settings around.
+Change inline editing behavior so that **blur saves the value** (instead of reverting), with validation to prevent saving empty or zero values. This makes the iOS Safari keyboard checkmark button work as users expect.
 
 ---
 
-### File to Modify
+### Behavior Summary
+
+| Action | Current Behavior | New Behavior |
+|--------|------------------|--------------|
+| **Enter** | Save and close | Save and close (unchanged) |
+| **Escape** | Revert and close | Revert and close (unchanged) |
+| **Blur** (tap away / iOS checkmark) | **Revert** | **Save if valid, else revert** |
+
+**Validation rules:**
+- **Description fields**: Save unless empty/whitespace-only
+- **Number fields**: Save unless 0 or empty (for calories, sets, reps, weight)
+
+---
+
+### Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/lib/csv-export.ts` | Add both `Weight (lbs)` and `Weight (kg)` columns |
+| `src/components/FoodItemsTable.tsx` | Update `onBlur` for calories input and `handleDescriptionBlur` |
+| `src/components/WeightItemsTable.tsx` | Update `onBlur` for sets/reps/weight inputs and `handleDescriptionBlur` |
+| `src/components/SavedMealRow.tsx` | Update meal name `contentEditable` blur handler |
+| `src/components/SavedRoutineRow.tsx` | Update routine name `contentEditable` blur handler |
 
 ---
 
-### Implementation
+### Implementation Details
 
-**Current headers:**
+#### 1. FoodItemsTable - Calories Input
+
 ```typescript
-['Date', 'Time', 'Exercise', 'Sets', 'Reps', 'Weight (lbs)', 'Raw Input']
+// Current onBlur (line ~520):
+onBlur={() => setEditingCell(null)}
+
+// New onBlur:
+onBlur={() => {
+  if (editingCell && editingCell.value !== editingCell.originalValue) {
+    const numValue = Number(editingCell.value);
+    // Only save if non-zero and valid
+    if (numValue > 0) {
+      // Same batch logic as Enter key for calories
+      const item = items[index];
+      const scaled = scaleMacrosByCalories(
+        item.calories, item.protein, item.carbs, item.fat, numValue
+      );
+      onUpdateItemBatch?.(index, {
+        calories: scaled.calories,
+        protein: scaled.protein,
+        carbs: scaled.carbs,
+        fat: scaled.fat,
+      });
+    }
+  }
+  setEditingCell(null);
+}}
 ```
 
-**New headers:**
+#### 2. FoodItemsTable - Description (contentEditable)
+
 ```typescript
-['Date', 'Time', 'Exercise', 'Sets', 'Reps', 'Weight (lbs)', 'Weight (kg)', 'Raw Input']
+// Current handleDescriptionBlur (line ~186-189):
+const handleDescriptionBlur = (e: React.FocusEvent<HTMLSpanElement>) => {
+  e.currentTarget.textContent = descriptionOriginalRef.current;
+};
+
+// New handleDescriptionBlur:
+const handleDescriptionBlur = (
+  e: React.FocusEvent<HTMLSpanElement>,
+  index: number,
+  item: FoodItem
+) => {
+  if (isReadOnly) {
+    e.currentTarget.textContent = descriptionOriginalRef.current;
+    return;
+  }
+  
+  const newDescription = (e.currentTarget.textContent || '').trim();
+  
+  // Revert if empty, otherwise save
+  if (!newDescription) {
+    e.currentTarget.textContent = descriptionOriginalRef.current;
+  } else if (newDescription !== descriptionOriginalRef.current) {
+    onUpdateItem?.(index, 'description', newDescription);
+    if (item.portion) {
+      onUpdateItem?.(index, 'portion', '');
+    }
+  }
+};
 ```
 
-**Row mapping update:**
-```typescript
-const LBS_TO_KG = 0.453592;
+#### 3. WeightItemsTable - Number Inputs (sets, reps, weight)
 
-const rows = sorted.map((set) => [
-  set.logged_date,
-  format(new Date(set.created_at), 'HH:mm'),
-  set.description,
-  set.sets,
-  set.reps,
-  set.weight_lbs,                              // Original lbs value
-  Math.round(set.weight_lbs * LBS_TO_KG),      // Converted kg value
-  set.raw_input || '',
-]);
+```typescript
+// Current onBlur (lines ~402, 432, 475):
+onBlur={() => setEditingCell(null)}
+
+// New onBlur pattern:
+onBlur={() => {
+  if (editingCell && editingCell.value !== editingCell.originalValue) {
+    const numValue = Number(editingCell.value);
+    // Save if positive (non-zero)
+    if (numValue > 0) {
+      onUpdateItem?.(index, field, editingCell.value);
+    }
+  }
+  setEditingCell(null);
+}}
 ```
+
+#### 4. WeightItemsTable - Description (contentEditable)
+
+Same pattern as FoodItemsTable - save on blur unless empty.
+
+#### 5. SavedMealRow - Meal Name (contentEditable)
+
+```typescript
+// Current onBlur (line ~76):
+onBlur={(e) => {
+  e.currentTarget.textContent = e.currentTarget.dataset.original || meal.name;
+}}
+
+// New onBlur:
+onBlur={(e) => {
+  const newName = (e.currentTarget.textContent || '').trim();
+  const original = e.currentTarget.dataset.original || meal.name;
+  
+  if (!newName) {
+    // Revert if empty
+    e.currentTarget.textContent = original;
+  } else if (newName !== original) {
+    // Save valid name
+    onUpdateMeal({ id: meal.id, name: newName });
+    e.currentTarget.dataset.original = newName;
+  }
+}}
+```
+
+#### 6. SavedRoutineRow - Routine Name (contentEditable)
+
+Same pattern as SavedMealRow.
 
 ---
 
-### Result
+### Edge Cases Handled
 
-Sample CSV output:
-```
-Date,Time,Exercise,Sets,Reps,Weight (lbs),Weight (kg),Raw Input
-2024-01-15,09:30,Bench Press,3,10,135,61,bench press 3x10 at 135
-2024-01-15,09:45,Lat Pulldown,4,12,100,45,lat pulldown 4x12 at 100
-```
+| Scenario | Behavior |
+|----------|----------|
+| User clears description and blurs | Reverts to original |
+| User sets calories to 0 and blurs | Reverts to original |
+| User edits to same value and blurs | No-op (no save triggered) |
+| Read-only mode user blurs | Always reverts |
+| User presses Escape then blurs | Already reverted, blur is no-op |
 
 ---
 
-### Benefits
+### Summary of Changes
 
-- No settings dependency needed
-- Export is self-contained and complete
-- Users can filter/use whichever column they prefer
-- Simpler code - no parameter passing required
+- 4 files modified
+- ~15-20 lines changed per file
+- No new dependencies
+- Consistent behavior across all inline editing in the app
 
