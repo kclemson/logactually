@@ -16,7 +16,7 @@ const HELP_CONTENT = {
         highlights: ['braindump'],
       },
       {
-        text: 'Once a food item's logged, click or tap on it to make changes. Editing calories auto-scales protein, carbs, and fat proportionally.',
+        text: "Once a food item's logged, click or tap on it to make changes. Editing calories auto-scales protein, carbs, and fat proportionally.",
         highlights: ['editing calories'],
       },
       {
