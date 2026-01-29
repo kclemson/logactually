@@ -1,23 +1,45 @@
 
 
-## Refine Duplicate Exercise Prompt UI
+## Refine Duplicate Exercise Prompt - Better Layout and Context
 
 ### Overview
 
-Tone down the duplicate exercise prompt to feel like a natural part of the charts UI rather than an alarming warning. Match the typography of chart titles/subtitles and remove the yellow warning styling.
+Redesign the prompt to feel more integrated with the charts UI and provide meaningful context about what's being merged - showing session counts and date ranges for each duplicate chart.
 
 ---
 
-### Current vs. Proposed
+### Current Issues
 
-| Aspect | Current | Proposed |
-|--------|---------|----------|
-| Border | Yellow warning border | No border (like chart cards) |
-| Background | `bg-warning/10` (yellow tint) | `bg-muted/30` (subtle gray) |
-| Icon | AlertTriangle (warning) | None |
-| Title size | `text-sm font-medium` | `text-xs font-semibold` (matches ChartTitle) |
-| Subtitle size | `text-xs` | `text-[10px]` (matches ChartSubtitle) |
-| Overall feel | Alarming | Informational, blends with charts |
+1. X button feels disconnected (top-right corner, no visual boundary)
+2. Merge button too far right, disconnected from content
+3. Text is mechanical - "2 entries" doesn't help user understand what they're merging
+4. Header "1 exercise may have duplicates" is generic and doesn't add value
+
+---
+
+### Proposed Layout
+
+For each duplicate group:
+
+```text
+Diverging Low Row
+Found in 2 charts: 8 sessions (Dec 21 - Jan 29), 1 session (Dec 15)
+[Merge into one chart]  [×]
+```
+
+Key changes:
+- Exercise name as the title (like chart titles)
+- Descriptive subtitle showing what each chart contains
+- Buttons grouped together on same line, closer to content
+- Remove the generic header entirely
+
+---
+
+### Data Available
+
+From `ExerciseTrend` we have access to:
+- `sessionCount` - unique dates (what we show as "X sessions")
+- `weightData[].date` - can derive date range (first/last date)
 
 ---
 
@@ -27,40 +49,74 @@ Tone down the duplicate exercise prompt to feel like a natural part of the chart
 
 **Changes:**
 
-1. Remove the `AlertTriangle` import and icon
-2. Change card styling from warning to subtle:
-   - `border-warning bg-warning/10` → `border-0 shadow-none bg-muted/30`
-3. Match chart typography:
-   - Title: `text-sm font-medium text-warning-foreground` → `text-xs font-semibold`
-   - Subtitle: `text-xs text-muted-foreground` → `text-[10px] text-muted-foreground`
-4. Adjust padding to be more compact (like chart cards)
-5. Make buttons even smaller/subtler
+1. Remove the header row ("1 exercise may have duplicates")
+2. For each group, show:
+   - Exercise name as title (`text-xs font-semibold`)
+   - Descriptive subtitle with session counts and date ranges
+   - Action buttons grouped on same line below
+3. Add helper function for date formatting
+4. Change dismiss to per-group (so users can selectively ignore)
 
-**Updated component structure:**
+**Updated structure:**
 
 ```tsx
+import { format, parseISO } from "date-fns";
+
+const formatChartInfo = (exercises: ExerciseTrend[]) => {
+  return exercises.map(ex => {
+    const dates = ex.weightData.map(d => d.date);
+    const firstDate = parseISO(dates[0]);
+    const lastDate = parseISO(dates[dates.length - 1]);
+    
+    const dateStr = dates.length === 1 || dates[0] === dates[dates.length - 1]
+      ? format(firstDate, 'MMM d')
+      : `${format(firstDate, 'MMM d')} - ${format(lastDate, 'MMM d')}`;
+    
+    const sessionWord = ex.sessionCount === 1 ? 'session' : 'sessions';
+    return `${ex.sessionCount} ${sessionWord} (${dateStr})`;
+  }).join(', ');
+};
+
+// Inside component:
 <Card className="border-0 shadow-none bg-muted/30 rounded-md">
   <CardContent className="p-2">
-    <div className="flex flex-col gap-1">
-      <p className="text-xs font-semibold">
-        {totalDuplicates === 1 
-          ? "1 exercise may have duplicates"
-          : `${totalDuplicates} exercises may have duplicates`
-        }
-      </p>
-      <p className="text-[10px] text-muted-foreground truncate">
-        "{firstGroup.winner.description}" appears under {firstGroup.exercises.length} entries
-      </p>
-      <div className="flex gap-2 mt-1">
-        <Button size="sm" variant="secondary" className="h-6 text-[10px] px-2">
-          <Merge className="h-3 w-3 mr-1" />
-          {isPending ? "Merging..." : "Merge"}
-        </Button>
-        <Button size="sm" variant="ghost" className="h-6 text-[10px] px-2">
-          <X className="h-3 w-3 mr-1" />
-          Dismiss
-        </Button>
-      </div>
+    <div className="flex flex-col gap-3">
+      {groups.map((group) => (
+        <div key={group.description} className="flex flex-col gap-1">
+          {/* Exercise name as title */}
+          <p className="text-xs font-semibold leading-tight">
+            {group.winner.description}
+          </p>
+          
+          {/* Descriptive context */}
+          <p className="text-[10px] text-muted-foreground">
+            Found in {group.exercises.length} charts: {formatChartInfo(group.exercises)}
+          </p>
+          
+          {/* Action buttons - grouped together */}
+          <div className="flex items-center gap-2 mt-0.5">
+            <Button 
+              size="sm" 
+              variant="secondary"
+              className="h-5 text-[10px] px-2"
+              onClick={() => onMerge(group)}
+              disabled={isPending}
+            >
+              <Merge className="h-2.5 w-2.5 mr-1" />
+              Merge into one chart
+            </Button>
+            <Button 
+              size="sm" 
+              variant="ghost"
+              className="h-5 w-5 p-0"
+              onClick={() => onDismissGroup(group.description)}
+              disabled={isPending}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+      ))}
     </div>
   </CardContent>
 </Card>
@@ -68,31 +124,37 @@ Tone down the duplicate exercise prompt to feel like a natural part of the chart
 
 ---
 
-### Multiple Duplicates Behavior
+### Example Output
 
-Currently, when multiple duplicate groups exist:
-- Shows "N exercises may have duplicates" in the title
-- Shows details for the first group only
-- "Merge" button only acts on the first group
-
-**Enhanced approach for multiple duplicates:**
-
-When there are multiple groups, show them in a stacked list so users can address each one:
-
-```tsx
-{groups.map((group, index) => (
-  <div key={group.description} className="flex items-center justify-between gap-2">
-    <p className="text-[10px] text-muted-foreground truncate flex-1">
-      "{group.winner.description}" ({group.exercises.length} entries)
-    </p>
-    <Button size="sm" variant="secondary" className="h-5 text-[10px] px-2 shrink-0">
-      Merge
-    </Button>
-  </div>
-))}
+**Single duplicate:**
+```
+Diverging Low Row
+Found in 2 charts: 8 sessions (Dec 21 - Jan 29), 1 session (Dec 15)
+[Merge into one chart]  [×]
 ```
 
-This way each duplicate group has its own inline merge button, and when merged, it disappears from the list.
+**Multiple duplicates:**
+```
+Diverging Low Row
+Found in 2 charts: 8 sessions (Dec 21 - Jan 29), 1 session (Dec 15)
+[Merge into one chart]  [×]
+
+Lat Pulldown
+Found in 2 charts: 5 sessions (Nov 19 - Jan 10), 2 sessions (Jan 23)
+[Merge into one chart]  [×]
+```
+
+---
+
+### Per-Group Dismiss
+
+To support dismissing individual groups, we'll need to update how dismiss works:
+
+1. Change `onDismiss: () => void` to `onDismiss: (description: string) => void`
+2. In `Trends.tsx`, update localStorage to store an array of dismissed descriptions instead of a boolean
+3. Filter `duplicateGroups` to exclude dismissed ones
+
+This lets users keep some duplicates separate intentionally while merging others.
 
 ---
 
@@ -100,10 +162,10 @@ This way each duplicate group has its own inline merge button, and when merged, 
 
 | Change | Details |
 |--------|---------|
-| Remove warning styling | No yellow border/background, no warning icon |
-| Match typography | Use `text-xs font-semibold` for title, `text-[10px]` for subtitle |
-| Compact layout | Smaller padding (`p-2`), smaller buttons (`h-6`) |
-| Multiple duplicates | Show each group with its own merge button in a list |
-
-The result will feel like a natural extension of the charts section rather than an alarming alert.
+| Remove generic header | No more "1 exercise may have duplicates" |
+| Exercise name as title | Use the actual exercise name prominently |
+| Rich context | Show session counts and date ranges per chart |
+| Grouped buttons | Merge + dismiss on same line, close to content |
+| Per-group dismiss | Allow selective dismissal of individual duplicates |
+| Date formatting | Add `format`, `parseISO` from date-fns |
 
