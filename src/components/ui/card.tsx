@@ -42,7 +42,7 @@ CardFooter.displayName = "CardFooter";
 
 const ChartTitle = React.forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTMLHeadingElement>>(
   ({ className, ...props }, ref) => (
-    <h4 ref={ref} className={cn("text-xs font-semibold leading-none tracking-tight", className)} {...props} />
+    <h4 ref={ref} className={cn("text-xs font-semibold leading-tight tracking-tight", className)} {...props} />
   ),
 );
 ChartTitle.displayName = "ChartTitle";
