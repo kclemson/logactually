@@ -356,6 +356,9 @@ export function FoodItemsTable({
 
   return (
     <div className="space-y-1">
+      {/* Totals at top */}
+      {showTotals && totalsPosition === 'top' && <TotalsRow />}
+
       {/* Header row */}
       {showHeader && (
         <div className={cn('grid gap-0.5 text-muted-foreground items-center text-xs', gridCols)}>
@@ -375,9 +378,6 @@ export function FoodItemsTable({
           {hasDeleteColumn && <span></span>}
         </div>
       )}
-
-      {/* Totals at top */}
-      {showTotals && totalsPosition === 'top' && <TotalsRow />}
 
       {/* Data rows */}
       {items.map((item, index) => {
