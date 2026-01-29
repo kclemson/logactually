@@ -17,7 +17,7 @@ const HELP_CONTENT = {
         highlights: ["braindump"],
       },
       {
-        text: "Once a food item's logged, click or tap on it to make changes. Editing calories auto-scales protein, carbs, and fat proportionally.",
+        text: "Once an item's logged, click or tap on it to make changes. Editing calories auto-scales protein, carbs, and fat proportionally.",
         highlights: ["editing calories"],
       },
       {
@@ -25,7 +25,7 @@ const HELP_CONTENT = {
         highlights: ["save it"],
       },
       {
-        text: "Select \"Trends\" to see charts of your progress over time.",
+        text: 'Select "Trends" to see charts of your progress over time.',
         highlights: ["charts"],
       },
       {
@@ -33,7 +33,7 @@ const HELP_CONTENT = {
         highlights: ["Export to CSV"],
       },
       {
-        text: "Pin this app to your phone's home screen for quick access — tap Share (or your browser menu), then \"Add to Home Screen.\"",
+        text: 'Pin this app to your phone\'s home screen for quick access — tap Share (or your browser menu), then "Add to Home Screen."',
         highlights: ["Pin this app"],
       },
     ],
