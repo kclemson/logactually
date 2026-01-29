@@ -1,92 +1,55 @@
 
-## Fix Weight Chart Label Visibility - Debug and Correct Approach
+## Tune Weight Chart Label Thresholds & Remove Grid Lines
 
-The current fix broke labels because Recharts' `LabelList` content function receives props differently than expected.
-
----
-
-### Root Cause
-
-When using `<LabelList dataKey="label" content={renderGroupedLabel} />`, Recharts passes these props to the content function:
-
-```typescript
-{
-  x, y, width, height,
-  value,        // The value from dataKey="label" (e.g., "3×10×160")
-  index,        // The index of the data point
-  ...otherProps // May include the full data object spread or as a property
-}
-```
-
-The issue is that `showLabel` is a custom property we added to the chart data, but Recharts may not pass the entire data object under `payload`. Instead, the full data point is likely available:
-1. Directly on `props` (spread), or
-2. Under a different property like `entry` or as individual props
+Two changes to improve the Weight Trends chart appearance:
 
 ---
 
-### Solution
+### Change 1: Adjust Label Thresholds
 
-Access `showLabel` using the `index` prop to look it up from the original data, OR check if it's passed directly on props rather than under `payload`.
-
-**Option 1 - Check if showLabel is on props directly:**
+**Current logic (line 56):**
 ```tsx
-const renderGroupedLabel = (props: any) => {
-  const { x, y, width, height, value, showLabel } = props;
-
-  // Check showLabel directly on props
-  if (!showLabel) return null;
-  
-  // ... rest of rendering
-};
+const labelInterval = dataLength <= 8 ? 1 : dataLength <= 16 ? 2 : 3;
 ```
 
-**Option 2 - Pass a data accessor (more reliable):**
-Since `ExerciseChart` creates `chartData` in a `useMemo`, we can pass it to `renderGroupedLabel` via closure by converting it to an inline function that has access to `chartData`.
+**New logic:**
+```tsx
+const labelInterval = dataLength <= 12 ? 1 : dataLength <= 20 ? 2 : 3;
+```
+
+| Column Count | Old Behavior | New Behavior |
+|--------------|--------------|--------------|
+| 1-8 bars | Every label | Every label |
+| 9-12 bars | Every 2nd | Every label |
+| 13-16 bars | Every 2nd | Every 2nd |
+| 17-20 bars | Every 3rd | Every 2nd |
+| 21+ bars | Every 3rd | Every 3rd |
 
 ---
 
-### Recommended Fix
+### Change 2: Remove Dashed Grid Lines from Weight Charts
 
-Change the approach to use an inline content function that has access to `chartData`:
-
+**Current (line 125):**
 ```tsx
-const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
-  const chartData = useMemo(() => {
-    // ... existing logic
-  }, [exercise.weightData]);
-
-  // Move renderGroupedLabel INSIDE the component as a callback
-  const renderLabel = (props: any) => {
-    const { x, y, width, height, value, index } = props;
-    
-    // Access showLabel from chartData using index
-    const dataPoint = chartData[index];
-    if (!dataPoint?.showLabel) return null;
-
-    // ... rest of rendering logic
-  };
-
-  return (
-    // ...
-    <LabelList dataKey="label" content={renderLabel} />
-  );
-};
+<CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
 ```
+
+**Fix:** Simply remove this line from the `ExerciseChart` component.
+
+This removes the dashed horizontal lines in the background of weight charts while keeping them in the food charts (if desired).
 
 ---
 
 ### Files to Modify
 
 **src/pages/Trends.tsx**
-
-1. Remove the standalone `renderGroupedLabel` function (lines 52-94)
-2. Move the label rendering logic inside `ExerciseChart` component as an inline function or callback that has access to `chartData`
-3. Use `index` prop to look up the `showLabel` value from `chartData[index]`
+- Line 56: Update threshold from `8` to `12` and from `16` to `20`
+- Line 125: Delete the `<CartesianGrid ... />` line
 
 ---
 
-### Why This Will Work
+### Result
 
-- The `index` prop is reliably passed by Recharts to `LabelList` content functions
-- By keeping `renderLabel` inside `ExerciseChart`, we have closure access to `chartData`
-- We can then use `chartData[index].showLabel` to determine visibility
+- Weight charts with 12 or fewer bars will show all labels
+- Weight charts will have a cleaner look without the dashed grid lines
+- Food charts remain unchanged (keep their grid lines)
