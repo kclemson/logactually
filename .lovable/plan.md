@@ -1,61 +1,56 @@
 
-## Update Welcome Dialog for Demo Users
+## Add Demo User Detection for Account Deletion
 
 ### Overview
 
-Modify the ReadOnlyOverlay component to show different button configurations depending on the overlay mode:
-- **Welcome mode** (first load): Show only "OK" button (no "Create Free Account")
-- **Blocked mode** (after trying to save): Show both "OK" and "Create Free Account" buttons
+Currently, the "Delete account" link is hidden for all read-only users (`!isReadOnly`). This works for the demo account but is too broad - future read-only accounts should still be able to delete themselves.
+
+The solution is to add a `isDemoUser` check based on the user's email matching `DEMO_EMAIL`.
 
 ---
 
-### Current State
-
-The dialog currently shows both buttons regardless of mode:
-```tsx
-<DialogFooter className="flex-col gap-2 sm:flex-row">
-  <Button variant="outline" onClick={dismissOverlay} className="w-full sm:w-auto">
-    Keep Browsing
-  </Button>
-  <Button onClick={handleCreateAccount} className="w-full sm:w-auto">
-    Create Free Account
-  </Button>
-</DialogFooter>
-```
-
----
-
-### Proposed Changes
-
-**1. Rename "Keep Browsing" to "OK"**
-
-Change the button text from "Keep Browsing" to "OK".
-
-**2. Conditionally show "Create Free Account" button**
-
-Only show the "Create Free Account" button when `overlayMode === 'blocked'` (when user tries to save).
+### Current State (Settings.tsx, line 105-112)
 
 ```tsx
-<DialogFooter className="flex-col gap-2 sm:flex-row">
-  <Button variant="outline" onClick={dismissOverlay} className="w-full sm:w-auto">
-    OK
-  </Button>
-  {!isWelcome && (
-    <Button onClick={handleCreateAccount} className="w-full sm:w-auto">
-      Create Free Account
-    </Button>
-  )}
-</DialogFooter>
+{!isReadOnly && (
+  <button onClick={() => setDeleteAccountOpen(true)} ...>
+    Delete account
+  </button>
+)}
 ```
+
+This hides delete for ALL read-only users.
 
 ---
 
-### Result
+### Proposed Change
 
-| Mode | Buttons Shown |
-|------|---------------|
-| Welcome (first load) | "OK" only |
-| Blocked (after save attempt) | "OK" + "Create Free Account" |
+**1. Import demo email constant**
+
+```tsx
+import { DEMO_EMAIL } from '@/lib/demo-mode';
+```
+
+**2. Create demo user check**
+
+```tsx
+const isDemoUser = user?.email === DEMO_EMAIL;
+```
+
+**3. Update delete account visibility**
+
+```tsx
+{!isDemoUser && (
+  <button onClick={() => setDeleteAccountOpen(true)} ...>
+    Delete account
+  </button>
+)}
+```
+
+Now:
+- Demo user (`demo@logactually.com`): Cannot delete (shared public account)
+- Other read-only users: CAN delete their own account
+- Regular users: CAN delete their account
 
 ---
 
@@ -63,4 +58,4 @@ Only show the "Create Free Account" button when `overlayMode === 'blocked'` (whe
 
 | File | Change |
 |------|--------|
-| `src/components/ReadOnlyOverlay.tsx` | Rename button to "OK", conditionally render "Create Free Account" |
+| `src/pages/Settings.tsx` | Import `DEMO_EMAIL`, add `isDemoUser` check, update delete button visibility |
