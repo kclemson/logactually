@@ -1,26 +1,26 @@
-import { useState } from 'react';
-import { Navigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { APP_NAME, APP_DESCRIPTION } from '@/lib/constants';
-import { DEMO_EMAIL, DEMO_PASSWORD } from '@/lib/demo-mode';
+import { useState } from "react";
+import { Navigate, useSearchParams } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { APP_NAME, APP_DESCRIPTION } from "@/lib/constants";
+import { DEMO_EMAIL, DEMO_PASSWORD } from "@/lib/demo-mode";
 
 export default function Auth() {
   const { user, signUp, signIn, loading } = useAuth();
   const [searchParams] = useSearchParams();
-  const isResetCallback = searchParams.get('reset') === 'true';
-  
+  const isResetCallback = searchParams.get("reset") === "true";
+
   const [isSignUp, setIsSignUp] = useState(false);
   const [isResetMode, setIsResetMode] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(isResetCallback);
   const [resetSent, setResetSent] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [isDemoLoading, setIsDemoLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -43,16 +43,16 @@ export default function Auth() {
     e.preventDefault();
     setSubmitting(true);
     setErrorMessage(null);
-    
+
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth?reset=true`,
     });
-    
+
     // Log error for debugging but don't expose to user
     if (error) {
-      console.error('Password reset error:', error.message);
+      console.error("Password reset error:", error.message);
     }
-    
+
     // Always show "success" to prevent account enumeration
     setResetSent(true);
     setSubmitting(false);
@@ -62,15 +62,15 @@ export default function Auth() {
     e.preventDefault();
     setSubmitting(true);
     setErrorMessage(null);
-    
+
     const { error } = await supabase.auth.updateUser({ password });
-    
+
     if (error) {
       setErrorMessage(error.message);
     } else {
-      setSuccessMessage('Password updated successfully! Redirecting...');
+      setSuccessMessage("Password updated successfully! Redirecting...");
       setTimeout(() => {
-        window.location.href = '/';
+        window.location.href = "/";
       }, 1500);
     }
     setSubmitting(false);
@@ -87,9 +87,7 @@ export default function Auth() {
       return;
     }
 
-    const { error } = isSignUp 
-      ? await signUp(email, password)
-      : await signIn(email, password);
+    const { error } = isSignUp ? await signUp(email, password) : await signIn(email, password);
 
     if (error) {
       setErrorMessage(error.message);
@@ -103,7 +101,7 @@ export default function Auth() {
     setErrorMessage(null);
     const { error } = await signIn(DEMO_EMAIL, DEMO_PASSWORD);
     if (error) {
-      setErrorMessage('Demo temporarily unavailable. Please try again later.');
+      setErrorMessage("Demo temporarily unavailable. Please try again later.");
     }
     setIsDemoLoading(false);
   };
@@ -121,14 +119,10 @@ export default function Auth() {
           <CardContent>
             <form onSubmit={handlePasswordUpdate} className="space-y-4">
               {errorMessage && (
-                <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                  {errorMessage}
-                </div>
+                <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{errorMessage}</div>
               )}
               {successMessage && (
-                <div className="rounded-md bg-primary/10 p-3 text-sm text-primary">
-                  {successMessage}
-                </div>
+                <div className="rounded-md bg-primary/10 p-3 text-sm text-primary">{successMessage}</div>
               )}
               <div className="space-y-2">
                 <Label htmlFor="password">New Password</Label>
@@ -145,7 +139,7 @@ export default function Auth() {
                 />
               </div>
               <Button type="submit" className="w-full" disabled={submitting}>
-                {submitting ? 'Updating...' : 'Update Password'}
+                {submitting ? "Updating..." : "Update Password"}
               </Button>
             </form>
           </CardContent>
@@ -162,12 +156,7 @@ export default function Auth() {
           <CardHeader className="text-center">
             <img src="/favicon.png" alt={APP_NAME} className="w-24 h-24 mx-auto mb-4" />
             <CardTitle className="text-2xl font-bold">{APP_NAME}</CardTitle>
-            <CardDescription>
-              {resetSent 
-                ? "Check your email"
-                : "Reset your password"
-              }
-            </CardDescription>
+            <CardDescription>{resetSent ? "Check your email" : "Reset your password"}</CardDescription>
           </CardHeader>
           <CardContent>
             {resetSent ? (
@@ -175,13 +164,13 @@ export default function Auth() {
                 <div className="rounded-md bg-primary/10 p-3 text-sm text-primary">
                   If an account exists for this email, you'll receive a password reset link shortly.
                 </div>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="w-full"
                   onClick={() => {
                     setIsResetMode(false);
                     setResetSent(false);
-                    setEmail('');
+                    setEmail("");
                   }}
                 >
                   Back to Sign In
@@ -190,9 +179,7 @@ export default function Auth() {
             ) : (
               <form onSubmit={handlePasswordReset} className="space-y-4">
                 {errorMessage && (
-                  <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                    {errorMessage}
-                  </div>
+                  <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{errorMessage}</div>
                 )}
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
@@ -208,11 +195,11 @@ export default function Auth() {
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={submitting}>
-                  {submitting ? 'Sending...' : 'Send Reset Link'}
+                  {submitting ? "Sending..." : "Send Reset Link"}
                 </Button>
-                <Button 
+                <Button
                   type="button"
-                  variant="ghost" 
+                  variant="ghost"
                   className="w-full"
                   onClick={() => {
                     setIsResetMode(false);
@@ -233,24 +220,14 @@ export default function Auth() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <img 
-            src="/favicon.png" 
-            alt={APP_NAME} 
-            className="w-24 h-24 mx-auto mb-4"
-          />
-          <CardTitle className="text-2xl font-bold">
-            {APP_NAME}
-          </CardTitle>
-          <CardDescription>
-            Braindump what you ate — AI handles the rest
-          </CardDescription>
+          <img src="/favicon.png" alt={APP_NAME} className="w-24 h-24 mx-auto mb-4" />
+          <CardTitle className="text-2xl font-bold">{APP_NAME}</CardTitle>
+          <CardDescription>Braindump what you ate or lifted — AI handles the rest</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {errorMessage && (
-              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                {errorMessage}
-              </div>
+              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{errorMessage}</div>
             )}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -307,35 +284,35 @@ export default function Auth() {
               </div>
             )}
             <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? 'Loading...' : isSignUp ? 'Sign Up' : 'Sign In'}
+              {submitting ? "Loading..." : isSignUp ? "Sign Up" : "Sign In"}
             </Button>
           </form>
           <div className="mt-4 text-center text-sm text-muted-foreground space-y-2">
             <p>
-              {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
+              {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
               <button
                 type="button"
                 onClick={() => {
                   setIsSignUp(!isSignUp);
-                  setConfirmPassword('');
+                  setConfirmPassword("");
                   setErrorMessage(null);
                 }}
                 className="text-primary underline-offset-4 hover:underline"
               >
-                {isSignUp ? 'Sign In' : 'Sign Up'}
+                {isSignUp ? "Sign In" : "Sign Up"}
               </button>
             </p>
             <p>
-              Or{' '}
+              Or{" "}
               <button
                 type="button"
                 onClick={handleTryDemo}
                 disabled={submitting || isDemoLoading}
                 className="text-blue-500 underline-offset-4 hover:underline disabled:opacity-50"
               >
-                {isDemoLoading ? 'loading demo...' : 'try the demo'}
-              </button>
-              {' '}— no account needed
+                {isDemoLoading ? "loading demo..." : "try the demo"}
+              </button>{" "}
+              — no account needed
             </p>
           </div>
         </CardContent>
