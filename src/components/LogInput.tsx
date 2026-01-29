@@ -127,9 +127,10 @@ export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput
   const [isListening, setIsListening] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [savedMealsOpen, setSavedMealsOpen] = useState(false);
-  const [defaultPlaceholder] = useState(
-    () => placeholders[Math.floor(Math.random() * placeholders.length)],
-  );
+  // Stable random index per component instance
+  const [randomIndex] = useState(() => Math.floor(Math.random() * 100));
+  // Derive placeholder from current placeholders (updates when weightUnit changes)
+  const defaultPlaceholder = placeholders[randomIndex % placeholders.length];
 
   // Use custom placeholder if provided, otherwise use random default from mode config
   const placeholderText = customPlaceholder ?? defaultPlaceholder;
