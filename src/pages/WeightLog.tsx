@@ -306,6 +306,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
           isLoading={isAnalyzing || createEntry.isPending || (isFetching && !!pendingEntryId)}
           onLogSavedRoutine={handleLogSavedRoutine}
           onCreateNewRoutine={() => setCreateRoutineDialogOpen(true)}
+          weightUnit={settings.weightUnit}
         />
         {analyzeError && (
           <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive mt-3">

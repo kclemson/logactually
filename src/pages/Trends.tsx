@@ -11,6 +11,8 @@ import { FEATURES } from "@/lib/feature-flags";
 import { useWeightTrends, ExerciseTrend, WeightPoint } from "@/hooks/useWeightTrends";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useUserSettings } from "@/hooks/useUserSettings";
+import type { WeightUnit } from "@/lib/weight-units";
 
 // Chart color palette (hex RGB format for easy editing)
 const CHART_COLORS = {
@@ -49,20 +51,30 @@ const periods = [
   { label: "90 days", days: 90 },
 ];
 
-const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
+const LBS_TO_KG = 0.453592;
+
+const ExerciseChart = ({ exercise, unit }: { exercise: ExerciseTrend; unit: WeightUnit }) => {
   const chartData = useMemo(() => {
     const dataLength = exercise.weightData.length;
     // Calculate how often to show labels based on column count
     const labelInterval = dataLength <= 12 ? 1 : dataLength <= 20 ? 2 : 3;
 
-    return exercise.weightData.map((d, index) => ({
-      ...d,
-      dateLabel: format(new Date(`${d.date}T12:00:00`), "MMM d"),
-      label: `${d.sets}×${d.reps}×${d.weight}`,
-      // Show label on interval OR always on last column
-      showLabel: index % labelInterval === 0 || index === dataLength - 1,
-    }));
-  }, [exercise.weightData]);
+    return exercise.weightData.map((d, index) => {
+      const displayWeight = unit === 'kg' ? Math.round(d.weight * LBS_TO_KG) : d.weight;
+      return {
+        ...d,
+        weight: displayWeight,
+        dateLabel: format(new Date(`${d.date}T12:00:00`), "MMM d"),
+        label: `${d.sets}×${d.reps}×${displayWeight}`,
+        // Show label on interval OR always on last column
+        showLabel: index % labelInterval === 0 || index === dataLength - 1,
+      };
+    });
+  }, [exercise.weightData, unit]);
+
+  const maxWeightDisplay = unit === 'kg' 
+    ? Math.round(exercise.maxWeight * LBS_TO_KG) 
+    : exercise.maxWeight;
 
   // Label renderer with closure access to chartData for showLabel lookup
   const renderLabel = (props: any) => {
@@ -115,7 +127,7 @@ const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
       <CardHeader className="p-2 pb-1">
         <div className="flex flex-col gap-0.5">
           <ChartTitle className="truncate">{exercise.description}</ChartTitle>
-          <ChartSubtitle>Max: {exercise.maxWeight} lbs</ChartSubtitle>
+          <ChartSubtitle>Max: {maxWeightDisplay} {unit}</ChartSubtitle>
         </div>
       </CardHeader>
       <CardContent className="p-2 pt-0">
@@ -130,18 +142,18 @@ const ExerciseChart = ({ exercise }: { exercise: ExerciseTrend }) => {
                 tickMargin={2}
                 height={16}
               />
-              <Tooltip
-                content={
-                  <CompactTooltip
-                    formatter={(value: number, name: string, entry: any) => {
-                      const { sets, reps, weight } = entry.payload;
-                      return `${sets} sets × ${reps} reps @ ${weight} lbs`;
-                    }}
-                  />
-                }
-                offset={20}
-                cursor={{ fill: "hsl(var(--muted)/0.3)" }}
-              />
+                <Tooltip
+                  content={
+                    <CompactTooltip
+                      formatter={(value: number, name: string, entry: any) => {
+                        const { sets, reps, weight } = entry.payload;
+                        return `${sets} sets × ${reps} reps @ ${weight} ${unit}`;
+                      }}
+                    />
+                  }
+                  offset={20}
+                  cursor={{ fill: "hsl(var(--muted)/0.3)" }}
+                />
               <Bar dataKey="weight" fill="hsl(262 83% 58%)" radius={[2, 2, 0, 0]}>
                 <LabelList dataKey="label" content={renderLabel} />
               </Bar>
@@ -160,6 +172,7 @@ const [selectedPeriod, setSelectedPeriod] = useState(() => {
   });
   const [extraExercise, setExtraExercise] = useState<string | null>(null);
   const { data: isAdmin } = useIsAdmin();
+  const { settings } = useUserSettings();
   const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
 
   const { data: entries = [], isLoading } = useQuery({
@@ -406,7 +419,7 @@ const [selectedPeriod, setSelectedPeriod] = useState(() => {
               {/* Top 6 exercises in 2-column grid */}
               <div className="grid grid-cols-2 gap-3">
                 {top6Exercises.map((exercise) => (
-                  <ExerciseChart key={exercise.exercise_key} exercise={exercise} />
+                  <ExerciseChart key={exercise.exercise_key} exercise={exercise} unit={settings.weightUnit} />
                 ))}
               </div>
 
@@ -439,7 +452,7 @@ const [selectedPeriod, setSelectedPeriod] = useState(() => {
                   </Popover>
 
                   {/* Show selected extra exercise chart */}
-                  {selectedExtra && <ExerciseChart exercise={selectedExtra} />}
+                  {selectedExtra && <ExerciseChart exercise={selectedExtra} unit={settings.weightUnit} />}
                 </div>
               )}
             </div>
