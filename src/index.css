@@ -54,6 +54,9 @@ All colors MUST be HSL.
 
     --radius: 0.5rem;
 
+    --warning: 38 92% 50%;
+    --warning-foreground: 38 92% 20%;
+
     --edited: 38 92% 50%;
     --new-item: 217 70% 75%;
     --focus-ring: 217 91% 60%;
@@ -113,6 +116,9 @@ All colors MUST be HSL.
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
     
+    --warning: 38 92% 50%;
+    --warning-foreground: 38 92% 90%;
+
     --edited: 38 92% 50%;
     --new-item: 217 70% 75%;
     --focus-ring: 217 91% 60%;
