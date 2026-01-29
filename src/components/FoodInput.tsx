@@ -206,7 +206,7 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(function FoodI
             size="sm"
             onClick={toggleListening}
             disabled={isBusy}
-            className={cn("px-2", isListening && "bg-destructive text-destructive-foreground animate-pulse")}
+            className={cn("px-2", isListening && "bg-destructive text-destructive-foreground")}
           >
             <Mic className="h-4 w-4 mr-1" />
             {isListening ? "Stop" : "Voice"}
