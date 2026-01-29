@@ -1,6 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useAdminStats, useAdminUserStats } from "@/hooks/useAdminStats";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useAdminFeedback } from "@/hooks/useFeedback";
 import { format, parseISO, isToday } from "date-fns";
 
 const USER_NAMES: Record<number, string> = {
@@ -20,6 +21,7 @@ export default function Admin() {
   const { data: isAdmin, isLoading: isAdminLoading } = useIsAdmin();
   const { data: stats, isLoading, error } = useAdminStats();
   const { data: userStats } = useAdminUserStats();
+  const { data: feedback } = useAdminFeedback();
 
   // Render nothing while checking admin status - no spinner, no flash
   if (isAdminLoading) {
@@ -158,6 +160,21 @@ export default function Admin() {
         </table>
       ) : (
         <p className="text-muted-foreground text-xs">No data in the last 14 days.</p>
+      )}
+
+      {/* Feedback section */}
+      {feedback && feedback.length > 0 && (
+        <div className="space-y-1">
+          <p className="font-medium text-xs text-muted-foreground">Recent Feedback</p>
+          {feedback.map((f) => (
+            <div key={f.id} className="text-xs border-b border-border/50 py-1">
+              <span className="text-muted-foreground">
+                {USER_NAMES[f.user_number] ?? `User ${f.user_number}`} • {format(parseISO(f.created_at), "MMM d")}
+              </span>
+              <p className="whitespace-pre-wrap">{f.message}</p>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
