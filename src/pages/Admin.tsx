@@ -88,6 +88,8 @@ export default function Admin() {
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Food Today</th>
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Weight Logged</th>
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Weight Today</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">SM</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">SR</th>
               <th className="text-center py-0.5 font-medium text-muted-foreground">Last Active</th>
             </tr>
           </thead>
@@ -103,8 +105,7 @@ export default function Admin() {
                       : ""
                   }`}
                 >
-                  User {user.user_number}
-                  {USER_NAMES[user.user_number] && ` (${USER_NAMES[user.user_number]})`}
+                  {USER_NAMES[user.user_number] ?? `User ${user.user_number}`}
                 </td>
                 <td className="text-center py-0.5 pr-2">{user.total_entries}</td>
                 <td className={`text-center py-0.5 pr-2 ${user.entries_today > 0 ? "text-green-500" : ""}`}>
@@ -114,6 +115,8 @@ export default function Admin() {
                 <td className={`text-center py-0.5 pr-2 ${(user.weight_today ?? 0) > 0 ? "text-green-500" : ""}`}>
                   {user.weight_today ?? 0}
                 </td>
+                <td className="text-center py-0.5 pr-2">{user.saved_meals_count ?? 0}</td>
+                <td className="text-center py-0.5 pr-2">{user.saved_routines_count ?? 0}</td>
                 <td
                   className={`text-center py-0.5 ${user.last_active && isToday(parseISO(user.last_active)) ? "text-green-500" : ""}`}
                 >

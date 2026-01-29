@@ -32,6 +32,8 @@ interface UserStats {
   entries_today: number;
   total_weight_entries: number;
   weight_today: number;
+  saved_meals_count: number;
+  saved_routines_count: number;
   last_active: string | null;
 }
 
