@@ -1,8 +1,9 @@
 
-## Add Close Button to Help Page
+
+## Simplify Close Button Navigation
 
 ### Overview
-Add an X (close) button to the Help page that navigates back to the previous page, providing an intuitive way to dismiss the help content.
+Update the close button on the Help page to always navigate to the home page (`/`) instead of trying to go back in history.
 
 ---
 
@@ -10,35 +11,20 @@ Add an X (close) button to the Help page that navigates back to the previous pag
 
 **File:** `src/pages/Help.tsx`
 
-Add a close button at the top-right of the page that uses `useNavigate(-1)` to go back:
+Update line 76 to change `navigate(-1)` to `navigate('/')`:
 
 ```tsx
-import { useNavigate } from 'react-router-dom';
-import { X } from 'lucide-react';
-
-export default function Help() {
-  const navigate = useNavigate();
-  // ... existing state
-
-  return (
-    <div className="space-y-6 relative">
-      {/* Close button */}
-      <button
-        onClick={() => navigate(-1)}
-        className="absolute right-0 top-0 p-2 -mr-2 -mt-2 text-muted-foreground hover:text-foreground"
-        aria-label="Close help"
-      >
-        <X className="h-5 w-5" />
-      </button>
-
-      {/* Tips Section - existing */}
-      {/* Feedback Section - existing */}
-    </div>
-  );
-}
+<button
+  onClick={() => navigate('/')}
+  className="absolute right-0 top-0 p-2 -mr-2 -mt-2 text-muted-foreground hover:text-foreground transition-colors"
+  aria-label="Close help"
+>
+  <X className="h-5 w-5" />
+</button>
 ```
 
 ---
 
 ### Files to Modify
-1. `src/pages/Help.tsx` - Add close button with back navigation
+1. `src/pages/Help.tsx` - Change `navigate(-1)` to `navigate('/')`
+
