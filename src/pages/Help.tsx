@@ -123,6 +123,18 @@ export default function Help() {
           </div>
         )}
       </section>
+
+      {/* Made by link */}
+      <div className="pt-4 text-center">
+        <a
+          href="https://www.kcloadletter.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          made by kcloadletter.com
+        </a>
+      </div>
     </div>
   );
 }
