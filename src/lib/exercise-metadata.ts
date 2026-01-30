@@ -65,13 +65,13 @@ export const EXERCISE_MUSCLE_GROUPS: Record<string, ExerciseMuscles> = {
   trap_bar_deadlift: { primary: 'Glutes', secondary: ['Hamstrings', 'Quads', 'Lower Back'] },
   clean: { primary: 'Quads', secondary: ['Hamstrings', 'Glutes', 'Shoulders', 'Upper Back'] },
   snatch: { primary: 'Quads', secondary: ['Hamstrings', 'Glutes', 'Shoulders', 'Upper Back'] },
-  kettlebell_swing: { primary: 'Glutes', secondary: ['Hamstrings', 'Abs'] },
+  kettlebell_swing: { primary: 'Glutes', secondary: ['Hamstrings', 'Abs', 'Lower Back'] },
 
   // Core
   cable_crunch: { primary: 'Abs' },
   hanging_leg_raise: { primary: 'Abs', secondary: ['Hips'] },
   ab_wheel: { primary: 'Abs' },
-  plank: { primary: 'Abs' },
+  plank: { primary: 'Abs', secondary: ['Shoulders', 'Glutes'] },
   russian_twist: { primary: 'Abs' },
   sit_up: { primary: 'Abs', secondary: ['Hips'] },
   crunch: { primary: 'Abs' },
