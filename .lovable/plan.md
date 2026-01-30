@@ -1,140 +1,72 @@
 
 
-## Add Column Labels to Food Trend Charts
+## Add Secondary Muscles to Plank and Kettlebell Swing
 
 ### Overview
 
-Add value labels above each bar in the Calories, Protein, Carbs, and Fat charts, following the same interval-based display logic used in the weight charts to prevent overcrowding.
+Incorporate the optional UX improvements from the external review to add secondary muscle groups for core stabilizer exercises.
 
 ---
 
-### Pattern Reference (from ExerciseChart)
+### Changes Summary
 
-The weight charts calculate label visibility like this:
+| Exercise | Current | After |
+|----------|---------|-------|
+| plank | Abs (no secondary) | Abs, **Shoulders**, **Glutes** |
+| kettlebell_swing | Glutes, Hamstrings, Abs | Glutes, Hamstrings, Abs, **Lower Back** |
+
+---
+
+### File Changes
+
+#### 1. `src/lib/exercise-metadata.ts`
+
+**Line ~78 (plank)**:
 ```typescript
-const labelInterval = dataLength <= 12 ? 1 : dataLength <= 20 ? 2 : 3;
-// Show label on interval OR always on last column
-showLabel: index % labelInterval === 0 || index === dataLength - 1
+// Before
+plank: { primary: 'Abs' },
+
+// After
+plank: { primary: 'Abs', secondary: ['Shoulders', 'Glutes'] },
 ```
 
----
-
-### Implementation
-
-#### 1. Create a Shared Label Renderer Factory
-
-Add a helper function that creates label renderers with:
-- The chart data (to check `showLabel`)
-- The label color (matching the bar color)
-
+**Line ~57 (kettlebell_swing)**:
 ```typescript
-// Helper to create food chart label renderer with interval-based visibility
-const createFoodLabelRenderer = (
-  chartData: Array<{ showLabel: boolean }>,
-  color: string
-) => (props: any) => {
-  const { x, y, width, value, index } = props;
-  
-  const dataPoint = chartData[index];
-  if (!dataPoint?.showLabel) return null;
-  if (!value || typeof x !== 'number' || typeof width !== 'number') return null;
-  
-  return (
-    <text
-      x={x + width / 2}
-      y={y - 4}
-      fill={color}
-      textAnchor="middle"
-      fontSize={7}
-      fontWeight={500}
-    >
-      {Math.round(value)}
-    </text>
-  );
-};
+// Before
+kettlebell_swing: { primary: 'Glutes', secondary: ['Hamstrings', 'Abs'] },
+
+// After
+kettlebell_swing: { primary: 'Glutes', secondary: ['Hamstrings', 'Abs', 'Lower Back'] },
 ```
 
-#### 2. Update chartData to Include showLabel
+---
 
-Modify the `chartData` useMemo (around line 285) to add `showLabel` for each data point:
+#### 2. `supabase/functions/_shared/exercises.ts`
 
+**Line ~68 (plank)**:
 ```typescript
-const chartData = useMemo(() => {
-  const byDate: Record<string, { ... }> = {};
-  
-  // ... existing aggregation logic ...
-  
-  const data = Object.entries(byDate).map(...);
-  
-  // Add showLabel based on interval
-  const dataLength = data.length;
-  const labelInterval = dataLength <= 12 ? 1 : dataLength <= 20 ? 2 : 3;
-  
-  return data.map((d, index) => ({
-    ...d,
-    showLabel: index % labelInterval === 0 || index === dataLength - 1,
-  }));
-}, [entries]);
+// Before
+{ key: 'plank', name: 'Plank', aliases: ['planks', 'front plank'], primaryMuscle: 'Abs' },
+
+// After
+{ key: 'plank', name: 'Plank', aliases: ['planks', 'front plank'], primaryMuscle: 'Abs', secondaryMuscles: ['Shoulders', 'Glutes'] },
 ```
 
-#### 3. Update Chart Margins
+**Line ~61 (kettlebell_swing)**:
+```typescript
+// Before
+{ key: 'kettlebell_swing', ..., primaryMuscle: 'Glutes', secondaryMuscles: ['Hamstrings', 'Abs'] },
 
-Change `margin={{ top: 4, ... }}` to `margin={{ top: 12, ... }}` on all food charts to make room for labels above bars.
-
-#### 4. Add LabelList to Each Food Bar Chart
-
-**Calories Chart** (line ~409):
-```tsx
-<Bar dataKey="calories" fill="#0033CC" radius={[2, 2, 0, 0]}>
-  <LabelList 
-    dataKey="calories" 
-    content={createFoodLabelRenderer(chartData, CHART_COLORS.calories)} 
-  />
-</Bar>
+// After
+{ key: 'kettlebell_swing', ..., primaryMuscle: 'Glutes', secondaryMuscles: ['Hamstrings', 'Abs', 'Lower Back'] },
 ```
-
-**Protein Chart** (within the map, line ~478):
-```tsx
-<Bar dataKey={key} fill={color} radius={[2, 2, 0, 0]}>
-  <LabelList 
-    dataKey={key} 
-    content={createFoodLabelRenderer(chartData, color)} 
-  />
-</Bar>
-```
-
-Same pattern for Carbs and Fat (they share the `.map()` loop).
 
 ---
 
-### File Changes Summary
+### UI Result Examples
 
-| Location | Change |
-|----------|--------|
-| ~Line 29 | Add `createFoodLabelRenderer` helper function |
-| ~Line 299 | Add `showLabel` calculation to `chartData` useMemo |
-| ~Line 399 | Change Calories chart margin to `top: 12` |
-| ~Line 409 | Add `<LabelList>` to Calories bar |
-| ~Line 424 | Change Macro Split chart margin to `top: 12` (optional, stacked chart) |
-| ~Line 464 | Change Protein/Carbs/Fat charts margin to `top: 12` |
-| ~Line 478 | Add `<LabelList>` to macro bars |
-
----
-
-### Expected Result
-
-| Chart | Label Format | Color |
-|-------|--------------|-------|
-| Calories | `2150` | Deep blue (#0033CC) |
-| Protein | `145` | Teal (#115E83) |
-| Carbs | `220` | Cyan (#00B4D8) |
-| Fat | `85` | Light blue (#90E0EF) |
-
-Labels will be:
-- Font size 7px (matching weight charts)
-- Positioned 4px above each bar
-- Shown every column when ≤12 data points
-- Shown every 2nd column when 13-20 data points
-- Shown every 3rd column when >20 data points
-- Always shown on the last column
+| Exercise | Before | After |
+|----------|--------|-------|
+| Plank | Max: 60 lbs · Abs | Max: 60 lbs · Abs, Shoulders, Glutes |
+| Kettlebell Swing | Max: 35 lbs · Glutes, Hamstrings, Abs | Max: 35 lbs · Glutes, Hamstrings, Abs, Lower Back |
 
