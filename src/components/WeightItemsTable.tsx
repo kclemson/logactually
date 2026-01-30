@@ -320,6 +320,8 @@ export function WeightItemsTable({
               className={cn(
                 'grid gap-0.5 items-center group',
                 gridCols,
+                // Add left padding for inset shadow when entry is new
+                entryIsNew && "pl-0.5",
                 entryIsNew && isFirstInEntry && !isLastInEntry && "rounded-t-md animate-outline-fade-top",
                 entryIsNew && !isFirstInEntry && isLastInEntry && "rounded-b-md animate-outline-fade-bottom",
                 entryIsNew && !isFirstInEntry && !isLastInEntry && "animate-outline-fade-middle",
