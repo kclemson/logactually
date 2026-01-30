@@ -44,14 +44,24 @@ const PRIVACY_CONTENT = {
     title: "For the Technically Curious",
     intro: "If you're wondering about the security implementation:",
     items: [
-      { label: "Passwords", description: "are hashed using bcrypt — never stored in plaintext, and not visible to anyone (including me)" },
+      {
+        label: "Passwords",
+        description: "are hashed using bcrypt — never stored in plaintext, and not visible to anyone (including me)",
+      },
       {
         label: "Data isolation",
         description:
           "is enforced through Row-Level Security (RLS) policies — authenticated users can only access their own data",
       },
-      { label: "Sessions", description: "use JWT access tokens (1-hour expiry by default) with single-use refresh tokens" },
-      { label: "All traffic", description: "is encrypted via HTTPS/TLS — both between your device and the server, and between the server and AI services" },
+      {
+        label: "Sessions",
+        description: "use JWT access tokens (1-hour expiry by default) with single-use refresh tokens",
+      },
+      {
+        label: "All traffic",
+        description:
+          "is encrypted via HTTPS/TLS — both between your device and the server, and between the server and AI services",
+      },
       { label: "Infrastructure", description: "runs on SOC2 Type II compliant hosting" },
     ],
     links: [
@@ -61,7 +71,7 @@ const PRIVACY_CONTENT = {
   },
   howBuilt: {
     title: "How This Was Built",
-    text: "This app was built using AI-assisted development tools. The security mechanisms described above — password hashing, data isolation, session management — are handled at the infrastructure level, not custom code. I can see your email address in the database, but not your password (it's hashed). If I ever need to debug something, I use my own data.",
+    text: "This app was built using AI-assisted development tools. The security mechanisms described above — password hashing, data isolation, session management — are handled at the infrastructure level, not custom code. I can see your email address in the database, but not your password (it's hashed). If I ever need to debug something that requires looking at raw data, I use my own data (since I use this app daily).",
   },
   footer: {
     lastUpdated: "Last updated: January 29, 2026",
@@ -189,11 +199,7 @@ export default function Privacy() {
           </CollapsibleSection>
 
           {/* How This Was Built */}
-          <CollapsibleSection
-            title={PRIVACY_CONTENT.howBuilt.title}
-            icon={Wrench}
-            storageKey="privacy-how-built"
-          >
+          <CollapsibleSection title={PRIVACY_CONTENT.howBuilt.title} icon={Wrench} storageKey="privacy-how-built">
             <p className="text-sm text-muted-foreground">{PRIVACY_CONTENT.howBuilt.text}</p>
           </CollapsibleSection>
 
