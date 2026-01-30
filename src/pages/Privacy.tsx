@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+forimport { useNavigate } from "react-router-dom";
 import { Shield, Database, Bot, Code, Eye, UserCheck, X } from "lucide-react";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 
@@ -57,7 +57,7 @@ const PRIVACY_CONTENT = {
   },
   developerAccess: {
     title: "Developer Access",
-    text: "Technically, I have the ability to see what's logged in the database — but the only reason I'd ever look is to investigate and fix a bug. Even then, I use my own data first (I use this app daily). Honestly, I have zero interest in your food diary. It's yours.",
+    text: "Technically, I have the ability to see what's logged in the database — but the only reason I ever look at it is if I need to for investigating a bug, and if so then I use my own data (since I use this app daily).",
   },
   footer: {
     lastUpdated: "Last updated: January 15, 2026",
