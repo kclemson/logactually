@@ -18,6 +18,7 @@ export function FoodEntryCard({ entry, onDelete }: FoodEntryCardProps) {
     calories: entry.total_calories,
     protein: Number(entry.total_protein),
     carbs: Number(entry.total_carbs),
+    fiber: entry.food_items.reduce((sum, item) => sum + (item.fiber || 0), 0),
     fat: Number(entry.total_fat),
   };
 

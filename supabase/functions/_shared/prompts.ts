@@ -14,6 +14,7 @@ For each food item, provide:
 - calories: estimated calories (whole number)
 - protein: grams of protein (whole number)
 - carbs: grams of carbohydrates (whole number)
+- fiber: grams of dietary fiber (whole number)
 - fat: grams of fat (whole number)
 - confidence: your certainty level for the nutritional data:
   - "high" = known brand with verified nutritional data, or very common food with well-established values
@@ -28,7 +29,7 @@ Be reasonable with portion sizes. If no portion is specified, use typical servin
 Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
 {
   "food_items": [
-    { "name": "Food name", "portion": "portion size", "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "confidence": "high", "source_note": "optional" }
+    { "name": "Food name", "portion": "portion size", "calories": 0, "protein": 0, "carbs": 0, "fiber": 0, "fat": 0, "confidence": "high", "source_note": "optional" }
   ]
 }`;
 
@@ -47,6 +48,7 @@ For each food item, provide:
 - calories: estimated calories (whole number)
 - protein: grams of protein (whole number)
 - carbs: grams of carbohydrates (whole number)
+- fiber: grams of dietary fiber (whole number)
 - fat: grams of fat (whole number)
 - confidence: your certainty level for the nutritional data:
   - "high" = known brand with verified nutritional data, or very common food with well-established values
@@ -61,7 +63,7 @@ Be reasonable with portion sizes. If no portion is specified, use typical servin
 Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
 {
   "food_items": [
-    { "name": "Food name", "portion": "portion size", "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "confidence": "high", "source_note": "optional" }
+    { "name": "Food name", "portion": "portion size", "calories": 0, "protein": 0, "carbs": 0, "fiber": 0, "fat": 0, "confidence": "high", "source_note": "optional" }
   ]
 }`;
 

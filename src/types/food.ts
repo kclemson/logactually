@@ -8,6 +8,8 @@ export interface FoodItem {
   calories: number;
   protein: number;
   carbs: number;
+  fiber?: number;  // Dietary fiber (optional for backwards compat)
+  net_carbs?: number;  // Calculated: carbs - fiber (optional for backwards compat)
   fat: number;
   editedFields?: EditableField[];
   confidence?: 'high' | 'medium' | 'low';  // AI confidence level (experimental prompt only)
@@ -33,6 +35,7 @@ export interface DailyTotals {
   calories: number;
   protein: number;
   carbs: number;
+  fiber: number;
   fat: number;
 }
 
@@ -79,9 +82,10 @@ export function calculateTotals(items: FoodItem[]): DailyTotals {
       calories: acc.calories + (item.calories || 0),
       protein: acc.protein + (item.protein || 0),
       carbs: acc.carbs + (item.carbs || 0),
+      fiber: acc.fiber + (item.fiber || 0),
       fat: acc.fat + (item.fat || 0),
     }),
-    { calories: 0, protein: 0, carbs: 0, fat: 0 }
+    { calories: 0, protein: 0, carbs: 0, fiber: 0, fat: 0 }
   );
 }
 

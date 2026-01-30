@@ -69,7 +69,7 @@ export function exportDailyTotals(entries: FoodEntry[]) {
  * Export detailed food log - one row per food item
  */
 export function exportFoodLog(entries: FoodEntry[]) {
-  const headers = ['Date', 'Time', 'Food Item', 'Calories', 'Protein (g)', 'Carbs (g)', 'Fat (g)', 'Raw Input'];
+  const headers = ['Date', 'Time', 'Food Item', 'Calories', 'Protein (g)', 'Carbs (g)', 'Fiber (g)', 'Fat (g)', 'Raw Input'];
 
   const rows: (string | number)[][] = [];
 
@@ -91,6 +91,7 @@ export function exportFoodLog(entries: FoodEntry[]) {
         item.calories,
         item.protein,
         item.carbs,
+        item.fiber || 0,
         item.fat,
         entry.raw_input || '',
       ]);
