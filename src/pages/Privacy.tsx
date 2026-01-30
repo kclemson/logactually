@@ -26,11 +26,7 @@ const PRIVACY_CONTENT = {
     title: "What Data Is",
     titleEmphasis: "Not",
     titleEnd: "Collected",
-    items: [
-      "No third-party analytics",
-      "No tracking cookies or pixels",
-      "No selling or sharing data with anyone",
-    ],
+    items: ["No third-party analytics", "No tracking cookies or pixels", "No selling or sharing data with anyone"],
   },
   control: {
     title: "Your Data, Your Control",
@@ -49,7 +45,11 @@ const PRIVACY_CONTENT = {
     intro: "If you're wondering about the security implementation:",
     items: [
       { label: "Passwords", description: "are hashed using bcrypt — never stored in plaintext" },
-      { label: "Data isolation", description: "is enforced through Row-Level Security (RLS) policies — authenticated users can only access their own data" },
+      {
+        label: "Data isolation",
+        description:
+          "is enforced through Row-Level Security (RLS) policies — authenticated users can only access their own data",
+      },
       { label: "Sessions", description: "use JWT tokens with secure, time-limited expiry" },
       { label: "All traffic", description: "is encrypted via HTTPS/TLS" },
       { label: "Infrastructure", description: "runs on SOC2 Type II compliant hosting" },
@@ -60,7 +60,7 @@ const PRIVACY_CONTENT = {
     text: "Technically, I have the ability to see what's logged in the database — but the only reason I ever look at it is if I need to for investigating a bug, and if so then I use my own data (since I use this app daily).",
   },
   footer: {
-    lastUpdated: "Last updated: January 15, 2026",
+    lastUpdated: "Last updated: January 29, 2026",
   },
 };
 // ============================================
@@ -90,9 +90,7 @@ export default function Privacy() {
           {/* The Short Version - always visible */}
           <section className="rounded-lg border bg-muted/30 p-4">
             <h2 className="text-sm font-medium mb-2">{PRIVACY_CONTENT.shortVersion.title}</h2>
-            <p className="text-sm text-muted-foreground">
-              {PRIVACY_CONTENT.shortVersion.text}
-            </p>
+            <p className="text-sm text-muted-foreground">{PRIVACY_CONTENT.shortVersion.text}</p>
           </section>
 
           {/* What Data Is Collected */}
@@ -106,7 +104,9 @@ export default function Privacy() {
               {PRIVACY_CONTENT.collected.items.map((item, index) => (
                 <li key={index} className="flex gap-2">
                   <span>•</span>
-                  <span>{item.label} — {item.description}</span>
+                  <span>
+                    {item.label} — {item.description}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -114,7 +114,11 @@ export default function Privacy() {
 
           {/* What Data Is Not Collected */}
           <CollapsibleSection
-            title={<>What Data Is <u>Not</u> Collected</>}
+            title={
+              <>
+                What Data Is <u>Not</u> Collected
+              </>
+            }
             icon={Eye}
             defaultOpen
             storageKey="privacy-not-collected"
@@ -130,11 +134,7 @@ export default function Privacy() {
           </CollapsibleSection>
 
           {/* Your Data, Your Control */}
-          <CollapsibleSection
-            title={PRIVACY_CONTENT.control.title}
-            icon={Shield}
-            storageKey="privacy-control"
-          >
+          <CollapsibleSection title={PRIVACY_CONTENT.control.title} icon={Shield} storageKey="privacy-control">
             <ul className="text-sm text-muted-foreground">
               {PRIVACY_CONTENT.control.items.map((item, index) => (
                 <li key={index} className="flex gap-2">
@@ -149,28 +149,20 @@ export default function Privacy() {
           </CollapsibleSection>
 
           {/* How AI Processing Works */}
-          <CollapsibleSection
-            title={PRIVACY_CONTENT.aiProcessing.title}
-            icon={Bot}
-            storageKey="privacy-ai"
-          >
-            <p className="text-sm text-muted-foreground">
-              {PRIVACY_CONTENT.aiProcessing.text}
-            </p>
+          <CollapsibleSection title={PRIVACY_CONTENT.aiProcessing.title} icon={Bot} storageKey="privacy-ai">
+            <p className="text-sm text-muted-foreground">{PRIVACY_CONTENT.aiProcessing.text}</p>
           </CollapsibleSection>
 
           {/* For the Technically Curious */}
-          <CollapsibleSection
-            title={PRIVACY_CONTENT.technical.title}
-            icon={Code}
-            storageKey="privacy-technical"
-          >
+          <CollapsibleSection title={PRIVACY_CONTENT.technical.title} icon={Code} storageKey="privacy-technical">
             <p className="text-sm text-muted-foreground mb-2">{PRIVACY_CONTENT.technical.intro}</p>
             <ul className="text-sm text-muted-foreground">
               {PRIVACY_CONTENT.technical.items.map((item, index) => (
                 <li key={index} className="flex gap-2">
                   <span>•</span>
-                  <span>{item.label} {item.description}</span>
+                  <span>
+                    {item.label} {item.description}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -182,9 +174,7 @@ export default function Privacy() {
             icon={UserCheck}
             storageKey="privacy-developer"
           >
-            <p className="text-sm text-muted-foreground">
-              {PRIVACY_CONTENT.developerAccess.text}
-            </p>
+            <p className="text-sm text-muted-foreground">{PRIVACY_CONTENT.developerAccess.text}</p>
           </CollapsibleSection>
 
           {/* Footer */}
