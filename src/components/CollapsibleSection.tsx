@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 
 interface CollapsibleSectionProps {
   /** Section title displayed in header */
-  title: string;
+  title: ReactNode;
   /** Icon displayed before title */
   icon: LucideIcon;
   /** Whether section is open by default (default: true) */
@@ -32,7 +32,7 @@ export function CollapsibleSection({
   className,
   storageKey,
 }: CollapsibleSectionProps) {
-  const key = `section-${storageKey || title.toLowerCase().replace(/\s+/g, '-')}`;
+  const key = `section-${storageKey || 'default'}`;
   
   // Initialize from localStorage or default
   const [isOpen, setIsOpen] = useState(() => {
