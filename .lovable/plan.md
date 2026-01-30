@@ -1,51 +1,37 @@
 
 
-## Add Social Media Links to Privacy Page Footer
+## Privacy Page Text & Layout Updates
 
 ### Overview
 
-Add LinkedIn, Bluesky, and Mastodon icons in the footer of the Privacy page, styled similarly to your portfolio page - a row of clickable icons above the "Last updated" text.
-
-### Design Approach
-
-Since Lucide-react only has LinkedIn (and it's deprecated for brand icons), I'll create inline SVG components for all three icons to ensure visual consistency. This also avoids any deprecation warnings.
+Two small updates to the "How This Was Built" section:
+1. Center the social media icons horizontally
+2. Add a retirement sentence before the existing "I've done my best" text
 
 ### Changes
 
 **File: `src/pages/Privacy.tsx`**
 
-1. **Add social links data to `PRIVACY_CONTENT.footer`** (around line 76-78):
+#### 1. Update `socialText` content (line 75)
+
+Prepend the retirement sentence to the beginning of the paragraph:
+
 ```tsx
-footer: {
-  lastUpdated: "Last updated: January 29, 2026",
-  socialLinks: [
-    { name: "LinkedIn", url: "https://www.linkedin.com/in/kc-lemson-b58467/" },
-    { name: "Bluesky", url: "https://bsky.app/profile/kclemson.bsky.social" },
-    { name: "Mastodon", url: "https://mastodon.social/@kclemson" },
-  ],
-},
+socialText: "I recently retired after >25 years in the tech industry — but once a product-maker, always a product-maker. I've done my best to make sure this app is built with care. You can find me on social media at the links below.",
 ```
 
-2. **Create simple SVG icon components** (before the Privacy component):
-- LinkedIn icon (the "in" logo)
-- Bluesky icon (the butterfly)
-- Mastodon icon (the "M" elephant logo)
+#### 2. Center the social icons row (line 223)
 
-3. **Update the footer section** (around line 206-209):
-- Add a flex row with the three social icons
-- Each icon opens in a new tab
-- Icons styled with muted color that transitions to foreground on hover
-- Keep the "Last updated" text below
+Add `justify-center` to the flex container:
 
-### Visual Result
-
-The footer will display:
-
-```text
-[LinkedIn icon]  [Bluesky icon]  [Mastodon icon]
-
-Last updated: January 29, 2026
+```tsx
+<div className="flex justify-center gap-4 mt-2">
 ```
 
-Icons will be ~20px, spaced apart, with hover effects matching the reference image style.
+### Result
+
+The "How This Was Built" section will show:
+- Main text about AI-assisted development
+- New paragraph starting with the retirement sentence, flowing into the "built with care" text
+- Horizontally centered Bluesky and Mastodon icons
 
