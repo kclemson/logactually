@@ -1,38 +1,50 @@
 
-
-## Fix Section Header Bolding
+## Reduce Bullet List Vertical Spacing
 
 ### Problem
 
-The section headers on the Privacy page don't appear bold because:
-1. `font-medium` (weight 500) isn't strong enough contrast against the body text
-2. The headers use `text-muted-foreground` which is a lighter color, further reducing visual weight
+Bulleted lists currently use `space-y-1.5` which adds 6px of margin between each list item. This creates more vertical space between bullet points than exists between lines within a paragraph, making the lists feel spread out.
 
 ### Solution
 
-Update the CollapsibleSection component to make headers visibly bolder by:
-1. Change `font-medium` to `font-semibold` (weight 600) for stronger visual weight
-2. Change `text-muted-foreground` to `text-foreground` so headers are brighter/darker than body text
-3. Keep the `hover:text-foreground` behavior (it will just stay the same color on hover since already foreground)
+Remove the `space-y-1.5` class from all `<ul>` elements in the Privacy page. The list items will then use natural line-height spacing (1.5), matching how paragraph text flows.
 
-### Changes to `src/components/CollapsibleSection.tsx`
+### Changes to `src/pages/Privacy.tsx`
 
-**Line 63, change from:**
-```tsx
-className="flex items-center gap-2 font-medium text-muted-foreground hover:text-foreground transition-colors"
-```
+**5 locations to update:**
 
-**To:**
-```tsx
-className="flex items-center gap-2 font-semibold text-foreground transition-colors"
-```
+1. **Line 105** - "What Data Is Collected":
+   ```tsx
+   // Change from:
+   <ul className="space-y-1.5 text-sm text-muted-foreground">
+   // To:
+   <ul className="text-sm text-muted-foreground">
+   ```
+
+2. **Line 122** - "What Data Is Not Collected":
+   ```tsx
+   // Change from:
+   <ul className="space-y-1.5 text-sm text-muted-foreground">
+   // To:
+   <ul className="text-sm text-muted-foreground">
+   ```
+
+3. **Line 138** - "Your Data, Your Control":
+   ```tsx
+   // Change from:
+   <ul className="space-y-1.5 text-sm text-muted-foreground">
+   // To:
+   <ul className="text-sm text-muted-foreground">
+   ```
+
+4. **Line 169** - "For the Technically Curious":
+   ```tsx
+   // Change from:
+   <ul className="space-y-1.5 text-sm text-muted-foreground">
+   // To:
+   <ul className="text-sm text-muted-foreground">
+   ```
 
 ### Result
 
-Section headers will be:
-- **Bolder** (semibold 600 vs medium 500)
-- **Brighter/higher contrast** (foreground color instead of muted)
-- Clearly distinguishable from the muted body text underneath
-
-This affects both the Privacy page and Settings page, providing consistent bold headers across the app.
-
+Bullet list items will have the same vertical spacing as lines within a paragraph, creating a more compact and natural reading flow. This reduces the overall page length and makes the content feel less spread out on mobile.
