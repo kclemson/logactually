@@ -1,43 +1,49 @@
 
 
-## Fix: Stabilize Exercise Chart Click Handler with useCallback
+## Change "Users w/Logged Items" to Daily Active Users
 
-### The Problem
-The `ExerciseChart` components receive inline arrow functions `(date) => navigate(...)` which creates a new function on every render. Recharts may cache or bind click handlers based on prop identity, causing unreliable first-click behavior.
+### Goal
+Update the daily stats table to show users who logged items (food **or** weight) on that specific day, instead of cumulative users who have ever logged items.
 
-### The Solution
-Use `useCallback` to create a stable function reference that doesn't change between renders.
+### Current Behavior
+The `users_with_entries` field counts users who have logged food entries **up to and including** that date (cumulative).
 
-### Changes
+### New Behavior  
+Count distinct users who logged **either** food entries **or** weight entries **on that specific day**.
 
-**File: `src/pages/Trends.tsx`**
+### Changes Required
 
-1. **Line 1** - Add `useCallback` to imports:
-   ```tsx
-   import { useState, useMemo, useCallback } from "react";
-   ```
+**Database Migration** - Update `get_usage_stats` function
 
-2. **Around line 239** - Add stable callback after existing hooks:
-   ```tsx
-   const handleExerciseBarClick = useCallback((date: string) => {
-     navigate(`/weights?date=${date}`);
-   }, [navigate]);
-   ```
+The daily_stats subquery currently has:
+```sql
+(SELECT COUNT(DISTINCT fe.user_id) FROM food_entries fe
+ JOIN profiles p ON fe.user_id = p.id
+ WHERE fe.eaten_date <= d.stat_date  -- cumulative
+   AND (...)) as users_with_entries,
+```
 
-3. **Line 688** - Use stable callback:
-   ```tsx
-   onBarClick={handleExerciseBarClick}
-   ```
-   (instead of `onBarClick={(date) => navigate(...)}`)
+Change to:
+```sql
+(SELECT COUNT(DISTINCT user_id) FROM (
+  SELECT fe.user_id FROM food_entries fe
+  JOIN profiles p ON fe.user_id = p.id
+  WHERE fe.eaten_date = d.stat_date  -- same day only
+    AND (include_read_only OR NOT COALESCE(p.is_read_only, false))
+  UNION
+  SELECT ws.user_id FROM weight_sets ws
+  JOIN profiles p ON ws.user_id = p.id
+  WHERE ws.logged_date = d.stat_date  -- same day only
+    AND (include_read_only OR NOT COALESCE(p.is_read_only, false))
+) active_users) as users_with_entries,
+```
 
-4. **Line 726** - Use stable callback:
-   ```tsx
-   onBarClick={handleExerciseBarClick}
-   ```
-   (instead of `onBarClick={(date) => navigate(...)}`)
+**Frontend** - Update column header in `src/pages/Admin.tsx`
+
+Line 144: Change header text from "Users w/Logged Items" to "Active Users" (shorter, clearer meaning now that it's daily).
 
 ### Summary
-- 4 small edits
-- No behavioral changes
-- Click handler now fires reliably on first click
+- 1 database function update (SQL migration)
+- 1 small frontend text change
+- No TypeScript interface changes needed (same field name)
 
