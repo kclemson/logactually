@@ -11,7 +11,7 @@ const PRIVACY_CONTENT = {
   },
   shortVersion: {
     title: "The Short Version",
-    text: "Your data is yours. It's not sold, there are no ads, and no tracking pixels. This is a passion project built by one person (hi! it's me!), currently free to use. I originally built this for myself and find it genuinely useful — thought others might too.",
+    text: "Your data is yours. It's not sold, there are no ads, and no tracking pixels. This is a passion project built by one person (hi! it's me!), currently free to use. I originally built this for myself and find it genuinely useful, and hope others might too.",
   },
   collected: {
     title: "What Data Is Collected",
