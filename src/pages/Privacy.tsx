@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Shield, Database, Bot, Code, Eye, Wrench, X } from "lucide-react";
+import { Shield, Database, Bot, Code, Eye, Wrench, ScrollText, X } from "lucide-react";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 
 // ============================================
@@ -7,7 +7,7 @@ import { CollapsibleSection } from "@/components/CollapsibleSection";
 // ============================================
 const PRIVACY_CONTENT = {
   header: {
-    title: "Privacy & Security",
+    title: "Privacy, Security & Terms",
   },
   shortVersion: {
     title: "The Short Version",
@@ -63,6 +63,10 @@ const PRIVACY_CONTENT = {
           "is encrypted via HTTPS/TLS — both between your device and the server, and between the server and AI services",
       },
       { label: "Infrastructure", description: "runs on SOC2 Type II compliant hosting" },
+      {
+        label: "Browser storage",
+        description: "(localStorage) is used only for UI preferences like theme and collapsed sections — no tracking or analytics cookies",
+      },
     ],
     links: [
       { label: "Supabase Security", url: "https://supabase.com/docs/guides/security/soc-2-compliance" },
@@ -78,8 +82,33 @@ const PRIVACY_CONTENT = {
       { name: "Mastodon", url: "https://mastodon.social/@kclemson" },
     ],
   },
+  terms: {
+    title: "Terms of Use",
+    items: [
+      {
+        label: "As-is service",
+        description: "This app is provided as-is, without warranties of any kind. Use it at your own discretion.",
+      },
+      {
+        label: "AI-generated data",
+        description: "Nutritional estimates and exercise parsing are AI-generated and may contain errors. Always verify important health data.",
+      },
+      {
+        label: "Service availability",
+        description: "The service may be modified, suspended, or discontinued at any time without notice.",
+      },
+      {
+        label: "Account termination",
+        description: "Accounts may be removed for abuse or at the operator's discretion. You can delete your own account anytime.",
+      },
+      {
+        label: "Liability",
+        description: "The developer is not liable for any damages arising from use of this service.",
+      },
+    ],
+  },
   footer: {
-    lastUpdated: "Last updated: January 29, 2026",
+    lastUpdated: "Last updated: January 30, 2026",
   },
 };
 
@@ -235,6 +264,20 @@ export default function Privacy() {
                 </a>
               ))}
             </div>
+          </CollapsibleSection>
+
+          {/* Terms of Use */}
+          <CollapsibleSection title={PRIVACY_CONTENT.terms.title} icon={ScrollText} defaultOpen storageKey="privacy-terms">
+            <ul className="text-sm text-muted-foreground">
+              {PRIVACY_CONTENT.terms.items.map((item, index) => (
+                <li key={index} className="flex gap-2">
+                  <span>•</span>
+                  <span>
+                    <strong>{item.label}:</strong> {item.description}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </CollapsibleSection>
 
           {/* Footer */}
