@@ -1,64 +1,130 @@
 
 
-## Tighten DevToolsPanel Column Widths
+## Add Privacy & Security Page
 
 ### Overview
 
-The results table currently spans too wide, making it hard to read with content spread out. This change reduces the default column widths to create a more compact, readable layout while maintaining the ability to resize columns if needed.
+Create a new Privacy & Security page with approachable, transparent copy that communicates the solo-developer nature of the project, modern security practices, and technical details for savvy users. Add links from the Auth page footer, Settings account section, and Help page footer.
+
+---
+
+### New Files
+
+#### `src/pages/Privacy.tsx`
+
+Create a new page matching the Help page's minimal aesthetic:
+
+- Close button in top-right (navigates back)
+- Shield icon in header
+- Clean sections with muted text and keyword highlights
+- Mobile-friendly layout
+- `PRIVACY_CONTENT` constant for easy copy editing
 
 ---
 
 ### File Changes
 
-#### `src/components/DevToolsPanel.tsx`
+#### `src/App.tsx`
 
-**Update columnWidths state (lines 79-96)**
+Add public route for `/privacy`:
 
-| Column | Before | After | Change |
-|--------|--------|-------|--------|
-| input | 250 | 180 | -70 |
-| source | 70 | 50 | -20 |
-| prompt | 80 | 50 | -30 |
-| description | 200 | 150 | -50 |
-| portion | 80 | 100 | +20 (portion text needs room) |
-| calories | 50 | 35 | -15 |
-| protein | 40 | 30 | -10 |
-| carbs | 40 | 30 | -10 |
-| fiber | 40 | 30 | -10 |
-| sugar | 40 | 30 | -10 |
-| fat | 40 | 30 | -10 |
-| satFat | 40 | 30 | -10 |
-| sodium | 50 | 35 | -15 |
-| cholesterol | 50 | 30 | -20 |
-| confidence | 60 | 55 | -5 |
-| sourceNote | 250 | 180 | -70 |
+```tsx
+import Privacy from "./pages/Privacy";
 
-**Total width reduction:** ~355px narrower by default
-
-```typescript
-const [columnWidths, setColumnWidths] = useState({
-  input: 180,
-  source: 50,
-  prompt: 50,
-  description: 150,
-  portion: 100,
-  calories: 35,
-  protein: 30,
-  carbs: 30,
-  fiber: 30,
-  sugar: 30,
-  fat: 30,
-  satFat: 30,
-  sodium: 35,
-  cholesterol: 30,
-  confidence: 55,
-  sourceNote: 180,
-});
+// Add alongside other routes (outside ProtectedRoute):
+<Route path="/privacy" element={<Privacy />} />
 ```
+
+#### `src/pages/Auth.tsx`
+
+Add footer link below the auth form
+
+#### `src/pages/Settings.tsx`
+
+Add link in the Account section near "Delete account"
+
+#### `src/pages/Help.tsx`
+
+Add link in the footer alongside the "made by" credit
 
 ---
 
-### Result
+### Link Placement Summary
 
-The table will be significantly more compact while still readable. All columns remain individually resizable via the existing drag handles if you need more space for specific content.
+| Location | Placement | Visibility |
+|----------|-----------|------------|
+| Auth page | Footer below form | Pre-login |
+| Settings > Account | Near "Delete account" | Logged in |
+| Help page | Footer section | Logged in |
+
+---
+
+### Revised Copy
+
+**The Short Version**
+
+Your data is yours. It's not sold, there are no ads, and no tracking pixels. This is a passion project built by one person, currently free to use.
+
+---
+
+**What Data Is Collected**
+
+- **Email address** — for login
+- **Food and exercise entries** — what you choose to log
+- **Saved meals and routines** — for quick re-logging
+- **Preferences** — like theme and weight units
+
+---
+
+**What Data Is *Not* Collected**
+
+- No third-party analytics
+- No tracking cookies or pixels
+- No selling or sharing data with anyone
+
+---
+
+**How AI Processing Works**
+
+When you log food or exercise, your text is sent to an AI model to provide nutritional or exercise information. Only the text you enter is sent — no user identifiers, account info, or other context is included. The AI knows the request came from this app, but nothing more specific than that.
+
+---
+
+**For the Technically Curious**
+
+If you're wondering about the security implementation:
+
+- **Passwords** are hashed using bcrypt — never stored in plaintext
+- **Data isolation** is enforced through Row-Level Security (RLS) policies — authenticated users can only access their own data
+- **Sessions** use JWT tokens with secure, time-limited expiry
+- **All traffic** is encrypted via HTTPS/TLS
+- **Infrastructure** runs on SOC2 Type II compliant hosting
+
+---
+
+**Developer Access**
+
+As a solo project, the developer has database access for debugging and support purposes. However, there is no routine review or mining of individual user data — logs are only accessed when investigating specific technical issues or responding to support requests.
+
+---
+
+**Your Data, Your Control**
+
+- Export your data anytime as CSV (Settings → Export)
+- Delete your account permanently (Settings → Account)
+- Questions or concerns? Drop a note in the Help section
+
+*Last updated: January 2026*
+
+---
+
+### Technical Implementation
+
+The page will follow the same pattern as `Help.tsx`:
+
+- `PRIVACY_CONTENT` constant at the top for easy copy editing
+- `highlightText` helper for keyword emphasis
+- Lucide icons: `Shield` (header), `Database`, `Bot`, `Code`, `UserCheck`, `Eye`
+- `X` close button navigating to `/`
+- Collapsible or distinct styling for the "Technically Curious" section
 
