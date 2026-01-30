@@ -1,80 +1,41 @@
 
 
-## Font Color Signals Interactivity
+## Add Blue Background to CollapsibleSection Headers
 
-### Design Principle
+### Change
 
-**Text color indicates whether something is interactive:**
-- `text-foreground` (bright) = Clickable/tappable
-- `text-muted-foreground` (gray) = Static information, labels, descriptions
+**File: `src/components/CollapsibleSection.tsx`**
 
-### Current Inconsistencies
-
-| Element | Current | Should Be |
-|---------|---------|-----------|
-| Email address | `text-foreground` (bright) | `text-muted-foreground` (gray) — it's static info |
-| "Privacy & Security" link | `text-muted-foreground` (gray) | `text-foreground` (bright) — it's clickable |
-
-### Changes
-
-**File: `src/pages/Settings.tsx`**
-
-#### 1. Email address (line 116)
-
-Make it gray since it's non-interactive:
+Update the header button styling to include a subtle blue background:
 
 ```tsx
-// Change from:
-<p className="text-sm">{user?.email}</p>
+// Line 52-57: Change from:
+<button
+  type="button"
+  onClick={handleToggle}
+  aria-expanded={isOpen}
+  className="flex items-center gap-2 font-semibold text-foreground transition-colors"
+>
 
 // To:
-<p className="text-sm text-muted-foreground">{user?.email}</p>
-```
-
-#### 2. Privacy & Security link (line 300-305)
-
-Make it bright since it's clickable:
-
-```tsx
-// Change from:
-<Link
-  to="/privacy"
-  className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+<button
+  type="button"
+  onClick={handleToggle}
+  aria-expanded={isOpen}
+  className="flex items-center gap-2 px-2 py-1.5 -ml-2 rounded-md font-semibold text-foreground bg-[hsl(217_91%_60%/0.08)] transition-colors"
 >
-  Privacy & Security
-</Link>
-
-// To:
-<Link
-  to="/privacy"
-  className="text-sm text-foreground hover:underline underline-offset-2 transition-colors"
->
-  Privacy & Security
-</Link>
 ```
 
-### Visual Result
+### What's changing
 
-**Account section:**
-```
-Email                              Delete account
-foodlog@photo.lemson.com  ← Gray (static info)
+| Property | Before | After |
+|----------|--------|-------|
+| Background | None | `hsl(217 91% 60% / 8%)` — subtle blue tint |
+| Padding | None | `px-2 py-1.5` — breathing room |
+| Margin | None | `-ml-2` — align text with content below |
+| Border radius | None | `rounded-md` — soft corners |
 
-Change Password           ← Bright (clickable)
-Sign Out                  ← Bright (clickable)
-```
+### Visual result
 
-**About section:**
-```
-Privacy & Security        ← Bright (clickable), underline on hover
-```
-
-### Updated Design System Summary
-
-| Element Type | Color | Behavior |
-|--------------|-------|----------|
-| Interactive text (buttons, links) | `text-foreground` | Bright |
-| Static info (email, labels) | `text-muted-foreground` | Gray |
-| Destructive actions | `text-muted-foreground` → `hover:text-destructive` | Gray, turns red |
-| Selection toggles | Bordered with state highlight | Shows which is active |
+The section headers (Account, Saved Meals, Preferences, etc.) will have a very subtle blue wash behind them, distinguishing them from the white action rows beneath while staying cohesive with the app's blue accent system.
 
