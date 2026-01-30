@@ -1,115 +1,86 @@
 
 
-## Track Login Count for All Users
+## Fix Admin Table for Mobile Layout
 
 ### Overview
 
-Add a `login_count` column to profiles for all users, incremented on every successful login. Display the demo user's count on the Admin page (with the option to see all users' counts later).
+Shorten column headers and reorder columns so the user stats table fits on mobile screens while keeping the new Logins column visible.
 
 ---
 
-### Why Client-Side (Not Trigger)
+### Column Changes
 
-The `auth.users` table is in Supabase's reserved schema - we cannot attach triggers to it. The cleanest alternative is incrementing in `useAuth.tsx`'s `signIn` function, which is the single entry point for all logins.
-
----
-
-### Database Changes
-
-#### 1. Add Column to Profiles
-
-```sql
-ALTER TABLE profiles ADD COLUMN login_count integer NOT NULL DEFAULT 0;
-```
-
-#### 2. Create Increment Function
-
-```sql
-CREATE OR REPLACE FUNCTION increment_login_count(user_id uuid)
-RETURNS void
-LANGUAGE sql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
-  UPDATE profiles 
-  SET login_count = login_count + 1
-  WHERE id = user_id;
-$$;
-```
-
-This uses `SECURITY DEFINER` so it works even for read-only users (the demo account).
+| Current Header | New Header | Notes |
+|----------------|------------|-------|
+| Food Logged | Fs | Total food entries |
+| Weight Logged | Ws | Total weight entries |
+| Food Today | Ftod | Today's food count |
+| Weight Today | Wtod | Today's weight count |
+| Last Active | Last | Last activity date |
+| SM | SM | No change |
+| SR | SR | No change |
+| Logins | Logins | No change |
 
 ---
 
-### Frontend Changes
+### New Column Order
 
-#### `src/hooks/useAuth.tsx`
-
-Update the `signIn` function to increment counter after successful login:
-
-```typescript
-const signIn = async (email: string, password: string) => {
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  
-  // Track login count (fire-and-forget, don't block auth flow)
-  if (!error && data.user) {
-    supabase.rpc('increment_login_count', { user_id: data.user.id }).catch(() => {});
-  }
-  
-  return { error };
-};
+```text
+User | Last | Ftod | Wtod | Fs | SM | Ws | SR | Logins
 ```
 
-#### `src/hooks/useAdminStats.ts`
-
-The existing `get_user_stats` RPC already queries profiles - we just need to include the new column. Update the TypeScript interface:
-
-```typescript
-interface UserStats {
-  // ... existing fields
-  login_count: number;
-}
-```
-
-#### `src/pages/Admin.tsx`
-
-Add login count to the user stats table (new column after "Last Active"):
-
-| User | ... | Last Active | Logins |
-|------|-----|-------------|--------|
-| KC   | ... | Jan 29      | 47     |
+This groups "today" metrics together and places frequently-checked columns (Last, Ftod, Wtod) earlier.
 
 ---
 
-### Database Function Update
+### File Changes
 
-Update `get_user_stats` to include login_count:
+**`src/pages/Admin.tsx`**
 
-```sql
--- In the SELECT inside get_user_stats:
-p.login_count
+Update the user stats table headers and data cells:
+
+**Headers (lines 89-98):**
+```tsx
+<th className="text-left py-0.5 pr-2 font-medium text-muted-foreground whitespace-nowrap">User</th>
+<th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Last</th>
+<th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Ftod</th>
+<th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Wtod</th>
+<th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Fs</th>
+<th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">SM</th>
+<th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Ws</th>
+<th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">SR</th>
+<th className="text-center py-0.5 font-medium text-muted-foreground">Logins</th>
+```
+
+**Data cells (lines 103-129) - reordered to match:**
+```tsx
+{/* User */}
+<td className={...}>{USER_NAMES[user.user_number] ?? `User ${user.user_number}`}</td>
+{/* Last */}
+<td className={...}>{user.last_active ? format(parseISO(user.last_active), "MMM d") : "—"}</td>
+{/* Ftod */}
+<td className={...}>{user.entries_today}</td>
+{/* Wtod */}
+<td className={...}>{user.weight_today ?? 0}</td>
+{/* Fs */}
+<td className="text-center py-0.5 pr-2">{user.total_entries}</td>
+{/* SM */}
+<td className="text-center py-0.5 pr-2">{user.saved_meals_count ?? 0}</td>
+{/* Ws */}
+<td className="text-center py-0.5 pr-2">{user.total_weight_entries ?? 0}</td>
+{/* SR */}
+<td className="text-center py-0.5 pr-2">{user.saved_routines_count ?? 0}</td>
+{/* Logins */}
+<td className="text-center py-0.5">{user.login_count ?? 0}</td>
 ```
 
 ---
 
 ### Summary
 
-| Component | Change |
-|-----------|--------|
-| Database | Add `login_count` column to profiles |
-| Database | Add `increment_login_count()` function |
-| Database | Update `get_user_stats` to include login_count |
-| `useAuth.tsx` | Call increment RPC after successful signIn |
-| `useAdminStats.ts` | Add `login_count` to UserStats interface |
-| `Admin.tsx` | Display login count in user table |
-
----
-
-### Benefits
-
-- **All users tracked** - not just demo
-- **Single code path** - `signIn` handles both regular and demo logins  
-- **Fire-and-forget** - doesn't block or slow down login
-- **Works for read-only** - SECURITY DEFINER bypasses RLS
-- **Extensible** - easy to add "logins last 7 days" later using timestamps if needed
+| Change | Details |
+|--------|---------|
+| Shorten headers | Food Logged→Fs, Weight Logged→Ws, Food Today→Ftod, Weight Today→Wtod, Last Active→Last |
+| Reorder columns | User, Last, Ftod, Wtod, Fs, SM, Ws, SR, Logins |
+| No logic changes | Same data, same highlighting rules, just repositioned |
 
