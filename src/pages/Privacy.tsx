@@ -64,8 +64,8 @@ const PRIVACY_CONTENT = {
       },
       { label: "Infrastructure", description: "runs on SOC2 Type II compliant hosting" },
       {
-        label: "Browser storage",
-        description: "(localStorage) is used only for UI preferences like theme and collapsed sections — no tracking or analytics cookies",
+        label: "localStorage",
+        description: "is used only for UI preferences like theme and collapsed sections — no tracking or analytics cookies",
       },
     ],
     links: [
@@ -76,7 +76,7 @@ const PRIVACY_CONTENT = {
   howBuilt: {
     title: "How This Was Built",
     text: "This app was built using AI-assisted development tools. The security mechanisms described above — password hashing, data isolation, session management — are handled at the infrastructure level, not custom code. If I ever need to debug something that requires looking at raw data logged, I use my own data (since I use this app daily).",
-    socialText: "I recently retired after >25 years in the tech industry — but once a product-maker, always a product-maker. I've done my best to make sure this app is built with care. You can find me on social media at the links below.",
+    socialText: "I recently retired after >25 years in the tech industry — but once a product-maker, always a product-maker. I've done my best to make sure this app is built with care. You can find me on social media here:",
     socialLinks: [
       { name: "Bluesky", url: "https://bsky.app/profile/kclemson.bsky.social" },
       { name: "Mastodon", url: "https://mastodon.social/@kclemson" },
@@ -270,10 +270,10 @@ export default function Privacy() {
           <CollapsibleSection title={PRIVACY_CONTENT.terms.title} icon={ScrollText} defaultOpen storageKey="privacy-terms">
             <ul className="text-sm text-muted-foreground">
               {PRIVACY_CONTENT.terms.items.map((item, index) => (
-                <li key={index} className="flex gap-2">
+        <li key={index} className="flex gap-2">
                   <span>•</span>
                   <span>
-                    <strong>{item.label}:</strong> {item.description}
+                    {item.label}: {item.description}
                   </span>
                 </li>
               ))}
