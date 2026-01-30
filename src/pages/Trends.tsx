@@ -344,9 +344,17 @@ const Trends = () => {
       dataLength <= 21 ? 3 :
       dataLength <= 35 ? 4 : 5;
 
+    // Full-width charts have ~2x horizontal space
+    const labelIntervalFullWidth = 
+      dataLength <= 14 ? 1 :
+      dataLength <= 28 ? 2 :
+      dataLength <= 42 ? 3 :
+      dataLength <= 70 ? 4 : 5;
+
     return entries.map((d, index) => ({
       ...d,
       showLabel: index % labelInterval === 0 || index === dataLength - 1,
+      showLabelFullWidth: index % labelIntervalFullWidth === 0 || index === dataLength - 1,
     }));
   }, [weightExercises, settings.weightUnit]);
 
@@ -733,7 +741,7 @@ const Trends = () => {
                             content={(props: any) => {
                               const { x, y, width, value, index } = props;
                               const dataPoint = volumeByDay[index];
-                              if (!dataPoint?.showLabel) return null;
+                              if (!dataPoint?.showLabelFullWidth) return null;
                               if (!value || typeof x !== 'number' || typeof width !== 'number') return null;
                               
                               return (
