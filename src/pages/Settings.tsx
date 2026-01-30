@@ -146,22 +146,21 @@ export default function Settings() {
       </CollapsibleSection>
 
       {/* Saved Meals - frequently accessed */}
-      <CollapsibleSection
-        title="Saved Meals"
-        icon={Star}
-        headerAction={
-          !isReadOnly && (
-            <Button variant="outline" size="sm" onClick={() => setCreateMealDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-1" />
-              Add
-            </Button>
-          )
-        }
-      >
+      <CollapsibleSection title="Saved Meals" icon={Star}>
+        {/* Add button as first row */}
+        {!isReadOnly && (
+          <button
+            onClick={() => setCreateMealDialogOpen(true)}
+            className="w-full text-left py-2 hover:bg-accent/50 transition-colors flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Add Saved Meal</span>
+          </button>
+        )}
         {mealsLoading ? (
           <p className="text-sm text-muted-foreground">Loading...</p>
         ) : !savedMeals?.length ? (
-          <p className="text-sm text-muted-foreground">No saved meals yet</p>
+          !isReadOnly ? null : <p className="text-sm text-muted-foreground">No saved meals yet</p>
         ) : (
           <ul className="space-y-0">
             {savedMeals.map((meal) => (
@@ -182,22 +181,21 @@ export default function Settings() {
 
       {/* Saved Routines - weight tracking (gated by feature flag or admin) */}
       {showWeights && (
-        <CollapsibleSection
-          title="Saved Routines"
-          icon={Dumbbell}
-          headerAction={
-            !isReadOnly && (
-              <Button variant="outline" size="sm" onClick={() => setCreateRoutineDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-1" />
-                Add
-              </Button>
-            )
-          }
-        >
+        <CollapsibleSection title="Saved Routines" icon={Dumbbell}>
+          {/* Add button as first row */}
+          {!isReadOnly && (
+            <button
+              onClick={() => setCreateRoutineDialogOpen(true)}
+              className="w-full text-left py-2 hover:bg-accent/50 transition-colors flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Add Saved Routine</span>
+            </button>
+          )}
           {routinesLoading ? (
             <p className="text-sm text-muted-foreground">Loading...</p>
           ) : !savedRoutines?.length ? (
-            <p className="text-sm text-muted-foreground">No saved routines yet</p>
+            !isReadOnly ? null : <p className="text-sm text-muted-foreground">No saved routines yet</p>
           ) : (
             <ul className="space-y-0">
               {savedRoutines.map((routine) => (
