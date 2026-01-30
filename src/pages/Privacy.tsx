@@ -34,7 +34,7 @@ const PRIVACY_CONTENT = {
   },
   aiProcessing: {
     title: "How AI Processing Works",
-    text: "When you log food or exercise, your text is sent to an AI model to provide nutritional or exercise information. Only the text you enter is sent — no user identifiers, account info, or other context is included. The AI knows the request came from this app, but nothing more specific than that.",
+    text: "When you log food or exercise, your input is sent to an AI model that parses your freeform text and returns structured data — calories, macros, sets, reps — so you don't have to do the formatting or math yourself. Only the text you enter is sent — no user identifiers, account info, or other context. The AI knows the request came from this app, but nothing more specific than that.",
     highlights: ["no user identifiers", "nothing more specific"],
   },
   technical: {
@@ -50,8 +50,8 @@ const PRIVACY_CONTENT = {
   },
   developerAccess: {
     title: "Developer Access",
-    text: "As a solo project, the developer has database access for debugging and support purposes. However, there is no routine review or mining of individual user data — logs are only accessed when investigating specific technical issues or responding to support requests.",
-    highlights: ["no routine review or mining"],
+    text: "I have database access for debugging and fixing bugs, but I have no reason to look at your individual data — and I don't. Your logs are only accessed when investigating specific technical issues.",
+    highlights: ["no reason to look"],
   },
   control: {
     title: "Your Data, Your Control",
@@ -76,7 +76,7 @@ function highlightText(text: string, highlights: string[]) {
   return parts.map((part, i) => {
     const isHighlight = highlights.some((h) => h.toLowerCase() === part.toLowerCase());
     return isHighlight ? (
-      <span key={i} className="text-foreground font-medium">
+      <span key={i} className="text-foreground">
         {part}
       </span>
     ) : (
@@ -126,7 +126,7 @@ export default function Privacy() {
                 <li key={index} className="flex gap-2">
                   <span className="text-foreground">•</span>
                   <span>
-                    <span className="text-foreground font-medium">{item.label}</span> — {item.description}
+                    <span className="text-foreground">{item.label}</span> — {item.description}
                   </span>
                 </li>
               ))}
@@ -165,7 +165,7 @@ export default function Privacy() {
           </section>
 
           {/* For the Technically Curious */}
-          <section className="rounded-lg border p-4">
+          <section>
             <div className="flex items-center gap-2 mb-3">
               <Code className="h-4 w-4 text-muted-foreground" />
               <h2 className="text-sm font-medium">{PRIVACY_CONTENT.technical.title}</h2>
@@ -176,7 +176,7 @@ export default function Privacy() {
                 <li key={index} className="flex gap-2">
                   <span className="text-foreground">•</span>
                   <span>
-                    <span className="text-foreground font-medium">{item.label}</span> {item.description}
+                    <span className="text-foreground">{item.label}</span> {item.description}
                   </span>
                 </li>
               ))}
