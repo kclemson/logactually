@@ -114,7 +114,7 @@ export default function Privacy() {
 
           {/* What Data Is Not Collected */}
           <CollapsibleSection
-            title={`${PRIVACY_CONTENT.notCollected.title} ${PRIVACY_CONTENT.notCollected.titleEmphasis} ${PRIVACY_CONTENT.notCollected.titleEnd}`}
+            title={<>What Data Is <u>Not</u> Collected</>}
             icon={Eye}
             defaultOpen
             storageKey="privacy-not-collected"
