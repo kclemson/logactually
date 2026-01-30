@@ -1,46 +1,115 @@
 
-## Remove Demo Data Population UI from Admin Page
+
+## Track Login Count for All Users
 
 ### Overview
 
-Remove the "Populate Demo Data" button and related UI from the Admin page to prevent accidental clicks. The edge function will remain available for future use if needed.
+Add a `login_count` column to profiles for all users, incremented on every successful login. Display the demo user's count on the Admin page (with the option to see all users' counts later).
 
 ---
 
-### Changes
+### Why Client-Side (Not Trigger)
+
+The `auth.users` table is in Supabase's reserved schema - we cannot attach triggers to it. The cleanest alternative is incrementing in `useAuth.tsx`'s `signIn` function, which is the single entry point for all logins.
+
+---
+
+### Database Changes
+
+#### 1. Add Column to Profiles
+
+```sql
+ALTER TABLE profiles ADD COLUMN login_count integer NOT NULL DEFAULT 0;
+```
+
+#### 2. Create Increment Function
+
+```sql
+CREATE OR REPLACE FUNCTION increment_login_count(user_id uuid)
+RETURNS void
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+  UPDATE profiles 
+  SET login_count = login_count + 1
+  WHERE id = user_id;
+$$;
+```
+
+This uses `SECURITY DEFINER` so it works even for read-only users (the demo account).
+
+---
+
+### Frontend Changes
+
+#### `src/hooks/useAuth.tsx`
+
+Update the `signIn` function to increment counter after successful login:
+
+```typescript
+const signIn = async (email: string, password: string) => {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  
+  // Track login count (fire-and-forget, don't block auth flow)
+  if (!error && data.user) {
+    supabase.rpc('increment_login_count', { user_id: data.user.id }).catch(() => {});
+  }
+  
+  return { error };
+};
+```
+
+#### `src/hooks/useAdminStats.ts`
+
+The existing `get_user_stats` RPC already queries profiles - we just need to include the new column. Update the TypeScript interface:
+
+```typescript
+interface UserStats {
+  // ... existing fields
+  login_count: number;
+}
+```
 
 #### `src/pages/Admin.tsx`
 
-**Remove unused imports** (lines 7-8):
-- Remove `Button` import (no longer needed after removing the button)
-- Remove `supabase` import (no longer needed)
+Add login count to the user stats table (new column after "Last Active"):
 
-**Remove state variables** (lines 29-33):
-- Remove `isPopulating` useState
-- Remove `populateResult` useState
-
-**Remove handler function** (lines 35-60):
-- Remove entire `handlePopulateDemoData` async function
-
-**Remove Admin Actions UI section** (lines 216-242):
-- Remove the entire "Admin Actions" div containing the button and result message
+| User | ... | Last Active | Logins |
+|------|-----|-------------|--------|
+| KC   | ... | Jan 29      | 47     |
 
 ---
 
-### What Remains
+### Database Function Update
 
-The edge function `populate-demo-data` stays in place - you can invoke it via curl or re-add the UI later when needed.
+Update `get_user_stats` to include login_count:
+
+```sql
+-- In the SELECT inside get_user_stats:
+p.login_count
+```
 
 ---
 
 ### Summary
 
-| Item | Action |
-|------|--------|
-| Button import | Remove |
-| supabase import | Remove |
-| `isPopulating` state | Remove |
-| `populateResult` state | Remove |
-| `handlePopulateDemoData` function | Remove |
-| Admin Actions UI section | Remove |
-| Edge function | Keep (unchanged) |
+| Component | Change |
+|-----------|--------|
+| Database | Add `login_count` column to profiles |
+| Database | Add `increment_login_count()` function |
+| Database | Update `get_user_stats` to include login_count |
+| `useAuth.tsx` | Call increment RPC after successful signIn |
+| `useAdminStats.ts` | Add `login_count` to UserStats interface |
+| `Admin.tsx` | Display login count in user table |
+
+---
+
+### Benefits
+
+- **All users tracked** - not just demo
+- **Single code path** - `signIn` handles both regular and demo logins  
+- **Fire-and-forget** - doesn't block or slow down login
+- **Works for read-only** - SECURITY DEFINER bypasses RLS
+- **Extensible** - easy to add "logins last 7 days" later using timestamps if needed
+
