@@ -1,73 +1,46 @@
 
-## Fix Voice Input Microphone Resource Leak on Safari/iOS
+## Remove Demo Data Population UI from Admin Page
 
 ### Overview
 
-Safari/iOS sometimes keeps the microphone active at the OS level even after the Web Speech API's `onend` fires. This fix adds explicit cleanup using `abort()` (more aggressive than `stop()`) and ensures the microphone is released on component unmount.
+Remove the "Populate Demo Data" button and related UI from the Admin page to prevent accidental clicks. The edge function will remain available for future use if needed.
 
 ---
 
-### Changes (Minimal)
+### Changes
 
-#### 1. Use `abort()` Instead of `stop()` in Toggle Handler
+#### `src/pages/Admin.tsx`
 
-**Line 187** - Change from `stop()` to `abort()` and immediately update UI:
+**Remove unused imports** (lines 7-8):
+- Remove `Button` import (no longer needed after removing the button)
+- Remove `supabase` import (no longer needed)
 
-```typescript
-// Before
-if (isListening) {
-  recognitionRef.current?.stop();
-  return;
-}
+**Remove state variables** (lines 29-33):
+- Remove `isPopulating` useState
+- Remove `populateResult` useState
 
-// After
-if (isListening) {
-  recognitionRef.current?.abort();
-  setIsListening(false);  // Don't wait for onend - update immediately
-  return;
-}
-```
+**Remove handler function** (lines 35-60):
+- Remove entire `handlePopulateDemoData` async function
 
-#### 2. Add Cleanup Effect
-
-**After line 183** (after `getOrCreateRecognition`):
-
-```typescript
-// Cleanup on unmount - ensure microphone is released
-useEffect(() => {
-  return () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.abort();
-      recognitionRef.current = null;
-    }
-  };
-}, []);
-```
+**Remove Admin Actions UI section** (lines 216-242):
+- Remove the entire "Admin Actions" div containing the button and result message
 
 ---
 
-### Why This is Appropriate for useEffect
+### What Remains
 
-Per project guidelines, `useEffect` is correct here because:
-- The Web Speech API is an **external browser system**
-- We need **cleanup on unmount** to release the microphone resource
-- No state synchronization is happening - this is purely resource management
+The edge function `populate-demo-data` stays in place - you can invoke it via curl or re-add the UI later when needed.
 
 ---
 
-### File Changes Summary
+### Summary
 
-| Location | Change |
-|----------|--------|
-| Line 187 | Change `.stop()` to `.abort()` and add immediate `setIsListening(false)` |
-| After line 183 | Add cleanup `useEffect` for unmount |
-
----
-
-### Testing
-
-1. Open on iPhone Safari
-2. Start voice input, speak, then stay silent
-3. Wait for button to auto-reset
-4. Verify orange microphone icon disappears from iOS status bar
-5. Also test: navigate away from the page while recording - mic should release
+| Item | Action |
+|------|--------|
+| Button import | Remove |
+| supabase import | Remove |
+| `isPopulating` state | Remove |
+| `populateResult` state | Remove |
+| `handlePopulateDemoData` function | Remove |
+| Admin Actions UI section | Remove |
+| Edge function | Keep (unchanged) |
