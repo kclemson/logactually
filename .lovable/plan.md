@@ -1,97 +1,68 @@
 
 
-## Add Total Calories to Combined Chart Tooltip
+## Add Full-Width Label Thresholds for Combined Chart
 
-The current tooltip shows the macro breakdown (Protein, Carbs, Fat in calories) but doesn't show the total. We'll add the total calories to the tooltip header.
+A simple change to use different (more generous) thresholds for full-width charts since they have roughly 2x the horizontal space.
 
-### Change
+### Current State
 
-**File: `src/pages/Trends.tsx`** (line 577-579)
+All charts use the same `showLabel` thresholds:
+- ≤7 days: show all
+- 8-14 days: every 2nd
+- 15-21 days: every 3rd
+- 22-35 days: every 4th
+- >35 days: every 5th
 
-Update the Tooltip for the combined chart to use a custom formatter that also displays total calories. Since the `CompactTooltip` already shows the date as the label, we can add total calories right after the date header.
+### Proposed Change
 
-The approach: Create a custom tooltip component specifically for this chart, or pass additional info via the formatter. The cleanest solution is to add the total calories display in the tooltip by accessing `entry.payload.calories` from the first payload item.
+Add a `showLabelFullWidth` field with ~2x thresholds:
+- ≤14 days: show all
+- 15-28 days: every 2nd
+- 29-42 days: every 3rd
+- 43-70 days: every 4th
+- >70 days: every 5th
 
-```tsx
-<Tooltip
-  content={
-    <CompactTooltip 
-      formatter={(value, name, entry) => `${name}: ${Math.round(value)} cal`}
-      // Access entry.payload.calories for total
-    />
-  }
-  offset={20}
-  cursor={{ fill: "hsl(var(--muted)/0.3)" }}
-/>
-```
+### File Changes
 
-However, since `CompactTooltip` doesn't have a built-in way to show totals, the cleanest fix is to:
+**`src/pages/Trends.tsx`**
 
-1. **Add a `showTotal` prop** to `CompactTooltip` that, when true, displays the total calories from `payload[0].payload.calories` in the header area
-2. Or create a dedicated tooltip component for this chart
-
-**Recommended approach**: Extend `CompactTooltip` to accept an optional `totalKey` prop that displays a total value from the payload data in the header.
-
-### Updated CompactTooltip (lines 63-84)
+1. **Extend `chartData` calculation** (lines 397-408) to add `showLabelFullWidth`:
 
 ```tsx
-const CompactTooltip = ({ active, payload, label, formatter, totalKey, totalLabel, totalColor }: any) => {
-  if (!active || !payload?.length) return null;
+const labelInterval = 
+  dataLength <= 7 ? 1 :
+  dataLength <= 14 ? 2 :
+  dataLength <= 21 ? 3 :
+  dataLength <= 35 ? 4 : 5;
 
-  // Get total from the first payload item's data if totalKey is provided
-  const totalValue = totalKey && payload[0]?.payload?.[totalKey];
+// Full-width charts have ~2x horizontal space
+const labelIntervalFullWidth = 
+  dataLength <= 14 ? 1 :
+  dataLength <= 28 ? 2 :
+  dataLength <= 42 ? 3 :
+  dataLength <= 70 ? 4 : 5;
 
-  return (
-    <div className="rounded-md border border-border/50 bg-white dark:bg-slate-800 px-2 py-1 shadow-md">
-      <p className="text-[10px] font-medium text-slate-900 dark:text-slate-100 mb-0.5">{label}</p>
-      {totalValue !== undefined && (
-        <p className="text-[10px] font-semibold mb-0.5" style={{ color: totalColor || '#0033CC' }}>
-          {totalLabel || 'Total'}: {Math.round(totalValue)} cal
-        </p>
-      )}
-      {payload
-        .slice()
-        .reverse()
-        .map((entry: any, index: number) => {
-          const displayValue = formatter
-            ? formatter(entry.value, entry.name, entry, index, entry.payload)
-            : `${entry.name}: ${Math.round(entry.value)}`;
-          return (
-            <p key={entry.dataKey || index} className="text-[10px]" style={{ color: entry.color }}>
-              {Array.isArray(displayValue) ? displayValue[0] : displayValue}
-            </p>
-          );
-        })}
-    </div>
-  );
-};
+return data.map((d, index) => ({
+  ...d,
+  showLabel: index % labelInterval === 0 || index === dataLength - 1,
+  showLabelFullWidth: index % labelIntervalFullWidth === 0 || index === dataLength - 1,
+}));
 ```
 
-### Updated Combined Chart Tooltip (line 577-581)
+2. **Update `createFoodLabelRenderer`** to accept which field to check, OR create a separate version for full-width charts that checks `showLabelFullWidth` instead of `showLabel`.
 
-```tsx
-<Tooltip
-  content={
-    <CompactTooltip 
-      formatter={(value, name) => `${name}: ${Math.round(value)} cal`}
-      totalKey="calories"
-      totalLabel="Calories"
-      totalColor={CHART_COLORS.calories}
-    />
-  }
-  offset={20}
-  cursor={{ fill: "hsl(var(--muted)/0.3)" }}
-/>
-```
+3. **Use `showLabelFullWidth`** in the Combined Calories + Macros chart's `LabelList`.
 
 ### Result
 
-The tooltip will now show:
-```
-Jan 24
-Calories: 1824 cal  ← NEW (in blue)
-Protein: 232 cal
-Carbs: 908 cal
-Fat: 684 cal
-```
+- Half-width charts (Calories, Macro Split, Protein, Carbs, Fat): Use existing thresholds
+- Full-width charts (Combined Calories + Macros, Total Volume): Use more generous thresholds
+- At 30 days: half-width shows every 4th label, full-width shows every 2nd label
+
+### Effort Estimate
+
+**Very easy** - about 10 lines of code change. Just need to:
+1. Add one more interval calculation
+2. Add one more field to the mapped data
+3. Point the combined chart's label renderer at the new field
 
