@@ -52,6 +52,8 @@ interface FoodItemsTableProps {
   onToggleEntryExpand?: (entryId: string) => void;
   onSaveAsMeal?: (entryId: string, rawInput: string | null, foodItems: FoodItem[]) => void;
   entryMealNames?: Map<string, string>;
+  /** Set of entry IDs that originated from a saved meal (even if meal was deleted) */
+  entrySourceMealIds?: Set<string>;
   /** When true, show inline labels after numeric values (e.g., "250 cal") */
   showInlineLabels?: boolean;
 }
@@ -75,6 +77,7 @@ export function FoodItemsTable({
   onToggleEntryExpand,
   onSaveAsMeal,
   entryMealNames,
+  entrySourceMealIds,
   showInlineLabels = false,
 }: FoodItemsTableProps) {
   // Read-only mode blocks saves
@@ -615,42 +618,53 @@ export function FoodItemsTable({
             </div>
             
             {/* Expanded raw input - shows after last item in entry */}
-            {showEntryDividers && isLastInEntry && isCurrentExpanded && (
-              <div className={cn('grid gap-0.5', gridCols)}>
-                <div className="col-span-full pl-6 py-1 space-y-2">
-                  {currentRawInput && (
-                    <p className="text-muted-foreground whitespace-pre-wrap italic">
-                      {currentRawInput}
-                    </p>
-                  )}
-                  {/* Show meal name if from saved meal, otherwise show "Save as meal" link */}
-{currentEntryId && entryMealNames?.get(currentEntryId) ? (
-                    <p className="text-sm text-muted-foreground italic">
-                      From saved meal:{' '}
-                      <Link 
-                        to="/settings" 
-                        className="text-blue-600 dark:text-blue-400 hover:underline not-italic"
+            {showEntryDividers && isLastInEntry && isCurrentExpanded && (() => {
+              // Check if this entry came from a saved meal (by ID, not name lookup)
+              const isFromSavedMeal = currentEntryId && entrySourceMealIds?.has(currentEntryId);
+              const mealName = currentEntryId && entryMealNames?.get(currentEntryId);
+              
+              return (
+                <div className={cn('grid gap-0.5', gridCols)}>
+                  <div className="col-span-full pl-6 py-1 space-y-2">
+                    {/* Only show raw input if NOT from a saved meal */}
+                    {!isFromSavedMeal && currentRawInput && (
+                      <p className="text-muted-foreground whitespace-pre-wrap italic">
+                        {currentRawInput}
+                      </p>
+                    )}
+                    {/* Show meal info if from saved meal, otherwise show "Save as meal" link */}
+                    {isFromSavedMeal ? (
+                      <p className="text-sm text-muted-foreground italic">
+                        From saved meal:{' '}
+                        {mealName ? (
+                          <Link 
+                            to="/settings" 
+                            className="text-blue-600 dark:text-blue-400 hover:underline not-italic"
+                          >
+                            {mealName}
+                          </Link>
+                        ) : (
+                          <span className="not-italic">(deleted)</span>
+                        )}
+                      </p>
+                    ) : onSaveAsMeal && currentEntryId && (
+                      <button
+                        onClick={() => {
+                          const boundary = entryBoundaries?.find(b => b.entryId === currentEntryId);
+                          if (boundary) {
+                            const entryItems = items.slice(boundary.startIndex, boundary.endIndex + 1);
+                            onSaveAsMeal(currentEntryId, currentRawInput ?? null, entryItems);
+                          }
+                        }}
+                        className="text-sm text-blue-600 dark:text-blue-400 underline"
                       >
-                        {entryMealNames.get(currentEntryId)}
-                      </Link>
-                    </p>
-                  ) : onSaveAsMeal && currentEntryId && (
-                    <button
-                      onClick={() => {
-                        const boundary = entryBoundaries?.find(b => b.entryId === currentEntryId);
-                        if (boundary) {
-                          const entryItems = items.slice(boundary.startIndex, boundary.endIndex + 1);
-                          onSaveAsMeal(currentEntryId, currentRawInput ?? null, entryItems);
-                        }
-                      }}
-                      className="text-sm text-blue-600 dark:text-blue-400 underline"
-                    >
-                      Save as meal
-                    </button>
-                  )}
+                        Save as meal
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
         );
       })}

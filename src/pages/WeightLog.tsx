@@ -143,7 +143,18 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
     return map;
   }, [weightSets]);
 
-  // Build map of entryId -> routine name for entries from saved routines
+  // Build set of entry IDs that came from saved routines (regardless of whether routine still exists)
+  const entrySourceRoutineIds = useMemo(() => {
+    const ids = new Set<string>();
+    weightSets.forEach(set => {
+      if (set.sourceRoutineId) {
+        ids.add(set.entryId);
+      }
+    });
+    return ids;
+  }, [weightSets]);
+
+  // Build map of entryId -> routine name for entries from saved routines (for display only)
   const entryRoutineNames = useMemo(() => {
     const map = new Map<string, string>();
     if (!savedRoutines) return map;
@@ -412,6 +423,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
           onSaveAsRoutine={handleSaveAsRoutine}
           weightUnit={settings.weightUnit}
           entryRoutineNames={entryRoutineNames}
+          entrySourceRoutineIds={entrySourceRoutineIds}
         />
       )}
 
