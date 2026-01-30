@@ -1,72 +1,73 @@
 
-
-## Add Secondary Muscles to Plank and Kettlebell Swing
+## Fix Voice Input Microphone Resource Leak on Safari/iOS
 
 ### Overview
 
-Incorporate the optional UX improvements from the external review to add secondary muscle groups for core stabilizer exercises.
+Safari/iOS sometimes keeps the microphone active at the OS level even after the Web Speech API's `onend` fires. This fix adds explicit cleanup using `abort()` (more aggressive than `stop()`) and ensures the microphone is released on component unmount.
 
 ---
 
-### Changes Summary
+### Changes (Minimal)
 
-| Exercise | Current | After |
-|----------|---------|-------|
-| plank | Abs (no secondary) | Abs, **Shoulders**, **Glutes** |
-| kettlebell_swing | Glutes, Hamstrings, Abs | Glutes, Hamstrings, Abs, **Lower Back** |
+#### 1. Use `abort()` Instead of `stop()` in Toggle Handler
 
----
+**Line 187** - Change from `stop()` to `abort()` and immediately update UI:
 
-### File Changes
-
-#### 1. `src/lib/exercise-metadata.ts`
-
-**Line ~78 (plank)**:
 ```typescript
 // Before
-plank: { primary: 'Abs' },
+if (isListening) {
+  recognitionRef.current?.stop();
+  return;
+}
 
 // After
-plank: { primary: 'Abs', secondary: ['Shoulders', 'Glutes'] },
+if (isListening) {
+  recognitionRef.current?.abort();
+  setIsListening(false);  // Don't wait for onend - update immediately
+  return;
+}
 ```
 
-**Line ~57 (kettlebell_swing)**:
+#### 2. Add Cleanup Effect
+
+**After line 183** (after `getOrCreateRecognition`):
+
 ```typescript
-// Before
-kettlebell_swing: { primary: 'Glutes', secondary: ['Hamstrings', 'Abs'] },
-
-// After
-kettlebell_swing: { primary: 'Glutes', secondary: ['Hamstrings', 'Abs', 'Lower Back'] },
-```
-
----
-
-#### 2. `supabase/functions/_shared/exercises.ts`
-
-**Line ~68 (plank)**:
-```typescript
-// Before
-{ key: 'plank', name: 'Plank', aliases: ['planks', 'front plank'], primaryMuscle: 'Abs' },
-
-// After
-{ key: 'plank', name: 'Plank', aliases: ['planks', 'front plank'], primaryMuscle: 'Abs', secondaryMuscles: ['Shoulders', 'Glutes'] },
-```
-
-**Line ~61 (kettlebell_swing)**:
-```typescript
-// Before
-{ key: 'kettlebell_swing', ..., primaryMuscle: 'Glutes', secondaryMuscles: ['Hamstrings', 'Abs'] },
-
-// After
-{ key: 'kettlebell_swing', ..., primaryMuscle: 'Glutes', secondaryMuscles: ['Hamstrings', 'Abs', 'Lower Back'] },
+// Cleanup on unmount - ensure microphone is released
+useEffect(() => {
+  return () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.abort();
+      recognitionRef.current = null;
+    }
+  };
+}, []);
 ```
 
 ---
 
-### UI Result Examples
+### Why This is Appropriate for useEffect
 
-| Exercise | Before | After |
-|----------|--------|-------|
-| Plank | Max: 60 lbs · Abs | Max: 60 lbs · Abs, Shoulders, Glutes |
-| Kettlebell Swing | Max: 35 lbs · Glutes, Hamstrings, Abs | Max: 35 lbs · Glutes, Hamstrings, Abs, Lower Back |
+Per project guidelines, `useEffect` is correct here because:
+- The Web Speech API is an **external browser system**
+- We need **cleanup on unmount** to release the microphone resource
+- No state synchronization is happening - this is purely resource management
 
+---
+
+### File Changes Summary
+
+| Location | Change |
+|----------|--------|
+| Line 187 | Change `.stop()` to `.abort()` and add immediate `setIsListening(false)` |
+| After line 183 | Add cleanup `useEffect` for unmount |
+
+---
+
+### Testing
+
+1. Open on iPhone Safari
+2. Start voice input, speak, then stay silent
+3. Wait for button to auto-reset
+4. Verify orange microphone icon disappears from iOS status bar
+5. Also test: navigate away from the page while recording - mic should release
