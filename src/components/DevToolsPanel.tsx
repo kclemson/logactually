@@ -11,7 +11,16 @@ import { useScanBarcode } from '@/hooks/useScanBarcode';
 
 interface FoodItemOutput {
   description: string;
+  portion?: string;
   calories: number;
+  protein?: number;
+  carbs?: number;
+  fiber?: number;
+  sugar?: number;
+  fat?: number;
+  saturated_fat?: number;
+  sodium?: number;
+  cholesterol?: number;
   confidence?: 'high' | 'medium' | 'low';
   source_note?: string;
 }
@@ -37,7 +46,23 @@ interface RunResponse {
   results: TestResult[];
 }
 
-type ColumnKey = 'input' | 'source' | 'prompt' | 'output' | 'sourceNote';
+type ColumnKey = 
+  | 'input' 
+  | 'source' 
+  | 'prompt' 
+  | 'description'
+  | 'portion'
+  | 'calories'
+  | 'protein'
+  | 'carbs'
+  | 'fiber'
+  | 'sugar'
+  | 'fat'
+  | 'satFat'
+  | 'sodium'
+  | 'cholesterol'
+  | 'confidence'
+  | 'sourceNote';
 
 export function DevToolsPanel() {
   const [isOpen, setIsOpen] = useState(false);
@@ -52,11 +77,22 @@ export function DevToolsPanel() {
   const [runId, setRunId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [columnWidths, setColumnWidths] = useState({
-    input: 350,
-    source: 80,
-    prompt: 100,
-    output: 400,
-    sourceNote: 350,
+    input: 250,
+    source: 70,
+    prompt: 80,
+    description: 200,
+    portion: 80,
+    calories: 50,
+    protein: 40,
+    carbs: 40,
+    fiber: 40,
+    sugar: 40,
+    fat: 40,
+    satFat: 40,
+    sodium: 50,
+    cholesterol: 50,
+    confidence: 60,
+    sourceNote: 250,
   });
 
   const { lookupUpc } = useScanBarcode();
@@ -370,31 +406,75 @@ export function DevToolsPanel() {
                   <table className="text-xs" style={{ tableLayout: 'fixed', minWidth: '100%' }}>
                     <thead className="bg-background sticky top-0">
                       <tr>
-                        <th className="relative px-1 py-1 text-left" style={{ width: columnWidths.input }}>
+                        <th className="relative px-1 py-1 text-left" style={{ width: columnWidths.input }} title="Test input">
                           <span className="font-medium text-xs">Input</span>
                           <ResizeHandle columnKey="input" />
                         </th>
-                        <th className="relative px-1 py-1 text-left" style={{ width: columnWidths.source }}>
+                        <th className="relative px-1 py-1 text-left" style={{ width: columnWidths.source }} title="Data source">
                           <span className="font-medium text-xs">Source</span>
                           <ResizeHandle columnKey="source" />
                         </th>
-                        <th className="relative px-1 py-1 text-left" style={{ width: columnWidths.prompt }}>
+                        <th className="relative px-1 py-1 text-left" style={{ width: columnWidths.prompt }} title="Prompt version">
                           <span className="font-medium text-xs">Prompt</span>
                           <ResizeHandle columnKey="prompt" />
                         </th>
-                        <th className="relative px-1 py-1 text-left" style={{ width: columnWidths.output }}>
-                          <span className="font-medium text-xs">Output</span>
-                          <ResizeHandle columnKey="output" />
+                        <th className="relative px-1 py-1 text-left" style={{ width: columnWidths.description }} title="Food description">
+                          <span className="font-medium text-xs">Desc</span>
+                          <ResizeHandle columnKey="description" />
                         </th>
-                        <th className="relative px-1 py-1 text-left" style={{ width: columnWidths.sourceNote }}>
-                          <span className="font-medium text-xs">Source Note</span>
+                        <th className="relative px-1 py-1 text-left" style={{ width: columnWidths.portion }} title="Portion size">
+                          <span className="font-medium text-xs">Portion</span>
+                          <ResizeHandle columnKey="portion" />
+                        </th>
+                        <th className="relative px-1 py-1 text-right" style={{ width: columnWidths.calories }} title="Calories">
+                          <span className="font-medium text-xs">Cal</span>
+                          <ResizeHandle columnKey="calories" />
+                        </th>
+                        <th className="relative px-1 py-1 text-right" style={{ width: columnWidths.protein }} title="Protein (g)">
+                          <span className="font-medium text-xs">P</span>
+                          <ResizeHandle columnKey="protein" />
+                        </th>
+                        <th className="relative px-1 py-1 text-right" style={{ width: columnWidths.carbs }} title="Carbs (g)">
+                          <span className="font-medium text-xs">C</span>
+                          <ResizeHandle columnKey="carbs" />
+                        </th>
+                        <th className="relative px-1 py-1 text-right" style={{ width: columnWidths.fiber }} title="Fiber (g)">
+                          <span className="font-medium text-xs">Fb</span>
+                          <ResizeHandle columnKey="fiber" />
+                        </th>
+                        <th className="relative px-1 py-1 text-right" style={{ width: columnWidths.sugar }} title="Sugar (g)">
+                          <span className="font-medium text-xs">Sg</span>
+                          <ResizeHandle columnKey="sugar" />
+                        </th>
+                        <th className="relative px-1 py-1 text-right" style={{ width: columnWidths.fat }} title="Fat (g)">
+                          <span className="font-medium text-xs">F</span>
+                          <ResizeHandle columnKey="fat" />
+                        </th>
+                        <th className="relative px-1 py-1 text-right" style={{ width: columnWidths.satFat }} title="Saturated Fat (g)">
+                          <span className="font-medium text-xs">SF</span>
+                          <ResizeHandle columnKey="satFat" />
+                        </th>
+                        <th className="relative px-1 py-1 text-right" style={{ width: columnWidths.sodium }} title="Sodium (mg)">
+                          <span className="font-medium text-xs">Na</span>
+                          <ResizeHandle columnKey="sodium" />
+                        </th>
+                        <th className="relative px-1 py-1 text-right" style={{ width: columnWidths.cholesterol }} title="Cholesterol (mg)">
+                          <span className="font-medium text-xs">Ch</span>
+                          <ResizeHandle columnKey="cholesterol" />
+                        </th>
+                        <th className="relative px-1 py-1 text-left" style={{ width: columnWidths.confidence }} title="AI confidence">
+                          <span className="font-medium text-xs">Conf</span>
+                          <ResizeHandle columnKey="confidence" />
+                        </th>
+                        <th className="relative px-1 py-1 text-left" style={{ width: columnWidths.sourceNote }} title="Source note">
+                          <span className="font-medium text-xs">Note</span>
                           <ResizeHandle columnKey="sourceNote" />
                         </th>
                       </tr>
                     </thead>
                     <tbody>
                       {displayResults.map((result, i) => (
-                        <tr key={i} className="border-t">
+                        <tr key={i} className="border-t align-top">
                           <td className="px-1 py-1 font-mono text-xs" style={{ width: columnWidths.input, maxWidth: columnWidths.input }} title={result.input}>
                             <div className="line-clamp-2 break-words">{result.input}</div>
                           </td>
@@ -415,47 +495,120 @@ export function DevToolsPanel() {
                                 ? 'text-purple-500' 
                                 : 'text-muted-foreground'
                             }>
-                              {result.promptVersion === 'experimental' ? 'Experimental' : 'Default'}
+                              {result.promptVersion === 'experimental' ? 'Exp' : 'Def'}
                             </span>
                           </td>
-                          <td className="px-1 py-1 text-xs" style={{ width: columnWidths.output, maxWidth: columnWidths.output }}>
-                            {result.error ? (
-                              <span className="text-destructive">{result.error}</span>
-                            ) : (
-                              <div className="space-y-0.5">
-                                {result.output?.food_items?.map((f, idx) => (
-                                  <div key={idx} className="flex items-center gap-1 truncate" title={f.source_note || undefined}>
-                                    <span 
-                                      className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${
-                                        f.confidence === 'high' 
-                                          ? 'bg-green-500' 
-                                          : f.confidence === 'medium' 
-                                            ? 'bg-yellow-500' 
-                                            : f.confidence === 'low' 
-                                              ? 'bg-red-500' 
-                                              : 'bg-muted-foreground/30'
-                                      }`}
-                                      title={f.confidence ? `Confidence: ${f.confidence}${f.source_note ? ` - ${f.source_note}` : ''}` : 'No confidence data'}
-                                    />
-                                    <span className="truncate">
-                                      {f.description} ({f.calories} cal)
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-1 py-1 text-xs text-muted-foreground" style={{ width: columnWidths.sourceNote, maxWidth: columnWidths.sourceNote }}>
-                            {result.error ? null : (
-                              <div className="space-y-0.5">
-                                {result.output?.food_items?.map((f, idx) => (
-                                  <div key={idx} className="line-clamp-2 break-words" title={f.source_note || undefined}>
-                                    {f.source_note || "—"}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </td>
+                          {result.error ? (
+                            <td colSpan={13} className="px-1 py-1 text-xs text-destructive">
+                              {result.error}
+                            </td>
+                          ) : (
+                            <>
+                              <td className="px-1 py-1 text-xs" style={{ width: columnWidths.description, maxWidth: columnWidths.description }}>
+                                <div className="space-y-0.5">
+                                  {result.output?.food_items?.map((f, idx) => (
+                                    <div key={idx} className="truncate" title={f.description}>{f.description}</div>
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="px-1 py-1 text-xs" style={{ width: columnWidths.portion, maxWidth: columnWidths.portion }}>
+                                <div className="space-y-0.5">
+                                  {result.output?.food_items?.map((f, idx) => (
+                                    <div key={idx} className="truncate" title={f.portion}>{f.portion || '—'}</div>
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="px-1 py-1 text-xs text-right" style={{ width: columnWidths.calories, maxWidth: columnWidths.calories }}>
+                                <div className="space-y-0.5">
+                                  {result.output?.food_items?.map((f, idx) => (
+                                    <div key={idx}>{f.calories}</div>
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="px-1 py-1 text-xs text-right" style={{ width: columnWidths.protein, maxWidth: columnWidths.protein }}>
+                                <div className="space-y-0.5">
+                                  {result.output?.food_items?.map((f, idx) => (
+                                    <div key={idx}>{f.protein ?? '—'}</div>
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="px-1 py-1 text-xs text-right" style={{ width: columnWidths.carbs, maxWidth: columnWidths.carbs }}>
+                                <div className="space-y-0.5">
+                                  {result.output?.food_items?.map((f, idx) => (
+                                    <div key={idx}>{f.carbs ?? '—'}</div>
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="px-1 py-1 text-xs text-right" style={{ width: columnWidths.fiber, maxWidth: columnWidths.fiber }}>
+                                <div className="space-y-0.5">
+                                  {result.output?.food_items?.map((f, idx) => (
+                                    <div key={idx}>{f.fiber ?? '—'}</div>
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="px-1 py-1 text-xs text-right" style={{ width: columnWidths.sugar, maxWidth: columnWidths.sugar }}>
+                                <div className="space-y-0.5">
+                                  {result.output?.food_items?.map((f, idx) => (
+                                    <div key={idx}>{f.sugar ?? '—'}</div>
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="px-1 py-1 text-xs text-right" style={{ width: columnWidths.fat, maxWidth: columnWidths.fat }}>
+                                <div className="space-y-0.5">
+                                  {result.output?.food_items?.map((f, idx) => (
+                                    <div key={idx}>{f.fat ?? '—'}</div>
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="px-1 py-1 text-xs text-right" style={{ width: columnWidths.satFat, maxWidth: columnWidths.satFat }}>
+                                <div className="space-y-0.5">
+                                  {result.output?.food_items?.map((f, idx) => (
+                                    <div key={idx}>{f.saturated_fat ?? '—'}</div>
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="px-1 py-1 text-xs text-right" style={{ width: columnWidths.sodium, maxWidth: columnWidths.sodium }}>
+                                <div className="space-y-0.5">
+                                  {result.output?.food_items?.map((f, idx) => (
+                                    <div key={idx}>{f.sodium ?? '—'}</div>
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="px-1 py-1 text-xs text-right" style={{ width: columnWidths.cholesterol, maxWidth: columnWidths.cholesterol }}>
+                                <div className="space-y-0.5">
+                                  {result.output?.food_items?.map((f, idx) => (
+                                    <div key={idx}>{f.cholesterol ?? '—'}</div>
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="px-1 py-1 text-xs" style={{ width: columnWidths.confidence, maxWidth: columnWidths.confidence }}>
+                                <div className="space-y-0.5">
+                                  {result.output?.food_items?.map((f, idx) => (
+                                    <div key={idx} className={
+                                      f.confidence === 'high' 
+                                        ? 'text-green-600' 
+                                        : f.confidence === 'medium' 
+                                          ? 'text-yellow-600' 
+                                          : f.confidence === 'low' 
+                                            ? 'text-red-600' 
+                                            : 'text-muted-foreground'
+                                    }>
+                                      {f.confidence || '—'}
+                                    </div>
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="px-1 py-1 text-xs text-muted-foreground" style={{ width: columnWidths.sourceNote, maxWidth: columnWidths.sourceNote }}>
+                                <div className="space-y-0.5">
+                                  {result.output?.food_items?.map((f, idx) => (
+                                    <div key={idx} className="line-clamp-2 break-words" title={f.source_note || undefined}>
+                                      {f.source_note || '—'}
+                                    </div>
+                                  ))}
+                                </div>
+                              </td>
+                            </>
+                          )}
                         </tr>
                       ))}
                     </tbody>
