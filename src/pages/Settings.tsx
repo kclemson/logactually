@@ -113,7 +113,7 @@ export default function Settings() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground">Email</p>
-              <p className="text-sm">{user?.email}</p>
+              <p className="text-sm text-muted-foreground">{user?.email}</p>
             </div>
             {!isDemoUser && (
               <button
@@ -299,7 +299,7 @@ export default function Settings() {
         <div className="space-y-2">
           <Link
             to="/privacy"
-            className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+            className="text-sm text-foreground hover:underline underline-offset-2 transition-colors"
           >
             Privacy & Security
           </Link>
