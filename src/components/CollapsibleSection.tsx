@@ -17,6 +17,8 @@ interface CollapsibleSectionProps {
   className?: string;
   /** Storage key suffix for persisting state (uses title if not provided) */
   storageKey?: string;
+  /** Optional className for icon (default: blue focus color) */
+  iconClassName?: string;
 }
 
 /**
@@ -31,6 +33,7 @@ export function CollapsibleSection({
   children,
   className,
   storageKey,
+  iconClassName,
 }: CollapsibleSectionProps) {
   const key = `section-${storageKey || 'default'}`;
   
@@ -63,7 +66,7 @@ export function CollapsibleSection({
           aria-expanded={isOpen}
           className="flex items-center gap-2 font-semibold text-foreground transition-colors"
         >
-          <Icon className="h-4 w-4 text-[hsl(217_91%_60%)]" />
+          <Icon className={cn("h-4 w-4", iconClassName || "text-[hsl(217_91%_60%)]")} />
           <span>{title}</span>
           <ChevronDown
             className={cn(
