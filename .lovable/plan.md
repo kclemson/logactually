@@ -1,75 +1,82 @@
 
 
-## Expand DevToolsPanel Width for Large Monitors
+## Reverse CSV Export Order (Most Recent First)
 
 ### Overview
 
-The DevToolsPanel is currently constrained to `max-w-4xl` (896px), which is quite narrow on a large monitor. Since this is a desktop-only developer tool, we can remove the width constraint entirely and let it use the full viewport width with just some horizontal padding.
+All three CSV export functions currently sort data in ascending order (oldest first). This change will reverse the sort to descending order so the most recent entries appear at the top of the file.
 
 ---
 
 ### Changes
 
-#### `src/components/DevToolsPanel.tsx`
+#### `src/lib/csv-export.ts`
 
-**Current (line 244):**
-```tsx
-<div className="mx-auto max-w-4xl px-3">
+**1. Daily Totals (line 50)**
+
+Current:
+```typescript
+.sort(([a], [b]) => a.localeCompare(b))
 ```
 
-**Updated:**
-```tsx
-<div className="px-6">
+Updated:
+```typescript
+.sort(([a], [b]) => b.localeCompare(a))
 ```
 
-This change:
-- Removes `mx-auto max-w-4xl` which was limiting the panel to 896px centered
-- Increases horizontal padding from `px-3` (12px) to `px-6` (24px) for breathing room on large screens
-- The table and all controls will now use the full available width
+**2. Food Log (lines 82-87)**
 
----
-
-#### Increase Default Column Widths
-
-Since there's more space available, we should also increase the default column widths:
-
-**Current (lines 54-60):**
-```tsx
-const [columnWidths, setColumnWidths] = useState({
-  input: 200,
-  source: 60,
-  prompt: 80,
-  output: 250,
-  sourceNote: 200,
+Current:
+```typescript
+const sorted = [...entries].sort((a, b) => {
+  if (a.eaten_date !== b.eaten_date) {
+    return a.eaten_date.localeCompare(b.eaten_date);
+  }
+  return a.created_at.localeCompare(b.created_at);
 });
 ```
 
-**Updated:**
-```tsx
-const [columnWidths, setColumnWidths] = useState({
-  input: 350,
-  source: 80,
-  prompt: 100,
-  output: 400,
-  sourceNote: 350,
+Updated:
+```typescript
+const sorted = [...entries].sort((a, b) => {
+  if (a.eaten_date !== b.eaten_date) {
+    return b.eaten_date.localeCompare(a.eaten_date);
+  }
+  return b.created_at.localeCompare(a.created_at);
 });
 ```
 
-This roughly doubles the space for content, making it much easier to see full inputs and outputs without truncation.
+**3. Weight Log (lines 141-146)**
+
+Current:
+```typescript
+const sorted = [...sets].sort((a, b) => {
+  if (a.logged_date !== b.logged_date) {
+    return a.logged_date.localeCompare(b.logged_date);
+  }
+  return a.created_at.localeCompare(b.created_at);
+});
+```
+
+Updated:
+```typescript
+const sorted = [...sets].sort((a, b) => {
+  if (a.logged_date !== b.logged_date) {
+    return b.logged_date.localeCompare(a.logged_date);
+  }
+  return b.created_at.localeCompare(a.created_at);
+});
+```
 
 ---
 
 ### Summary
 
-| Change | Before | After |
-|--------|--------|-------|
-| Container width | `max-w-4xl` (896px) | Full width |
-| Horizontal padding | `px-3` (12px) | `px-6` (24px) |
-| Input column | 200px | 350px |
-| Source column | 60px | 80px |
-| Prompt column | 80px | 100px |
-| Output column | 250px | 400px |
-| Source Note column | 200px | 350px |
+| Export Function | Change |
+|-----------------|--------|
+| `exportDailyTotals` | Reverse date sort: `a.localeCompare(b)` → `b.localeCompare(a)` |
+| `exportFoodLog` | Reverse both date and time sort |
+| `exportWeightLog` | Reverse both date and time sort |
 
-The resizable columns feature is already in place, so you can still drag to adjust if needed.
+The fix is simply swapping `a` and `b` in the comparison functions to reverse the sort order from ascending to descending.
 
