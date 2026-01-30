@@ -1,57 +1,42 @@
 
 
-## Fix Theme Reverting on Settings Page Interactions
+## Add Purple Icon Color for Weights Trends Section
 
-### Problem
+Currently, `CollapsibleSection` hardcodes all icons to blue (`hsl(217 91% 60%)`). To match the purple color scheme of the weight charts, we'll add an optional `iconClassName` prop.
 
-When you change the theme on the Settings page, then interact with other elements (like collapsing sections), the theme unexpectedly reverts to its previous value.
+### Changes
 
-**Root cause**: The `updateSettings` function in `useUserSettings.ts` uses a stale closure of `settings` when creating the new settings object. If a re-render happens during the async database update, the callback can capture outdated state.
+**File: `src/components/CollapsibleSection.tsx`**
 
-### Solution
-
-Use a functional state update pattern to ensure we always work with the latest state, not a stale closure:
-
-**File: `src/hooks/useUserSettings.ts`**
+1. Add optional `iconClassName` prop to the interface
+2. Apply it to the Icon component, defaulting to the existing blue if not provided
 
 ```tsx
-const updateSettings = useCallback(
-  async (updates: Partial<UserSettings>) => {
-    if (!user) return;
+interface CollapsibleSectionProps {
+  // ... existing props
+  /** Optional className for icon (default: blue focus color) */
+  iconClassName?: string;
+}
 
-    // Store previous settings for potential rollback
-    let previousSettings: UserSettings;
-    
-    // Use functional update to ensure we get latest state
-    setSettings(current => {
-      previousSettings = current;
-      return { ...current, ...updates };
-    });
-
-    const { error } = await supabase
-      .from('profiles')
-      .update({ settings: { ...previousSettings!, ...updates } })
-      .eq('id', user.id);
-
-    if (error) {
-      console.error('Failed to save settings:', error);
-      // Revert on error using the captured previous state
-      setSettings(previousSettings!);
-    }
-  },
-  [user]  // Remove `settings` from dependencies
-);
+// In the component:
+<Icon className={cn("h-4 w-4", iconClassName || "text-[hsl(217_91%_60%)]")} />
 ```
 
-### Why This Fixes It
+**File: `src/pages/Trends.tsx`**
 
-1. **Functional state update** (`setSettings(current => ...)`) always receives the latest state value, avoiding stale closures
-2. **Removing `settings` from dependencies** means the callback doesn't get recreated on every settings change, preventing closure staleness
-3. **Capturing `previousSettings`** inside the functional update ensures rollback uses the correct value
+Update the Weights Trends section to pass a purple icon class matching the training volume color:
 
-### Changes Summary
+```tsx
+<CollapsibleSection 
+  title="Weights Trends" 
+  icon={Dumbbell} 
+  iconClassName="text-[hsl(262_83%_58%)]"  // Match CHART_COLORS.trainingVolume
+  defaultOpen={true}
+>
+```
 
-| File | Change |
-|------|--------|
-| `src/hooks/useUserSettings.ts` | Update `updateSettings` to use functional state pattern |
+### Result
+
+- Food Trends section: Blue icon (default)
+- Weights Trends section: Purple icon (matches the weight charts color scheme)
 
