@@ -29,7 +29,7 @@ const HELP_CONTENT = {
         highlights: ["charts"],
       },
       {
-        text: "Want to work with your data in another app? Export to CSV in Settings.",
+        text: "Switch to dark theme, show weight in Kgs or export to CSV in Settings.",
         highlights: ["Export to CSV"],
       },
       {
