@@ -72,7 +72,7 @@ const PRIVACY_CONTENT = {
   howBuilt: {
     title: "How This Was Built",
     text: "This app was built using AI-assisted development tools. The security mechanisms described above — password hashing, data isolation, session management — are handled at the infrastructure level, not custom code. If I ever need to debug something that requires looking at raw data logged, I use my own data (since I use this app daily).",
-    socialText: "I've done my best to make sure this app is built with care. You can find me on social media at the links below.",
+    socialText: "I recently retired after >25 years in the tech industry — but once a product-maker, always a product-maker. I've done my best to make sure this app is built with care. You can find me on social media at the links below.",
     socialLinks: [
       { name: "Bluesky", url: "https://bsky.app/profile/kclemson.bsky.social" },
       { name: "Mastodon", url: "https://mastodon.social/@kclemson" },
@@ -220,7 +220,7 @@ export default function Privacy() {
           <CollapsibleSection title={PRIVACY_CONTENT.howBuilt.title} icon={Wrench} defaultOpen storageKey="privacy-how-built">
             <p className="text-sm text-muted-foreground">{PRIVACY_CONTENT.howBuilt.text}</p>
             <p className="text-sm text-muted-foreground mt-3">{PRIVACY_CONTENT.howBuilt.socialText}</p>
-            <div className="flex gap-4 mt-2">
+            <div className="flex justify-center gap-4 mt-2">
               {PRIVACY_CONTENT.howBuilt.socialLinks.map((link) => (
                 <a
                   key={link.name}
