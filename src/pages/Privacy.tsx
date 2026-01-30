@@ -72,24 +72,18 @@ const PRIVACY_CONTENT = {
   howBuilt: {
     title: "How This Was Built",
     text: "This app was built using AI-assisted development tools. The security mechanisms described above — password hashing, data isolation, session management — are handled at the infrastructure level, not custom code. If I ever need to debug something that requires looking at raw data logged, I use my own data (since I use this app daily).",
-  },
-  footer: {
-    lastUpdated: "Last updated: January 29, 2026",
+    socialText: "I've done my best to make sure this app is built with care. You can find me on social media at the links below.",
     socialLinks: [
-      { name: "LinkedIn", url: "https://www.linkedin.com/in/kc-lemson-b58467/" },
       { name: "Bluesky", url: "https://bsky.app/profile/kclemson.bsky.social" },
       { name: "Mastodon", url: "https://mastodon.social/@kclemson" },
     ],
   },
+  footer: {
+    lastUpdated: "Last updated: January 29, 2026",
+  },
 };
 
 // Social media icon components
-const LinkedInIcon = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-  </svg>
-);
-
 const BlueskyIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
     <path d="M12 10.8c-1.087-2.114-4.046-6.053-6.798-7.995C2.566.944 1.561 1.266.902 1.565.139 1.908 0 3.08 0 3.768c0 .69.378 5.65.624 6.479.815 2.736 3.713 3.66 6.383 3.364.136-.02.275-.039.415-.056-.138.022-.276.04-.415.056-3.912.58-7.387 2.005-2.83 7.078 5.013 5.19 6.87-1.113 7.823-4.308.953 3.195 2.05 9.271 7.733 4.308 4.267-4.308 1.172-6.498-2.74-7.078a8.741 8.741 0 0 1-.415-.056c.14.017.279.036.415.056 2.67.297 5.568-.628 6.383-3.364.246-.828.624-5.79.624-6.478 0-.69-.139-1.861-.902-2.206-.659-.298-1.664-.62-4.3 1.24C16.046 4.748 13.087 8.687 12 10.8Z" />
@@ -172,7 +166,7 @@ export default function Privacy() {
           </CollapsibleSection>
 
           {/* Your Data, Your Control */}
-          <CollapsibleSection title={PRIVACY_CONTENT.control.title} icon={Shield} storageKey="privacy-control">
+          <CollapsibleSection title={PRIVACY_CONTENT.control.title} icon={Shield} defaultOpen storageKey="privacy-control">
             <ul className="text-sm text-muted-foreground">
               {PRIVACY_CONTENT.control.items.map((item, index) => (
                 <li key={index} className="flex gap-2">
@@ -187,12 +181,12 @@ export default function Privacy() {
           </CollapsibleSection>
 
           {/* How AI Processing Works */}
-          <CollapsibleSection title={PRIVACY_CONTENT.aiProcessing.title} icon={Bot} storageKey="privacy-ai">
+          <CollapsibleSection title={PRIVACY_CONTENT.aiProcessing.title} icon={Bot} defaultOpen storageKey="privacy-ai">
             <p className="text-sm text-muted-foreground">{PRIVACY_CONTENT.aiProcessing.text}</p>
           </CollapsibleSection>
 
           {/* For the Technically Curious */}
-          <CollapsibleSection title={PRIVACY_CONTENT.technical.title} icon={Code} storageKey="privacy-technical">
+          <CollapsibleSection title={PRIVACY_CONTENT.technical.title} icon={Code} defaultOpen storageKey="privacy-technical">
             <p className="text-sm text-muted-foreground mb-2">{PRIVACY_CONTENT.technical.intro}</p>
             <ul className="text-sm text-muted-foreground">
               {PRIVACY_CONTENT.technical.items.map((item, index) => (
@@ -223,14 +217,11 @@ export default function Privacy() {
           </CollapsibleSection>
 
           {/* How This Was Built */}
-          <CollapsibleSection title={PRIVACY_CONTENT.howBuilt.title} icon={Wrench} storageKey="privacy-how-built">
+          <CollapsibleSection title={PRIVACY_CONTENT.howBuilt.title} icon={Wrench} defaultOpen storageKey="privacy-how-built">
             <p className="text-sm text-muted-foreground">{PRIVACY_CONTENT.howBuilt.text}</p>
-          </CollapsibleSection>
-
-          {/* Footer */}
-          <div className="pt-4 text-center space-y-3">
-            <div className="flex justify-center gap-4">
-              {PRIVACY_CONTENT.footer.socialLinks.map((link) => (
+            <p className="text-sm text-muted-foreground mt-3">{PRIVACY_CONTENT.howBuilt.socialText}</p>
+            <div className="flex gap-4 mt-2">
+              {PRIVACY_CONTENT.howBuilt.socialLinks.map((link) => (
                 <a
                   key={link.name}
                   href={link.url}
@@ -239,12 +230,15 @@ export default function Privacy() {
                   className="text-muted-foreground hover:text-foreground transition-colors"
                   aria-label={link.name}
                 >
-                  {link.name === "LinkedIn" && <LinkedInIcon className="h-5 w-5" />}
                   {link.name === "Bluesky" && <BlueskyIcon className="h-5 w-5" />}
                   {link.name === "Mastodon" && <MastodonIcon className="h-5 w-5" />}
                 </a>
               ))}
             </div>
+          </CollapsibleSection>
+
+          {/* Footer */}
+          <div className="pt-4 text-center">
             <p className="text-xs text-muted-foreground italic">{PRIVACY_CONTENT.footer.lastUpdated}</p>
           </div>
         </div>
