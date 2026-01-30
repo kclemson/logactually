@@ -18,6 +18,8 @@ interface UsageStats {
   users_created_last_7_days: number;
   entries_created_last_7_days: number;
   daily_stats: DailyStats[];
+  // Demo metrics
+  demo_logins: number;
   // Saved meals metrics
   total_saved_meals: number;
   users_with_saved_meals: number;
