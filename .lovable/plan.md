@@ -1,39 +1,77 @@
 
 
-## Underline "Not" in Section Title
+## Privacy Page Refinements for Technical Credibility
 
-### Problem
+### Overview
 
-The word "Not" in "What Data Is Not Collected" isn't emphasized. Currently the title is built from string concatenation, so we can't style individual words.
+Update the Privacy page to be more precise about claims, add sources where available, and honestly address the AI-assisted development approach without inviting scrutiny or overpromising.
 
-### Solution
+### Content Changes
 
-1. Update `CollapsibleSection` to accept `ReactNode` for the title (allowing JSX)
-2. Pass JSX with a simple `<u>` tag around "Not"
+#### 1. Rename "Developer Access" → "How This Was Built"
 
-### Changes
+Update the section to honestly describe the development approach while emphasizing that security-critical mechanisms are infrastructure-level:
 
-**1. `src/components/CollapsibleSection.tsx` (line 7)**
+**Current text:**
+> "Technically, I have the ability to see what's logged in the database — but the only reason I ever look at it is if I need to for investigating a bug, and if so then I use my own data (since I use this app daily)."
 
-```tsx
-// Change from:
-title: string;
+**New text:**
+> "This app was built using AI-assisted development tools. The security mechanisms described above — password hashing, data isolation, session management — are handled at the infrastructure level, not custom code. I can see your email address in the database, but not your password (it's hashed). If I ever need to debug something, I use my own data."
 
-// To:
-title: ReactNode;
-```
+This:
+- Acknowledges AI-assisted development upfront (they'll figure it out anyway)
+- Emphasizes that security is infrastructure-level (not custom code that could have AI bugs)
+- Keeps the "I use my own data" point
+- Adds the email-visible-but-not-password detail that builds trust
 
-**2. `src/pages/Privacy.tsx` (line 117)**
+#### 2. Update "For the Technically Curious" section
 
-```tsx
-// Change from:
-title={`${PRIVACY_CONTENT.notCollected.title} ${PRIVACY_CONTENT.notCollected.titleEmphasis} ${PRIVACY_CONTENT.notCollected.titleEnd}`}
+**Passwords line** — add that they can't be viewed:
+> "Passwords are hashed using bcrypt — never stored in plaintext, and not visible to anyone (including me)"
 
-// To:
-title={<>What Data Is <u>Not</u> Collected</>}
-```
+**Sessions line** — remove vague "secure" wording:
+> "Sessions use JWT access tokens (1-hour expiry by default) with single-use refresh tokens"
+
+**Encryption line** — clarify both legs:
+> "All traffic is encrypted via HTTPS/TLS — both between your device and the server, and between the server and AI services"
+
+**Infrastructure line** — add link:
+> "Infrastructure runs on SOC2 Type II compliant hosting"
+
+Since we can't add clickable links easily in the current structure, we could add a small note at the end of this section with reference links, or just leave the claim as-is since it's verifiable.
+
+#### 3. Optional: Add reference links at the bottom of the technical section
+
+Add a small paragraph after the bullet list:
+> "For verification: [Lovable Security](https://lovable.dev/security) · [Infrastructure Security](https://supabase.com/docs/guides/security/soc-2-compliance)"
+
+This gives technically curious users a way to verify the claims without cluttering the main content.
+
+### Implementation
+
+**File: `src/pages/Privacy.tsx`**
+
+Update the `PRIVACY_CONTENT` object:
+
+1. **Line 43-56** - Update `technical` section:
+   - Change passwords description to include "not visible to anyone"
+   - Change sessions description to be specific about 1-hour expiry and single-use refresh tokens
+   - Change traffic description to clarify both legs
+   - Add a `links` array for optional reference links
+
+2. **Lines 58-61** - Update `developerAccess` section:
+   - Rename title to "How This Was Built"
+   - Replace text with the honest AI-assisted development explanation
+
+3. **Lines 171-178** - Update the JSX rendering:
+   - Update icon from `UserCheck` to something like `Wrench` (more fitting for "how it was built")
+   - Add optional links rendering after the technical section bullet list
 
 ### Result
 
-The section header will display "What Data Is Not Collected" with "Not" underlined, making the emphasis clearly visible.
+The page will:
+- Be honest about AI-assisted development without inviting security scrutiny
+- Make claims that are precise and verifiable
+- Build trust through transparency (email visible, password not)
+- Provide reference links for the technically curious to verify claims
 
