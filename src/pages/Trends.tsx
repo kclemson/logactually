@@ -60,12 +60,20 @@ const createFoodLabelRenderer = (
   );
 };
 
-const CompactTooltip = ({ active, payload, label, formatter }: any) => {
+const CompactTooltip = ({ active, payload, label, formatter, totalKey, totalLabel, totalColor }: any) => {
   if (!active || !payload?.length) return null;
+
+  // Get total from the first payload item's data if totalKey is provided
+  const totalValue = totalKey && payload[0]?.payload?.[totalKey];
 
   return (
     <div className="rounded-md border border-border/50 bg-white dark:bg-slate-800 px-2 py-1 shadow-md">
       <p className="text-[10px] font-medium text-slate-900 dark:text-slate-100 mb-0.5">{label}</p>
+      {totalValue !== undefined && (
+        <p className="text-[10px] font-semibold mb-0.5" style={{ color: totalColor || '#0033CC' }}>
+          {totalLabel || 'Total'}: {Math.round(totalValue)} cal
+        </p>
+      )}
       {payload
         .slice()
         .reverse()
@@ -575,7 +583,14 @@ const Trends = () => {
                         height={16}
                       />
                       <Tooltip
-                        content={<CompactTooltip formatter={(value, name) => `${name}: ${Math.round(value)} cal`} />}
+                        content={
+                          <CompactTooltip 
+                            formatter={(value, name) => `${name}: ${Math.round(value)} cal`}
+                            totalKey="calories"
+                            totalLabel="Calories"
+                            totalColor={CHART_COLORS.calories}
+                          />
+                        }
                         offset={20}
                         cursor={{ fill: "hsl(var(--muted)/0.3)" }}
                       />
