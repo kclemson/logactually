@@ -71,9 +71,7 @@ export function useWeightEntries(date: string) {
       const { error } = await supabase.from('weight_sets').insert(rows);
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['weight-sets', date] });
-    },
+    // Caller handles invalidation to enable awaiting
   });
 
   // Update a single weight set
