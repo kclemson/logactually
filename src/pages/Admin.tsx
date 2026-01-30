@@ -93,7 +93,8 @@ export default function Admin() {
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Weight Today</th>
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">SM</th>
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">SR</th>
-              <th className="text-center py-0.5 font-medium text-muted-foreground">Last Active</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Last Active</th>
+              <th className="text-center py-0.5 font-medium text-muted-foreground">Logins</th>
             </tr>
           </thead>
           <tbody>
@@ -121,10 +122,11 @@ export default function Admin() {
                 <td className="text-center py-0.5 pr-2">{user.saved_meals_count ?? 0}</td>
                 <td className="text-center py-0.5 pr-2">{user.saved_routines_count ?? 0}</td>
                 <td
-                  className={`text-center py-0.5 ${user.last_active && isToday(parseISO(user.last_active)) ? "text-green-500" : ""}`}
+                  className={`text-center py-0.5 pr-2 ${user.last_active && isToday(parseISO(user.last_active)) ? "text-green-500" : ""}`}
                 >
                   {user.last_active ? format(parseISO(user.last_active), "MMM d") : "—"}
                 </td>
+                <td className="text-center py-0.5">{user.login_count ?? 0}</td>
               </tr>
             ))}
           </tbody>
