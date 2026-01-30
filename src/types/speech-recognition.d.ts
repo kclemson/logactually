@@ -38,6 +38,13 @@ interface SpeechRecognition extends EventTarget {
   abort(): void;
 }
 
+// Declaration merging to add abort() to built-in DOM SpeechRecognition if it exists
+declare global {
+  interface SpeechRecognition {
+    abort(): void;
+  }
+}
+
 interface Window {
   SpeechRecognition: {
     new (): SpeechRecognition;
