@@ -14,6 +14,7 @@ import History from "./pages/History";
 import Admin from "./pages/Admin";
 import Settings from "./pages/Settings";
 import Help from "./pages/Help";
+import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
             <BrowserRouter>
               <Routes>
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/privacy" element={<Privacy />} />
                 <Route
                   element={
                     <ProtectedRoute>

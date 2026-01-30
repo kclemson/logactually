@@ -1,5 +1,6 @@
 import { useTheme } from "next-themes";
 import { Moon, Sun, Monitor, Star, Download, Plus, Dumbbell, User, Settings2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import type { WeightUnit } from "@/lib/weight-units";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
@@ -114,14 +115,22 @@ export default function Settings() {
               <p className="text-xs text-muted-foreground">Email</p>
               <p className="text-sm">{user?.email}</p>
             </div>
-            {!isDemoUser && (
-              <button
-                onClick={() => setDeleteAccountOpen(true)}
-                className="text-sm text-muted-foreground hover:text-destructive hover:underline"
+            <div className="flex items-center gap-3">
+              <Link
+                to="/privacy"
+                className="text-sm text-muted-foreground hover:text-foreground hover:underline"
               >
-                Delete account
-              </button>
-            )}
+                Privacy & Security
+              </Link>
+              {!isDemoUser && (
+                <button
+                  onClick={() => setDeleteAccountOpen(true)}
+                  className="text-sm text-muted-foreground hover:text-destructive hover:underline"
+                >
+                  Delete account
+                </button>
+              )}
+            </div>
           </div>
           <div className="flex gap-2">
             {!isReadOnly && (
