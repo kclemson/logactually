@@ -47,7 +47,7 @@ export function exportDailyTotals(entries: FoodEntry[]) {
 
   const headers = ['Date', 'Calories', 'Protein (g)', 'Carbs (g)', 'Fat (g)'];
   const rows = Object.entries(byDate)
-    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(([a], [b]) => b.localeCompare(a))
     .map(([date, totals]) => [
       date,
       totals.calories,
@@ -81,9 +81,9 @@ export function exportFoodLog(entries: FoodEntry[]) {
 
   const sorted = [...entries].sort((a, b) => {
     if (a.eaten_date !== b.eaten_date) {
-      return a.eaten_date.localeCompare(b.eaten_date);
+      return b.eaten_date.localeCompare(a.eaten_date);
     }
-    return a.created_at.localeCompare(b.created_at);
+    return b.created_at.localeCompare(a.created_at);
   });
 
   sorted.forEach((entry) => {
@@ -140,9 +140,9 @@ export function exportWeightLog(sets: WeightSetExport[]) {
 
   const sorted = [...sets].sort((a, b) => {
     if (a.logged_date !== b.logged_date) {
-      return a.logged_date.localeCompare(b.logged_date);
+      return b.logged_date.localeCompare(a.logged_date);
     }
-    return a.created_at.localeCompare(b.created_at);
+    return b.created_at.localeCompare(a.created_at);
   });
 
   const rows = sorted.map((set) => [
