@@ -26,10 +26,18 @@ const CHART_COLORS = {
   trainingVolume: "hsl(262 83% 58%)", // Bright purple matching exercise charts (kept separate const for future adjustment)
 } as const;
 
+// Density-based spacing helpers for food charts
+const getFoodLabelOffsetPx = (dataLength: number): number =>
+  dataLength > 35 ? 11 : dataLength > 21 ? 8 : 4;
+
+const getFoodChartMarginTop = (dataLength: number): number =>
+  dataLength > 35 ? 22 : dataLength > 21 ? 18 : 12;
+
 // Helper to create food chart label renderer with interval-based visibility
 const createFoodLabelRenderer = (
   chartData: Array<{ showLabel: boolean }>,
-  color: string
+  color: string,
+  yOffsetPx: number = 4
 ) => (props: any) => {
   const { x, y, width, value, index } = props;
   
@@ -40,7 +48,7 @@ const createFoodLabelRenderer = (
   return (
     <text
       x={x + width / 2}
-      y={y - 4}
+      y={y - yOffsetPx}
       fill={color}
       textAnchor="middle"
       fontSize={7}
@@ -451,7 +459,7 @@ const Trends = () => {
                 <CardContent className="p-2 pt-0">
                   <div className="h-24">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={chartData} margin={{ top: 12, right: 0, left: 0, bottom: 0 }}>
+                      <BarChart data={chartData} margin={{ top: getFoodChartMarginTop(chartData.length), right: 0, left: 0, bottom: 0 }}>
                         <XAxis
                           dataKey="date"
                           tick={{ fontSize: 8 }}
@@ -462,7 +470,7 @@ const Trends = () => {
                         />
                         <Tooltip content={<CompactTooltip />} offset={20} cursor={{ fill: "hsl(var(--muted)/0.3)" }} />
                         <Bar dataKey="calories" fill={CHART_COLORS.calories} radius={[2, 2, 0, 0]}>
-                          <LabelList dataKey="calories" content={createFoodLabelRenderer(chartData, CHART_COLORS.calories)} />
+                          <LabelList dataKey="calories" content={createFoodLabelRenderer(chartData, CHART_COLORS.calories, getFoodLabelOffsetPx(chartData.length))} />
                         </Bar>
                       </BarChart>
                     </ResponsiveContainer>
@@ -518,7 +526,7 @@ const Trends = () => {
                   <CardContent className="p-2 pt-0">
                     <div className="h-24">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={chartData} margin={{ top: 12, right: 0, left: 0, bottom: 0 }}>
+                        <BarChart data={chartData} margin={{ top: getFoodChartMarginTop(chartData.length), right: 0, left: 0, bottom: 0 }}>
                           <XAxis
                             dataKey="date"
                             tick={{ fontSize: 8 }}
@@ -533,7 +541,7 @@ const Trends = () => {
                             cursor={{ fill: "hsl(var(--muted)/0.3)" }}
                           />
                           <Bar dataKey={key} fill={color} radius={[2, 2, 0, 0]}>
-                            <LabelList dataKey={key} content={createFoodLabelRenderer(chartData, color)} />
+                            <LabelList dataKey={key} content={createFoodLabelRenderer(chartData, color, getFoodLabelOffsetPx(chartData.length))} />
                           </Bar>
                         </BarChart>
                       </ResponsiveContainer>
