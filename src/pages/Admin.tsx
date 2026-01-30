@@ -113,17 +113,17 @@ export default function Admin() {
                 >
                   {user.last_active ? format(parseISO(user.last_active), "MMM d") : "—"}
                 </td>
-                <td className={`text-center py-0.5 pr-2 ${user.entries_today > 0 ? "text-green-500" : "text-muted-foreground"}`}>
+                <td className={`text-center py-0.5 pr-2 ${user.entries_today > 0 ? "text-green-500" : "text-muted-foreground/50"}`}>
                   {user.entries_today}
                 </td>
-                <td className={`text-center py-0.5 pr-2 ${(user.weight_today ?? 0) > 0 ? "text-green-500" : "text-muted-foreground"}`}>
+                <td className={`text-center py-0.5 pr-2 ${(user.weight_today ?? 0) > 0 ? "text-green-500" : "text-muted-foreground/50"}`}>
                   {user.weight_today ?? 0}
                 </td>
-                <td className={`text-center py-0.5 pr-2 ${user.total_entries === 0 ? "text-muted-foreground" : ""}`}>{user.total_entries}</td>
-                <td className={`text-center py-0.5 pr-2 ${(user.saved_meals_count ?? 0) === 0 ? "text-muted-foreground" : ""}`}>{user.saved_meals_count ?? 0}</td>
-                <td className={`text-center py-0.5 pr-2 ${(user.total_weight_entries ?? 0) === 0 ? "text-muted-foreground" : ""}`}>{user.total_weight_entries ?? 0}</td>
-                <td className={`text-center py-0.5 pr-2 ${(user.saved_routines_count ?? 0) === 0 ? "text-muted-foreground" : ""}`}>{user.saved_routines_count ?? 0}</td>
-                <td className={`text-center py-0.5 ${(user.login_count ?? 0) === 0 ? "text-muted-foreground" : ""}`}>{user.login_count ?? 0}</td>
+                <td className={`text-center py-0.5 pr-2 ${user.total_entries === 0 ? "text-muted-foreground/50" : ""}`}>{user.total_entries}</td>
+                <td className={`text-center py-0.5 pr-2 ${(user.saved_meals_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}>{user.saved_meals_count ?? 0}</td>
+                <td className={`text-center py-0.5 pr-2 ${(user.total_weight_entries ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}>{user.total_weight_entries ?? 0}</td>
+                <td className={`text-center py-0.5 pr-2 ${(user.saved_routines_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}>{user.saved_routines_count ?? 0}</td>
+                <td className={`text-center py-0.5 ${(user.login_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}>{user.login_count ?? 0}</td>
               </tr>
             ))}
           </tbody>
@@ -149,11 +149,11 @@ export default function Admin() {
             {stats.daily_stats.slice(0, 7).map((row) => (
               <tr key={row.stat_date} className="border-b border-border/50">
                 <td className="py-0.5 pr-2 whitespace-nowrap">{format(parseISO(row.stat_date), "MMM-dd")}</td>
-                <td className={`text-center py-0.5 pr-2 ${row.entry_count === 0 ? "text-muted-foreground" : ""}`}>{row.entry_count}</td>
-                <td className={`text-center py-0.5 pr-2 ${(row.weight_count ?? 0) === 0 ? "text-muted-foreground" : ""}`}>{row.weight_count ?? 0}</td>
+                <td className={`text-center py-0.5 pr-2 ${row.entry_count === 0 ? "text-muted-foreground/50" : ""}`}>{row.entry_count}</td>
+                <td className={`text-center py-0.5 pr-2 ${(row.weight_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}>{row.weight_count ?? 0}</td>
                 <td className="text-center py-0.5 pr-2">{row.total_users}</td>
-                <td className={`text-center py-0.5 pr-2 ${row.users_with_entries === 0 ? "text-muted-foreground" : ""}`}>{row.users_with_entries}</td>
-                <td className={`text-center py-0.5 ${row.users_created === 0 ? "text-muted-foreground" : ""}`}>{row.users_created}</td>
+                <td className={`text-center py-0.5 pr-2 ${row.users_with_entries === 0 ? "text-muted-foreground/50" : ""}`}>{row.users_with_entries}</td>
+                <td className={`text-center py-0.5 ${row.users_created === 0 ? "text-muted-foreground/50" : ""}`}>{row.users_created}</td>
               </tr>
             ))}
           </tbody>
