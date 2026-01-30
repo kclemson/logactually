@@ -376,6 +376,10 @@ const Trends = () => {
         rawDate: date, // Keep original date for navigation
         date: format(new Date(`${date}T12:00:00`), "MMM d"),
         ...totals,
+        // Calorie values for each macro (for stacked chart)
+        proteinCals,
+        carbsCals,
+        fatCals,
         proteinPct,
         carbsPct,
         fatPct,
@@ -552,6 +556,63 @@ const Trends = () => {
                 </CardContent>
               </Card>
             </div>
+
+            {/* NEW: Combined Calories + Macros Chart (Experimental) */}
+            <Card className="border-0 shadow-none">
+              <CardHeader className="p-2 pb-1">
+                <ChartTitle>Combined Calories + Macros</ChartTitle>
+              </CardHeader>
+              <CardContent className="p-2 pt-0">
+                <div className="h-28">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData} margin={{ top: getFoodChartMarginTop(chartData.length), right: 0, left: 0, bottom: 0 }}>
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: 8 }}
+                        stroke="hsl(var(--muted-foreground))"
+                        interval="preserveStartEnd"
+                        tickMargin={2}
+                        height={16}
+                      />
+                      <Tooltip
+                        content={<CompactTooltip formatter={(value, name) => `${name}: ${Math.round(value)} cal`} />}
+                        offset={20}
+                        cursor={{ fill: "hsl(var(--muted)/0.3)" }}
+                      />
+                      {/* Stacked bars - first rendered = bottom */}
+                      <Bar 
+                        dataKey="fatCals" 
+                        name="Fat" 
+                        stackId="macroCals" 
+                        fill={CHART_COLORS.fat}
+                        onClick={(data) => navigate(`/?date=${data.rawDate}`)}
+                        className="cursor-pointer"
+                      />
+                      <Bar 
+                        dataKey="carbsCals" 
+                        name="Carbs" 
+                        stackId="macroCals" 
+                        fill={CHART_COLORS.carbs}
+                        onClick={(data) => navigate(`/?date=${data.rawDate}`)}
+                        className="cursor-pointer"
+                      />
+                      <Bar
+                        dataKey="proteinCals"
+                        name="Protein"
+                        stackId="macroCals"
+                        fill={CHART_COLORS.protein}
+                        radius={[2, 2, 0, 0]}
+                        onClick={(data) => navigate(`/?date=${data.rawDate}`)}
+                        className="cursor-pointer"
+                      >
+                        {/* Total calories label above the stack - uses existing showLabel threshold logic */}
+                        <LabelList dataKey="calories" content={createFoodLabelRenderer(chartData, CHART_COLORS.calories, getFoodLabelOffsetPx(chartData.length))} />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Row 2: Protein + Carbs + Fat */}
             <div className="grid grid-cols-3 gap-3">
