@@ -52,6 +52,7 @@ export function FoodEntryCard({ entry, onDelete }: FoodEntryCardProps) {
               size="icon"
               onClick={handleDelete}
               className="h-8 w-8 text-muted-foreground hover:text-destructive"
+              aria-label="Delete entry"
             >
               <Trash2 className="h-4 w-4" />
             </Button>

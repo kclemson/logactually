@@ -95,6 +95,7 @@ export function SavedRoutinesPopover({ onSelectRoutine, onClose, onCreateNew }: 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search routines..."
+              aria-label="Search saved routines"
               className="pl-8 h-8"
             />
           </div>

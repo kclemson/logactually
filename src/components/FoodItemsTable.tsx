@@ -314,6 +314,7 @@ export function FoodItemsTable({
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                aria-label="Delete all entries"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
@@ -418,6 +419,7 @@ export function FoodItemsTable({
                     {isLastInEntry ? (
                       <button
                         onClick={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
+                        aria-label={isCurrentExpanded ? "Collapse entry" : "Expand entry"}
                         className={cn(
                           "absolute inset-0 w-[44px] -left-3 flex items-center justify-center text-muted-foreground/60 hover:text-muted-foreground transition-transform text-xl",
                           isCurrentExpanded && "rotate-90"
@@ -465,6 +467,7 @@ export function FoodItemsTable({
                     {isLastInEntry ? (
                       <button
                         onClick={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
+                        aria-label={isCurrentExpanded ? "Collapse entry" : "Expand entry"}
                         className={cn(
                           "absolute inset-0 w-[44px] -left-3 flex items-center justify-center text-muted-foreground/60 hover:text-muted-foreground transition-transform text-xl",
                           isCurrentExpanded && "rotate-90"
@@ -566,6 +569,7 @@ export function FoodItemsTable({
                 size="icon"
                 onClick={() => onRemoveItem?.(index)}
                 className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                aria-label="Delete item"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
@@ -580,6 +584,7 @@ export function FoodItemsTable({
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                      aria-label="Delete entry"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>

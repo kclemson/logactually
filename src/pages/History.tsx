@@ -139,7 +139,7 @@ const History = () => {
     <div className="space-y-4">
       {/* Month Navigation */}
       <div className="flex items-center justify-center gap-1">
-        <Button variant="ghost" size="icon" onClick={goToPreviousMonth}>
+        <Button variant="ghost" size="icon" onClick={goToPreviousMonth} aria-label="Previous month">
           <ChevronLeft className="h-5 w-5" />
         </Button>
         <h2 className="text-title min-w-[160px] text-center">
@@ -150,6 +150,7 @@ const History = () => {
           size="icon" 
           onClick={goToNextMonth}
           disabled={isSameMonth(currentMonth, new Date())}
+          aria-label="Next month"
         >
           <ChevronRight className="h-5 w-5" />
         </Button>
