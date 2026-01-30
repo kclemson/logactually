@@ -92,9 +92,7 @@ export function useFoodEntries(date?: string) {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['food-entries'] });
-    },
+    // Caller handles invalidation to enable awaiting
     onError: (error) => {
       console.error('Failed to save entry:', error.message);
     },

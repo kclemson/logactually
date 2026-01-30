@@ -1,5 +1,6 @@
-import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams, Navigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { format, addDays, subDays, isToday, parseISO, isFuture, startOfMonth } from 'date-fns';
 import { useWeightDatesWithData } from '@/hooks/useDatesWithData';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -64,13 +65,11 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
     exerciseSets: WeightSet[];
   } | null>(null);
   
-  // Track pending entry ID to extend loading state until rows are visible
-  const [pendingEntryId, setPendingEntryId] = useState<string | null>(null);
-  
   const dateStr = initialDate;
   const selectedDate = parseISO(initialDate);
   const isTodaySelected = isToday(selectedDate);
   
+  const queryClient = useQueryClient();
   const { weightSets, isFetching, createEntry, updateSet, deleteSet, deleteEntry, deleteAllByDate } = useWeightEntries(dateStr);
   const { data: datesWithWeights = [] } = useWeightDatesWithData(calendarMonth);
   const { analyzeWeights, isAnalyzing, error: analyzeError } = useAnalyzeWeights();
@@ -188,18 +187,6 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
     removeItem,
   } = useEditableItems<WeightSet>(allItems, WEIGHT_EDITABLE_FIELDS);
 
-  // Check if pending entry is now visible in the entries list
-  const pendingEntryVisible = pendingEntryId 
-    ? weightSets.some(s => s.entryId === pendingEntryId)
-    : false;
-  
-  // When pending entry becomes visible, trigger highlight and clear loading
-  useEffect(() => {
-    if (pendingEntryVisible && pendingEntryId) {
-      markEntryAsNew(pendingEntryId);
-      setPendingEntryId(null);
-    }
-  }, [pendingEntryVisible, pendingEntryId, markEntryAsNew]);
 
   // Find which entry an item belongs to based on its index
   const findEntryForIndex = useCallback((index: number): { entryId: string; localIndex: number } | null => {
@@ -215,7 +202,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   }, [entryBoundaries]);
 
   // Helper to create and save entry from exercises
-  const createEntryFromExercises = useCallback((
+  const createEntryFromExercises = useCallback(async (
     exercises: Omit<WeightSet, 'id' | 'uid' | 'entryId' | 'editedFields'>[],
     rawInput: string | null,
     sourceRoutineId?: string | null
@@ -226,26 +213,24 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
       entryId,
     }));
     
-    setPendingEntryId(entryId);
-    
-    createEntry.mutate(
-      {
+    try {
+      await createEntry.mutateAsync({
         entry_id: entryId,
         logged_date: dateStr,
         raw_input: rawInput,
         source_routine_id: sourceRoutineId,
         weight_sets: setsWithEntryId,
-      },
-      {
-        onSuccess: () => {
-          weightInputRef.current?.clear();
-        },
-        onError: () => {
-          setPendingEntryId(null);
-        },
-      }
-    );
-  }, [createEntry, dateStr]);
+      });
+      
+      // Wait for cache to update so entry is in DOM
+      await queryClient.invalidateQueries({ queryKey: ['weight-sets', dateStr] });
+      
+      markEntryAsNew(entryId);
+      weightInputRef.current?.clear();
+    } catch {
+      // Error already logged by mutation's onError
+    }
+  }, [createEntry, dateStr, queryClient, markEntryAsNew]);
 
   const handleSubmit = async (text: string) => {
     const result = await analyzeWeights(text);
@@ -336,7 +321,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
           mode="weights"
           ref={weightInputRef}
           onSubmit={handleSubmit}
-          isLoading={isAnalyzing || createEntry.isPending || (isFetching && !!pendingEntryId)}
+          isLoading={isAnalyzing || createEntry.isPending}
           onLogSavedRoutine={handleLogSavedRoutine}
           onCreateNewRoutine={() => setCreateRoutineDialogOpen(true)}
           weightUnit={settings.weightUnit}

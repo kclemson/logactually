@@ -1,5 +1,6 @@
-import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { format, addDays, subDays, isToday, parseISO, isFuture, startOfMonth } from 'date-fns';
 import { useFoodDatesWithData } from '@/hooks/useDatesWithData';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
@@ -58,14 +59,12 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     items: FoodItem[];
   } | null>(null);
   
-  // Track pending entry ID to extend loading state until rows are visible
-  const [pendingEntryId, setPendingEntryId] = useState<string | null>(null);
-  
   // Date is stable for this component instance - derived from props, no state needed
   const dateStr = initialDate;
   const selectedDate = parseISO(initialDate);
   const isTodaySelected = isToday(selectedDate);
   
+  const queryClient = useQueryClient();
   const { entries, isFetching, createEntry, updateEntry, deleteEntry, deleteAllByDate } = useFoodEntries(dateStr);
   const { data: datesWithFood = [] } = useFoodDatesWithData(calendarMonth);
   const { analyzeFood, isAnalyzing, error: analyzeError } = useAnalyzeFood();
@@ -153,18 +152,6 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   // Calculate display totals based on current edit state
   const displayTotals = calculateTotals(displayItems);
   
-  // Check if pending entry is now visible in the entries list
-  const pendingEntryVisible = pendingEntryId 
-    ? entries.some(e => e.id === pendingEntryId)
-    : false;
-  
-  // When pending entry becomes visible, trigger highlight and clear loading
-  useEffect(() => {
-    if (pendingEntryVisible && pendingEntryId) {
-      markEntryAsNew(pendingEntryId);
-      setPendingEntryId(null);
-    }
-  }, [pendingEntryVisible, pendingEntryId, markEntryAsNew]);
   // Build map of entryId -> raw_input for inline expansion
   const entryRawInputs = useMemo(() => {
     const map = new Map<string, string>();
@@ -208,8 +195,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   };
 
   // Helper to create and save entry from food items
-  const createEntryFromItems = useCallback((items: FoodItem[], rawInput: string | null, sourceMealId?: string) => {
-    // Generate entry ID and UIDs upfront
+  const createEntryFromItems = useCallback(async (items: FoodItem[], rawInput: string | null, sourceMealId?: string) => {
     const entryId = crypto.randomUUID();
     const itemsWithUids = items.map(item => ({
       ...item,
@@ -217,12 +203,10 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       entryId,
     }));
     
-    // Track that we're waiting for this entry to appear
-    setPendingEntryId(entryId);
-    
     const totals = calculateTotals(itemsWithUids);
-    createEntry.mutate(
-      {
+    
+    try {
+      await createEntry.mutateAsync({
         id: entryId,
         eaten_date: dateStr,
         raw_input: rawInput,
@@ -232,17 +216,17 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
         total_carbs: Math.round(totals.carbs * 10) / 10,
         total_fat: Math.round(totals.fat * 10) / 10,
         source_meal_id: sourceMealId ?? null,
-      },
-      {
-        onSuccess: () => {
-          foodInputRef.current?.clear();
-        },
-        onError: () => {
-          setPendingEntryId(null);
-        },
-      }
-    );
-  }, [createEntry, dateStr]);
+      });
+      
+      // Wait for cache to update so entry is in DOM
+      await queryClient.invalidateQueries({ queryKey: ['food-entries', dateStr] });
+      
+      markEntryAsNew(entryId);
+      foodInputRef.current?.clear();
+    } catch {
+      // Error already logged by mutation's onError
+    }
+  }, [createEntry, dateStr, queryClient, markEntryAsNew]);
 
   const handleSubmit = async (text: string) => {
     const result = await analyzeFood(text);
@@ -304,7 +288,6 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
 
   // Handle direct scan results (when barcode lookup succeeds)
   const handleScanResult = async (foodItem: Omit<FoodItem, 'uid' | 'entryId'>, originalInput: string) => {
-    // Generate entry ID and UID upfront
     const entryId = crypto.randomUUID();
     const itemWithUid = {
       ...foodItem,
@@ -312,12 +295,10 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       entryId,
     };
     
-    // Track that we're waiting for this entry
-    setPendingEntryId(entryId);
-    
     const totals = calculateTotals([itemWithUid]);
-    createEntry.mutate(
-      {
+    
+    try {
+      await createEntry.mutateAsync({
         id: entryId,
         eaten_date: dateStr,
         raw_input: originalInput,
@@ -326,16 +307,15 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
         total_protein: Math.round(totals.protein * 10) / 10,
         total_carbs: Math.round(totals.carbs * 10) / 10,
         total_fat: Math.round(totals.fat * 10) / 10,
-      },
-      {
-        onSuccess: () => {
-          // Input already cleared by barcode scanner
-        },
-        onError: () => {
-          setPendingEntryId(null);
-        },
-      }
-    );
+      });
+      
+      await queryClient.invalidateQueries({ queryKey: ['food-entries', dateStr] });
+      
+      markEntryAsNew(entryId);
+      // Input already cleared by barcode scanner
+    } catch {
+      // Error already logged by mutation's onError
+    }
   };
 
   // Handle logging a saved meal from popover
@@ -494,7 +474,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
           onScanResult={handleScanResult}
           onLogSavedMeal={handleLogSavedMeal}
           onCreateNewMeal={() => setCreateMealDialogOpen(true)}
-          isLoading={isAnalyzing || createEntry.isPending || (isFetching && !!pendingEntryId)}
+          isLoading={isAnalyzing || createEntry.isPending}
         />
         {analyzeError && (
           <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive mt-3">
