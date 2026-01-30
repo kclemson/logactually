@@ -174,7 +174,18 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     return map;
   }, [entries]);
 
-  // Build map of entryId -> meal name for entries from saved meals
+  // Build set of entry IDs that came from saved meals (regardless of whether meal still exists)
+  const entrySourceMealIds = useMemo(() => {
+    const ids = new Set<string>();
+    entries.forEach(entry => {
+      if (entry.source_meal_id) {
+        ids.add(entry.id);
+      }
+    });
+    return ids;
+  }, [entries]);
+
+  // Build map of entryId -> meal name for entries from saved meals (for display only)
   const entryMealNames = useMemo(() => {
     const map = new Map<string, string>();
     entries.forEach(entry => {
@@ -582,6 +593,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
             onToggleEntryExpand={handleToggleEntryExpand}
             onSaveAsMeal={handleSaveAsMeal}
             entryMealNames={entryMealNames}
+            entrySourceMealIds={entrySourceMealIds}
           />
         ) : (
           <p className="text-muted-foreground">

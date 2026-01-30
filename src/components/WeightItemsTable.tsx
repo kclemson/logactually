@@ -57,6 +57,8 @@ interface WeightItemsTableProps {
   weightUnit?: WeightUnit;
   /** Map of entry ID to routine name for entries from saved routines */
   entryRoutineNames?: Map<string, string>;
+  /** Set of entry IDs that originated from a saved routine (even if routine was deleted) */
+  entrySourceRoutineIds?: Set<string>;
 }
 
 export function WeightItemsTable({
@@ -78,6 +80,7 @@ export function WeightItemsTable({
   showInlineLabels = false,
   weightUnit = 'lbs',
   entryRoutineNames,
+  entrySourceRoutineIds,
 }: WeightItemsTableProps) {
   const { isReadOnly, triggerOverlay } = useReadOnlyContext();
   
@@ -582,38 +585,51 @@ export function WeightItemsTable({
             </div>
             
             {/* Expanded content section */}
-            {showEntryDividers && isLastInEntry && isCurrentExpanded && currentRawInput && (
-              <div className={cn('grid gap-0.5', gridCols)}>
-                <div className="col-span-full pl-6 py-1 space-y-1">
-                  <p className="text-muted-foreground whitespace-pre-wrap italic">
-                    {currentRawInput}
-                  </p>
-                  {/* Show routine name if from saved routine, otherwise show "Save as routine" */}
-{currentEntryId && entryRoutineNames?.get(currentEntryId) ? (
-                    <p className="text-sm text-muted-foreground italic">
-                      From saved routine:{' '}
-                      <Link 
-                        to="/settings" 
-                        className="text-blue-600 dark:text-blue-400 hover:underline not-italic"
+            {showEntryDividers && isLastInEntry && isCurrentExpanded && (() => {
+              // Check if this entry came from a saved routine (by ID, not name lookup)
+              const isFromSavedRoutine = currentEntryId && entrySourceRoutineIds?.has(currentEntryId);
+              const routineName = currentEntryId && entryRoutineNames?.get(currentEntryId);
+              
+              return (
+                <div className={cn('grid gap-0.5', gridCols)}>
+                  <div className="col-span-full pl-6 py-1 space-y-1">
+                    {/* Only show raw input if NOT from a saved routine */}
+                    {!isFromSavedRoutine && currentRawInput && (
+                      <p className="text-muted-foreground whitespace-pre-wrap italic">
+                        {currentRawInput}
+                      </p>
+                    )}
+                    {/* Show routine info if from saved routine, otherwise show "Save as routine" */}
+                    {isFromSavedRoutine ? (
+                      <p className="text-sm text-muted-foreground italic">
+                        From saved routine:{' '}
+                        {routineName ? (
+                          <Link 
+                            to="/settings" 
+                            className="text-blue-600 dark:text-blue-400 hover:underline not-italic"
+                          >
+                            {routineName}
+                          </Link>
+                        ) : (
+                          <span className="not-italic">(deleted)</span>
+                        )}
+                      </p>
+                    ) : onSaveAsRoutine && (
+                      <button
+                        onClick={() => {
+                          // Gather all exercises in this entry
+                          const entryExercises = items.filter(i => i.entryId === currentEntryId);
+                          onSaveAsRoutine(currentEntryId!, currentRawInput, entryExercises);
+                        }}
+                        className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
                       >
-                        {entryRoutineNames.get(currentEntryId)}
-                      </Link>
-                    </p>
-                  ) : onSaveAsRoutine && (
-                    <button
-                      onClick={() => {
-                        // Gather all exercises in this entry
-                        const entryExercises = items.filter(i => i.entryId === currentEntryId);
-                        onSaveAsRoutine(currentEntryId!, currentRawInput, entryExercises);
-                      }}
-                      className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-                    >
-                      Save as routine
-                    </button>
-                  )}
+                        Save as routine
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
         );
       })}
