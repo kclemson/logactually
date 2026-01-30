@@ -65,7 +65,8 @@ const PRIVACY_CONTENT = {
       { label: "Infrastructure", description: "runs on SOC2 Type II compliant hosting" },
       {
         label: "localStorage",
-        description: "is used only for UI preferences like theme and collapsed sections — no tracking or analytics cookies",
+        description:
+          "is used only for UI preferences like theme and collapsed sections — no tracking or analytics cookies",
       },
     ],
     links: [
@@ -76,7 +77,8 @@ const PRIVACY_CONTENT = {
   howBuilt: {
     title: "How This Was Built",
     text: "This app was built using AI-assisted development tools. The security mechanisms described above — password hashing, data isolation, session management — are handled at the infrastructure level, not custom code. If I ever need to debug something that requires looking at raw data logged, I use my own data (since I use this app daily).",
-    socialText: "I recently retired after >25 years in the tech industry — but once a product-maker, always a product-maker. I've done my best to make sure this app is built with care. You can find me on social media here:",
+    socialText:
+      "I recently retired after >25 years in the tech industry — but once a product-maker, always a product-maker. I've done my best to make sure this app is built with care. You can find me on social media here:",
     socialLinks: [
       { name: "Bluesky", url: "https://bsky.app/profile/kclemson.bsky.social" },
       { name: "Mastodon", url: "https://mastodon.social/@kclemson" },
@@ -91,7 +93,8 @@ const PRIVACY_CONTENT = {
       },
       {
         label: "AI-generated data",
-        description: "Nutritional estimates and exercise parsing are AI-generated and may contain errors. Always verify important health data.",
+        description:
+          "Nutritional estimates and exercise parsing are AI-generated and may contain errors. Always verify important health data.",
       },
       {
         label: "Service availability",
@@ -99,7 +102,8 @@ const PRIVACY_CONTENT = {
       },
       {
         label: "Account termination",
-        description: "Accounts may be removed for abuse or at the operator's discretion. You can delete your own account anytime.",
+        description:
+          "Accounts may be removed for abuse or at the operator's discretion. You can delete your own account anytime.",
       },
       {
         label: "Liability",
@@ -108,7 +112,7 @@ const PRIVACY_CONTENT = {
     ],
   },
   footer: {
-    lastUpdated: "Last updated: January 30, 2026",
+    lastUpdated: "Last updated: January 29, 2026",
   },
 };
 
@@ -195,7 +199,12 @@ export default function Privacy() {
           </CollapsibleSection>
 
           {/* Your Data, Your Control */}
-          <CollapsibleSection title={PRIVACY_CONTENT.control.title} icon={Shield} defaultOpen storageKey="privacy-control">
+          <CollapsibleSection
+            title={PRIVACY_CONTENT.control.title}
+            icon={Shield}
+            defaultOpen
+            storageKey="privacy-control"
+          >
             <ul className="text-sm text-muted-foreground">
               {PRIVACY_CONTENT.control.items.map((item, index) => (
                 <li key={index} className="flex gap-2">
@@ -215,7 +224,12 @@ export default function Privacy() {
           </CollapsibleSection>
 
           {/* For the Technically Curious */}
-          <CollapsibleSection title={PRIVACY_CONTENT.technical.title} icon={Code} defaultOpen storageKey="privacy-technical">
+          <CollapsibleSection
+            title={PRIVACY_CONTENT.technical.title}
+            icon={Code}
+            defaultOpen
+            storageKey="privacy-technical"
+          >
             <p className="text-sm text-muted-foreground mb-2">{PRIVACY_CONTENT.technical.intro}</p>
             <ul className="text-sm text-muted-foreground">
               {PRIVACY_CONTENT.technical.items.map((item, index) => (
@@ -246,7 +260,12 @@ export default function Privacy() {
           </CollapsibleSection>
 
           {/* How This Was Built */}
-          <CollapsibleSection title={PRIVACY_CONTENT.howBuilt.title} icon={Wrench} defaultOpen storageKey="privacy-how-built">
+          <CollapsibleSection
+            title={PRIVACY_CONTENT.howBuilt.title}
+            icon={Wrench}
+            defaultOpen
+            storageKey="privacy-how-built"
+          >
             <p className="text-sm text-muted-foreground">{PRIVACY_CONTENT.howBuilt.text}</p>
             <p className="text-sm text-muted-foreground mt-3">{PRIVACY_CONTENT.howBuilt.socialText}</p>
             <div className="flex justify-center gap-4 mt-2">
@@ -267,10 +286,15 @@ export default function Privacy() {
           </CollapsibleSection>
 
           {/* Terms of Use */}
-          <CollapsibleSection title={PRIVACY_CONTENT.terms.title} icon={ScrollText} defaultOpen storageKey="privacy-terms">
+          <CollapsibleSection
+            title={PRIVACY_CONTENT.terms.title}
+            icon={ScrollText}
+            defaultOpen
+            storageKey="privacy-terms"
+          >
             <ul className="text-sm text-muted-foreground">
               {PRIVACY_CONTENT.terms.items.map((item, index) => (
-        <li key={index} className="flex gap-2">
+                <li key={index} className="flex gap-2">
                   <span>•</span>
                   <span>
                     {item.label}: {item.description}
