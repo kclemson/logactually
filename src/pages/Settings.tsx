@@ -1,5 +1,5 @@
 import { useTheme } from "next-themes";
-import { Moon, Sun, Monitor, Star, Download, Plus, Dumbbell, User, Settings2 } from "lucide-react";
+import { Moon, Sun, Monitor, Star, Download, Plus, Dumbbell, User, Settings2, Info } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { WeightUnit } from "@/lib/weight-units";
 import { cn } from "@/lib/utils";
@@ -115,22 +115,14 @@ export default function Settings() {
               <p className="text-xs text-muted-foreground">Email</p>
               <p className="text-sm">{user?.email}</p>
             </div>
-            <div className="flex items-center gap-3">
-              <Link
-                to="/privacy"
-                className="text-sm text-muted-foreground hover:text-foreground hover:underline"
+            {!isDemoUser && (
+              <button
+                onClick={() => setDeleteAccountOpen(true)}
+                className="text-sm text-muted-foreground hover:text-destructive hover:underline"
               >
-                Privacy & Security
-              </Link>
-              {!isDemoUser && (
-                <button
-                  onClick={() => setDeleteAccountOpen(true)}
-                  className="text-sm text-muted-foreground hover:text-destructive hover:underline"
-                >
-                  Delete account
-                </button>
-              )}
-            </div>
+                Delete account
+              </button>
+            )}
           </div>
           <div className="flex gap-2">
             {!isReadOnly && (
@@ -287,6 +279,18 @@ export default function Settings() {
               Create an account to export your data
             </p>
           )}
+        </div>
+      </CollapsibleSection>
+
+      {/* About section */}
+      <CollapsibleSection title="About" icon={Info} defaultOpen={true}>
+        <div className="space-y-2">
+          <Link
+            to="/privacy"
+            className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+          >
+            Privacy & Security
+          </Link>
         </div>
       </CollapsibleSection>
 
