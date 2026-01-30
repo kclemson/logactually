@@ -306,7 +306,11 @@ const Trends = () => {
 
     // Add showLabel based on interval
     const dataLength = entries.length;
-    const labelInterval = dataLength <= 12 ? 1 : dataLength <= 20 ? 2 : 3;
+    const labelInterval = 
+      dataLength <= 7 ? 1 :
+      dataLength <= 14 ? 2 :
+      dataLength <= 21 ? 3 :
+      dataLength <= 35 ? 4 : 5;
 
     return entries.map((d, index) => ({
       ...d,
@@ -357,7 +361,11 @@ const Trends = () => {
 
     // Add showLabel based on interval (same logic as weight charts)
     const dataLength = data.length;
-    const labelInterval = dataLength <= 12 ? 1 : dataLength <= 20 ? 2 : 3;
+    const labelInterval = 
+      dataLength <= 7 ? 1 :
+      dataLength <= 14 ? 2 :
+      dataLength <= 21 ? 3 :
+      dataLength <= 35 ? 4 : 5;
 
     return data.map((d, index) => ({
       ...d,
