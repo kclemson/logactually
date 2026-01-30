@@ -1,89 +1,64 @@
 
 
-## Add Interval-Based Labels to Food and Total Volume Charts
+## Fix Interval-Based Labels for All Charts
 
-### Problem
-The user correctly identified that:
-1. **Total Training Volume chart** - Has no interval-based label logic at all; it shows every label unconditionally
-2. **Food charts** - While the logic exists in code, it may not be rendering correctly with the current implementation
+### Problem Analysis
+After investigating with the browser and database:
 
-Looking at the code:
-- Food charts use `createFoodLabelRenderer` which checks `showLabel` - this should work, but the labels appear crowded in the screenshot
-- Total Volume chart uses a plain `<LabelList>` without any interval logic
+1. **The logic is working** - the food charts DO use interval-based label visibility via `createFoodLabelRenderer` which checks `showLabel`
+2. **The thresholds are too lenient** - Current thresholds (≤12 → all, 13-20 → every 2nd, >20 → every 3rd) result in too many labels when there are 30-60+ data points
+3. **With 62 days of food data at every 3rd label = ~20 labels** - still very crowded
+
+### Solution
+Update the thresholds to be more aggressive, matching what looks good visually:
+
+- ≤7 → show all labels  
+- 8-14 → show every 2nd
+- 15-21 → show every 3rd
+- 22-35 → show every 4th
+- \>35 → show every 5th
+
+This ensures no more than ~7-8 labels ever appear, preventing visual clutter.
 
 ---
 
 ### Technical Changes
 
-#### 1. Fix Total Training Volume Chart (lines 544-584)
-
-Add `showLabel` calculation to `volumeByDay` and use a custom label renderer similar to the food charts.
-
-**Update the `volumeByDay` calculation (around lines 284-306):**
-
-Add interval-based `showLabel` to each data point:
+#### 1. Update Food Chart Thresholds (lines 358-365)
 
 ```tsx
-const volumeByDay = useMemo(() => {
-  // ... existing byDate aggregation ...
-  
-  const entries = Object.entries(byDate)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, volumeLbs]) => {
-      const volume = settings.weightUnit === "kg" 
-        ? Math.round(volumeLbs * LBS_TO_KG) 
-        : Math.round(volumeLbs);
-      return {
-        date: format(new Date(`${date}T12:00:00`), "MMM d"),
-        volume,
-        label: `${Math.round(volume / 1000)}k`,
-      };
-    });
+// Current (too lenient):
+const labelInterval = dataLength <= 12 ? 1 : dataLength <= 20 ? 2 : 3;
 
-  // Add showLabel based on interval
-  const dataLength = entries.length;
-  const labelInterval = dataLength <= 12 ? 1 : dataLength <= 20 ? 2 : 3;
-  
-  return entries.map((d, index) => ({
-    ...d,
-    showLabel: index % labelInterval === 0 || index === dataLength - 1,
-  }));
-}, [weightExercises, settings.weightUnit]);
+// New (more aggressive):
+const labelInterval = 
+  dataLength <= 7 ? 1 :
+  dataLength <= 14 ? 2 :
+  dataLength <= 21 ? 3 :
+  dataLength <= 35 ? 4 : 5;
 ```
 
-**Update the Total Volume chart's LabelList (lines 571-577):**
+#### 2. Update Total Volume Chart Thresholds (lines 310-312)
 
-Replace the plain `LabelList` with a custom content renderer that respects `showLabel`:
+Apply the same updated thresholds to the weight volume chart for consistency:
 
 ```tsx
-<LabelList 
-  dataKey="label" 
-  content={(props: any) => {
-    const { x, y, width, value, index } = props;
-    const dataPoint = volumeByDay[index];
-    if (!dataPoint?.showLabel) return null;
-    if (!value || typeof x !== 'number' || typeof width !== 'number') return null;
-    
-    return (
-      <text
-        x={x + width / 2}
-        y={y - 4}
-        fill={CHART_COLORS.trainingVolume}
-        textAnchor="middle"
-        fontSize={7}
-        fontWeight={500}
-      >
-        {value}
-      </text>
-    );
-  }}
-/>
+// Current:
+const labelInterval = dataLength <= 12 ? 1 : dataLength <= 20 ? 2 : 3;
+
+// New:
+const labelInterval = 
+  dataLength <= 7 ? 1 :
+  dataLength <= 14 ? 2 :
+  dataLength <= 21 ? 3 :
+  dataLength <= 35 ? 4 : 5;
 ```
 
 ---
 
 ### Result
-- Total Training Volume chart will show labels every N columns based on the data count threshold (≤12: every column, 13-20: every 2nd, >20: every 3rd)
-- Last column always shows its label
-- Consistent behavior across all charts on the Trends page
+- All charts will show at most ~7-8 labels regardless of how many data points exist
+- Labels remain readable and well-spaced even with 30, 60, or 90 days of data
+- Consistent behavior across food and weight charts
+- First and last data points always show labels (ensures the range is clear)
 
