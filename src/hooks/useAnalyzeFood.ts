@@ -9,7 +9,11 @@ interface AnalyzeResult {
   total_carbs: number;
   total_fiber: number;
   total_net_carbs: number;
+  total_sugar: number;
   total_fat: number;
+  total_saturated_fat: number;
+  total_sodium: number;
+  total_cholesterol: number;
 }
 
 export function useAnalyzeFood() {

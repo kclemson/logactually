@@ -19,7 +19,11 @@ export function FoodEntryCard({ entry, onDelete }: FoodEntryCardProps) {
     protein: Number(entry.total_protein),
     carbs: Number(entry.total_carbs),
     fiber: entry.food_items.reduce((sum, item) => sum + (item.fiber || 0), 0),
+    sugar: entry.food_items.reduce((sum, item) => sum + (item.sugar || 0), 0),
     fat: Number(entry.total_fat),
+    saturated_fat: entry.food_items.reduce((sum, item) => sum + (item.saturated_fat || 0), 0),
+    sodium: entry.food_items.reduce((sum, item) => sum + (item.sodium || 0), 0),
+    cholesterol: entry.food_items.reduce((sum, item) => sum + (item.cholesterol || 0), 0),
   };
 
   const handleDelete = (e: React.MouseEvent) => {

@@ -10,7 +10,11 @@ export interface FoodItem {
   carbs: number;
   fiber?: number;  // Dietary fiber (optional for backwards compat)
   net_carbs?: number;  // Calculated: carbs - fiber (optional for backwards compat)
+  sugar?: number;  // Grams of sugar (optional for backwards compat)
   fat: number;
+  saturated_fat?: number;  // Grams of saturated fat
+  sodium?: number;  // Milligrams of sodium
+  cholesterol?: number;  // Milligrams of cholesterol
   editedFields?: EditableField[];
   confidence?: 'high' | 'medium' | 'low';  // AI confidence level (experimental prompt only)
   source_note?: string;  // Optional note about data source/estimation
@@ -36,7 +40,11 @@ export interface DailyTotals {
   protein: number;
   carbs: number;
   fiber: number;
+  sugar: number;
   fat: number;
+  saturated_fat: number;
+  sodium: number;
+  cholesterol: number;
 }
 
 export interface ScaledMacros {
@@ -83,9 +91,13 @@ export function calculateTotals(items: FoodItem[]): DailyTotals {
       protein: acc.protein + (item.protein || 0),
       carbs: acc.carbs + (item.carbs || 0),
       fiber: acc.fiber + (item.fiber || 0),
+      sugar: acc.sugar + (item.sugar || 0),
       fat: acc.fat + (item.fat || 0),
+      saturated_fat: acc.saturated_fat + (item.saturated_fat || 0),
+      sodium: acc.sodium + (item.sodium || 0),
+      cholesterol: acc.cholesterol + (item.cholesterol || 0),
     }),
-    { calories: 0, protein: 0, carbs: 0, fiber: 0, fat: 0 }
+    { calories: 0, protein: 0, carbs: 0, fiber: 0, sugar: 0, fat: 0, saturated_fat: 0, sodium: 0, cholesterol: 0 }
   );
 }
 

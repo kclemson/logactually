@@ -16,7 +16,11 @@ interface ParsedFoodItem {
   protein: number;
   carbs: number;
   fiber: number;
+  sugar: number;
   fat: number;
+  saturated_fat: number;
+  sodium: number;
+  cholesterol: number;
   confidence?: 'high' | 'medium' | 'low';
   source_note?: string;
 }
@@ -24,12 +28,17 @@ interface ParsedFoodItem {
 // Output interface sent to client (merged description)
 interface FoodItem {
   description: string;
+  portion?: string;
   calories: number;
   protein: number;
   carbs: number;
   fiber: number;
   net_carbs: number;
+  sugar: number;
   fat: number;
+  saturated_fat: number;
+  sodium: number;
+  cholesterol: number;
   confidence?: 'high' | 'medium' | 'low';
   source_note?: string;
 }
@@ -41,7 +50,11 @@ interface AnalyzeResponse {
   total_carbs: number;
   total_fiber: number;
   total_net_carbs: number;
+  total_sugar: number;
   total_fat: number;
+  total_saturated_fat: number;
+  total_sodium: number;
+  total_cholesterol: number;
 }
 
 
@@ -174,7 +187,11 @@ serve(async (req) => {
         carbs: carbs,
         fiber: fiber,
         net_carbs: Math.max(0, carbs - fiber),
+        sugar: item.sugar || 0,
         fat: item.fat || 0,
+        saturated_fat: item.saturated_fat || 0,
+        sodium: item.sodium || 0,
+        cholesterol: item.cholesterol || 0,
         confidence: item.confidence,
         source_note: item.source_note,
       };
@@ -187,9 +204,13 @@ serve(async (req) => {
         protein: acc.protein + item.protein,
         carbs: acc.carbs + item.carbs,
         fiber: acc.fiber + item.fiber,
+        sugar: acc.sugar + item.sugar,
         fat: acc.fat + item.fat,
+        saturated_fat: acc.saturated_fat + item.saturated_fat,
+        sodium: acc.sodium + item.sodium,
+        cholesterol: acc.cholesterol + item.cholesterol,
       }),
-      { calories: 0, protein: 0, carbs: 0, fiber: 0, fat: 0 }
+      { calories: 0, protein: 0, carbs: 0, fiber: 0, sugar: 0, fat: 0, saturated_fat: 0, sodium: 0, cholesterol: 0 }
     );
 
     const result: AnalyzeResponse = {
@@ -199,7 +220,11 @@ serve(async (req) => {
       total_carbs: Math.round(totals.carbs),
       total_fiber: Math.round(totals.fiber),
       total_net_carbs: Math.round(Math.max(0, totals.carbs - totals.fiber)),
+      total_sugar: Math.round(totals.sugar),
       total_fat: Math.round(totals.fat),
+      total_saturated_fat: Math.round(totals.saturated_fat),
+      total_sodium: Math.round(totals.sodium),
+      total_cholesterol: Math.round(totals.cholesterol),
     };
 
     console.log('Analysis result:', result);
