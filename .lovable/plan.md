@@ -1,58 +1,57 @@
 
 
-## Apply Full-Width Label Thresholds to Total Volume Chart
+## Fix Theme Reverting on Settings Page Interactions
 
-The Total Volume chart is also full-width but currently uses the regular label thresholds. This needs to be updated to use the more generous full-width thresholds for consistency.
+### Problem
 
-### Current State (lines 339-350)
+When you change the theme on the Settings page, then interact with other elements (like collapsing sections), the theme unexpectedly reverts to its previous value.
 
-The `volumeByDay` calculation only computes `showLabel` using the regular interval:
-- ≤7 days: show all
-- 8-14 days: every 2nd
-- 15-21 days: every 3rd
-- 22-35 days: every 4th
-- >35 days: every 5th
+**Root cause**: The `updateSettings` function in `useUserSettings.ts` uses a stale closure of `settings` when creating the new settings object. If a re-render happens during the async database update, the callback can capture outdated state.
 
-### Changes Required
+### Solution
 
-**File: `src/pages/Trends.tsx`**
+Use a functional state update pattern to ensure we always work with the latest state, not a stale closure:
 
-#### 1. Update `volumeByDay` calculation (lines 339-350)
-
-Add `showLabelFullWidth` with the more generous thresholds:
+**File: `src/hooks/useUserSettings.ts`**
 
 ```tsx
-// Add showLabel based on interval
-const dataLength = entries.length;
-const labelInterval = 
-  dataLength <= 7 ? 1 :
-  dataLength <= 14 ? 2 :
-  dataLength <= 21 ? 3 :
-  dataLength <= 35 ? 4 : 5;
+const updateSettings = useCallback(
+  async (updates: Partial<UserSettings>) => {
+    if (!user) return;
 
-// Full-width charts have ~2x horizontal space
-const labelIntervalFullWidth = 
-  dataLength <= 14 ? 1 :
-  dataLength <= 28 ? 2 :
-  dataLength <= 42 ? 3 :
-  dataLength <= 70 ? 4 : 5;
+    // Store previous settings for potential rollback
+    let previousSettings: UserSettings;
+    
+    // Use functional update to ensure we get latest state
+    setSettings(current => {
+      previousSettings = current;
+      return { ...current, ...updates };
+    });
 
-return entries.map((d, index) => ({
-  ...d,
-  showLabel: index % labelInterval === 0 || index === dataLength - 1,
-  showLabelFullWidth: index % labelIntervalFullWidth === 0 || index === dataLength - 1,
-}));
+    const { error } = await supabase
+      .from('profiles')
+      .update({ settings: { ...previousSettings!, ...updates } })
+      .eq('id', user.id);
+
+    if (error) {
+      console.error('Failed to save settings:', error);
+      // Revert on error using the captured previous state
+      setSettings(previousSettings!);
+    }
+  },
+  [user]  // Remove `settings` from dependencies
+);
 ```
 
-#### 2. Update Total Volume chart's LabelList (line 736)
+### Why This Fixes It
 
-Change from `showLabel` to `showLabelFullWidth`:
+1. **Functional state update** (`setSettings(current => ...)`) always receives the latest state value, avoiding stale closures
+2. **Removing `settings` from dependencies** means the callback doesn't get recreated on every settings change, preventing closure staleness
+3. **Capturing `previousSettings`** inside the functional update ensures rollback uses the correct value
 
-```tsx
-if (!dataPoint?.showLabelFullWidth) return null;
-```
+### Changes Summary
 
-### Result
-
-Both full-width charts (Combined Calories + Macros and Total Volume) will now use the same generous label thresholds, showing more labels since they have the horizontal space for it.
+| File | Change |
+|------|--------|
+| `src/hooks/useUserSettings.ts` | Update `updateSettings` to use functional state pattern |
 
