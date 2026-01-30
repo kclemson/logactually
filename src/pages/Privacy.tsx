@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Shield, Database, Bot, Code, Eye, UserCheck, X } from "lucide-react";
+import { CollapsibleSection } from "@/components/CollapsibleSection";
 
 // ============================================
 // EDITABLE CONTENT - Modify strings here
@@ -10,8 +11,7 @@ const PRIVACY_CONTENT = {
   },
   shortVersion: {
     title: "The Short Version",
-    text: "Your data is yours. It's not sold, there are no ads, and no tracking pixels. This is a passion project built by one person, currently free to use.",
-    highlights: ["Your data is yours"],
+    text: "Your data is yours. It's not sold, there are no ads, and no tracking pixels. This is a passion project built by one person (hi! it's me!), currently free to use. I originally built this for myself and find it genuinely useful — thought others might too.",
   },
   collected: {
     title: "What Data Is Collected",
@@ -32,10 +32,17 @@ const PRIVACY_CONTENT = {
       "No selling or sharing data with anyone",
     ],
   },
+  control: {
+    title: "Your Data, Your Control",
+    items: [
+      { text: "Export your data anytime as CSV", link: "Settings → Export" },
+      { text: "Delete your account permanently", link: "Settings → Account" },
+      { text: "Questions or concerns? Drop a note in the Help section" },
+    ],
+  },
   aiProcessing: {
     title: "How AI Processing Works",
     text: "When you log food or exercise, your input is sent to an AI model that parses your freeform text and returns structured data — calories, macros, sets, reps — so you don't have to do the formatting or math yourself. Only the text you enter is sent — no user identifiers, account info, or other context. The AI knows the request came from this app, but nothing more specific than that.",
-    highlights: ["no user identifiers", "nothing more specific"],
   },
   technical: {
     title: "For the Technically Curious",
@@ -50,40 +57,13 @@ const PRIVACY_CONTENT = {
   },
   developerAccess: {
     title: "Developer Access",
-    text: "I have database access for debugging and fixing bugs, but I have no reason to look at your individual data — and I don't. Your logs are only accessed when investigating specific technical issues.",
-    highlights: ["no reason to look"],
-  },
-  control: {
-    title: "Your Data, Your Control",
-    items: [
-      { text: "Export your data anytime as CSV", link: "Settings → Export", highlights: ["Export"] },
-      { text: "Delete your account permanently", link: "Settings → Account", highlights: ["Delete"] },
-      { text: "Questions or concerns? Drop a note in the Help section", highlights: ["Help section"] },
-    ],
+    text: "Technically, I have the ability to see what's logged in the database — but the only reason I'd ever look is to investigate and fix a bug. Even then, I use my own data first (I use this app daily). Honestly, I have zero interest in your food diary. It's yours.",
   },
   footer: {
-    lastUpdated: "Last updated: January 2026",
+    lastUpdated: "Last updated: January 15, 2026",
   },
 };
 // ============================================
-
-function highlightText(text: string, highlights: string[]) {
-  if (!highlights.length) return text;
-
-  const pattern = new RegExp(`(${highlights.map((h) => h.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "gi");
-  const parts = text.split(pattern);
-
-  return parts.map((part, i) => {
-    const isHighlight = highlights.some((h) => h.toLowerCase() === part.toLowerCase());
-    return isHighlight ? (
-      <span key={i} className="text-foreground">
-        {part}
-      </span>
-    ) : (
-      part
-    );
-  });
-}
 
 export default function Privacy() {
   const navigate = useNavigate();
@@ -91,7 +71,7 @@ export default function Privacy() {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-2xl mx-auto px-4 py-8">
-        <div className="space-y-6 relative">
+        <div className="space-y-4 relative">
           {/* Close button */}
           <button
             onClick={() => navigate(-1)}
@@ -107,108 +87,105 @@ export default function Privacy() {
             <h1 className="text-lg font-semibold">{PRIVACY_CONTENT.header.title}</h1>
           </div>
 
-          {/* The Short Version */}
+          {/* The Short Version - always visible */}
           <section className="rounded-lg border bg-muted/30 p-4">
             <h2 className="text-sm font-medium mb-2">{PRIVACY_CONTENT.shortVersion.title}</h2>
             <p className="text-sm text-muted-foreground">
-              {highlightText(PRIVACY_CONTENT.shortVersion.text, PRIVACY_CONTENT.shortVersion.highlights)}
+              {PRIVACY_CONTENT.shortVersion.text}
             </p>
           </section>
 
           {/* What Data Is Collected */}
-          <section>
-            <div className="flex items-center gap-2 mb-3">
-              <Database className="h-4 w-4 text-muted-foreground" />
-              <h2 className="text-sm font-medium">{PRIVACY_CONTENT.collected.title}</h2>
-            </div>
-            <ul className="space-y-2 text-sm text-muted-foreground">
+          <CollapsibleSection
+            title={PRIVACY_CONTENT.collected.title}
+            icon={Database}
+            defaultOpen
+            storageKey="privacy-collected"
+          >
+            <ul className="space-y-1.5 text-sm text-muted-foreground">
               {PRIVACY_CONTENT.collected.items.map((item, index) => (
                 <li key={index} className="flex gap-2">
-                  <span className="text-foreground">•</span>
-                  <span>
-                    <span className="text-foreground">{item.label}</span> — {item.description}
-                  </span>
+                  <span>•</span>
+                  <span>{item.label} — {item.description}</span>
                 </li>
               ))}
             </ul>
-          </section>
+          </CollapsibleSection>
 
           {/* What Data Is Not Collected */}
-          <section>
-            <div className="flex items-center gap-2 mb-3">
-              <Eye className="h-4 w-4 text-muted-foreground" />
-              <h2 className="text-sm font-medium">
-                {PRIVACY_CONTENT.notCollected.title}{" "}
-                <em>{PRIVACY_CONTENT.notCollected.titleEmphasis}</em>{" "}
-                {PRIVACY_CONTENT.notCollected.titleEnd}
-              </h2>
-            </div>
-            <ul className="space-y-2 text-sm text-muted-foreground">
+          <CollapsibleSection
+            title={`${PRIVACY_CONTENT.notCollected.title} ${PRIVACY_CONTENT.notCollected.titleEmphasis} ${PRIVACY_CONTENT.notCollected.titleEnd}`}
+            icon={Eye}
+            defaultOpen
+            storageKey="privacy-not-collected"
+          >
+            <ul className="space-y-1.5 text-sm text-muted-foreground">
               {PRIVACY_CONTENT.notCollected.items.map((item, index) => (
                 <li key={index} className="flex gap-2">
-                  <span className="text-foreground">•</span>
+                  <span>•</span>
                   <span>{item}</span>
                 </li>
               ))}
             </ul>
-          </section>
-
-          {/* How AI Processing Works */}
-          <section>
-            <div className="flex items-center gap-2 mb-3">
-              <Bot className="h-4 w-4 text-muted-foreground" />
-              <h2 className="text-sm font-medium">{PRIVACY_CONTENT.aiProcessing.title}</h2>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {highlightText(PRIVACY_CONTENT.aiProcessing.text, PRIVACY_CONTENT.aiProcessing.highlights)}
-            </p>
-          </section>
-
-          {/* For the Technically Curious */}
-          <section>
-            <div className="flex items-center gap-2 mb-3">
-              <Code className="h-4 w-4 text-muted-foreground" />
-              <h2 className="text-sm font-medium">{PRIVACY_CONTENT.technical.title}</h2>
-            </div>
-            <p className="text-sm text-muted-foreground mb-3">{PRIVACY_CONTENT.technical.intro}</p>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              {PRIVACY_CONTENT.technical.items.map((item, index) => (
-                <li key={index} className="flex gap-2">
-                  <span className="text-foreground">•</span>
-                  <span>
-                    <span className="text-foreground">{item.label}</span> {item.description}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          {/* Developer Access */}
-          <section>
-            <div className="flex items-center gap-2 mb-3">
-              <UserCheck className="h-4 w-4 text-muted-foreground" />
-              <h2 className="text-sm font-medium">{PRIVACY_CONTENT.developerAccess.title}</h2>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {highlightText(PRIVACY_CONTENT.developerAccess.text, PRIVACY_CONTENT.developerAccess.highlights)}
-            </p>
-          </section>
+          </CollapsibleSection>
 
           {/* Your Data, Your Control */}
-          <section>
-            <h2 className="text-sm font-medium mb-3">{PRIVACY_CONTENT.control.title}</h2>
-            <ul className="space-y-2 text-sm text-muted-foreground">
+          <CollapsibleSection
+            title={PRIVACY_CONTENT.control.title}
+            icon={Shield}
+            storageKey="privacy-control"
+          >
+            <ul className="space-y-1.5 text-sm text-muted-foreground">
               {PRIVACY_CONTENT.control.items.map((item, index) => (
                 <li key={index} className="flex gap-2">
-                  <span className="text-foreground">•</span>
+                  <span>•</span>
                   <span>
-                    {highlightText(item.text, item.highlights)}
-                    {item.link && <span className="text-muted-foreground"> ({item.link})</span>}
+                    {item.text}
+                    {item.link && <span> ({item.link})</span>}
                   </span>
                 </li>
               ))}
             </ul>
-          </section>
+          </CollapsibleSection>
+
+          {/* How AI Processing Works */}
+          <CollapsibleSection
+            title={PRIVACY_CONTENT.aiProcessing.title}
+            icon={Bot}
+            storageKey="privacy-ai"
+          >
+            <p className="text-sm text-muted-foreground">
+              {PRIVACY_CONTENT.aiProcessing.text}
+            </p>
+          </CollapsibleSection>
+
+          {/* For the Technically Curious */}
+          <CollapsibleSection
+            title={PRIVACY_CONTENT.technical.title}
+            icon={Code}
+            storageKey="privacy-technical"
+          >
+            <p className="text-sm text-muted-foreground mb-2">{PRIVACY_CONTENT.technical.intro}</p>
+            <ul className="space-y-1.5 text-sm text-muted-foreground">
+              {PRIVACY_CONTENT.technical.items.map((item, index) => (
+                <li key={index} className="flex gap-2">
+                  <span>•</span>
+                  <span>{item.label} {item.description}</span>
+                </li>
+              ))}
+            </ul>
+          </CollapsibleSection>
+
+          {/* Developer Access */}
+          <CollapsibleSection
+            title={PRIVACY_CONTENT.developerAccess.title}
+            icon={UserCheck}
+            storageKey="privacy-developer"
+          >
+            <p className="text-sm text-muted-foreground">
+              {PRIVACY_CONTENT.developerAccess.text}
+            </p>
+          </CollapsibleSection>
 
           {/* Footer */}
           <div className="pt-4 text-center">
