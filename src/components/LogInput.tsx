@@ -1,4 +1,4 @@
-import { useState, useImperativeHandle, forwardRef, useRef, useCallback } from "react";
+import { useState, useImperativeHandle, forwardRef, useRef, useCallback, useEffect } from "react";
 import { Mic, Send, Loader2, ScanBarcode, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -182,9 +182,20 @@ export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput
     }
   }, []);
 
+  // Cleanup on unmount - ensure microphone is released
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+        recognitionRef.current = null;
+      }
+    };
+  }, []);
+
   const toggleListening = useCallback(() => {
     if (isListening) {
-      recognitionRef.current?.stop();
+      recognitionRef.current?.abort();
+      setIsListening(false);  // Don't wait for onend - update immediately
       return;
     }
 
