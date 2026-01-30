@@ -51,21 +51,27 @@ export function useUserSettings() {
     async (updates: Partial<UserSettings>) => {
       if (!user) return;
 
-      const newSettings = { ...settings, ...updates };
-      setSettings(newSettings); // Optimistic update
+      // Store previous settings for potential rollback
+      let previousSettings: UserSettings;
+      
+      // Use functional update to ensure we get latest state (avoids stale closures)
+      setSettings(current => {
+        previousSettings = current;
+        return { ...current, ...updates };
+      });
 
       const { error } = await supabase
         .from('profiles')
-        .update({ settings: newSettings })
+        .update({ settings: { ...previousSettings!, ...updates } })
         .eq('id', user.id);
 
       if (error) {
         console.error('Failed to save settings:', error);
-        // Revert on error
-        setSettings(settings);
+        // Revert on error using the captured previous state
+        setSettings(previousSettings!);
       }
     },
-    [user, settings]
+    [user]  // Remove `settings` from dependencies to prevent stale closures
   );
 
   return { settings, updateSettings, isLoading };
