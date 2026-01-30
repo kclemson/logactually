@@ -27,18 +27,24 @@ export function useFoodEntries(date?: string) {
       return (data || []).map((entry) => {
         const rawItems = Array.isArray(entry.food_items) ? (entry.food_items as unknown as any[]) : [];
         // Migrate legacy name+portion to description, assign UIDs
-        const itemsWithIds: FoodItem[] = rawItems.map((item) => ({
-          // Migrate legacy format: if 'description' exists use it, else merge name+portion
-          description: item.description || (item.portion ? `${item.name} (${item.portion})` : (item.name || '')),
-          portion: item.portion,
-          calories: item.calories || 0,
-          protein: item.protein || 0,
-          carbs: item.carbs || 0,
-          fat: item.fat || 0,
-          uid: item.uid || crypto.randomUUID(),
-          entryId: entry.id,
-          editedFields: item.editedFields,
-        }));
+        const itemsWithIds: FoodItem[] = rawItems.map((item) => {
+          const fiber = item.fiber || 0;
+          const carbs = item.carbs || 0;
+          return {
+            // Migrate legacy format: if 'description' exists use it, else merge name+portion
+            description: item.description || (item.portion ? `${item.name} (${item.portion})` : (item.name || '')),
+            portion: item.portion,
+            calories: item.calories || 0,
+            protein: item.protein || 0,
+            carbs: carbs,
+            fiber: fiber,
+            net_carbs: item.net_carbs ?? Math.max(0, carbs - fiber),
+            fat: item.fat || 0,
+            uid: item.uid || crypto.randomUUID(),
+            entryId: entry.id,
+            editedFields: item.editedFields,
+          };
+        });
         return {
           ...entry,
           food_items: itemsWithIds,

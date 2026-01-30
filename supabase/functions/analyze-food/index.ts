@@ -15,6 +15,7 @@ interface ParsedFoodItem {
   calories: number;
   protein: number;
   carbs: number;
+  fiber: number;
   fat: number;
   confidence?: 'high' | 'medium' | 'low';
   source_note?: string;
@@ -26,6 +27,8 @@ interface FoodItem {
   calories: number;
   protein: number;
   carbs: number;
+  fiber: number;
+  net_carbs: number;
   fat: number;
   confidence?: 'high' | 'medium' | 'low';
   source_note?: string;
@@ -36,6 +39,8 @@ interface AnalyzeResponse {
   total_calories: number;
   total_protein: number;
   total_carbs: number;
+  total_fiber: number;
+  total_net_carbs: number;
   total_fat: number;
 }
 
@@ -158,16 +163,22 @@ serve(async (req) => {
     }
 
     // Send name and portion as separate fields for UI styling
-    const mergedItems: FoodItem[] = parsed.food_items.map(item => ({
-      description: item.name,
-      portion: item.portion || undefined,
-      calories: item.calories || 0,
-      protein: item.protein || 0,
-      carbs: item.carbs || 0,
-      fat: item.fat || 0,
-      confidence: item.confidence,
-      source_note: item.source_note,
-    }));
+    const mergedItems: FoodItem[] = parsed.food_items.map(item => {
+      const fiber = item.fiber || 0;
+      const carbs = item.carbs || 0;
+      return {
+        description: item.name,
+        portion: item.portion || undefined,
+        calories: item.calories || 0,
+        protein: item.protein || 0,
+        carbs: carbs,
+        fiber: fiber,
+        net_carbs: Math.max(0, carbs - fiber),
+        fat: item.fat || 0,
+        confidence: item.confidence,
+        source_note: item.source_note,
+      };
+    });
 
     // Calculate totals
     const totals = mergedItems.reduce(
@@ -175,9 +186,10 @@ serve(async (req) => {
         calories: acc.calories + item.calories,
         protein: acc.protein + item.protein,
         carbs: acc.carbs + item.carbs,
+        fiber: acc.fiber + item.fiber,
         fat: acc.fat + item.fat,
       }),
-      { calories: 0, protein: 0, carbs: 0, fat: 0 }
+      { calories: 0, protein: 0, carbs: 0, fiber: 0, fat: 0 }
     );
 
     const result: AnalyzeResponse = {
@@ -185,6 +197,8 @@ serve(async (req) => {
       total_calories: Math.round(totals.calories),
       total_protein: Math.round(totals.protein),
       total_carbs: Math.round(totals.carbs),
+      total_fiber: Math.round(totals.fiber),
+      total_net_carbs: Math.round(Math.max(0, totals.carbs - totals.fiber)),
       total_fat: Math.round(totals.fat),
     };
 
