@@ -26,6 +26,31 @@ const CHART_COLORS = {
   trainingVolume: "hsl(262 83% 58%)", // Bright purple matching exercise charts (kept separate const for future adjustment)
 } as const;
 
+// Helper to create food chart label renderer with interval-based visibility
+const createFoodLabelRenderer = (
+  chartData: Array<{ showLabel: boolean }>,
+  color: string
+) => (props: any) => {
+  const { x, y, width, value, index } = props;
+  
+  const dataPoint = chartData[index];
+  if (!dataPoint?.showLabel) return null;
+  if (!value || typeof x !== 'number' || typeof width !== 'number') return null;
+  
+  return (
+    <text
+      x={x + width / 2}
+      y={y - 4}
+      fill={color}
+      textAnchor="middle"
+      fontSize={7}
+      fontWeight={500}
+    >
+      {Math.round(value)}
+    </text>
+  );
+};
+
 const CompactTooltip = ({ active, payload, label, formatter }: any) => {
   if (!active || !payload?.length) return null;
 
@@ -296,7 +321,7 @@ const Trends = () => {
       byDate[date].fat += Number(entry.total_fat);
     });
 
-    return Object.entries(byDate).map(([date, totals]) => {
+    const data = Object.entries(byDate).map(([date, totals]) => {
       // Calculate calorie contribution from each macro
       const proteinCals = totals.protein * 4;
       const carbsCals = totals.carbs * 4;
@@ -316,6 +341,15 @@ const Trends = () => {
         fatPct,
       };
     });
+
+    // Add showLabel based on interval (same logic as weight charts)
+    const dataLength = data.length;
+    const labelInterval = dataLength <= 12 ? 1 : dataLength <= 20 ? 2 : 3;
+
+    return data.map((d, index) => ({
+      ...d,
+      showLabel: index % labelInterval === 0 || index === dataLength - 1,
+    }));
   }, [entries]);
 
   // Calculate averages
@@ -396,7 +430,7 @@ const Trends = () => {
                 <CardContent className="p-2 pt-0">
                   <div className="h-24">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+                      <BarChart data={chartData} margin={{ top: 12, right: 0, left: 0, bottom: 0 }}>
                         <XAxis
                           dataKey="date"
                           tick={{ fontSize: 8 }}
@@ -406,7 +440,9 @@ const Trends = () => {
                           height={16}
                         />
                         <Tooltip content={<CompactTooltip />} offset={20} cursor={{ fill: "hsl(var(--muted)/0.3)" }} />
-                        <Bar dataKey="calories" fill="#0033CC" radius={[2, 2, 0, 0]} />
+                        <Bar dataKey="calories" fill={CHART_COLORS.calories} radius={[2, 2, 0, 0]}>
+                          <LabelList dataKey="calories" content={createFoodLabelRenderer(chartData, CHART_COLORS.calories)} />
+                        </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -461,7 +497,7 @@ const Trends = () => {
                   <CardContent className="p-2 pt-0">
                     <div className="h-24">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+                        <BarChart data={chartData} margin={{ top: 12, right: 0, left: 0, bottom: 0 }}>
                           <XAxis
                             dataKey="date"
                             tick={{ fontSize: 8 }}
@@ -475,7 +511,9 @@ const Trends = () => {
                             offset={20}
                             cursor={{ fill: "hsl(var(--muted)/0.3)" }}
                           />
-                          <Bar dataKey={key} fill={color} radius={[2, 2, 0, 0]} />
+                          <Bar dataKey={key} fill={color} radius={[2, 2, 0, 0]}>
+                            <LabelList dataKey={key} content={createFoodLabelRenderer(chartData, color)} />
+                          </Bar>
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
