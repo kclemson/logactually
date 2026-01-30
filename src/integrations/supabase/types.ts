@@ -93,6 +93,7 @@ export type Database = {
           created_at: string
           id: string
           is_read_only: boolean
+          login_count: number
           settings: Json | null
           updated_at: string
           user_number: number
@@ -101,6 +102,7 @@ export type Database = {
           created_at?: string
           id: string
           is_read_only?: boolean
+          login_count?: number
           settings?: Json | null
           updated_at?: string
           user_number: number
@@ -109,6 +111,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_read_only?: boolean
+          login_count?: number
           settings?: Json | null
           updated_at?: string
           user_number?: number
@@ -319,6 +322,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_login_count: { Args: { user_id: string }; Returns: undefined }
       is_read_only_user: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {

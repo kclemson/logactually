@@ -142,7 +142,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    
+    // Track login count (fire-and-forget, don't block auth flow)
+    if (!error && data.user) {
+      (supabase.rpc as Function)('increment_login_count', { user_id: data.user.id }).catch(() => {});
+    }
+    
     return { error };
   };
 

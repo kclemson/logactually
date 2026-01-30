@@ -35,6 +35,7 @@ interface UserStats {
   saved_meals_count: number;
   saved_routines_count: number;
   last_active: string | null;
+  login_count: number;
 }
 
 export function useAdminStats() {
