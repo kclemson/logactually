@@ -52,11 +52,11 @@ export function DevToolsPanel() {
   const [runId, setRunId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [columnWidths, setColumnWidths] = useState({
-    input: 200,
-    source: 60,
-    prompt: 80,
-    output: 250,
-    sourceNote: 200,
+    input: 350,
+    source: 80,
+    prompt: 100,
+    output: 400,
+    sourceNote: 350,
   });
 
   const { lookupUpc } = useScanBarcode();
@@ -241,7 +241,7 @@ export function DevToolsPanel() {
 
   return (
     <div className="hidden md:block border-t bg-background">
-    <div className="mx-auto max-w-4xl px-3">
+    <div className="px-6">
         {/* Toggle Header */}
         <button
           onClick={() => setIsOpen(!isOpen)}
