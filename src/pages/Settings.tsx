@@ -124,23 +124,25 @@ export default function Settings() {
               </button>
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="space-y-1">
             {!isReadOnly && (
-              <Button variant="outline" size="sm" onClick={() => setChangePasswordOpen(true)}>
+              <button
+                onClick={() => setChangePasswordOpen(true)}
+                className="w-full text-left py-2 hover:bg-accent/50 transition-colors text-sm text-foreground"
+              >
                 Change Password
-              </Button>
+              </button>
             )}
-            <Button
-              variant="outline"
-              size="sm"
+            <button
               onClick={async () => {
                 setIsSigningOut(true);
                 await signOut();
               }}
               disabled={isSigningOut}
+              className="w-full text-left py-2 hover:bg-accent/50 transition-colors text-sm text-foreground disabled:opacity-50"
             >
               {isSigningOut ? 'Signing out...' : 'Sign Out'}
-            </Button>
+            </button>
           </div>
         </div>
       </CollapsibleSection>
@@ -260,20 +262,32 @@ export default function Settings() {
 
       {/* Export as CSV */}
       <CollapsibleSection title="Export to CSV" icon={Download}>
-        <div className="flex flex-wrap gap-2 max-w-md">
-          <Button variant="outline" size="sm" onClick={exportDailyTotals} disabled={isExporting || isReadOnly}>
+        <div className="space-y-1">
+          <button 
+            onClick={exportDailyTotals} 
+            disabled={isExporting || isReadOnly}
+            className="w-full text-left py-2 hover:bg-accent/50 transition-colors text-sm text-foreground disabled:opacity-50"
+          >
             Food Daily Totals
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportFoodLog} disabled={isExporting || isReadOnly}>
+          </button>
+          <button 
+            onClick={exportFoodLog} 
+            disabled={isExporting || isReadOnly}
+            className="w-full text-left py-2 hover:bg-accent/50 transition-colors text-sm text-foreground disabled:opacity-50"
+          >
             Food Log
-          </Button>
+          </button>
           {showWeights && (
-            <Button variant="outline" size="sm" onClick={exportWeightLog} disabled={isExporting || isReadOnly}>
+            <button 
+              onClick={exportWeightLog} 
+              disabled={isExporting || isReadOnly}
+              className="w-full text-left py-2 hover:bg-accent/50 transition-colors text-sm text-foreground disabled:opacity-50"
+            >
               Weights Log
-            </Button>
+            </button>
           )}
           {isReadOnly && (
-            <p className="w-full text-xs text-muted-foreground mt-1">
+            <p className="text-xs text-muted-foreground mt-2">
               Create an account to export your data
             </p>
           )}
