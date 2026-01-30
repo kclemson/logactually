@@ -1,4 +1,4 @@
-forimport { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Shield, Database, Bot, Code, Eye, UserCheck, X } from "lucide-react";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 
