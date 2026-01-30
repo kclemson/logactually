@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { FoodItem, DailyTotals, calculateTotals, scaleMacrosByCalories, ScaledMacros } from '@/types/food';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -623,9 +624,15 @@ export function FoodItemsTable({
                     </p>
                   )}
                   {/* Show meal name if from saved meal, otherwise show "Save as meal" link */}
-                  {currentEntryId && entryMealNames?.get(currentEntryId) ? (
-                    <p className="text-sm text-muted-foreground">
-                      Saved meal: <span className="font-medium">{entryMealNames.get(currentEntryId)}</span>
+{currentEntryId && entryMealNames?.get(currentEntryId) ? (
+                    <p className="text-sm text-muted-foreground italic">
+                      From saved meal:{' '}
+                      <Link 
+                        to="/settings" 
+                        className="text-blue-600 dark:text-blue-400 hover:underline not-italic"
+                      >
+                        {entryMealNames.get(currentEntryId)}
+                      </Link>
                     </p>
                   ) : onSaveAsMeal && currentEntryId && (
                     <button

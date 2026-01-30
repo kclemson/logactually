@@ -589,12 +589,12 @@ export function WeightItemsTable({
                     {currentRawInput}
                   </p>
                   {/* Show routine name if from saved routine, otherwise show "Save as routine" */}
-                  {currentEntryId && entryRoutineNames?.get(currentEntryId) ? (
-                    <p className="text-sm text-muted-foreground">
-                      Saved routine:{' '}
+{currentEntryId && entryRoutineNames?.get(currentEntryId) ? (
+                    <p className="text-sm text-muted-foreground italic">
+                      From saved routine:{' '}
                       <Link 
                         to="/settings" 
-                        className="font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                        className="text-blue-600 dark:text-blue-400 hover:underline not-italic"
                       >
                         {entryRoutineNames.get(currentEntryId)}
                       </Link>
