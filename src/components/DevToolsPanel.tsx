@@ -77,22 +77,22 @@ export function DevToolsPanel() {
   const [runId, setRunId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [columnWidths, setColumnWidths] = useState({
-    input: 250,
-    source: 70,
-    prompt: 80,
-    description: 200,
-    portion: 80,
-    calories: 50,
-    protein: 40,
-    carbs: 40,
-    fiber: 40,
-    sugar: 40,
-    fat: 40,
-    satFat: 40,
-    sodium: 50,
-    cholesterol: 50,
-    confidence: 60,
-    sourceNote: 250,
+    input: 180,
+    source: 50,
+    prompt: 50,
+    description: 150,
+    portion: 100,
+    calories: 35,
+    protein: 30,
+    carbs: 30,
+    fiber: 30,
+    sugar: 30,
+    fat: 30,
+    satFat: 30,
+    sodium: 35,
+    cholesterol: 30,
+    confidence: 55,
+    sourceNote: 180,
   });
 
   const { lookupUpc } = useScanBarcode();
