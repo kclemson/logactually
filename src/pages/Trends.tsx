@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, subDays, startOfDay } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
@@ -236,6 +236,10 @@ const Trends = () => {
   const { settings } = useUserSettings();
   const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
   const mergeMutation = useMergeExercises();
+
+  const handleExerciseBarClick = useCallback((date: string) => {
+    navigate(`/weights?date=${date}`);
+  }, [navigate]);
 
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ["food-entries-trends", selectedPeriod],
@@ -685,7 +689,7 @@ const Trends = () => {
                     key={exercise.exercise_key} 
                     exercise={exercise} 
                     unit={settings.weightUnit}
-                    onBarClick={(date) => navigate(`/weights?date=${date}`)}
+                    onBarClick={handleExerciseBarClick}
                   />
                 ))}
               </div>
@@ -723,7 +727,7 @@ const Trends = () => {
                     <ExerciseChart 
                       exercise={selectedExtra} 
                       unit={settings.weightUnit}
-                      onBarClick={(date) => navigate(`/weights?date=${date}`)}
+                      onBarClick={handleExerciseBarClick}
                     />
                   )}
                 </div>
