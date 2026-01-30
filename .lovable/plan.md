@@ -1,49 +1,156 @@
 
 
-## Change "Users w/Logged Items" to Daily Active Users
+## Enhance Demo Data to Showcase AI Translation Power
 
 ### Goal
-Update the daily stats table to show users who logged items (food **or** weight) on that specific day, instead of cumulative users who have ever logged items.
+Update demo account data so that:
+1. **Food entries**: Raw input looks sloppy/casual, but parsed food items have polished descriptions with realistic macros
+2. **Weight entries**: Raw input looks sloppy/casual, but parsed exercises have proper names
+3. **Date range**: Extends 30 days into the future so demo always has "today" data
 
-### Current Behavior
-The `users_with_entries` field counts users who have logged food entries **up to and including** that date (cumulative).
+### Current Problems
 
-### New Behavior  
-Count distinct users who logged **either** food entries **or** weight entries **on that specific day**.
+**Food entries** - Description copies raw input exactly:
+| raw_input | description | Problem |
+|-----------|-------------|---------|
+| "burger and fries" | "burger and fries" | No polishing |
+| "got chipotle - chicken bowl with guac" | "got chipotle - chicken bowl with guac" | No transformation |
 
-### Changes Required
+**Weight entries** - Raw input is already formatted (less impressive):
+| raw_input | description |
+|-----------|-------------|
+| "Bench Press 90lb 4x11" | "Bench Press" |
 
-**Database Migration** - Update `get_usage_stats` function
+Should be more like:
+| raw_input | description |
+|-----------|-------------|
+| "bench 90 4x11" | "Bench Press" |
 
-The daily_stats subquery currently has:
-```sql
-(SELECT COUNT(DISTINCT fe.user_id) FROM food_entries fe
- JOIN profiles p ON fe.user_id = p.id
- WHERE fe.eaten_date <= d.stat_date  -- cumulative
-   AND (...)) as users_with_entries,
+### Solution Architecture
+
+**Phase 1: Create polished food mappings**
+
+Add a `POLISHED_FOODS` structure that maps each raw input to structured output with realistic macros:
+
+```typescript
+const POLISHED_FOODS = {
+  shorthand: {
+    breakfast: [
+      { 
+        rawInput: 'eggs and toast',
+        items: [
+          { description: 'Scrambled Eggs', portion: '2 large', calories: 182, protein: 12, carbs: 2, fat: 14 },
+          { description: 'Buttered Toast', portion: '2 slices', calories: 186, protein: 4, carbs: 26, fat: 8 },
+        ]
+      },
+      // ... more
+    ],
+    // lunch, dinner, snack
+  },
+  casual: { /* similar */ },
+  brand: { /* similar */ },
+};
 ```
 
-Change to:
-```sql
-(SELECT COUNT(DISTINCT user_id) FROM (
-  SELECT fe.user_id FROM food_entries fe
-  JOIN profiles p ON fe.user_id = p.id
-  WHERE fe.eaten_date = d.stat_date  -- same day only
-    AND (include_read_only OR NOT COALESCE(p.is_read_only, false))
-  UNION
-  SELECT ws.user_id FROM weight_sets ws
-  JOIN profiles p ON ws.user_id = p.id
-  WHERE ws.logged_date = d.stat_date  -- same day only
-    AND (include_read_only OR NOT COALESCE(p.is_read_only, false))
-) active_users) as users_with_entries,
+**Phase 2: Create casual weight input formats**
+
+Add sloppy variations for weight raw inputs:
+
+```typescript
+const CASUAL_EXERCISE_FORMATS = [
+  (name, weight, sets, reps) => `${name.toLowerCase().replace(/ /g, '')} ${weight} ${sets}x${reps}`,
+  (name, weight, sets, reps) => `${name.split(' ')[0].toLowerCase()} ${sets}x${reps} ${weight}`,
+  (name, weight, sets, reps) => `${name.toLowerCase()} ${weight}lb ${sets} sets`,
+  // Abbreviated versions: "bench", "lat pull", "rdl", "ohp"
+];
+
+const EXERCISE_ABBREVIATIONS = {
+  'Bench Press': ['bench', 'bp'],
+  'Lat Pulldown': ['lat pull', 'pulldown', 'lats'],
+  'Romanian Deadlift': ['rdl', 'romanian dl'],
+  'Shoulder Press': ['ohp', 'shoulder', 'sp'],
+  // ...
+};
 ```
 
-**Frontend** - Update column header in `src/pages/Admin.tsx`
+**Phase 3: Extend date range**
 
-Line 144: Change header text from "Users w/Logged Items" to "Active Users" (shorter, clearer meaning now that it's daily).
+Change default endDate from today to today + 30 days:
+
+```typescript
+// Line ~670
+const thirtyDaysFromNow = new Date(today);
+thirtyDaysFromNow.setDate(today.getDate() + 30);
+const endDate = params.endDate ? new Date(params.endDate) : thirtyDaysFromNow;
+```
+
+### File Changes
+
+**supabase/functions/populate-demo-data/index.ts**
+
+1. **Add `POLISHED_FOODS` mapping** (~lines 65-153 area)
+   - Transform existing SHORTHAND_FOODS and CASUAL_FOODS into mappings with polished output
+   - Each entry: `{ rawInput: string, items: FoodItem[] }` with realistic USDA-based macros
+   - Cover breakfast, lunch, dinner, snack for each category
+   - ~25-30 food mappings total
+
+2. **Add `EXERCISE_ABBREVIATIONS`** (~lines 156-179 area)
+   - Map canonical exercise names to casual/abbreviated forms
+   - Examples: "Bench Press" → ["bench", "bp"], "Romanian Deadlift" → ["rdl"]
+
+3. **Add casual exercise input formatter** (~lines 478-498 area)
+   - New formats using abbreviations and casual separators
+   - Mix of: "bench 135 3x10", "pulldown 3x10 @ 80", "rdl 95lb 3 sets 10 reps"
+
+4. **Update `generateFoodEntriesForDay()`** (~lines 337-374)
+   - Return `{ rawInput: string; items: FoodItem[] }[]` instead of `string[]`
+   - Look up polished items from POLISHED_FOODS mapping
+
+5. **Update food insertion logic** (~lines 750-779)
+   - Use returned items array instead of copying raw_input
+   - Calculate totals from actual item values
+   - Support multi-item entries
+
+6. **Update weight raw_input generation** (~lines 478-498)
+   - Use casual abbreviations instead of proper names
+   - More varied separators and formats
+
+7. **Extend date range** (~line 670)
+   - Default to today + 30 days
+
+### Example Transformations After Changes
+
+**Food - Before:**
+```json
+{ "raw_input": "eggs and toast", "description": "eggs and toast", "calories": 234 }
+```
+
+**Food - After:**
+```json
+{
+  "raw_input": "eggs and toast",
+  "food_items": [
+    { "description": "Scrambled Eggs", "portion": "2 large", "calories": 182, "protein": 12, "carbs": 2, "fat": 14 },
+    { "description": "Buttered Toast", "portion": "2 slices", "calories": 186, "protein": 4, "carbs": 26, "fat": 8 }
+  ],
+  "total_calories": 368
+}
+```
+
+**Weight - Before:**
+```json
+{ "raw_input": "Bench Press 90lb 4x11", "description": "Bench Press" }
+```
+
+**Weight - After:**
+```json
+{ "raw_input": "bench 90 4x11, lat pull 80 4x11, rdl 95 4x11", "description": "Bench Press" }
+```
 
 ### Summary
-- 1 database function update (SQL migration)
-- 1 small frontend text change
-- No TypeScript interface changes needed (same field name)
+- ~150 lines of polished food data with realistic macros
+- ~20 lines of exercise abbreviations
+- ~30 lines of updated generation logic
+- ~5 lines for date range extension
+- After deploying, invoke the function with `clearExisting: true` to repopulate demo data
 
