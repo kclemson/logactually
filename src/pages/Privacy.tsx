@@ -102,7 +102,7 @@ export default function Privacy() {
             defaultOpen
             storageKey="privacy-collected"
           >
-            <ul className="space-y-1.5 text-sm text-muted-foreground">
+            <ul className="text-sm text-muted-foreground">
               {PRIVACY_CONTENT.collected.items.map((item, index) => (
                 <li key={index} className="flex gap-2">
                   <span>•</span>
@@ -119,7 +119,7 @@ export default function Privacy() {
             defaultOpen
             storageKey="privacy-not-collected"
           >
-            <ul className="space-y-1.5 text-sm text-muted-foreground">
+            <ul className="text-sm text-muted-foreground">
               {PRIVACY_CONTENT.notCollected.items.map((item, index) => (
                 <li key={index} className="flex gap-2">
                   <span>•</span>
@@ -135,7 +135,7 @@ export default function Privacy() {
             icon={Shield}
             storageKey="privacy-control"
           >
-            <ul className="space-y-1.5 text-sm text-muted-foreground">
+            <ul className="text-sm text-muted-foreground">
               {PRIVACY_CONTENT.control.items.map((item, index) => (
                 <li key={index} className="flex gap-2">
                   <span>•</span>
@@ -166,7 +166,7 @@ export default function Privacy() {
             storageKey="privacy-technical"
           >
             <p className="text-sm text-muted-foreground mb-2">{PRIVACY_CONTENT.technical.intro}</p>
-            <ul className="space-y-1.5 text-sm text-muted-foreground">
+            <ul className="text-sm text-muted-foreground">
               {PRIVACY_CONTENT.technical.items.map((item, index) => (
                 <li key={index} className="flex gap-2">
                   <span>•</span>
