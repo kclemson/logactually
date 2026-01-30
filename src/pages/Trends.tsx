@@ -36,14 +36,16 @@ const getFoodChartMarginTop = (dataLength: number): number =>
 
 // Helper to create food chart label renderer with interval-based visibility
 const createFoodLabelRenderer = (
-  chartData: Array<{ showLabel: boolean }>,
+  chartData: Array<{ showLabel: boolean; showLabelFullWidth?: boolean }>,
   color: string,
-  yOffsetPx: number = 4
+  yOffsetPx: number = 4,
+  useFullWidthLabels: boolean = false
 ) => (props: any) => {
   const { x, y, width, value, index } = props;
   
   const dataPoint = chartData[index];
-  if (!dataPoint?.showLabel) return null;
+  const shouldShow = useFullWidthLabels ? dataPoint?.showLabelFullWidth : dataPoint?.showLabel;
+  if (!shouldShow) return null;
   if (!value || typeof x !== 'number' || typeof width !== 'number') return null;
   
   return (
@@ -402,9 +404,17 @@ const Trends = () => {
       dataLength <= 21 ? 3 :
       dataLength <= 35 ? 4 : 5;
 
+    // Full-width charts have ~2x horizontal space, so use more generous thresholds
+    const labelIntervalFullWidth = 
+      dataLength <= 14 ? 1 :
+      dataLength <= 28 ? 2 :
+      dataLength <= 42 ? 3 :
+      dataLength <= 70 ? 4 : 5;
+
     return data.map((d, index) => ({
       ...d,
       showLabel: index % labelInterval === 0 || index === dataLength - 1,
+      showLabelFullWidth: index % labelIntervalFullWidth === 0 || index === dataLength - 1,
     }));
   }, [entries]);
 
@@ -620,8 +630,8 @@ const Trends = () => {
                         onClick={(data) => navigate(`/?date=${data.rawDate}`)}
                         className="cursor-pointer"
                       >
-                        {/* Total calories label above the stack - uses existing showLabel threshold logic */}
-                        <LabelList dataKey="calories" content={createFoodLabelRenderer(chartData, CHART_COLORS.calories, getFoodLabelOffsetPx(chartData.length))} />
+                        {/* Total calories label above the stack - uses full-width thresholds */}
+                        <LabelList dataKey="calories" content={createFoodLabelRenderer(chartData, CHART_COLORS.calories, getFoodLabelOffsetPx(chartData.length), true)} />
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
