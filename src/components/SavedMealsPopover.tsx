@@ -95,6 +95,7 @@ export function SavedMealsPopover({ onSelectMeal, onClose, onCreateNew }: SavedM
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search meals..."
+              aria-label="Search saved meals"
               className="pl-8 h-8"
             />
           </div>

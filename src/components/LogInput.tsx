@@ -295,6 +295,7 @@ export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder={placeholderText}
+        aria-label={mode === 'food' ? 'Describe what you ate' : 'Describe your workout'}
         className="min-h-[100px] resize-none"
         disabled={isBusy}
         onKeyDown={(e) => {

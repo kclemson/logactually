@@ -317,7 +317,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
 
       {/* Date Navigation */}
       <div className="flex items-center justify-center gap-1">
-        <Button variant="ghost" size="icon" onClick={goToPreviousDay} className="h-11 w-11">
+        <Button variant="ghost" size="icon" onClick={goToPreviousDay} className="h-11 w-11" aria-label="Previous day">
           <ChevronLeft className="h-5 w-5" />
         </Button>
         
@@ -367,6 +367,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
           onClick={goToNextDay}
           disabled={isTodaySelected}
           className="h-11 w-11"
+          aria-label="Next day"
         >
           <ChevronRight className="h-5 w-5" />
         </Button>

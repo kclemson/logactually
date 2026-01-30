@@ -190,6 +190,7 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(function FoodI
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder={placeholderText}
+        aria-label="Describe what you ate"
         className="min-h-[80px] resize-none"
         disabled={isBusy}
         onKeyDown={(e) => {

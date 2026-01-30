@@ -60,6 +60,7 @@ export function CollapsibleSection({
         <button
           type="button"
           onClick={handleToggle}
+          aria-expanded={isOpen}
           className="flex items-center gap-2 font-semibold text-foreground transition-colors"
         >
           <Icon className="h-4 w-4" />
