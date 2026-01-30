@@ -186,7 +186,8 @@ export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput
   useEffect(() => {
     return () => {
       if (recognitionRef.current) {
-        recognitionRef.current.abort();
+        // abort() is a valid Web Speech API method, but not in all TS type definitions
+        (recognitionRef.current as unknown as { abort: () => void }).abort();
         recognitionRef.current = null;
       }
     };
@@ -194,7 +195,8 @@ export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput
 
   const toggleListening = useCallback(() => {
     if (isListening) {
-      recognitionRef.current?.abort();
+      // abort() is more aggressive than stop() - helps Safari release the microphone
+      (recognitionRef.current as unknown as { abort: () => void })?.abort?.();
       setIsListening(false);  // Don't wait for onend - update immediately
       return;
     }
