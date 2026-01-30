@@ -141,7 +141,7 @@ export default function Admin() {
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Food Logged</th>
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Weight Logged</th>
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Users</th>
-              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Users w/Logged Items</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Active Users</th>
               <th className="text-center py-0.5 font-medium text-muted-foreground">New Users</th>
             </tr>
           </thead>
