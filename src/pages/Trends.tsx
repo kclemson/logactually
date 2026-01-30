@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { format, subDays, startOfDay } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -90,7 +91,7 @@ const periods = [
 
 const LBS_TO_KG = 0.453592;
 
-const ExerciseChart = ({ exercise, unit }: { exercise: ExerciseTrend; unit: WeightUnit }) => {
+const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend; unit: WeightUnit; onBarClick: (date: string) => void }) => {
   const chartData = useMemo(() => {
     const dataLength = exercise.weightData.length;
     // Calculate how often to show labels based on column count
@@ -100,6 +101,7 @@ const ExerciseChart = ({ exercise, unit }: { exercise: ExerciseTrend; unit: Weig
       const displayWeight = unit === "kg" ? Math.round(d.weight * LBS_TO_KG) : d.weight;
       return {
         ...d,
+        rawDate: d.date, // Keep original date for navigation
         weight: displayWeight,
         dateLabel: format(new Date(`${d.date}T12:00:00`), "MMM d"),
         label: `${d.sets}×${d.reps}×${displayWeight}`,
@@ -198,7 +200,13 @@ const ExerciseChart = ({ exercise, unit }: { exercise: ExerciseTrend; unit: Weig
                 offset={20}
                 cursor={{ fill: "hsl(var(--muted)/0.3)" }}
               />
-              <Bar dataKey="weight" fill="hsl(262 83% 58%)" radius={[2, 2, 0, 0]}>
+              <Bar 
+                dataKey="weight" 
+                fill="hsl(262 83% 58%)" 
+                radius={[2, 2, 0, 0]}
+                onClick={(data) => onBarClick(data.rawDate)}
+                className="cursor-pointer"
+              >
                 <LabelList dataKey="label" content={renderLabel} />
               </Bar>
             </BarChart>
@@ -210,6 +218,7 @@ const ExerciseChart = ({ exercise, unit }: { exercise: ExerciseTrend; unit: Weig
 };
 
 const Trends = () => {
+  const navigate = useNavigate();
   const [selectedPeriod, setSelectedPeriod] = useState(() => {
     const saved = localStorage.getItem("trends-period");
     return saved && [7, 30, 90].includes(Number(saved)) ? Number(saved) : 30;
@@ -306,6 +315,7 @@ const Trends = () => {
           ? Math.round(volumeLbs * LBS_TO_KG) 
           : Math.round(volumeLbs);
         return {
+          rawDate: date, // Keep original date for navigation
           date: format(new Date(`${date}T12:00:00`), "MMM d"),
           volume,
           label: `${Math.round(volume / 1000)}k`,
@@ -359,6 +369,7 @@ const Trends = () => {
       const fatPct = totalMacroCals > 0 ? Math.round((fatCals / totalMacroCals) * 100) : 0;
 
       return {
+        rawDate: date, // Keep original date for navigation
         date: format(new Date(`${date}T12:00:00`), "MMM d"),
         ...totals,
         proteinPct,
@@ -469,7 +480,13 @@ const Trends = () => {
                           height={16}
                         />
                         <Tooltip content={<CompactTooltip />} offset={20} cursor={{ fill: "hsl(var(--muted)/0.3)" }} />
-                        <Bar dataKey="calories" fill={CHART_COLORS.calories} radius={[2, 2, 0, 0]}>
+                        <Bar 
+                          dataKey="calories" 
+                          fill={CHART_COLORS.calories} 
+                          radius={[2, 2, 0, 0]}
+                          onClick={(data) => navigate(`/?date=${data.rawDate}`)}
+                          className="cursor-pointer"
+                        >
                           <LabelList dataKey="calories" content={createFoodLabelRenderer(chartData, CHART_COLORS.calories, getFoodLabelOffsetPx(chartData.length))} />
                         </Bar>
                       </BarChart>
@@ -500,14 +517,30 @@ const Trends = () => {
                           offset={20}
                           cursor={{ fill: "hsl(var(--muted)/0.3)" }}
                         />
-                        <Bar dataKey="fatPct" name="Fat" stackId="macros" fill={CHART_COLORS.fat} />
-                        <Bar dataKey="carbsPct" name="Carbs" stackId="macros" fill={CHART_COLORS.carbs} />
+                        <Bar 
+                          dataKey="fatPct" 
+                          name="Fat" 
+                          stackId="macros" 
+                          fill={CHART_COLORS.fat}
+                          onClick={(data) => navigate(`/?date=${data.rawDate}`)}
+                          className="cursor-pointer"
+                        />
+                        <Bar 
+                          dataKey="carbsPct" 
+                          name="Carbs" 
+                          stackId="macros" 
+                          fill={CHART_COLORS.carbs}
+                          onClick={(data) => navigate(`/?date=${data.rawDate}`)}
+                          className="cursor-pointer"
+                        />
                         <Bar
                           dataKey="proteinPct"
                           name="Protein"
                           stackId="macros"
                           fill={CHART_COLORS.protein}
                           radius={[2, 2, 0, 0]}
+                          onClick={(data) => navigate(`/?date=${data.rawDate}`)}
+                          className="cursor-pointer"
                         />
                       </BarChart>
                     </ResponsiveContainer>
@@ -540,7 +573,13 @@ const Trends = () => {
                             offset={20}
                             cursor={{ fill: "hsl(var(--muted)/0.3)" }}
                           />
-                          <Bar dataKey={key} fill={color} radius={[2, 2, 0, 0]}>
+                          <Bar 
+                            dataKey={key} 
+                            fill={color} 
+                            radius={[2, 2, 0, 0]}
+                            onClick={(data) => navigate(`/?date=${data.rawDate}`)}
+                            className="cursor-pointer"
+                          >
                             <LabelList dataKey={key} content={createFoodLabelRenderer(chartData, color, getFoodLabelOffsetPx(chartData.length))} />
                           </Bar>
                         </BarChart>
@@ -592,7 +631,13 @@ const Trends = () => {
                           offset={20}
                           cursor={{ fill: "hsl(var(--muted)/0.3)" }}
                         />
-                        <Bar dataKey="volume" fill={CHART_COLORS.trainingVolume} radius={[2, 2, 0, 0]}>
+                        <Bar 
+                          dataKey="volume" 
+                          fill={CHART_COLORS.trainingVolume} 
+                          radius={[2, 2, 0, 0]}
+                          onClick={(data) => navigate(`/weights?date=${data.rawDate}`)}
+                          className="cursor-pointer"
+                        >
                           <LabelList 
                             dataKey="label" 
                             content={(props: any) => {
@@ -636,7 +681,12 @@ const Trends = () => {
               {/* Top 25 exercises in 2-column grid */}
               <div className="grid grid-cols-2 gap-3">
                 {top25Exercises.map((exercise) => (
-                  <ExerciseChart key={exercise.exercise_key} exercise={exercise} unit={settings.weightUnit} />
+                  <ExerciseChart 
+                    key={exercise.exercise_key} 
+                    exercise={exercise} 
+                    unit={settings.weightUnit}
+                    onBarClick={(date) => navigate(`/weights?date=${date}`)}
+                  />
                 ))}
               </div>
 
@@ -669,7 +719,13 @@ const Trends = () => {
                   </Popover>
 
                   {/* Show selected extra exercise chart */}
-                  {selectedExtra && <ExerciseChart exercise={selectedExtra} unit={settings.weightUnit} />}
+                  {selectedExtra && (
+                    <ExerciseChart 
+                      exercise={selectedExtra} 
+                      unit={settings.weightUnit}
+                      onBarClick={(date) => navigate(`/weights?date=${date}`)}
+                    />
+                  )}
                 </div>
               )}
             </div>
