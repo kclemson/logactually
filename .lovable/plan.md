@@ -1,130 +1,69 @@
 
 
-## Add Privacy & Security Page
+## Move Privacy & Security to "About" Section
 
 ### Overview
 
-Create a new Privacy & Security page with approachable, transparent copy that communicates the solo-developer nature of the project, modern security practices, and technical details for savvy users. Add links from the Auth page footer, Settings account section, and Help page footer.
+Create a new "About" CollapsibleSection at the bottom of the Settings page to house the Privacy & Security link. This gives it a proper semantic home and follows common app conventions.
 
 ---
 
-### New Files
-
-#### `src/pages/Privacy.tsx`
-
-Create a new page matching the Help page's minimal aesthetic:
-
-- Close button in top-right (navigates back)
-- Shield icon in header
-- Clean sections with muted text and keyword highlights
-- Mobile-friendly layout
-- `PRIVACY_CONTENT` constant for easy copy editing
-
----
-
-### File Changes
-
-#### `src/App.tsx`
-
-Add public route for `/privacy`:
-
-```tsx
-import Privacy from "./pages/Privacy";
-
-// Add alongside other routes (outside ProtectedRoute):
-<Route path="/privacy" element={<Privacy />} />
-```
-
-#### `src/pages/Auth.tsx`
-
-Add footer link below the auth form
+### Changes
 
 #### `src/pages/Settings.tsx`
 
-Add link in the Account section near "Delete account"
+**1. Add Info icon import:**
+```tsx
+import { ..., Info } from "lucide-react";
+```
+
+**2. Remove Privacy & Security from Account section:**
+
+Remove the link from the header row that currently shows it next to "Delete account"
+
+**3. Add new "About" CollapsibleSection after Export to CSV:**
+
+```tsx
+{/* About section - at the very bottom */}
+<CollapsibleSection title="About" icon={Info} defaultOpen={true}>
+  <div className="space-y-2">
+    <Link
+      to="/privacy"
+      className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+    >
+      Privacy & Security
+    </Link>
+  </div>
+</CollapsibleSection>
+```
+
+---
 
 #### `src/pages/Help.tsx`
 
-Add link in the footer alongside the "made by" credit
+**Apply consistent underline styling and remove "made by" credit:**
+
+- Add `underline underline-offset-2` to the Privacy & Security link
+- Remove the kcloadletter.com link
 
 ---
 
-### Link Placement Summary
+### Section Order (Final)
 
-| Location | Placement | Visibility |
-|----------|-----------|------------|
-| Auth page | Footer below form | Pre-login |
-| Settings > Account | Near "Delete account" | Logged in |
-| Help page | Footer section | Logged in |
-
----
-
-### Revised Copy
-
-**The Short Version**
-
-Your data is yours. It's not sold, there are no ads, and no tracking pixels. This is a passion project built by one person, currently free to use.
+1. Account
+2. Saved Meals
+3. Saved Routines (if weight tracking enabled)
+4. Preferences
+5. Export to CSV
+6. **About** (new)
 
 ---
 
-**What Data Is Collected**
+### Future Extensibility
 
-- **Email address** — for login
-- **Food and exercise entries** — what you choose to log
-- **Saved meals and routines** — for quick re-logging
-- **Preferences** — like theme and weight units
-
----
-
-**What Data Is *Not* Collected**
-
-- No third-party analytics
-- No tracking cookies or pixels
-- No selling or sharing data with anyone
-
----
-
-**How AI Processing Works**
-
-When you log food or exercise, your text is sent to an AI model to provide nutritional or exercise information. Only the text you enter is sent — no user identifiers, account info, or other context is included. The AI knows the request came from this app, but nothing more specific than that.
-
----
-
-**For the Technically Curious**
-
-If you're wondering about the security implementation:
-
-- **Passwords** are hashed using bcrypt — never stored in plaintext
-- **Data isolation** is enforced through Row-Level Security (RLS) policies — authenticated users can only access their own data
-- **Sessions** use JWT tokens with secure, time-limited expiry
-- **All traffic** is encrypted via HTTPS/TLS
-- **Infrastructure** runs on SOC2 Type II compliant hosting
-
----
-
-**Developer Access**
-
-As a solo project, the developer has database access for debugging and support purposes. However, there is no routine review or mining of individual user data — logs are only accessed when investigating specific technical issues or responding to support requests.
-
----
-
-**Your Data, Your Control**
-
-- Export your data anytime as CSV (Settings → Export)
-- Delete your account permanently (Settings → Account)
-- Questions or concerns? Drop a note in the Help section
-
-*Last updated: January 2026*
-
----
-
-### Technical Implementation
-
-The page will follow the same pattern as `Help.tsx`:
-
-- `PRIVACY_CONTENT` constant at the top for easy copy editing
-- `highlightText` helper for keyword emphasis
-- Lucide icons: `Shield` (header), `Database`, `Bot`, `Code`, `UserCheck`, `Eye`
-- `X` close button navigating to `/`
-- Collapsible or distinct styling for the "Technically Curious" section
+The About section could later include:
+- App version number
+- Link to changelog/release notes
+- Link to Help page
+- Credits/acknowledgments
 
