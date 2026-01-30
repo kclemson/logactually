@@ -1,50 +1,39 @@
 
-## Reduce Bullet List Vertical Spacing
+
+## Underline "Not" in Section Title
 
 ### Problem
 
-Bulleted lists currently use `space-y-1.5` which adds 6px of margin between each list item. This creates more vertical space between bullet points than exists between lines within a paragraph, making the lists feel spread out.
+The word "Not" in "What Data Is Not Collected" isn't emphasized. Currently the title is built from string concatenation, so we can't style individual words.
 
 ### Solution
 
-Remove the `space-y-1.5` class from all `<ul>` elements in the Privacy page. The list items will then use natural line-height spacing (1.5), matching how paragraph text flows.
+1. Update `CollapsibleSection` to accept `ReactNode` for the title (allowing JSX)
+2. Pass JSX with a simple `<u>` tag around "Not"
 
-### Changes to `src/pages/Privacy.tsx`
+### Changes
 
-**5 locations to update:**
+**1. `src/components/CollapsibleSection.tsx` (line 7)**
 
-1. **Line 105** - "What Data Is Collected":
-   ```tsx
-   // Change from:
-   <ul className="space-y-1.5 text-sm text-muted-foreground">
-   // To:
-   <ul className="text-sm text-muted-foreground">
-   ```
+```tsx
+// Change from:
+title: string;
 
-2. **Line 122** - "What Data Is Not Collected":
-   ```tsx
-   // Change from:
-   <ul className="space-y-1.5 text-sm text-muted-foreground">
-   // To:
-   <ul className="text-sm text-muted-foreground">
-   ```
+// To:
+title: ReactNode;
+```
 
-3. **Line 138** - "Your Data, Your Control":
-   ```tsx
-   // Change from:
-   <ul className="space-y-1.5 text-sm text-muted-foreground">
-   // To:
-   <ul className="text-sm text-muted-foreground">
-   ```
+**2. `src/pages/Privacy.tsx` (line 117)**
 
-4. **Line 169** - "For the Technically Curious":
-   ```tsx
-   // Change from:
-   <ul className="space-y-1.5 text-sm text-muted-foreground">
-   // To:
-   <ul className="text-sm text-muted-foreground">
-   ```
+```tsx
+// Change from:
+title={`${PRIVACY_CONTENT.notCollected.title} ${PRIVACY_CONTENT.notCollected.titleEmphasis} ${PRIVACY_CONTENT.notCollected.titleEnd}`}
+
+// To:
+title={<>What Data Is <u>Not</u> Collected</>}
+```
 
 ### Result
 
-Bullet list items will have the same vertical spacing as lines within a paragraph, creating a more compact and natural reading flow. This reduces the overall page length and makes the content feel less spread out on mobile.
+The section header will display "What Data Is Not Collected" with "Not" underlined, making the emphasis clearly visible.
+
