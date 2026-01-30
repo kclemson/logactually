@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate, useSearchParams } from "react-router-dom";
+import { Navigate, useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -314,6 +314,14 @@ export default function Auth() {
               </button>{" "}
               — no account needed
             </p>
+          </div>
+          <div className="mt-6 text-center">
+            <Link
+              to="/privacy"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Privacy & Security
+            </Link>
           </div>
         </CardContent>
       </Card>

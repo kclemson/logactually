@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Lightbulb, MessageSquare, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -136,16 +136,26 @@ export default function Help() {
         )}
       </section>
 
-      {/* Made by link */}
-      <div className="pt-4 text-center">
-        <a
-          href="https://www.kcloadletter.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          made by kcloadletter.com
-        </a>
+      {/* Footer */}
+      <div className="pt-4 text-center space-y-2">
+        <div>
+          <Link
+            to="/privacy"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Privacy & Security
+          </Link>
+        </div>
+        <div>
+          <a
+            href="https://www.kcloadletter.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            made by kcloadletter.com
+          </a>
+        </div>
       </div>
     </div>
   );
