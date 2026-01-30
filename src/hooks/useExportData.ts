@@ -20,7 +20,7 @@ export function useExportData() {
       const rawItems = Array.isArray(entry.food_items)
         ? (entry.food_items as unknown as any[])
         : [];
-      const itemsWithIds: FoodItem[] = rawItems.map((item) => {
+        const itemsWithIds: FoodItem[] = rawItems.map((item) => {
         const fiber = item.fiber || 0;
         const carbs = item.carbs || 0;
         return {
@@ -30,7 +30,11 @@ export function useExportData() {
           carbs: carbs,
           fiber: fiber,
           net_carbs: item.net_carbs ?? Math.max(0, carbs - fiber),
+          sugar: item.sugar || 0,
           fat: item.fat || 0,
+          saturated_fat: item.saturated_fat || 0,
+          sodium: item.sodium || 0,
+          cholesterol: item.cholesterol || 0,
           uid: item.uid || crypto.randomUUID(),
           entryId: entry.id,
           editedFields: item.editedFields,
