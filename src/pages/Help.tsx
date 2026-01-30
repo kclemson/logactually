@@ -21,15 +21,11 @@ const HELP_CONTENT = {
         highlights: ["editing calories"],
       },
       {
-        text: "Select the > next to a row to see what the original input was - and save it as a meal or weight lifting routine for easy access in the future.",
+        text: "Select the > next to a row to see what you originally wrote, and then save it as a meal or weight lifting routine for easy access in the future.",
         highlights: ["save it"],
       },
       {
-        text: 'Select "Trends" to see charts of your progress over time.',
-        highlights: ["charts"],
-      },
-      {
-        text: "Switch to dark theme, show weight in Kgs or export to CSV in Settings.",
+        text: "Switch to dark theme, show weight in Kgs, or export to CSV in Settings.",
         highlights: ["Export to CSV"],
       },
       {
