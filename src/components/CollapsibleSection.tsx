@@ -61,9 +61,9 @@ export function CollapsibleSection({
           type="button"
           onClick={handleToggle}
           aria-expanded={isOpen}
-          className="flex items-center gap-2 px-2 py-1.5 -ml-2 rounded-md font-semibold text-foreground bg-[hsl(217_91%_60%/0.08)] transition-colors"
+          className="flex items-center gap-2 font-semibold text-foreground transition-colors"
         >
-          <Icon className="h-4 w-4" />
+          <Icon className="h-4 w-4 text-[hsl(217_91%_60%)]" />
           <span>{title}</span>
           <ChevronDown
             className={cn(
