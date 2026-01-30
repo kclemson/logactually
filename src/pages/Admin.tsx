@@ -1,11 +1,8 @@
-import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAdminStats, useAdminUserStats } from "@/hooks/useAdminStats";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useAdminFeedback } from "@/hooks/useFeedback";
 import { format, parseISO, isToday } from "date-fns";
-import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
 
 const USER_NAMES: Record<number, string> = {
   1: "KC",
@@ -26,38 +23,6 @@ export default function Admin() {
   const { data: userStats } = useAdminUserStats();
   const { data: feedback } = useAdminFeedback();
   
-  const [isPopulating, setIsPopulating] = useState(false);
-  const [populateResult, setPopulateResult] = useState<{
-    success: boolean;
-    message: string;
-  } | null>(null);
-
-  const handlePopulateDemoData = async () => {
-    setIsPopulating(true);
-    setPopulateResult(null);
-    
-    try {
-      const { data, error } = await supabase.functions.invoke('populate-demo-data', {
-        body: {
-          clearExisting: true,
-        }
-      });
-      
-      if (error) throw error;
-      
-      setPopulateResult({
-        success: true,
-        message: `Created ${data.summary.foodEntries} food entries, ${data.summary.weightSets} weight sets, ${data.summary.savedMeals} saved meals, ${data.summary.savedRoutines} saved routines`
-      });
-    } catch (err) {
-      setPopulateResult({
-        success: false,
-        message: err instanceof Error ? err.message : 'Failed to populate demo data'
-      });
-    } finally {
-      setIsPopulating(false);
-    }
-  };
 
   // Render nothing while checking admin status - no spinner, no flash
   if (isAdminLoading) {
@@ -213,33 +178,6 @@ export default function Admin() {
         </div>
       )}
 
-      {/* Admin Actions */}
-      <div className="space-y-2 pt-4 border-t">
-        <p className="font-medium text-xs text-muted-foreground">Admin Actions</p>
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handlePopulateDemoData}
-            disabled={isPopulating}
-            className="text-xs"
-          >
-            {isPopulating ? (
-              <>
-                <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent mr-1" />
-                Populating...
-              </>
-            ) : (
-              'Populate Demo Data'
-            )}
-          </Button>
-        </div>
-        {populateResult && (
-          <p className={`text-xs ${populateResult.success ? 'text-green-500' : 'text-destructive'}`}>
-            {populateResult.message}
-          </p>
-        )}
-      </div>
     </div>
   );
 }
