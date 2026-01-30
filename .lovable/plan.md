@@ -1,34 +1,29 @@
 
 
-## Add Full-Width Label Thresholds for Combined Chart
+## Apply Full-Width Label Thresholds to Total Volume Chart
 
-A simple change to use different (more generous) thresholds for full-width charts since they have roughly 2x the horizontal space.
+The Total Volume chart is also full-width but currently uses the regular label thresholds. This needs to be updated to use the more generous full-width thresholds for consistency.
 
-### Current State
+### Current State (lines 339-350)
 
-All charts use the same `showLabel` thresholds:
+The `volumeByDay` calculation only computes `showLabel` using the regular interval:
 - ≤7 days: show all
 - 8-14 days: every 2nd
 - 15-21 days: every 3rd
 - 22-35 days: every 4th
 - >35 days: every 5th
 
-### Proposed Change
+### Changes Required
 
-Add a `showLabelFullWidth` field with ~2x thresholds:
-- ≤14 days: show all
-- 15-28 days: every 2nd
-- 29-42 days: every 3rd
-- 43-70 days: every 4th
-- >70 days: every 5th
+**File: `src/pages/Trends.tsx`**
 
-### File Changes
+#### 1. Update `volumeByDay` calculation (lines 339-350)
 
-**`src/pages/Trends.tsx`**
-
-1. **Extend `chartData` calculation** (lines 397-408) to add `showLabelFullWidth`:
+Add `showLabelFullWidth` with the more generous thresholds:
 
 ```tsx
+// Add showLabel based on interval
+const dataLength = entries.length;
 const labelInterval = 
   dataLength <= 7 ? 1 :
   dataLength <= 14 ? 2 :
@@ -42,27 +37,22 @@ const labelIntervalFullWidth =
   dataLength <= 42 ? 3 :
   dataLength <= 70 ? 4 : 5;
 
-return data.map((d, index) => ({
+return entries.map((d, index) => ({
   ...d,
   showLabel: index % labelInterval === 0 || index === dataLength - 1,
   showLabelFullWidth: index % labelIntervalFullWidth === 0 || index === dataLength - 1,
 }));
 ```
 
-2. **Update `createFoodLabelRenderer`** to accept which field to check, OR create a separate version for full-width charts that checks `showLabelFullWidth` instead of `showLabel`.
+#### 2. Update Total Volume chart's LabelList (line 736)
 
-3. **Use `showLabelFullWidth`** in the Combined Calories + Macros chart's `LabelList`.
+Change from `showLabel` to `showLabelFullWidth`:
+
+```tsx
+if (!dataPoint?.showLabelFullWidth) return null;
+```
 
 ### Result
 
-- Half-width charts (Calories, Macro Split, Protein, Carbs, Fat): Use existing thresholds
-- Full-width charts (Combined Calories + Macros, Total Volume): Use more generous thresholds
-- At 30 days: half-width shows every 4th label, full-width shows every 2nd label
-
-### Effort Estimate
-
-**Very easy** - about 10 lines of code change. Just need to:
-1. Add one more interval calculation
-2. Add one more field to the mapped data
-3. Point the combined chart's label renderer at the new field
+Both full-width charts (Combined Calories + Macros and Total Volume) will now use the same generous label thresholds, showing more labels since they have the horizontal space for it.
 
