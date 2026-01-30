@@ -22,7 +22,6 @@ export default function Admin() {
   const { data: stats, isLoading, error } = useAdminStats();
   const { data: userStats } = useAdminUserStats();
   const { data: feedback } = useAdminFeedback();
-  
 
   // Render nothing while checking admin status - no spinner, no flash
   if (isAdminLoading) {
@@ -86,12 +85,12 @@ export default function Admin() {
             <tr className="border-b">
               <th className="text-left py-0.5 pr-2 font-medium text-muted-foreground whitespace-nowrap">User</th>
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Last</th>
-              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Ftod</th>
-              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Wtod</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">F2day</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">W2day</th>
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Fs</th>
-              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">SM</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">SF</th>
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Ws</th>
-              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">SR</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">SW</th>
               <th className="text-center py-0.5 font-medium text-muted-foreground">Logins</th>
             </tr>
           </thead>
@@ -177,7 +176,6 @@ export default function Admin() {
           ))}
         </div>
       )}
-
     </div>
   );
 }
