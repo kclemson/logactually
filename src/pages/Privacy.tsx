@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Shield, Database, Bot, Code, Eye, UserCheck, X } from "lucide-react";
+import { Shield, Database, Bot, Code, Eye, Wrench, X } from "lucide-react";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 
 // ============================================
@@ -44,20 +44,24 @@ const PRIVACY_CONTENT = {
     title: "For the Technically Curious",
     intro: "If you're wondering about the security implementation:",
     items: [
-      { label: "Passwords", description: "are hashed using bcrypt — never stored in plaintext" },
+      { label: "Passwords", description: "are hashed using bcrypt — never stored in plaintext, and not visible to anyone (including me)" },
       {
         label: "Data isolation",
         description:
           "is enforced through Row-Level Security (RLS) policies — authenticated users can only access their own data",
       },
-      { label: "Sessions", description: "use JWT tokens with secure, time-limited expiry" },
-      { label: "All traffic", description: "is encrypted via HTTPS/TLS" },
+      { label: "Sessions", description: "use JWT access tokens (1-hour expiry by default) with single-use refresh tokens" },
+      { label: "All traffic", description: "is encrypted via HTTPS/TLS — both between your device and the server, and between the server and AI services" },
       { label: "Infrastructure", description: "runs on SOC2 Type II compliant hosting" },
     ],
+    links: [
+      { label: "Lovable Security", url: "https://lovable.dev/security" },
+      { label: "Infrastructure Security", url: "https://supabase.com/docs/guides/security/soc-2-compliance" },
+    ],
   },
-  developerAccess: {
-    title: "Developer Access",
-    text: "Technically, I have the ability to see what's logged in the database — but the only reason I ever look at it is if I need to for investigating a bug, and if so then I use my own data (since I use this app daily).",
+  howBuilt: {
+    title: "How This Was Built",
+    text: "This app was built using AI-assisted development tools. The security mechanisms described above — password hashing, data isolation, session management — are handled at the infrastructure level, not custom code. I can see your email address in the database, but not your password (it's hashed). If I ever need to debug something, I use my own data.",
   },
   footer: {
     lastUpdated: "Last updated: January 29, 2026",
@@ -166,15 +170,31 @@ export default function Privacy() {
                 </li>
               ))}
             </ul>
+            <p className="text-xs text-muted-foreground mt-3">
+              For verification:{" "}
+              {PRIVACY_CONTENT.technical.links.map((link, index) => (
+                <span key={link.url}>
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-foreground transition-colors"
+                  >
+                    {link.label}
+                  </a>
+                  {index < PRIVACY_CONTENT.technical.links.length - 1 && " · "}
+                </span>
+              ))}
+            </p>
           </CollapsibleSection>
 
-          {/* Developer Access */}
+          {/* How This Was Built */}
           <CollapsibleSection
-            title={PRIVACY_CONTENT.developerAccess.title}
-            icon={UserCheck}
-            storageKey="privacy-developer"
+            title={PRIVACY_CONTENT.howBuilt.title}
+            icon={Wrench}
+            storageKey="privacy-how-built"
           >
-            <p className="text-sm text-muted-foreground">{PRIVACY_CONTENT.developerAccess.text}</p>
+            <p className="text-sm text-muted-foreground">{PRIVACY_CONTENT.howBuilt.text}</p>
           </CollapsibleSection>
 
           {/* Footer */}
