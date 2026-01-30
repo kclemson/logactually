@@ -1,42 +1,48 @@
 
 
-## Add Purple Icon Color for Weights Trends Section
+## Track First Login for New Signups
 
-Currently, `CollapsibleSection` hardcodes all icons to blue (`hsl(217 91% 60%)`). To match the purple color scheme of the weight charts, we'll add an optional `iconClassName` prop.
+Currently, `increment_login_count` is only called in the `signIn` function, so users who sign up never get their first login counted. We'll add tracking after successful signup.
 
 ### Changes
 
-**File: `src/components/CollapsibleSection.tsx`**
+**File: `src/pages/Auth.tsx`**
 
-1. Add optional `iconClassName` prop to the interface
-2. Apply it to the Icon component, defaulting to the existing blue if not provided
-
-```tsx
-interface CollapsibleSectionProps {
-  // ... existing props
-  /** Optional className for icon (default: blue focus color) */
-  iconClassName?: string;
-}
-
-// In the component:
-<Icon className={cn("h-4 w-4", iconClassName || "text-[hsl(217_91%_60%)]")} />
-```
-
-**File: `src/pages/Trends.tsx`**
-
-Update the Weights Trends section to pass a purple icon class matching the training volume color:
+After a successful signup (when `!error` and `isSignUp`), call the same `increment_login_count` RPC to count the account creation as the user's first engagement.
 
 ```tsx
-<CollapsibleSection 
-  title="Weights Trends" 
-  icon={Dumbbell} 
-  iconClassName="text-[hsl(262_83%_58%)]"  // Match CHART_COLORS.trainingVolume
-  defaultOpen={true}
->
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setSubmitting(true);
+  setErrorMessage(null);
+
+  if (isSignUp && password !== confirmPassword) {
+    setErrorMessage("Passwords do not match.");
+    setSubmitting(false);
+    return;
+  }
+
+  const { error } = isSignUp ? await signUp(email, password) : await signIn(email, password);
+
+  if (error) {
+    setErrorMessage(error.message);
+  } else if (isSignUp) {
+    // Track signup as first login (fire-and-forget)
+    // Note: User may not be immediately available if email confirmation is required
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        supabase.rpc('increment_login_count', { user_id: user.id });
+      }
+    });
+  }
+
+  setSubmitting(false);
+};
 ```
 
-### Result
+### Considerations
 
-- Food Trends section: Blue icon (default)
-- Weights Trends section: Purple icon (matches the weight charts color scheme)
+- Uses fire-and-forget pattern (same as `signIn`) so it doesn't block the auth flow
+- Only attempts to increment if we can get the user (handles email confirmation scenarios gracefully)
+- New users will now start with `login_count = 1` instead of 0
 
