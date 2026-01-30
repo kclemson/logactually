@@ -1,37 +1,20 @@
 
 
-## Add Max Width to Prompt Eval Tools Panel
+## Increase Prompt Eval Panel Max Width to 1200px
 
-### Problem
-The Prompt Eval Tools panel at the bottom of the screen spans the full viewport width, making the results table extremely wide and difficult to read on large monitors.
-
-### Solution
-Add a max-width constraint to the panel content while keeping the border spanning full width for visual consistency.
-
-### Changes Required
+### Change Required
 
 **File: `src/components/DevToolsPanel.tsx`**
 
-Update the inner container (line 280) to include a max-width and center alignment:
+Update line 280 to use a custom max-width of 1200px instead of `max-w-5xl` (1024px):
 
 ```tsx
-// Before (line 280):
-<div className="px-6">
+// Before:
+<div className="mx-auto max-w-5xl px-6">
 
 // After:
-<div className="mx-auto max-w-5xl px-6">
+<div className="mx-auto max-w-[1200px] px-6">
 ```
 
-This applies a `max-w-5xl` (1024px) constraint which:
-- Keeps the table readable on wide screens
-- Centers the content horizontally
-- Maintains the border-t spanning full width for visual separation
-- Matches a reasonable desktop reading width for dense data tables
-
-### Alternative Widths Considered
-- `max-w-4xl` (896px) - Slightly narrower, good for focused reading
-- `max-w-6xl` (1152px) - Wider, allows more columns visible
-- `max-w-5xl` (1024px) - Sweet spot for data tables with many columns
-
-Recommending `max-w-5xl` as it provides enough room for the many columns while preventing extreme stretching.
+Since Tailwind's preset sizes jump from `max-w-5xl` (1024px) to `max-w-6xl` (1152px) to `max-w-7xl` (1280px), using the arbitrary value `max-w-[1200px]` gives the exact width requested.
 
