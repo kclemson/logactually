@@ -1,28 +1,38 @@
 
 
-## Add Bold to Section Headers in CollapsibleSection
+## Fix Section Header Bolding
 
 ### Problem
 
-The CollapsibleSection component's title text lacks `font-medium`, so section headers appear with normal weight instead of being bold. This makes it harder to visually distinguish section headers from body text.
+The section headers on the Privacy page don't appear bold because:
+1. `font-medium` (weight 500) isn't strong enough contrast against the body text
+2. The headers use `text-muted-foreground` which is a lighter color, further reducing visual weight
 
-### Fix
+### Solution
 
-Update `src/components/CollapsibleSection.tsx` line 63 to add `font-medium` to the button's className:
+Update the CollapsibleSection component to make headers visibly bolder by:
+1. Change `font-medium` to `font-semibold` (weight 600) for stronger visual weight
+2. Change `text-muted-foreground` to `text-foreground` so headers are brighter/darker than body text
+3. Keep the `hover:text-foreground` behavior (it will just stay the same color on hover since already foreground)
 
-**Current:**
-```tsx
-className="flex items-center gap-2 text-heading text-muted-foreground hover:text-foreground transition-colors"
-```
+### Changes to `src/components/CollapsibleSection.tsx`
 
-**Updated:**
+**Line 63, change from:**
 ```tsx
 className="flex items-center gap-2 font-medium text-muted-foreground hover:text-foreground transition-colors"
 ```
 
-This adds bold weight to all CollapsibleSection headers (including on Privacy page, Settings, and anywhere else the component is used), while keeping the muted color and hover effect.
+**To:**
+```tsx
+className="flex items-center gap-2 font-semibold text-foreground transition-colors"
+```
 
 ### Result
 
-Section headers like "What Data Is Collected", "Your Data, Your Control", etc. will be bold, clearly distinguishing them from the bullet point content beneath.
+Section headers will be:
+- **Bolder** (semibold 600 vs medium 500)
+- **Brighter/higher contrast** (foreground color instead of muted)
+- Clearly distinguishable from the muted body text underneath
+
+This affects both the Privacy page and Settings page, providing consistent bold headers across the app.
 
