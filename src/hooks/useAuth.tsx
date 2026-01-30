@@ -146,7 +146,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     // Track login count (fire-and-forget, don't block auth flow)
     if (!error && data.user) {
-      (supabase.rpc as Function)('increment_login_count', { user_id: data.user.id }).catch(() => {});
+      supabase.rpc('increment_login_count', { user_id: data.user.id })
+        .then(({ error: rpcError }) => {
+          if (import.meta.env.DEV) {
+            if (rpcError) {
+              console.error('Failed to increment login count:', rpcError);
+            } else {
+              console.log('Login count incremented for user:', data.user.id);
+            }
+          }
+        });
     }
     
     return { error };
