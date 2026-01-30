@@ -60,7 +60,7 @@ export function CollapsibleSection({
         <button
           type="button"
           onClick={handleToggle}
-          className="flex items-center gap-2 font-medium text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-2 font-semibold text-foreground transition-colors"
         >
           <Icon className="h-4 w-4" />
           <span>{title}</span>
