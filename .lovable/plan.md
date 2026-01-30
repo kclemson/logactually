@@ -1,40 +1,100 @@
 
 
-## Darker Zero Values
+## Truncate Muscle Groups with Tooltip
 
 ### Overview
-Change the zero-value styling from `text-muted-foreground` to a darker shade for less visual prominence.
+Limit the muscle group display to prevent line wrapping, while adding a native `title` tooltip to show the full list on hover.
 
 ---
 
-### Changes to `src/pages/Admin.tsx`
+### Changes to `src/lib/exercise-metadata.ts`
 
-Replace all instances of `text-muted-foreground` (for zero values) with `text-muted-foreground/50` to apply 50% opacity, making them significantly darker while still legible.
+#### 1. Add New Function for Truncated Display (after line 102)
 
-**Affected lines:**
-- Line 116: `entries_today`
-- Line 119: `weight_today`
-- Line 122: `total_entries`
-- Line 123: `saved_meals_count`
-- Line 124: `total_weight_entries`
-- Line 125: `saved_routines_count`
-- Line 126: `login_count`
-- Line 152: `entry_count`
-- Line 153: `weight_count`
-- Line 155: `users_with_entries`
-- Line 156: `users_created`
+Add a new function that returns both the truncated display string and the full string:
 
-**Example change:**
 ```tsx
-// From:
-text-muted-foreground
-
-// To:
-text-muted-foreground/50
+// Returns truncated display with full text for tooltip
+export function getMuscleGroupDisplayWithTooltip(exerciseKey: string): { display: string; full: string } | null {
+  const muscles = EXERCISE_MUSCLE_GROUPS[exerciseKey];
+  if (!muscles) return null;
+  
+  if (!muscles.secondary?.length) {
+    return { display: muscles.primary, full: muscles.primary };
+  }
+  
+  const full = `${muscles.primary}, ${muscles.secondary.join(', ')}`;
+  
+  // If 2 or fewer secondary muscles, no truncation needed
+  if (muscles.secondary.length <= 2) {
+    return { display: full, full };
+  }
+  
+  // Truncate: show primary + 2 secondary + indicator
+  const shownSecondary = muscles.secondary.slice(0, 2);
+  const remainingCount = muscles.secondary.length - 2;
+  const display = `${muscles.primary}, ${shownSecondary.join(', ')} +${remainingCount}`;
+  
+  return { display, full };
+}
 ```
 
 ---
 
+### Changes to `src/pages/Trends.tsx`
+
+#### 1. Update Import (line 18)
+
+```tsx
+// From:
+import { getMuscleGroupDisplay } from "@/lib/exercise-metadata";
+
+// To:
+import { getMuscleGroupDisplayWithTooltip } from "@/lib/exercise-metadata";
+```
+
+#### 2. Update ChartSubtitle Usage (lines 157-162)
+
+Wrap the muscle group text in a `<span>` with a `title` attribute for the native tooltip:
+
+```tsx
+// From:
+<ChartSubtitle>
+  Max: {maxWeightDisplay} {unit}
+  {getMuscleGroupDisplay(exercise.exercise_key) && (
+    <> · {getMuscleGroupDisplay(exercise.exercise_key)}</>
+  )}
+</ChartSubtitle>
+
+// To:
+<ChartSubtitle>
+  Max: {maxWeightDisplay} {unit}
+  {(() => {
+    const muscleInfo = getMuscleGroupDisplayWithTooltip(exercise.exercise_key);
+    if (!muscleInfo) return null;
+    return (
+      <span title={muscleInfo.full}> · {muscleInfo.display}</span>
+    );
+  })()}
+</ChartSubtitle>
+```
+
+---
+
+### Examples
+
+| Exercise | Display | Tooltip (on hover) |
+|----------|---------|-------------------|
+| Deadlift | Glutes, Hamstrings, Quads +2 | Glutes, Hamstrings, Quads, Hips, Lower Back |
+| Clean | Quads, Hamstrings, Glutes +2 | Quads, Hamstrings, Glutes, Shoulders, Upper Back |
+| Squat | Quads, Glutes, Hips +1 | Quads, Glutes, Hips, Abs |
+| Lat Pulldown | Back, Biceps | Back, Biceps |
+| Bench Press | Chest, Triceps | Chest, Triceps |
+
+---
+
 ### Result
-Zero values will appear much darker (50% opacity of the muted gray), making non-zero values stand out more prominently.
+- All chart subtitles stay on a single line
+- Hovering over the muscle group text shows the full list via native browser tooltip
+- No external tooltip library needed - uses simple HTML `title` attribute
 
