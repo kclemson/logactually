@@ -69,13 +69,13 @@ export const CANONICAL_EXERCISES: CanonicalExercise[] = [
   { key: 'trap_bar_deadlift', name: 'Trap Bar Deadlift', aliases: ['hex bar deadlift', 'hex bar'], primaryMuscle: 'Glutes', secondaryMuscles: ['Hamstrings', 'Quads', 'Lower Back'] },
   { key: 'clean', name: 'Clean', aliases: ['power clean', 'hang clean', 'clean and jerk'], primaryMuscle: 'Quads', secondaryMuscles: ['Hamstrings', 'Glutes', 'Shoulders', 'Upper Back'] },
   { key: 'snatch', name: 'Snatch', aliases: ['power snatch', 'hang snatch'], primaryMuscle: 'Quads', secondaryMuscles: ['Hamstrings', 'Glutes', 'Shoulders', 'Upper Back'] },
-  { key: 'kettlebell_swing', name: 'Kettlebell Swing', aliases: ['kb swing', 'russian swing', 'american swing'], primaryMuscle: 'Glutes', secondaryMuscles: ['Hamstrings', 'Abs'] },
+  { key: 'kettlebell_swing', name: 'Kettlebell Swing', aliases: ['kb swing', 'russian swing', 'american swing'], primaryMuscle: 'Glutes', secondaryMuscles: ['Hamstrings', 'Abs', 'Lower Back'] },
   
   // Core
   { key: 'cable_crunch', name: 'Cable Crunch', aliases: ['kneeling cable crunch', 'rope crunch'], primaryMuscle: 'Abs' },
   { key: 'hanging_leg_raise', name: 'Hanging Leg Raise', aliases: ['leg raise', 'hanging knee raise', 'captain chair'], primaryMuscle: 'Abs', secondaryMuscles: ['Hips'] },
   { key: 'ab_wheel', name: 'Ab Wheel', aliases: ['ab roller', 'rollout', 'ab wheel rollout'], primaryMuscle: 'Abs' },
-  { key: 'plank', name: 'Plank', aliases: ['planks', 'front plank'], primaryMuscle: 'Abs' },
+  { key: 'plank', name: 'Plank', aliases: ['planks', 'front plank'], primaryMuscle: 'Abs', secondaryMuscles: ['Shoulders', 'Glutes'] },
   { key: 'russian_twist', name: 'Russian Twist', aliases: ['russian twists', 'seated twist'], primaryMuscle: 'Abs' },
   { key: 'sit_up', name: 'Sit Up', aliases: ['sit ups', 'situp', 'situps'], primaryMuscle: 'Abs', secondaryMuscles: ['Hips'] },
   { key: 'crunch', name: 'Crunch', aliases: ['crunches', 'ab crunch'], primaryMuscle: 'Abs' },
