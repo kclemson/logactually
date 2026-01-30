@@ -89,11 +89,18 @@ export default function Auth() {
 
     const { error } = isSignUp ? await signUp(email, password) : await signIn(email, password);
 
-    if (error) {
-      setErrorMessage(error.message);
-    }
+  if (error) {
+    setErrorMessage(error.message);
+  } else if (isSignUp) {
+    // Track signup as first login (fire-and-forget)
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        supabase.rpc('increment_login_count', { user_id: user.id });
+      }
+    });
+  }
 
-    setSubmitting(false);
+  setSubmitting(false);
   };
 
   const handleTryDemo = async () => {
