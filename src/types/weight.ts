@@ -18,6 +18,7 @@ export interface WeightSet {
   reps: number;
   weight_lbs: number;
   rawInput?: string | null; // Only present on first set of entry
+  sourceRoutineId?: string | null; // Links to saved_routines.id when entry originated from a routine
   editedFields?: WeightEditableField[];
 }
 
@@ -48,6 +49,7 @@ export interface WeightSetRow {
   reps: number;
   weight_lbs: number;
   raw_input: string | null;
+  source_routine_id: string | null;
   created_at: string;
   updated_at: string;
 }

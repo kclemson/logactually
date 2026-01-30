@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useAnalyzeWeights } from '@/hooks/useAnalyzeWeights';
 import { useWeightEntries } from '@/hooks/useWeightEntries';
 import { useEditableItems } from '@/hooks/useEditableItems';
+import { useSavedRoutines } from '@/hooks/useSavedRoutines';
 import { useSaveRoutine } from '@/hooks/useSavedRoutines';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { WeightSet, WeightEditableField, SavedExerciseSet } from '@/types/weight';
@@ -75,6 +76,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   const { analyzeWeights, isAnalyzing, error: analyzeError } = useAnalyzeWeights();
   const saveRoutineMutation = useSaveRoutine();
   const { settings } = useUserSettings();
+  const { data: savedRoutines } = useSavedRoutines();
   
   const weightInputRef = useRef<LogInputRef>(null);
 
@@ -141,6 +143,21 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
     return map;
   }, [weightSets]);
 
+  // Build map of entryId -> routine name for entries from saved routines
+  const entryRoutineNames = useMemo(() => {
+    const map = new Map<string, string>();
+    if (!savedRoutines) return map;
+    const seenEntries = new Set<string>();
+    weightSets.forEach(set => {
+      if (!seenEntries.has(set.entryId) && set.sourceRoutineId) {
+        const routine = savedRoutines.find(r => r.id === set.sourceRoutineId);
+        if (routine) map.set(set.entryId, routine.name);
+        seenEntries.add(set.entryId);
+      }
+    });
+    return map;
+  }, [weightSets, savedRoutines]);
+
   // Toggle entry expansion
   const handleToggleEntryExpand = useCallback((entryId: string) => {
     setExpandedEntryIds(prev => {
@@ -187,7 +204,11 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   }, [entryBoundaries]);
 
   // Helper to create and save entry from exercises
-  const createEntryFromExercises = useCallback((exercises: Omit<WeightSet, 'id' | 'uid' | 'entryId' | 'editedFields'>[], rawInput: string | null) => {
+  const createEntryFromExercises = useCallback((
+    exercises: Omit<WeightSet, 'id' | 'uid' | 'entryId' | 'editedFields'>[],
+    rawInput: string | null,
+    sourceRoutineId?: string | null
+  ) => {
     const entryId = crypto.randomUUID();
     const setsWithEntryId = exercises.map(exercise => ({
       ...exercise,
@@ -201,6 +222,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
         entry_id: entryId,
         logged_date: dateStr,
         raw_input: rawInput,
+        source_routine_id: sourceRoutineId,
         weight_sets: setsWithEntryId,
       },
       {
@@ -231,7 +253,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
       reps: set.reps,
       weight_lbs: set.weight_lbs,
     }));
-    createEntryFromExercises(exercises, `From saved routine`);
+    createEntryFromExercises(exercises, `From saved routine`, routineId);
   }, [createEntryFromExercises]);
 
   // Auto-save handler for single field updates
@@ -389,6 +411,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
           onToggleEntryExpand={handleToggleEntryExpand}
           onSaveAsRoutine={handleSaveAsRoutine}
           weightUnit={settings.weightUnit}
+          entryRoutineNames={entryRoutineNames}
         />
       )}
 
