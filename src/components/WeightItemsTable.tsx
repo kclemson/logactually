@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { WeightSet } from '@/types/weight';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -54,6 +55,8 @@ interface WeightItemsTableProps {
   showInlineLabels?: boolean;
   /** Weight unit preference for display (lbs or kg) */
   weightUnit?: WeightUnit;
+  /** Map of entry ID to routine name for entries from saved routines */
+  entryRoutineNames?: Map<string, string>;
 }
 
 export function WeightItemsTable({
@@ -74,6 +77,7 @@ export function WeightItemsTable({
   onSaveAsRoutine,
   showInlineLabels = false,
   weightUnit = 'lbs',
+  entryRoutineNames,
 }: WeightItemsTableProps) {
   const { isReadOnly, triggerOverlay } = useReadOnlyContext();
   
@@ -584,7 +588,18 @@ export function WeightItemsTable({
                   <p className="text-muted-foreground whitespace-pre-wrap italic">
                     {currentRawInput}
                   </p>
-                  {onSaveAsRoutine && (
+                  {/* Show routine name if from saved routine, otherwise show "Save as routine" */}
+                  {currentEntryId && entryRoutineNames?.get(currentEntryId) ? (
+                    <p className="text-sm text-muted-foreground">
+                      Saved routine:{' '}
+                      <Link 
+                        to="/settings" 
+                        className="font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                      >
+                        {entryRoutineNames.get(currentEntryId)}
+                      </Link>
+                    </p>
+                  ) : onSaveAsRoutine && (
                     <button
                       onClick={() => {
                         // Gather all exercises in this entry

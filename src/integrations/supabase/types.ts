@@ -264,6 +264,7 @@ export type Database = {
           raw_input: string | null
           reps: number
           sets: number
+          source_routine_id: string | null
           updated_at: string
           user_id: string
           weight_lbs: number
@@ -278,6 +279,7 @@ export type Database = {
           raw_input?: string | null
           reps: number
           sets: number
+          source_routine_id?: string | null
           updated_at?: string
           user_id: string
           weight_lbs: number
@@ -292,6 +294,7 @@ export type Database = {
           raw_input?: string | null
           reps?: number
           sets?: number
+          source_routine_id?: string | null
           updated_at?: string
           user_id?: string
           weight_lbs?: number

@@ -36,6 +36,7 @@ export function useWeightEntries(date: string) {
         reps: row.reps,
         weight_lbs: Number(row.weight_lbs),
         rawInput: row.raw_input,
+        sourceRoutineId: row.source_routine_id,
       }));
     },
     enabled: !!user,
@@ -47,6 +48,7 @@ export function useWeightEntries(date: string) {
       entry_id: string;
       logged_date: string;
       raw_input: string | null;
+      source_routine_id?: string | null;
       weight_sets: Omit<WeightSet, 'id' | 'uid' | 'editedFields'>[];
     }) => {
       if (!user) throw new Error('Not authenticated');
@@ -61,8 +63,9 @@ export function useWeightEntries(date: string) {
         sets: set.sets,
         reps: set.reps,
         weight_lbs: set.weight_lbs,
-        // Only store raw_input on the first set
+        // Only store raw_input and source_routine_id on the first set
         raw_input: index === 0 ? params.raw_input : null,
+        source_routine_id: index === 0 ? (params.source_routine_id ?? null) : null,
       }));
 
       const { error } = await supabase.from('weight_sets').insert(rows);
