@@ -34,8 +34,8 @@ export function ReadOnlyOverlay() {
           <DialogDescription>
             {isWelcome ? (
               <>
-                You're exploring with sample data. Browse around, try the editing experience,
-                and see how everything works. Changes won't be saved.
+                You're exploring with sample data. Browse around and see how everything works.
+                Changes won't be saved.
               </>
             ) : (
               <>
