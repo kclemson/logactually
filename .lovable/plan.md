@@ -1,10 +1,10 @@
 
 
-## Add Muscle Group Labels to Exercise Charts
+## Add Diverging Low Row to Exercise Lists
 
 ### Overview
 
-Add a `muscleGroup` field to canonical exercises and display it in the chart subtitles on the Trends page, using a minimal frontend lookup that only contains what's needed.
+Add "Diverging Low Row" to both the canonical exercise list and the frontend muscle group lookup so it displays "Back" as its muscle group.
 
 ---
 
@@ -12,69 +12,20 @@ Add a `muscleGroup` field to canonical exercises and display it in the chart sub
 
 #### 1. `supabase/functions/_shared/exercises.ts`
 
-**Add sync note after line 3:**
-```typescript
-//
-// SYNC NOTE: Muscle group data is duplicated in src/lib/exercise-metadata.ts
-// for frontend use. When adding/updating exercises, update BOTH files.
-```
-
-**Update interface to include muscleGroup:**
-```typescript
-export interface CanonicalExercise {
-  key: string;
-  name: string;
-  aliases: string[];
-  muscleGroup: string;
-}
-```
-
-**Add muscleGroup to all exercises** using labels: `Chest`, `Shoulders`, `Triceps`, `Back`, `Biceps`, `Traps`, `Quads`, `Hamstrings`, `Glutes`, `Calves`, `Hips`, `Core`, `Full Body`
-
-**Update `getExerciseReferenceForPrompt()`** to include muscle group in AI context.
-
----
-
-#### 2. `src/lib/exercise-metadata.ts` (New File)
-
-Minimal lookup with sync note:
+Add to the "Upper Body - Pull" section (around line 24):
 
 ```typescript
-// Muscle group lookup for exercise charts on the Trends page
-//
-// SYNC NOTE: This duplicates data from supabase/functions/_shared/exercises.ts
-// Edge functions (Deno) and frontend (Vite) run in separate build contexts,
-// so we cannot share imports. When adding/updating exercises, update BOTH files.
-
-export const EXERCISE_MUSCLE_GROUPS: Record<string, string> = {
-  bench_press: 'Chest',
-  leg_extension: 'Quads',
-  leg_curl: 'Hamstrings',
-  // ... all 50+ exercises
-};
-
-export function getMuscleGroup(exerciseKey: string): string | null {
-  return EXERCISE_MUSCLE_GROUPS[exerciseKey] || null;
-}
+{ key: 'diverging_low_row', name: 'Diverging Low Row', aliases: ['diverging row', 'low row machine', 'plate loaded row'], muscleGroup: 'Back' },
 ```
 
 ---
 
-#### 3. `src/pages/Trends.tsx`
+#### 2. `src/lib/exercise-metadata.ts`
 
-**Add import:**
+Add to the "Upper Body - Pull" section (around line 21):
+
 ```typescript
-import { getMuscleGroup } from '@/lib/exercise-metadata';
-```
-
-**Update subtitle (around line 132):**
-```tsx
-<ChartSubtitle>
-  Max: {maxWeightDisplay} {unit}
-  {getMuscleGroup(exercise.exercise_key) && (
-    <> · {getMuscleGroup(exercise.exercise_key)}</>
-  )}
-</ChartSubtitle>
+diverging_low_row: 'Back',
 ```
 
 ---
@@ -83,6 +34,12 @@ import { getMuscleGroup } from '@/lib/exercise-metadata';
 
 | Before | After |
 |--------|-------|
-| Max: 60 lbs | Max: 60 lbs · Quads |
-| Max: 40 lbs | Max: 40 lbs · Hamstrings |
+| **Diverging Low Row** | **Diverging Low Row** |
+| Max: 70 lbs | Max: 70 lbs · Back |
+
+---
+
+### Note
+
+If the exercise was logged with a different key (e.g., `diverging_low_row` vs something else), we may need to check the database to confirm the exact key being used. However, based on the display name "Diverging Low Row", the key is almost certainly `diverging_low_row` following our snake_case convention.
 
