@@ -1,68 +1,64 @@
 
-## Fix Login Count Tracking
 
-### Problem
+## Add Demo Logins to Admin Dashboard
 
-The `increment_login_count` RPC call never fires because the type assertion `(supabase.rpc as Function)` breaks the PostgrestBuilder promise chain.
+### Overview
 
-### Root Cause
-
-When this was first implemented, the generated types didn't include the new RPC. The workaround `(supabase.rpc as Function)('increment_login_count', ...)` was used, but `PostgrestBuilder` objects need `.then()` or `await` to execute. The silent `.catch(() => {})` swallowed any errors.
-
-Now that types have regenerated and include `increment_login_count`, we can use the properly typed call.
+Replace the "w/logged items" row (which is always 100%) with "Demo logins: #" under the Users header.
 
 ---
 
-### File Changes
+### Changes Required
 
-**`src/hooks/useAuth.tsx`** (lines 144-153)
+#### 1. Database Function Update
 
-Replace:
+**Add `demo_logins` to `get_usage_stats` response**
+
+The `get_usage_stats` RPC needs a new field that fetches the login count for the read-only (demo) user:
+
+```sql
+'demo_logins', (
+  SELECT COALESCE(login_count, 0) 
+  FROM profiles 
+  WHERE is_read_only = true 
+  LIMIT 1
+)
+```
+
+---
+
+#### 2. Frontend Changes
+
+**`src/hooks/useAdminStats.ts`**
+
+Add to `UsageStats` interface:
 ```typescript
-const signIn = async (email: string, password: string) => {
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  
-  // Track login count (fire-and-forget, don't block auth flow)
-  if (!error && data.user) {
-    (supabase.rpc as Function)('increment_login_count', { user_id: data.user.id }).catch(() => {});
-  }
-  
-  return { error };
-};
+demo_logins: number;
+```
+
+**`src/pages/Admin.tsx`**
+
+Replace line 63-65:
+```tsx
+<p>
+  w/logged items: {stats?.users_with_entries ?? 0} ({pct(stats?.users_with_entries ?? 0)}%)
+</p>
 ```
 
 With:
-```typescript
-const signIn = async (email: string, password: string) => {
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  
-  // Track login count (fire-and-forget, don't block auth flow)
-  if (!error && data.user) {
-    supabase.rpc('increment_login_count', { user_id: data.user.id })
-      .then(() => {
-        if (import.meta.env.DEV) {
-          console.log('Login count incremented for user:', data.user.id);
-        }
-      })
-      .catch((err) => {
-        if (import.meta.env.DEV) {
-          console.error('Failed to increment login count:', err);
-        }
-      });
-  }
-  
-  return { error };
-};
+```tsx
+<p>Demo logins: {stats?.demo_logins ?? 0}</p>
 ```
 
 ---
 
 ### Summary
 
-| Change | Reason |
-|--------|--------|
-| Remove `(supabase.rpc as Function)` cast | Types now include `increment_login_count` |
-| Add `.then()` | Ensures the PostgrestBuilder actually executes |
-| Add dev-mode logging | Surfaces success/failure in console during testing |
+| Component | Change |
+|-----------|--------|
+| Database | Add `demo_logins` field to `get_usage_stats` RPC |
+| TypeScript | Add `demo_logins: number` to `UsageStats` interface |
+| Admin UI | Replace "w/logged items" with "Demo logins: #" |
 
-After this fix, sign out and back in - you should see "Login count incremented" in console and the count update on refresh.
+After this, the admin dashboard will show how many times the demo account has been signed into.
+
