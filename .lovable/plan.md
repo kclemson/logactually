@@ -1,28 +1,88 @@
 
 
-## Update Training Volume Color to Match Exercise Charts
+## Add Muscle Group Labels to Exercise Charts
 
-### Change
+### Overview
 
-**`src/pages/Trends.tsx` - Line 25**
+Add a `muscleGroup` field to canonical exercises and display it in the chart subtitles on the Trends page, using a minimal frontend lookup that only contains what's needed.
 
-Update `trainingVolume` to use the same bright purple value as the exercise charts:
+---
 
-From:
+### File Changes
+
+#### 1. `supabase/functions/_shared/exercises.ts`
+
+**Add sync note after line 3:**
 ```typescript
-trainingVolume: "hsl(262 70% 45%)", // Darker purple for volume chart, visible on both themes
+//
+// SYNC NOTE: Muscle group data is duplicated in src/lib/exercise-metadata.ts
+// for frontend use. When adding/updating exercises, update BOTH files.
 ```
 
-To:
+**Update interface to include muscleGroup:**
 ```typescript
-trainingVolume: "hsl(262 83% 58%)", // Bright purple matching exercise charts (kept separate const for future adjustment)
+export interface CanonicalExercise {
+  key: string;
+  name: string;
+  aliases: string[];
+  muscleGroup: string;
+}
+```
+
+**Add muscleGroup to all exercises** using labels: `Chest`, `Shoulders`, `Triceps`, `Back`, `Biceps`, `Traps`, `Quads`, `Hamstrings`, `Glutes`, `Calves`, `Hips`, `Core`, `Full Body`
+
+**Update `getExerciseReferenceForPrompt()`** to include muscle group in AI context.
+
+---
+
+#### 2. `src/lib/exercise-metadata.ts` (New File)
+
+Minimal lookup with sync note:
+
+```typescript
+// Muscle group lookup for exercise charts on the Trends page
+//
+// SYNC NOTE: This duplicates data from supabase/functions/_shared/exercises.ts
+// Edge functions (Deno) and frontend (Vite) run in separate build contexts,
+// so we cannot share imports. When adding/updating exercises, update BOTH files.
+
+export const EXERCISE_MUSCLE_GROUPS: Record<string, string> = {
+  bench_press: 'Chest',
+  leg_extension: 'Quads',
+  leg_curl: 'Hamstrings',
+  // ... all 50+ exercises
+};
+
+export function getMuscleGroup(exerciseKey: string): string | null {
+  return EXERCISE_MUSCLE_GROUPS[exerciseKey] || null;
+}
+```
+
+---
+
+#### 3. `src/pages/Trends.tsx`
+
+**Add import:**
+```typescript
+import { getMuscleGroup } from '@/lib/exercise-metadata';
+```
+
+**Update subtitle (around line 132):**
+```tsx
+<ChartSubtitle>
+  Max: {maxWeightDisplay} {unit}
+  {getMuscleGroup(exercise.exercise_key) && (
+    <> · {getMuscleGroup(exercise.exercise_key)}</>
+  )}
+</ChartSubtitle>
 ```
 
 ---
 
 ### Result
 
-- Two semantic color constants remain: `trainingVolume` for the volume chart, exercise charts use `hsl(262 83% 58%)` inline
-- Both currently use the same bright purple value
-- Easy to differentiate later by just changing the `trainingVolume` value
+| Before | After |
+|--------|-------|
+| Max: 60 lbs | Max: 60 lbs · Quads |
+| Max: 40 lbs | Max: 40 lbs · Hamstrings |
 
