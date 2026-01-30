@@ -101,6 +101,30 @@ export function getMuscleGroupDisplay(exerciseKey: string): string | null {
   return muscles.primary;
 }
 
+// Returns truncated display with full text for tooltip
+export function getMuscleGroupDisplayWithTooltip(exerciseKey: string): { display: string; full: string } | null {
+  const muscles = EXERCISE_MUSCLE_GROUPS[exerciseKey];
+  if (!muscles) return null;
+  
+  if (!muscles.secondary?.length) {
+    return { display: muscles.primary, full: muscles.primary };
+  }
+  
+  const full = `${muscles.primary}, ${muscles.secondary.join(', ')}`;
+  
+  // If 2 or fewer secondary muscles, no truncation needed
+  if (muscles.secondary.length <= 2) {
+    return { display: full, full };
+  }
+  
+  // Truncate: show primary + 2 secondary + indicator
+  const shownSecondary = muscles.secondary.slice(0, 2);
+  const remainingCount = muscles.secondary.length - 2;
+  const display = `${muscles.primary}, ${shownSecondary.join(', ')} +${remainingCount}`;
+  
+  return { display, full };
+}
+
 // Returns just primary muscle (backwards compatibility)
 export function getMuscleGroup(exerciseKey: string): string | null {
   return EXERCISE_MUSCLE_GROUPS[exerciseKey]?.primary || null;

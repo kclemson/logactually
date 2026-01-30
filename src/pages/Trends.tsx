@@ -15,7 +15,7 @@ import { useUserSettings } from "@/hooks/useUserSettings";
 import type { WeightUnit } from "@/lib/weight-units";
 import { useMergeExercises } from "@/hooks/useMergeExercises";
 import { DuplicateExercisePrompt, type DuplicateGroup } from "@/components/DuplicateExercisePrompt";
-import { getMuscleGroupDisplay } from "@/lib/exercise-metadata";
+import { getMuscleGroupDisplayWithTooltip } from "@/lib/exercise-metadata";
 
 // Chart color palette (hex RGB format for easy editing)
 const CHART_COLORS = {
@@ -156,9 +156,13 @@ const ExerciseChart = ({ exercise, unit }: { exercise: ExerciseTrend; unit: Weig
           <ChartTitle className="truncate">{exercise.description}</ChartTitle>
           <ChartSubtitle>
             Max: {maxWeightDisplay} {unit}
-            {getMuscleGroupDisplay(exercise.exercise_key) && (
-              <> · {getMuscleGroupDisplay(exercise.exercise_key)}</>
-            )}
+            {(() => {
+              const muscleInfo = getMuscleGroupDisplayWithTooltip(exercise.exercise_key);
+              if (!muscleInfo) return null;
+              return (
+                <span title={muscleInfo.full}> · {muscleInfo.display}</span>
+              );
+            })()}
           </ChartSubtitle>
         </div>
       </CardHeader>
