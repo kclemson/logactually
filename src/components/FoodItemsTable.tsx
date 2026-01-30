@@ -266,14 +266,8 @@ export function FoodItemsTable({
     return entryBoundaries.some(b => b.startIndex === index);
   };
 
-  // Get the entry ID for the current item
-  const getEntryIdForItem = (index: number): string | null => {
-    if (!entryBoundaries) return null;
-    const boundary = entryBoundaries.find(
-      b => index >= b.startIndex && index <= b.endIndex
-    );
-    return boundary?.entryId || null;
-  };
+  // Note: entryBoundaries is kept for visual grouping (isFirstItemInEntry, isLastItemInEntry)
+  // but data lookups use item.entryId directly to avoid race conditions
 
   const hasDeleteColumn = editable || hasEntryDeletion;
   const gridCols = getGridCols(!!hasDeleteColumn);
@@ -389,7 +383,7 @@ export function FoodItemsTable({
         const entryBoundary = isLastItemInEntry(index);
         const isFirstInEntry = isFirstItemInEntry(index);
         const isLastInEntry = !!entryBoundary;
-        const currentEntryId = getEntryIdForItem(index);
+        const currentEntryId = item.entryId || null;
         const isCurrentExpanded = currentEntryId ? expandedEntryIds?.has(currentEntryId) : false;
         const currentRawInput = currentEntryId ? entryRawInputs?.get(currentEntryId) : null;
         
@@ -650,11 +644,8 @@ export function FoodItemsTable({
                     ) : onSaveAsMeal && currentEntryId && (
                       <button
                         onClick={() => {
-                          const boundary = entryBoundaries?.find(b => b.entryId === currentEntryId);
-                          if (boundary) {
-                            const entryItems = items.slice(boundary.startIndex, boundary.endIndex + 1);
-                            onSaveAsMeal(currentEntryId, currentRawInput ?? null, entryItems);
-                          }
+                          const entryItems = items.filter(i => i.entryId === currentEntryId);
+                          onSaveAsMeal(currentEntryId!, currentRawInput ?? null, entryItems);
                         }}
                         className="text-sm text-blue-600 dark:text-blue-400 underline"
                       >

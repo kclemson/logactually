@@ -209,13 +209,8 @@ export function WeightItemsTable({
     return entryBoundaries.some(b => b.startIndex === index);
   };
 
-  const getEntryIdForItem = (index: number): string | null => {
-    if (!entryBoundaries) return null;
-    const boundary = entryBoundaries.find(
-      b => index >= b.startIndex && index <= b.endIndex
-    );
-    return boundary?.entryId || null;
-  };
+  // Note: entryBoundaries is kept for visual grouping (isFirstItemInEntry, isLastItemInEntry)
+  // but data lookups use item.entryId directly to avoid race conditions
 
   const hasDeleteColumn = editable || hasEntryDeletion;
   const gridCols = getGridCols(!!hasDeleteColumn);
@@ -316,7 +311,7 @@ export function WeightItemsTable({
       {items.map((item, index) => {
         const isFirstInEntry = isFirstItemInEntry(index);
         const isLastInEntry = !!isLastItemInEntry(index);
-        const currentEntryId = getEntryIdForItem(index);
+        const currentEntryId = item.entryId || null;
         const entryIsNew = isNewEntry(currentEntryId);
         const isCurrentExpanded = currentEntryId ? expandedEntryIds?.has(currentEntryId) : false;
         const currentRawInput = currentEntryId ? entryRawInputs?.get(currentEntryId) : null;
