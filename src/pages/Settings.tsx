@@ -151,7 +151,7 @@ export default function Settings() {
         {!isReadOnly && (
           <button
             onClick={() => setCreateMealDialogOpen(true)}
-            className="w-full text-left py-2 hover:bg-accent/50 transition-colors flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+            className="w-full text-left py-2 hover:bg-accent/50 transition-colors flex items-center gap-2 text-sm text-foreground"
           >
             <Plus className="h-4 w-4" />
             <span>Add Saved Meal</span>
@@ -186,7 +186,7 @@ export default function Settings() {
           {!isReadOnly && (
             <button
               onClick={() => setCreateRoutineDialogOpen(true)}
-              className="w-full text-left py-2 hover:bg-accent/50 transition-colors flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+              className="w-full text-left py-2 hover:bg-accent/50 transition-colors flex items-center gap-2 text-sm text-foreground"
             >
               <Plus className="h-4 w-4" />
               <span>Add Saved Routine</span>
