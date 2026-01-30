@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Shield, Database, Bot, Code, Eye, Wrench, ScrollText, X } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 
 // ============================================
@@ -132,6 +133,7 @@ const MastodonIcon = ({ className }: { className?: string }) => (
 
 export default function Privacy() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   return (
     <div className="min-h-screen bg-background">
@@ -139,7 +141,7 @@ export default function Privacy() {
         <div className="space-y-4 relative">
           {/* Close button */}
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate(user ? "/" : "/auth")}
             className="absolute right-0 top-0 p-2 -mr-2 -mt-2 text-muted-foreground hover:text-foreground transition-colors"
             aria-label="Close"
           >
