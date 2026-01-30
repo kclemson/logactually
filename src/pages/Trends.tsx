@@ -291,18 +291,27 @@ const Trends = () => {
       });
     });
 
-  return Object.entries(byDate)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, volumeLbs]) => {
-      const volume = settings.weightUnit === "kg" 
-        ? Math.round(volumeLbs * LBS_TO_KG) 
-        : Math.round(volumeLbs);
-      return {
-        date: format(new Date(`${date}T12:00:00`), "MMM d"),
-        volume,
-        label: `${Math.round(volume / 1000)}k`,
-      };
-    });
+    const entries = Object.entries(byDate)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, volumeLbs]) => {
+        const volume = settings.weightUnit === "kg" 
+          ? Math.round(volumeLbs * LBS_TO_KG) 
+          : Math.round(volumeLbs);
+        return {
+          date: format(new Date(`${date}T12:00:00`), "MMM d"),
+          volume,
+          label: `${Math.round(volume / 1000)}k`,
+        };
+      });
+
+    // Add showLabel based on interval
+    const dataLength = entries.length;
+    const labelInterval = dataLength <= 12 ? 1 : dataLength <= 20 ? 2 : 3;
+
+    return entries.map((d, index) => ({
+      ...d,
+      showLabel: index % labelInterval === 0 || index === dataLength - 1,
+    }));
   }, [weightExercises, settings.weightUnit]);
 
   // Split into top 25 and remaining
@@ -570,10 +579,25 @@ const Trends = () => {
                         <Bar dataKey="volume" fill={CHART_COLORS.trainingVolume} radius={[2, 2, 0, 0]}>
                           <LabelList 
                             dataKey="label" 
-                            position="top" 
-                            fill={CHART_COLORS.trainingVolume}
-                            fontSize={7}
-                            fontWeight={500}
+                            content={(props: any) => {
+                              const { x, y, width, value, index } = props;
+                              const dataPoint = volumeByDay[index];
+                              if (!dataPoint?.showLabel) return null;
+                              if (!value || typeof x !== 'number' || typeof width !== 'number') return null;
+                              
+                              return (
+                                <text
+                                  x={x + width / 2}
+                                  y={y - 4}
+                                  fill={CHART_COLORS.trainingVolume}
+                                  textAnchor="middle"
+                                  fontSize={7}
+                                  fontWeight={500}
+                                >
+                                  {value}
+                                </text>
+                              );
+                            }}
                           />
                         </Bar>
                         </BarChart>
