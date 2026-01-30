@@ -39,6 +39,7 @@ export const CANONICAL_EXERCISES: CanonicalExercise[] = [
   { key: 'hammer_curl', name: 'Hammer Curl', aliases: ['hammer curls', 'neutral grip curl'], muscleGroup: 'Biceps' },
   { key: 'preacher_curl', name: 'Preacher Curl', aliases: ['preacher bench curl', 'scott curl'], muscleGroup: 'Biceps' },
   { key: 'cable_curl', name: 'Cable Curl', aliases: ['cable bicep curl'], muscleGroup: 'Biceps' },
+  { key: 'diverging_low_row', name: 'Diverging Low Row', aliases: ['diverging row', 'low row machine', 'plate loaded row'], muscleGroup: 'Back' },
   { key: 'shrugs', name: 'Shrugs', aliases: ['shoulder shrugs', 'trap shrugs', 'dumbbell shrugs', 'barbell shrugs'], muscleGroup: 'Traps' },
   
   // Lower Body

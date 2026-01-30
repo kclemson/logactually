@@ -31,6 +31,7 @@ export const EXERCISE_MUSCLE_GROUPS: Record<string, string> = {
   hammer_curl: 'Biceps',
   preacher_curl: 'Biceps',
   cable_curl: 'Biceps',
+  diverging_low_row: 'Back',
   shrugs: 'Traps',
 
   // Lower Body
