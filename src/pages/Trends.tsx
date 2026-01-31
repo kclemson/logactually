@@ -122,9 +122,12 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
 
     return sourceData.map((d, index) => {
       const displayWeight = unit === "kg" ? Math.round(d.weight * LBS_TO_KG) : d.weight;
-      // Calculate mph: distance / (duration / 60)
+      // Calculate mph: distance / (duration / 60), pace: duration / distance
       const mph = d.distance_miles && d.duration_minutes 
         ? Number((d.distance_miles / (d.duration_minutes / 60)).toFixed(1))
+        : null;
+      const pace = d.distance_miles && d.duration_minutes
+        ? Number((d.duration_minutes / d.distance_miles).toFixed(1))
         : null;
       
       return {
@@ -133,6 +136,7 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
         weight: displayWeight,
         dateLabel: format(new Date(`${d.date}T12:00:00`), "MMM d"),
         mph,
+        pace,
         // For weight exercises: "3×10×135"; for cardio in time mode: duration; in mph mode: mph value
         label: isCardio 
           ? (showMph ? `${mph}` : `${Number(d.duration_minutes || 0).toFixed(1)}`)
@@ -259,7 +263,8 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
                         const duration = Number(entry.payload.duration_minutes || 0).toFixed(1);
                         const distance = entry.payload.distance_miles;
                         if (showMph && entry.payload.mph) {
-                          return `${entry.payload.mph} mph · ${distance} mi`;
+                          const pace = entry.payload.pace;
+                          return `${entry.payload.mph} mph · ${pace} min/mi · ${distance} mi`;
                         }
                         if (distance) {
                           return `${duration} min · ${distance} mi`;
