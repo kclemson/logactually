@@ -1,56 +1,78 @@
 
-## Remove Apple OAuth and Feature Flag
+
+## Persist Cardio Chart MPH Toggle to LocalStorage
 
 ### Summary
 
-Two changes in one:
-1. Remove all Apple OAuth code (state, handler, button)
-2. Remove the `?oauth=1` feature flag so Google sign-in is always visible
+Add localStorage persistence for the time/mph toggle on cardio charts that support it (walk_run and cycling). When you switch to mph view, that preference will be remembered for each exercise type.
 
-### Changes to `src/pages/Auth.tsx`
+### Current Behavior
+- Line 111: `const [showMph, setShowMph] = useState(false);`
+- Every time you navigate away and come back to Trends, the toggle resets to "time" view
 
-| Line(s) | What to Remove/Change |
-|---------|----------------------|
-| 17 | Remove `useSearchParams` from import (no longer needed after removing feature flag) |
-| 17-19 | Remove `searchParams` and `showOAuth` variables |
-| 31 | Remove `isAppleLoading` state |
-| 142-160 | Remove entire `handleAppleSignIn` function |
-| 375-433 | Replace conditional `{showOAuth && (<>...</>)}` wrapper with just the Google button (no condition) |
-| 413-431 | Remove entire Apple button block |
-| 384, 419, 444, 457 | Remove `isAppleLoading` from disabled prop checks |
+### Proposed Behavior
+- Each exercise with distance tracking gets its own persisted preference
+- LocalStorage key format: `trends-mph-{exercise_key}` (e.g., `trends-mph-walk_run`, `trends-mph-cycling`)
+- On mount, reads from localStorage; on toggle, writes to localStorage
 
-### Resulting Code Structure
+### Implementation
 
-**Before (sign-in options section):**
+**File:** `src/pages/Trends.tsx`
+
+**Change 1:** Update `showMph` state initialization (line 111)
+
+Replace:
 ```tsx
-{showOAuth && (
-  <>
-    {/* Google button */}
-    {/* Apple button */}
-  </>
-)}
-{/* Email Sign Up button */}
+const [showMph, setShowMph] = useState(false);
 ```
 
-**After:**
+With:
 ```tsx
-{/* Google button - always visible */}
-{/* Email Sign Up button */}
+const [showMph, setShowMph] = useState(() => {
+  if (!supportsSpeedToggle) return false;
+  return localStorage.getItem(`trends-mph-${exercise.exercise_key}`) === 'true';
+});
 ```
 
-### Import Cleanup
+**Change 2:** Update the toggle handler (line 216)
 
-Since `useSearchParams` is only used for the OAuth feature flag (the `reset` param is still used but via different means), we need to check if it's still needed. Looking at line 18, `isResetCallback` still uses `searchParams`, so we keep the import but remove the `showOAuth` variable.
+Replace:
+```tsx
+const handleHeaderClick = supportsSpeedToggle ? () => setShowMph(!showMph) : undefined;
+```
 
-### Lines Removed
+With:
+```tsx
+const handleHeaderClick = supportsSpeedToggle 
+  ? () => {
+      const newValue = !showMph;
+      localStorage.setItem(`trends-mph-${exercise.exercise_key}`, String(newValue));
+      setShowMph(newValue);
+    }
+  : undefined;
+```
 
-- ~30 lines of Apple OAuth code
-- ~3 lines of feature flag logic
-- Conditional wrapper around OAuth buttons
+### Why This Pattern
 
-### What Stays
+This follows the existing patterns in the same file:
+- `trends-period` (lines 301-304, 537): Period selector persistence
+- `dismissed-duplicate-exercises` (lines 306-313, 379): Dismissed duplicates persistence
 
-- Google OAuth button and handler (now always visible on sign-in screen)
-- All email/password auth flows
-- Demo mode
-- Password reset flow (still uses `searchParams` for `?reset=true`)
+Both use the same approach: initialize from localStorage in useState, save in the handler.
+
+### LocalStorage Keys
+
+| Exercise | Key |
+|----------|-----|
+| Walk/Run | `trends-mph-walk_run` |
+| Cycling | `trends-mph-cycling` |
+
+### Testing
+
+1. Go to Trends page
+2. Find a walk_run or cycling chart
+3. Click the header to toggle to "mph" view
+4. Navigate to another page (e.g., /weights)
+5. Return to Trends
+6. Verify the chart is still in "mph" view
+
