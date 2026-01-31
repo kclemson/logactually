@@ -9,7 +9,7 @@ import { useSubmitFeedback } from "@/hooks/useFeedback";
 // ============================================
 const FEEDBACK_CONTENT = {
   title: "Feedback",
-  placeholder: "Let us know what you think, or if you have any feature requests or bug reports",
+  placeholder: "Let me know what you think about the app, or if you have any feature requests or bug reports",
   submitButton: "Send Feedback",
   submittingButton: "Sending...",
   successMessage: "Thanks for the feedback!",
