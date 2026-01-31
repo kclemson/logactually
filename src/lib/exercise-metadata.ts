@@ -91,13 +91,11 @@ export const EXERCISE_MUSCLE_GROUPS: Record<string, ExerciseMuscles> = {
   assisted_pullup_machine: { primary: 'Back', secondary: ['Biceps'] },
 
   // Cardio / Duration-Based
-  treadmill: { primary: 'Cardio', isCardio: true },
-  stationary_bike: { primary: 'Cardio', isCardio: true },
+  walk_run: { primary: 'Cardio', isCardio: true },
+  cycling: { primary: 'Cardio', isCardio: true },
   elliptical: { primary: 'Cardio', isCardio: true },
-  rowing_machine: { primary: 'Cardio', isCardio: true },
+  rowing: { primary: 'Cardio', isCardio: true },
   stair_climber: { primary: 'Cardio', isCardio: true },
-  walking: { primary: 'Cardio', isCardio: true },
-  running: { primary: 'Cardio', isCardio: true },
   swimming: { primary: 'Cardio', isCardio: true },
   jump_rope: { primary: 'Cardio', isCardio: true },
 };

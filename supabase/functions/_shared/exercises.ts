@@ -95,13 +95,11 @@ export const CANONICAL_EXERCISES: CanonicalExercise[] = [
   { key: 'assisted_pullup_machine', name: 'Assisted Pull-up Machine', aliases: ['pullup assist', 'gravitron'], primaryMuscle: 'Back', secondaryMuscles: ['Biceps'] },
 
   // Cardio / Duration-Based
-  { key: 'treadmill', name: 'Treadmill', aliases: ['treadmill walk', 'treadmill run', 'treadmill jog'], primaryMuscle: 'Cardio', isCardio: true },
-  { key: 'stationary_bike', name: 'Stationary Bike', aliases: ['bike', 'cycling', 'spin bike', 'exercise bike', 'recumbent bike'], primaryMuscle: 'Cardio', isCardio: true },
+  { key: 'walk_run', name: 'Walk/Run', aliases: ['treadmill', 'treadmill walk', 'treadmill run', 'treadmill jog', 'walking', 'walk', 'running', 'run', 'jog', 'jogging', 'speedwalk', 'outdoor walk', 'outdoor run', 'incline walk'], primaryMuscle: 'Cardio', isCardio: true },
+  { key: 'cycling', name: 'Cycling', aliases: ['bike', 'stationary bike', 'spin bike', 'spin class', 'exercise bike', 'recumbent bike', 'outdoor bike', 'bicycle'], primaryMuscle: 'Cardio', isCardio: true },
   { key: 'elliptical', name: 'Elliptical', aliases: ['elliptical machine', 'cross trainer'], primaryMuscle: 'Cardio', isCardio: true },
-  { key: 'rowing_machine', name: 'Rowing Machine', aliases: ['row machine', 'erg', 'rower', 'concept 2', 'ergometer'], primaryMuscle: 'Cardio', isCardio: true },
+  { key: 'rowing', name: 'Rowing', aliases: ['rowing machine', 'row machine', 'erg', 'rower', 'concept 2', 'ergometer'], primaryMuscle: 'Cardio', isCardio: true },
   { key: 'stair_climber', name: 'Stair Climber', aliases: ['stairmaster', 'stair stepper', 'step machine'], primaryMuscle: 'Cardio', isCardio: true },
-  { key: 'walking', name: 'Walking', aliases: ['walk', 'outdoor walk', 'incline walk'], primaryMuscle: 'Cardio', isCardio: true },
-  { key: 'running', name: 'Running', aliases: ['run', 'jog', 'jogging', 'outdoor run'], primaryMuscle: 'Cardio', isCardio: true },
   { key: 'swimming', name: 'Swimming', aliases: ['swim', 'laps', 'pool'], primaryMuscle: 'Cardio', isCardio: true },
   { key: 'jump_rope', name: 'Jump Rope', aliases: ['skipping', 'skip rope'], primaryMuscle: 'Cardio', isCardio: true },
 ];

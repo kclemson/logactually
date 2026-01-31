@@ -38,11 +38,9 @@ Default to lbs for weight if no unit is specified.
 
 For cardio or duration-based exercises, provide:
 - exercise_key: a canonical snake_case identifier from the reference below
-- description: a user-friendly name (e.g., "Treadmill Walk", "Stationary Bike")
-- duration_minutes: duration in minutes (integer)
-- sets: 0
-- reps: 0
-- weight_lbs: 0
+- description: a user-friendly, context-specific name (e.g., "Treadmill Jog", "Morning Walk", "5K Run", "Spin Class")
+- duration_minutes: duration in minutes (integer), if relevant
+- distance_miles: distance in miles (number), if relevant. Convert km to miles (1km = 0.621mi).
 
 CANONICAL CARDIO EXERCISES (prefer these keys when applicable):
 {{cardioExerciseReference}}
@@ -53,7 +51,8 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
 {
   "exercises": [
     { "exercise_key": "bench_press", "description": "Bench Press", "sets": 3, "reps": 10, "weight_lbs": 135 },
-    { "exercise_key": "treadmill", "description": "Treadmill Walk", "duration_minutes": 30, "sets": 0, "reps": 0, "weight_lbs": 0 }
+    { "exercise_key": "walk_run", "description": "Treadmill Walk", "duration_minutes": 30 },
+    { "exercise_key": "walk_run", "description": "5K Run", "duration_minutes": 25, "distance_miles": 3.1 }
   ]
 }`;
 
@@ -200,14 +199,15 @@ serve(async (req) => {
       const reps = Number(exercise.reps) || 0;
       const weight_lbs = Number(exercise.weight_lbs) || 0;
       const duration_minutes = Number(exercise.duration_minutes) || 0;
+      const distance_miles = Number(exercise.distance_miles) || 0;
       
       // Valid if EITHER weight data OR cardio data present
       const hasWeightData = sets > 0 && reps > 0;
-      const hasCardioData = duration_minutes > 0;
+      const hasCardioData = duration_minutes > 0 || distance_miles > 0;
       
       if (!hasWeightData && !hasCardioData) {
         console.error("[analyze-weights] Exercise has neither weight nor cardio data:", exercise);
-        throw new Error("Could not understand exercise. Include sets/reps/weight or duration.");
+        throw new Error("Could not understand exercise. Include sets/reps/weight or duration/distance.");
       }
       
       normalizedExercises.push({
@@ -216,7 +216,8 @@ serve(async (req) => {
         sets: Math.round(sets),
         reps: Math.round(reps),
         weight_lbs: Math.round(weight_lbs * 10) / 10, // Round to 1 decimal
-        duration_minutes: hasCardioData ? Math.round(duration_minutes) : null,
+        duration_minutes: hasCardioData && duration_minutes > 0 ? Math.round(duration_minutes) : null,
+        distance_miles: hasCardioData && distance_miles > 0 ? Math.round(distance_miles * 100) / 100 : null,
       });
     }
 
