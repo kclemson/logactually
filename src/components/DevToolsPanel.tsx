@@ -476,7 +476,7 @@ export function DevToolsPanel() {
                       {displayResults.map((result, i) => (
                         <tr key={i} className="border-t align-top">
                           <td className="px-1 py-1 font-mono text-xs" style={{ width: columnWidths.input, maxWidth: columnWidths.input }} title={result.input}>
-                            <div className="line-clamp-2 break-words">{result.input}</div>
+                            <div className="break-words">{result.input}</div>
                           </td>
                           <td className="px-1 py-1 text-xs" style={{ width: columnWidths.source, maxWidth: columnWidths.source }}>
                             <span className={
