@@ -90,14 +90,8 @@ export function useUpdateSavedRoutine() {
       }
       
       if (exerciseSets !== undefined) {
-        // Strip runtime metadata before saving (in case any slipped through)
-        const cleanedSets = exerciseSets.map(({ exercise_key, description, sets, reps, weight_lbs }) => ({
-          exercise_key,
-          description,
-          sets,
-          reps,
-          weight_lbs,
-        }));
+        // SavedExerciseSet already contains only persistent fields, spread for future-proofing
+        const cleanedSets = exerciseSets.map(set => ({ ...set }));
         updates.exercise_sets = cleanedSets as unknown as Json;
       }
       

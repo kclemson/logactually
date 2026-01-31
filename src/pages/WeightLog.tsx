@@ -241,14 +241,8 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
 
   // Handle logging a saved routine
   const handleLogSavedRoutine = useCallback((exerciseSets: SavedExerciseSet[], routineId: string) => {
-    // Convert SavedExerciseSet to the format createEntryFromExercises expects
-    const exercises = exerciseSets.map(set => ({
-      exercise_key: set.exercise_key,
-      description: set.description,
-      sets: set.sets,
-      reps: set.reps,
-      weight_lbs: set.weight_lbs,
-    }));
+    // SavedExerciseSet already contains only persistent fields, spread for future-proofing
+    const exercises = exerciseSets.map(set => ({ ...set }));
     createEntryFromExercises(exercises, `From saved routine`, routineId);
   }, [createEntryFromExercises]);
 
@@ -291,13 +285,11 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   const handleSaveRoutineConfirm = useCallback((name: string) => {
     if (!saveRoutineDialogData) return;
     
-    const exerciseSets: SavedExerciseSet[] = saveRoutineDialogData.exerciseSets.map(set => ({
-      exercise_key: set.exercise_key,
-      description: set.description,
-      sets: set.sets,
-      reps: set.reps,
-      weight_lbs: set.weight_lbs,
-    }));
+    // Strip runtime metadata, spread the rest for future-proofing
+    const exerciseSets: SavedExerciseSet[] = saveRoutineDialogData.exerciseSets.map(({
+      id, uid, entryId, rawInput, sourceRoutineId, editedFields,
+      ...persistentFields
+    }) => persistentFields);
     
     saveRoutineMutation.mutate(
       {
