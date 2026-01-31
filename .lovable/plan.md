@@ -1,78 +1,125 @@
 
 
-## Persist Cardio Chart MPH Toggle to LocalStorage
+## Changelog Page Implementation
 
 ### Summary
 
-Add localStorage persistence for the time/mph toggle on cardio charts that support it (walk_run and cycling). When you switch to mph view, that preference will be remembered for each exercise type.
+Create a simple, publicly accessible changelog page with an optional feedback form for authenticated users. The page will be dead-simple to edit manually.
 
-### Current Behavior
-- Line 111: `const [showMph, setShowMph] = useState(false);`
-- Every time you navigate away and come back to Trends, the toggle resets to "time" view
+### New File: `src/pages/Changelog.tsx`
 
-### Proposed Behavior
-- Each exercise with distance tracking gets its own persisted preference
-- LocalStorage key format: `trends-mph-{exercise_key}` (e.g., `trends-mph-walk_run`, `trends-mph-cycling`)
-- On mount, reads from localStorage; on toggle, writes to localStorage
+A standalone page following the Privacy page pattern with these key features:
 
-### Implementation
-
-**File:** `src/pages/Trends.tsx`
-
-**Change 1:** Update `showMph` state initialization (line 111)
-
-Replace:
+**Structure optimized for manual editing:**
 ```tsx
-const [showMph, setShowMph] = useState(false);
+// ============================================
+// CHANGELOG ENTRIES - Add new entries at the top
+// Each entry is one line: { date: "Mon-DD", text: "description" }
+// ============================================
+const CHANGELOG_ENTRIES = [
+{ date: "Jan-31", text: "Added support for Google authentication" },
+{ date: "Jan-30", text: "Added minimal support for cardio exercises - instead of erroring out, it will now log the items and show a 'cardio' label, with minimal support on the Trends page for cardio charts. Running/walking/cycling charts also support switching between time-based view and mph-based view." },
+{ date: "Jan-28", text: "Added user setting to show weights in Kg vs Lbs" },
+{ date: "Jan-27", text: "Added support for logging weight lifting exercises, saved routines, charts, and exporting the full weight lifting log to CSV" },
+{ date: "Jan-25", text: "Added feature for being able to save meals & quickly add saved meals to the log" },
+{ date: "Jan-24", text: "Added support for dark theme" },
+{ date: "Jan-23", text: "v1 of app published with support for food logging, basic charts for trends over time" },
+];
+
+const LAST_UPDATED = "Jan-31-26";
+// ============================================
 ```
 
-With:
+**Why this format:**
+- No nested objects or complex structures
+- Each entry is one line - just copy/paste and modify
+- No indentation issues with JSX templates
+- Date format matches your preference (Mon-DD)
+- Last updated date is a simple string at the top
+
+**Page layout:**
+- "Changelog" title
+- "Last updated: Jan-31-26" in smaller muted text
+- Bullet list with dates in muted color, description in foreground
+- Close button (goes to `/auth` if not logged in, `/` if logged in - same as Privacy)
+
+### Shared Feedback Component: `src/components/FeedbackForm.tsx`
+
+Extract the feedback form from Help.tsx into a reusable component:
+- Takes no props (self-contained)
+- Uses existing `useSubmitFeedback` hook
+- Renders the title, textarea, and submit button
+- Shows success message after submission
+
+**Future-proofing for responding to feedback:**
+- The existing `feedback` table already has `user_id`, which allows you to identify who submitted feedback
+- When you want to add responses, you would add a `response` column (or a separate `feedback_responses` table) and display it in this component
+- The component structure makes it easy to add a "You have a response!" indicator later
+
+### Updates to Existing Pages
+
+**1. Auth.tsx (login page)**
+
+Add below the card, after the Privacy link:
 ```tsx
-const [showMph, setShowMph] = useState(() => {
-  if (!supportsSpeedToggle) return false;
-  return localStorage.getItem(`trends-mph-${exercise.exercise_key}`) === 'true';
-});
+<Link
+  to="/changelog"
+  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+>
+  Changelog
+</Link>
 ```
 
-**Change 2:** Update the toggle handler (line 216)
+Both links on the same row separated by a dot: `Privacy & Security · Changelog`
 
-Replace:
+**2. Settings.tsx (About section)**
+
+Add Changelog link below Privacy & Security link:
 ```tsx
-const handleHeaderClick = supportsSpeedToggle ? () => setShowMph(!showMph) : undefined;
+<Link
+  to="/changelog"
+  className="text-sm text-foreground hover:underline underline-offset-2 transition-colors"
+>
+  Changelog
+</Link>
 ```
 
-With:
+**3. Help.tsx**
+
+Replace the single Privacy link with both links on one row:
 ```tsx
-const handleHeaderClick = supportsSpeedToggle 
-  ? () => {
-      const newValue = !showMph;
-      localStorage.setItem(`trends-mph-${exercise.exercise_key}`, String(newValue));
-      setShowMph(newValue);
-    }
-  : undefined;
+<div className="pt-4 text-center">
+  <Link to="/privacy" className="...">Privacy & Security</Link>
+  <span className="text-muted-foreground"> · </span>
+  <Link to="/changelog" className="...">Changelog</Link>
+</div>
 ```
 
-### Why This Pattern
+Also refactor to use the shared FeedbackForm component.
 
-This follows the existing patterns in the same file:
-- `trends-period` (lines 301-304, 537): Period selector persistence
-- `dismissed-duplicate-exercises` (lines 306-313, 379): Dismissed duplicates persistence
+**4. App.tsx (routing)**
 
-Both use the same approach: initialize from localStorage in useState, save in the handler.
+Add the new route outside protected routes (like Privacy):
+```tsx
+<Route path="/changelog" element={<Changelog />} />
+```
 
-### LocalStorage Keys
+### File Changes Summary
 
-| Exercise | Key |
-|----------|-----|
-| Walk/Run | `trends-mph-walk_run` |
-| Cycling | `trends-mph-cycling` |
+| File | Change |
+|------|--------|
+| `src/pages/Changelog.tsx` | New file - the changelog page |
+| `src/components/FeedbackForm.tsx` | New file - extracted feedback form |
+| `src/pages/Auth.tsx` | Add changelog link in footer |
+| `src/pages/Settings.tsx` | Add changelog link in About section |
+| `src/pages/Help.tsx` | Replace footer, use FeedbackForm component |
+| `src/App.tsx` | Add `/changelog` route |
 
-### Testing
+### Conditional Feedback on Changelog
 
-1. Go to Trends page
-2. Find a walk_run or cycling chart
-3. Click the header to toggle to "mph" view
-4. Navigate to another page (e.g., /weights)
-5. Return to Trends
-6. Verify the chart is still in "mph" view
+The Changelog page will check `useAuth()` to see if user is logged in:
+- **Logged out**: Just shows the changelog entries
+- **Logged in**: Shows changelog entries + the FeedbackForm at the bottom
+
+This keeps anonymous users from seeing a form they can't use, while giving authenticated users a convenient way to share thoughts right from the changelog.
 
