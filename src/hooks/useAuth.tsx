@@ -2,13 +2,17 @@ import { useState, useEffect, createContext, useContext, ReactNode } from 'react
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
+interface SignOutOptions {
+  clearQueryCache?: () => void;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signOut: () => Promise<void>;
+  signOut: (options?: SignOutOptions) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -161,23 +165,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   };
 
-  const signOut = async () => {
+  const signOut = async (options?: SignOutOptions) => {
+    // Clear localStorage FIRST - synchronously, before any async operations
+    // This ensures ProtectedRoute's hasStoredSession() returns false immediately
+    const storageKey = `sb-${import.meta.env.VITE_SUPABASE_PROJECT_ID}-auth-token`;
+    localStorage.removeItem(storageKey);
+    
+    // Clear module cache immediately too
+    cachedSession = null;
+    cachedUser = null;
+    
+    // Clear React state
+    setSession(null);
+    setUser(null);
+    
+    // Clear React Query cache if provided (prevents data leaking between users)
+    options?.clearQueryCache?.();
+    
+    // Now call the API (don't wait for it to finish before clearing state)
     try {
       await supabase.auth.signOut();
     } catch (error) {
-      // Log but don't throw - we still want to clear local state
-      // This handles 403 "session_not_found" errors when session is already invalid
+      // Log but don't throw - local state is already cleared
       if (import.meta.env.DEV) {
         console.warn('Sign out API call failed:', error);
       }
     }
-    
-    // ALWAYS clear local state, even if API failed
-    // If session was already invalid, we still want to "sign out" locally
-    cachedSession = null;
-    cachedUser = null;
-    setSession(null);
-    setUser(null);
   };
 
   return (

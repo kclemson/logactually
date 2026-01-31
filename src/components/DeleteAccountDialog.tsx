@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Dialog,
   DialogContent,
@@ -24,6 +25,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { signOut } = useAuth();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
 
   const isConfirmed = confirmText.toLowerCase() === 'delete';
@@ -63,7 +65,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
       }
 
       // Success - sign out and redirect
-      await signOut();
+      await signOut({ clearQueryCache: () => queryClient.clear() });
       navigate('/auth');
     } catch (err) {
       console.error('Unexpected error:', err);
