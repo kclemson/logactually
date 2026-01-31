@@ -387,33 +387,28 @@ export default function Auth() {
             </Button>
           </div>
 
-          <div className="mt-4 text-center text-sm text-muted-foreground space-y-2">
-            <p>
-              {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setConfirmPassword("");
-                  setErrorMessage(null);
-                }}
-                className="text-primary underline-offset-4 hover:underline"
-              >
-                {isSignUp ? "Sign In" : "Sign Up"}
-              </button>
-            </p>
-            <p>
-              Or{" "}
-              <button
-                type="button"
-                onClick={handleTryDemo}
-                disabled={submitting || isDemoLoading}
-                className="text-blue-500 underline-offset-4 hover:underline disabled:opacity-50"
-              >
-                {isDemoLoading ? "loading demo..." : "try the demo"}
-              </button>{" "}
-              — no account needed
-            </p>
+          <div className="mt-4 space-y-2">
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full"
+              onClick={() => {
+                setIsSignUp(!isSignUp);
+                setConfirmPassword("");
+                setErrorMessage(null);
+              }}
+            >
+              {isSignUp ? "Sign in with email" : "Sign up with email"}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full"
+              onClick={handleTryDemo}
+              disabled={submitting || isDemoLoading}
+            >
+              {isDemoLoading ? "Loading demo..." : "Try the demo — no account needed"}
+            </Button>
           </div>
           <div className="mt-6 text-center">
             <Link
