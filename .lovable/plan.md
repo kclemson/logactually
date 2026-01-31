@@ -1,33 +1,113 @@
 
 
-## Standardize Changelog Entries to Single-Line Format
+## Reorganize Feedback Hooks into Dedicated Directory
 
 ### Summary
 
-Add a `// prettier-ignore` comment before the `CHANGELOG_ENTRIES` array and reformat all entries to be single-line, giving you full control over formatting.
+Create a `src/hooks/feedback/` directory with individual files for each hook, all prefixed with `Feedback*` for easy navigation.
 
-### Changes to `src/pages/Changelog.tsx`
+### New File Structure
 
-**Lines 10-34** - Add prettier-ignore and collapse all entries to single lines:
-
-```tsx
-// prettier-ignore
-const CHANGELOG_ENTRIES = [
-  { date: "Jan-31", text: "Added support for Google authentication, and this changelog page." },
-  { date: "Jan-30", text: "Added (minimal) support for cardio exercises - instead of erroring out, it will now log the items and show a 'cardio' label, with simple charts for cardio exercises on the Trends page. Running/walking/cycling charts also support switching between time-based view and mph-based view." },
-  { date: "Jan-28", text: "Added user setting to show weights in Kg vs Lbs." },
-  { date: "Jan-27", text: "Added support for logging weight lifting exercises, saved routines, charts, and exporting the full weight lifting log to CSV. Refactored a bunch of code to be shared between Food and Weights. Also added 'demo mode', a read-only account that has pre-populated content in it so people can see the basic UI of the app without having to create an account." },
-  { date: "Jan-26", text: "Added support for requesting additional food metadata from the model (fiber, sugar, saturated fat, sodium, cholesterol) but don't want to add them to the UI for now - but they're available in the exported CSV though" },
-  { date: "Jan-25", text: "Added the ability to save meals (click/tap the > next to the logged food to access it) and then quickly add a saved meal to the log." },
-  { date: "Jan-24", text: "Added barcode scanning support for logging food, and user setting for dark theme." },
-  { date: "Jan-23", text: "It's alive! v1 of app published with support for food logging & AI integration, simple charts for trends over time, mobile & desktop layouts, PWA support for pinning to home screen." },
-];
+```
+src/hooks/feedback/
+├── index.ts                          # Re-exports all hooks
+├── FeedbackTypes.ts                  # Shared interfaces
+├── FeedbackSubmit.ts                 # useSubmitFeedback
+├── FeedbackAdminList.ts              # useAdminFeedback
+├── FeedbackAdminRespond.ts           # useRespondToFeedback (NEW)
+├── FeedbackUserHistory.ts            # useUserFeedback (NEW)
+├── FeedbackDelete.ts                 # useDeleteFeedback (NEW)
+├── FeedbackUnreadStatus.ts           # useHasUnreadResponses (NEW)
+└── FeedbackMarkRead.ts               # useMarkFeedbackRead (NEW)
 ```
 
-### Result
+### File Contents
 
-- Each entry stays on one line regardless of length
-- Prettier won't reformat this section
-- Easy to copy/paste new entries
-- You can use horizontal scrolling in your editor to view long entries
+**`FeedbackTypes.ts`** - Shared interfaces:
+```typescript
+export interface FeedbackWithUser {
+  id: string;
+  message: string;
+  created_at: string;
+  user_number: number;
+  response: string | null;
+  responded_at: string | null;
+}
+
+export interface UserFeedback {
+  id: string;
+  message: string;
+  created_at: string;
+  response: string | null;
+  responded_at: string | null;
+  read_at: string | null;
+}
+```
+
+**`index.ts`** - Barrel export:
+```typescript
+export { useSubmitFeedback } from './FeedbackSubmit';
+export { useAdminFeedback } from './FeedbackAdminList';
+export { useRespondToFeedback } from './FeedbackAdminRespond';
+export { useUserFeedback } from './FeedbackUserHistory';
+export { useDeleteFeedback } from './FeedbackDelete';
+export { useHasUnreadResponses } from './FeedbackUnreadStatus';
+export { useMarkFeedbackRead } from './FeedbackMarkRead';
+export type { FeedbackWithUser, UserFeedback } from './FeedbackTypes';
+```
+
+### Import Path Updates
+
+Consumers can continue using the same import pattern:
+
+```typescript
+// Before
+import { useSubmitFeedback } from '@/hooks/useFeedback';
+
+// After (same style, different path)
+import { useSubmitFeedback } from '@/hooks/feedback';
+```
+
+Files to update:
+- `src/pages/Admin.tsx` - update import path
+- `src/components/FeedbackForm.tsx` - update import path
+- `src/components/Header.tsx` - add new import (for notification dot)
+
+### Database Migration
+
+Same as before - add columns to `feedback` table:
+
+```sql
+ALTER TABLE feedback ADD COLUMN response text DEFAULT NULL;
+ALTER TABLE feedback ADD COLUMN responded_at timestamptz DEFAULT NULL;
+ALTER TABLE feedback ADD COLUMN read_at timestamptz DEFAULT NULL;
+
+-- RLS policies for update/delete
+CREATE POLICY "Admins can update feedback" ON feedback
+  FOR UPDATE USING (has_role(auth.uid(), 'admin'));
+
+CREATE POLICY "Users can update own feedback" ON feedback
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own feedback" ON feedback
+  FOR DELETE USING (auth.uid() = user_id AND NOT is_read_only_user(auth.uid()));
+```
+
+### File Changes Summary
+
+| Action | File |
+|--------|------|
+| Delete | `src/hooks/useFeedback.ts` |
+| Create | `src/hooks/feedback/index.ts` |
+| Create | `src/hooks/feedback/FeedbackTypes.ts` |
+| Create | `src/hooks/feedback/FeedbackSubmit.ts` |
+| Create | `src/hooks/feedback/FeedbackAdminList.ts` |
+| Create | `src/hooks/feedback/FeedbackAdminRespond.ts` |
+| Create | `src/hooks/feedback/FeedbackUserHistory.ts` |
+| Create | `src/hooks/feedback/FeedbackDelete.ts` |
+| Create | `src/hooks/feedback/FeedbackUnreadStatus.ts` |
+| Create | `src/hooks/feedback/FeedbackMarkRead.ts` |
+| Update | `src/pages/Admin.tsx` - import path + reply UI |
+| Update | `src/components/FeedbackForm.tsx` - import path + history UI |
+| Update | `src/components/Header.tsx` - notification dot |
 
