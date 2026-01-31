@@ -1,43 +1,92 @@
 
 
-## Migrate Old Cardio Keys to Consolidated Keys
+## Show Cardio Metadata in Expanded Section
 
-### Current State
+### What You'll See
 
-| Old Key | Count | New Key |
-|---------|-------|---------|
-| `running` | 33 | `walk_run` |
-| `treadmill_walk` | 1 | `walk_run` |
+When you expand a cardio entry, you'll see the recorded details underneath it:
+- Duration (e.g., "10 min")
+- Distance (e.g., "2 miles")
+- Only shown if the data exists for that exercise
 
-**Total: 34 entries to migrate**
+For entries with multiple exercises (e.g., "treadmill 10min 2mi, bench 3x10 135"), only the cardio items will show their metadata.
 
 ---
 
-### Migration SQL
+### Implementation
 
-```sql
--- Consolidate legacy cardio exercise keys to new unified keys
-UPDATE weight_sets 
-SET exercise_key = 'walk_run', updated_at = now()
-WHERE exercise_key IN ('running', 'treadmill_walk', 'treadmill', 'walking');
+**File: `src/components/WeightItemsTable.tsx`**
 
--- Future-proof: also handle stationary_bike and rowing_machine if they ever appear
-UPDATE weight_sets 
-SET exercise_key = 'cycling', updated_at = now()
-WHERE exercise_key = 'stationary_bike';
+In the expanded content section (lines 598-643), add a cardio metadata block before the raw input:
 
-UPDATE weight_sets 
-SET exercise_key = 'rowing', updated_at = now()
-WHERE exercise_key = 'rowing_machine';
+```tsx
+{/* Expanded content section */}
+{showEntryDividers && isLastInEntry && isCurrentExpanded && (() => {
+  const isFromSavedRoutine = currentEntryId && entrySourceRoutineIds?.has(currentEntryId);
+  const routineName = currentEntryId && entryRoutineNames?.get(currentEntryId);
+  
+  // Get all exercises in this entry for cardio metadata
+  const entryExercises = items.filter(i => i.entryId === currentEntryId);
+  
+  // Build cardio metadata for exercises that have duration/distance
+  const cardioItems = entryExercises.filter(ex => 
+    (ex.duration_minutes ?? 0) > 0 || (ex.distance_miles ?? 0) > 0
+  );
+  
+  return (
+    <div className={cn('grid gap-0.5', gridCols)}>
+      <div className="col-span-full pl-6 py-1 space-y-1">
+        
+        {/* Cardio metadata - show for each cardio item */}
+        {cardioItems.map((ex, idx) => {
+          const parts: string[] = [];
+          if ((ex.duration_minutes ?? 0) > 0) {
+            parts.push(`${ex.duration_minutes} min`);
+          }
+          if ((ex.distance_miles ?? 0) > 0) {
+            parts.push(`${ex.distance_miles} mi`);
+          }
+          
+          return (
+            <p key={ex.uid || idx} className="text-sm text-muted-foreground">
+              <span className="font-medium">{ex.description}:</span>{' '}
+              {parts.join(', ')}
+            </p>
+          );
+        })}
+
+        {/* Raw input (existing) */}
+        {!isFromSavedRoutine && currentRawInput && (
+          <p className="text-muted-foreground whitespace-pre-wrap italic">
+            {currentRawInput}
+          </p>
+        )}
+        
+        {/* Routine info or Save as routine (existing) */}
+        {/* ... */}
+      </div>
+    </div>
+  );
+})()}
 ```
 
 ---
 
-### Verification
+### Display Examples
 
-After migration, all cardio entries should use these keys only:
-- `walk_run` (consolidated from running/walking/treadmill)
-- `cycling` (consolidated from stationary_bike)
-- `rowing` (consolidated from rowing_machine)
-- `elliptical`, `stair_climber`, `swimming`, `jump_rope` (unchanged)
+| Entry | Expanded Shows |
+|-------|----------------|
+| "Treadmill Run" (10min, 2mi) | **Treadmill Run:** 10 min, 2 mi |
+| "Walk" (30min, no distance) | **Walk:** 30 min |
+| "5K Run" (no duration, 3.1mi) | **5K Run:** 3.1 mi |
+| "Bench Press" (weight exercise) | *(nothing - not cardio)* |
+| Mixed entry: run + bench | Only the run shows metadata |
+
+---
+
+### Files Modified
+
+| File | Change |
+|------|--------|
+| `src/components/WeightItemsTable.tsx` | Add cardio metadata display in expanded section |
 
