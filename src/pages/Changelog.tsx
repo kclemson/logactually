@@ -8,13 +8,19 @@ import { FeedbackForm } from "@/components/FeedbackForm";
 // Each entry is one line: { date: "Mon-DD", text: "description" }
 // ============================================
 const CHANGELOG_ENTRIES = [
-{ date: "Jan-31", text: "Added support for Google authentication" },
-{ date: "Jan-30", text: "Added minimal support for cardio exercises - instead of erroring out, it will now log the items and show a 'cardio' label, with minimal support on the Trends page for cardio charts. Running/walking/cycling charts also support switching between time-based view and mph-based view." },
-{ date: "Jan-28", text: "Added user setting to show weights in Kg vs Lbs" },
-{ date: "Jan-27", text: "Added support for logging weight lifting exercises, saved routines, charts, and exporting the full weight lifting log to CSV" },
-{ date: "Jan-25", text: "Added feature for being able to save meals & quickly add saved meals to the log" },
-{ date: "Jan-24", text: "Added support for dark theme" },
-{ date: "Jan-23", text: "v1 of app published with support for food logging, basic charts for trends over time" },
+  { date: "Jan-31", text: "Added support for Google authentication" },
+  {
+    date: "Jan-30",
+    text: "Added minimal support for cardio exercises - instead of erroring out, it will now log the items and show a 'cardio' label, with minimal support on the Trends page for cardio charts. Running/walking/cycling charts also support switching between time-based view and mph-based view.",
+  },
+  { date: "Jan-28", text: "Added user setting to show weights in Kg vs Lbs" },
+  {
+    date: "Jan-27",
+    text: "Added support for logging weight lifting exercises, saved routines, charts, and exporting the full weight lifting log to CSV. Also added 'demo mode', a read-only account that has pre-populated content in it so people can see the basic UI of the app without having to create an account.",
+  },
+  { date: "Jan-25", text: "Added feature for being able to save meals & quickly add saved meals to the log" },
+  { date: "Jan-24", text: "Added support for barcode scanning for food, and dark theme" },
+  { date: "Jan-23", text: "v1 of app published with support for food logging, basic charts for trends over time" },
 ];
 
 const LAST_UPDATED = "Jan-31-26";
