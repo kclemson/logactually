@@ -122,13 +122,52 @@ export default function Auth() {
     setIsGoogleLoading(true);
     setErrorMessage(null);
     
-    const { error } = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    
-    if (error) {
-      setErrorMessage("Google sign-in failed. Please try again.");
-      setIsGoogleLoading(false);
+    // Detect if we're on a custom domain (not Lovable infrastructure)
+    const hostname = window.location.hostname;
+    const isCustomDomain = 
+      !hostname.includes("lovable.app") &&
+      !hostname.includes("lovableproject.com") &&
+      hostname !== "localhost";
+
+    if (isCustomDomain) {
+      // Bypass lovable auth-bridge - use Supabase directly
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin,
+          skipBrowserRedirect: true,
+        },
+      });
+
+      if (error) {
+        setErrorMessage("Google sign-in failed. Please try again.");
+        setIsGoogleLoading(false);
+        return;
+      }
+
+      // Validate OAuth URL before redirect (security: prevent open redirect)
+      if (data?.url) {
+        try {
+          const oauthUrl = new URL(data.url);
+          if (oauthUrl.hostname !== "accounts.google.com") {
+            throw new Error("Invalid OAuth redirect URL");
+          }
+          window.location.href = data.url;
+        } catch {
+          setErrorMessage("Google sign-in failed. Please try again.");
+          setIsGoogleLoading(false);
+        }
+      }
+    } else {
+      // Use lovable auth for preview domains (handles iframe popup flow)
+      const { error } = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+      });
+      
+      if (error) {
+        setErrorMessage("Google sign-in failed. Please try again.");
+        setIsGoogleLoading(false);
+      }
     }
   };
 
@@ -136,13 +175,52 @@ export default function Auth() {
     setIsAppleLoading(true);
     setErrorMessage(null);
     
-    const { error } = await lovable.auth.signInWithOAuth("apple", {
-      redirect_uri: window.location.origin,
-    });
-    
-    if (error) {
-      setErrorMessage("Apple sign-in failed. Please try again.");
-      setIsAppleLoading(false);
+    // Detect if we're on a custom domain (not Lovable infrastructure)
+    const hostname = window.location.hostname;
+    const isCustomDomain = 
+      !hostname.includes("lovable.app") &&
+      !hostname.includes("lovableproject.com") &&
+      hostname !== "localhost";
+
+    if (isCustomDomain) {
+      // Bypass lovable auth-bridge - use Supabase directly
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "apple",
+        options: {
+          redirectTo: window.location.origin,
+          skipBrowserRedirect: true,
+        },
+      });
+
+      if (error) {
+        setErrorMessage("Apple sign-in failed. Please try again.");
+        setIsAppleLoading(false);
+        return;
+      }
+
+      // Validate OAuth URL before redirect (security: prevent open redirect)
+      if (data?.url) {
+        try {
+          const oauthUrl = new URL(data.url);
+          if (oauthUrl.hostname !== "appleid.apple.com") {
+            throw new Error("Invalid OAuth redirect URL");
+          }
+          window.location.href = data.url;
+        } catch {
+          setErrorMessage("Apple sign-in failed. Please try again.");
+          setIsAppleLoading(false);
+        }
+      }
+    } else {
+      // Use lovable auth for preview domains (handles iframe popup flow)
+      const { error } = await lovable.auth.signInWithOAuth("apple", {
+        redirect_uri: window.location.origin,
+      });
+      
+      if (error) {
+        setErrorMessage("Apple sign-in failed. Please try again.");
+        setIsAppleLoading(false);
+      }
     }
   };
 
