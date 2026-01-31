@@ -16,7 +16,7 @@ const CHANGELOG_ENTRIES = [
   { date: "Jan-26", text: "Added support for requesting additional food metadata from the model (fiber, sugar, saturated fat, sodium, cholesterol) but they're not shown in the UI for now as it's already fairly dense. These fields are available in the exported CSV of the food log." },
   { date: "Jan-25", text: "Added the ability to save meals (click/tap the > next to the logged food to access it) and then quickly add a saved meal to the log." },
   { date: "Jan-24", text: "Added barcode scanning support for logging food, and user setting for dark theme." },
-  { date: "Jan-23", text: "It's alive! v1 of app published with support for food logging & AI integration, simple charts for trends over time, mobile & desktop layouts, PWA support for pinning to home screen." },
+  { date: "Jan-23", text: "It's alive! v1 of app published with support for food logging & AI integration, editing logged items (and editing calories auto-scales protein/carbs/fat), charts for trends over time, mobile & desktop layouts, PWA support for pinning to home screen." },
 ];
 
 const LAST_UPDATED = "Jan-31-26";
