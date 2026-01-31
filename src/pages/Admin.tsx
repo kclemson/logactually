@@ -197,9 +197,19 @@ export default function Admin() {
           <p className="font-medium text-xs text-muted-foreground">Recent Feedback</p>
           {feedback.map((f) => (
             <div key={f.id} className="text-xs border-b border-border/50 py-1 space-y-1">
-              <span className="text-muted-foreground">
-                {USER_NAMES[f.user_number] ?? `User #${f.user_number}`} • {format(parseISO(f.created_at), "MMM d")}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">
+                  {USER_NAMES[f.user_number] ?? `User #${f.user_number}`} • {format(parseISO(f.created_at), "MMM d")}
+                </span>
+                {replyingToId !== f.id && (
+                  <button
+                    className="text-[hsl(217_91%_60%)] underline hover:text-[hsl(217_91%_70%)]"
+                    onClick={() => handleStartReply(f.id, f.response)}
+                  >
+                    {f.response ? "Edit Reply" : "Reply"}
+                  </button>
+                )}
+              </div>
               <p className="whitespace-pre-wrap">{f.message}</p>
               
               {/* Show existing response */}
@@ -241,16 +251,7 @@ export default function Admin() {
                     </Button>
                   </div>
                 </div>
-              ) : (
-                <Button 
-                  size="sm" 
-                  variant="ghost" 
-                  className="h-5 text-[10px] px-1"
-                  onClick={() => handleStartReply(f.id, f.response)}
-                >
-                  {f.response ? "Edit Reply" : "Reply"}
-                </Button>
-              )}
+              ) : null}
             </div>
           ))}
         </div>
