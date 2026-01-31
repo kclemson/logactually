@@ -1,93 +1,132 @@
 
 
-## Add Minutes Per Mile to Cardio Tooltips + Fix Duration Decimals
+## Add Google and Apple OAuth Sign-In
 
 ### Overview
 
-Enhance the cardio chart tooltips to show pace (min/mi) alongside mph and distance for runners who think in terms of pace. Also fix the long decimal duration display in the Weight Log page.
+Add "Continue with Google" and "Sign in with Apple" buttons to the Auth page. Both use Lovable Cloud's managed OAuth - no API keys or configuration needed.
 
 ---
 
 ### Changes
 
-#### 1. Add Pace to Tooltip (Trends.tsx)
+#### 1. Configure Social Auth
 
-**Location**: Line 261-262 in the tooltip formatter
+Run the `configure-social-auth` tool to generate the `src/integrations/lovable/` module with the auth helper.
 
-**Current:**
+---
+
+#### 2. Update Auth.tsx
+
+**New import:**
 ```typescript
-if (showMph && entry.payload.mph) {
-  return `${entry.payload.mph} mph · ${distance} mi`;
-}
+import { lovable } from "@/integrations/lovable/index";
 ```
 
-**Updated:**
+**New state:**
 ```typescript
-if (showMph && entry.payload.mph) {
-  const pace = entry.payload.pace; // pre-calculated min/mi
-  return `${entry.payload.mph} mph · ${pace} min/mi · ${distance} mi`;
-}
+const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+const [isAppleLoading, setIsAppleLoading] = useState(false);
+```
+
+**New handlers:**
+```typescript
+const handleGoogleSignIn = async () => {
+  setIsGoogleLoading(true);
+  setErrorMessage(null);
+  const { error } = await lovable.auth.signInWithOAuth("google", {
+    redirect_uri: window.location.origin,
+  });
+  if (error) {
+    setErrorMessage("Google sign-in failed. Please try again.");
+    setIsGoogleLoading(false);
+  }
+};
+
+const handleAppleSignIn = async () => {
+  setIsAppleLoading(true);
+  setErrorMessage(null);
+  const { error } = await lovable.auth.signInWithOAuth("apple", {
+    redirect_uri: window.location.origin,
+  });
+  if (error) {
+    setErrorMessage("Apple sign-in failed. Please try again.");
+    setIsAppleLoading(false);
+  }
+};
+```
+
+**New UI elements (after the email/password form, before the toggle links):**
+
+```tsx
+{/* Divider */}
+<div className="relative my-4">
+  <div className="absolute inset-0 flex items-center">
+    <span className="w-full border-t" />
+  </div>
+  <div className="relative flex justify-center text-xs uppercase">
+    <span className="bg-card px-2 text-muted-foreground">or</span>
+  </div>
+</div>
+
+{/* OAuth buttons */}
+<div className="space-y-2">
+  <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={...}>
+    <GoogleIcon /> Continue with Google
+  </Button>
+  <Button variant="outline" className="w-full" onClick={handleAppleSignIn} disabled={...}>
+    <AppleIcon /> Sign in with Apple
+  </Button>
+</div>
 ```
 
 ---
 
-#### 2. Pre-calculate Pace in Chart Data (Trends.tsx)
+### Visual Layout
 
-**Location**: Line 126-128 in `chartData` useMemo
-
-Add pace calculation alongside mph:
-```typescript
-const mph = d.distance_miles && d.duration_minutes 
-  ? Number((d.distance_miles / (d.duration_minutes / 60)).toFixed(1))
-  : null;
-const pace = d.distance_miles && d.duration_minutes
-  ? Number((d.duration_minutes / d.distance_miles).toFixed(1))
-  : null;
-```
-
-And include `pace` in the returned data object.
-
----
-
-#### 3. Fix Duration Decimals in Weight Log (WeightItemsTable.tsx)
-
-**Locations**: 
-- Line 561: Table cell display
-- Line 619: Expanded cardio metadata
-
-**Fix:**
-```typescript
-// Line 561: Table cell
-`${Number(item.duration_minutes).toFixed(1)} min`
-
-// Line 619: Expanded view
-parts.push(`${Number(ex.duration_minutes).toFixed(1)} min`);
+```text
+┌─────────────────────────────────┐
+│         [App Logo]              │
+│         App Name                │
+│                                 │
+│  Email: [___________________]   │
+│  Password: [________________]   │
+│                                 │
+│  [        Sign In           ]   │
+│                                 │
+│  ─────────── or ───────────     │
+│                                 │
+│  [ G  Continue with Google  ]   │
+│  [   Sign in with Apple    ]   │
+│                                 │
+│  Don't have an account? Sign Up │
+│  Or try the demo                │
+└─────────────────────────────────┘
 ```
 
 ---
 
-#### 4. Fix Duration Decimals in Routine Dialogs
+### How It Works
 
-**Files**: `SaveRoutineDialog.tsx` (line 33), `CreateRoutineDialog.tsx` (line 30)
-
-Apply same `.toFixed(1)` formatting for consistency.
-
----
-
-### Result
-
-| Component | Before | After |
-|-----------|--------|-------|
-| Tooltip (mph view) | `5.1 mph · 1 mi` | `5.1 mph · 11.7 min/mi · 1 mi` |
-| Weight Log table | `11.666666666666666 min` | `11.7 min` |
-| Cardio metadata | `11.666666666666666 min` | `11.7 min` |
+1. User clicks either OAuth button
+2. Redirects to Google/Apple's consent screen
+3. User authenticates
+4. Redirects back to app
+5. **New user**: `handle_new_user()` trigger creates profile (same as email signup)
+6. **Existing user with same email**: Accounts linked automatically
 
 ---
 
-### Why min/mi as decimal vs mm:ss?
+### Files Changed
 
-Using `11.7 min/mi` (decimal) instead of `11:42` (mm:ss) for consistency:
-- Matches the mph format (also uses decimal)
-- Simpler implementation
-- Can revisit mm:ss format later if preferred
+| File | Change |
+|------|--------|
+| `src/integrations/lovable/` | Generated by configure-social-auth tool |
+| `src/pages/Auth.tsx` | Add OAuth buttons, handlers, and divider |
+
+---
+
+### No Database Changes
+
+Existing schema handles both providers identically to email auth.
 
