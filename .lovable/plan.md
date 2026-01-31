@@ -1,36 +1,64 @@
 
-## Fix Input Column Text Clipping in Prompt Eval Tools Table
 
-### Problem
+## Add URL Parameter to Show OAuth Buttons
 
-The "Input" column in the DevToolsPanel results table currently uses `line-clamp-2`, which limits the displayed text to exactly 2 lines with ellipsis ("...") truncation. However, since other columns (like "Note") can make rows taller, there's unused vertical space in the Input column that could display more of the input text.
+### Overview
 
-### Solution
+Add a `?oauth=1` URL parameter that enables the Google and Apple sign-in buttons. Without this parameter, the OAuth buttons will be hidden from regular users while you debug the 404 issue in production.
 
-Remove the `line-clamp-2` class from the Input column's inner div so the text can wrap naturally and use all available row height. The text will still be constrained by the column width (via `maxWidth`) and will wrap with `break-words`, but it won't artificially limit to 2 lines.
+### Usage
+
+- **Regular users**: `https://logactually.com/auth` → OAuth buttons hidden
+- **Testing**: `https://logactually.com/auth?oauth=1` → OAuth buttons visible
 
 ### File to Modify
 
 | File | Change |
 |------|--------|
-| `src/components/DevToolsPanel.tsx` | Remove `line-clamp-2` from input cell |
+| `src/pages/Auth.tsx` | Add `showOAuth` flag based on URL param, conditionally render OAuth buttons |
 
-### Code Change
+### Code Changes
 
-**Line 479** - Change from:
-```tsx
-<div className="line-clamp-2 break-words">{result.input}</div>
+**Line 17** - Add the OAuth param check (after existing `isResetCallback`):
+```typescript
+const isResetCallback = searchParams.get("reset") === "true";
+const showOAuth = searchParams.get("oauth") === "1";
 ```
 
-To:
+**Lines 361-414** - Wrap the Google and Apple buttons in a conditional:
 ```tsx
-<div className="break-words">{result.input}</div>
+{/* OAuth buttons - hidden unless ?oauth=1 */}
+{showOAuth && (
+  <>
+    {/* Google */}
+    <Button ... >
+      Continue with Google
+    </Button>
+
+    {/* Apple */}
+    <Button ... >
+      Sign in with Apple
+    </Button>
+  </>
+)}
+
+{/* Email Sign Up - always visible */}
+<Button ... >
+  Sign up with email
+</Button>
 ```
 
 ### Result
 
-- Input text will wrap naturally within the column width
-- Text will expand vertically to use available row height
-- No more artificial 2-line truncation with "..."
-- The title tooltip (already present) still provides full text on hover if needed
-- Column width is still controlled by the resizable `columnWidths.input` value
+| URL | Google Button | Apple Button | Email Sign Up |
+|-----|---------------|--------------|---------------|
+| `/auth` | Hidden | Hidden | Visible |
+| `/auth?oauth=1` | Visible | Visible | Visible |
+| `/auth?reset=true` | N/A (password update form) | N/A | N/A |
+
+### Notes
+
+- The "Sign up with email" button remains visible always
+- Demo link remains visible always
+- Once OAuth is fixed, remove the conditional and show buttons to everyone
+
