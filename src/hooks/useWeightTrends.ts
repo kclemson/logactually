@@ -10,6 +10,7 @@ export interface WeightPoint {
   reps: number;
   volume: number;  // Pre-calculated volume for accurate aggregation
   duration_minutes?: number;  // For cardio exercises
+  distance_miles?: number;    // For distance-based cardio (walk_run, cycling)
 }
 
 export interface ExerciseTrend {
@@ -36,7 +37,7 @@ export function useWeightTrends(days: number) {
 
       const { data, error } = await supabase
         .from('weight_sets')
-        .select('exercise_key, description, sets, reps, weight_lbs, logged_date, duration_minutes')
+        .select('exercise_key, description, sets, reps, weight_lbs, logged_date, duration_minutes, distance_miles')
         .gte('logged_date', startDate)
         .order('logged_date', { ascending: true });
 
@@ -49,6 +50,7 @@ export function useWeightTrends(days: number) {
         const exerciseKey = row.exercise_key;
         const weight = Number(row.weight_lbs);
         const duration = Number(row.duration_minutes) || 0;
+        const distance = Number(row.distance_miles) || 0;
 
         if (!exerciseMap.has(exerciseKey)) {
           exerciseMap.set(exerciseKey, {
@@ -67,7 +69,6 @@ export function useWeightTrends(days: number) {
 
         // For cardio, aggregate by date only; for weights, aggregate by date + weight
         const isCardio = duration > 0 && weight === 0;
-        const compositeKey = isCardio ? row.logged_date : `${row.logged_date}_${weight}`;
         const existing = trend.weightData.find(
           d => isCardio 
             ? d.date === row.logged_date 
@@ -78,6 +79,7 @@ export function useWeightTrends(days: number) {
           existing.reps += row.reps;
           existing.volume += row.sets * row.reps * weight;
           existing.duration_minutes = (existing.duration_minutes || 0) + duration;
+          existing.distance_miles = (existing.distance_miles || 0) + distance;
         } else {
           trend.weightData.push({
             date: row.logged_date,
@@ -86,6 +88,7 @@ export function useWeightTrends(days: number) {
             reps: row.reps,
             volume: row.sets * row.reps * weight,
             duration_minutes: duration > 0 ? duration : undefined,
+            distance_miles: distance > 0 ? distance : undefined,
           });
         }
       });

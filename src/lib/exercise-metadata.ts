@@ -149,3 +149,8 @@ export function getMuscleGroup(exerciseKey: string): string | null {
 export function getExerciseMuscles(exerciseKey: string): ExerciseMuscles | null {
   return EXERCISE_MUSCLE_GROUPS[exerciseKey] || null;
 }
+
+// Check if an exercise tracks distance (mph toggle supported)
+export function hasDistanceTracking(exerciseKey: string): boolean {
+  return ['walk_run', 'cycling'].includes(exerciseKey);
+}

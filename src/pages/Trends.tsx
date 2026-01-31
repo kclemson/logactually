@@ -16,7 +16,8 @@ import { useUserSettings } from "@/hooks/useUserSettings";
 import type { WeightUnit } from "@/lib/weight-units";
 import { useMergeExercises } from "@/hooks/useMergeExercises";
 import { DuplicateExercisePrompt, type DuplicateGroup } from "@/components/DuplicateExercisePrompt";
-import { getMuscleGroupDisplayWithTooltip, isCardioExercise } from "@/lib/exercise-metadata";
+import { getMuscleGroupDisplayWithTooltip, isCardioExercise, hasDistanceTracking } from "@/lib/exercise-metadata";
+import { cn } from "@/lib/utils";
 
 // Chart color palette (hex RGB format for easy editing)
 const CHART_COLORS = {
@@ -105,25 +106,42 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
   // Detect cardio exercise: has duration data and no meaningful weight
   const isCardio = exercise.maxWeight === 0 && exercise.maxDuration > 0;
   
+  // Speed toggle for distance-based exercises (walk_run, cycling)
+  const supportsSpeedToggle = isCardio && hasDistanceTracking(exercise.exercise_key);
+  const [showMph, setShowMph] = useState(false);
+  
   const chartData = useMemo(() => {
-    const dataLength = exercise.weightData.length;
+    // For mph mode, filter to only entries with distance data
+    const sourceData = showMph 
+      ? exercise.weightData.filter(d => d.distance_miles && d.distance_miles > 0)
+      : exercise.weightData;
+    
+    const dataLength = sourceData.length;
     // Calculate how often to show labels based on column count
     const labelInterval = dataLength <= 12 ? 1 : dataLength <= 20 ? 2 : 3;
 
-    return exercise.weightData.map((d, index) => {
+    return sourceData.map((d, index) => {
       const displayWeight = unit === "kg" ? Math.round(d.weight * LBS_TO_KG) : d.weight;
+      // Calculate mph: distance / (duration / 60)
+      const mph = d.distance_miles && d.duration_minutes 
+        ? Number((d.distance_miles / (d.duration_minutes / 60)).toFixed(1))
+        : null;
+      
       return {
         ...d,
         rawDate: d.date, // Keep original date for navigation
         weight: displayWeight,
         dateLabel: format(new Date(`${d.date}T12:00:00`), "MMM d"),
-        // For weight exercises: "3×10×135"; for cardio: just the duration
-        label: isCardio ? `${d.duration_minutes || 0}` : `${d.sets}×${d.reps}×${displayWeight}`,
+        mph,
+        // For weight exercises: "3×10×135"; for cardio in time mode: duration; in mph mode: mph value
+        label: isCardio 
+          ? (showMph ? `${mph}` : `${d.duration_minutes || 0}`)
+          : `${d.sets}×${d.reps}×${displayWeight}`,
         // Show label on interval OR always on last column
         showLabel: index % labelInterval === 0 || index === dataLength - 1,
       };
     });
-  }, [exercise.weightData, unit, isCardio]);
+  }, [exercise.weightData, unit, isCardio, showMph]);
 
   const maxWeightDisplay = unit === "kg" ? Math.round(exercise.maxWeight * LBS_TO_KG) : exercise.maxWeight;
 
@@ -173,7 +191,7 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
     );
   };
 
-  // Simple label renderer for CARDIO exercises (duration only)
+  // Simple label renderer for CARDIO exercises (duration or mph)
   const renderCardioLabel = (props: any) => {
     const { x, y, width, value, index } = props;
 
@@ -191,14 +209,21 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
     );
   };
 
+  const handleHeaderClick = supportsSpeedToggle ? () => setShowMph(!showMph) : undefined;
+
   return (
     <Card className="border-0 shadow-none">
-      <CardHeader className="p-2 pb-1">
+      <CardHeader 
+        className={cn("p-2 pb-1", supportsSpeedToggle && "cursor-pointer")}
+        onClick={handleHeaderClick}
+      >
         <div className="flex flex-col gap-0.5">
           <ChartTitle className="truncate">{exercise.description}</ChartTitle>
           <ChartSubtitle>
-            {isCardio ? (
-              <>Max: {exercise.maxDuration} min · Cardio</>
+            {supportsSpeedToggle ? (
+              <>Cardio · {showMph ? 'mph' : 'time'} <span className="opacity-50">▾</span></>
+            ) : isCardio ? (
+              <>Cardio</>
             ) : (
               <>
                 Max: {maxWeightDisplay} {unit}
@@ -231,7 +256,15 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
                   <CompactTooltip
                     formatter={(value: number, name: string, entry: any) => {
                       if (isCardio) {
-                        return `${entry.payload.duration_minutes || 0} min`;
+                        const duration = entry.payload.duration_minutes || 0;
+                        const distance = entry.payload.distance_miles;
+                        if (showMph && entry.payload.mph) {
+                          return `${entry.payload.mph} mph · ${distance} mi`;
+                        }
+                        if (distance) {
+                          return `${duration} min · ${distance} mi`;
+                        }
+                        return `${duration} min`;
                       }
                       const { sets, reps, weight } = entry.payload;
                       return `${sets} sets × ${reps} reps @ ${weight} ${unit}`;
@@ -242,7 +275,7 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
                 cursor={{ fill: "hsl(var(--muted)/0.3)" }}
               />
               <Bar 
-                dataKey={isCardio ? "duration_minutes" : "weight"} 
+                dataKey={isCardio ? (showMph ? "mph" : "duration_minutes") : "weight"} 
                 fill="hsl(262 83% 58%)" 
                 radius={[2, 2, 0, 0]}
                 onClick={(data) => onBarClick(data.rawDate)}
