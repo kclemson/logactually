@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Navigate, useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { createLovableAuth } from "@lovable.dev/cloud-auth-js";
+import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,8 +11,6 @@ import { APP_NAME, APP_DESCRIPTION } from "@/lib/constants";
 import { DEMO_EMAIL, DEMO_PASSWORD } from "@/lib/demo-mode";
 import { Mail } from "lucide-react";
 
-// Preview domain for OAuth broker (works on custom domains too)
-const PREVIEW_DOMAIN = "https://id-preview--db525336-2711-490b-a991-6d235ef8c0ef.lovable.app";
 
 export default function Auth() {
   const { user, signUp, signIn, loading } = useAuth();
@@ -125,21 +123,7 @@ export default function Auth() {
     setIsGoogleLoading(true);
     setErrorMessage(null);
     
-    // Detect if we're on a custom domain (not Lovable infrastructure)
-    const hostname = window.location.hostname;
-    const isCustomDomain = 
-      !hostname.includes("lovable.app") &&
-      !hostname.includes("lovableproject.com") &&
-      hostname !== "localhost";
-
-    // Configure auth with absolute broker URL for custom domains
-    const lovableAuth = createLovableAuth(
-      isCustomDomain 
-        ? { oauthBrokerUrl: `${PREVIEW_DOMAIN}/~oauth/initiate` }
-        : {}
-    );
-
-    const result = await lovableAuth.signInWithOAuth("google", {
+    const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
     });
 
@@ -150,39 +134,16 @@ export default function Auth() {
     if (result.error) {
       console.error("Google OAuth error:", result.error);
       setErrorMessage("Google sign-in failed. Please try again.");
-      setIsGoogleLoading(false);
-      return;
     }
-
-    // Set the session in Supabase
-    try {
-      await supabase.auth.setSession(result.tokens);
-    } catch (e) {
-      console.error("Failed to set session:", e);
-      setErrorMessage("Google sign-in failed. Please try again.");
-      setIsGoogleLoading(false);
-    }
+    
+    setIsGoogleLoading(false);
   };
 
   const handleAppleSignIn = async () => {
     setIsAppleLoading(true);
     setErrorMessage(null);
     
-    // Detect if we're on a custom domain (not Lovable infrastructure)
-    const hostname = window.location.hostname;
-    const isCustomDomain = 
-      !hostname.includes("lovable.app") &&
-      !hostname.includes("lovableproject.com") &&
-      hostname !== "localhost";
-
-    // Configure auth with absolute broker URL for custom domains
-    const lovableAuth = createLovableAuth(
-      isCustomDomain 
-        ? { oauthBrokerUrl: `${PREVIEW_DOMAIN}/~oauth/initiate` }
-        : {}
-    );
-
-    const result = await lovableAuth.signInWithOAuth("apple", {
+    const result = await lovable.auth.signInWithOAuth("apple", {
       redirect_uri: window.location.origin,
     });
 
@@ -193,18 +154,9 @@ export default function Auth() {
     if (result.error) {
       console.error("Apple OAuth error:", result.error);
       setErrorMessage("Apple sign-in failed. Please try again.");
-      setIsAppleLoading(false);
-      return;
     }
-
-    // Set the session in Supabase
-    try {
-      await supabase.auth.setSession(result.tokens);
-    } catch (e) {
-      console.error("Failed to set session:", e);
-      setErrorMessage("Apple sign-in failed. Please try again.");
-      setIsAppleLoading(false);
-    }
+    
+    setIsAppleLoading(false);
   };
 
   // Password update form (after clicking reset link)
