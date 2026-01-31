@@ -9,6 +9,7 @@ export interface WeightPoint {
   sets: number;
   reps: number;
   volume: number;  // Pre-calculated volume for accurate aggregation
+  duration_minutes?: number;  // For cardio exercises
 }
 
 export interface ExerciseTrend {
@@ -16,6 +17,7 @@ export interface ExerciseTrend {
   description: string;
   sessionCount: number;
   maxWeight: number;
+  maxDuration: number;  // For cardio exercises
   weightData: WeightPoint[];
 }
 
@@ -34,7 +36,7 @@ export function useWeightTrends(days: number) {
 
       const { data, error } = await supabase
         .from('weight_sets')
-        .select('exercise_key, description, sets, reps, weight_lbs, logged_date')
+        .select('exercise_key, description, sets, reps, weight_lbs, logged_date, duration_minutes')
         .gte('logged_date', startDate)
         .order('logged_date', { ascending: true });
 
@@ -46,6 +48,7 @@ export function useWeightTrends(days: number) {
       (data || []).forEach(row => {
         const exerciseKey = row.exercise_key;
         const weight = Number(row.weight_lbs);
+        const duration = Number(row.duration_minutes) || 0;
 
         if (!exerciseMap.has(exerciseKey)) {
           exerciseMap.set(exerciseKey, {
@@ -53,22 +56,28 @@ export function useWeightTrends(days: number) {
             description: row.description,
             sessionCount: 0,
             maxWeight: 0,
+            maxDuration: 0,
             weightData: [],
           });
         }
 
         const trend = exerciseMap.get(exerciseKey)!;
         trend.maxWeight = Math.max(trend.maxWeight, weight);
+        trend.maxDuration = Math.max(trend.maxDuration, duration);
 
-        // Aggregate by date + weight (composite key)
-        const compositeKey = `${row.logged_date}_${weight}`;
+        // For cardio, aggregate by date only; for weights, aggregate by date + weight
+        const isCardio = duration > 0 && weight === 0;
+        const compositeKey = isCardio ? row.logged_date : `${row.logged_date}_${weight}`;
         const existing = trend.weightData.find(
-          d => d.date === row.logged_date && d.weight === weight
+          d => isCardio 
+            ? d.date === row.logged_date 
+            : (d.date === row.logged_date && d.weight === weight)
         );
         if (existing) {
           existing.sets += row.sets;
           existing.reps += row.reps;
           existing.volume += row.sets * row.reps * weight;
+          existing.duration_minutes = (existing.duration_minutes || 0) + duration;
         } else {
           trend.weightData.push({
             date: row.logged_date,
@@ -76,6 +85,7 @@ export function useWeightTrends(days: number) {
             sets: row.sets,
             reps: row.reps,
             volume: row.sets * row.reps * weight,
+            duration_minutes: duration > 0 ? duration : undefined,
           });
         }
       });

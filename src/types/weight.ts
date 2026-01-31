@@ -17,6 +17,8 @@ export interface WeightSet {
   sets: number;
   reps: number;
   weight_lbs: number;
+  duration_minutes?: number | null;  // For cardio exercises
+  distance_miles?: number | null;    // For cardio (future)
   rawInput?: string | null; // Only present on first set of entry
   sourceRoutineId?: string | null; // Links to saved_routines.id when entry originated from a routine
   editedFields?: WeightEditableField[];
@@ -48,6 +50,8 @@ export interface WeightSetRow {
   sets: number;
   reps: number;
   weight_lbs: number;
+  duration_minutes: number | null;
+  distance_miles: number | null;
   raw_input: string | null;
   source_routine_id: string | null;
   created_at: string;
@@ -63,6 +67,7 @@ export interface AnalyzedExercise {
   sets: number;
   reps: number;
   weight_lbs: number;
+  duration_minutes?: number | null;
 }
 
 /**
@@ -74,6 +79,7 @@ export interface SavedExerciseSet {
   sets: number;
   reps: number;
   weight_lbs: number;
+  duration_minutes?: number | null;
 }
 
 /**

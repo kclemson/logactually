@@ -35,6 +35,8 @@ export function useWeightEntries(date: string) {
         sets: row.sets,
         reps: row.reps,
         weight_lbs: Number(row.weight_lbs),
+        duration_minutes: row.duration_minutes ?? null,
+        distance_miles: row.distance_miles ?? null,
         rawInput: row.raw_input,
         sourceRoutineId: row.source_routine_id,
       }));
@@ -63,6 +65,8 @@ export function useWeightEntries(date: string) {
         sets: set.sets,
         reps: set.reps,
         weight_lbs: set.weight_lbs,
+        duration_minutes: set.duration_minutes ?? null,
+        distance_miles: set.distance_miles ?? null,
         // Only store raw_input and source_routine_id on the first set
         raw_input: index === 0 ? params.raw_input : null,
         source_routine_id: index === 0 ? (params.source_routine_id ?? null) : null,
