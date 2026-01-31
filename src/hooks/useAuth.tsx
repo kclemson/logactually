@@ -182,6 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     cachedUser = null;
     setSession(null);
     setUser(null);
+    setLoading(false);
   };
 
   return (
