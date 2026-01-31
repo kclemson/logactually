@@ -1,33 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-
-export function useSubmitFeedback() {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (message: string) => {
-      if (!user) throw new Error('Not authenticated');
-      
-      const { error } = await supabase
-        .from('feedback')
-        .insert({ user_id: user.id, message });
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['adminFeedback'] });
-    },
-  });
-}
-
-interface FeedbackWithUser {
-  id: string;
-  message: string;
-  created_at: string;
-  user_number: number;
-}
+import type { FeedbackWithUser } from './FeedbackTypes';
 
 export function useAdminFeedback() {
   return useQuery({
@@ -36,7 +9,7 @@ export function useAdminFeedback() {
       // Get feedback with user info via a join
       const { data, error } = await supabase
         .from('feedback')
-        .select('id, message, created_at, user_id')
+        .select('id, message, created_at, user_id, response, responded_at')
         .order('created_at', { ascending: false })
         .limit(50);
       
@@ -56,6 +29,8 @@ export function useAdminFeedback() {
         message: f.message,
         created_at: f.created_at,
         user_number: userMap.get(f.user_id) ?? 0,
+        response: f.response,
+        responded_at: f.responded_at,
       })) as FeedbackWithUser[];
     },
   });

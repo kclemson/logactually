@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAdminStats, useAdminUserStats } from "@/hooks/useAdminStats";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
-import { useAdminFeedback } from "@/hooks/useFeedback";
+import { useAdminFeedback, useRespondToFeedback } from "@/hooks/feedback";
 import { format, parseISO, isToday } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 const USER_NAMES: Record<number, string> = {
   1: "KC",
@@ -17,11 +20,15 @@ const USER_NAMES: Record<number, string> = {
 };
 
 export default function Admin() {
+  const [replyingToId, setReplyingToId] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
+  
   // All hooks must be called before any conditional returns
   const { data: isAdmin, isLoading: isAdminLoading } = useIsAdmin();
   const { data: stats, isLoading, error } = useAdminStats();
   const { data: userStats } = useAdminUserStats();
   const { data: feedback } = useAdminFeedback();
+  const respondToFeedback = useRespondToFeedback();
 
   // Render nothing while checking admin status - no spinner, no flash
   if (isAdminLoading) {
@@ -47,6 +54,28 @@ export default function Admin() {
   const avgEntriesPerUser = stats && stats.total_users > 0 ? (stats.total_entries / stats.total_users).toFixed(1) : "0";
 
   const pct = (value: number) => (stats && stats.total_users > 0 ? Math.round((value / stats.total_users) * 100) : 0);
+
+  const handleStartReply = (feedbackId: string, existingResponse: string | null) => {
+    setReplyingToId(feedbackId);
+    setReplyText(existingResponse ?? "");
+  };
+
+  const handleCancelReply = () => {
+    setReplyingToId(null);
+    setReplyText("");
+  };
+
+  const handleSendReply = async (feedbackId: string) => {
+    if (!replyText.trim()) return;
+    
+    try {
+      await respondToFeedback.mutateAsync({ feedbackId, response: replyText.trim() });
+      setReplyingToId(null);
+      setReplyText("");
+    } catch (error) {
+      console.error("Failed to send reply:", error);
+    }
+  };
 
   return (
     <div className="px-1 py-2 space-y-4">
@@ -167,11 +196,61 @@ export default function Admin() {
         <div className="space-y-1">
           <p className="font-medium text-xs text-muted-foreground">Recent Feedback</p>
           {feedback.map((f) => (
-            <div key={f.id} className="text-xs border-b border-border/50 py-1">
+            <div key={f.id} className="text-xs border-b border-border/50 py-1 space-y-1">
               <span className="text-muted-foreground">
                 {USER_NAMES[f.user_number] ?? `User #${f.user_number}`} • {format(parseISO(f.created_at), "MMM d")}
               </span>
               <p className="whitespace-pre-wrap">{f.message}</p>
+              
+              {/* Show existing response */}
+              {f.response && replyingToId !== f.id && (
+                <div className="ml-2 pl-2 border-l-2 border-primary/30 text-muted-foreground">
+                  <span className="text-[10px]">
+                    Response ({format(parseISO(f.responded_at!), "MMM d")})
+                  </span>
+                  <p className="whitespace-pre-wrap">{f.response}</p>
+                </div>
+              )}
+              
+              {/* Reply form */}
+              {replyingToId === f.id ? (
+                <div className="space-y-1 pt-1">
+                  <Textarea
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    placeholder="Write a response..."
+                    className="min-h-[60px] text-xs"
+                    maxLength={1000}
+                  />
+                  <div className="flex gap-1">
+                    <Button 
+                      size="sm" 
+                      className="h-6 text-xs px-2"
+                      onClick={() => handleSendReply(f.id)}
+                      disabled={!replyText.trim() || respondToFeedback.isPending}
+                    >
+                      {respondToFeedback.isPending ? "Sending..." : "Send"}
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      className="h-6 text-xs px-2"
+                      onClick={handleCancelReply}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className="h-5 text-[10px] px-1"
+                  onClick={() => handleStartReply(f.id, f.response)}
+                >
+                  {f.response ? "Edit Reply" : "Reply"}
+                </Button>
+              )}
             </div>
           ))}
         </div>
