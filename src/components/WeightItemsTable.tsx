@@ -404,158 +404,168 @@ export function WeightItemsTable({
                 </div>
               )}
 
-              {/* Sets */}
-              {editable ? (
-                <Input
-                  type="number"
-                  value={
-                    editingCell?.index === index && editingCell?.field === 'sets'
-                      ? String(editingCell.value)
-                      : item.sets
-                  }
-                  onFocus={() => setEditingCell({
-                    index,
-                    field: 'sets',
-                    value: item.sets,
-                    originalValue: item.sets
-                  })}
-                  onChange={(e) => {
-                    if (editingCell) {
-                      setEditingCell({ ...editingCell, value: parseInt(e.target.value, 10) || 0 });
-                    }
-                  }}
-                  onKeyDown={(e) => handleKeyDown(e, index, 'sets')}
-                  onBlur={() => {
-                    // Save on blur if value changed and valid (positive)
-                    if (editingCell && editingCell.value !== editingCell.originalValue && !isReadOnly) {
-                      const numValue = Number(editingCell.value);
-                      if (numValue > 0) {
-                        onUpdateItem?.(index, 'sets', editingCell.value);
-                      }
-                    }
-                    setEditingCell(null);
-                  }}
-                  className={getNumberInputClasses(editingCell?.index === index && editingCell?.field === 'sets')}
-                />
-              ) : (
-                <span className="px-1 py-1 text-center">
-                  {/* Show dash for cardio exercises with 0 sets */}
-                  {item.sets === 0 && (item.duration_minutes ?? 0) > 0 ? '—' : item.sets}
-                </span>
-              )}
+              {/* Sets, Reps, Weight - show "cardio" label for cardio items in editable mode */}
+              {(() => {
+                const isCardioItem = item.weight_lbs === 0 && (item.duration_minutes ?? 0) > 0;
+                
+                if (editable && isCardioItem) {
+                  // For cardio items in editable mode, show a single "cardio" label spanning all 3 columns
+                  return (
+                    <span className="col-span-3 text-center text-muted-foreground italic py-1">
+                      cardio
+                    </span>
+                  );
+                }
+                
+                // Normal rendering for weight exercises (or read-only mode)
+                return (
+                  <>
+                    {/* Sets */}
+                    {editable ? (
+                      <Input
+                        type="number"
+                        value={
+                          editingCell?.index === index && editingCell?.field === 'sets'
+                            ? String(editingCell.value)
+                            : item.sets
+                        }
+                        onFocus={() => setEditingCell({
+                          index,
+                          field: 'sets',
+                          value: item.sets,
+                          originalValue: item.sets
+                        })}
+                        onChange={(e) => {
+                          if (editingCell) {
+                            setEditingCell({ ...editingCell, value: parseInt(e.target.value, 10) || 0 });
+                          }
+                        }}
+                        onKeyDown={(e) => handleKeyDown(e, index, 'sets')}
+                        onBlur={() => {
+                          if (editingCell && editingCell.value !== editingCell.originalValue && !isReadOnly) {
+                            const numValue = Number(editingCell.value);
+                            if (numValue > 0) {
+                              onUpdateItem?.(index, 'sets', editingCell.value);
+                            }
+                          }
+                          setEditingCell(null);
+                        }}
+                        className={getNumberInputClasses(editingCell?.index === index && editingCell?.field === 'sets')}
+                      />
+                    ) : (
+                      <span className="px-1 py-1 text-center">
+                        {item.sets === 0 && (item.duration_minutes ?? 0) > 0 ? '—' : item.sets}
+                      </span>
+                    )}
 
-              {/* Reps */}
-              {editable ? (
-                <Input
-                  type="number"
-                  value={
-                    editingCell?.index === index && editingCell?.field === 'reps'
-                      ? String(editingCell.value)
-                      : item.reps
-                  }
-                  onFocus={() => setEditingCell({
-                    index,
-                    field: 'reps',
-                    value: item.reps,
-                    originalValue: item.reps
-                  })}
-                  onChange={(e) => {
-                    if (editingCell) {
-                      setEditingCell({ ...editingCell, value: parseInt(e.target.value, 10) || 0 });
-                    }
-                  }}
-                  onKeyDown={(e) => handleKeyDown(e, index, 'reps')}
-                  onBlur={() => {
-                    // Save on blur if value changed and valid (positive)
-                    if (editingCell && editingCell.value !== editingCell.originalValue && !isReadOnly) {
-                      const numValue = Number(editingCell.value);
-                      if (numValue > 0) {
-                        onUpdateItem?.(index, 'reps', editingCell.value);
-                      }
-                    }
-                    setEditingCell(null);
-                  }}
-                  className={getNumberInputClasses(editingCell?.index === index && editingCell?.field === 'reps')}
-                />
-              ) : (
-                <span className="px-1 py-1 text-center">
-                  {/* Show dash for cardio exercises with 0 reps */}
-                  {item.reps === 0 && (item.duration_minutes ?? 0) > 0 ? '—' : item.reps}
-                </span>
-              )}
+                    {/* Reps */}
+                    {editable ? (
+                      <Input
+                        type="number"
+                        value={
+                          editingCell?.index === index && editingCell?.field === 'reps'
+                            ? String(editingCell.value)
+                            : item.reps
+                        }
+                        onFocus={() => setEditingCell({
+                          index,
+                          field: 'reps',
+                          value: item.reps,
+                          originalValue: item.reps
+                        })}
+                        onChange={(e) => {
+                          if (editingCell) {
+                            setEditingCell({ ...editingCell, value: parseInt(e.target.value, 10) || 0 });
+                          }
+                        }}
+                        onKeyDown={(e) => handleKeyDown(e, index, 'reps')}
+                        onBlur={() => {
+                          if (editingCell && editingCell.value !== editingCell.originalValue && !isReadOnly) {
+                            const numValue = Number(editingCell.value);
+                            if (numValue > 0) {
+                              onUpdateItem?.(index, 'reps', editingCell.value);
+                            }
+                          }
+                          setEditingCell(null);
+                        }}
+                        className={getNumberInputClasses(editingCell?.index === index && editingCell?.field === 'reps')}
+                      />
+                    ) : (
+                      <span className="px-1 py-1 text-center">
+                        {item.reps === 0 && (item.duration_minutes ?? 0) > 0 ? '—' : item.reps}
+                      </span>
+                    )}
 
-              {/* Weight */}
-              {editable ? (
-                <Input
-                  type="number"
-                  step={weightUnit === 'kg' ? '0.5' : '1'}
-                  value={
-                    editingCell?.index === index && editingCell?.field === 'weight_lbs'
-                      ? String(editingCell.value)
-                      : formatWeight(item.weight_lbs, weightUnit, weightUnit === 'kg' ? 1 : 0)
-                  }
-                  onFocus={() => {
-                    // Convert stored lbs to display unit for editing
-                    const displayValue = weightUnit === 'kg' 
-                      ? parseFloat(formatWeight(item.weight_lbs, 'kg', 1))
-                      : item.weight_lbs;
-                    setEditingCell({
-                      index,
-                      field: 'weight_lbs',
-                      value: displayValue,
-                      originalValue: displayValue
-                    });
-                  }}
-                  onChange={(e) => {
-                    if (editingCell) {
-                      setEditingCell({ ...editingCell, value: parseFloat(e.target.value) || 0 });
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      if (isReadOnly) {
-                        triggerOverlay();
-                        setEditingCell(null);
-                        (e.target as HTMLElement).blur();
-                        return;
-                      }
-                      if (editingCell && editingCell.value !== editingCell.originalValue) {
-                        // Convert user input back to lbs for storage
-                        const lbsValue = parseWeightToLbs(editingCell.value as number, weightUnit);
-                        onUpdateItem?.(index, 'weight_lbs', lbsValue);
-                      }
-                      setEditingCell(null);
-                      (e.target as HTMLElement).blur();
-                    } else if (e.key === 'Escape') {
-                      e.preventDefault();
-                      setEditingCell(null);
-                      (e.target as HTMLElement).blur();
-                    }
-                  }}
-                  onBlur={() => {
-                    // Save on blur if value changed and valid (positive)
-                    if (editingCell && editingCell.value !== editingCell.originalValue && !isReadOnly) {
-                      const numValue = Number(editingCell.value);
-                      if (numValue > 0) {
-                        // Convert user input back to lbs for storage
-                        const lbsValue = parseWeightToLbs(numValue, weightUnit);
-                        onUpdateItem?.(index, 'weight_lbs', lbsValue);
-                      }
-                    }
-                    setEditingCell(null);
-                  }}
-                  className={getNumberInputClasses(editingCell?.index === index && editingCell?.field === 'weight_lbs')}
-                />
-              ) : (
-                <span className="px-1 py-1 text-center">
-                  {/* Show duration for cardio exercises, weight otherwise */}
-                  {item.weight_lbs === 0 && (item.duration_minutes ?? 0) > 0 
-                    ? `${item.duration_minutes} min`
-                    : formatWeight(item.weight_lbs, weightUnit, weightUnit === 'kg' ? 1 : 0)
-                  }
-                </span>
-              )}
+                    {/* Weight */}
+                    {editable ? (
+                      <Input
+                        type="number"
+                        step={weightUnit === 'kg' ? '0.5' : '1'}
+                        value={
+                          editingCell?.index === index && editingCell?.field === 'weight_lbs'
+                            ? String(editingCell.value)
+                            : formatWeight(item.weight_lbs, weightUnit, weightUnit === 'kg' ? 1 : 0)
+                        }
+                        onFocus={() => {
+                          const displayValue = weightUnit === 'kg' 
+                            ? parseFloat(formatWeight(item.weight_lbs, 'kg', 1))
+                            : item.weight_lbs;
+                          setEditingCell({
+                            index,
+                            field: 'weight_lbs',
+                            value: displayValue,
+                            originalValue: displayValue
+                          });
+                        }}
+                        onChange={(e) => {
+                          if (editingCell) {
+                            setEditingCell({ ...editingCell, value: parseFloat(e.target.value) || 0 });
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (isReadOnly) {
+                              triggerOverlay();
+                              setEditingCell(null);
+                              (e.target as HTMLElement).blur();
+                              return;
+                            }
+                            if (editingCell && editingCell.value !== editingCell.originalValue) {
+                              const lbsValue = parseWeightToLbs(editingCell.value as number, weightUnit);
+                              onUpdateItem?.(index, 'weight_lbs', lbsValue);
+                            }
+                            setEditingCell(null);
+                            (e.target as HTMLElement).blur();
+                          } else if (e.key === 'Escape') {
+                            e.preventDefault();
+                            setEditingCell(null);
+                            (e.target as HTMLElement).blur();
+                          }
+                        }}
+                        onBlur={() => {
+                          if (editingCell && editingCell.value !== editingCell.originalValue && !isReadOnly) {
+                            const numValue = Number(editingCell.value);
+                            if (numValue > 0) {
+                              const lbsValue = parseWeightToLbs(numValue, weightUnit);
+                              onUpdateItem?.(index, 'weight_lbs', lbsValue);
+                            }
+                          }
+                          setEditingCell(null);
+                        }}
+                        className={getNumberInputClasses(editingCell?.index === index && editingCell?.field === 'weight_lbs')}
+                      />
+                    ) : (
+                      <span className="px-1 py-1 text-center">
+                        {item.weight_lbs === 0 && (item.duration_minutes ?? 0) > 0 
+                          ? `${item.duration_minutes} min`
+                          : formatWeight(item.weight_lbs, weightUnit, weightUnit === 'kg' ? 1 : 0)
+                        }
+                      </span>
+                    )}
+                  </>
+                );
+              })()}
 
               {/* Delete */}
               {hasDeleteColumn && (
