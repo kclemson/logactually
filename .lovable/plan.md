@@ -1,20 +1,30 @@
 
 
-## Replace Login Page Logo with Updated Version
+## Change Calorie Chart Color to Brighter Blue (Hex)
 
 ### Summary
 
-Replace the current horizontal logo file with the new version that has pixel-level refinements.
+Update the calorie chart color from dark blue to the brighter Tailwind blue-600 equivalent, using hex notation for easier hand-editing.
 
-### Changes Required
+### Color Change
 
-**1. Replace the logo asset**
+| Before | After |
+|--------|-------|
+| `#0033CC` | `#2563EB` (Tailwind blue-600) |
 
-Copy `user-uploads://logactually-logo-horiz-2.png` to `public/logactually-logo-horiz.png`, overwriting the existing file.
+### Changes to `src/pages/Trends.tsx`
 
-This maintains the same filename so no code changes are needed - the three references in `src/pages/Auth.tsx` (password update form, password reset form, and main login form) will automatically use the updated image.
+**1. Update CHART_COLORS.calories constant (line 24)**
 
-### No Code Changes Required
+```tsx
+calories: "#2563EB",  // Was: "#0033CC"
+```
 
-Since we're replacing the file with the same name, all existing `<img src="/logactually-logo-horiz.png" ... />` references will pick up the new version without any modifications.
+**2. Update tooltip fallback color (line 76)**
+
+```tsx
+style={{ color: totalColor || '#2563EB' }}
+```
+
+This matches the default Tailwind `blue-600` which is close to what's used in the date navigation (`text-blue-600 dark:text-blue-400`).
 
