@@ -68,6 +68,7 @@ export interface AnalyzedExercise {
   reps: number;
   weight_lbs: number;
   duration_minutes?: number | null;
+  distance_miles?: number | null;
 }
 
 /**
@@ -80,6 +81,7 @@ export interface SavedExerciseSet {
   reps: number;
   weight_lbs: number;
   duration_minutes?: number | null;
+  distance_miles?: number | null;
 }
 
 /**
