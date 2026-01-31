@@ -30,7 +30,7 @@ interface SaveRoutineDialogProps {
 function formatExerciseSummary(exercise: WeightSet, includeSpace = true): string {
   const isCardio = exercise.weight_lbs === 0 && (exercise.duration_minutes ?? 0) > 0;
   if (isCardio) {
-    return `${exercise.description} (${exercise.duration_minutes} min)`;
+    return `${exercise.description} (${Number(exercise.duration_minutes).toFixed(1)} min)`;
   }
   const separator = includeSpace ? ' @ ' : ' @ ';
   return `${exercise.description} (${exercise.sets}x${exercise.reps}${separator}${exercise.weight_lbs} lbs)`;

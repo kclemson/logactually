@@ -558,7 +558,7 @@ export function WeightItemsTable({
                     ) : (
                       <span className="px-1 py-1 text-center">
                         {item.weight_lbs === 0 && (item.duration_minutes ?? 0) > 0 
-                          ? `${item.duration_minutes} min`
+                          ? `${Number(item.duration_minutes).toFixed(1)} min`
                           : formatWeight(item.weight_lbs, weightUnit, weightUnit === 'kg' ? 1 : 0)
                         }
                       </span>
@@ -616,7 +616,7 @@ export function WeightItemsTable({
                     {cardioItems.map((ex, idx) => {
                       const parts: string[] = [];
                       if ((ex.duration_minutes ?? 0) > 0) {
-                        parts.push(`${ex.duration_minutes} min`);
+                        parts.push(`${Number(ex.duration_minutes).toFixed(1)} min`);
                       }
                       if ((ex.distance_miles ?? 0) > 0) {
                         parts.push(`${ex.distance_miles} mi`);
