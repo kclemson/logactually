@@ -135,7 +135,7 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
         mph,
         // For weight exercises: "3×10×135"; for cardio in time mode: duration; in mph mode: mph value
         label: isCardio 
-          ? (showMph ? `${mph}` : `${d.duration_minutes || 0}`)
+          ? (showMph ? `${mph}` : `${Number(d.duration_minutes || 0).toFixed(1)}`)
           : `${d.sets}×${d.reps}×${displayWeight}`,
         // Show label on interval OR always on last column
         showLabel: index % labelInterval === 0 || index === dataLength - 1,
@@ -256,7 +256,7 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
                   <CompactTooltip
                     formatter={(value: number, name: string, entry: any) => {
                       if (isCardio) {
-                        const duration = entry.payload.duration_minutes || 0;
+                        const duration = Number(entry.payload.duration_minutes || 0).toFixed(1);
                         const distance = entry.payload.distance_miles;
                         if (showMph && entry.payload.mph) {
                           return `${entry.payload.mph} mph · ${distance} mi`;
