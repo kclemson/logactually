@@ -1,112 +1,181 @@
 
 
-## Fix Cardio Duration Loss with Future-Proof Field Handling
+## Add Distance Extraction + Consolidate Cardio Keys
 
 ### Problem
 
-When cardio exercises are saved as routines or applied from routines, the `duration_minutes` field is lost because the code explicitly maps only 5 fields, missing the newer cardio fields.
+1. When you log "1.5 mile run in 12 min", the AI ignores the distance - it stays null in the database
+2. Cardio exercise keys are fragmented: `treadmill`, `walking`, `running`, `stationary_bike` all create separate Trends charts when users often care about the same underlying activity
+3. Prompt has redundant `sets: 0, reps: 0, weight_lbs: 0` instructions for cardio
 
 ### Solution
 
-Switch from an **allowlist approach** (explicitly listing fields to keep) to a **blocklist approach** (explicitly listing runtime fields to drop, spreading the rest). This is more future-proof - when we add new persistent fields like `distance_miles`, they'll automatically flow through.
-
-### Runtime Fields to Strip (Blocklist)
-
-These are UI/client-side only and should NOT be saved to routines:
-
-| Field | Reason |
-|-------|--------|
-| `id` | Database row ID for the logged set, not routine data |
-| `uid` | Client-side React key |
-| `entryId` | Groups exercises in current log session |
-| `rawInput` | Stored separately at entry level |
-| `sourceRoutineId` | Stored separately at entry level |
-| `editedFields` | UI tracking for visual indicators |
-
-Everything else (exercise_key, description, sets, reps, weight_lbs, duration_minutes, distance_miles, and any future fields) will automatically persist.
+1. Consolidate locomotion into `walk_run` key (treadmill walk/jog/run, outdoor walk/run, speedwalk, etc.)
+2. Consolidate cycling into `cycling` key (stationary bike, outdoor cycling, spin)
+3. Add `distance_miles` extraction
+4. Clean up redundant cardio prompt instructions
 
 ---
 
-### Changes
+### New Cardio Key Structure
 
-**File 1: `src/hooks/useSavedRoutines.ts` (lines 93-100)**
+| Old Keys | New Key | Description Field (AI-inferred) |
+|----------|---------|--------------------------------|
+| `treadmill`, `walking`, `running` | `walk_run` | "Treadmill Walk", "Morning Jog", "5K Run", etc. |
+| `stationary_bike` | `cycling` | "Stationary Bike", "Spin Class", "Outdoor Ride", etc. |
+| `elliptical` | `elliptical` | (unchanged) |
+| `rowing_machine` | `rowing` | (simplified key name) |
+| `stair_climber` | `stair_climber` | (unchanged) |
+| `swimming` | `swimming` | (unchanged) |
+| `jump_rope` | `jump_rope` | (unchanged) |
 
-Current code explicitly picks 5 fields:
+---
+
+### File Changes
+
+#### 1. `supabase/functions/_shared/exercises.ts`
+
+**Replace lines 97-106 (Cardio section):**
+
 ```typescript
-const cleanedSets = exerciseSets.map(({ exercise_key, description, sets, reps, weight_lbs }) => ({
-  exercise_key,
-  description,
-  sets,
-  reps,
-  weight_lbs,
-}));
-```
-
-New code strips runtime fields, spreads the rest:
-```typescript
-const cleanedSets = exerciseSets.map(({ 
-  id, uid, entryId, rawInput, sourceRoutineId, editedFields,
-  ...persistentFields 
-}) => persistentFields);
+// Cardio / Duration-Based
+{ key: 'walk_run', name: 'Walk/Run', aliases: ['treadmill', 'treadmill walk', 'treadmill run', 'treadmill jog', 'walking', 'walk', 'running', 'run', 'jog', 'jogging', 'speedwalk', 'outdoor walk', 'outdoor run', 'incline walk'], primaryMuscle: 'Cardio', isCardio: true },
+{ key: 'cycling', name: 'Cycling', aliases: ['bike', 'stationary bike', 'spin bike', 'spin class', 'exercise bike', 'recumbent bike', 'outdoor bike', 'bicycle'], primaryMuscle: 'Cardio', isCardio: true },
+{ key: 'elliptical', name: 'Elliptical', aliases: ['elliptical machine', 'cross trainer'], primaryMuscle: 'Cardio', isCardio: true },
+{ key: 'rowing', name: 'Rowing', aliases: ['rowing machine', 'row machine', 'erg', 'rower', 'concept 2', 'ergometer'], primaryMuscle: 'Cardio', isCardio: true },
+{ key: 'stair_climber', name: 'Stair Climber', aliases: ['stairmaster', 'stair stepper', 'step machine'], primaryMuscle: 'Cardio', isCardio: true },
+{ key: 'swimming', name: 'Swimming', aliases: ['swim', 'laps', 'pool'], primaryMuscle: 'Cardio', isCardio: true },
+{ key: 'jump_rope', name: 'Jump Rope', aliases: ['skipping', 'skip rope'], primaryMuscle: 'Cardio', isCardio: true },
 ```
 
 ---
 
-**File 2: `src/pages/WeightLog.tsx` - `handleLogSavedRoutine` (lines 243-253)**
+#### 2. `src/lib/exercise-metadata.ts`
 
-Current code explicitly picks 5 fields:
-```typescript
-const exercises = exerciseSets.map(set => ({
-  exercise_key: set.exercise_key,
-  description: set.description,
-  sets: set.sets,
-  reps: set.reps,
-  weight_lbs: set.weight_lbs,
-}));
-```
+**Replace lines 71-81 (Cardio section):**
 
-New code uses spread (SavedExerciseSet already has no runtime fields, but this is safer for future):
 ```typescript
-const exercises = exerciseSets.map(set => ({ ...set }));
+// Cardio / Duration-Based
+walk_run: { primary: 'Cardio', isCardio: true },
+cycling: { primary: 'Cardio', isCardio: true },
+elliptical: { primary: 'Cardio', isCardio: true },
+rowing: { primary: 'Cardio', isCardio: true },
+stair_climber: { primary: 'Cardio', isCardio: true },
+swimming: { primary: 'Cardio', isCardio: true },
+jump_rope: { primary: 'Cardio', isCardio: true },
 ```
 
 ---
 
-**File 3: `src/pages/WeightLog.tsx` - `handleSaveRoutineConfirm` (lines 291-314)**
+#### 3. `supabase/functions/analyze-weights/index.ts`
 
-Current code explicitly picks 5 fields from WeightSet:
-```typescript
-const exerciseSets: SavedExerciseSet[] = saveRoutineDialogData.exerciseSets.map(set => ({
-  exercise_key: set.exercise_key,
-  description: set.description,
-  sets: set.sets,
-  reps: set.reps,
-  weight_lbs: set.weight_lbs,
-}));
+**Prompt changes (lines 39-46):**
+
+Current:
+```
+For cardio or duration-based exercises, provide:
+- exercise_key: a canonical snake_case identifier from the reference below
+- description: a user-friendly name (e.g., "Treadmill Walk", "Stationary Bike")
+- duration_minutes: duration in minutes (integer)
+- sets: 0
+- reps: 0
+- weight_lbs: 0
 ```
 
-New code strips runtime fields:
+New:
+```
+For cardio or duration-based exercises, provide:
+- exercise_key: a canonical snake_case identifier from the reference below
+- description: a user-friendly, context-specific name (e.g., "Treadmill Jog", "Morning Walk", "5K Run", "Spin Class")
+- duration_minutes: duration in minutes (integer), if relevant
+- distance_miles: distance in miles (number), if relevant. Convert km to miles (1km = 0.621mi).
+```
+
+**Example JSON changes (line 56):**
+
+Current:
+```json
+{ "exercise_key": "treadmill", "description": "Treadmill Walk", "duration_minutes": 30, "sets": 0, "reps": 0, "weight_lbs": 0 }
+```
+
+New:
+```json
+{ "exercise_key": "walk_run", "description": "Treadmill Walk", "duration_minutes": 30 },
+{ "exercise_key": "walk_run", "description": "5K Run", "duration_minutes": 25, "distance_miles": 3.1 }
+```
+
+**Normalization logic (lines 198-220):**
+
+Add after line 202:
 ```typescript
-const exerciseSets: SavedExerciseSet[] = saveRoutineDialogData.exerciseSets.map(({
-  id, uid, entryId, rawInput, sourceRoutineId, editedFields,
-  ...persistentFields
-}) => persistentFields);
+const distance_miles = Number(exercise.distance_miles) || 0;
+```
+
+Modify line 206:
+```typescript
+const hasCardioData = duration_minutes > 0 || distance_miles > 0;
+```
+
+Add to normalized object:
+```typescript
+distance_miles: hasCardioData && distance_miles > 0 
+  ? Math.round(distance_miles * 100) / 100
+  : null,
 ```
 
 ---
 
-### Result
+#### 4. `src/types/weight.ts`
 
-| Scenario | Before | After |
-|----------|--------|-------|
-| Save cardio as routine | `duration_minutes` lost | `duration_minutes` preserved |
-| Apply cardio routine | Shows "0 0 0" | Shows "cardio" label |
-| Add future field (e.g., `distance_miles`) | Would need manual update | Automatically works |
+**Add to `AnalyzedExercise` (after line 70):**
+```typescript
+distance_miles?: number | null;
+```
+
+**Add to `SavedExerciseSet` (after line 82):**
+```typescript
+distance_miles?: number | null;
+```
+
+---
+
+### Example Inputs After Changes
+
+| User Input | exercise_key | description | duration | distance |
+|------------|--------------|-------------|----------|----------|
+| `treadmill 30 min` | `walk_run` | "Treadmill Walk" | 30 | null |
+| `treadmill jog 20min 2mi` | `walk_run` | "Treadmill Jog" | 20 | 2.0 |
+| `3 mile walk` | `walk_run` | "Walking" | null | 3.0 |
+| `5k run` | `walk_run` | "5K Run" | null | 3.1 |
+| `morning run 30 min` | `walk_run` | "Morning Run" | 30 | null |
+| `spin class 45 min` | `cycling` | "Spin Class" | 45 | null |
+| `outdoor bike 10 miles` | `cycling` | "Outdoor Ride" | null | 10.0 |
+| `elliptical 20 min` | `elliptical` | "Elliptical" | 20 | null |
+
+---
+
+### Data Migration Note
+
+Existing data with old keys (`treadmill`, `running`, `walking`, `stationary_bike`, `rowing_machine`) will remain in the database. Options:
+
+1. **Do nothing** - old entries keep old keys, new entries use new keys. Trends will show separate charts for historical data until merged manually.
+
+2. **Run migration** (recommended) - update existing records to use the new consolidated keys:
+
+```sql
+UPDATE weight_sets SET exercise_key = 'walk_run' WHERE exercise_key IN ('treadmill', 'walking', 'running');
+UPDATE weight_sets SET exercise_key = 'cycling' WHERE exercise_key = 'stationary_bike';
+UPDATE weight_sets SET exercise_key = 'rowing' WHERE exercise_key = 'rowing_machine';
+```
+
+---
 
 ### Files Modified
 
-| File | Change |
-|------|--------|
-| `src/hooks/useSavedRoutines.ts` | Switch to blocklist approach in `useUpdateSavedRoutine` |
-| `src/pages/WeightLog.tsx` | Switch to blocklist approach in both `handleLogSavedRoutine` and `handleSaveRoutineConfirm` |
+| File | Changes |
+|------|---------|
+| `supabase/functions/_shared/exercises.ts` | Consolidate cardio keys (treadmill/walking/running → walk_run, etc.) |
+| `src/lib/exercise-metadata.ts` | Mirror the consolidated cardio keys |
+| `supabase/functions/analyze-weights/index.ts` | Update prompt + add distance_miles extraction |
+| `src/types/weight.ts` | Add distance_miles to AnalyzedExercise and SavedExerciseSet |
 
