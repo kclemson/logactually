@@ -106,7 +106,7 @@ export default function Admin() {
                       : ""
                   }`}
                 >
-                  {USER_NAMES[user.user_number] ?? `User ${user.user_number}`}
+                  {USER_NAMES[user.user_number] ?? `User #${user.user_number}`}
                 </td>
                 <td
                   className={`text-center py-0.5 pr-2 ${user.last_active && isToday(parseISO(user.last_active)) ? "text-green-500" : ""}`}
@@ -169,7 +169,7 @@ export default function Admin() {
           {feedback.map((f) => (
             <div key={f.id} className="text-xs border-b border-border/50 py-1">
               <span className="text-muted-foreground">
-                {USER_NAMES[f.user_number] ?? `User ${f.user_number}`} • {format(parseISO(f.created_at), "MMM d")}
+                {USER_NAMES[f.user_number] ?? `User #${f.user_number}`} • {format(parseISO(f.created_at), "MMM d")}
               </span>
               <p className="whitespace-pre-wrap">{f.message}</p>
             </div>
