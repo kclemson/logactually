@@ -1,113 +1,107 @@
 
 
-## Fix OAuth URL Validation - Wrong Hostname Check
+## Fix OAuth on Custom Domains - Use Absolute Broker URL
+
+### Summary
+
+Update the OAuth implementation to use Lovable's managed credentials on custom domains by configuring the `@lovable.dev/cloud-auth-js` library with an absolute broker URL pointing to the preview domain.
 
 ### Root Cause
 
-The OAuth flow is failing because of incorrect hostname validation. When calling `supabase.auth.signInWithOAuth` with `skipBrowserRedirect: true`, the returned URL is **not** directly to `accounts.google.com` or `appleid.apple.com`.
-
-Instead, it returns a URL to **Supabase's auth endpoint**:
-```
-https://enricsnosdrhmfvbjaei.supabase.co/auth/v1/authorize?provider=google&...
-```
-
-The current code validates:
-```typescript
-if (oauthUrl.hostname !== "accounts.google.com") {
-  throw new Error("Invalid OAuth redirect URL");
-}
-```
-
-This **always fails** because the hostname is `enricsnosdrhmfvbjaei.supabase.co`, not `accounts.google.com`.
+The current implementation tries to bypass Lovable auth and call Supabase directly on custom domains, which fails because Lovable's managed OAuth credentials (Google/Apple Client IDs) are only accessible through the Lovable auth broker—not directly from Supabase.
 
 ### Solution
 
-Update the URL validation to check for the Supabase auth endpoint hostname (which contains `supabase.co`) instead of the OAuth provider's hostname. The Supabase endpoint then handles the redirect to Google/Apple.
+Instead of bypassing the Lovable auth system, configure it to use the **absolute URL** of the preview domain's OAuth broker. This allows custom domains to leverage the same managed credentials as preview domains.
 
-Also add `console.error` logging so future issues are easier to debug.
+### File Changes
 
-### File to Modify
+**File:** `src/pages/Auth.tsx`
 
-| File | Change |
-|------|--------|
-| `src/pages/Auth.tsx` | Fix hostname validation and add error logging |
+| Section | Change |
+|---------|--------|
+| Imports (line 5) | Replace `lovable` import with `createLovableAuth` from `@lovable.dev/cloud-auth-js` |
+| After imports (line 12) | Add `PREVIEW_DOMAIN` constant |
+| `handleGoogleSignIn` (lines 121-179) | Replace Supabase direct call with configured Lovable auth |
+| `handleAppleSignIn` (lines 181-239) | Replace Supabase direct call with configured Lovable auth |
 
-### Code Changes
+### Implementation Details
 
-**handleGoogleSignIn (lines 148-159)** - Change validation:
+**1. Update imports:**
 ```typescript
-// Validate OAuth URL before redirect (security: prevent open redirect)
-if (data?.url) {
+// Remove: import { lovable } from "@/integrations/lovable/index";
+// Add:
+import { createLovableAuth } from "@lovable.dev/cloud-auth-js";
+```
+
+**2. Add preview domain constant:**
+```typescript
+const PREVIEW_DOMAIN = "https://id-preview--db525336-2711-490b-a991-6d235ef8c0ef.lovable.app";
+```
+
+**3. Simplified handler pattern (both Google and Apple):**
+```typescript
+const handleGoogleSignIn = async () => {
+  setIsGoogleLoading(true);
+  setErrorMessage(null);
+  
+  const hostname = window.location.hostname;
+  const isCustomDomain = 
+    !hostname.includes("lovable.app") &&
+    !hostname.includes("lovableproject.com") &&
+    hostname !== "localhost";
+
+  // Configure auth with absolute broker URL for custom domains
+  const lovableAuth = createLovableAuth(
+    isCustomDomain 
+      ? { oauthBrokerUrl: `${PREVIEW_DOMAIN}/~oauth/initiate` }
+      : {}
+  );
+
+  const result = await lovableAuth.signInWithOAuth("google", {
+    redirect_uri: window.location.origin,
+  });
+
+  if (result.redirected) {
+    return; // Page is redirecting to OAuth provider
+  }
+
+  if (result.error) {
+    console.error("Google OAuth error:", result.error);
+    setErrorMessage("Google sign-in failed. Please try again.");
+    setIsGoogleLoading(false);
+    return;
+  }
+
+  // Set the session in Supabase
   try {
-    const oauthUrl = new URL(data.url);
-    // Supabase returns URL to its own auth endpoint, not directly to Google
-    if (!oauthUrl.hostname.endsWith("supabase.co")) {
-      throw new Error("Invalid OAuth redirect URL");
-    }
-    window.location.href = data.url;
+    await supabase.auth.setSession(result.tokens);
   } catch (e) {
-    console.error("Google OAuth error:", e, "URL:", data?.url);
+    console.error("Failed to set session:", e);
     setErrorMessage("Google sign-in failed. Please try again.");
     setIsGoogleLoading(false);
   }
-} else {
-  console.error("Google OAuth: No URL returned from Supabase");
-  setErrorMessage("Google sign-in failed. Please try again.");
-  setIsGoogleLoading(false);
-}
+};
 ```
 
-**handleAppleSignIn (lines 201-212)** - Same pattern:
-```typescript
-// Validate OAuth URL before redirect (security: prevent open redirect)
-if (data?.url) {
-  try {
-    const oauthUrl = new URL(data.url);
-    // Supabase returns URL to its own auth endpoint, not directly to Apple
-    if (!oauthUrl.hostname.endsWith("supabase.co")) {
-      throw new Error("Invalid OAuth redirect URL");
-    }
-    window.location.href = data.url;
-  } catch (e) {
-    console.error("Apple OAuth error:", e, "URL:", data?.url);
-    setErrorMessage("Apple sign-in failed. Please try again.");
-    setIsAppleLoading(false);
-  }
-} else {
-  console.error("Apple OAuth: No URL returned from Supabase");
-  setErrorMessage("Apple sign-in failed. Please try again.");
-  setIsAppleLoading(false);
-}
-```
-
-Also add logging for the Supabase error case (lines 142-146 and 195-199):
-```typescript
-if (error) {
-  console.error("Google OAuth Supabase error:", error);
-  setErrorMessage("Google sign-in failed. Please try again.");
-  setIsGoogleLoading(false);
-  return;
-}
-```
-
-### OAuth Flow Explained
+### OAuth Flow (Fixed)
 
 ```text
+Custom Domain (logactually.com):
 1. User clicks "Continue with Google"
-2. Code calls supabase.auth.signInWithOAuth with skipBrowserRedirect: true
-3. Supabase returns: https://enricsnosdrhmfvbjaei.supabase.co/auth/v1/authorize?provider=google&...
-4. We validate it's a supabase.co URL (security check)
-5. We redirect user to that Supabase URL
-6. Supabase redirects user to accounts.google.com
-7. User authenticates with Google
-8. Google redirects back to Supabase callback
-9. Supabase redirects back to logactually.com with auth tokens
+2. Code creates lovableAuth with oauthBrokerUrl = "https://[preview].lovable.app/~oauth/initiate"
+3. lovableAuth.signInWithOAuth redirects to preview domain's broker
+4. Broker uses Lovable's managed Google credentials
+5. User authenticates with Google
+6. Broker redirects back to logactually.com (via redirect_uri)
+7. Session is set in Supabase client
 ```
 
-### Security Note
+### Feature Flag Preserved
 
-Validating against `supabase.co` is secure because:
-- Only legitimate Supabase instances use `*.supabase.co` domains
-- The URL contains the project ID in the subdomain
-- Supabase handles the actual provider redirect securely
+The `?oauth=1` feature flag remains intact. The OAuth buttons are only rendered when `showOAuth` is true (line 455), so production users won't see OAuth options unless they explicitly use `?oauth=1`.
+
+### Testing
+
+After implementation, test at: `https://logactually.com/auth?oauth=1`
 
