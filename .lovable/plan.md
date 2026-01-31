@@ -1,57 +1,20 @@
 
 
-## Make Demo Mode More Visible on Login Page
+## Replace Login Page Logo with Updated Version
 
 ### Summary
 
-Move the demo link from the bottom of the login form to directly below the app tagline, making it more prominent for first-time visitors.
+Replace the current horizontal logo file with the new version that has pixel-level refinements.
 
-### Changes to `src/pages/Auth.tsx`
+### Changes Required
 
-**1. Add demo link in CardHeader (after the description)**
+**1. Replace the logo asset**
 
-Insert a new paragraph right after the `CardDescription` component (line 257):
+Copy `user-uploads://logactually-logo-horiz-2.png` to `public/logactually-logo-horiz.png`, overwriting the existing file.
 
-```tsx
-<CardHeader className="text-center">
-  <img src="/logactually-logo-horiz.png" alt={APP_NAME} className="h-16 mx-auto mb-2" />
-  <CardTitle className="text-2xl font-bold">{APP_NAME}</CardTitle>
-  <CardDescription>Braindump what you ate or lifted — AI handles the rest</CardDescription>
-  <p className="text-sm text-muted-foreground pt-1">
-    <button
-      type="button"
-      onClick={handleTryDemo}
-      disabled={submitting || isDemoLoading || isGoogleLoading}
-      className="text-primary underline-offset-4 hover:underline disabled:opacity-50"
-    >
-      {isDemoLoading ? "loading demo..." : "Try the demo"}
-    </button>
-    {" "}— no account needed
-  </p>
-</CardHeader>
-```
+This maintains the same filename so no code changes are needed - the three references in `src/pages/Auth.tsx` (password update form, password reset form, and main login form) will automatically use the updated image.
 
-**2. Remove the old demo link (currently at lines 405-417)**
+### No Code Changes Required
 
-Delete the existing demo paragraph from below the OAuth buttons:
-
-```tsx
-{/* Demo link - REMOVE THIS */}
-<p className="mt-4 text-center text-sm text-muted-foreground">
-  Or{" "}
-  <button ...>
-    {isDemoLoading ? "loading demo..." : "try the demo"}
-  </button>{" "}
-  — no account needed
-</p>
-```
-
-### Text Changes
-
-| Before | After |
-|--------|-------|
-| `Or try the demo — no account needed` | `Try the demo — no account needed` |
-
-- Removed "Or" since it's no longer following other options
-- Capitalized "Try" since it's now at the start of the sentence
+Since we're replacing the file with the same name, all existing `<img src="/logactually-logo-horiz.png" ... />` references will pick up the new version without any modifications.
 
