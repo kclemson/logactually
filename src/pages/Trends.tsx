@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 
 // Chart color palette (hex RGB format for easy editing)
 const CHART_COLORS = {
-  calories: "#0033CC",
+  calories: "#2563EB",
   protein: "#115E83",
   carbs: "#00B4D8",
   fat: "#90E0EF",
@@ -73,7 +73,7 @@ const CompactTooltip = ({ active, payload, label, formatter, totalKey, totalLabe
     <div className="rounded-md border border-border/50 bg-white dark:bg-slate-800 px-2 py-1 shadow-md">
       <p className="text-[10px] font-medium text-slate-900 dark:text-slate-100 mb-0.5">{label}</p>
       {totalValue !== undefined && (
-        <p className="text-[10px] font-semibold mb-0.5" style={{ color: totalColor || '#0033CC' }}>
+        <p className="text-[10px] font-semibold mb-0.5" style={{ color: totalColor || '#2563EB' }}>
           {totalLabel || 'Total'}: {Math.round(totalValue)} cal
         </p>
       )}
