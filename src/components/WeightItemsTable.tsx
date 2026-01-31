@@ -601,9 +601,35 @@ export function WeightItemsTable({
               const isFromSavedRoutine = currentEntryId && entrySourceRoutineIds?.has(currentEntryId);
               const routineName = currentEntryId && entryRoutineNames?.get(currentEntryId);
               
+              // Get all exercises in this entry for cardio metadata
+              const entryExercises = items.filter(i => i.entryId === currentEntryId);
+              
+              // Build cardio metadata for exercises that have duration/distance
+              const cardioItems = entryExercises.filter(ex => 
+                (ex.duration_minutes ?? 0) > 0 || (ex.distance_miles ?? 0) > 0
+              );
+              
               return (
                 <div className={cn('grid gap-0.5', gridCols)}>
                   <div className="col-span-full pl-6 py-1 space-y-1">
+                    {/* Cardio metadata - show for each cardio item */}
+                    {cardioItems.map((ex, idx) => {
+                      const parts: string[] = [];
+                      if ((ex.duration_minutes ?? 0) > 0) {
+                        parts.push(`${ex.duration_minutes} min`);
+                      }
+                      if ((ex.distance_miles ?? 0) > 0) {
+                        parts.push(`${ex.distance_miles} mi`);
+                      }
+                      
+                      return (
+                        <p key={ex.uid || idx} className="text-sm text-muted-foreground">
+                          <span className="font-medium">{ex.description}:</span>{' '}
+                          {parts.join(', ')}
+                        </p>
+                      );
+                    })}
+                    
                     {/* Only show raw input if NOT from a saved routine */}
                     {!isFromSavedRoutine && currentRawInput && (
                       <p className="text-muted-foreground whitespace-pre-wrap italic">
