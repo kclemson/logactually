@@ -1,21 +1,57 @@
 
-## Improve Notification Dot Styling
 
-### Problem
-The current notification dot uses `bg-primary` which appears as a stark white circle in dark mode, making it look like an error or UI glitch rather than an intentional notification indicator.
+## Make Demo Mode More Visible on Login Page
 
-### Solution
-Change the dot to use the signature blue color (the same focus blue used elsewhere in the app) and add a subtle ring/border for better visual definition:
+### Summary
 
-**Changes to `src/components/Header.tsx`:**
+Move the demo link from the bottom of the login form to directly below the app tagline, making it more prominent for first-time visitors.
+
+### Changes to `src/pages/Auth.tsx`
+
+**1. Add demo link in CardHeader (after the description)**
+
+Insert a new paragraph right after the `CardDescription` component (line 257):
 
 ```tsx
-{hasUnread && (
-  <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-[hsl(217_91%_60%)] ring-2 ring-background" />
-)}
+<CardHeader className="text-center">
+  <img src="/logactually-logo-horiz.png" alt={APP_NAME} className="h-16 mx-auto mb-2" />
+  <CardTitle className="text-2xl font-bold">{APP_NAME}</CardTitle>
+  <CardDescription>Braindump what you ate or lifted — AI handles the rest</CardDescription>
+  <p className="text-sm text-muted-foreground pt-1">
+    <button
+      type="button"
+      onClick={handleTryDemo}
+      disabled={submitting || isDemoLoading || isGoogleLoading}
+      className="text-primary underline-offset-4 hover:underline disabled:opacity-50"
+    >
+      {isDemoLoading ? "loading demo..." : "Try the demo"}
+    </button>
+    {" "}— no account needed
+  </p>
+</CardHeader>
 ```
 
-- `bg-[hsl(217_91%_60%)]` - Uses the app's signature blue instead of primary (white in dark mode)
-- `ring-2 ring-background` - Adds a small ring in background color around the dot, giving it a "punched out" look that appears more intentional and designed
+**2. Remove the old demo link (currently at lines 405-417)**
 
-This matches the blue used for interactive elements throughout the app (per the design system memory) and will look consistent in both light and dark themes.
+Delete the existing demo paragraph from below the OAuth buttons:
+
+```tsx
+{/* Demo link - REMOVE THIS */}
+<p className="mt-4 text-center text-sm text-muted-foreground">
+  Or{" "}
+  <button ...>
+    {isDemoLoading ? "loading demo..." : "try the demo"}
+  </button>{" "}
+  — no account needed
+</p>
+```
+
+### Text Changes
+
+| Before | After |
+|--------|-------|
+| `Or try the demo — no account needed` | `Try the demo — no account needed` |
+
+- Removed "Or" since it's no longer following other options
+- Capitalized "Try" since it's now at the start of the sentence
+
