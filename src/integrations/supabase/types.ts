@@ -19,18 +19,27 @@ export type Database = {
           created_at: string
           id: string
           message: string
+          read_at: string | null
+          responded_at: string | null
+          response: string | null
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
           message: string
+          read_at?: string | null
+          responded_at?: string | null
+          response?: string | null
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
           message?: string
+          read_at?: string | null
+          responded_at?: string | null
+          response?: string | null
           user_id?: string
         }
         Relationships: []
