@@ -108,7 +108,10 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
   
   // Speed toggle for distance-based exercises (walk_run, cycling)
   const supportsSpeedToggle = isCardio && hasDistanceTracking(exercise.exercise_key);
-  const [showMph, setShowMph] = useState(false);
+  const [showMph, setShowMph] = useState(() => {
+    if (!supportsSpeedToggle) return false;
+    return localStorage.getItem(`trends-mph-${exercise.exercise_key}`) === 'true';
+  });
   
   const chartData = useMemo(() => {
     // For mph mode, filter to only entries with distance data
@@ -213,7 +216,13 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
     );
   };
 
-  const handleHeaderClick = supportsSpeedToggle ? () => setShowMph(!showMph) : undefined;
+  const handleHeaderClick = supportsSpeedToggle 
+    ? () => {
+        const newValue = !showMph;
+        localStorage.setItem(`trends-mph-${exercise.exercise_key}`, String(newValue));
+        setShowMph(newValue);
+      }
+    : undefined;
 
   return (
     <Card className="border-0 shadow-none">
