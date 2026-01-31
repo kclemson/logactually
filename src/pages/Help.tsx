@@ -1,9 +1,6 @@
-import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Lightbulb, MessageSquare, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { useSubmitFeedback } from "@/hooks/useFeedback";
+import { Lightbulb, X } from "lucide-react";
+import { FeedbackForm } from "@/components/FeedbackForm";
 
 // ============================================
 // EDITABLE CONTENT - Modify strings here
@@ -34,13 +31,6 @@ const HELP_CONTENT = {
       },
     ],
   },
-  feedback: {
-    title: "Feedback",
-    placeholder: "Let us know what you think, or if you have any feature requests or bug reports",
-    submitButton: "Send Feedback",
-    submittingButton: "Sending...",
-    successMessage: "Thanks for the feedback!",
-  },
 };
 // ============================================
 
@@ -64,21 +54,6 @@ function highlightText(text: string, highlights: string[]) {
 
 export default function Help() {
   const navigate = useNavigate();
-  const [message, setMessage] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const submitFeedback = useSubmitFeedback();
-
-  const handleSubmit = async () => {
-    if (!message.trim()) return;
-
-    try {
-      await submitFeedback.mutateAsync(message.trim());
-      setMessage("");
-      setSubmitted(true);
-    } catch (error) {
-      console.error("Failed to submit feedback:", error);
-    }
-  };
 
   return (
     <div className="space-y-6 relative">
@@ -108,37 +83,22 @@ export default function Help() {
       </section>
 
       {/* Feedback Section */}
-      <section>
-        <div className="flex items-center gap-2 mb-3">
-          <MessageSquare className="h-4 w-4 text-muted-foreground" />
-          <h2 className="text-sm font-medium">{HELP_CONTENT.feedback.title}</h2>
-        </div>
-
-        {submitted ? (
-          <p className="text-sm text-muted-foreground">{HELP_CONTENT.feedback.successMessage}</p>
-        ) : (
-          <div className="space-y-2">
-            <Textarea
-              placeholder={HELP_CONTENT.feedback.placeholder}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              className="min-h-[80px] text-sm resize-none"
-              maxLength={1000}
-            />
-            <Button size="sm" onClick={handleSubmit} disabled={!message.trim() || submitFeedback.isPending}>
-              {submitFeedback.isPending ? HELP_CONTENT.feedback.submittingButton : HELP_CONTENT.feedback.submitButton}
-            </Button>
-          </div>
-        )}
-      </section>
+      <FeedbackForm />
 
       {/* Footer */}
-      <div className="pt-4 text-center">
+      <div className="pt-4 text-center text-sm">
         <Link
           to="/privacy"
-          className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+          className="text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
         >
           Privacy & Security
+        </Link>
+        <span className="text-muted-foreground"> · </span>
+        <Link
+          to="/changelog"
+          className="text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+        >
+          Changelog
         </Link>
       </div>
     </div>

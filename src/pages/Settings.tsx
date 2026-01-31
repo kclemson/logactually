@@ -300,9 +300,15 @@ export default function Settings() {
         <div className="space-y-2">
           <Link
             to="/privacy"
-            className="text-sm text-foreground hover:underline underline-offset-2 transition-colors"
+            className="block text-sm text-foreground hover:underline underline-offset-2 transition-colors"
           >
             Privacy & Security
+          </Link>
+          <Link
+            to="/changelog"
+            className="block text-sm text-foreground hover:underline underline-offset-2 transition-colors"
+          >
+            Changelog
           </Link>
         </div>
       </CollapsibleSection>
