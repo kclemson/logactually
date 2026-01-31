@@ -417,12 +417,19 @@ export default function Auth() {
               </p>
             </>
           )}
-          <div className="mt-6 text-center">
+          <div className="mt-6 text-center text-sm">
             <Link
               to="/privacy"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="text-muted-foreground hover:text-foreground transition-colors"
             >
               Privacy & Security
+            </Link>
+            <span className="text-muted-foreground"> · </span>
+            <Link
+              to="/changelog"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Changelog
             </Link>
           </div>
         </CardContent>
