@@ -255,6 +255,17 @@ export default function Auth() {
           <img src="/logactually-logo-horiz.png" alt={APP_NAME} className="h-16 mx-auto mb-2" />
           <CardTitle className="text-2xl font-bold">{APP_NAME}</CardTitle>
           <CardDescription>Braindump what you ate or lifted — AI handles the rest</CardDescription>
+          <p className="text-sm text-muted-foreground pt-1">
+            <button
+              type="button"
+              onClick={handleTryDemo}
+              disabled={submitting || isDemoLoading || isGoogleLoading}
+              className="text-primary underline-offset-4 hover:underline disabled:opacity-50"
+            >
+              {isDemoLoading ? "loading demo..." : "Try the demo"}
+            </button>
+            {" "}— no account needed
+          </p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -402,19 +413,6 @@ export default function Auth() {
                 </Button>
               </div>
 
-              {/* Demo link */}
-              <p className="mt-4 text-center text-sm text-muted-foreground">
-                Or{" "}
-                <button
-                  type="button"
-                  onClick={handleTryDemo}
-                  disabled={submitting || isDemoLoading || isGoogleLoading}
-                  className="text-primary underline-offset-4 hover:underline disabled:opacity-50"
-                >
-                  {isDemoLoading ? "loading demo..." : "try the demo"}
-                </button>{" "}
-                — no account needed
-              </p>
             </>
           )}
           <div className="mt-6 text-center text-sm">
