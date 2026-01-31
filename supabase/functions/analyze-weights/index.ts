@@ -216,7 +216,7 @@ serve(async (req) => {
         sets: Math.round(sets),
         reps: Math.round(reps),
         weight_lbs: Math.round(weight_lbs * 10) / 10, // Round to 1 decimal
-        duration_minutes: hasCardioData && duration_minutes > 0 ? Math.round(duration_minutes) : null,
+        duration_minutes: hasCardioData && duration_minutes > 0 ? Math.round(duration_minutes * 100) / 100 : null,
         distance_miles: hasCardioData && distance_miles > 0 ? Math.round(distance_miles * 100) / 100 : null,
       });
     }
