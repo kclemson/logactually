@@ -162,6 +162,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    // Clear localStorage FIRST to prevent ProtectedRoute race condition
+    // This ensures hasStoredSession() returns false immediately
+    const storageKey = 'sb-enricsnosdrhmfvbjaei-auth-token';
+    localStorage.removeItem(storageKey);
+    
     try {
       await supabase.auth.signOut();
     } catch (error) {
