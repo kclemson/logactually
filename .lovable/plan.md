@@ -1,50 +1,93 @@
 
 
-## Fix Total Volume Chart to Exclude Cardio Entries
+## Add Minutes Per Mile to Cardio Tooltips + Fix Duration Decimals
 
-### Problem
+### Overview
 
-The "Total Volume (lbs)" chart displays "0k" bars on days with only cardio entries. This happens because:
-- Volume = sets × reps × weight
-- Cardio entries have weight = 0, so volume = 0
-- The chart shows these 0-volume days as bars
-
-### Solution
-
-Filter out zero-weight data points when calculating the total volume by day. This excludes cardio exercises (which have 0 lbs) from the volume calculation.
+Enhance the cardio chart tooltips to show pace (min/mi) alongside mph and distance for runners who think in terms of pace. Also fix the long decimal duration display in the Weight Log page.
 
 ---
 
-### Technical Changes
+### Changes
 
-**File: `src/pages/Trends.tsx`**
+#### 1. Add Pace to Tooltip (Trends.tsx)
 
-Update the `volumeByDay` calculation (around line 379) to skip data points with zero weight:
+**Location**: Line 261-262 in the tooltip formatter
 
+**Current:**
 ```typescript
-// Current (lines 382-387):
-weightExercises.forEach((exercise) => {
-  exercise.weightData.forEach((point) => {
-    byDate[point.date] = (byDate[point.date] || 0) + point.volume;
-  });
-});
-
-// Updated:
-weightExercises.forEach((exercise) => {
-  exercise.weightData.forEach((point) => {
-    // Skip cardio/bodyweight entries (0 lbs = 0 volume anyway)
-    if (point.weight === 0) return;
-    byDate[point.date] = (byDate[point.date] || 0) + point.volume;
-  });
-});
+if (showMph && entry.payload.mph) {
+  return `${entry.payload.mph} mph · ${distance} mi`;
+}
 ```
+
+**Updated:**
+```typescript
+if (showMph && entry.payload.mph) {
+  const pace = entry.payload.pace; // pre-calculated min/mi
+  return `${entry.payload.mph} mph · ${pace} min/mi · ${distance} mi`;
+}
+```
+
+---
+
+#### 2. Pre-calculate Pace in Chart Data (Trends.tsx)
+
+**Location**: Line 126-128 in `chartData` useMemo
+
+Add pace calculation alongside mph:
+```typescript
+const mph = d.distance_miles && d.duration_minutes 
+  ? Number((d.distance_miles / (d.duration_minutes / 60)).toFixed(1))
+  : null;
+const pace = d.distance_miles && d.duration_minutes
+  ? Number((d.duration_minutes / d.distance_miles).toFixed(1))
+  : null;
+```
+
+And include `pace` in the returned data object.
+
+---
+
+#### 3. Fix Duration Decimals in Weight Log (WeightItemsTable.tsx)
+
+**Locations**: 
+- Line 561: Table cell display
+- Line 619: Expanded cardio metadata
+
+**Fix:**
+```typescript
+// Line 561: Table cell
+`${Number(item.duration_minutes).toFixed(1)} min`
+
+// Line 619: Expanded view
+parts.push(`${Number(ex.duration_minutes).toFixed(1)} min`);
+```
+
+---
+
+#### 4. Fix Duration Decimals in Routine Dialogs
+
+**Files**: `SaveRoutineDialog.tsx` (line 33), `CreateRoutineDialog.tsx` (line 30)
+
+Apply same `.toFixed(1)` formatting for consistency.
 
 ---
 
 ### Result
 
-| Before | After |
-|--------|-------|
-| Shows "0k" bars for cardio-only days | No bar shown for cardio-only days |
-| Cardio days inflate the x-axis | Only weight training days appear |
+| Component | Before | After |
+|-----------|--------|-------|
+| Tooltip (mph view) | `5.1 mph · 1 mi` | `5.1 mph · 11.7 min/mi · 1 mi` |
+| Weight Log table | `11.666666666666666 min` | `11.7 min` |
+| Cardio metadata | `11.666666666666666 min` | `11.7 min` |
+
+---
+
+### Why min/mi as decimal vs mm:ss?
+
+Using `11.7 min/mi` (decimal) instead of `11:42` (mm:ss) for consistency:
+- Matches the mph format (also uses decimal)
+- Simpler implementation
+- Can revisit mm:ss format later if preferred
 
