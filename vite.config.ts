@@ -40,6 +40,11 @@ export default defineConfig(({ mode }) => ({
           },
         ],
       },
+      workbox: {
+        navigateFallbackDenylist: [/^\/~oauth\//],
+        clientsClaim: true,
+        skipWaiting: true,
+      },
     }),
   ],
   resolve: {
