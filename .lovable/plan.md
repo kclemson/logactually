@@ -1,93 +1,79 @@
 
 
-## Part 1: Fix Sign-Out Cache Clearing Bug
+## OAuth Integration Plan (Google + Apple Sign-In)
 
-### The Problem Explained
+### Problem Being Solved
 
-When a user signs out, there are **three layers of state** that need to be cleared:
+The previous OAuth attempt failed with 404 errors because it used `supabase.auth.signInWithOAuth()` directly. On Lovable Cloud with custom domains like `logactually.com`, the OAuth callback URL must be proxied through Lovable's managed authentication system.
 
-1. **Supabase localStorage token** (`sb-enricsnosdrhmfvbjaei-auth-token`) - This is Supabase's built-in session storage
-2. **Module-level cache** (`cachedSession` and `cachedUser` variables in `useAuth.tsx`) - These survive component re-renders
-3. **React state** (`session` and `user` from `useState`) - The actual UI state
-
-The current `signOut` function correctly clears layers 2 and 3, but there's a **race condition** problem:
-
-```text
-Current Flow:
-1. signOut() calls supabase.auth.signOut()
-2. signOut() clears module cache + React state
-3. BUT: ProtectedRoute has hasStoredSession() check
-   └─> This reads localStorage BEFORE Supabase clears it
-   └─> Returns true, shows spinner instead of redirecting
-4. onAuthStateChange fires SIGNED_OUT event
-   └─> Tries to clear cache again (already cleared)
-5. User gets stuck in limbo or flash-redirects
-```
-
-The issue is that `ProtectedRoute.tsx` line 40 checks `hasStoredSession()` as a "fallback" to prevent redirect flashes during login. But this same check **blocks the redirect during logout** because localStorage isn't cleared instantly.
-
-Additionally, there's a **fourth layer** that isn't being cleared: **React Query cache**. After sign-out, if a user signs in as a different account, they might briefly see the previous user's data.
+**The fix**: Use the `@lovable.dev/cloud-auth-js` package and `lovable.auth.signInWithOAuth()` instead of the Supabase client directly. This handles the OAuth proxy automatically for both Google and Apple.
 
 ---
 
-### The Fix
+### Implementation Steps
 
-**1. Clear localStorage explicitly in signOut (useAuth.tsx)**
+#### Step 1: Configure Social Auth (Tool Call)
 
-Add explicit localStorage removal to ensure the Supabase token is gone before `ProtectedRoute` checks it:
+Use the `configure-social-auth` tool which:
+- Generates the `src/integrations/lovable/` folder with the managed auth client
+- Installs the `@lovable.dev/cloud-auth-js` package
+- Sets up the proper OAuth proxy configuration for both providers
 
-```typescript
-const signOut = async () => {
-  // Clear localStorage FIRST - before any async operations
-  // This ensures ProtectedRoute's hasStoredSession() returns false immediately
-  const storageKey = `sb-${import.meta.env.VITE_SUPABASE_PROJECT_ID}-auth-token`;
-  localStorage.removeItem(storageKey);
-  
-  try {
-    await supabase.auth.signOut();
-  } catch (error) {
-    if (import.meta.env.DEV) {
-      console.warn('Sign out API call failed:', error);
-    }
-  }
-  
-  // Clear all local state
-  cachedSession = null;
-  cachedUser = null;
-  setSession(null);
-  setUser(null);
-};
+#### Step 2: Update Auth.tsx with OAuth + New Button Layout
+
+**Current Layout:**
+```text
+┌──────────────────────────────────────┐
+│  [Sign In] button                    │
+│                                      │
+│  Don't have an account? Sign Up      │
+│  Or try the demo — no account needed │
+│                                      │
+│  Privacy & Security                  │
+└──────────────────────────────────────┘
 ```
 
-**2. Export a way to clear React Query cache (useAuth.tsx)**
-
-To properly clear cached data, we need to provide a `queryClient.clear()` call. The cleanest way is to pass the queryClient to the signOut function or use a callback:
-
-```typescript
-// Add to AuthContextType
-signOut: (options?: { clearQueryCache?: () => void }) => Promise<void>;
-
-// In signOut implementation
-const signOut = async (options?: { clearQueryCache?: () => void }) => {
-  // ... existing logic ...
-  
-  // Clear React Query cache if provided
-  options?.clearQueryCache?.();
-};
+**New Layout (Sign In mode):**
+```text
+┌──────────────────────────────────────┐
+│  [Sign In] button                    │
+│                                      │
+│  ──────────── or ────────────        │
+│                                      │
+│  [G] Continue with Google            │
+│  [🍎] Sign in with Apple             │
+│  [✉] Sign up with email              │
+│                                      │
+│  Or try the demo — no account needed │
+│                                      │
+│  Privacy & Security                  │
+└──────────────────────────────────────┘
 ```
 
-**3. Update Settings.tsx to pass the query cache clear function**
-
-```typescript
-const queryClient = useQueryClient();
-
-const handleSignOut = async () => {
-  setIsSigningOut(true);
-  await signOut({ 
-    clearQueryCache: () => queryClient.clear() 
-  });
-};
+**New Layout (Sign Up mode):**
+```text
+┌──────────────────────────────────────┐
+│  Email field                         │
+│  Password field                      │
+│  Confirm Password field              │
+│                                      │
+│  [Sign Up] button                    │
+│                                      │
+│  Already have an account? Sign In    │
+│                                      │
+│  Privacy & Security                  │
+└──────────────────────────────────────┘
 ```
+
+---
+
+### Button Text (Branding Requirements)
+
+| Provider | Button Text | Reason |
+|----------|-------------|--------|
+| Google | "Continue with Google" | Google allows flexibility |
+| Apple | "Sign in with Apple" | **Required** by Apple Human Interface Guidelines |
+| Email | "Sign up with email" | Standard phrasing for non-OAuth option |
 
 ---
 
@@ -95,33 +81,208 @@ const handleSignOut = async () => {
 
 | File | Change |
 |------|--------|
-| `src/hooks/useAuth.tsx` | Add explicit localStorage clear + optional queryClient clear callback |
-| `src/pages/Settings.tsx` | Pass `clearQueryCache` callback to signOut |
-| `src/components/DemoBanner.tsx` | Pass `clearQueryCache` callback (optional - demo user doesn't matter as much) |
-| `src/components/ReadOnlyOverlay.tsx` | Pass `clearQueryCache` callback (optional) |
-| `src/components/DeleteAccountDialog.tsx` | Pass `clearQueryCache` callback |
+| `src/integrations/lovable/` | Auto-generated by configure-social-auth tool |
+| `src/pages/Auth.tsx` | Add OAuth buttons, divider, "Sign up with email" button, and handler functions |
 
 ---
 
-### Why This Works
+### Code Changes to Auth.tsx
 
-```text
-Fixed Flow:
-1. signOut() removes localStorage token FIRST (synchronous)
-2. ProtectedRoute's hasStoredSession() now returns false immediately
-3. signOut() calls supabase.auth.signOut() (async)
-4. signOut() clears module cache + React state
-5. signOut() clears React Query cache
-6. User is cleanly redirected to /auth with no stale data
+**1. Add imports:**
+```typescript
+import { lovable } from "@/integrations/lovable/index";
+import { Mail } from "lucide-react";
 ```
 
-The key insight is that we clear localStorage **synchronously before any async operations**, so `ProtectedRoute` immediately sees there's no session.
+**2. Add new state variables:**
+```typescript
+const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+const [isAppleLoading, setIsAppleLoading] = useState(false);
+```
+
+**3. Add OAuth handler functions:**
+```typescript
+const handleGoogleSignIn = async () => {
+  setIsGoogleLoading(true);
+  setErrorMessage(null);
+  
+  const { error } = await lovable.auth.signInWithOAuth("google", {
+    redirect_uri: window.location.origin,
+  });
+  
+  if (error) {
+    setErrorMessage("Google sign-in failed. Please try again.");
+    setIsGoogleLoading(false);
+  }
+};
+
+const handleAppleSignIn = async () => {
+  setIsAppleLoading(true);
+  setErrorMessage(null);
+  
+  const { error } = await lovable.auth.signInWithOAuth("apple", {
+    redirect_uri: window.location.origin,
+  });
+  
+  if (error) {
+    setErrorMessage("Apple sign-in failed. Please try again.");
+    setIsAppleLoading(false);
+  }
+};
+```
+
+**4. Update the button section (replacing lines 297-311):**
+
+In Sign In mode (`!isSignUp`), after the Sign In button:
+```tsx
+{/* Divider */}
+<div className="relative py-4">
+  <div className="absolute inset-0 flex items-center">
+    <span className="w-full border-t" />
+  </div>
+  <div className="relative flex justify-center text-xs uppercase">
+    <span className="bg-background px-2 text-muted-foreground">or</span>
+  </div>
+</div>
+
+{/* OAuth and Email Sign Up buttons */}
+<div className="space-y-2">
+  {/* Google */}
+  <Button
+    type="button"
+    variant="outline"
+    className="w-full"
+    onClick={handleGoogleSignIn}
+    disabled={submitting || isGoogleLoading || isAppleLoading || isDemoLoading}
+  >
+    {isGoogleLoading ? (
+      "Signing in..."
+    ) : (
+      <>
+        <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
+          {/* Google G logo SVG paths */}
+        </svg>
+        Continue with Google
+      </>
+    )}
+  </Button>
+
+  {/* Apple */}
+  <Button
+    type="button"
+    variant="outline"
+    className="w-full"
+    onClick={handleAppleSignIn}
+    disabled={submitting || isGoogleLoading || isAppleLoading || isDemoLoading}
+  >
+    {isAppleLoading ? (
+      "Signing in..."
+    ) : (
+      <>
+        <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+          {/* Apple logo SVG path */}
+        </svg>
+        Sign in with Apple
+      </>
+    )}
+  </Button>
+
+  {/* Email Sign Up */}
+  <Button
+    type="button"
+    variant="outline"
+    className="w-full"
+    onClick={() => {
+      setIsSignUp(true);
+      setErrorMessage(null);
+    }}
+    disabled={submitting || isGoogleLoading || isAppleLoading || isDemoLoading}
+  >
+    <Mail className="mr-2 h-4 w-4" />
+    Sign up with email
+  </Button>
+</div>
+
+{/* Demo link */}
+<p className="text-center text-sm text-muted-foreground">
+  Or{" "}
+  <button
+    type="button"
+    onClick={handleTryDemo}
+    disabled={submitting || isDemoLoading || isGoogleLoading || isAppleLoading}
+    className="text-blue-500 underline-offset-4 hover:underline disabled:opacity-50"
+  >
+    {isDemoLoading ? "loading demo..." : "try the demo"}
+  </button>{" "}
+  — no account needed
+</p>
+```
+
+In Sign Up mode (`isSignUp`), after the Sign Up button:
+```tsx
+<p className="text-center text-sm text-muted-foreground">
+  Already have an account?{" "}
+  <button
+    type="button"
+    onClick={() => {
+      setIsSignUp(false);
+      setConfirmPassword("");
+      setErrorMessage(null);
+    }}
+    className="text-primary underline-offset-4 hover:underline"
+  >
+    Sign In
+  </button>
+</p>
+```
 
 ---
 
-### Technical Details
+### What Changes
 
-The localStorage key follows Supabase's naming convention: `sb-{project_id}-auth-token`. We already have the project ID available via `VITE_SUPABASE_PROJECT_ID` environment variable, or we can hardcode it since it's already hardcoded in `ProtectedRoute.tsx` line 11.
+| Element | Before | After |
+|---------|--------|-------|
+| Sign up link | Text link "Don't have an account? Sign Up" | Outline button "Sign up with email" with Mail icon |
+| OAuth buttons | None | Two new buttons: Google and Apple |
+| Divider | None | "or" divider between form and buttons |
+| Sign up mode | Shows OAuth area | Hides OAuth buttons, shows "Already have an account?" text link |
 
-For consistency, I recommend using the environment variable approach where possible, but falling back to the hardcoded value if needed.
+---
+
+### What Stays Exactly the Same
+
+- Email/password form fields
+- Sign In / Sign Up button (primary action)
+- Password reset flow
+- Demo button functionality (just moved slightly)
+- Privacy & Security link
+- All loading states and error handling for email auth
+- Card layout, logo, title, description
+- Password update flow (reset callback)
+
+---
+
+### Why This Won't 404
+
+The `@lovable.dev/cloud-auth-js` package routes OAuth through Lovable's managed infrastructure:
+
+1. User clicks "Continue with Google" or "Sign in with Apple"
+2. `lovable.auth.signInWithOAuth()` redirects to Lovable's OAuth proxy
+3. Proxy handles the OAuth flow with the respective provider
+4. User is redirected back to `window.location.origin` (works with custom domains)
+5. Session is established via the existing Supabase auth listener in `useAuth.tsx`
+
+This avoids the 404 errors because the callback URL is managed by Lovable rather than pointing directly to a Supabase endpoint that doesn't exist on custom domains.
+
+---
+
+### Technical Notes
+
+- Both Google and Apple are supported by Lovable Cloud's managed OAuth
+- No API keys needed from the user - Lovable manages the OAuth credentials
+- The existing `useAuth.tsx` auth state listener will automatically pick up the session after OAuth redirect
+- Loading states disable all auth buttons to prevent race conditions
+- The Mail icon comes from lucide-react (already installed)
+- Google logo uses the official colored SVG
+- Apple logo uses a simple black SVG that works with the outline button style
 
