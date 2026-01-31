@@ -1,25 +1,43 @@
 
 
-## Cap Duration Labels to Prevent Long Decimals
+## Fix Total Volume Chart to Exclude Cardio Entries
 
 ### Problem
 
-After enabling fractional duration storage, the chart labels and tooltips now display raw decimal values like `20.1166666666666667` instead of clean numbers.
+The "Total Volume (lbs)" chart displays "0k" bars on days with only cardio entries. This happens because:
+- Volume = sets × reps × weight
+- Cardio entries have weight = 0, so volume = 0
+- The chart shows these 0-volume days as bars
 
 ### Solution
 
-Format `duration_minutes` values to 1 decimal place for labels/tooltips. This keeps precision visible (useful for speed calculations) while staying concise.
+Filter out zero-weight data points when calculating the total volume by day. This excludes cardio exercises (which have 0 lbs) from the volume calculation.
 
 ---
 
-### Changes
+### Technical Changes
 
 **File: `src/pages/Trends.tsx`**
 
-| Location | Current | Updated |
-|----------|---------|---------|
-| Line 138 (bar label) | `${d.duration_minutes \|\| 0}` | `${Number(d.duration_minutes \|\| 0).toFixed(1)}` |
-| Line 259 (tooltip duration) | `const duration = entry.payload.duration_minutes \|\| 0` | `const duration = Number(entry.payload.duration_minutes \|\| 0).toFixed(1)` |
+Update the `volumeByDay` calculation (around line 379) to skip data points with zero weight:
+
+```typescript
+// Current (lines 382-387):
+weightExercises.forEach((exercise) => {
+  exercise.weightData.forEach((point) => {
+    byDate[point.date] = (byDate[point.date] || 0) + point.volume;
+  });
+});
+
+// Updated:
+weightExercises.forEach((exercise) => {
+  exercise.weightData.forEach((point) => {
+    // Skip cardio/bodyweight entries (0 lbs = 0 volume anyway)
+    if (point.weight === 0) return;
+    byDate[point.date] = (byDate[point.date] || 0) + point.volume;
+  });
+});
+```
 
 ---
 
@@ -27,13 +45,6 @@ Format `duration_minutes` values to 1 decimal place for labels/tooltips. This ke
 
 | Before | After |
 |--------|-------|
-| `20.1166666666666667` | `20.1` |
-| `11.5` | `11.5` |
-| `12` | `12.0` |
-
----
-
-### Alternative Considered
-
-Converting to `mm:ss` format (e.g., `11:30` instead of `11.5`) was considered but would require a utility function and adds visual complexity. Single decimal place is simpler and matches the mph display pattern already in use.
+| Shows "0k" bars for cardio-only days | No bar shown for cardio-only days |
+| Cardio days inflate the x-axis | Only weight training days appear |
 
