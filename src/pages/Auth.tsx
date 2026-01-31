@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Navigate, useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
+import { createLovableAuth } from "@lovable.dev/cloud-auth-js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { APP_NAME, APP_DESCRIPTION } from "@/lib/constants";
 import { DEMO_EMAIL, DEMO_PASSWORD } from "@/lib/demo-mode";
 import { Mail } from "lucide-react";
+
+// Preview domain for OAuth broker (works on custom domains too)
+const PREVIEW_DOMAIN = "https://id-preview--db525336-2711-490b-a991-6d235ef8c0ef.lovable.app";
 
 export default function Auth() {
   const { user, signUp, signIn, loading } = useAuth();
@@ -129,52 +132,35 @@ export default function Auth() {
       !hostname.includes("lovableproject.com") &&
       hostname !== "localhost";
 
-    if (isCustomDomain) {
-      // Bypass lovable auth-bridge - use Supabase directly
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: window.location.origin,
-          skipBrowserRedirect: true,
-        },
-      });
+    // Configure auth with absolute broker URL for custom domains
+    const lovableAuth = createLovableAuth(
+      isCustomDomain 
+        ? { oauthBrokerUrl: `${PREVIEW_DOMAIN}/~oauth/initiate` }
+        : {}
+    );
 
-      if (error) {
-        console.error("Google OAuth Supabase error:", error);
-        setErrorMessage("Google sign-in failed. Please try again.");
-        setIsGoogleLoading(false);
-        return;
-      }
+    const result = await lovableAuth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
+    });
 
-      // Validate OAuth URL before redirect (security: prevent open redirect)
-      if (data?.url) {
-        try {
-          const oauthUrl = new URL(data.url);
-          // Supabase returns URL to its own auth endpoint, not directly to Google
-          if (!oauthUrl.hostname.endsWith("supabase.co")) {
-            throw new Error("Invalid OAuth redirect URL");
-          }
-          window.location.href = data.url;
-        } catch (e) {
-          console.error("Google OAuth error:", e, "URL:", data?.url);
-          setErrorMessage("Google sign-in failed. Please try again.");
-          setIsGoogleLoading(false);
-        }
-      } else {
-        console.error("Google OAuth: No URL returned from Supabase");
-        setErrorMessage("Google sign-in failed. Please try again.");
-        setIsGoogleLoading(false);
-      }
-    } else {
-      // Use lovable auth for preview domains (handles iframe popup flow)
-      const { error } = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
-      });
-      
-      if (error) {
-        setErrorMessage("Google sign-in failed. Please try again.");
-        setIsGoogleLoading(false);
-      }
+    if (result.redirected) {
+      return; // Page is redirecting to OAuth provider
+    }
+
+    if (result.error) {
+      console.error("Google OAuth error:", result.error);
+      setErrorMessage("Google sign-in failed. Please try again.");
+      setIsGoogleLoading(false);
+      return;
+    }
+
+    // Set the session in Supabase
+    try {
+      await supabase.auth.setSession(result.tokens);
+    } catch (e) {
+      console.error("Failed to set session:", e);
+      setErrorMessage("Google sign-in failed. Please try again.");
+      setIsGoogleLoading(false);
     }
   };
 
@@ -189,52 +175,35 @@ export default function Auth() {
       !hostname.includes("lovableproject.com") &&
       hostname !== "localhost";
 
-    if (isCustomDomain) {
-      // Bypass lovable auth-bridge - use Supabase directly
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "apple",
-        options: {
-          redirectTo: window.location.origin,
-          skipBrowserRedirect: true,
-        },
-      });
+    // Configure auth with absolute broker URL for custom domains
+    const lovableAuth = createLovableAuth(
+      isCustomDomain 
+        ? { oauthBrokerUrl: `${PREVIEW_DOMAIN}/~oauth/initiate` }
+        : {}
+    );
 
-      if (error) {
-        console.error("Apple OAuth Supabase error:", error);
-        setErrorMessage("Apple sign-in failed. Please try again.");
-        setIsAppleLoading(false);
-        return;
-      }
+    const result = await lovableAuth.signInWithOAuth("apple", {
+      redirect_uri: window.location.origin,
+    });
 
-      // Validate OAuth URL before redirect (security: prevent open redirect)
-      if (data?.url) {
-        try {
-          const oauthUrl = new URL(data.url);
-          // Supabase returns URL to its own auth endpoint, not directly to Apple
-          if (!oauthUrl.hostname.endsWith("supabase.co")) {
-            throw new Error("Invalid OAuth redirect URL");
-          }
-          window.location.href = data.url;
-        } catch (e) {
-          console.error("Apple OAuth error:", e, "URL:", data?.url);
-          setErrorMessage("Apple sign-in failed. Please try again.");
-          setIsAppleLoading(false);
-        }
-      } else {
-        console.error("Apple OAuth: No URL returned from Supabase");
-        setErrorMessage("Apple sign-in failed. Please try again.");
-        setIsAppleLoading(false);
-      }
-    } else {
-      // Use lovable auth for preview domains (handles iframe popup flow)
-      const { error } = await lovable.auth.signInWithOAuth("apple", {
-        redirect_uri: window.location.origin,
-      });
-      
-      if (error) {
-        setErrorMessage("Apple sign-in failed. Please try again.");
-        setIsAppleLoading(false);
-      }
+    if (result.redirected) {
+      return; // Page is redirecting to OAuth provider
+    }
+
+    if (result.error) {
+      console.error("Apple OAuth error:", result.error);
+      setErrorMessage("Apple sign-in failed. Please try again.");
+      setIsAppleLoading(false);
+      return;
+    }
+
+    // Set the session in Supabase
+    try {
+      await supabase.auth.setSession(result.tokens);
+    } catch (e) {
+      console.error("Failed to set session:", e);
+      setErrorMessage("Apple sign-in failed. Please try again.");
+      setIsAppleLoading(false);
     }
   };
 
