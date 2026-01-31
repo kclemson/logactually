@@ -25,6 +25,10 @@ const WEIGHTS_CONFIG: CreateSavedDialogConfig<WeightSet, SavedRoutine> = {
   getFallbackName: (items) => {
     if (items.length === 0) return '';
     const first = items[0];
+    const isCardio = first.weight_lbs === 0 && (first.duration_minutes ?? 0) > 0;
+    if (isCardio) {
+      return `${first.description} (${first.duration_minutes} min)`;
+    }
     return `${first.description} (${first.sets}x${first.reps} @ ${first.weight_lbs} lbs)`;
   },
   getDescriptions: (items) => items.map(item => item.description),

@@ -1,6 +1,6 @@
 
 
-## Cardio Display Improvements
+## Cardio Display Improvements ✅
 
 ### Overview
 
@@ -10,7 +10,7 @@ Two related improvements for better cardio exercise display:
 
 ---
 
-### Change 1: WeightItemsTable - Show "cardio" label in editable mode
+### Change 1: WeightItemsTable - Show "cardio" label in editable mode ✅
 
 **File:** `src/components/WeightItemsTable.tsx`
 
@@ -26,7 +26,7 @@ The label will be gray, italic, and span across where the 3 inputs would be.
 
 ---
 
-### Change 2: SaveRoutineDialog - Two places need cardio-aware formatting
+### Change 2: SaveRoutineDialog - Two places need cardio-aware formatting ✅
 
 **File:** `src/components/SaveRoutineDialog.tsx`
 
@@ -45,7 +45,7 @@ Both currently use `(sets)x(reps) @ (weight)lbs` format. Both will be updated to
 
 ---
 
-### Change 3: CreateRoutineDialog - Fallback name
+### Change 3: CreateRoutineDialog - Fallback name ✅
 
 **File:** `src/components/CreateRoutineDialog.tsx`
 
@@ -70,4 +70,3 @@ This requires BOTH conditions to avoid false positives.
 | `src/components/WeightItemsTable.tsx` | Add cardio detection; show "cardio" label instead of 3 inputs for cardio rows |
 | `src/components/SaveRoutineDialog.tsx` | Add `formatExerciseSummary` helper; update `getDefaultName` (line 32) and exercise list rendering (line 94) |
 | `src/components/CreateRoutineDialog.tsx` | Update `getFallbackName` to handle cardio format |
-

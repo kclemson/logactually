@@ -23,13 +23,25 @@ interface SaveRoutineDialogProps {
 }
 
 /**
- * Generate a default name from the first exercise in the format:
- * "Lat Pulldown (3×10 @ 65 lbs)"
+ * Format a single exercise for display.
+ * Cardio: "Rowing Machine (15 min)"
+ * Weights: "Lat Pulldown (3x10 @ 65 lbs)"
+ */
+function formatExerciseSummary(exercise: WeightSet, includeSpace = true): string {
+  const isCardio = exercise.weight_lbs === 0 && (exercise.duration_minutes ?? 0) > 0;
+  if (isCardio) {
+    return `${exercise.description} (${exercise.duration_minutes} min)`;
+  }
+  const separator = includeSpace ? ' @ ' : ' @ ';
+  return `${exercise.description} (${exercise.sets}x${exercise.reps}${separator}${exercise.weight_lbs} lbs)`;
+}
+
+/**
+ * Generate a default name from the first exercise
  */
 function getDefaultName(exerciseSets: WeightSet[]): string {
   if (exerciseSets.length === 0) return '';
-  const first = exerciseSets[0];
-  return `${first.description} (${first.sets}x${first.reps} @ ${first.weight_lbs} lbs)`;
+  return formatExerciseSummary(exerciseSets[0]);
 }
 
 export function SaveRoutineDialog({
@@ -91,7 +103,7 @@ export function SaveRoutineDialog({
             <ul className="list-disc list-inside space-y-0.5">
               {exerciseSets.slice(0, 5).map((set, i) => (
                 <li key={i} className="truncate">
-                  {set.description} ({set.sets}x{set.reps} @ {set.weight_lbs}lbs)
+                  {formatExerciseSummary(set, false)}
                 </li>
               ))}
               {exerciseSets.length > 5 && (
