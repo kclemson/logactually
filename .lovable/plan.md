@@ -1,127 +1,81 @@
 
+## What’s happening (root cause)
 
-## Clean Up OAuth Code - Remove Dead Workarounds
+- The `/~oauth/initiate` endpoint on your custom domain is **actually working** (it redirects to Google correctly). I verified this by fetching `https://logactually.com/~oauth/initiate?...` and receiving Google’s sign-in page response.
+- The reason you’re **seeing your app’s 404 page immediately** is that your **PWA Service Worker (from `vite-plugin-pwa`) is intercepting navigations** and serving the app shell (`index.html`).  
+  - When the browser navigates to `/~oauth/initiate?...`, the service worker treats it like an SPA navigation and responds with the cached app shell.
+  - React Router then sees `/~oauth/initiate` as an unknown route and renders `NotFound`, which looks like “the old custom 404”.
 
-### Summary
+This is why it “returns instantly” and never reaches Google in the browser, even though the endpoint is reachable.
 
-Remove the broken custom domain workarounds from `Auth.tsx` and use the standard auto-generated `lovable` module. With BYOK credentials configured in Lovable Cloud, the standard flow works on all domains without special handling.
+## Goal
 
-### Dead Code to Remove
+Ensure **all `/~oauth/*` requests bypass the PWA navigation fallback**, so the browser actually hits the real `/~oauth/initiate` and `/~oauth/callback` endpoints and completes the OAuth redirect.
 
-| Location | What | Why It's Dead |
-|----------|------|---------------|
-| Line 5 | `import { createLovableAuth }` | Duplicates what `lovable` module already does |
-| Lines 14-15 | `PREVIEW_DOMAIN` constant | Workaround that doesn't solve BYOK requirement |
-| Lines 128-140 | `isCustomDomain` detection + manual `createLovableAuth` | Workaround that doesn't work |
-| Lines 157-164 | Manual `supabase.auth.setSession()` | Already handled by `lovable` module |
-| Lines 171-183 | Duplicate domain detection for Apple | Same dead workaround |
-| Lines 200-207 | Duplicate manual session setting for Apple | Already handled by `lovable` module |
+## Implementation plan (code changes)
 
-### File Changes
+### 1) Update the PWA Workbox navigation fallback settings
+**File:** `vite.config.ts`
 
-**File:** `src/pages/Auth.tsx`
+Add a Workbox config to denylist the OAuth routes from SPA navigation fallback:
 
-**1. Fix imports (lines 4-5)**
-```typescript
-// Before:
-import { supabase } from "@/integrations/supabase/client";
-import { createLovableAuth } from "@lovable.dev/cloud-auth-js";
+- Add:
+  - `workbox.navigateFallbackDenylist: [/^\/~oauth\//]`
+- Also add (recommended for reliable update behavior):
+  - `workbox.clientsClaim: true`
+  - `workbox.skipWaiting: true`
 
-// After:
-import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
+Example shape:
+
+```ts
+VitePWA({
+  registerType: "autoUpdate",
+  includeAssets: ["favicon.png"],
+  manifest: { ... },
+  workbox: {
+    navigateFallbackDenylist: [/^\/~oauth\//],
+    clientsClaim: true,
+    skipWaiting: true,
+  },
+})
 ```
 
-**2. Remove dead constant (lines 14-15)**
-```typescript
-// DELETE these lines:
-// Preview domain for OAuth broker (works on custom domains too)
-const PREVIEW_DOMAIN = "https://id-preview--db525336-2711-490b-a991-6d235ef8c0ef.lovable.app";
-```
+Why this works:
+- The service worker will **stop serving `index.html`** for `/~oauth/*`.
+- Those requests will go to the network and the platform’s OAuth endpoints can redirect to Google as intended.
 
-**3. Simplify handleGoogleSignIn (lines 124-165)**
-```typescript
-// Before: 42 lines with domain detection, manual auth creation, manual session setting
-// After: 18 lines using the standard module
+### 2) (Optional but useful) Add a second denylist entry for future-proofing
+If we want to be extra safe, also denylist other reserved backend-ish paths if you ever add them (not required right now). For now, keep it focused on `/~oauth/` only.
 
-const handleGoogleSignIn = async () => {
-  setIsGoogleLoading(true);
-  setErrorMessage(null);
-  
-  const result = await lovable.auth.signInWithOAuth("google", {
-    redirect_uri: window.location.origin,
-  });
+## Rollout / “why it still might look stuck” (post-deploy steps)
 
-  if (result.redirected) {
-    return; // Page is redirecting to OAuth provider
-  }
+Even after the fix is published, a previously-installed service worker can keep controlling the page until it updates. `autoUpdate` will help, but for the first verification I recommend:
 
-  if (result.error) {
-    console.error("Google OAuth error:", result.error);
-    setErrorMessage("Google sign-in failed. Please try again.");
-  }
-  
-  setIsGoogleLoading(false);
-};
-```
+1. In Chrome DevTools → **Application** → **Service Workers**
+   - Click **Unregister**
+2. DevTools → **Application** → **Storage**
+   - Click **Clear site data**
+3. Reload `https://logactually.com/auth?oauth=1` and click “Continue with Google” again.
 
-**4. Simplify handleAppleSignIn (lines 167-208)**
-```typescript
-// Before: 42 lines with duplicate workarounds
-// After: 18 lines using the standard module
+This should immediately stop the “app 404” behavior.
 
-const handleAppleSignIn = async () => {
-  setIsAppleLoading(true);
-  setErrorMessage(null);
-  
-  const result = await lovable.auth.signInWithOAuth("apple", {
-    redirect_uri: window.location.origin,
-  });
+## Verification checklist
 
-  if (result.redirected) {
-    return; // Page is redirecting to OAuth provider
-  }
+After applying the code change and publishing:
 
-  if (result.error) {
-    console.error("Apple OAuth error:", result.error);
-    setErrorMessage("Apple sign-in failed. Please try again.");
-  }
-  
-  setIsAppleLoading(false);
-};
-```
+1. On `https://logactually.com/auth?oauth=1`, click **Continue with Google**
+   - Expected: you are redirected to `accounts.google.com` (or Google sign-in UI)
+   - Not expected: your app’s 404 page
+2. Complete the Google sign-in flow
+   - Expected: returns to `https://logactually.com/~oauth/callback` briefly, then into the app with an active session
+3. Confirm it still works in preview/iframe contexts
+   - Expected: popup-based flow continues to function (library uses web_message in iframe)
 
-### Why This Works
+## Notes on Google “branding not being shown” / Verification Center
 
-The auto-generated `src/integrations/lovable/index.ts` module already:
-1. Creates `lovableAuth` with default configuration
-2. Calls the OAuth provider
-3. Sets the session in Supabase after successful authentication
+That warning is typically about what Google displays on the consent screen and whether your app needs additional verification for certain scopes. It would not cause an immediate in-app 404 at `/~oauth/initiate`. The 404 symptom matches the service worker SPA fallback issue described above, so we should fix that first before chasing Google console warnings.
 
-With BYOK credentials configured in Lovable Cloud dashboard:
-- Your Google OAuth client has your custom domain in its redirect URIs
-- Lovable Cloud uses your credentials (not managed ones)
-- The standard flow works on any domain you've whitelisted
+## Files to change
 
-### Code Reduction
-
-| Metric | Before | After |
-|--------|--------|-------|
-| Lines in OAuth handlers | 84 | 36 |
-| Custom domain detection | 2 copies | 0 |
-| Manual session setting | 2 copies | 0 |
-| Dead constants | 1 | 0 |
-
-### What Stays the Same
-
-- `?oauth=1` feature flag (line 21) - keeps OAuth hidden until ready
-- OAuth button UI and styling (lines 427-503)
-- All other auth flows (email/password, demo, reset)
-
-### Testing After Implementation
-
-1. Finish Google Cloud Console setup (add redirect URIs)
-2. Save Client ID and Secret in Lovable Cloud dashboard  
-3. Publish the cleaned-up code
-4. Test at `https://logactually.com/auth?oauth=1`
+- `vite.config.ts` (add Workbox navigation denylist for `/~oauth/`)
 
