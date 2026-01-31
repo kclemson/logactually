@@ -1,92 +1,68 @@
 
 
-## Show Cardio Metadata in Expanded Section
+## Backfill Distance Data from Raw Input
 
-### What You'll See
+### Current State
 
-When you expand a cardio entry, you'll see the recorded details underneath it:
-- Duration (e.g., "10 min")
-- Distance (e.g., "2 miles")
-- Only shown if the data exists for that exercise
+You have 33+ `walk_run` entries with `distance_miles = NULL` but the distance is present in the `raw_input` text.
 
-For entries with multiple exercises (e.g., "treadmill 10min 2mi, bench 3x10 135"), only the cardio items will show their metadata.
+**Example patterns found:**
+| raw_input | Should extract |
+|-----------|----------------|
+| `1.01mi run in 11:34` | 1.01 |
+| `1.00 mi run in 12:25` | 1.00 |
+| `.88mi run in 10:49` | 0.88 |
+| `1 mile run in 11:33 minutes` | 1.0 |
 
 ---
 
-### Implementation
+### Migration SQL
 
-**File: `src/components/WeightItemsTable.tsx`**
-
-In the expanded content section (lines 598-643), add a cardio metadata block before the raw input:
-
-```tsx
-{/* Expanded content section */}
-{showEntryDividers && isLastInEntry && isCurrentExpanded && (() => {
-  const isFromSavedRoutine = currentEntryId && entrySourceRoutineIds?.has(currentEntryId);
-  const routineName = currentEntryId && entryRoutineNames?.get(currentEntryId);
-  
-  // Get all exercises in this entry for cardio metadata
-  const entryExercises = items.filter(i => i.entryId === currentEntryId);
-  
-  // Build cardio metadata for exercises that have duration/distance
-  const cardioItems = entryExercises.filter(ex => 
-    (ex.duration_minutes ?? 0) > 0 || (ex.distance_miles ?? 0) > 0
-  );
-  
-  return (
-    <div className={cn('grid gap-0.5', gridCols)}>
-      <div className="col-span-full pl-6 py-1 space-y-1">
-        
-        {/* Cardio metadata - show for each cardio item */}
-        {cardioItems.map((ex, idx) => {
-          const parts: string[] = [];
-          if ((ex.duration_minutes ?? 0) > 0) {
-            parts.push(`${ex.duration_minutes} min`);
-          }
-          if ((ex.distance_miles ?? 0) > 0) {
-            parts.push(`${ex.distance_miles} mi`);
-          }
-          
-          return (
-            <p key={ex.uid || idx} className="text-sm text-muted-foreground">
-              <span className="font-medium">{ex.description}:</span>{' '}
-              {parts.join(', ')}
-            </p>
-          );
-        })}
-
-        {/* Raw input (existing) */}
-        {!isFromSavedRoutine && currentRawInput && (
-          <p className="text-muted-foreground whitespace-pre-wrap italic">
-            {currentRawInput}
-          </p>
-        )}
-        
-        {/* Routine info or Save as routine (existing) */}
-        {/* ... */}
-      </div>
-    </div>
-  );
-})()}
+```sql
+-- Backfill distance_miles from raw_input for walk_run entries
+-- Handles patterns: "1.01mi", "1.00 mi", "1 mile", ".88mi"
+UPDATE weight_sets
+SET 
+  distance_miles = (
+    -- Extract the numeric value before 'mi' or 'mile'
+    CASE 
+      WHEN raw_input ~* '^[\d.]+\s*mi' THEN
+        (regexp_match(raw_input, '^([\d.]+)\s*mi', 'i'))[1]::numeric
+      WHEN raw_input ~* '([\d.]+)\s*mile' THEN
+        (regexp_match(raw_input, '([\d.]+)\s*mile', 'i'))[1]::numeric
+      ELSE NULL
+    END
+  ),
+  updated_at = now()
+WHERE exercise_key = 'walk_run'
+  AND distance_miles IS NULL
+  AND raw_input IS NOT NULL
+  AND raw_input ~* '[\d.]+\s*mi';
 ```
 
 ---
 
-### Display Examples
+### What This Does
 
-| Entry | Expanded Shows |
-|-------|----------------|
-| "Treadmill Run" (10min, 2mi) | **Treadmill Run:** 10 min, 2 mi |
-| "Walk" (30min, no distance) | **Walk:** 30 min |
-| "5K Run" (no duration, 3.1mi) | **5K Run:** 3.1 mi |
-| "Bench Press" (weight exercise) | *(nothing - not cardio)* |
-| Mixed entry: run + bench | Only the run shows metadata |
+1. Finds all `walk_run` entries where `distance_miles` is NULL
+2. Extracts the number before "mi" or "mile" in the raw input
+3. Sets that as the `distance_miles` value
+4. Skips the treadmill walk entry (no distance pattern)
 
 ---
 
-### Files Modified
+### Expected Results
 
-| File | Change |
-|------|--------|
-| `src/components/WeightItemsTable.tsx` | Add cardio metadata display in expanded section |
+| Entry | Before | After |
+|-------|--------|-------|
+| `1.01mi run in 11:34` | NULL | 1.01 |
+| `1.00 mi run in 12:25` | NULL | 1.00 |
+| `.88mi run in 10:49` | NULL | 0.88 |
+| `30 minute walk on the treadmill...` | NULL | NULL (no change) |
+
+---
+
+### After Migration
+
+Once the distance data is backfilled, we can proceed with the pace/speed display feature you asked about earlier.
 
