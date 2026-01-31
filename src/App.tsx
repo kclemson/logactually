@@ -1,6 +1,4 @@
-import { useEffect } from "react";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { queryClient } from "@/lib/query-client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/hooks/useAuth";
@@ -19,18 +17,7 @@ import Help from "./pages/Help";
 import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
 
-// Backstop: Redirect any /~oauth/* requests to absolute broker URL
-const OAuthRedirect = () => {
-  useEffect(() => {
-    window.location.href = `https://oauth.lovable.app${window.location.pathname}${window.location.search}`;
-  }, []);
-
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-    </div>
-  );
-};
+const queryClient = new QueryClient();
 
 const App = () => (
   <ErrorBoundary>
@@ -57,9 +44,8 @@ const App = () => (
                   <Route path="/help" element={<Help />} />
                   <Route path="/admin" element={<Admin />} />
                 </Route>
-              <Route path="/~oauth/*" element={<OAuthRedirect />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
             </BrowserRouter>
           </ReadOnlyProvider>
         </AuthProvider>

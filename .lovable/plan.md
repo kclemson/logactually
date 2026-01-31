@@ -1,70 +1,93 @@
 
 
-## Fix Infinite Loading Spinner After Sign Out
+## Add Minutes Per Mile to Cardio Tooltips + Fix Duration Decimals
 
-### Root Cause
+### Overview
 
-After signing out in dev mode, the Auth page shows an infinite loading spinner. The issue is a race condition in the `signOut` function in `useAuth.tsx`:
-
-1. `signOut()` clears `cachedSession`, `cachedUser`, `user`, and `session` state
-2. But it does **NOT** set `loading = false`
-3. The code relies on `onAuthStateChange` receiving a `SIGNED_OUT` event to set `loading = false`
-4. However, since `signOut()` is called imperatively (not from the effect), there's a timing gap where:
-   - User navigates to `/auth` 
-   - Component mounts with `loading = true` (because `cachedUser` is now `null`)
-   - The `SIGNED_OUT` event from `onAuthStateChange` may fire **before** `getSession()` resolves
-   - But the `SIGNED_OUT` handler only sets `loading = false` if there's a null session, which competes with the initial load logic
-
-The simplest fix is to **explicitly set `loading = false` in the `signOut` function** so the state is immediately consistent.
+Enhance the cardio chart tooltips to show pace (min/mi) alongside mph and distance for runners who think in terms of pace. Also fix the long decimal duration display in the Weight Log page.
 
 ---
 
 ### Changes
 
-**File: `src/hooks/useAuth.tsx`**
+#### 1. Add Pace to Tooltip (Trends.tsx)
 
-In the `signOut` function, add `setLoading(false)` after clearing the cached values:
+**Location**: Line 261-262 in the tooltip formatter
 
+**Current:**
 ```typescript
-const signOut = async () => {
-  try {
-    await supabase.auth.signOut();
-  } catch (error) {
-    if (import.meta.env.DEV) {
-      console.warn('Sign out API call failed:', error);
-    }
-  }
-  
-  queryClient.clear();
-  
-  cachedSession = null;
-  cachedUser = null;
-  setSession(null);
-  setUser(null);
-  setLoading(false);  // <-- ADD THIS LINE
-};
+if (showMph && entry.payload.mph) {
+  return `${entry.payload.mph} mph · ${distance} mi`;
+}
 ```
 
-This ensures that immediately after sign-out:
-- `user = null`
-- `session = null` 
-- `loading = false`
-
-So when the Auth page checks these values, it will correctly show the login form instead of the spinner.
-
----
-
-### Why This Works
-
-- The `loading` state is what controls the spinner in `Auth.tsx` (lines 32-38)
-- By explicitly setting `loading = false` in `signOut()`, we guarantee the auth state is fully consistent before any navigation occurs
-- This matches the pattern in the Stack Overflow solution: separating initial load (which controls loading state) from ongoing changes (which update user/session but shouldn't leave loading in an indeterminate state)
+**Updated:**
+```typescript
+if (showMph && entry.payload.mph) {
+  const pace = entry.payload.pace; // pre-calculated min/mi
+  return `${entry.payload.mph} mph · ${pace} min/mi · ${distance} mi`;
+}
+```
 
 ---
 
-### Files to Modify
+#### 2. Pre-calculate Pace in Chart Data (Trends.tsx)
 
-| File | Change |
-|------|--------|
-| `src/hooks/useAuth.tsx` | Add `setLoading(false)` in `signOut()` function |
+**Location**: Line 126-128 in `chartData` useMemo
+
+Add pace calculation alongside mph:
+```typescript
+const mph = d.distance_miles && d.duration_minutes 
+  ? Number((d.distance_miles / (d.duration_minutes / 60)).toFixed(1))
+  : null;
+const pace = d.distance_miles && d.duration_minutes
+  ? Number((d.duration_minutes / d.distance_miles).toFixed(1))
+  : null;
+```
+
+And include `pace` in the returned data object.
+
+---
+
+#### 3. Fix Duration Decimals in Weight Log (WeightItemsTable.tsx)
+
+**Locations**: 
+- Line 561: Table cell display
+- Line 619: Expanded cardio metadata
+
+**Fix:**
+```typescript
+// Line 561: Table cell
+`${Number(item.duration_minutes).toFixed(1)} min`
+
+// Line 619: Expanded view
+parts.push(`${Number(ex.duration_minutes).toFixed(1)} min`);
+```
+
+---
+
+#### 4. Fix Duration Decimals in Routine Dialogs
+
+**Files**: `SaveRoutineDialog.tsx` (line 33), `CreateRoutineDialog.tsx` (line 30)
+
+Apply same `.toFixed(1)` formatting for consistency.
+
+---
+
+### Result
+
+| Component | Before | After |
+|-----------|--------|-------|
+| Tooltip (mph view) | `5.1 mph · 1 mi` | `5.1 mph · 11.7 min/mi · 1 mi` |
+| Weight Log table | `11.666666666666666 min` | `11.7 min` |
+| Cardio metadata | `11.666666666666666 min` | `11.7 min` |
+
+---
+
+### Why min/mi as decimal vs mm:ss?
+
+Using `11.7 min/mi` (decimal) instead of `11:42` (mm:ss) for consistency:
+- Matches the mph format (also uses decimal)
+- Simpler implementation
+- Can revisit mm:ss format later if preferred
 

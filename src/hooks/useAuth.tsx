@@ -1,7 +1,6 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { queryClient } from '@/lib/query-client';
 
 interface AuthContextType {
   user: User | null;
@@ -173,16 +172,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
     
-    // Clear React Query cache to prevent data leakage between accounts
-    queryClient.clear();
-    
     // ALWAYS clear local state, even if API failed
     // If session was already invalid, we still want to "sign out" locally
     cachedSession = null;
     cachedUser = null;
     setSession(null);
     setUser(null);
-    setLoading(false);
   };
 
   return (
