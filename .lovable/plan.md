@@ -1,66 +1,92 @@
 
 
-## Minimal Fix: Clear Query Cache on Sign Out
+## Update Auth Page: Email Toggle and Demo as Buttons
 
 ### Overview
 
-Add a single line to clear the React Query cache when the user signs out. This prevents stale data from the previous user leaking into a new session.
+Convert the text links at the bottom of the auth form into full-width ghost buttons for better visibility and parallel UI with the OAuth options.
 
 ---
 
-### Changes
+### Changes to `src/pages/Auth.tsx`
 
-#### 1. Create Shared QueryClient Module
+**Current (lines 390-417):**
+```tsx
+<div className="mt-4 text-center text-sm text-muted-foreground space-y-2">
+  <p>
+    {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
+    <button
+      type="button"
+      onClick={() => {
+        setIsSignUp(!isSignUp);
+        setConfirmPassword("");
+        setErrorMessage(null);
+      }}
+      className="text-primary underline-offset-4 hover:underline"
+    >
+      {isSignUp ? "Sign In" : "Sign Up"}
+    </button>
+  </p>
+  <p>
+    Or{" "}
+    <button
+      type="button"
+      onClick={handleTryDemo}
+      disabled={submitting || isDemoLoading}
+      className="text-blue-500 underline-offset-4 hover:underline disabled:opacity-50"
+    >
+      {isDemoLoading ? "loading demo..." : "try the demo"}
+    </button>{" "}
+    — no account needed
+  </p>
+</div>
+```
 
-**New file: `src/lib/query-client.ts`**
-
-```typescript
-import { QueryClient } from "@tanstack/react-query";
-
-export const queryClient = new QueryClient();
+**After:**
+```tsx
+<div className="mt-4 space-y-2">
+  <Button
+    type="button"
+    variant="ghost"
+    className="w-full"
+    onClick={() => {
+      setIsSignUp(!isSignUp);
+      setConfirmPassword("");
+      setErrorMessage(null);
+    }}
+  >
+    {isSignUp ? "Sign in with email" : "Sign up with email"}
+  </Button>
+  <Button
+    type="button"
+    variant="ghost"
+    className="w-full"
+    onClick={handleTryDemo}
+    disabled={submitting || isDemoLoading}
+  >
+    {isDemoLoading ? "Loading demo..." : "Try the demo — no account needed"}
+  </Button>
+</div>
 ```
 
 ---
 
-#### 2. Update App.tsx
+### Visual Result
 
-Change from creating queryClient locally to importing it:
-
-```typescript
-// Remove this line:
-const queryClient = new QueryClient();
-
-// Add this import:
-import { queryClient } from "@/lib/query-client";
-```
-
----
-
-#### 3. Update useAuth.tsx
-
-Add one import and one line in `signOut`:
-
-```typescript
-// Add import at top:
-import { queryClient } from "@/lib/query-client";
-
-// In signOut function, add this line before clearing auth state:
-const signOut = async () => {
-  try {
-    await supabase.auth.signOut();
-  } catch (error) {
-    // ... existing error handling
-  }
-  
-  // ADD THIS LINE - Clear React Query cache to prevent data leakage
-  queryClient.clear();
-  
-  // EXISTING CODE - Clear local auth state
-  cachedSession = null;
-  cachedUser = null;
-  setSession(null);
-  setUser(null);
-};
+```text
+┌─────────────────────────────────┐
+│  [        Sign In           ]   │  ← Primary button
+│                                 │
+│  ─────────── or ───────────     │
+│                                 │
+│  [ G  Continue with Google  ]   │  ← Outline button
+│  [   Sign in with Apple    ]   │  ← Outline button
+│                                 │
+│  [   Sign up with email     ]   │  ← Ghost button
+│  [ Try the demo — no account ]  │  ← Ghost button
+│                                 │
+│        Privacy & Security       │
+└─────────────────────────────────┘
 ```
 
 ---
@@ -69,9 +95,5 @@ const signOut = async () => {
 
 | File | Change |
 |------|--------|
-| `src/lib/query-client.ts` | New file (3 lines) |
-| `src/App.tsx` | Change import source (1 line) |
-| `src/hooks/useAuth.tsx` | Add import + 1 line in signOut |
-
-**Total: ~5 lines of actual changes**
+| `src/pages/Auth.tsx` | Replace text links (lines 390-417) with two ghost `Button` components |
 
