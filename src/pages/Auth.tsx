@@ -322,7 +322,7 @@ export default function Auth() {
             </Button>
           </form>
 
-          {/* Divider */}
+          {/* OAuth temporarily disabled on custom domain - TODO: fix /~oauth routing
           <div className="relative my-4">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />
@@ -332,7 +332,6 @@ export default function Auth() {
             </div>
           </div>
 
-          {/* OAuth buttons */}
           <div className="space-y-2">
             <Button
               type="button"
@@ -386,6 +385,7 @@ export default function Auth() {
               )}
             </Button>
           </div>
+          */}
 
           <div className="mt-4 space-y-2">
             <Button
