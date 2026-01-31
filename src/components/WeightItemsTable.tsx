@@ -439,7 +439,8 @@ export function WeightItemsTable({
                 />
               ) : (
                 <span className="px-1 py-1 text-center">
-                  {item.sets}
+                  {/* Show dash for cardio exercises with 0 sets */}
+                  {item.sets === 0 && (item.duration_minutes ?? 0) > 0 ? '—' : item.sets}
                 </span>
               )}
 
@@ -478,7 +479,8 @@ export function WeightItemsTable({
                 />
               ) : (
                 <span className="px-1 py-1 text-center">
-                  {item.reps}
+                  {/* Show dash for cardio exercises with 0 reps */}
+                  {item.reps === 0 && (item.duration_minutes ?? 0) > 0 ? '—' : item.reps}
                 </span>
               )}
 
@@ -547,7 +549,11 @@ export function WeightItemsTable({
                 />
               ) : (
                 <span className="px-1 py-1 text-center">
-                  {formatWeight(item.weight_lbs, weightUnit, weightUnit === 'kg' ? 1 : 0)}
+                  {/* Show duration for cardio exercises, weight otherwise */}
+                  {item.weight_lbs === 0 && (item.duration_minutes ?? 0) > 0 
+                    ? `${item.duration_minutes} min`
+                    : formatWeight(item.weight_lbs, weightUnit, weightUnit === 'kg' ? 1 : 0)
+                  }
                 </span>
               )}
 

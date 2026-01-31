@@ -15,6 +15,7 @@ export interface CanonicalExercise {
   aliases: string[];
   primaryMuscle: string;
   secondaryMuscles?: string[];
+  isCardio?: boolean;
 }
 
 export const CANONICAL_EXERCISES: CanonicalExercise[] = [
@@ -92,11 +93,23 @@ export const CANONICAL_EXERCISES: CanonicalExercise[] = [
   { key: 'glute_kickback', name: 'Glute Kickback', aliases: ['cable kickback', 'glute machine', 'donkey kick machine'], primaryMuscle: 'Glutes' },
   { key: 'assisted_dip_machine', name: 'Assisted Dip Machine', aliases: ['dip assist', 'gravitron dips'], primaryMuscle: 'Chest', secondaryMuscles: ['Triceps'] },
   { key: 'assisted_pullup_machine', name: 'Assisted Pull-up Machine', aliases: ['pullup assist', 'gravitron'], primaryMuscle: 'Back', secondaryMuscles: ['Biceps'] },
+
+  // Cardio / Duration-Based
+  { key: 'treadmill', name: 'Treadmill', aliases: ['treadmill walk', 'treadmill run', 'treadmill jog'], primaryMuscle: 'Cardio', isCardio: true },
+  { key: 'stationary_bike', name: 'Stationary Bike', aliases: ['bike', 'cycling', 'spin bike', 'exercise bike', 'recumbent bike'], primaryMuscle: 'Cardio', isCardio: true },
+  { key: 'elliptical', name: 'Elliptical', aliases: ['elliptical machine', 'cross trainer'], primaryMuscle: 'Cardio', isCardio: true },
+  { key: 'rowing_machine', name: 'Rowing Machine', aliases: ['row machine', 'erg', 'rower', 'concept 2', 'ergometer'], primaryMuscle: 'Cardio', isCardio: true },
+  { key: 'stair_climber', name: 'Stair Climber', aliases: ['stairmaster', 'stair stepper', 'step machine'], primaryMuscle: 'Cardio', isCardio: true },
+  { key: 'walking', name: 'Walking', aliases: ['walk', 'outdoor walk', 'incline walk'], primaryMuscle: 'Cardio', isCardio: true },
+  { key: 'running', name: 'Running', aliases: ['run', 'jog', 'jogging', 'outdoor run'], primaryMuscle: 'Cardio', isCardio: true },
+  { key: 'swimming', name: 'Swimming', aliases: ['swim', 'laps', 'pool'], primaryMuscle: 'Cardio', isCardio: true },
+  { key: 'jump_rope', name: 'Jump Rope', aliases: ['skipping', 'skip rope'], primaryMuscle: 'Cardio', isCardio: true },
 ];
 
-// Format the exercise list for prompt injection
-export function getExerciseReferenceForPrompt(): string {
+// Format the weight exercise list for prompt injection
+export function getWeightExerciseReferenceForPrompt(): string {
   return CANONICAL_EXERCISES
+    .filter(e => !e.isCardio)
     .map(e => {
       const aliasText = e.aliases.length > 0 ? e.aliases.join(', ') : 'no common aliases';
       const secondary = e.secondaryMuscles?.length 
@@ -105,4 +118,20 @@ export function getExerciseReferenceForPrompt(): string {
       return `  - ${e.key}: "${e.name}" [${e.primaryMuscle}${secondary}] (also: ${aliasText})`;
     })
     .join('\n');
+}
+
+// Format the cardio exercise list for prompt injection
+export function getCardioExerciseReferenceForPrompt(): string {
+  return CANONICAL_EXERCISES
+    .filter(e => e.isCardio === true)
+    .map(e => {
+      const aliasText = e.aliases.length > 0 ? e.aliases.join(', ') : 'no common aliases';
+      return `  - ${e.key}: "${e.name}" (also: ${aliasText})`;
+    })
+    .join('\n');
+}
+
+// Legacy function for backwards compatibility
+export function getExerciseReferenceForPrompt(): string {
+  return getWeightExerciseReferenceForPrompt();
 }

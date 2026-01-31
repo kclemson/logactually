@@ -1,27 +1,29 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getExerciseReferenceForPrompt } from "../_shared/exercises.ts";
+import { getWeightExerciseReferenceForPrompt, getCardioExerciseReferenceForPrompt } from "../_shared/exercises.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const ANALYZE_WEIGHTS_PROMPT = `You are a fitness assistant helping a user log their weight training workouts. Parse natural language workout descriptions and extract structured exercise data.
+const ANALYZE_WEIGHTS_PROMPT = `You are a fitness assistant helping a user log their workouts. Parse natural language workout descriptions and extract structured exercise data.
 
 Analyze the following workout description and extract individual exercises with their set, rep, and weight information.
 
 Workout description: "{{rawInput}}"
 
-For each exercise, provide:
+## WEIGHT EXERCISES
+
+For weight exercises, provide:
 - exercise_key: a canonical snake_case identifier. PREFER using keys from the reference list below when the user's input matches. You may create new keys for exercises not in the list.
 - description: a user-friendly name for the exercise (e.g., "Lat Pulldown", "Bench Press")
 - sets: number of sets performed (integer)
 - reps: number of reps per set (integer)
 - weight_lbs: weight in pounds (number)
 
-CANONICAL EXERCISE REFERENCE (prefer these keys when applicable):
-{{exerciseReference}}
+CANONICAL WEIGHT EXERCISES (prefer these keys when applicable):
+{{weightExerciseReference}}
 
 Handle common patterns like:
 - "3x10 lat pulldown at 100 lbs" → 3 sets, 10 reps, 100 lbs
@@ -32,10 +34,26 @@ Handle common patterns like:
 
 Default to lbs for weight if no unit is specified.
 
+## CARDIO / DURATION EXERCISES
+
+For cardio or duration-based exercises, provide:
+- exercise_key: a canonical snake_case identifier from the reference below
+- description: a user-friendly name (e.g., "Treadmill Walk", "Stationary Bike")
+- duration_minutes: duration in minutes (integer)
+- sets: 0
+- reps: 0
+- weight_lbs: 0
+
+CANONICAL CARDIO EXERCISES (prefer these keys when applicable):
+{{cardioExerciseReference}}
+
+## RESPONSE FORMAT
+
 Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
 {
   "exercises": [
-    { "exercise_key": "exercise_key", "description": "Exercise Name", "sets": 3, "reps": 10, "weight_lbs": 100 }
+    { "exercise_key": "bench_press", "description": "Bench Press", "sets": 3, "reps": 10, "weight_lbs": 135 },
+    { "exercise_key": "treadmill", "description": "Treadmill Walk", "duration_minutes": 30, "sets": 0, "reps": 0, "weight_lbs": 0 }
   ]
 }`;
 
@@ -95,7 +113,8 @@ serve(async (req) => {
     // Build the prompt
     const prompt = ANALYZE_WEIGHTS_PROMPT
       .replace("{{rawInput}}", rawInput)
-      .replace("{{exerciseReference}}", getExerciseReferenceForPrompt());
+      .replace("{{weightExerciseReference}}", getWeightExerciseReferenceForPrompt())
+      .replace("{{cardioExerciseReference}}", getCardioExerciseReferenceForPrompt());
 
     console.log(`[analyze-weights] Processing: "${rawInput.substring(0, 100)}..."`);
     const startTime = Date.now();
@@ -168,7 +187,7 @@ serve(async (req) => {
       throw new Error("Invalid response structure: missing exercises array");
     }
 
-    // Normalize and validate each exercise
+    // Normalize and validate each exercise (Postel's Law: be liberal in what you accept)
     const normalizedExercises = [];
     for (const exercise of parsed.exercises) {
       if (!exercise.exercise_key || !exercise.description) {
@@ -176,20 +195,19 @@ serve(async (req) => {
         throw new Error("Invalid exercise: missing required fields");
       }
       
-      // Coerce string numbers to actual numbers (AI sometimes returns "3" instead of 3)
-      const sets = Number(exercise.sets);
-      const reps = Number(exercise.reps);
-      const weight_lbs = Number(exercise.weight_lbs);
+      // Lenient coercion - accept nulls, undefined, strings, coerce to 0
+      const sets = Number(exercise.sets) || 0;
+      const reps = Number(exercise.reps) || 0;
+      const weight_lbs = Number(exercise.weight_lbs) || 0;
+      const duration_minutes = Number(exercise.duration_minutes) || 0;
       
-      // Validate after coercion
-      if (isNaN(sets) || isNaN(reps) || isNaN(weight_lbs)) {
-        console.error("[analyze-weights] Invalid numeric values:", { sets: exercise.sets, reps: exercise.reps, weight_lbs: exercise.weight_lbs });
-        throw new Error("Could not parse sets, reps, or weight from your input. Please include weight (e.g., '3x10 squats at 135 lbs')");
-      }
+      // Valid if EITHER weight data OR cardio data present
+      const hasWeightData = sets > 0 && reps > 0;
+      const hasCardioData = duration_minutes > 0;
       
-      if (sets <= 0 || reps <= 0) {
-        console.error("[analyze-weights] Invalid sets/reps:", { sets, reps });
-        throw new Error("Sets and reps must be positive numbers");
+      if (!hasWeightData && !hasCardioData) {
+        console.error("[analyze-weights] Exercise has neither weight nor cardio data:", exercise);
+        throw new Error("Could not understand exercise. Include sets/reps/weight or duration.");
       }
       
       normalizedExercises.push({
@@ -198,6 +216,7 @@ serve(async (req) => {
         sets: Math.round(sets),
         reps: Math.round(reps),
         weight_lbs: Math.round(weight_lbs * 10) / 10, // Round to 1 decimal
+        duration_minutes: hasCardioData ? Math.round(duration_minutes) : null,
       });
     }
 

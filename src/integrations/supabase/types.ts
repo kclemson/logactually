@@ -257,6 +257,8 @@ export type Database = {
         Row: {
           created_at: string
           description: string
+          distance_miles: number | null
+          duration_minutes: number | null
           entry_id: string
           exercise_key: string
           id: string
@@ -272,21 +274,25 @@ export type Database = {
         Insert: {
           created_at?: string
           description: string
+          distance_miles?: number | null
+          duration_minutes?: number | null
           entry_id: string
           exercise_key: string
           id?: string
           logged_date?: string
           raw_input?: string | null
-          reps: number
-          sets: number
+          reps?: number
+          sets?: number
           source_routine_id?: string | null
           updated_at?: string
           user_id: string
-          weight_lbs: number
+          weight_lbs?: number
         }
         Update: {
           created_at?: string
           description?: string
+          distance_miles?: number | null
+          duration_minutes?: number | null
           entry_id?: string
           exercise_key?: string
           id?: string

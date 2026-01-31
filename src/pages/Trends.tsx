@@ -16,7 +16,7 @@ import { useUserSettings } from "@/hooks/useUserSettings";
 import type { WeightUnit } from "@/lib/weight-units";
 import { useMergeExercises } from "@/hooks/useMergeExercises";
 import { DuplicateExercisePrompt, type DuplicateGroup } from "@/components/DuplicateExercisePrompt";
-import { getMuscleGroupDisplayWithTooltip } from "@/lib/exercise-metadata";
+import { getMuscleGroupDisplayWithTooltip, isCardioExercise } from "@/lib/exercise-metadata";
 
 // Chart color palette (hex RGB format for easy editing)
 const CHART_COLORS = {
@@ -102,6 +102,9 @@ const periods = [
 const LBS_TO_KG = 0.453592;
 
 const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend; unit: WeightUnit; onBarClick: (date: string) => void }) => {
+  // Detect cardio exercise: has duration data and no meaningful weight
+  const isCardio = exercise.maxWeight === 0 && exercise.maxDuration > 0;
+  
   const chartData = useMemo(() => {
     const dataLength = exercise.weightData.length;
     // Calculate how often to show labels based on column count
@@ -114,17 +117,18 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
         rawDate: d.date, // Keep original date for navigation
         weight: displayWeight,
         dateLabel: format(new Date(`${d.date}T12:00:00`), "MMM d"),
-        label: `${d.sets}×${d.reps}×${displayWeight}`,
+        // For weight exercises: "3×10×135"; for cardio: just the duration
+        label: isCardio ? `${d.duration_minutes || 0}` : `${d.sets}×${d.reps}×${displayWeight}`,
         // Show label on interval OR always on last column
         showLabel: index % labelInterval === 0 || index === dataLength - 1,
       };
     });
-  }, [exercise.weightData, unit]);
+  }, [exercise.weightData, unit, isCardio]);
 
   const maxWeightDisplay = unit === "kg" ? Math.round(exercise.maxWeight * LBS_TO_KG) : exercise.maxWeight;
 
-  // Label renderer with closure access to chartData for showLabel lookup
-  const renderLabel = (props: any) => {
+  // Label renderer for WEIGHT exercises with closure access to chartData for showLabel lookup
+  const renderWeightLabel = (props: any) => {
     const { x, y, width, height, value, index } = props;
 
     // Access showLabel from chartData using index
@@ -169,20 +173,44 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
     );
   };
 
+  // Simple label renderer for CARDIO exercises (duration only)
+  const renderCardioLabel = (props: any) => {
+    const { x, y, width, value, index } = props;
+
+    const dataPoint = chartData[index];
+    if (!dataPoint?.showLabel) return null;
+
+    if (!value || typeof x !== "number" || typeof width !== "number") return null;
+
+    const centerX = x + width / 2;
+
+    return (
+      <text x={centerX} y={y - 4} fill="hsl(262 83% 58%)" textAnchor="middle" fontSize={7} fontWeight={500}>
+        {value}
+      </text>
+    );
+  };
+
   return (
     <Card className="border-0 shadow-none">
       <CardHeader className="p-2 pb-1">
         <div className="flex flex-col gap-0.5">
           <ChartTitle className="truncate">{exercise.description}</ChartTitle>
           <ChartSubtitle>
-            Max: {maxWeightDisplay} {unit}
-            {(() => {
-              const muscleInfo = getMuscleGroupDisplayWithTooltip(exercise.exercise_key);
-              if (!muscleInfo) return null;
-              return (
-                <span title={muscleInfo.full}> · {muscleInfo.display}</span>
-              );
-            })()}
+            {isCardio ? (
+              <>Max: {exercise.maxDuration} min · Cardio</>
+            ) : (
+              <>
+                Max: {maxWeightDisplay} {unit}
+                {(() => {
+                  const muscleInfo = getMuscleGroupDisplayWithTooltip(exercise.exercise_key);
+                  if (!muscleInfo) return null;
+                  return (
+                    <span title={muscleInfo.full}> · {muscleInfo.display}</span>
+                  );
+                })()}
+              </>
+            )}
           </ChartSubtitle>
         </div>
       </CardHeader>
@@ -202,6 +230,9 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
                 content={
                   <CompactTooltip
                     formatter={(value: number, name: string, entry: any) => {
+                      if (isCardio) {
+                        return `${entry.payload.duration_minutes || 0} min`;
+                      }
                       const { sets, reps, weight } = entry.payload;
                       return `${sets} sets × ${reps} reps @ ${weight} ${unit}`;
                     }}
@@ -211,13 +242,13 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
                 cursor={{ fill: "hsl(var(--muted)/0.3)" }}
               />
               <Bar 
-                dataKey="weight" 
+                dataKey={isCardio ? "duration_minutes" : "weight"} 
                 fill="hsl(262 83% 58%)" 
                 radius={[2, 2, 0, 0]}
                 onClick={(data) => onBarClick(data.rawDate)}
                 className="cursor-pointer"
               >
-                <LabelList dataKey="label" content={renderLabel} />
+                <LabelList dataKey="label" content={isCardio ? renderCardioLabel : renderWeightLabel} />
               </Bar>
             </BarChart>
           </ResponsiveContainer>

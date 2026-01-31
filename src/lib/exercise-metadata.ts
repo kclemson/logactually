@@ -11,6 +11,7 @@
 export interface ExerciseMuscles {
   primary: string;
   secondary?: string[];
+  isCardio?: boolean;
 }
 
 export const EXERCISE_MUSCLE_GROUPS: Record<string, ExerciseMuscles> = {
@@ -88,7 +89,23 @@ export const EXERCISE_MUSCLE_GROUPS: Record<string, ExerciseMuscles> = {
   glute_kickback: { primary: 'Glutes' },
   assisted_dip_machine: { primary: 'Chest', secondary: ['Triceps'] },
   assisted_pullup_machine: { primary: 'Back', secondary: ['Biceps'] },
+
+  // Cardio / Duration-Based
+  treadmill: { primary: 'Cardio', isCardio: true },
+  stationary_bike: { primary: 'Cardio', isCardio: true },
+  elliptical: { primary: 'Cardio', isCardio: true },
+  rowing_machine: { primary: 'Cardio', isCardio: true },
+  stair_climber: { primary: 'Cardio', isCardio: true },
+  walking: { primary: 'Cardio', isCardio: true },
+  running: { primary: 'Cardio', isCardio: true },
+  swimming: { primary: 'Cardio', isCardio: true },
+  jump_rope: { primary: 'Cardio', isCardio: true },
 };
+
+// Check if an exercise is cardio-based
+export function isCardioExercise(exerciseKey: string): boolean {
+  return EXERCISE_MUSCLE_GROUPS[exerciseKey]?.isCardio === true;
+}
 
 // Returns formatted string for chart display: "Back, Biceps"
 export function getMuscleGroupDisplay(exerciseKey: string): string | null {
