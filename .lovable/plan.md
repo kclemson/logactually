@@ -1,58 +1,39 @@
 
 
-## Backfill Duration Minutes from Raw Input
+## Cap Duration Labels to Prevent Long Decimals
 
-### Overview
+### Problem
 
-Parse the `raw_input` field for existing weight_sets entries to extract accurate fractional duration values. Most entries have formats like "11:30" (11 minutes 30 seconds) that were previously rounded to 12.
+After enabling fractional duration storage, the chart labels and tooltips now display raw decimal values like `20.1166666666666667` instead of clean numbers.
 
----
+### Solution
 
-### Data Analysis
-
-Looking at the existing data, entries follow patterns like:
-- `.82mi run in 11:30` → should be 11.5 min (currently 11)
-- `1.00 mi run in 11:48` → should be 11.8 min (currently 12)
-- `1.01mi run in 12:25` → should be 12.42 min (currently 12)
-- `1.39mi run in 19m` → stays 19 min (no seconds)
+Format `duration_minutes` values to 1 decimal place for labels/tooltips. This keeps precision visible (useful for speed calculations) while staying concise.
 
 ---
 
-### SQL Migration
+### Changes
 
-Run this SQL to update existing records:
+**File: `src/pages/Trends.tsx`**
 
-```sql
-UPDATE weight_sets
-SET duration_minutes = 
-  CASE 
-    -- Pattern: "in MM:SS" (minutes:seconds format)
-    WHEN raw_input ~ '\d+:\d{2}' THEN
-      (regexp_match(raw_input, '(\d+):(\d{2})'))[1]::numeric + 
-      (regexp_match(raw_input, '(\d+):(\d{2})'))[2]::numeric / 60
-    -- Keep existing value if no MM:SS pattern found
-    ELSE duration_minutes
-  END
-WHERE duration_minutes IS NOT NULL
-  AND raw_input IS NOT NULL
-  AND raw_input ~ '\d+:\d{2}';
-```
+| Location | Current | Updated |
+|----------|---------|---------|
+| Line 138 (bar label) | `${d.duration_minutes \|\| 0}` | `${Number(d.duration_minutes \|\| 0).toFixed(1)}` |
+| Line 259 (tooltip duration) | `const duration = entry.payload.duration_minutes \|\| 0` | `const duration = Number(entry.payload.duration_minutes \|\| 0).toFixed(1)` |
 
 ---
 
-### Expected Results
+### Result
 
-| raw_input | Before | After |
-|-----------|--------|-------|
-| `.82mi run in 11:30` | 11 | 11.5 |
-| `1.00 mi run in 11:48` | 12 | 11.8 |
-| `.97mi run in 12:25` | 12 | 12.42 |
-| `1.7mi run in 21:34` | 22 | 21.57 |
-| `1.39mi run in 19m` | 19 | 19 (unchanged) |
+| Before | After |
+|--------|-------|
+| `20.1166666666666667` | `20.1` |
+| `11.5` | `11.5` |
+| `12` | `12.0` |
 
 ---
 
-### Implementation
+### Alternative Considered
 
-I'll run this as a database query using the migration tool to update all affected records in one operation.
+Converting to `mm:ss` format (e.g., `11:30` instead of `11.5`) was considered but would require a utility function and adds visual complexity. Single decimal place is simpler and matches the mph display pattern already in use.
 
