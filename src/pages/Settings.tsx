@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import type { WeightUnit } from "@/lib/weight-units";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { useSavedMeals, useUpdateSavedMeal, useDeleteSavedMeal } from "@/hooks/useSavedMeals";
 import { useSavedRoutines, useUpdateSavedRoutine, useDeleteSavedRoutine } from "@/hooks/useSavedRoutines";
@@ -21,9 +22,9 @@ import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 import { DeleteAccountDialog } from "@/components/DeleteAccountDialog";
 import { useReadOnlyContext } from "@/contexts/ReadOnlyContext";
 import { DEMO_EMAIL } from "@/lib/demo-mode";
-
 export default function Settings() {
   const { user, signOut } = useAuth();
+  const queryClient = useQueryClient();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const { theme, setTheme } = useTheme();
   const { settings, updateSettings, isLoading } = useUserSettings();
@@ -136,7 +137,7 @@ export default function Settings() {
             <button
               onClick={async () => {
                 setIsSigningOut(true);
-                await signOut();
+                await signOut({ clearQueryCache: () => queryClient.clear() });
               }}
               disabled={isSigningOut}
               className="w-full text-left py-2 hover:bg-accent/50 transition-colors text-sm text-foreground disabled:opacity-50"

@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,12 +14,13 @@ import { useAuth } from '@/hooks/useAuth';
 
 export function ReadOnlyOverlay() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { signOut } = useAuth();
   const { showOverlay, overlayMode, dismissOverlay } = useReadOnlyContext();
 
   const handleCreateAccount = async () => {
     dismissOverlay();
-    await signOut();
+    await signOut({ clearQueryCache: () => queryClient.clear() });
     navigate('/auth');
   };
 

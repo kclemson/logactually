@@ -1,18 +1,20 @@
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 
 export function DemoBanner() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { signOut } = useAuth();
 
   const handleCreateAccount = async () => {
-    await signOut();
+    await signOut({ clearQueryCache: () => queryClient.clear() });
     navigate('/auth');
   };
 
   const handleEndDemo = async () => {
-    await signOut();
+    await signOut({ clearQueryCache: () => queryClient.clear() });
     navigate('/auth');
   };
 
