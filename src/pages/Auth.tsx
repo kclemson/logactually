@@ -140,6 +140,7 @@ export default function Auth() {
       });
 
       if (error) {
+        console.error("Google OAuth Supabase error:", error);
         setErrorMessage("Google sign-in failed. Please try again.");
         setIsGoogleLoading(false);
         return;
@@ -149,14 +150,20 @@ export default function Auth() {
       if (data?.url) {
         try {
           const oauthUrl = new URL(data.url);
-          if (oauthUrl.hostname !== "accounts.google.com") {
+          // Supabase returns URL to its own auth endpoint, not directly to Google
+          if (!oauthUrl.hostname.endsWith("supabase.co")) {
             throw new Error("Invalid OAuth redirect URL");
           }
           window.location.href = data.url;
-        } catch {
+        } catch (e) {
+          console.error("Google OAuth error:", e, "URL:", data?.url);
           setErrorMessage("Google sign-in failed. Please try again.");
           setIsGoogleLoading(false);
         }
+      } else {
+        console.error("Google OAuth: No URL returned from Supabase");
+        setErrorMessage("Google sign-in failed. Please try again.");
+        setIsGoogleLoading(false);
       }
     } else {
       // Use lovable auth for preview domains (handles iframe popup flow)
@@ -193,6 +200,7 @@ export default function Auth() {
       });
 
       if (error) {
+        console.error("Apple OAuth Supabase error:", error);
         setErrorMessage("Apple sign-in failed. Please try again.");
         setIsAppleLoading(false);
         return;
@@ -202,14 +210,20 @@ export default function Auth() {
       if (data?.url) {
         try {
           const oauthUrl = new URL(data.url);
-          if (oauthUrl.hostname !== "appleid.apple.com") {
+          // Supabase returns URL to its own auth endpoint, not directly to Apple
+          if (!oauthUrl.hostname.endsWith("supabase.co")) {
             throw new Error("Invalid OAuth redirect URL");
           }
           window.location.href = data.url;
-        } catch {
+        } catch (e) {
+          console.error("Apple OAuth error:", e, "URL:", data?.url);
           setErrorMessage("Apple sign-in failed. Please try again.");
           setIsAppleLoading(false);
         }
+      } else {
+        console.error("Apple OAuth: No URL returned from Supabase");
+        setErrorMessage("Apple sign-in failed. Please try again.");
+        setIsAppleLoading(false);
       }
     } else {
       // Use lovable auth for preview domains (handles iframe popup flow)
