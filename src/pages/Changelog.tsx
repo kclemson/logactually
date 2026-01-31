@@ -8,7 +8,7 @@ import { FeedbackForm } from "@/components/FeedbackForm";
 // Each entry is one line: { date: "Mon-DD", text: "description" }
 // ============================================
 const CHANGELOG_ENTRIES = [
-  { date: "Jan-31", text: "Added support for Google authentication" },
+  { date: "Jan-31", text: "Added support for Google authentication, and this changelog page" },
   {
     date: "Jan-30",
     text: "Added minimal support for cardio exercises - instead of erroring out, it will now log the items and show a 'cardio' label, with minimal support on the Trends page for cardio charts. Running/walking/cycling charts also support switching between time-based view and mph-based view.",
