@@ -144,7 +144,7 @@ export default function Auth() {
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <img src="/favicon.png" alt={APP_NAME} className="w-24 h-24 mx-auto mb-4" />
+            <img src="/logactually-logo-horiz.png" alt={APP_NAME} className="h-16 mx-auto mb-2" />
             <CardTitle className="text-2xl font-bold">{APP_NAME}</CardTitle>
             <CardDescription>Enter your new password below</CardDescription>
           </CardHeader>
@@ -186,7 +186,7 @@ export default function Auth() {
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <img src="/favicon.png" alt={APP_NAME} className="w-24 h-24 mx-auto mb-4" />
+            <img src="/logactually-logo-horiz.png" alt={APP_NAME} className="h-16 mx-auto mb-2" />
             <CardTitle className="text-2xl font-bold">{APP_NAME}</CardTitle>
             <CardDescription>{resetSent ? "Check your email" : "Reset your password"}</CardDescription>
           </CardHeader>
@@ -252,7 +252,7 @@ export default function Auth() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <img src="/favicon.png" alt={APP_NAME} className="w-24 h-24 mx-auto mb-4" />
+          <img src="/logactually-logo-horiz.png" alt={APP_NAME} className="h-16 mx-auto mb-2" />
           <CardTitle className="text-2xl font-bold">{APP_NAME}</CardTitle>
           <CardDescription>Braindump what you ate or lifted — AI handles the rest</CardDescription>
         </CardHeader>
