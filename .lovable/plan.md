@@ -1,64 +1,54 @@
 
 
-## Fix OAuth on Custom Domains - Use Absolute Broker URL
+## Clean Up OAuth Code - Remove Dead Workarounds
 
 ### Summary
 
-Update the OAuth implementation to use Lovable's managed credentials on custom domains by configuring the `@lovable.dev/cloud-auth-js` library with an absolute broker URL pointing to the preview domain.
+Remove the broken custom domain workarounds from `Auth.tsx` and use the standard auto-generated `lovable` module. With BYOK credentials configured in Lovable Cloud, the standard flow works on all domains without special handling.
 
-### Root Cause
+### Dead Code to Remove
 
-The current implementation tries to bypass Lovable auth and call Supabase directly on custom domains, which fails because Lovable's managed OAuth credentials (Google/Apple Client IDs) are only accessible through the Lovable auth broker—not directly from Supabase.
-
-### Solution
-
-Instead of bypassing the Lovable auth system, configure it to use the **absolute URL** of the preview domain's OAuth broker. This allows custom domains to leverage the same managed credentials as preview domains.
+| Location | What | Why It's Dead |
+|----------|------|---------------|
+| Line 5 | `import { createLovableAuth }` | Duplicates what `lovable` module already does |
+| Lines 14-15 | `PREVIEW_DOMAIN` constant | Workaround that doesn't solve BYOK requirement |
+| Lines 128-140 | `isCustomDomain` detection + manual `createLovableAuth` | Workaround that doesn't work |
+| Lines 157-164 | Manual `supabase.auth.setSession()` | Already handled by `lovable` module |
+| Lines 171-183 | Duplicate domain detection for Apple | Same dead workaround |
+| Lines 200-207 | Duplicate manual session setting for Apple | Already handled by `lovable` module |
 
 ### File Changes
 
 **File:** `src/pages/Auth.tsx`
 
-| Section | Change |
-|---------|--------|
-| Imports (line 5) | Replace `lovable` import with `createLovableAuth` from `@lovable.dev/cloud-auth-js` |
-| After imports (line 12) | Add `PREVIEW_DOMAIN` constant |
-| `handleGoogleSignIn` (lines 121-179) | Replace Supabase direct call with configured Lovable auth |
-| `handleAppleSignIn` (lines 181-239) | Replace Supabase direct call with configured Lovable auth |
-
-### Implementation Details
-
-**1. Update imports:**
+**1. Fix imports (lines 4-5)**
 ```typescript
-// Remove: import { lovable } from "@/integrations/lovable/index";
-// Add:
+// Before:
+import { supabase } from "@/integrations/supabase/client";
 import { createLovableAuth } from "@lovable.dev/cloud-auth-js";
+
+// After:
+import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
 ```
 
-**2. Add preview domain constant:**
+**2. Remove dead constant (lines 14-15)**
 ```typescript
+// DELETE these lines:
+// Preview domain for OAuth broker (works on custom domains too)
 const PREVIEW_DOMAIN = "https://id-preview--db525336-2711-490b-a991-6d235ef8c0ef.lovable.app";
 ```
 
-**3. Simplified handler pattern (both Google and Apple):**
+**3. Simplify handleGoogleSignIn (lines 124-165)**
 ```typescript
+// Before: 42 lines with domain detection, manual auth creation, manual session setting
+// After: 18 lines using the standard module
+
 const handleGoogleSignIn = async () => {
   setIsGoogleLoading(true);
   setErrorMessage(null);
   
-  const hostname = window.location.hostname;
-  const isCustomDomain = 
-    !hostname.includes("lovable.app") &&
-    !hostname.includes("lovableproject.com") &&
-    hostname !== "localhost";
-
-  // Configure auth with absolute broker URL for custom domains
-  const lovableAuth = createLovableAuth(
-    isCustomDomain 
-      ? { oauthBrokerUrl: `${PREVIEW_DOMAIN}/~oauth/initiate` }
-      : {}
-  );
-
-  const result = await lovableAuth.signInWithOAuth("google", {
+  const result = await lovable.auth.signInWithOAuth("google", {
     redirect_uri: window.location.origin,
   });
 
@@ -69,39 +59,69 @@ const handleGoogleSignIn = async () => {
   if (result.error) {
     console.error("Google OAuth error:", result.error);
     setErrorMessage("Google sign-in failed. Please try again.");
-    setIsGoogleLoading(false);
-    return;
   }
-
-  // Set the session in Supabase
-  try {
-    await supabase.auth.setSession(result.tokens);
-  } catch (e) {
-    console.error("Failed to set session:", e);
-    setErrorMessage("Google sign-in failed. Please try again.");
-    setIsGoogleLoading(false);
-  }
+  
+  setIsGoogleLoading(false);
 };
 ```
 
-### OAuth Flow (Fixed)
+**4. Simplify handleAppleSignIn (lines 167-208)**
+```typescript
+// Before: 42 lines with duplicate workarounds
+// After: 18 lines using the standard module
 
-```text
-Custom Domain (logactually.com):
-1. User clicks "Continue with Google"
-2. Code creates lovableAuth with oauthBrokerUrl = "https://[preview].lovable.app/~oauth/initiate"
-3. lovableAuth.signInWithOAuth redirects to preview domain's broker
-4. Broker uses Lovable's managed Google credentials
-5. User authenticates with Google
-6. Broker redirects back to logactually.com (via redirect_uri)
-7. Session is set in Supabase client
+const handleAppleSignIn = async () => {
+  setIsAppleLoading(true);
+  setErrorMessage(null);
+  
+  const result = await lovable.auth.signInWithOAuth("apple", {
+    redirect_uri: window.location.origin,
+  });
+
+  if (result.redirected) {
+    return; // Page is redirecting to OAuth provider
+  }
+
+  if (result.error) {
+    console.error("Apple OAuth error:", result.error);
+    setErrorMessage("Apple sign-in failed. Please try again.");
+  }
+  
+  setIsAppleLoading(false);
+};
 ```
 
-### Feature Flag Preserved
+### Why This Works
 
-The `?oauth=1` feature flag remains intact. The OAuth buttons are only rendered when `showOAuth` is true (line 455), so production users won't see OAuth options unless they explicitly use `?oauth=1`.
+The auto-generated `src/integrations/lovable/index.ts` module already:
+1. Creates `lovableAuth` with default configuration
+2. Calls the OAuth provider
+3. Sets the session in Supabase after successful authentication
 
-### Testing
+With BYOK credentials configured in Lovable Cloud dashboard:
+- Your Google OAuth client has your custom domain in its redirect URIs
+- Lovable Cloud uses your credentials (not managed ones)
+- The standard flow works on any domain you've whitelisted
 
-After implementation, test at: `https://logactually.com/auth?oauth=1`
+### Code Reduction
+
+| Metric | Before | After |
+|--------|--------|-------|
+| Lines in OAuth handlers | 84 | 36 |
+| Custom domain detection | 2 copies | 0 |
+| Manual session setting | 2 copies | 0 |
+| Dead constants | 1 | 0 |
+
+### What Stays the Same
+
+- `?oauth=1` feature flag (line 21) - keeps OAuth hidden until ready
+- OAuth button UI and styling (lines 427-503)
+- All other auth flows (email/password, demo, reset)
+
+### Testing After Implementation
+
+1. Finish Google Cloud Console setup (add redirect URIs)
+2. Save Client ID and Secret in Lovable Cloud dashboard  
+3. Publish the cleaned-up code
+4. Test at `https://logactually.com/auth?oauth=1`
 
