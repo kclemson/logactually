@@ -1,38 +1,70 @@
 
-## Temporarily Hide OAuth Sign-In Buttons
 
-### Overview
-Comment out/hide the Google and Apple OAuth buttons on the Auth page until the custom domain OAuth issue is properly resolved.
+## Fix Infinite Loading Spinner After Sign Out
+
+### Root Cause
+
+After signing out in dev mode, the Auth page shows an infinite loading spinner. The issue is a race condition in the `signOut` function in `useAuth.tsx`:
+
+1. `signOut()` clears `cachedSession`, `cachedUser`, `user`, and `session` state
+2. But it does **NOT** set `loading = false`
+3. The code relies on `onAuthStateChange` receiving a `SIGNED_OUT` event to set `loading = false`
+4. However, since `signOut()` is called imperatively (not from the effect), there's a timing gap where:
+   - User navigates to `/auth` 
+   - Component mounts with `loading = true` (because `cachedUser` is now `null`)
+   - The `SIGNED_OUT` event from `onAuthStateChange` may fire **before** `getSession()` resolves
+   - But the `SIGNED_OUT` handler only sets `loading = false` if there's a null session, which competes with the initial load logic
+
+The simplest fix is to **explicitly set `loading = false` in the `signOut` function** so the state is immediately consistent.
+
+---
 
 ### Changes
 
-**File: `src/pages/Auth.tsx`**
+**File: `src/hooks/useAuth.tsx`**
 
-Comment out the OAuth section (the divider and both buttons):
+In the `signOut` function, add `setLoading(false)` after clearing the cached values:
 
-```tsx
-{/* OAuth temporarily disabled on custom domain - TODO: fix /~oauth routing
-<div className="relative my-4">
-  <div className="absolute inset-0 flex items-center">
-    <span className="w-full border-t" />
-  </div>
-  <div className="relative flex justify-center text-xs uppercase">
-    <span className="bg-card px-2 text-muted-foreground">or</span>
-  </div>
-</div>
-
-<div className="space-y-2">
-  <Button ... onClick={handleGoogleSignIn}>Continue with Google</Button>
-  <Button ... onClick={handleAppleSignIn}>Sign in with Apple</Button>
-</div>
-*/}
+```typescript
+const signOut = async () => {
+  try {
+    await supabase.auth.signOut();
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.warn('Sign out API call failed:', error);
+    }
+  }
+  
+  queryClient.clear();
+  
+  cachedSession = null;
+  cachedUser = null;
+  setSession(null);
+  setUser(null);
+  setLoading(false);  // <-- ADD THIS LINE
+};
 ```
 
-### What stays working
-- Email/password sign in
-- Email/password sign up  
-- Password reset flow
-- Demo mode
+This ensures that immediately after sign-out:
+- `user = null`
+- `session = null` 
+- `loading = false`
 
-### Cleanup for later
-When you pick this back up tomorrow, the OAuth buttons are still in the code (just commented out) and the backstop route in `App.tsx` is harmless. You can uncomment and continue debugging.
+So when the Auth page checks these values, it will correctly show the login form instead of the spinner.
+
+---
+
+### Why This Works
+
+- The `loading` state is what controls the spinner in `Auth.tsx` (lines 32-38)
+- By explicitly setting `loading = false` in `signOut()`, we guarantee the auth state is fully consistent before any navigation occurs
+- This matches the pattern in the Stack Overflow solution: separating initial load (which controls loading state) from ongoing changes (which update user/session but shouldn't leave loading in an indeterminate state)
+
+---
+
+### Files to Modify
+
+| File | Change |
+|------|--------|
+| `src/hooks/useAuth.tsx` | Add `setLoading(false)` in `signOut()` function |
+
