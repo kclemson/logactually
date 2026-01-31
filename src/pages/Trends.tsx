@@ -381,7 +381,8 @@ const Trends = () => {
 
     weightExercises.forEach((exercise) => {
       exercise.weightData.forEach((point) => {
-        // Use pre-calculated volume (correctly accumulated per-row)
+        // Skip cardio/bodyweight entries (0 lbs = 0 volume anyway)
+        if (point.weight === 0) return;
         byDate[point.date] = (byDate[point.date] || 0) + point.volume;
       });
     });
