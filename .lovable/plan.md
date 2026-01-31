@@ -1,93 +1,120 @@
 
 
-## Add Minutes Per Mile to Cardio Tooltips + Fix Duration Decimals
+## Add OAuth with Consistent Button Styling
 
 ### Overview
 
-Enhance the cardio chart tooltips to show pace (min/mi) alongside mph and distance for runners who think in terms of pace. Also fix the long decimal duration display in the Weight Log page.
+Add Google and Apple OAuth sign-in using Lovable Cloud's managed solution, with all 4 sign-in options displayed as visually consistent buttons (same `outline` variant).
 
 ---
 
-### Changes
+### UI Layout
 
-#### 1. Add Pace to Tooltip (Trends.tsx)
-
-**Location**: Line 261-262 in the tooltip formatter
-
-**Current:**
-```typescript
-if (showMph && entry.payload.mph) {
-  return `${entry.payload.mph} mph · ${distance} mi`;
-}
+```text
++------------------------------------------+
+|    [G] Continue with Google              |  <- outline button
++------------------------------------------+
+|    [] Continue with Apple                |  <- outline button  
++------------------------------------------+
+|    [Mail] Sign up with Email             |  <- outline button (expands form)
++------------------------------------------+
+|    [Play] Try Demo - no account needed   |  <- outline button
++------------------------------------------+
 ```
 
-**Updated:**
+All 4 buttons use the same `outline` variant. Text remains as-is from current implementation.
+
+---
+
+### Implementation Steps
+
+#### Step 1: Configure Social Auth Providers
+
+Use the system tool to:
+- Install `@lovable.dev/cloud-auth-js` package
+- Generate `src/integrations/lovable/index.ts`
+- Enable Google and Apple providers
+
+#### Step 2: Refactor Auth.tsx
+
+**New state:**
 ```typescript
-if (showMph && entry.payload.mph) {
-  const pace = entry.payload.pace; // pre-calculated min/mi
-  return `${entry.payload.mph} mph · ${pace} min/mi · ${distance} mi`;
-}
+const [showEmailForm, setShowEmailForm] = useState(false);
 ```
 
----
-
-#### 2. Pre-calculate Pace in Chart Data (Trends.tsx)
-
-**Location**: Line 126-128 in `chartData` useMemo
-
-Add pace calculation alongside mph:
+**OAuth handlers:**
 ```typescript
-const mph = d.distance_miles && d.duration_minutes 
-  ? Number((d.distance_miles / (d.duration_minutes / 60)).toFixed(1))
-  : null;
-const pace = d.distance_miles && d.duration_minutes
-  ? Number((d.duration_minutes / d.distance_miles).toFixed(1))
-  : null;
+import { lovable } from "@/integrations/lovable/index";
+
+const handleGoogleSignIn = async () => {
+  setErrorMessage(null);
+  const { error } = await lovable.auth.signInWithOAuth("google", {
+    redirect_uri: window.location.origin,
+  });
+  if (error) setErrorMessage(error.message);
+};
+
+const handleAppleSignIn = async () => {
+  setErrorMessage(null);
+  const { error } = await lovable.auth.signInWithOAuth("apple", {
+    redirect_uri: window.location.origin,
+  });
+  if (error) setErrorMessage(error.message);
+};
 ```
 
-And include `pace` in the returned data object.
-
----
-
-#### 3. Fix Duration Decimals in Weight Log (WeightItemsTable.tsx)
-
-**Locations**: 
-- Line 561: Table cell display
-- Line 619: Expanded cardio metadata
-
-**Fix:**
-```typescript
-// Line 561: Table cell
-`${Number(item.duration_minutes).toFixed(1)} min`
-
-// Line 619: Expanded view
-parts.push(`${Number(ex.duration_minutes).toFixed(1)} min`);
+**Button layout (default view):**
+```tsx
+<div className="space-y-3">
+  <Button variant="outline" className="w-full" onClick={handleGoogleSignIn}>
+    <Chrome className="h-4 w-4" />
+    Continue with Google
+  </Button>
+  <Button variant="outline" className="w-full" onClick={handleAppleSignIn}>
+    <Apple className="h-4 w-4" />
+    Continue with Apple
+  </Button>
+  <Button variant="outline" className="w-full" onClick={() => setShowEmailForm(true)}>
+    <Mail className="h-4 w-4" />
+    Sign up with Email
+  </Button>
+  <Button variant="outline" className="w-full" onClick={handleTryDemo} disabled={isDemoLoading}>
+    <Play className="h-4 w-4" />
+    {isDemoLoading ? "Loading demo..." : "Try Demo — no account needed"}
+  </Button>
+</div>
 ```
 
----
-
-#### 4. Fix Duration Decimals in Routine Dialogs
-
-**Files**: `SaveRoutineDialog.tsx` (line 33), `CreateRoutineDialog.tsx` (line 30)
-
-Apply same `.toFixed(1)` formatting for consistency.
+When email button clicked, show existing email/password form with a back arrow to return.
 
 ---
 
-### Result
+### Files Changed
 
-| Component | Before | After |
-|-----------|--------|-------|
-| Tooltip (mph view) | `5.1 mph · 1 mi` | `5.1 mph · 11.7 min/mi · 1 mi` |
-| Weight Log table | `11.666666666666666 min` | `11.7 min` |
-| Cardio metadata | `11.666666666666666 min` | `11.7 min` |
+1. **Configure social auth** (system tool):
+   - Generates `src/integrations/lovable/index.ts`
+   - Installs `@lovable.dev/cloud-auth-js`
+
+2. **`src/pages/Auth.tsx`**:
+   - Import `lovable` client
+   - Import icons: `Mail`, `Play`, `Chrome` from lucide-react
+   - Add `showEmailForm` state
+   - Add OAuth handler functions
+   - Refactor to show 4 outline buttons by default
+   - Existing form renders when `showEmailForm` is true
+   - Add back navigation from form view
 
 ---
 
-### Why min/mi as decimal vs mm:ss?
+### Key Points
 
-Using `11.7 min/mi` (decimal) instead of `11:42` (mm:ss) for consistency:
-- Matches the mph format (also uses decimal)
-- Simpler implementation
-- Can revisit mm:ss format later if preferred
+| Item | Kept As-Is |
+|------|------------|
+| "Sign up with Email" text | ✓ |
+| "no account needed" demo clarification | ✓ |
+| Existing email/password form behavior | ✓ |
+| Sign In / Sign Up toggle within form | ✓ |
+| Demo login logic | ✓ |
+
+Only the visual presentation changes - all 4 options become equal-weight outline buttons.
 
