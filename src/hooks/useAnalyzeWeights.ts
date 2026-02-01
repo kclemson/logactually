@@ -9,10 +9,12 @@ interface AnalyzeWeightsResult {
 export function useAnalyzeWeights() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
 
   const analyzeWeights = useCallback(async (rawInput: string): Promise<AnalyzeWeightsResult | null> => {
     setIsAnalyzing(true);
     setError(null);
+    setWarning(null);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -32,6 +34,12 @@ export function useAnalyzeWeights() {
         throw new Error('Invalid response from analyze-weights');
       }
 
+      // Check for empty results (e.g., user entered food on weights page)
+      if (data.exercises.length === 0) {
+        setWarning("No exercises detected. If this is food, try the Food page.");
+        return null;
+      }
+
       return { exercises: data.exercises };
     } catch (err) {
       let message = err instanceof Error ? err.message : 'Failed to analyze workout';
@@ -48,5 +56,5 @@ export function useAnalyzeWeights() {
     }
   }, []);
 
-  return { analyzeWeights, isAnalyzing, error };
+  return { analyzeWeights, isAnalyzing, error, warning };
 }

@@ -72,7 +72,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   const queryClient = useQueryClient();
   const { weightSets, isFetching, createEntry, updateSet, deleteSet, deleteEntry, deleteAllByDate } = useWeightEntries(dateStr);
   const { data: datesWithWeights = [] } = useWeightDatesWithData(calendarMonth);
-  const { analyzeWeights, isAnalyzing, error: analyzeError } = useAnalyzeWeights();
+  const { analyzeWeights, isAnalyzing, error: analyzeError, warning: analyzeWarning } = useAnalyzeWeights();
   const saveRoutineMutation = useSaveRoutine();
   const { settings } = useUserSettings();
   const { data: savedRoutines } = useSavedRoutines();
@@ -321,6 +321,11 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
         {analyzeError && (
           <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive mt-3">
             Analysis failed: {analyzeError}
+          </div>
+        )}
+        {analyzeWarning && (
+          <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive mt-3">
+            {analyzeWarning}
           </div>
         )}
       </section>
