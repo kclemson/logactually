@@ -468,7 +468,7 @@ export function DevToolsPanel() {
             )}
 
             {/* Results */}
-            {displayResults.length > 0 && (
+            {filteredResults.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium">
@@ -552,7 +552,7 @@ export function DevToolsPanel() {
                         </tr>
                       </thead>
                       <tbody>
-                        {displayResults.map((result, i) => (
+                        {filteredResults.map((result, i) => (
                           <tr key={i} className="border-t align-top">
                             <td className="px-1 py-1 text-xs" style={{ width: foodColumnWidths.input, maxWidth: foodColumnWidths.input }} title={result.input}>
                               <div className="break-words line-clamp-5">{result.input}</div>
@@ -736,7 +736,7 @@ export function DevToolsPanel() {
                         </tr>
                       </thead>
                       <tbody>
-                        {displayResults.map((result, i) => (
+                        {filteredResults.map((result, i) => (
                           <tr key={i} className="border-t align-top">
                             <td className="px-1 py-1 text-xs" style={{ width: weightsColumnWidths.input, maxWidth: weightsColumnWidths.input }} title={result.input}>
                               <div className="break-words line-clamp-5">{result.input}</div>
