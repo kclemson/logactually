@@ -184,6 +184,7 @@ export const FoodChart = ({
                   height={16}
                 />
                 <Tooltip
+                  wrapperStyle={{ pointerEvents: 'auto', zIndex: 50 }}
                   active={isMobile ? activeBarIndex !== null : undefined}
                   payload={isMobile && activeBarIndex !== null 
                     ? [{ payload: chartData[activeBarIndex] }] 
@@ -317,6 +318,7 @@ export const StackedMacroChart = ({
                   height={16}
                 />
                 <Tooltip
+                  wrapperStyle={{ pointerEvents: 'auto', zIndex: 50 }}
                   active={isMobile ? activeBarIndex !== null : undefined}
                   payload={isMobile && activeBarIndex !== null 
                     ? bars.map(bar => ({ 
@@ -444,6 +446,7 @@ export const VolumeChart = ({
                   height={16}
                 />
                 <Tooltip
+                  wrapperStyle={{ pointerEvents: 'auto', zIndex: 50 }}
                   active={isMobile ? activeBarIndex !== null : undefined}
                   payload={isMobile && activeBarIndex !== null 
                     ? [{ payload: chartData[activeBarIndex] }] 
