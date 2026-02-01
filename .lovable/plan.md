@@ -1,147 +1,81 @@
 
 
-## Empty Results Warning (Both Pages) + Data Cleanup
 
-Prevent "ghost entries" when users log content on the wrong page by detecting empty AI results and showing a warning instead of silently saving.
+## Fix Empty Food Detection (Server-Side Validation)
 
----
-
-### Overview
-
-| Aspect | Details |
-|--------|---------|
-| Problem | Logging exercise on Food page (or food on Weights page) saves an entry with zero items - invisible in UI |
-| Solution | Detect empty results in analyze hooks, return warning instead of null, display in both pages |
-| Pattern | Add `warning` state to analyze hooks - reusable for future log types (books, movies, etc.) |
-| Cleanup | Delete 4 existing ghost entries from food_entries table |
+Add server-side validation to `analyze-food` to filter out placeholder items with zero calories/macros, matching the validation pattern used in `analyze-weights`.
 
 ---
 
-### Design: Future-Proof Pattern
+### Root Cause
 
-Both `useAnalyzeFood` and `useAnalyzeWeights` already share identical structure:
-- `isAnalyzing` state
-- `error` state  
-- Returns `result | null`
+| Edge Function | Server-Side Validation | Result with non-matching input |
+|---------------|------------------------|--------------------------------|
+| analyze-weights | Lines 204-211: Throws error if exercise lacks weight OR cardio data | Error returned → hook shows error → no entry saved |
+| analyze-food | **None** - passes through any AI response | AI returns placeholder item → passes hook's `length > 0` check → ghost entry saved |
 
-Adding `warning` state follows the same pattern. When we add new log types (books, movies, period tracker), each `useAnalyze[Type]` hook will include the same three states: `isAnalyzing`, `error`, `warning`.
-
-The consuming pages already have identical UI patterns for error display:
-```tsx
-{analyzeError && (
-  <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive mt-3">
-    Analysis failed: {analyzeError}
-  </div>
-)}
+The AI returned a placeholder:
+```json
+{"food_items": [{"description": "No food identified", "calories": 0, "protein": 0, ...}]}
 ```
 
-The warning display will follow the same pattern, making it trivial to copy-paste for future log types.
+Since `length === 1`, the hook's empty check passed.
+
+---
+
+### Solution
+
+Filter out zero-calorie/zero-macro items **in the edge function** before returning. This matches the analyze-weights pattern of validating data quality server-side.
 
 ---
 
 ### Technical Changes
 
-#### 1. Add Warning State to useAnalyzeFood
+#### 1. Add Validation in analyze-food Edge Function
 
-**File: `src/hooks/useAnalyzeFood.ts`**
+**File: `supabase/functions/analyze-food/index.ts`**
 
-| Change | Details |
-|--------|---------|
-| Add state | `const [warning, setWarning] = useState<string \| null>(null);` |
-| Clear on request | `setWarning(null);` at start of analyze |
-| Check empty | After successful parse, if `food_items.length === 0`, set warning and return null |
-| Return | Add `warning` to return object |
+After line 198 (after `mergedItems` is created), add filtering:
 
 ```typescript
-// After successful parse
-if (data.food_items.length === 0) {
-  setWarning("No food items detected. If this is exercise, try the Weights page.");
-  return null;
-}
-setWarning(null); // Clear any previous warning on success
+// Filter out placeholder items (all macros zero = AI couldn't identify real food)
+const validItems = mergedItems.filter(item => 
+  item.calories > 0 || item.protein > 0 || item.carbs > 0 || item.fat > 0
+);
 ```
+
+Then update the totals calculation (line 201) and response (line 215) to use `validItems` instead of `mergedItems`.
 
 ---
 
-#### 2. Add Warning State to useAnalyzeWeights
+#### 2. Database Cleanup
 
-**File: `src/hooks/useAnalyzeWeights.ts`**
-
-| Change | Details |
-|--------|---------|
-| Add state | `const [warning, setWarning] = useState<string \| null>(null);` |
-| Clear on request | `setWarning(null);` at start of analyze |
-| Check empty | After successful parse, if `exercises.length === 0`, set warning and return null |
-| Return | Add `warning` to return object |
-
-```typescript
-// After successful parse
-if (data.exercises.length === 0) {
-  setWarning("No exercises detected. If this is food, try the Food page.");
-  return null;
-}
-setWarning(null); // Clear any previous warning on success
-```
-
----
-
-#### 3. Display Warning in FoodLog
-
-**File: `src/pages/FoodLog.tsx`**
-
-Extract `warning` from hook and display below error:
-
-```typescript
-const { analyzeFood, isAnalyzing, error: analyzeError, warning: analyzeWarning } = useAnalyzeFood();
-
-// In JSX, after existing error block (line ~483):
-{analyzeWarning && (
-  <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive mt-3">
-    {analyzeWarning}
-  </div>
-)}
-```
-
----
-
-#### 4. Display Warning in WeightLog
-
-**File: `src/pages/WeightLog.tsx`**
-
-Extract `warning` from hook and display below error:
-
-```typescript
-const { analyzeWeights, isAnalyzing, error: analyzeError, warning: analyzeWarning } = useAnalyzeWeights();
-
-// In JSX, after existing error block (line ~325):
-{analyzeWarning && (
-  <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive mt-3">
-    {analyzeWarning}
-  </div>
-)}
-```
-
----
-
-#### 5. Database Cleanup
-
-Delete the 4 ghost entries:
-
-| Date | Raw Input |
-|------|-----------|
-| 2026-02-01 | `.7 miles on the treadmill in 11:25` |
-| 2026-02-01 | `.8 miles on treadmill in 11:40` (x2) |
-| 2026-01-29 | `Just testing my voice to make sure it works` |
+Delete the ghost entry created during testing:
 
 ```sql
 DELETE FROM food_entries 
-WHERE id IN (
-  '13e8d822-c5e2-4baa-9cae-29d6d28b1f31',
-  '3767e715-610d-4e86-b955-0c8e2061629a',
-  '1de62f34-e31e-4269-87b7-04ab26f16b17',
-  '474c10d8-1b4b-4b62-869e-365d1294d56a'
-);
+WHERE id = '7c3dcf52-f813-4d87-bde2-4c9247acaf8d';
 ```
+
+---
+
+### Why This Works
+
+1. Edge function filters out zero-calorie placeholder items
+2. Returns empty `food_items: []` for non-food input
+3. Existing hook code sees `length === 0`
+4. Warning is displayed, no entry saved
+
+---
+
+### Pattern Comparison
+
+| Component | analyze-weights | analyze-food (after fix) |
+|-----------|-----------------|--------------------------|
+| Validation | `hasWeightData OR hasCardioData` | `calories > 0 OR protein > 0 OR carbs > 0 OR fat > 0` |
+| On failure | Throws error | Filters item out |
+| Empty result | `exercises: []` | `food_items: []` |
+| Hook behavior | Shows warning | Shows warning |
 
 ---
 
@@ -149,34 +83,7 @@ WHERE id IN (
 
 | Step | File | Change |
 |------|------|--------|
-| 1 | `useAnalyzeFood.ts` | Add `warning` state, check for empty `food_items` |
-| 2 | `useAnalyzeWeights.ts` | Add `warning` state, check for empty `exercises` |
-| 3 | `FoodLog.tsx` | Extract and display `warning` |
-| 4 | `WeightLog.tsx` | Extract and display `warning` |
-| 5 | Database | Delete 4 ghost entries |
+| 1 | `supabase/functions/analyze-food/index.ts` | Filter out items where all macros are zero |
+| 2 | Database | Delete ghost entry `7c3dcf52-f813-4d87-bde2-4c9247acaf8d` |
 
----
-
-### Future Extensibility
-
-When adding `useAnalyzeBooks`, `useAnalyzeMovies`, etc., each hook will follow the same pattern:
-
-```typescript
-export function useAnalyze[Type]() {
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [warning, setWarning] = useState<string | null>(null);  // Standard pattern
-  
-  // ... analyze logic ...
-  
-  if (data.items.length === 0) {
-    setWarning("No [type] detected. Try the [correct] page.");
-    return null;
-  }
-  
-  return { analyze[Type], isAnalyzing, error, warning };
-}
-```
-
-The consuming pages will all use the same UI pattern for displaying warnings - copy-paste friendly.
 
