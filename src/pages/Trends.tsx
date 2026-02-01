@@ -281,10 +281,21 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
                       if (isCardio) {
                         const duration = formatDurationMmSs(Number(entry.payload.duration_minutes || 0));
                         const distance = entry.payload.distance_miles;
-                        if (showMph && entry.payload.mph) {
-                          const pace = entry.payload.pace;
-                          return [`${entry.payload.mph} mph`, `${pace} min/mi`, `${distance} mi`];
+                        const mph = entry.payload.mph;
+                        const paceDecimal = entry.payload.pace;
+                        
+                        // Show full 4-row format when we have distance data
+                        if (distance && mph && paceDecimal) {
+                          const paceFormatted = formatDurationMmSs(paceDecimal);
+                          return [
+                            `${paceFormatted} /mi`,   // Pace in mm:ss
+                            `${mph} mph`,              // Speed
+                            `${distance} mi`,          // Distance
+                            duration                   // Time
+                          ];
                         }
+                        
+                        // Fallback for cardio without distance (e.g., stationary bike with time only)
                         if (distance) {
                           return [duration, `${distance} mi`];
                         }
