@@ -219,7 +219,7 @@ serve(async (req) => {
     );
 
     const result: AnalyzeResponse = {
-      food_items: mergedItems,
+      food_items: validItems,
       total_calories: Math.round(totals.calories),
       total_protein: Math.round(totals.protein),
       total_carbs: Math.round(totals.carbs),
