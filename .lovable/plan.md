@@ -1,44 +1,114 @@
 
-
-## Friendlier Network Error Messages
+## Convert Duration Display to mm:ss Format
 
 ### Summary
 
-Replace the technical Supabase error message with a user-friendly alternative in both analyze hooks.
+Change the duration display from decimal format (e.g., "11.0 min") to mm:ss format (e.g., "11:00") in cardio tooltips and expanded metadata sections. Bar chart labels remain as decimal values for space efficiency.
 
-### Error Message Change
+### Scope Clarification
 
-| Current | New |
-|---------|-----|
-| `"failed to send a request to the edge function"` | `"Couldn't connect - please try again"` |
+| Location | Current | Change |
+|----------|---------|--------|
+| Chart bar labels (above bars) | `11.0` | **No change** (decimal) |
+| Chart tooltips (on hover) | `11.0 min · 0.8 mi` (single line) | `11:00` + separate line for distance |
+| Weight Log expanded section | `11.0 min, 0.8 mi` | `11:00` + `0.8 mi` (same comma format but with mm:ss) |
+| Create Routine Dialog preview | `(11.0 min)` | `(11:00)` |
+| Save Routine Dialog preview | `(11.0 min)` | `(11:00)` |
 
-### Files to Modify
+### Implementation
 
-**1. `src/hooks/useAnalyzeWeights.ts`** (lines 36-40)
+**1. Create utility function in `src/lib/weight-units.ts`**
 
-Update the catch block to intercept the technical error:
+Add a new function to convert decimal minutes to mm:ss format:
 
 ```typescript
-} catch (err) {
-  let message = err instanceof Error ? err.message : 'Failed to analyze workout';
-  
-  if (message.includes('failed to send a request to the edge function')) {
-    message = "Couldn't connect - please try again";
-  }
-  
-  setError(message);
-  console.error('Analyze weights error:', err);
-  return null;
+export function formatDurationMmSs(decimalMinutes: number): string {
+  const totalSeconds = Math.round(decimalMinutes * 60);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 ```
 
-**2. `src/hooks/useAnalyzeFood.ts`** (lines 54-57)
+**2. Update `src/pages/Trends.tsx`** (tooltip only, lines 270-281)
 
-Apply the same pattern for consistency across both logging features.
+Change the tooltip formatter to use mm:ss and split duration/distance onto separate rows:
 
-### Technical Notes
+```typescript
+formatter={(value: number, name: string, entry: any) => {
+  if (isCardio) {
+    const duration = formatDurationMmSs(Number(entry.payload.duration_minutes || 0));
+    const distance = entry.payload.distance_miles;
+    if (showMph && entry.payload.mph) {
+      const pace = entry.payload.pace;
+      // Return array for multi-line: speed, pace, distance
+      return [`${entry.payload.mph} mph`, `${pace} min/mi`, `${distance} mi`];
+    }
+    if (distance) {
+      // Return array for multi-line: duration, distance
+      return [duration, `${distance} mi`];
+    }
+    return duration;
+  }
+  // ...weight exercises unchanged
+}}
+```
 
-- Original error still logged to console for debugging
-- No changes to logic or flow
-- Inline error display continues to work as before
+Also update CompactTooltip to handle array returns as separate rows.
 
+**3. Update `src/components/WeightItemsTable.tsx`** (lines 618-622)
+
+```typescript
+if ((ex.duration_minutes ?? 0) > 0) {
+  parts.push(formatDurationMmSs(Number(ex.duration_minutes)));
+}
+```
+
+**4. Update `src/components/CreateRoutineDialog.tsx`** (line 30)
+
+```typescript
+return `${first.description} (${formatDurationMmSs(Number(first.duration_minutes))})`;
+```
+
+**5. Update `src/components/SaveRoutineDialog.tsx`** (line 33)
+
+```typescript
+return `${exercise.description} (${formatDurationMmSs(Number(exercise.duration_minutes))})`;
+```
+
+### Examples
+
+| Decimal Input | mm:ss Output |
+|---------------|--------------|
+| 11.0 | 11:00 |
+| 11.5 | 11:30 |
+| 30.25 | 30:15 |
+| 5.75 | 5:45 |
+| 0.5 | 0:30 |
+
+### Tooltip Before/After
+
+**Before (single line):**
+```
+Feb 1
+11.0 min · 0.8 mi
+```
+
+**After (multi-line):**
+```
+Feb 1
+11:00
+0.8 mi
+```
+
+**MPH mode before:**
+```
+5.2 mph · 11.5 min/mi · 0.8 mi
+```
+
+**MPH mode after:**
+```
+5.2 mph
+11.5 min/mi
+0.8 mi
+```
