@@ -1,83 +1,47 @@
 
 
-## Change Exercise Charts to "Load More" Pattern
+## Fix Raw Input Font Size on Mobile
 
-Replace the current "top 25 + dropdown for specific exercises" pattern with a simpler "show 10, then load 10 more" approach.
-
----
-
-### Current vs New Behavior
-
-| Aspect | Current | New |
-|--------|---------|-----|
-| Initial charts | 25 | 10 |
-| Overflow UI | Dropdown to pick specific exercise | "Show more" button |
-| Sorting | By session count (descending) | Same |
+The raw input text (italic original input displayed when expanding an entry) appears larger than expected on mobile because it inherits the 16px base font size instead of using an explicit smaller size.
 
 ---
 
-### Technical Changes
+### Problem Analysis
 
-**File: `src/pages/Trends.tsx`**
+| Element | Current Classes | Mobile Size | Desktop Size |
+|---------|----------------|-------------|--------------|
+| Raw input text | `text-muted-foreground` (no size) | 16px (inherited) | 14px (inherited) |
+| "From saved meal" text | `text-sm text-muted-foreground` | 14px | 14px |
 
-#### 1. Replace state variable
+The 16px mobile base is applied to prevent iOS auto-zoom on **editable inputs**. Since the raw input text is read-only display text, it should use `text-sm` to match other metadata text.
+
+---
+
+### Solution
+
+Add `text-sm` to the raw input paragraph element so it matches the "From saved meal" text size.
+
+---
+
+### File Change
+
+**`src/components/FoodItemsTable.tsx`** - Line 625:
 
 ```typescript
 // Before
-const [extraExercise, setExtraExercise] = useState<string | null>(null);
+<p className="text-muted-foreground whitespace-pre-wrap italic">
+  {currentRawInput}
+</p>
 
 // After
-const [visibleExerciseCount, setVisibleExerciseCount] = useState(10);
+<p className="text-sm text-muted-foreground whitespace-pre-wrap italic">
+  {currentRawInput}
+</p>
 ```
-
-#### 2. Update derived data
-
-```typescript
-// Before
-const top25Exercises = weightExercises.slice(0, 25);
-const remainingExercises = weightExercises.slice(25);
-const selectedExtra = remainingExercises.find((e) => e.exercise_key === extraExercise);
-
-// After
-const visibleExercises = weightExercises.slice(0, visibleExerciseCount);
-const hasMoreExercises = weightExercises.length > visibleExerciseCount;
-```
-
-#### 3. Replace UI
-
-```typescript
-// Exercise charts grid - use visibleExercises instead of top25Exercises
-<div className="grid grid-cols-2 gap-3">
-  {visibleExercises.map((exercise) => (
-    <ExerciseChart ... />
-  ))}
-</div>
-
-// Replace Popover dropdown with simple button
-{hasMoreExercises && (
-  <Button
-    variant="outline"
-    size="sm"
-    className="w-full"
-    onClick={() => setVisibleExerciseCount(prev => prev + 10)}
-  >
-    Show more
-  </Button>
-)}
-```
-
-#### 4. Remove unused code
-
-- Remove the `selectedExtra` rendering block
-- Remove unused imports (`Popover`, `PopoverContent`, `PopoverTrigger`, `ChevronDown`) if no longer needed elsewhere
 
 ---
 
-### Summary
+### Result
 
-| Change | Details |
-|--------|---------|
-| State | `extraExercise` → `visibleExerciseCount` (default 10) |
-| Data | `top25Exercises`/`remainingExercises`/`selectedExtra` → `visibleExercises`/`hasMoreExercises` |
-| UI | Popover dropdown → "Show more" button that adds 10 more charts |
+Both the raw input text and "From saved meal" text will render at 14px (`text-sm`) on all viewports, creating consistent typography in the expanded entry section.
 
