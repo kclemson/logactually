@@ -1,89 +1,195 @@
 
 
+## Extend Prompt Eval Tools for Weights Testing
 
-## Fix Empty Food Detection (Server-Side Validation)
-
-Add server-side validation to `analyze-food` to filter out placeholder items with zero calories/macros, matching the validation pattern used in `analyze-weights`.
-
----
-
-### Root Cause
-
-| Edge Function | Server-Side Validation | Result with non-matching input |
-|---------------|------------------------|--------------------------------|
-| analyze-weights | Lines 204-211: Throws error if exercise lacks weight OR cardio data | Error returned → hook shows error → no entry saved |
-| analyze-food | **None** - passes through any AI response | AI returns placeholder item → passes hook's `length > 0` check → ghost entry saved |
-
-The AI returned a placeholder:
-```json
-{"food_items": [{"description": "No food identified", "calories": 0, "protein": 0, ...}]}
-```
-
-Since `length === 1`, the hook's empty check passed.
+Add support for testing `analyze-weights` alongside `analyze-food` in the DevTools panel, using dropdown menus for compact controls, with table styling improvements.
 
 ---
 
-### Solution
+### Overview
 
-Filter out zero-calorie/zero-macro items **in the edge function** before returning. This matches the analyze-weights pattern of validating data quality server-side.
+| Current | Proposed |
+|---------|----------|
+| Radio buttons for Prompt and Routing | Dropdown menus for Test Type, Prompt, and Routing |
+| Food-only testing | Support both Food and Weights testing |
+| font-mono on Input cell | Consistent font-face across all columns |
+| Unlimited Input lines | Cap at 5 lines with `line-clamp-5` |
 
 ---
 
 ### Technical Changes
 
-#### 1. Add Validation in analyze-food Edge Function
+#### 1. Add Select UI Component
 
-**File: `supabase/functions/analyze-food/index.ts`**
+Create a new shadcn/ui select component for dropdown menus.
 
-After line 198 (after `mergedItems` is created), add filtering:
+**File: `src/components/ui/select.tsx`** (new)
 
+Standard Radix UI Select component with proper styling and z-index for the content dropdown.
+
+---
+
+#### 2. Update DevToolsPanel UI
+
+**File: `src/components/DevToolsPanel.tsx`**
+
+**Add Imports:**
 ```typescript
-// Filter out placeholder items (all macros zero = AI couldn't identify real food)
-const validItems = mergedItems.filter(item => 
-  item.calories > 0 || item.protein > 0 || item.carbs > 0 || item.fat > 0
-);
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 ```
 
-Then update the totals calculation (line 201) and response (line 215) to use `validItems` instead of `mergedItems`.
+**Add Test Type State:**
+```typescript
+const [testType, setTestType] = useState<'food' | 'weights'>('food');
+```
 
----
+**Add Exercise Output Interface:**
+```typescript
+interface ExerciseItemOutput {
+  exercise_key: string;
+  description: string;
+  sets: number;
+  reps: number;
+  weight_lbs: number;
+  duration_minutes?: number | null;
+  distance_miles?: number | null;
+}
+```
 
-#### 2. Database Cleanup
+**Update TestResult Interface:**
+```typescript
+interface TestResult {
+  // ... existing fields
+  output: { 
+    food_items?: FoodItemOutput[];
+    exercises?: ExerciseItemOutput[];
+  } | null;
+}
+```
 
-Delete the ghost entry created during testing:
+**Replace Radio Buttons with Dropdowns:**
+```tsx
+{/* Test Type */}
+<Select value={testType} onValueChange={(v) => setTestType(v as 'food' | 'weights')}>
+  <SelectTrigger className="w-24 h-7 text-xs">
+    <SelectValue />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="food">Food</SelectItem>
+    <SelectItem value="weights">Weights</SelectItem>
+  </SelectContent>
+</Select>
 
-```sql
-DELETE FROM food_entries 
-WHERE id = '7c3dcf52-f813-4d87-bde2-4c9247acaf8d';
+{/* Prompt Version */}
+<Select value={promptVersion} onValueChange={(v) => setPromptVersion(v as 'default' | 'experimental')}>
+  <SelectTrigger className="w-28 h-7 text-xs">
+    <SelectValue />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="default">Default</SelectItem>
+    <SelectItem value="experimental">Experimental</SelectItem>
+  </SelectContent>
+</Select>
+
+{/* Routing (only for food) */}
+{testType === 'food' && (
+  <Select value={routingMode} onValueChange={(v) => setRoutingMode(v as 'client' | 'ai-only')}>
+    <SelectTrigger className="w-24 h-7 text-xs">
+      <SelectValue />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="client">Client</SelectItem>
+      <SelectItem value="ai-only">AI Only</SelectItem>
+    </SelectContent>
+  </Select>
+)}
+```
+
+**Table Styling Fixes:**
+
+Remove `font-mono` from Input cell and add 5-line cap:
+```tsx
+// Before
+<td className="px-1 py-1 font-mono text-xs" ...>
+  <div className="break-words">{result.input}</div>
+</td>
+
+// After
+<td className="px-1 py-1 text-xs" ...>
+  <div className="break-words line-clamp-5">{result.input}</div>
+</td>
+```
+
+**Conditional Table Columns:**
+
+Render different column headers and cells based on `testType`:
+- Food: Desc, Portion, Cal, P, C, Fb, Sg, F, SF, Na, Ch, Conf, Note
+- Weights: Exercise, Sets, Reps, Weight, Duration, Distance
+
+**Update runTests to pass testType:**
+```typescript
+body: { 
+  testCases: [{ input: testCase.input, source }], 
+  promptVersion, 
+  iterations: 1,
+  testType,
+},
 ```
 
 ---
 
-### Why This Works
+#### 3. Update run-prompt-tests Edge Function
 
-1. Edge function filters out zero-calorie placeholder items
-2. Returns empty `food_items: []` for non-food input
-3. Existing hook code sees `length === 0`
-4. Warning is displayed, no entry saved
+**File: `supabase/functions/run-prompt-tests/index.ts`**
+
+**Accept testType Parameter:**
+```typescript
+const { testCases, promptVersion = 'default', iterations = 1, testType = 'food' } = await req.json();
+```
+
+**Route to Correct Function:**
+```typescript
+const functionName = testType === 'weights' ? 'analyze-weights' : 'analyze-food';
+const functionUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/${functionName}`;
+```
+
+**Handle Different Response Shapes:**
+```typescript
+// For food responses
+if (testType === 'food') {
+  actual_output = { food_items: data.food_items };
+}
+// For weights responses
+else {
+  actual_output = { exercises: data.exercises };
+}
+```
 
 ---
 
-### Pattern Comparison
+### Results Table Layout
 
-| Component | analyze-weights | analyze-food (after fix) |
-|-----------|-----------------|--------------------------|
-| Validation | `hasWeightData OR hasCardioData` | `calories > 0 OR protein > 0 OR carbs > 0 OR fat > 0` |
-| On failure | Throws error | Filters item out |
-| Empty result | `exercises: []` | `food_items: []` |
-| Hook behavior | Shows warning | Shows warning |
+**Food Mode (existing columns):**
+| Input | Source | Prompt | Desc | Portion | Cal | P | C | Fb | Sg | F | SF | Na | Ch | Conf | Note |
+
+**Weights Mode (new columns):**
+| Input | Source | Prompt | Exercise | Sets | Reps | Weight | Duration | Distance |
 
 ---
 
-### Summary
+### Summary of Files Changed
 
-| Step | File | Change |
-|------|------|--------|
-| 1 | `supabase/functions/analyze-food/index.ts` | Filter out items where all macros are zero |
-| 2 | Database | Delete ghost entry `7c3dcf52-f813-4d87-bde2-4c9247acaf8d` |
+| File | Changes |
+|------|---------|
+| `src/components/ui/select.tsx` | New shadcn/ui Select component |
+| `src/components/DevToolsPanel.tsx` | Add testType dropdown, replace radio buttons with selects, conditional columns, styling fixes |
+| `supabase/functions/run-prompt-tests/index.ts` | Accept testType param, route to correct function, handle different response shapes |
 
+---
+
+### Notes
+
+- Routing mode dropdown only shows for Food mode (UPC lookup doesn't apply to weights)
+- Historical results will display whichever fields are present in the output
+- The weights table won't show food-specific columns (Cal, P, C, etc.) and vice versa
 
