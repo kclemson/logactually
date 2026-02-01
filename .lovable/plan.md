@@ -1,36 +1,84 @@
-# Mobile Tap-to-Show Tooltip Pattern — IMPLEMENTED ✅
 
-## Summary
+## Fix: Mobile Tooltip Click Not Working
 
-Device-aware chart interaction model implemented:
-- **Desktop**: Hover shows tooltip, click navigates directly (unchanged)
-- **Mobile**: Tap shows persistent tooltip with "Go to day →" button, tap outside dismisses
+### Root Cause Analysis
 
-## Files Changed
+The "Go to day →" button is unclickable due to two issues:
 
-| File | Changes |
-|------|---------|
-| `src/pages/Trends.tsx` | Updated `CompactTooltip` and `ExerciseChart` with mobile state/handlers |
-| `src/components/trends/FoodChart.tsx` | **NEW** - Extracted `FoodChart`, `StackedMacroChart`, `VolumeChart` components with mobile tooltip support |
+1. **Z-index layering problem**: The click-away overlay (`fixed inset-0 z-10`) covers the entire viewport, but the Recharts tooltip is rendered with positioning that doesn't respect the parent's `z-20`. The tooltip ends up BEHIND the overlay.
 
-## Implementation Details
+2. **Recharts tooltip pointer-events**: By default, Recharts tooltip wrappers may have CSS that interferes with pointer events.
 
-1. **CompactTooltip**: Added `isMobile`, `onGoToDay`, `rawDate` props; renders "Go to day →" button on mobile
-2. **ExerciseChart**: Added `activeBarIndex` state, conditional click behavior, click-away overlay, controlled tooltip mode
-3. **FoodChart/StackedMacroChart/VolumeChart**: New components encapsulating the same mobile pattern for food and volume charts
+### Solution
 
-## User Experience
+**1. Increase tooltip z-index using `wrapperStyle`**
 
-```text
-Mobile Flow:
-1. User taps bar → Tooltip appears with data + "Go to day →" link
-2. User can:
-   a. Read data and tap elsewhere → tooltip dismisses
-   b. Tap "Go to day →" → navigates to the day
-   c. Tap different bar → switches tooltip to that bar
+Add `wrapperStyle={{ pointerEvents: 'auto', zIndex: 50 }}` to all `<Tooltip>` components. This ensures:
+- The tooltip is above the click-away overlay (`z-10`)
+- Pointer events are explicitly enabled
 
-Desktop Flow (unchanged):
-1. User hovers bar → tooltip shows
-2. User clicks bar → navigates immediately
+**2. Update all chart Tooltip components**
+
+| File | Components | Change |
+|------|------------|--------|
+| `src/pages/Trends.tsx` | `ExerciseChart` | Add `wrapperStyle` prop to Tooltip |
+| `src/components/trends/FoodChart.tsx` | `FoodChart`, `StackedMacroChart`, `VolumeChart` | Add `wrapperStyle` prop to all Tooltips |
+
+### Code Changes
+
+**src/pages/Trends.tsx - ExerciseChart (around line 299)**
+
+```typescript
+<Tooltip
+  wrapperStyle={{ pointerEvents: 'auto', zIndex: 50 }}
+  active={isMobile ? activeBarIndex !== null : undefined}
+  // ... rest of props
+/>
 ```
 
+**src/components/trends/FoodChart.tsx - FoodChart (around line 186)**
+
+```typescript
+<Tooltip
+  wrapperStyle={{ pointerEvents: 'auto', zIndex: 50 }}
+  active={isMobile ? activeBarIndex !== null : undefined}
+  // ... rest of props
+/>
+```
+
+**src/components/trends/FoodChart.tsx - StackedMacroChart (around line 319)**
+
+```typescript
+<Tooltip
+  wrapperStyle={{ pointerEvents: 'auto', zIndex: 50 }}
+  active={isMobile ? activeBarIndex !== null : undefined}
+  // ... rest of props
+/>
+```
+
+**src/components/trends/FoodChart.tsx - VolumeChart (around line 446)**
+
+```typescript
+<Tooltip
+  wrapperStyle={{ pointerEvents: 'auto', zIndex: 50 }}
+  active={isMobile ? activeBarIndex !== null : undefined}
+  // ... rest of props
+/>
+```
+
+### Summary of Changes
+
+| File | Lines | Change |
+|------|-------|--------|
+| `src/pages/Trends.tsx` | ~299 | Add `wrapperStyle={{ pointerEvents: 'auto', zIndex: 50 }}` to Tooltip |
+| `src/components/trends/FoodChart.tsx` | ~186, ~319, ~446 | Add same `wrapperStyle` to all 3 Tooltip components |
+
+### Why This Works
+
+- `zIndex: 50` ensures the tooltip renders above the `z-10` click-away overlay
+- `pointerEvents: 'auto'` explicitly enables click handling on the tooltip
+- The existing `e.stopPropagation()` on the button prevents the click from bubbling to the overlay
+
+### Alternative Considered
+
+We could also move the overlay to a lower z-index or restructure the DOM, but using `wrapperStyle` is the cleanest solution as it's the Recharts-recommended way to style the tooltip container.
