@@ -1,39 +1,31 @@
 
-
-## Add Persistence to Collapsible Sections on Trends & Settings
+## Add storageKey Props for Persistent Collapsed State
 
 ### Summary
 
-The `CollapsibleSection` component already has localStorage persistence built in via the `storageKey` prop - we just need to add unique `storageKey` values to each section. Currently, all sections fall back to using `'default'` as the key, which would make them all share state.
+Add unique `storageKey` props to all `CollapsibleSection` components in Settings.tsx and Trends.tsx so each section's expanded/collapsed state is persisted independently in localStorage.
 
-### Changes Required
+### Changes to Trends.tsx
 
-**1. Trends.tsx** - Add `storageKey` to each section:
+| Line | Section | storageKey to add |
+|------|---------|-------------------|
+| 556 | Food Trends | `storageKey="trends-food"` |
+| 775 | Weights Trends | `storageKey="trends-weights"` |
 
-| Section | storageKey |
-|---------|------------|
-| Food Trends | `"trends-food"` |
-| Weights Trends | `"trends-weights"` |
+### Changes to Settings.tsx
 
-**2. Settings.tsx** - Add `storageKey` to each section:
-
-| Section | storageKey |
-|---------|------------|
-| Account | `"settings-account"` |
-| Saved Meals | `"settings-meals"` |
-| Saved Routines | `"settings-routines"` |
-| Preferences | `"settings-preferences"` |
-| Export to CSV | `"settings-export"` |
-| About | `"settings-about"` |
-
-### How It Works
-
-The `CollapsibleSection` component already:
-1. Reads from localStorage on mount: `localStorage.getItem(`section-${storageKey}`)`
-2. Persists on toggle: `localStorage.setItem(key, String(newValue))`
-3. Cleans up when returning to default: `localStorage.removeItem(key)`
+| Line | Section | storageKey to add |
+|------|---------|-------------------|
+| 112 | Account | `storageKey="settings-account"` |
+| 152 | Saved Meals | `storageKey="settings-meals"` |
+| 187 | Saved Routines | `storageKey="settings-routines"` |
+| 222 | Preferences | `storageKey="settings-preferences"` |
+| 265 | Export to CSV | `storageKey="settings-export"` |
+| 299 | About | `storageKey="settings-about"` |
 
 ### localStorage Keys Created
+
+When users collapse/expand sections, these keys will be written:
 
 - `section-trends-food`
 - `section-trends-weights`
@@ -44,7 +36,11 @@ The `CollapsibleSection` component already:
 - `section-settings-export`
 - `section-settings-about`
 
-### No Other Changes Needed
+### How It Works (Already Built)
 
-The component handles everything else - no additional code required.
+The `CollapsibleSection` component already:
+1. Reads from localStorage on mount using the `storageKey` prop
+2. Persists the new state on toggle
+3. Removes the key when returning to the default state (cleanup)
 
+No changes to the component itself are needed.
