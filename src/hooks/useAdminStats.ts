@@ -27,6 +27,16 @@ interface UsageStats {
   saved_meals_used_last_7_days: number;
 }
 
+interface TodayFoodDetail {
+  raw_input: string | null;
+  items: string[] | null;
+}
+
+interface TodayWeightDetail {
+  raw_input: string | null;
+  description: string;
+}
+
 interface UserStats {
   user_id: string;
   user_number: number;
@@ -38,6 +48,8 @@ interface UserStats {
   saved_routines_count: number;
   last_active: string | null;
   login_count: number;
+  food_today_details: TodayFoodDetail[] | null;
+  weight_today_details: TodayWeightDetail[] | null;
 }
 
 export function useAdminStats() {
