@@ -34,7 +34,12 @@ export function useAnalyzeWeights() {
 
       return { exercises: data.exercises };
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to analyze workout';
+      let message = err instanceof Error ? err.message : 'Failed to analyze workout';
+      
+      if (message.includes('failed to send a request to the edge function')) {
+        message = "Couldn't connect - please try again";
+      }
+      
       setError(message);
       console.error('Analyze weights error:', err);
       return null;

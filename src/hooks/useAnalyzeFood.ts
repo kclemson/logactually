@@ -52,7 +52,12 @@ export function useAnalyzeFood() {
 
       return { ...data, food_items: itemsWithIds } as AnalyzeResult;
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to analyze food';
+      let message = err instanceof Error ? err.message : 'Failed to analyze food';
+      
+      if (message.includes('failed to send a request to the edge function')) {
+        message = "Couldn't connect - please try again";
+      }
+      
       setError(message);
       return null;
     } finally {
