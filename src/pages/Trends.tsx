@@ -6,12 +6,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, LabelList } from "recharts";
 import { Card, CardContent, CardHeader, ChartTitle, ChartSubtitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { UtensilsCrossed, Dumbbell, ChevronDown } from "lucide-react";
+import { UtensilsCrossed, Dumbbell } from "lucide-react";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { FEATURES } from "@/lib/feature-flags";
 import { useWeightTrends, ExerciseTrend } from "@/hooks/useWeightTrends";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { type WeightUnit, formatDurationMmSs } from "@/lib/weight-units";
 import { useMergeExercises } from "@/hooks/useMergeExercises";
@@ -375,7 +375,7 @@ const Trends = () => {
     const saved = localStorage.getItem("trends-period");
     return saved && [7, 30, 90].includes(Number(saved)) ? Number(saved) : 30;
   });
-  const [extraExercise, setExtraExercise] = useState<string | null>(null);
+  const [visibleExerciseCount, setVisibleExerciseCount] = useState(10);
   const [dismissedDuplicates, setDismissedDuplicates] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem("dismissed-duplicate-exercises");
@@ -508,10 +508,9 @@ const Trends = () => {
     });
   }, [weightExercises, settings.weightUnit]);
 
-  // Split into top 25 and remaining
-  const top25Exercises = weightExercises.slice(0, 25);
-  const remainingExercises = weightExercises.slice(25);
-  const selectedExtra = remainingExercises.find((e) => e.exercise_key === extraExercise);
+  // Visible exercises (load more pattern)
+  const visibleExercises = weightExercises.slice(0, visibleExerciseCount);
+  const hasMoreExercises = weightExercises.length > visibleExerciseCount;
 
   // Aggregate by date
   const chartData = useMemo(() => {
@@ -744,9 +743,9 @@ const Trends = () => {
                 />
               )}
 
-              {/* Top 25 exercises in 2-column grid */}
+              {/* Exercise charts in 2-column grid */}
               <div className="grid grid-cols-2 gap-3">
-                {top25Exercises.map((exercise) => (
+                {visibleExercises.map((exercise) => (
                   <ExerciseChart 
                     key={exercise.exercise_key} 
                     exercise={exercise} 
@@ -756,43 +755,16 @@ const Trends = () => {
                 ))}
               </div>
 
-              {/* Dropdown for remaining exercises */}
-              {remainingExercises.length > 0 && (
-                <div className="space-y-3">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm" className="w-full">
-                        {selectedExtra ? selectedExtra.description : "More exercises..."}
-                        <ChevronDown className="ml-2 h-4 w-4" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-56 p-1 bg-popover z-50">
-                      <div className="flex flex-col gap-1">
-                        {remainingExercises.map((ex) => (
-                          <Button
-                            key={ex.exercise_key}
-                            variant="ghost"
-                            size="sm"
-                            className="justify-start"
-                            onClick={() => setExtraExercise(ex.exercise_key)}
-                          >
-                            {ex.description}
-                            <span className="ml-auto text-muted-foreground text-xs">{ex.sessionCount} sessions</span>
-                          </Button>
-                        ))}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-
-                  {/* Show selected extra exercise chart */}
-                  {selectedExtra && (
-                    <ExerciseChart 
-                      exercise={selectedExtra} 
-                      unit={settings.weightUnit}
-                      onBarClick={handleExerciseBarClick}
-                    />
-                  )}
-                </div>
+              {/* Show more button */}
+              {hasMoreExercises && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setVisibleExerciseCount(prev => prev + 10)}
+                >
+                  Show more
+                </Button>
               )}
             </div>
           )}
