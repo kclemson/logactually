@@ -67,7 +67,7 @@ serve(async (req) => {
       );
     }
 
-    const { testCases, promptVersion = 'default', iterations = 1 } = await req.json();
+    const { testCases, promptVersion = 'default', iterations = 1, testType = 'food' } = await req.json();
 
     if (!testCases || !Array.isArray(testCases) || testCases.length === 0) {
       return new Response(
@@ -80,19 +80,21 @@ serve(async (req) => {
     const runId = crypto.randomUUID();
     const results: TestResult[] = [];
 
+    // Route to correct function based on testType
+    const functionName = testType === 'weights' ? 'analyze-weights' : 'analyze-food';
     console.log(`Starting test run ${runId}: ${testCases.length} cases × ${iterations} iterations = ${testCases.length * iterations} total`);
-    console.log(`Prompt version: ${version}`);
+    console.log(`Prompt version: ${version}, Test type: ${testType}`);
 
-    // Build the analyze-food URL
-    const analyzeFoodUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/analyze-food`;
+    // Build the function URL
+    const functionUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/${functionName}`;
 
     for (const testCase of testCases as TestCase[]) {
       for (let i = 0; i < iterations; i++) {
         const startTime = Date.now();
         
         try {
-          // Call analyze-food directly instead of duplicating AI logic
-          const response = await fetch(analyzeFoodUrl, {
+          // Call the appropriate function directly
+          const response = await fetch(functionUrl, {
             method: 'POST',
             headers: {
               'Authorization': authHeader,
@@ -133,10 +135,15 @@ serve(async (req) => {
             continue;
           }
 
+          // Handle different response shapes based on testType
+          const actualOutput = testType === 'weights' 
+            ? { exercises: data.exercises }
+            : { food_items: data.food_items };
+
           const result: TestResult = {
             input: testCase.input,
             additionalContext: testCase.additionalContext,
-            output: { food_items: data.food_items },
+            output: actualOutput,
             latencyMs,
           };
 
@@ -150,7 +157,7 @@ serve(async (req) => {
               prompt_version: version,
               test_input: testCase.input,
               additional_context: testCase.additionalContext,
-              actual_output: { food_items: data.food_items },
+              actual_output: actualOutput,
               latency_ms: latencyMs,
               source: testCase.source || 'ai',
             });
