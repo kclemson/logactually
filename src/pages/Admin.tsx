@@ -22,7 +22,7 @@ const USER_NAMES: Record<number, string> = {
 export default function Admin() {
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
-  
+
   // All hooks must be called before any conditional returns
   const { data: isAdmin, isLoading: isAdminLoading } = useIsAdmin();
   const { data: stats, isLoading, error } = useAdminStats();
@@ -67,7 +67,7 @@ export default function Admin() {
 
   const handleSendReply = async (feedbackId: string) => {
     if (!replyText.trim()) return;
-    
+
     try {
       await respondToFeedback.mutateAsync({ feedbackId, response: replyText.trim() });
       setReplyingToId(null);
@@ -116,9 +116,9 @@ export default function Admin() {
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Last</th>
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">F2day</th>
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">W2day</th>
-              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Fs</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">F</th>
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">SF</th>
-              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Ws</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">W</th>
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">SW</th>
               <th className="text-center py-0.5 font-medium text-muted-foreground">Logins</th>
             </tr>
@@ -142,17 +142,37 @@ export default function Admin() {
                 >
                   {user.last_active ? format(parseISO(user.last_active), "MMM d") : "—"}
                 </td>
-                <td className={`text-center py-0.5 pr-2 ${user.entries_today > 0 ? "text-green-500" : "text-muted-foreground/50"}`}>
+                <td
+                  className={`text-center py-0.5 pr-2 ${user.entries_today > 0 ? "text-green-500" : "text-muted-foreground/50"}`}
+                >
                   {user.entries_today}
                 </td>
-                <td className={`text-center py-0.5 pr-2 ${(user.weight_today ?? 0) > 0 ? "text-green-500" : "text-muted-foreground/50"}`}>
+                <td
+                  className={`text-center py-0.5 pr-2 ${(user.weight_today ?? 0) > 0 ? "text-green-500" : "text-muted-foreground/50"}`}
+                >
                   {user.weight_today ?? 0}
                 </td>
-                <td className={`text-center py-0.5 pr-2 ${user.total_entries === 0 ? "text-muted-foreground/50" : ""}`}>{user.total_entries}</td>
-                <td className={`text-center py-0.5 pr-2 ${(user.saved_meals_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}>{user.saved_meals_count ?? 0}</td>
-                <td className={`text-center py-0.5 pr-2 ${(user.total_weight_entries ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}>{user.total_weight_entries ?? 0}</td>
-                <td className={`text-center py-0.5 pr-2 ${(user.saved_routines_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}>{user.saved_routines_count ?? 0}</td>
-                <td className={`text-center py-0.5 ${(user.login_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}>{user.login_count ?? 0}</td>
+                <td className={`text-center py-0.5 pr-2 ${user.total_entries === 0 ? "text-muted-foreground/50" : ""}`}>
+                  {user.total_entries}
+                </td>
+                <td
+                  className={`text-center py-0.5 pr-2 ${(user.saved_meals_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
+                >
+                  {user.saved_meals_count ?? 0}
+                </td>
+                <td
+                  className={`text-center py-0.5 pr-2 ${(user.total_weight_entries ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
+                >
+                  {user.total_weight_entries ?? 0}
+                </td>
+                <td
+                  className={`text-center py-0.5 pr-2 ${(user.saved_routines_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
+                >
+                  {user.saved_routines_count ?? 0}
+                </td>
+                <td className={`text-center py-0.5 ${(user.login_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}>
+                  {user.login_count ?? 0}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -178,11 +198,23 @@ export default function Admin() {
             {stats.daily_stats.slice(0, 7).map((row) => (
               <tr key={row.stat_date} className="border-b border-border/50">
                 <td className="py-0.5 pr-2 whitespace-nowrap">{format(parseISO(row.stat_date), "MMM-dd")}</td>
-                <td className={`text-center py-0.5 pr-2 ${row.entry_count === 0 ? "text-muted-foreground/50" : ""}`}>{row.entry_count}</td>
-                <td className={`text-center py-0.5 pr-2 ${(row.weight_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}>{row.weight_count ?? 0}</td>
+                <td className={`text-center py-0.5 pr-2 ${row.entry_count === 0 ? "text-muted-foreground/50" : ""}`}>
+                  {row.entry_count}
+                </td>
+                <td
+                  className={`text-center py-0.5 pr-2 ${(row.weight_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
+                >
+                  {row.weight_count ?? 0}
+                </td>
                 <td className="text-center py-0.5 pr-2">{row.total_users}</td>
-                <td className={`text-center py-0.5 pr-2 ${row.users_with_entries === 0 ? "text-muted-foreground/50" : ""}`}>{row.users_with_entries}</td>
-                <td className={`text-center py-0.5 ${row.users_created === 0 ? "text-muted-foreground/50" : ""}`}>{row.users_created}</td>
+                <td
+                  className={`text-center py-0.5 pr-2 ${row.users_with_entries === 0 ? "text-muted-foreground/50" : ""}`}
+                >
+                  {row.users_with_entries}
+                </td>
+                <td className={`text-center py-0.5 ${row.users_created === 0 ? "text-muted-foreground/50" : ""}`}>
+                  {row.users_created}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -211,17 +243,15 @@ export default function Admin() {
                 )}
               </div>
               <p className="whitespace-pre-wrap">{f.message}</p>
-              
+
               {/* Show existing response */}
               {f.response && replyingToId !== f.id && (
                 <div className="ml-2 pl-2 border-l-2 border-primary/30 text-muted-foreground">
-                  <span className="text-[10px]">
-                    Response ({format(parseISO(f.responded_at!), "MMM d")})
-                  </span>
+                  <span className="text-[10px]">Response ({format(parseISO(f.responded_at!), "MMM d")})</span>
                   <p className="whitespace-pre-wrap">{f.response}</p>
                 </div>
               )}
-              
+
               {/* Reply form */}
               {replyingToId === f.id ? (
                 <div className="space-y-1 pt-1">
@@ -233,20 +263,15 @@ export default function Admin() {
                     maxLength={1000}
                   />
                   <div className="flex gap-1">
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       className="h-6 text-xs px-2"
                       onClick={() => handleSendReply(f.id)}
                       disabled={!replyText.trim() || respondToFeedback.isPending}
                     >
                       {respondToFeedback.isPending ? "Sending..." : "Send"}
                     </Button>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      className="h-6 text-xs px-2"
-                      onClick={handleCancelReply}
-                    >
+                    <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={handleCancelReply}>
                       Cancel
                     </Button>
                   </div>
