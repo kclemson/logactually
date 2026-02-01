@@ -1,23 +1,25 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, subDays, startOfDay } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart, Bar, XAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from "recharts";
+import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, LabelList } from "recharts";
 import { Card, CardContent, CardHeader, ChartTitle, ChartSubtitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { UtensilsCrossed, Dumbbell, ChevronDown } from "lucide-react";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { FEATURES } from "@/lib/feature-flags";
-import { useWeightTrends, ExerciseTrend, WeightPoint } from "@/hooks/useWeightTrends";
+import { useWeightTrends, ExerciseTrend } from "@/hooks/useWeightTrends";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { type WeightUnit, formatDurationMmSs } from "@/lib/weight-units";
 import { useMergeExercises } from "@/hooks/useMergeExercises";
 import { DuplicateExercisePrompt, type DuplicateGroup } from "@/components/DuplicateExercisePrompt";
-import { getMuscleGroupDisplayWithTooltip, isCardioExercise, hasDistanceTracking } from "@/lib/exercise-metadata";
+import { getMuscleGroupDisplayWithTooltip, hasDistanceTracking } from "@/lib/exercise-metadata";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { FoodChart, StackedMacroChart, VolumeChart } from "@/components/trends/FoodChart";
 
 // Chart color palette (hex RGB format for easy editing)
 const CHART_COLORS = {
@@ -28,42 +30,19 @@ const CHART_COLORS = {
   trainingVolume: "hsl(262 83% 58%)", // Bright purple matching exercise charts (kept separate const for future adjustment)
 } as const;
 
-// Density-based spacing helpers for food charts
-const getFoodLabelOffsetPx = (dataLength: number): number =>
-  dataLength > 35 ? 11 : dataLength > 21 ? 8 : 4;
-
-const getFoodChartMarginTop = (dataLength: number): number =>
-  dataLength > 35 ? 22 : dataLength > 21 ? 18 : 12;
-
-// Helper to create food chart label renderer with interval-based visibility
-const createFoodLabelRenderer = (
-  chartData: Array<{ showLabel: boolean; showLabelFullWidth?: boolean }>,
-  color: string,
-  yOffsetPx: number = 4,
-  useFullWidthLabels: boolean = false
-) => (props: any) => {
-  const { x, y, width, value, index } = props;
-  
-  const dataPoint = chartData[index];
-  const shouldShow = useFullWidthLabels ? dataPoint?.showLabelFullWidth : dataPoint?.showLabel;
-  if (!shouldShow) return null;
-  if (!value || typeof x !== 'number' || typeof width !== 'number') return null;
-  
-  return (
-    <text
-      x={x + width / 2}
-      y={y - yOffsetPx}
-      fill={color}
-      textAnchor="middle"
-      fontSize={7}
-      fontWeight={500}
-    >
-      {Math.round(value)}
-    </text>
-  );
-};
-
-const CompactTooltip = ({ active, payload, label, formatter, totalKey, totalLabel, totalColor }: any) => {
+const CompactTooltip = ({ 
+  active, 
+  payload, 
+  label, 
+  formatter, 
+  totalKey, 
+  totalLabel, 
+  totalColor,
+  // Mobile props
+  isMobile,
+  onGoToDay,
+  rawDate,
+}: any) => {
   if (!active || !payload?.length) return null;
 
   // Get total from the first payload item's data if totalKey is provided
@@ -100,6 +79,18 @@ const CompactTooltip = ({ active, payload, label, formatter, totalKey, totalLabe
             </p>
           );
         })}
+      {/* Mobile "Go to day" button */}
+      {isMobile && onGoToDay && rawDate && (
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            onGoToDay(rawDate);
+          }}
+          className="mt-1.5 w-full text-left text-[10px] text-primary hover:underline"
+        >
+          Go to day →
+        </button>
+      )}
     </div>
   );
 };
@@ -113,6 +104,9 @@ const periods = [
 const LBS_TO_KG = 0.453592;
 
 const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend; unit: WeightUnit; onBarClick: (date: string) => void }) => {
+  const isMobile = useIsMobile();
+  const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
+  
   // Detect cardio exercise: has duration data and no meaningful weight
   const isCardio = exercise.maxWeight === 0 && exercise.maxDuration > 0;
   
@@ -122,6 +116,25 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
     if (!supportsSpeedToggle) return false;
     return localStorage.getItem(`trends-mph-${exercise.exercise_key}`) === 'true';
   });
+
+  // Reset active bar when chart data changes (e.g., mph toggle)
+  useEffect(() => {
+    setActiveBarIndex(null);
+  }, [showMph]);
+
+  const handleBarClick = (data: any, index: number) => {
+    if (isMobile) {
+      // Toggle: tap same bar to close, different bar to switch
+      setActiveBarIndex(prev => prev === index ? null : index);
+    } else {
+      onBarClick(data.rawDate);
+    }
+  };
+
+  const handleGoToDay = (date: string) => {
+    setActiveBarIndex(null);
+    onBarClick(date);
+  };
   
   const chartData = useMemo(() => {
     // For mph mode, filter to only entries with distance data
@@ -235,92 +248,112 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
     : undefined;
 
   return (
-    <Card className="border-0 shadow-none">
-      <CardHeader 
-        className={cn("p-2 pb-1", supportsSpeedToggle && "cursor-pointer")}
-        onClick={handleHeaderClick}
-      >
-        <div className="flex flex-col gap-0.5">
-          <ChartTitle className="truncate">{exercise.description}</ChartTitle>
-          <ChartSubtitle>
-            {supportsSpeedToggle ? (
-              <>Cardio · {showMph ? 'mph' : 'time'} <span className="opacity-50">▾</span></>
-            ) : isCardio ? (
-              <>Cardio</>
-            ) : (
-              <>
-                Max: {maxWeightDisplay} {unit}
-                {(() => {
-                  const muscleInfo = getMuscleGroupDisplayWithTooltip(exercise.exercise_key);
-                  if (!muscleInfo) return null;
-                  return (
-                    <span title={muscleInfo.full}> · {muscleInfo.display}</span>
-                  );
-                })()}
-              </>
-            )}
-          </ChartSubtitle>
-        </div>
-      </CardHeader>
-      <CardContent className="p-2 pt-0">
-        <div className="h-24">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 12, right: 0, left: 0, bottom: 0 }}>
-              <XAxis
-                dataKey="dateLabel"
-                tick={{ fontSize: 8 }}
-                stroke="hsl(var(--muted-foreground))"
-                interval="preserveStartEnd"
-                tickMargin={2}
-                height={16}
-              />
-              <Tooltip
-                content={
-                  <CompactTooltip
-                    formatter={(value: number, name: string, entry: any) => {
-                      if (isCardio) {
-                        const duration = formatDurationMmSs(Number(entry.payload.duration_minutes || 0));
-                        const distance = entry.payload.distance_miles;
-                        const mph = entry.payload.mph;
-                        const paceDecimal = entry.payload.pace;
-                        
-                        // Show 3-row format when we have distance data
-                        if (distance && mph && paceDecimal) {
-                          const paceFormatted = formatDurationMmSs(paceDecimal);
-                          return [
-                            `${paceFormatted} /mi`,           // Pace in mm:ss
-                            `${mph} mph`,                      // Speed
-                            `${distance} mi in ${duration}`   // Distance + Time combined
-                          ];
+    <Card className="border-0 shadow-none relative">
+      {/* Click-away overlay to dismiss tooltip on mobile */}
+      {isMobile && activeBarIndex !== null && (
+        <div 
+          className="fixed inset-0 z-10" 
+          onClick={() => setActiveBarIndex(null)}
+        />
+      )}
+      
+      <div className="relative z-20">
+        <CardHeader 
+          className={cn("p-2 pb-1", supportsSpeedToggle && "cursor-pointer")}
+          onClick={handleHeaderClick}
+        >
+          <div className="flex flex-col gap-0.5">
+            <ChartTitle className="truncate">{exercise.description}</ChartTitle>
+            <ChartSubtitle>
+              {supportsSpeedToggle ? (
+                <>Cardio · {showMph ? 'mph' : 'time'} <span className="opacity-50">▾</span></>
+              ) : isCardio ? (
+                <>Cardio</>
+              ) : (
+                <>
+                  Max: {maxWeightDisplay} {unit}
+                  {(() => {
+                    const muscleInfo = getMuscleGroupDisplayWithTooltip(exercise.exercise_key);
+                    if (!muscleInfo) return null;
+                    return (
+                      <span title={muscleInfo.full}> · {muscleInfo.display}</span>
+                    );
+                  })()}
+                </>
+              )}
+            </ChartSubtitle>
+          </div>
+        </CardHeader>
+        <CardContent className="p-2 pt-0">
+          <div className="h-24">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 12, right: 0, left: 0, bottom: 0 }}>
+                <XAxis
+                  dataKey="dateLabel"
+                  tick={{ fontSize: 8 }}
+                  stroke="hsl(var(--muted-foreground))"
+                  interval="preserveStartEnd"
+                  tickMargin={2}
+                  height={16}
+                />
+                <Tooltip
+                  active={isMobile ? activeBarIndex !== null : undefined}
+                  payload={isMobile && activeBarIndex !== null 
+                    ? [{ payload: chartData[activeBarIndex] }] 
+                    : undefined}
+                  label={isMobile && activeBarIndex !== null 
+                    ? chartData[activeBarIndex]?.dateLabel 
+                    : undefined}
+                  content={
+                    <CompactTooltip
+                      isMobile={isMobile}
+                      onGoToDay={handleGoToDay}
+                      rawDate={activeBarIndex !== null ? chartData[activeBarIndex]?.rawDate : undefined}
+                      formatter={(value: number, name: string, entry: any) => {
+                        if (isCardio) {
+                          const duration = formatDurationMmSs(Number(entry.payload.duration_minutes || 0));
+                          const distance = entry.payload.distance_miles;
+                          const mph = entry.payload.mph;
+                          const paceDecimal = entry.payload.pace;
+                          
+                          // Show 3-row format when we have distance data
+                          if (distance && mph && paceDecimal) {
+                            const paceFormatted = formatDurationMmSs(paceDecimal);
+                            return [
+                              `${paceFormatted} /mi`,           // Pace in mm:ss
+                              `${mph} mph`,                      // Speed
+                              `${distance} mi in ${duration}`   // Distance + Time combined
+                            ];
+                          }
+                          
+                          // Fallback for cardio without distance (e.g., stationary bike with time only)
+                          if (distance) {
+                            return [duration, `${distance} mi`];
+                          }
+                          return duration;
                         }
-                        
-                        // Fallback for cardio without distance (e.g., stationary bike with time only)
-                        if (distance) {
-                          return [duration, `${distance} mi`];
-                        }
-                        return duration;
-                      }
-                      const { sets, reps, weight } = entry.payload;
-                      return `${sets} sets × ${reps} reps @ ${weight} ${unit}`;
-                    }}
-                  />
-                }
-                offset={20}
-                cursor={{ fill: "hsl(var(--muted)/0.3)" }}
-              />
-              <Bar 
-                dataKey={isCardio ? (showMph ? "mph" : "duration_minutes") : "weight"} 
-                fill="hsl(262 83% 58%)" 
-                radius={[2, 2, 0, 0]}
-                onClick={(data) => onBarClick(data.rawDate)}
-                className="cursor-pointer"
-              >
-                <LabelList dataKey="label" content={isCardio ? renderCardioLabel : renderWeightLabel} />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
+                        const { sets, reps, weight } = entry.payload;
+                        return `${sets} sets × ${reps} reps @ ${weight} ${unit}`;
+                      }}
+                    />
+                  }
+                  offset={20}
+                  cursor={{ fill: "hsl(var(--muted)/0.3)" }}
+                />
+                <Bar 
+                  dataKey={isCardio ? (showMph ? "mph" : "duration_minutes") : "weight"} 
+                  fill="hsl(262 83% 58%)" 
+                  radius={[2, 2, 0, 0]}
+                  onClick={(data, index) => handleBarClick(data, index)}
+                  className="cursor-pointer"
+                >
+                  <LabelList dataKey="label" content={isCardio ? renderCardioLabel : renderWeightLabel} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </div>
     </Card>
   );
 };
@@ -596,194 +629,58 @@ const Trends = () => {
             {/* Row 1: Calories + Macros Breakdown */}
             <div className="grid grid-cols-2 gap-3">
               {/* Calories Chart */}
-              <Card className="border-0 shadow-none">
-                <CardHeader className="p-2 pb-1">
-                  <ChartTitle>Calories</ChartTitle>
-                </CardHeader>
-                <CardContent className="p-2 pt-0">
-                  <div className="h-24">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={chartData} margin={{ top: getFoodChartMarginTop(chartData.length), right: 0, left: 0, bottom: 0 }}>
-                        <XAxis
-                          dataKey="date"
-                          tick={{ fontSize: 8 }}
-                          stroke="hsl(var(--muted-foreground))"
-                          interval="preserveStartEnd"
-                          tickMargin={2}
-                          height={16}
-                        />
-                        <Tooltip content={<CompactTooltip />} offset={20} cursor={{ fill: "hsl(var(--muted)/0.3)" }} />
-                        <Bar 
-                          dataKey="calories" 
-                          fill={CHART_COLORS.calories} 
-                          radius={[2, 2, 0, 0]}
-                          onClick={(data) => navigate(`/?date=${data.rawDate}`)}
-                          className="cursor-pointer"
-                        >
-                          <LabelList dataKey="calories" content={createFoodLabelRenderer(chartData, CHART_COLORS.calories, getFoodLabelOffsetPx(chartData.length))} />
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
+              <FoodChart
+                title="Calories"
+                chartData={chartData}
+                dataKey="calories"
+                color={CHART_COLORS.calories}
+                onNavigate={(date) => navigate(`/?date=${date}`)}
+              />
 
               {/* Macro Split Chart (100% stacked by calorie %) */}
-              <Card className="border-0 shadow-none">
-                <CardHeader className="p-2 pb-1">
-                  <ChartTitle>Macro Split (%)</ChartTitle>
-                </CardHeader>
-                <CardContent className="p-2 pt-0">
-                  <div className="h-24">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
-                        <XAxis
-                          dataKey="date"
-                          tick={{ fontSize: 8 }}
-                          stroke="hsl(var(--muted-foreground))"
-                          interval="preserveStartEnd"
-                          tickMargin={2}
-                          height={16}
-                        />
-                        <Tooltip
-                          content={<CompactTooltip formatter={(value, name) => `${name}: ${value}%`} />}
-                          offset={20}
-                          cursor={{ fill: "hsl(var(--muted)/0.3)" }}
-                        />
-                        <Bar 
-                          dataKey="fatPct" 
-                          name="Fat" 
-                          stackId="macros" 
-                          fill={CHART_COLORS.fat}
-                          onClick={(data) => navigate(`/?date=${data.rawDate}`)}
-                          className="cursor-pointer"
-                        />
-                        <Bar 
-                          dataKey="carbsPct" 
-                          name="Carbs" 
-                          stackId="macros" 
-                          fill={CHART_COLORS.carbs}
-                          onClick={(data) => navigate(`/?date=${data.rawDate}`)}
-                          className="cursor-pointer"
-                        />
-                        <Bar
-                          dataKey="proteinPct"
-                          name="Protein"
-                          stackId="macros"
-                          fill={CHART_COLORS.protein}
-                          radius={[2, 2, 0, 0]}
-                          onClick={(data) => navigate(`/?date=${data.rawDate}`)}
-                          className="cursor-pointer"
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
+              <StackedMacroChart
+                title="Macro Split (%)"
+                chartData={chartData}
+                bars={[
+                  { dataKey: "fatPct", name: "Fat", color: CHART_COLORS.fat },
+                  { dataKey: "carbsPct", name: "Carbs", color: CHART_COLORS.carbs },
+                  { dataKey: "proteinPct", name: "Protein", color: CHART_COLORS.protein, isTop: true },
+                ]}
+                onNavigate={(date) => navigate(`/?date=${date}`)}
+                formatter={(value, name) => `${name}: ${value}%`}
+              />
             </div>
 
-            {/* NEW: Combined Calories + Macros Chart (Experimental) */}
-            <Card className="border-0 shadow-none">
-              <CardHeader className="p-2 pb-1">
-                <ChartTitle>Combined Calories + Macros</ChartTitle>
-              </CardHeader>
-              <CardContent className="p-2 pt-0">
-                <div className="h-28">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData} margin={{ top: getFoodChartMarginTop(chartData.length), right: 0, left: 0, bottom: 0 }}>
-                      <XAxis
-                        dataKey="date"
-                        tick={{ fontSize: 8 }}
-                        stroke="hsl(var(--muted-foreground))"
-                        interval="preserveStartEnd"
-                        tickMargin={2}
-                        height={16}
-                      />
-                      <Tooltip
-                        content={
-                          <CompactTooltip 
-                            formatter={(value, name) => `${name}: ${Math.round(value)} cal`}
-                            totalKey="calories"
-                            totalLabel="Calories"
-                            totalColor={CHART_COLORS.calories}
-                          />
-                        }
-                        offset={20}
-                        cursor={{ fill: "hsl(var(--muted)/0.3)" }}
-                      />
-                      {/* Stacked bars - first rendered = bottom */}
-                      <Bar 
-                        dataKey="fatCals" 
-                        name="Fat" 
-                        stackId="macroCals" 
-                        fill={CHART_COLORS.fat}
-                        onClick={(data) => navigate(`/?date=${data.rawDate}`)}
-                        className="cursor-pointer"
-                      />
-                      <Bar 
-                        dataKey="carbsCals" 
-                        name="Carbs" 
-                        stackId="macroCals" 
-                        fill={CHART_COLORS.carbs}
-                        onClick={(data) => navigate(`/?date=${data.rawDate}`)}
-                        className="cursor-pointer"
-                      />
-                      <Bar
-                        dataKey="proteinCals"
-                        name="Protein"
-                        stackId="macroCals"
-                        fill={CHART_COLORS.protein}
-                        radius={[2, 2, 0, 0]}
-                        onClick={(data) => navigate(`/?date=${data.rawDate}`)}
-                        className="cursor-pointer"
-                      >
-                        {/* Total calories label above the stack - uses full-width thresholds */}
-                        <LabelList dataKey="calories" content={createFoodLabelRenderer(chartData, CHART_COLORS.calories, getFoodLabelOffsetPx(chartData.length), true)} />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Combined Calories + Macros Chart */}
+            <StackedMacroChart
+              title="Combined Calories + Macros"
+              chartData={chartData}
+              bars={[
+                { dataKey: "fatCals", name: "Fat", color: CHART_COLORS.fat },
+                { dataKey: "carbsCals", name: "Carbs", color: CHART_COLORS.carbs },
+                { dataKey: "proteinCals", name: "Protein", color: CHART_COLORS.protein, isTop: true },
+              ]}
+              onNavigate={(date) => navigate(`/?date=${date}`)}
+              formatter={(value, name) => `${name}: ${Math.round(value)} cal`}
+              totalKey="calories"
+              totalLabel="Calories"
+              totalColor={CHART_COLORS.calories}
+              labelDataKey="calories"
+              labelColor={CHART_COLORS.calories}
+              height="h-28"
+            />
 
             {/* Row 2: Protein + Carbs + Fat */}
             <div className="grid grid-cols-3 gap-3">
               {charts.slice(1).map(({ key, label, color }) => (
-                <Card key={key} className="border-0 shadow-none">
-                  <CardHeader className="p-2 pb-1">
-                    <ChartTitle>{label}</ChartTitle>
-                  </CardHeader>
-                  <CardContent className="p-2 pt-0">
-                    <div className="h-24">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={chartData} margin={{ top: getFoodChartMarginTop(chartData.length), right: 0, left: 0, bottom: 0 }}>
-                          <XAxis
-                            dataKey="date"
-                            tick={{ fontSize: 8 }}
-                            stroke="hsl(var(--muted-foreground))"
-                            interval="preserveStartEnd"
-                            tickMargin={2}
-                            height={16}
-                          />
-                          <Tooltip
-                            content={<CompactTooltip />}
-                            offset={20}
-                            cursor={{ fill: "hsl(var(--muted)/0.3)" }}
-                          />
-                          <Bar 
-                            dataKey={key} 
-                            fill={color} 
-                            radius={[2, 2, 0, 0]}
-                            onClick={(data) => navigate(`/?date=${data.rawDate}`)}
-                            className="cursor-pointer"
-                          >
-                            <LabelList dataKey={key} content={createFoodLabelRenderer(chartData, color, getFoodLabelOffsetPx(chartData.length))} />
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
+                <FoodChart
+                  key={key}
+                  title={label}
+                  chartData={chartData}
+                  dataKey={key}
+                  color={color}
+                  onNavigate={(date) => navigate(`/?date=${date}`)}
+                />
               ))}
             </div>
           </div>
@@ -803,66 +700,13 @@ const Trends = () => {
             <div className="space-y-3">
               {/* Total Volume Chart */}
               {volumeByDay.length > 0 && (
-                <Card className="border-0 shadow-none">
-                  <CardHeader className="p-2 pb-1">
-                    <ChartTitle>Total Volume ({settings.weightUnit})</ChartTitle>
-                  </CardHeader>
-                  <CardContent className="p-2 pt-0">
-                    <div className="h-24">
-                      <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={volumeByDay} margin={{ top: 12, right: 0, left: 0, bottom: 0 }}>
-                        <XAxis
-                          dataKey="date"
-                          tick={{ fontSize: 8 }}
-                          stroke="hsl(var(--muted-foreground))"
-                          interval="preserveStartEnd"
-                          tickMargin={2}
-                          height={16}
-                        />
-                        <Tooltip
-                          content={
-                            <CompactTooltip
-                              formatter={(value: number) => `${value.toLocaleString()} ${settings.weightUnit}`}
-                            />
-                          }
-                          offset={20}
-                          cursor={{ fill: "hsl(var(--muted)/0.3)" }}
-                        />
-                        <Bar 
-                          dataKey="volume" 
-                          fill={CHART_COLORS.trainingVolume} 
-                          radius={[2, 2, 0, 0]}
-                          onClick={(data) => navigate(`/weights?date=${data.rawDate}`)}
-                          className="cursor-pointer"
-                        >
-                          <LabelList 
-                            dataKey="label" 
-                            content={(props: any) => {
-                              const { x, y, width, value, index } = props;
-                              const dataPoint = volumeByDay[index];
-                              if (!dataPoint?.showLabelFullWidth) return null;
-                              if (!value || typeof x !== 'number' || typeof width !== 'number') return null;
-                              
-                              return (
-                                <text
-                                  x={x + width / 2}
-                                  y={y - 4}
-                                  fill={CHART_COLORS.trainingVolume}
-                                  textAnchor="middle"
-                                  fontSize={7}
-                                  fontWeight={500}
-                                >
-                                  {value}
-                                </text>
-                              );
-                            }}
-                          />
-                        </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
+                <VolumeChart
+                  title={`Total Volume (${settings.weightUnit})`}
+                  chartData={volumeByDay}
+                  color={CHART_COLORS.trainingVolume}
+                  unit={settings.weightUnit}
+                  onNavigate={(date) => navigate(`/weights?date=${date}`)}
+                />
               )}
 
               {/* Duplicate exercise prompt */}
