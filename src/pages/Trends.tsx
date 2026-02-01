@@ -148,9 +148,10 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
     const labelInterval = 
       dataLength <= 12 ? 1 : 
       dataLength <= 20 ? 2 : 
-      dataLength <= 35 ? 3 :
-      dataLength <= 50 ? 5 : 
-      dataLength <= 70 ? 7 : 10;
+      dataLength <= 35 ? 4 :
+      dataLength <= 50 ? 6 : 
+      dataLength <= 70 ? 10 : 
+      dataLength <= 90 ? 15 : 20;
 
     return sourceData.map((d, index) => {
       const displayWeight = unit === "kg" ? Math.round(d.weight * LBS_TO_KG) : d.weight;
