@@ -1,8 +1,8 @@
 
 
-## Add Hover Tooltips for F2day/W2day on Admin Page
+## Empty Results Warning (Both Pages) + Data Cleanup
 
-Show detailed information (raw input + logged items) when hovering over non-zero F2day or W2day values on desktop.
+Prevent "ghost entries" when users log content on the wrong page by detecting empty AI results and showing a warning instead of silently saving.
 
 ---
 
@@ -10,161 +10,173 @@ Show detailed information (raw input + logged items) when hovering over non-zero
 
 | Aspect | Details |
 |--------|---------|
-| Trigger | Hover on non-zero F2day/W2day cells |
-| Platform | Desktop only (uses `useHasHover`) |
-| Content | Raw input + parsed item descriptions |
-| Data source | Extend `get_user_stats` RPC to include today's items |
+| Problem | Logging exercise on Food page (or food on Weights page) saves an entry with zero items - invisible in UI |
+| Solution | Detect empty results in analyze hooks, return warning instead of null, display in both pages |
+| Pattern | Add `warning` state to analyze hooks - reusable for future log types (books, movies, etc.) |
+| Cleanup | Delete 4 existing ghost entries from food_entries table |
+
+---
+
+### Design: Future-Proof Pattern
+
+Both `useAnalyzeFood` and `useAnalyzeWeights` already share identical structure:
+- `isAnalyzing` state
+- `error` state  
+- Returns `result | null`
+
+Adding `warning` state follows the same pattern. When we add new log types (books, movies, period tracker), each `useAnalyze[Type]` hook will include the same three states: `isAnalyzing`, `error`, `warning`.
+
+The consuming pages already have identical UI patterns for error display:
+```tsx
+{analyzeError && (
+  <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive mt-3">
+    Analysis failed: {analyzeError}
+  </div>
+)}
+```
+
+The warning display will follow the same pattern, making it trivial to copy-paste for future log types.
 
 ---
 
 ### Technical Changes
 
-#### 1. Install Radix Tooltip
+#### 1. Add Warning State to useAnalyzeFood
 
-Add `@radix-ui/react-tooltip` package for proper tooltip behavior.
+**File: `src/hooks/useAnalyzeFood.ts`**
 
-#### 2. Create Tooltip UI Component
-
-**New file: `src/components/ui/tooltip.tsx`**
-
-Standard shadcn/Radix tooltip wrapper:
-
-```typescript
-import * as TooltipPrimitive from "@radix-ui/react-tooltip"
-
-const TooltipProvider = TooltipPrimitive.Provider
-const Tooltip = TooltipPrimitive.Root
-const TooltipTrigger = TooltipPrimitive.Trigger
-const TooltipContent = // styled portal content
-```
-
-#### 3. Extend Database RPC
-
-**Migration: Modify `get_user_stats` function**
-
-Add two new fields to the return data:
-- `food_today_details`: Array of `{ raw_input, items[] }` for today's food entries
-- `weight_today_details`: Array of `{ raw_input, items[] }` for today's weight entries
-
-```sql
--- Add to the SELECT inside get_user_stats:
-(
-  SELECT json_agg(json_build_object(
-    'raw_input', fe2.raw_input,
-    'items', (
-      SELECT json_agg(item->>'description')
-      FROM jsonb_array_elements(fe2.food_items) item
-    )
-  ))
-  FROM food_entries fe2 
-  WHERE fe2.user_id = p.id 
-  AND fe2.eaten_date = local_today
-) as food_today_details,
-
-(
-  SELECT json_agg(json_build_object(
-    'raw_input', ws2.raw_input,
-    'description', ws2.description
-  ))
-  FROM weight_sets ws2 
-  WHERE ws2.user_id = p.id 
-  AND ws2.logged_date = local_today
-) as weight_today_details
-```
-
-#### 4. Update TypeScript Types
-
-**File: `src/hooks/useAdminStats.ts`**
+| Change | Details |
+|--------|---------|
+| Add state | `const [warning, setWarning] = useState<string \| null>(null);` |
+| Clear on request | `setWarning(null);` at start of analyze |
+| Check empty | After successful parse, if `food_items.length === 0`, set warning and return null |
+| Return | Add `warning` to return object |
 
 ```typescript
-interface TodayFoodDetail {
-  raw_input: string | null;
-  items: string[] | null;
+// After successful parse
+if (data.food_items.length === 0) {
+  setWarning("No food items detected. If this is exercise, try the Weights page.");
+  return null;
 }
-
-interface TodayWeightDetail {
-  raw_input: string | null;
-  description: string;
-}
-
-interface UserStats {
-  // ... existing fields
-  food_today_details: TodayFoodDetail[] | null;
-  weight_today_details: TodayWeightDetail[] | null;
-}
-```
-
-#### 5. Update Admin Page
-
-**File: `src/pages/Admin.tsx`**
-
-```typescript
-import { useHasHover } from "@/hooks/use-has-hover";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
-// In component:
-const hasHover = useHasHover();
-
-// Wrap table with TooltipProvider
-
-// For F2day cell (lines 145-149):
-{hasHover && user.entries_today > 0 && user.food_today_details ? (
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <td className="...cursor-default">{user.entries_today}</td>
-    </TooltipTrigger>
-    <TooltipContent className="max-w-xs text-xs">
-      {user.food_today_details.map((entry, i) => (
-        <div key={i}>
-          {entry.raw_input && <p className="italic text-muted-foreground">{entry.raw_input}</p>}
-          {entry.items?.map((item, j) => <p key={j}>• {item}</p>)}
-        </div>
-      ))}
-    </TooltipContent>
-  </Tooltip>
-) : (
-  <td className="...">{user.entries_today}</td>
-)}
-
-// Similar pattern for W2day cell
+setWarning(null); // Clear any previous warning on success
 ```
 
 ---
 
-### Data Shape Example
+#### 2. Add Warning State to useAnalyzeWeights
 
-```json
-{
-  "user_id": "...",
-  "entries_today": 2,
-  "food_today_details": [
-    {
-      "raw_input": "oatmeal with blueberries",
-      "items": ["Oatmeal", "Blueberries"]
-    },
-    {
-      "raw_input": "chicken salad",
-      "items": ["Grilled Chicken Breast", "Mixed Greens", "Ranch Dressing"]
-    }
-  ],
-  "weight_today": 3,
-  "weight_today_details": [
-    { "raw_input": "bench press 3x10 135", "description": "Bench Press" },
-    { "raw_input": null, "description": "Lat Pulldown" },
-    { "raw_input": null, "description": "Bicep Curls" }
-  ]
+**File: `src/hooks/useAnalyzeWeights.ts`**
+
+| Change | Details |
+|--------|---------|
+| Add state | `const [warning, setWarning] = useState<string \| null>(null);` |
+| Clear on request | `setWarning(null);` at start of analyze |
+| Check empty | After successful parse, if `exercises.length === 0`, set warning and return null |
+| Return | Add `warning` to return object |
+
+```typescript
+// After successful parse
+if (data.exercises.length === 0) {
+  setWarning("No exercises detected. If this is food, try the Food page.");
+  return null;
 }
+setWarning(null); // Clear any previous warning on success
+```
+
+---
+
+#### 3. Display Warning in FoodLog
+
+**File: `src/pages/FoodLog.tsx`**
+
+Extract `warning` from hook and display below error:
+
+```typescript
+const { analyzeFood, isAnalyzing, error: analyzeError, warning: analyzeWarning } = useAnalyzeFood();
+
+// In JSX, after existing error block (line ~483):
+{analyzeWarning && (
+  <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive mt-3">
+    {analyzeWarning}
+  </div>
+)}
+```
+
+---
+
+#### 4. Display Warning in WeightLog
+
+**File: `src/pages/WeightLog.tsx`**
+
+Extract `warning` from hook and display below error:
+
+```typescript
+const { analyzeWeights, isAnalyzing, error: analyzeError, warning: analyzeWarning } = useAnalyzeWeights();
+
+// In JSX, after existing error block (line ~325):
+{analyzeWarning && (
+  <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive mt-3">
+    {analyzeWarning}
+  </div>
+)}
+```
+
+---
+
+#### 5. Database Cleanup
+
+Delete the 4 ghost entries:
+
+| Date | Raw Input |
+|------|-----------|
+| 2026-02-01 | `.7 miles on the treadmill in 11:25` |
+| 2026-02-01 | `.8 miles on treadmill in 11:40` (x2) |
+| 2026-01-29 | `Just testing my voice to make sure it works` |
+
+```sql
+DELETE FROM food_entries 
+WHERE id IN (
+  '13e8d822-c5e2-4baa-9cae-29d6d28b1f31',
+  '3767e715-610d-4e86-b955-0c8e2061629a',
+  '1de62f34-e31e-4269-87b7-04ab26f16b17',
+  '474c10d8-1b4b-4b62-869e-365d1294d56a'
+);
 ```
 
 ---
 
 ### Summary
 
-| Step | Change |
-|------|--------|
-| 1 | Install `@radix-ui/react-tooltip` |
-| 2 | Create `src/components/ui/tooltip.tsx` |
-| 3 | Extend `get_user_stats` RPC with detail arrays |
-| 4 | Update `UserStats` TypeScript interface |
-| 5 | Add conditional tooltips to Admin.tsx (desktop only via `useHasHover`) |
+| Step | File | Change |
+|------|------|--------|
+| 1 | `useAnalyzeFood.ts` | Add `warning` state, check for empty `food_items` |
+| 2 | `useAnalyzeWeights.ts` | Add `warning` state, check for empty `exercises` |
+| 3 | `FoodLog.tsx` | Extract and display `warning` |
+| 4 | `WeightLog.tsx` | Extract and display `warning` |
+| 5 | Database | Delete 4 ghost entries |
+
+---
+
+### Future Extensibility
+
+When adding `useAnalyzeBooks`, `useAnalyzeMovies`, etc., each hook will follow the same pattern:
+
+```typescript
+export function useAnalyze[Type]() {
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);  // Standard pattern
+  
+  // ... analyze logic ...
+  
+  if (data.items.length === 0) {
+    setWarning("No [type] detected. Try the [correct] page.");
+    return null;
+  }
+  
+  return { analyze[Type], isAnalyzing, error, warning };
+}
+```
+
+The consuming pages will all use the same UI pattern for displaying warnings - copy-paste friendly.
 
