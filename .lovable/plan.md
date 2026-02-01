@@ -1,57 +1,83 @@
 
 
-## Fix Chart Label Thresholds for High-Density Views
+## Change Exercise Charts to "Load More" Pattern
 
-The current thresholds are still too aggressive for 65+ data point views. Need to increase intervals significantly.
-
----
-
-### Problem
-
-Looking at the screenshots with ~65-70 data points:
-- Labels are appearing approximately every 3rd bar (way too dense)
-- Even interval = 7 or 10 would still produce ~7-10 labels, which may overlap at this density
+Replace the current "top 25 + dropdown for specific exercises" pattern with a simpler "show 10, then load 10 more" approach.
 
 ---
 
-### Proposed Threshold Changes
+### Current vs New Behavior
 
-**ExerciseChart (half-width):**
-
-| Data Points | Current Interval | Proposed Interval | Labels Shown |
-|-------------|-----------------|-------------------|--------------|
-| 1-12 | 1 | 1 | All |
-| 13-20 | 2 | 2 | ~10 |
-| 21-35 | 3 | 4 | ~9 |
-| 36-50 | 5 | 6 | ~8 |
-| 51-70 | 7 | 10 | ~7 |
-| 71-90 | 10 | 15 | ~6 |
-| 91+ | 10 | 20 | ~5 |
-
-**Key change:** For 65 data points, go from interval=7 (showing ~9 labels) to interval=10 (showing ~7 labels). For 90+ points, use interval=20 (showing ~5 labels).
+| Aspect | Current | New |
+|--------|---------|-----|
+| Initial charts | 25 | 10 |
+| Overflow UI | Dropdown to pick specific exercise | "Show more" button |
+| Sorting | By session count (descending) | Same |
 
 ---
 
-### File Changes
+### Technical Changes
 
-**`src/pages/Trends.tsx`** - ExerciseChart labelInterval (~line 148):
+**File: `src/pages/Trends.tsx`**
+
+#### 1. Replace state variable
 
 ```typescript
-const labelInterval = 
-  dataLength <= 12 ? 1 : 
-  dataLength <= 20 ? 2 : 
-  dataLength <= 35 ? 4 :    // was 3
-  dataLength <= 50 ? 6 :    // was 5
-  dataLength <= 70 ? 10 :   // was 7
-  dataLength <= 90 ? 15 : 20;  // was 10
+// Before
+const [extraExercise, setExtraExercise] = useState<string | null>(null);
+
+// After
+const [visibleExerciseCount, setVisibleExerciseCount] = useState(10);
 ```
+
+#### 2. Update derived data
+
+```typescript
+// Before
+const top25Exercises = weightExercises.slice(0, 25);
+const remainingExercises = weightExercises.slice(25);
+const selectedExtra = remainingExercises.find((e) => e.exercise_key === extraExercise);
+
+// After
+const visibleExercises = weightExercises.slice(0, visibleExerciseCount);
+const hasMoreExercises = weightExercises.length > visibleExerciseCount;
+```
+
+#### 3. Replace UI
+
+```typescript
+// Exercise charts grid - use visibleExercises instead of top25Exercises
+<div className="grid grid-cols-2 gap-3">
+  {visibleExercises.map((exercise) => (
+    <ExerciseChart ... />
+  ))}
+</div>
+
+// Replace Popover dropdown with simple button
+{hasMoreExercises && (
+  <Button
+    variant="outline"
+    size="sm"
+    className="w-full"
+    onClick={() => setVisibleExerciseCount(prev => prev + 10)}
+  >
+    Show more
+  </Button>
+)}
+```
+
+#### 4. Remove unused code
+
+- Remove the `selectedExtra` rendering block
+- Remove unused imports (`Popover`, `PopoverContent`, `PopoverTrigger`, `ChevronDown`) if no longer needed elsewhere
 
 ---
 
-### Expected Result
+### Summary
 
-At 65 data points with interval = 10:
-- Labels shown at positions: 64, 54, 44, 34, 24, 14, 4 (7 labels total)
-- Clear spacing between labels
-- Rightmost bar always labeled
+| Change | Details |
+|--------|---------|
+| State | `extraExercise` → `visibleExerciseCount` (default 10) |
+| Data | `top25Exercises`/`remainingExercises`/`selectedExtra` → `visibleExercises`/`hasMoreExercises` |
+| UI | Popover dropdown → "Show more" button that adds 10 more charts |
 
