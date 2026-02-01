@@ -19,6 +19,7 @@ interface AnalyzeResult {
 export function useAnalyzeFood() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
 
   const analyzeFood = async (
     rawInput: string,
@@ -27,6 +28,7 @@ export function useAnalyzeFood() {
   ): Promise<AnalyzeResult | null> => {
     setIsAnalyzing(true);
     setError(null);
+    setWarning(null);
 
     try {
       const { data, error: invokeError } = await supabase.functions.invoke(
@@ -42,6 +44,12 @@ export function useAnalyzeFood() {
 
       if (data.error) {
         throw new Error(data.error);
+      }
+
+      // Check for empty results (e.g., user entered exercise on food page)
+      if (!data.food_items || data.food_items.length === 0) {
+        setWarning("No food items detected. If this is exercise, try the Weights page.");
+        return null;
       }
 
       // Assign unique IDs to each food item for reliable change tracking
@@ -65,5 +73,5 @@ export function useAnalyzeFood() {
     }
   };
 
-  return { analyzeFood, isAnalyzing, error };
+  return { analyzeFood, isAnalyzing, error, warning };
 }

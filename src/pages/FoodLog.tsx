@@ -67,7 +67,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   const queryClient = useQueryClient();
   const { entries, isFetching, createEntry, updateEntry, deleteEntry, deleteAllByDate } = useFoodEntries(dateStr);
   const { data: datesWithFood = [] } = useFoodDatesWithData(calendarMonth);
-  const { analyzeFood, isAnalyzing, error: analyzeError } = useAnalyzeFood();
+  const { analyzeFood, isAnalyzing, error: analyzeError, warning: analyzeWarning } = useAnalyzeFood();
   const { data: savedMeals } = useSavedMeals();
   const saveMeal = useSaveMeal();
   const logSavedMeal = useLogSavedMeal();
@@ -479,6 +479,11 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
         {analyzeError && (
           <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive mt-3">
             Analysis failed: {analyzeError}
+          </div>
+        )}
+        {analyzeWarning && (
+          <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive mt-3">
+            {analyzeWarning}
           </div>
         )}
         
