@@ -3,9 +3,11 @@ import { Navigate } from "react-router-dom";
 import { useAdminStats, useAdminUserStats } from "@/hooks/useAdminStats";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useAdminFeedback, useRespondToFeedback } from "@/hooks/feedback";
+import { useHasHover } from "@/hooks/use-has-hover";
 import { format, parseISO, isToday } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const USER_NAMES: Record<number, string> = {
   1: "KC",
@@ -29,6 +31,7 @@ export default function Admin() {
   const { data: userStats } = useAdminUserStats();
   const { data: feedback } = useAdminFeedback();
   const respondToFeedback = useRespondToFeedback();
+  const hasHover = useHasHover();
 
   // Render nothing while checking admin status - no spinner, no flash
   if (isAdminLoading) {
@@ -107,8 +110,8 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* User stats table */}
       {userStats && userStats.length > 0 ? (
+        <TooltipProvider delayDuration={200}>
         <table className="w-auto text-xs">
           <thead>
             <tr className="border-b">
@@ -142,16 +145,57 @@ export default function Admin() {
                 >
                   {user.last_active ? format(parseISO(user.last_active), "MMM d") : "—"}
                 </td>
-                <td
-                  className={`text-center py-0.5 pr-2 ${user.entries_today > 0 ? "text-green-500" : "text-muted-foreground/50"}`}
-                >
-                  {user.entries_today}
-                </td>
-                <td
-                  className={`text-center py-0.5 pr-2 ${(user.weight_today ?? 0) > 0 ? "text-green-500" : "text-muted-foreground/50"}`}
-                >
-                  {user.weight_today ?? 0}
-                </td>
+                {hasHover && user.entries_today > 0 && user.food_today_details ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <td className="text-center py-0.5 pr-2 text-green-500 cursor-default">
+                        {user.entries_today}
+                      </td>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs text-xs space-y-2 bg-popover text-popover-foreground border">
+                      {user.food_today_details.map((entry, i) => (
+                        <div key={i} className={i > 0 ? "border-t border-border pt-2" : ""}>
+                          {entry.raw_input && (
+                            <p className="italic text-muted-foreground mb-1">"{entry.raw_input}"</p>
+                          )}
+                          {entry.items?.map((item, j) => <p key={j}>• {item}</p>)}
+                        </div>
+                      ))}
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <td
+                    className={`text-center py-0.5 pr-2 ${user.entries_today > 0 ? "text-green-500" : "text-muted-foreground/50"}`}
+                  >
+                    {user.entries_today}
+                  </td>
+                )}
+                {hasHover && (user.weight_today ?? 0) > 0 && user.weight_today_details ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <td className="text-center py-0.5 pr-2 text-green-500 cursor-default">
+                        {user.weight_today ?? 0}
+                      </td>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs text-xs space-y-1 bg-popover text-popover-foreground border">
+                      {user.weight_today_details.map((entry, i) => (
+                        <div key={i}>
+                          {entry.raw_input ? (
+                            <p><span className="italic text-muted-foreground">"{entry.raw_input}"</span> → {entry.description}</p>
+                          ) : (
+                            <p>• {entry.description}</p>
+                          )}
+                        </div>
+                      ))}
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <td
+                    className={`text-center py-0.5 pr-2 ${(user.weight_today ?? 0) > 0 ? "text-green-500" : "text-muted-foreground/50"}`}
+                  >
+                    {user.weight_today ?? 0}
+                  </td>
+                )}
                 <td className={`text-center py-0.5 pr-2 ${user.total_entries === 0 ? "text-muted-foreground/50" : ""}`}>
                   {user.total_entries}
                 </td>
@@ -177,6 +221,7 @@ export default function Admin() {
             ))}
           </tbody>
         </table>
+        </TooltipProvider>
       ) : (
         <p className="text-muted-foreground text-xs">No users found.</p>
       )}
