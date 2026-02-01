@@ -144,7 +144,13 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
     
     const dataLength = sourceData.length;
     // Calculate how often to show labels based on column count
-    const labelInterval = dataLength <= 12 ? 1 : dataLength <= 20 ? 2 : 3;
+    // Extended thresholds for high-density views (35+ data points)
+    const labelInterval = 
+      dataLength <= 12 ? 1 : 
+      dataLength <= 20 ? 2 : 
+      dataLength <= 35 ? 3 :
+      dataLength <= 50 ? 5 : 
+      dataLength <= 70 ? 7 : 10;
 
     return sourceData.map((d, index) => {
       const displayWeight = unit === "kg" ? Math.round(d.weight * LBS_TO_KG) : d.weight;
@@ -155,6 +161,9 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
       const pace = d.distance_miles && d.duration_minutes
         ? Number((d.duration_minutes / d.distance_miles).toFixed(1))
         : null;
+      
+      // Count from right (end) to prioritize recent data - rightmost column always labeled
+      const distanceFromEnd = dataLength - 1 - index;
       
       return {
         ...d,
@@ -167,8 +176,8 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
         label: isCardio 
           ? (showMph ? `${mph}` : `${Number(d.duration_minutes || 0).toFixed(1)}`)
           : `${d.sets}×${d.reps}×${displayWeight}`,
-        // Show label on interval OR always on last column
-        showLabel: index % labelInterval === 0 || index === dataLength - 1,
+        // Show label using right-to-left counting (distance 0 = rightmost column)
+        showLabel: distanceFromEnd % labelInterval === 0,
       };
     });
   }, [exercise.weightData, unit, isCardio, showMph]);
@@ -475,20 +484,27 @@ const Trends = () => {
       dataLength <= 7 ? 1 :
       dataLength <= 14 ? 2 :
       dataLength <= 21 ? 3 :
-      dataLength <= 35 ? 4 : 5;
+      dataLength <= 35 ? 4 : 
+      dataLength <= 50 ? 5 : 
+      dataLength <= 70 ? 7 : 10;
 
     // Full-width charts have ~2x horizontal space
     const labelIntervalFullWidth = 
       dataLength <= 14 ? 1 :
       dataLength <= 28 ? 2 :
       dataLength <= 42 ? 3 :
-      dataLength <= 70 ? 4 : 5;
+      dataLength <= 70 ? 4 : 
+      dataLength <= 90 ? 5 : 7;
 
-    return entries.map((d, index) => ({
-      ...d,
-      showLabel: index % labelInterval === 0 || index === dataLength - 1,
-      showLabelFullWidth: index % labelIntervalFullWidth === 0 || index === dataLength - 1,
-    }));
+    return entries.map((d, index) => {
+      // Count from right (end) to prioritize recent data
+      const distanceFromEnd = dataLength - 1 - index;
+      return {
+        ...d,
+        showLabel: distanceFromEnd % labelInterval === 0,
+        showLabelFullWidth: distanceFromEnd % labelIntervalFullWidth === 0,
+      };
+    });
   }, [weightExercises, settings.weightUnit]);
 
   // Split into top 25 and remaining
@@ -543,20 +559,27 @@ const Trends = () => {
       dataLength <= 7 ? 1 :
       dataLength <= 14 ? 2 :
       dataLength <= 21 ? 3 :
-      dataLength <= 35 ? 4 : 5;
+      dataLength <= 35 ? 4 : 
+      dataLength <= 50 ? 5 : 
+      dataLength <= 70 ? 7 : 10;
 
     // Full-width charts have ~2x horizontal space, so use more generous thresholds
     const labelIntervalFullWidth = 
       dataLength <= 14 ? 1 :
       dataLength <= 28 ? 2 :
       dataLength <= 42 ? 3 :
-      dataLength <= 70 ? 4 : 5;
+      dataLength <= 70 ? 4 : 
+      dataLength <= 90 ? 5 : 7;
 
-    return data.map((d, index) => ({
-      ...d,
-      showLabel: index % labelInterval === 0 || index === dataLength - 1,
-      showLabelFullWidth: index % labelIntervalFullWidth === 0 || index === dataLength - 1,
-    }));
+    return data.map((d, index) => {
+      // Count from right (end) to prioritize recent data
+      const distanceFromEnd = dataLength - 1 - index;
+      return {
+        ...d,
+        showLabel: distanceFromEnd % labelInterval === 0,
+        showLabelFullWidth: distanceFromEnd % labelIntervalFullWidth === 0,
+      };
+    });
   }, [entries]);
 
   // Calculate averages
