@@ -288,9 +288,9 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
                         if (distance && mph && paceDecimal) {
                           const paceFormatted = formatDurationMmSs(paceDecimal);
                           return [
-                            `${distance} mi in ${duration}`,  // Distance + Time combined
                             `${paceFormatted} /mi`,           // Pace in mm:ss
-                            `${mph} mph`                      // Speed
+                            `${mph} mph`,                      // Speed
+                            `${distance} mi in ${duration}`   // Distance + Time combined
                           ];
                         }
                         
