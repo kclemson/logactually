@@ -1,46 +1,44 @@
 
-## Add storageKey Props for Persistent Collapsed State
+
+## Friendlier Network Error Messages
 
 ### Summary
 
-Add unique `storageKey` props to all `CollapsibleSection` components in Settings.tsx and Trends.tsx so each section's expanded/collapsed state is persisted independently in localStorage.
+Replace the technical Supabase error message with a user-friendly alternative in both analyze hooks.
 
-### Changes to Trends.tsx
+### Error Message Change
 
-| Line | Section | storageKey to add |
-|------|---------|-------------------|
-| 556 | Food Trends | `storageKey="trends-food"` |
-| 775 | Weights Trends | `storageKey="trends-weights"` |
+| Current | New |
+|---------|-----|
+| `"failed to send a request to the edge function"` | `"Couldn't connect - please try again"` |
 
-### Changes to Settings.tsx
+### Files to Modify
 
-| Line | Section | storageKey to add |
-|------|---------|-------------------|
-| 112 | Account | `storageKey="settings-account"` |
-| 152 | Saved Meals | `storageKey="settings-meals"` |
-| 187 | Saved Routines | `storageKey="settings-routines"` |
-| 222 | Preferences | `storageKey="settings-preferences"` |
-| 265 | Export to CSV | `storageKey="settings-export"` |
-| 299 | About | `storageKey="settings-about"` |
+**1. `src/hooks/useAnalyzeWeights.ts`** (lines 36-40)
 
-### localStorage Keys Created
+Update the catch block to intercept the technical error:
 
-When users collapse/expand sections, these keys will be written:
+```typescript
+} catch (err) {
+  let message = err instanceof Error ? err.message : 'Failed to analyze workout';
+  
+  if (message.includes('failed to send a request to the edge function')) {
+    message = "Couldn't connect - please try again";
+  }
+  
+  setError(message);
+  console.error('Analyze weights error:', err);
+  return null;
+}
+```
 
-- `section-trends-food`
-- `section-trends-weights`
-- `section-settings-account`
-- `section-settings-meals`
-- `section-settings-routines`
-- `section-settings-preferences`
-- `section-settings-export`
-- `section-settings-about`
+**2. `src/hooks/useAnalyzeFood.ts`** (lines 54-57)
 
-### How It Works (Already Built)
+Apply the same pattern for consistency across both logging features.
 
-The `CollapsibleSection` component already:
-1. Reads from localStorage on mount using the `storageKey` prop
-2. Persists the new state on toggle
-3. Removes the key when returning to the default state (cleanup)
+### Technical Notes
 
-No changes to the component itself are needed.
+- Original error still logged to console for debugging
+- No changes to logic or flow
+- Inline error display continues to work as before
+
