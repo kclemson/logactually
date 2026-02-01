@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, LabelList } from "recharts";
 import { Card, CardContent, CardHeader, ChartTitle } from "@/components/ui/card";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useHasHover } from "@/hooks/use-has-hover";
 
 // Density-based spacing helpers
 const getFoodLabelOffsetPx = (dataLength: number): number =>
@@ -46,7 +46,7 @@ interface CompactTooltipProps {
   totalKey?: string;
   totalLabel?: string;
   totalColor?: string;
-  isMobile?: boolean;
+  isTouchDevice?: boolean;
   onGoToDay?: (date: string) => void;
   rawDate?: string;
 }
@@ -59,7 +59,7 @@ const CompactTooltip = ({
   totalKey, 
   totalLabel, 
   totalColor,
-  isMobile,
+  isTouchDevice,
   onGoToDay,
   rawDate,
 }: CompactTooltipProps) => {
@@ -97,7 +97,7 @@ const CompactTooltip = ({
             </p>
           );
         })}
-      {isMobile && onGoToDay && rawDate && (
+      {isTouchDevice && onGoToDay && rawDate && (
         <button 
           onClick={(e) => {
             e.stopPropagation();
@@ -137,7 +137,7 @@ export const FoodChart = ({
   useFullWidthLabels = false,
   height = "h-24",
 }: FoodChartProps) => {
-  const isMobile = useIsMobile();
+  const isTouchDevice = !useHasHover();
   const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
 
   // Reset active bar when chart data changes
@@ -146,7 +146,7 @@ export const FoodChart = ({
   }, [chartData]);
 
   const handleBarClick = (data: any, index: number) => {
-    if (isMobile) {
+    if (isTouchDevice) {
       setActiveBarIndex(prev => prev === index ? null : index);
     } else {
       onNavigate(data.rawDate);
@@ -160,7 +160,7 @@ export const FoodChart = ({
 
   return (
     <Card className="border-0 shadow-none relative">
-      {isMobile && activeBarIndex !== null && (
+      {isTouchDevice && activeBarIndex !== null && (
         <div 
           className="fixed inset-0 z-10" 
           onClick={() => setActiveBarIndex(null)}
@@ -185,16 +185,16 @@ export const FoodChart = ({
                 />
                 <Tooltip
                   wrapperStyle={{ pointerEvents: 'auto', zIndex: 50 }}
-                  active={isMobile ? activeBarIndex !== null : undefined}
-                  payload={isMobile && activeBarIndex !== null 
+                  active={isTouchDevice ? activeBarIndex !== null : undefined}
+                  payload={isTouchDevice && activeBarIndex !== null 
                     ? [{ payload: chartData[activeBarIndex] }] 
                     : undefined}
-                  label={isMobile && activeBarIndex !== null 
+                  label={isTouchDevice && activeBarIndex !== null 
                     ? chartData[activeBarIndex]?.date 
                     : undefined}
                   content={
                     <CompactTooltip
-                      isMobile={isMobile}
+                      isTouchDevice={isTouchDevice}
                       onGoToDay={handleGoToDay}
                       rawDate={activeBarIndex !== null ? chartData[activeBarIndex]?.rawDate : undefined}
                     />
@@ -264,7 +264,7 @@ export const StackedMacroChart = ({
   labelColor,
   height = "h-24",
 }: StackedMacroChartProps) => {
-  const isMobile = useIsMobile();
+  const isTouchDevice = !useHasHover();
   const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
 
   useEffect(() => {
@@ -272,7 +272,7 @@ export const StackedMacroChart = ({
   }, [chartData]);
 
   const handleBarClick = (data: any, index: number) => {
-    if (isMobile) {
+    if (isTouchDevice) {
       setActiveBarIndex(prev => prev === index ? null : index);
     } else {
       onNavigate(data.rawDate);
@@ -286,7 +286,7 @@ export const StackedMacroChart = ({
 
   return (
     <Card className="border-0 shadow-none relative">
-      {isMobile && activeBarIndex !== null && (
+      {isTouchDevice && activeBarIndex !== null && (
         <div 
           className="fixed inset-0 z-10" 
           onClick={() => setActiveBarIndex(null)}
@@ -319,8 +319,8 @@ export const StackedMacroChart = ({
                 />
                 <Tooltip
                   wrapperStyle={{ pointerEvents: 'auto', zIndex: 50 }}
-                  active={isMobile ? activeBarIndex !== null : undefined}
-                  payload={isMobile && activeBarIndex !== null 
+                  active={isTouchDevice ? activeBarIndex !== null : undefined}
+                  payload={isTouchDevice && activeBarIndex !== null 
                     ? bars.map(bar => ({ 
                         payload: chartData[activeBarIndex],
                         dataKey: bar.dataKey,
@@ -329,7 +329,7 @@ export const StackedMacroChart = ({
                         color: bar.color,
                       }))
                     : undefined}
-                  label={isMobile && activeBarIndex !== null 
+                  label={isTouchDevice && activeBarIndex !== null 
                     ? chartData[activeBarIndex]?.date 
                     : undefined}
                   content={
@@ -338,7 +338,7 @@ export const StackedMacroChart = ({
                       totalKey={totalKey}
                       totalLabel={totalLabel}
                       totalColor={totalColor}
-                      isMobile={isMobile}
+                      isTouchDevice={isTouchDevice}
                       onGoToDay={handleGoToDay}
                       rawDate={activeBarIndex !== null ? chartData[activeBarIndex]?.rawDate : undefined}
                     />
@@ -400,7 +400,7 @@ export const VolumeChart = ({
   unit,
   onNavigate,
 }: VolumeChartProps) => {
-  const isMobile = useIsMobile();
+  const isTouchDevice = !useHasHover();
   const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
 
   useEffect(() => {
@@ -408,7 +408,7 @@ export const VolumeChart = ({
   }, [chartData]);
 
   const handleBarClick = (data: any, index: number) => {
-    if (isMobile) {
+    if (isTouchDevice) {
       setActiveBarIndex(prev => prev === index ? null : index);
     } else {
       onNavigate(data.rawDate);
@@ -422,7 +422,7 @@ export const VolumeChart = ({
 
   return (
     <Card className="border-0 shadow-none relative">
-      {isMobile && activeBarIndex !== null && (
+      {isTouchDevice && activeBarIndex !== null && (
         <div 
           className="fixed inset-0 z-10" 
           onClick={() => setActiveBarIndex(null)}
@@ -447,17 +447,17 @@ export const VolumeChart = ({
                 />
                 <Tooltip
                   wrapperStyle={{ pointerEvents: 'auto', zIndex: 50 }}
-                  active={isMobile ? activeBarIndex !== null : undefined}
-                  payload={isMobile && activeBarIndex !== null 
+                  active={isTouchDevice ? activeBarIndex !== null : undefined}
+                  payload={isTouchDevice && activeBarIndex !== null 
                     ? [{ payload: chartData[activeBarIndex] }] 
                     : undefined}
-                  label={isMobile && activeBarIndex !== null 
+                  label={isTouchDevice && activeBarIndex !== null 
                     ? chartData[activeBarIndex]?.date 
                     : undefined}
                   content={
                     <CompactTooltip
                       formatter={(value: number) => `${value.toLocaleString()} ${unit}`}
-                      isMobile={isMobile}
+                      isTouchDevice={isTouchDevice}
                       onGoToDay={handleGoToDay}
                       rawDate={activeBarIndex !== null ? chartData[activeBarIndex]?.rawDate : undefined}
                     />
