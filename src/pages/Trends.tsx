@@ -297,6 +297,7 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
                   height={16}
                 />
                 <Tooltip
+                  wrapperStyle={{ pointerEvents: 'auto', zIndex: 50 }}
                   active={isMobile ? activeBarIndex !== null : undefined}
                   payload={isMobile && activeBarIndex !== null 
                     ? [{ payload: chartData[activeBarIndex] }] 
