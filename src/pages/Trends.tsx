@@ -18,7 +18,7 @@ import { useMergeExercises } from "@/hooks/useMergeExercises";
 import { DuplicateExercisePrompt, type DuplicateGroup } from "@/components/DuplicateExercisePrompt";
 import { getMuscleGroupDisplayWithTooltip, hasDistanceTracking } from "@/lib/exercise-metadata";
 import { cn } from "@/lib/utils";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useHasHover } from "@/hooks/use-has-hover";
 import { FoodChart, StackedMacroChart, VolumeChart } from "@/components/trends/FoodChart";
 
 // Chart color palette (hex RGB format for easy editing)
@@ -38,8 +38,8 @@ const CompactTooltip = ({
   totalKey, 
   totalLabel, 
   totalColor,
-  // Mobile props
-  isMobile,
+  // Touch device props
+  isTouchDevice,
   onGoToDay,
   rawDate,
 }: any) => {
@@ -79,8 +79,8 @@ const CompactTooltip = ({
             </p>
           );
         })}
-      {/* Mobile "Go to day" button */}
-      {isMobile && onGoToDay && rawDate && (
+      {/* Touch device "Go to day" button */}
+      {isTouchDevice && onGoToDay && rawDate && (
         <button 
           onClick={(e) => {
             e.stopPropagation();
@@ -104,7 +104,7 @@ const periods = [
 const LBS_TO_KG = 0.453592;
 
 const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend; unit: WeightUnit; onBarClick: (date: string) => void }) => {
-  const isMobile = useIsMobile();
+  const isTouchDevice = !useHasHover();
   const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
   
   // Detect cardio exercise: has duration data and no meaningful weight
@@ -123,7 +123,7 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
   }, [showMph]);
 
   const handleBarClick = (data: any, index: number) => {
-    if (isMobile) {
+    if (isTouchDevice) {
       // Toggle: tap same bar to close, different bar to switch
       setActiveBarIndex(prev => prev === index ? null : index);
     } else {
@@ -249,8 +249,8 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
 
   return (
     <Card className="border-0 shadow-none relative">
-      {/* Click-away overlay to dismiss tooltip on mobile */}
-      {isMobile && activeBarIndex !== null && (
+      {/* Click-away overlay to dismiss tooltip on touch devices */}
+      {isTouchDevice && activeBarIndex !== null && (
         <div 
           className="fixed inset-0 z-10" 
           onClick={() => setActiveBarIndex(null)}
@@ -298,16 +298,16 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
                 />
                 <Tooltip
                   wrapperStyle={{ pointerEvents: 'auto', zIndex: 50 }}
-                  active={isMobile ? activeBarIndex !== null : undefined}
-                  payload={isMobile && activeBarIndex !== null 
+                  active={isTouchDevice ? activeBarIndex !== null : undefined}
+                  payload={isTouchDevice && activeBarIndex !== null 
                     ? [{ payload: chartData[activeBarIndex] }] 
                     : undefined}
-                  label={isMobile && activeBarIndex !== null 
+                  label={isTouchDevice && activeBarIndex !== null 
                     ? chartData[activeBarIndex]?.dateLabel 
                     : undefined}
                   content={
                     <CompactTooltip
-                      isMobile={isMobile}
+                      isTouchDevice={isTouchDevice}
                       onGoToDay={handleGoToDay}
                       rawDate={activeBarIndex !== null ? chartData[activeBarIndex]?.rawDate : undefined}
                       formatter={(value: number, name: string, entry: any) => {
