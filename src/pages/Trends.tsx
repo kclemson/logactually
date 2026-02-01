@@ -13,7 +13,7 @@ import { useWeightTrends, ExerciseTrend, WeightPoint } from "@/hooks/useWeightTr
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useUserSettings } from "@/hooks/useUserSettings";
-import type { WeightUnit } from "@/lib/weight-units";
+import { type WeightUnit, formatDurationMmSs } from "@/lib/weight-units";
 import { useMergeExercises } from "@/hooks/useMergeExercises";
 import { DuplicateExercisePrompt, type DuplicateGroup } from "@/components/DuplicateExercisePrompt";
 import { getMuscleGroupDisplayWithTooltip, isCardioExercise, hasDistanceTracking } from "@/lib/exercise-metadata";
@@ -84,9 +84,19 @@ const CompactTooltip = ({ active, payload, label, formatter, totalKey, totalLabe
           const displayValue = formatter
             ? formatter(entry.value, entry.name, entry, index, entry.payload)
             : `${entry.name}: ${Math.round(entry.value)}`;
+          
+          // Handle array returns for multi-line display
+          if (Array.isArray(displayValue)) {
+            return displayValue.map((line: string, lineIndex: number) => (
+              <p key={`${entry.dataKey || index}-${lineIndex}`} className="text-[10px]" style={{ color: entry.color }}>
+                {line}
+              </p>
+            ));
+          }
+          
           return (
             <p key={entry.dataKey || index} className="text-[10px]" style={{ color: entry.color }}>
-              {Array.isArray(displayValue) ? displayValue[0] : displayValue}
+              {displayValue}
             </p>
           );
         })}
@@ -269,16 +279,16 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
                   <CompactTooltip
                     formatter={(value: number, name: string, entry: any) => {
                       if (isCardio) {
-                        const duration = Number(entry.payload.duration_minutes || 0).toFixed(1);
+                        const duration = formatDurationMmSs(Number(entry.payload.duration_minutes || 0));
                         const distance = entry.payload.distance_miles;
                         if (showMph && entry.payload.mph) {
                           const pace = entry.payload.pace;
-                          return `${entry.payload.mph} mph · ${pace} min/mi · ${distance} mi`;
+                          return [`${entry.payload.mph} mph`, `${pace} min/mi`, `${distance} mi`];
                         }
                         if (distance) {
-                          return `${duration} min · ${distance} mi`;
+                          return [duration, `${distance} mi`];
                         }
-                        return `${duration} min`;
+                        return duration;
                       }
                       const { sets, reps, weight } = entry.payload;
                       return `${sets} sets × ${reps} reps @ ${weight} ${unit}`;

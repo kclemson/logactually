@@ -17,7 +17,7 @@ import {
 import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
-import { type WeightUnit, formatWeight, parseWeightToLbs, getWeightUnitLabel } from '@/lib/weight-units';
+import { type WeightUnit, formatWeight, parseWeightToLbs, getWeightUnitLabel, formatDurationMmSs } from '@/lib/weight-units';
 
 type EditableFieldKey = 'description' | 'sets' | 'reps' | 'weight_lbs';
 
@@ -616,7 +616,7 @@ export function WeightItemsTable({
                     {cardioItems.map((ex, idx) => {
                       const parts: string[] = [];
                       if ((ex.duration_minutes ?? 0) > 0) {
-                        parts.push(`${Number(ex.duration_minutes).toFixed(1)} min`);
+                        parts.push(formatDurationMmSs(Number(ex.duration_minutes)));
                       }
                       if ((ex.distance_miles ?? 0) > 0) {
                         parts.push(`${ex.distance_miles} mi`);

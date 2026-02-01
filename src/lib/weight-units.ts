@@ -25,3 +25,10 @@ export function parseWeightToLbs(value: number, unit: WeightUnit): number {
 export function getWeightUnitLabel(unit: WeightUnit): string {
   return unit === 'kg' ? 'Kg' : 'Lbs';
 }
+
+export function formatDurationMmSs(decimalMinutes: number): string {
+  const totalSeconds = Math.round(decimalMinutes * 60);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}

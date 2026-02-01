@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import { WeightSet } from '@/types/weight';
+import { formatDurationMmSs } from '@/lib/weight-units';
 
 interface SaveRoutineDialogProps {
   open: boolean;
@@ -30,7 +31,7 @@ interface SaveRoutineDialogProps {
 function formatExerciseSummary(exercise: WeightSet, includeSpace = true): string {
   const isCardio = exercise.weight_lbs === 0 && (exercise.duration_minutes ?? 0) > 0;
   if (isCardio) {
-    return `${exercise.description} (${Number(exercise.duration_minutes).toFixed(1)} min)`;
+    return `${exercise.description} (${formatDurationMmSs(Number(exercise.duration_minutes))})`;
   }
   const separator = includeSpace ? ' @ ' : ' @ ';
   return `${exercise.description} (${exercise.sets}x${exercise.reps}${separator}${exercise.weight_lbs} lbs)`;
