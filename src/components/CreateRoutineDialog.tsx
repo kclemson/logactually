@@ -5,6 +5,7 @@ import { useAnalyzeWeights } from '@/hooks/useAnalyzeWeights';
 import { useSaveRoutine } from '@/hooks/useSavedRoutines';
 import { useEditableItems } from '@/hooks/useEditableItems';
 import { WeightSet, SavedRoutine, SavedExerciseSet, WeightEditableField } from '@/types/weight';
+import { formatDurationMmSs } from '@/lib/weight-units';
 
 interface CreateRoutineDialogProps {
   open: boolean;
@@ -27,7 +28,7 @@ const WEIGHTS_CONFIG: CreateSavedDialogConfig<WeightSet, SavedRoutine> = {
     const first = items[0];
     const isCardio = first.weight_lbs === 0 && (first.duration_minutes ?? 0) > 0;
     if (isCardio) {
-      return `${first.description} (${Number(first.duration_minutes).toFixed(1)} min)`;
+      return `${first.description} (${formatDurationMmSs(Number(first.duration_minutes))})`;
     }
     return `${first.description} (${first.sets}x${first.reps} @ ${first.weight_lbs} lbs)`;
   },
