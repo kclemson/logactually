@@ -399,8 +399,9 @@ export function FoodItemsTable({
               className={cn(
                 'grid gap-0.5 items-center group',
                 gridCols,
-                // Add left padding for inset shadow when entry is new
+                // Add padding for inset shadow when entry is new
                 entryIsNew && "pl-0.5",
+                entryIsNew && isLastInEntry && "pb-0.5",
                 // Grouped highlight: apply segmented outline to create connected visual
                 entryIsNew && isFirstInEntry && !isLastInEntry && "rounded-t-md animate-outline-fade-top",
                 entryIsNew && !isFirstInEntry && isLastInEntry && "rounded-b-md animate-outline-fade-bottom",
