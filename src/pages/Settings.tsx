@@ -109,7 +109,7 @@ export default function Settings() {
   return (
     <div className="space-y-4">
       {/* Account section */}
-      <CollapsibleSection title="Account" icon={User}>
+      <CollapsibleSection title="Account" icon={User} storageKey="settings-account">
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div>
@@ -149,7 +149,7 @@ export default function Settings() {
       </CollapsibleSection>
 
       {/* Saved Meals - frequently accessed */}
-      <CollapsibleSection title="Saved Meals" icon={Star}>
+      <CollapsibleSection title="Saved Meals" icon={Star} storageKey="settings-meals">
         {/* Add button as first row */}
         {!isReadOnly && (
           <button
@@ -184,7 +184,7 @@ export default function Settings() {
 
       {/* Saved Routines - weight tracking (gated by feature flag or admin) */}
       {showWeights && (
-        <CollapsibleSection title="Saved Routines" icon={Dumbbell}>
+        <CollapsibleSection title="Saved Routines" icon={Dumbbell} storageKey="settings-routines">
           {/* Add button as first row */}
           {!isReadOnly && (
             <button
@@ -219,7 +219,7 @@ export default function Settings() {
       )}
 
       {/* Preferences - theme and units */}
-      <CollapsibleSection title="Preferences" icon={Settings2}>
+      <CollapsibleSection title="Preferences" icon={Settings2} storageKey="settings-preferences">
         <div className="space-y-4">
           <div>
             <p className="text-xs text-muted-foreground mb-2">Theme</p>
@@ -262,7 +262,7 @@ export default function Settings() {
       </CollapsibleSection>
 
       {/* Export as CSV */}
-      <CollapsibleSection title="Export to CSV" icon={Download}>
+      <CollapsibleSection title="Export to CSV" icon={Download} storageKey="settings-export">
         <div className="space-y-1">
           <button 
             onClick={exportDailyTotals} 
@@ -296,7 +296,7 @@ export default function Settings() {
       </CollapsibleSection>
 
       {/* About section */}
-      <CollapsibleSection title="About" icon={Info} defaultOpen={true}>
+      <CollapsibleSection title="About" icon={Info} defaultOpen={true} storageKey="settings-about">
         <div className="space-y-2">
           <Link
             to="/privacy"

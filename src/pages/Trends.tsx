@@ -553,7 +553,7 @@ const Trends = () => {
       </div>
 
       {/* Food Trends Section */}
-      <CollapsibleSection title="Food Trends" icon={UtensilsCrossed} defaultOpen={true}>
+      <CollapsibleSection title="Food Trends" icon={UtensilsCrossed} defaultOpen={true} storageKey="trends-food">
         <div className="grid grid-cols-4 gap-2">
           {charts.map(({ key, label }) => (
             <Card key={key} className="text-center border-0 shadow-none">
@@ -772,7 +772,7 @@ const Trends = () => {
 
       {/* Weight Trends Section */}
       {showWeights && (
-        <CollapsibleSection title="Weights Trends" icon={Dumbbell} iconClassName="text-[hsl(262_83%_58%)]" defaultOpen={true}>
+        <CollapsibleSection title="Weights Trends" icon={Dumbbell} iconClassName="text-[hsl(262_83%_58%)]" defaultOpen={true} storageKey="trends-weights">
           {weightLoading ? (
             <div className="flex justify-center py-8">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
