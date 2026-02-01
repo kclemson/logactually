@@ -197,8 +197,13 @@ serve(async (req) => {
       };
     });
 
+    // Filter out placeholder items (all macros zero = AI couldn't identify real food)
+    const validItems = mergedItems.filter(item => 
+      item.calories > 0 || item.protein > 0 || item.carbs > 0 || item.fat > 0
+    );
+
     // Calculate totals
-    const totals = mergedItems.reduce(
+    const totals = validItems.reduce(
       (acc, item) => ({
         calories: acc.calories + item.calories,
         protein: acc.protein + item.protein,
