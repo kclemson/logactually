@@ -1,30 +1,50 @@
 
 
-## Change Calorie Chart Color to Brighter Blue (Hex)
+## Add Persistence to Collapsible Sections on Trends & Settings
 
 ### Summary
 
-Update the calorie chart color from dark blue to the brighter Tailwind blue-600 equivalent, using hex notation for easier hand-editing.
+The `CollapsibleSection` component already has localStorage persistence built in via the `storageKey` prop - we just need to add unique `storageKey` values to each section. Currently, all sections fall back to using `'default'` as the key, which would make them all share state.
 
-### Color Change
+### Changes Required
 
-| Before | After |
-|--------|-------|
-| `#0033CC` | `#2563EB` (Tailwind blue-600) |
+**1. Trends.tsx** - Add `storageKey` to each section:
 
-### Changes to `src/pages/Trends.tsx`
+| Section | storageKey |
+|---------|------------|
+| Food Trends | `"trends-food"` |
+| Weights Trends | `"trends-weights"` |
 
-**1. Update CHART_COLORS.calories constant (line 24)**
+**2. Settings.tsx** - Add `storageKey` to each section:
 
-```tsx
-calories: "#2563EB",  // Was: "#0033CC"
-```
+| Section | storageKey |
+|---------|------------|
+| Account | `"settings-account"` |
+| Saved Meals | `"settings-meals"` |
+| Saved Routines | `"settings-routines"` |
+| Preferences | `"settings-preferences"` |
+| Export to CSV | `"settings-export"` |
+| About | `"settings-about"` |
 
-**2. Update tooltip fallback color (line 76)**
+### How It Works
 
-```tsx
-style={{ color: totalColor || '#2563EB' }}
-```
+The `CollapsibleSection` component already:
+1. Reads from localStorage on mount: `localStorage.getItem(`section-${storageKey}`)`
+2. Persists on toggle: `localStorage.setItem(key, String(newValue))`
+3. Cleans up when returning to default: `localStorage.removeItem(key)`
 
-This matches the default Tailwind `blue-600` which is close to what's used in the date navigation (`text-blue-600 dark:text-blue-400`).
+### localStorage Keys Created
+
+- `section-trends-food`
+- `section-trends-weights`
+- `section-settings-account`
+- `section-settings-meals`
+- `section-settings-routines`
+- `section-settings-preferences`
+- `section-settings-export`
+- `section-settings-about`
+
+### No Other Changes Needed
+
+The component handles everything else - no additional code required.
 
