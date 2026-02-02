@@ -69,142 +69,142 @@ interface PolishedFoodEntry {
 const POLISHED_FOODS: Record<string, Record<string, PolishedFoodEntry[]>> = {
   shorthand: {
     breakfast: [
-      { rawInput: 'eggs and toast', items: [
+      { rawInput: '2 eggs scrambled with buttered toast', items: [
         { description: 'Scrambled Eggs', portion: '2 large', calories: 182, protein: 12, carbs: 2, fat: 14 },
         { description: 'Buttered Toast', portion: '2 slices', calories: 186, protein: 4, carbs: 26, fat: 8 },
       ]},
-      { rawInput: '2 eggs scrambled', items: [
+      { rawInput: 'scrambled eggs, 2 large', items: [
         { description: 'Scrambled Eggs', portion: '2 large', calories: 182, protein: 12, carbs: 2, fat: 14 },
       ]},
-      { rawInput: 'oatmeal with banana', items: [
+      { rawInput: 'oatmeal with sliced banana', items: [
         { description: 'Oatmeal', portion: '1 cup cooked', calories: 158, protein: 6, carbs: 27, fat: 3 },
         { description: 'Banana', portion: '1 medium', calories: 105, protein: 1, carbs: 27, fat: 0 },
       ]},
-      { rawInput: 'cereal with milk', items: [
+      { rawInput: 'bowl of cheerios with 2% milk', items: [
         { description: 'Breakfast Cereal', portion: '1 cup', calories: 150, protein: 3, carbs: 33, fat: 1 },
         { description: 'Milk', portion: '1 cup 2%', calories: 122, protein: 8, carbs: 12, fat: 5 },
       ]},
-      { rawInput: 'yogurt and granola', items: [
+      { rawInput: 'greek yogurt with granola and blueberries', items: [
         { description: 'Greek Yogurt', portion: '1 cup plain', calories: 130, protein: 17, carbs: 8, fat: 4 },
         { description: 'Granola', portion: '1/2 cup', calories: 210, protein: 5, carbs: 34, fat: 7 },
       ]},
-      { rawInput: 'bagel with cream cheese', items: [
+      { rawInput: 'everything bagel with cream cheese', items: [
         { description: 'Plain Bagel', portion: '1 large', calories: 277, protein: 10, carbs: 54, fat: 2 },
         { description: 'Cream Cheese', portion: '2 tbsp', calories: 99, protein: 2, carbs: 2, fat: 10 },
       ]},
-      { rawInput: 'avocado toast', items: [
+      { rawInput: 'avocado toast on sourdough', items: [
         { description: 'Avocado Toast', portion: '2 slices whole wheat', calories: 320, protein: 8, carbs: 28, fat: 22 },
       ]},
-      { rawInput: 'protein shake', items: [
+      { rawInput: 'whey protein shake with almond milk', items: [
         { description: 'Whey Protein Shake', portion: '1 scoop with water', calories: 120, protein: 24, carbs: 3, fat: 1 },
       ]},
-      { rawInput: 'overnight oats', items: [
+      { rawInput: 'overnight oats with chia seeds and berries', items: [
         { description: 'Overnight Oats', portion: '1 jar with berries', calories: 340, protein: 12, carbs: 52, fat: 10 },
       ]},
-      { rawInput: 'english muffin with pb', items: [
+      { rawInput: 'english muffin with peanut butter', items: [
         { description: 'English Muffin', portion: '1 whole wheat', calories: 134, protein: 5, carbs: 26, fat: 1 },
         { description: 'Peanut Butter', portion: '2 tbsp', calories: 188, protein: 8, carbs: 6, fat: 16 },
       ]},
     ],
     lunch: [
-      { rawInput: 'turkey sandwich', items: [
+      { rawInput: 'turkey sandwich on wheat with lettuce and tomato', items: [
         { description: 'Turkey Sandwich', portion: 'on whole wheat with lettuce, tomato', calories: 380, protein: 28, carbs: 36, fat: 12 },
       ]},
-      { rawInput: 'salad with chicken', items: [
+      { rawInput: 'big salad with grilled chicken', items: [
         { description: 'Grilled Chicken Salad', portion: 'mixed greens, veggies', calories: 350, protein: 32, carbs: 18, fat: 16 },
       ]},
-      { rawInput: 'leftover pasta', items: [
+      { rawInput: 'leftover spaghetti, about 2 cups', items: [
         { description: 'Pasta with Marinara', portion: '2 cups', calories: 420, protein: 14, carbs: 72, fat: 8 },
       ]},
-      { rawInput: 'soup and bread', items: [
+      { rawInput: 'chicken noodle soup with crusty bread', items: [
         { description: 'Chicken Noodle Soup', portion: '1.5 cups', calories: 180, protein: 12, carbs: 20, fat: 5 },
         { description: 'Crusty Bread', portion: '1 slice', calories: 120, protein: 4, carbs: 22, fat: 2 },
       ]},
-      { rawInput: 'burrito bowl', items: [
+      { rawInput: 'chicken burrito bowl with rice beans and guac', items: [
         { description: 'Burrito Bowl', portion: 'rice, beans, chicken, salsa', calories: 580, protein: 38, carbs: 62, fat: 18 },
       ]},
-      { rawInput: 'sushi (8 pieces)', items: [
+      { rawInput: 'salmon roll, 8 pieces', items: [
         { description: 'Salmon Sushi Roll', portion: '8 pieces', calories: 320, protein: 16, carbs: 44, fat: 8 },
       ]},
-      { rawInput: 'grilled cheese', items: [
+      { rawInput: 'grilled cheese sandwich with tomato soup', items: [
         { description: 'Grilled Cheese Sandwich', portion: '1 sandwich', calories: 440, protein: 16, carbs: 34, fat: 28 },
       ]},
-      { rawInput: 'chicken wrap', items: [
+      { rawInput: 'chicken wrap with veggies and ranch', items: [
         { description: 'Grilled Chicken Wrap', portion: 'with veggies', calories: 420, protein: 30, carbs: 38, fat: 16 },
       ]},
-      { rawInput: 'poke bowl', items: [
+      { rawInput: 'poke bowl with ahi tuna and rice', items: [
         { description: 'Ahi Tuna Poke Bowl', portion: 'with rice and veggies', calories: 520, protein: 32, carbs: 58, fat: 16 },
       ]},
-      { rawInput: 'mediterranean bowl', items: [
+      { rawInput: 'falafel bowl with hummus and tabbouleh', items: [
         { description: 'Mediterranean Bowl', portion: 'falafel, hummus, tabbouleh', calories: 580, protein: 18, carbs: 62, fat: 28 },
       ]},
     ],
     dinner: [
-      { rawInput: 'salmon and veggies', items: [
+      { rawInput: 'baked salmon with roasted vegetables', items: [
         { description: 'Baked Salmon', portion: '6 oz fillet', calories: 350, protein: 38, carbs: 0, fat: 20 },
         { description: 'Roasted Vegetables', portion: '1.5 cups mixed', calories: 120, protein: 3, carbs: 18, fat: 5 },
       ]},
-      { rawInput: 'chicken stir fry', items: [
+      { rawInput: 'chicken stir fry with mixed veggies', items: [
         { description: 'Chicken Stir Fry', portion: 'with vegetables and sauce', calories: 420, protein: 34, carbs: 28, fat: 18 },
       ]},
-      { rawInput: 'pasta with meat sauce', items: [
+      { rawInput: 'spaghetti with meat sauce, 2 cups', items: [
         { description: 'Spaghetti Bolognese', portion: '2 cups', calories: 580, protein: 28, carbs: 68, fat: 20 },
       ]},
-      { rawInput: 'tacos (3)', items: [
+      { rawInput: '3 beef tacos with cheese and salsa', items: [
         { description: 'Beef Tacos', portion: '3 soft shell', calories: 540, protein: 28, carbs: 42, fat: 28 },
       ]},
-      { rawInput: 'pizza (2 slices)', items: [
+      { rawInput: '2 slices pepperoni pizza', items: [
         { description: 'Pepperoni Pizza', portion: '2 large slices', calories: 560, protein: 22, carbs: 56, fat: 28 },
       ]},
-      { rawInput: 'burger and fries', items: [
+      { rawInput: 'cheeseburger with medium fries', items: [
         { description: 'Cheeseburger', portion: '1/4 lb with bun', calories: 530, protein: 28, carbs: 40, fat: 30 },
         { description: 'French Fries', portion: 'medium', calories: 380, protein: 5, carbs: 48, fat: 18 },
       ]},
-      { rawInput: 'grilled chicken and rice', items: [
+      { rawInput: 'grilled chicken breast with brown rice', items: [
         { description: 'Grilled Chicken Breast', portion: '6 oz', calories: 280, protein: 52, carbs: 0, fat: 6 },
         { description: 'Brown Rice', portion: '1 cup cooked', calories: 216, protein: 5, carbs: 45, fat: 2 },
       ]},
-      { rawInput: 'shrimp scampi', items: [
+      { rawInput: 'shrimp scampi over linguine', items: [
         { description: 'Shrimp Scampi', portion: 'over linguine', calories: 620, protein: 34, carbs: 58, fat: 26 },
       ]},
-      { rawInput: 'beef and broccoli', items: [
+      { rawInput: 'beef and broccoli with steamed rice', items: [
         { description: 'Beef and Broccoli', portion: 'with steamed rice', calories: 520, protein: 32, carbs: 48, fat: 22 },
       ]},
-      { rawInput: 'baked chicken thighs', items: [
+      { rawInput: '2 baked chicken thighs, bone-in', items: [
         { description: 'Baked Chicken Thighs', portion: '2 thighs bone-in', calories: 440, protein: 42, carbs: 0, fat: 28 },
       ]},
     ],
     snack: [
-      { rawInput: 'apple with peanut butter', items: [
+      { rawInput: 'apple slices with 2 tbsp peanut butter', items: [
         { description: 'Apple', portion: '1 medium', calories: 95, protein: 0, carbs: 25, fat: 0 },
         { description: 'Peanut Butter', portion: '2 tbsp', calories: 188, protein: 8, carbs: 6, fat: 16 },
       ]},
-      { rawInput: 'handful of almonds', items: [
+      { rawInput: 'handful of almonds, about 20', items: [
         { description: 'Almonds', portion: '1/4 cup (about 23)', calories: 207, protein: 8, carbs: 7, fat: 18 },
       ]},
-      { rawInput: 'protein bar', items: [
+      { rawInput: 'chocolate chip protein bar', items: [
         { description: 'Protein Bar', portion: '1 bar', calories: 200, protein: 20, carbs: 22, fat: 7 },
       ]},
-      { rawInput: 'banana', items: [
+      { rawInput: '1 medium banana', items: [
         { description: 'Banana', portion: '1 medium', calories: 105, protein: 1, carbs: 27, fat: 0 },
       ]},
-      { rawInput: 'greek yogurt', items: [
+      { rawInput: 'plain greek yogurt, 1 cup', items: [
         { description: 'Greek Yogurt', portion: '1 cup plain', calories: 130, protein: 17, carbs: 8, fat: 4 },
       ]},
-      { rawInput: 'cheese stick', items: [
+      { rawInput: 'string cheese, 2 sticks', items: [
         { description: 'String Cheese', portion: '1 stick', calories: 80, protein: 7, carbs: 1, fat: 6 },
       ]},
-      { rawInput: 'carrots and hummus', items: [
+      { rawInput: 'baby carrots with hummus', items: [
         { description: 'Baby Carrots', portion: '1 cup', calories: 52, protein: 1, carbs: 12, fat: 0 },
         { description: 'Hummus', portion: '1/4 cup', calories: 140, protein: 5, carbs: 12, fat: 9 },
       ]},
-      { rawInput: 'trail mix', items: [
+      { rawInput: 'handful of trail mix', items: [
         { description: 'Trail Mix', portion: '1/4 cup', calories: 173, protein: 5, carbs: 16, fat: 11 },
       ]},
-      { rawInput: 'popcorn', items: [
+      { rawInput: '3 cups popcorn, air popped', items: [
         { description: 'Popcorn', portion: '3 cups air-popped', calories: 93, protein: 3, carbs: 19, fat: 1 },
       ]},
-      { rawInput: 'rice cakes', items: [
+      { rawInput: '2 rice cakes with almond butter', items: [
         { description: 'Rice Cakes', portion: '2 cakes', calories: 70, protein: 2, carbs: 14, fat: 1 },
       ]},
     ],
