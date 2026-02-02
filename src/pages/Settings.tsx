@@ -264,10 +264,10 @@ export default function Settings() {
               <p className="text-xs text-muted-foreground mb-2">Show Weights</p>
               <button
                 onClick={() => updateSettings({ showWeights: !settings.showWeights })}
-                className={cn(
-                  "w-12 h-6 rounded-full transition-colors relative",
-                  settings.showWeights ? "bg-primary" : "bg-muted"
-                )}
+              className={cn(
+                "w-12 h-6 rounded-full transition-colors relative border",
+                settings.showWeights ? "bg-primary border-primary" : "bg-muted border-border"
+              )}
               >
                 <span
                   className={cn(
