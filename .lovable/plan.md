@@ -1,44 +1,48 @@
 
 
-## Fix: Preserve User-Entered Name in Create Saved Dialog
+## Hide DevToolsPanel with `hideAdmin=true` URL Parameter
 
-Prevent the fallback name from overwriting a name the user has already entered.
+Apply the same hiding logic used in BottomNav to the DevToolsPanel in Layout.
 
 ---
 
-### Root Cause
+### Current Behavior
 
-In `CreateSavedDialog.tsx` line 128, after analysis completes, the code unconditionally sets the name:
-
-```tsx
-setName(config.getFallbackName(result));
-```
-
-This overwrites any name the user typed before submitting the ingredient description.
+- `BottomNav.tsx` checks for `hideAdmin=true` and hides the Admin tab
+- `Layout.tsx` renders `DevToolsPanel` based only on `isAdmin` - ignoring the URL parameter
 
 ---
 
 ### Fix
 
-Only set the fallback name if the user hasn't already entered one:
-
-```tsx
-// Before
-setName(config.getFallbackName(result));
-
-// After
-setName(prevName => prevName.trim() ? prevName : config.getFallbackName(result));
-```
-
-This uses the functional update form of `setName` to check the current value:
-- If user already typed a name → keep it
-- If name is empty → use the fallback from first item
+Update `Layout.tsx` to:
+1. Import `useSearchParams` from react-router-dom
+2. Check for `hideAdmin=true` parameter
+3. Only render `DevToolsPanel` when admin AND not hidden
 
 ---
 
-### File Changed
+### Code Changes
+
+**`src/components/Layout.tsx`**
+
+```tsx
+// Add to imports
+import { Outlet, useSearchParams } from 'react-router-dom';
+
+// Inside Layout component, add:
+const [searchParams] = useSearchParams();
+const hideAdmin = searchParams.get('hideAdmin') === 'true';
+
+// Update render condition (line 61)
+{isAdmin && !hideAdmin && <DevToolsPanel />}
+```
+
+---
+
+### Files Changed
 
 | File | Change |
 |------|--------|
-| `src/components/CreateSavedDialog.tsx` | Line 128: Preserve existing name when setting fallback |
+| `src/components/Layout.tsx` | Add `hideAdmin` URL parameter check for DevToolsPanel |
 
