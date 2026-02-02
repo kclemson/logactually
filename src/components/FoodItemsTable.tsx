@@ -56,6 +56,8 @@ interface FoodItemsTableProps {
   entrySourceMealIds?: Set<string>;
   /** When true, show inline labels after numeric values (e.g., "250 cal") */
   showInlineLabels?: boolean;
+  /** When false, hide the macro percentages row in totals (default: true) */
+  showMacroPercentages?: boolean;
 }
 
 export function FoodItemsTable({
@@ -79,6 +81,7 @@ export function FoodItemsTable({
   entryMealNames,
   entrySourceMealIds,
   showInlineLabels = false,
+  showMacroPercentages = true,
 }: FoodItemsTableProps) {
   // Read-only mode blocks saves
   const { isReadOnly, triggerOverlay } = useReadOnlyContext();
@@ -300,9 +303,11 @@ export function FoodItemsTable({
         <span className="px-1 text-heading text-center">{Math.round(totals.calories)}</span>
         <span className="px-1 text-heading text-center">
           <div>{Math.round(totals.protein)}/{Math.round(totals.carbs)}/{Math.round(totals.fat)}</div>
-        <div className="text-[9px] text-muted-foreground font-normal">
-          {proteinPct}%/{carbsPct}%/{fatPct}%
-        </div>
+          {showMacroPercentages && (
+            <div className="text-[9px] text-muted-foreground font-normal">
+              {proteinPct}%/{carbsPct}%/{fatPct}%
+            </div>
+          )}
         </span>
       {hasDeleteColumn && (
         onDeleteAll ? (

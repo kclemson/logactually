@@ -40,10 +40,10 @@ export function ReadOnlyOverlay() {
                 Changes won't be saved.
               </>
             ) : (
-              <>
-                This demo account is read-only — your changes won't be saved.
-                Create a free account to track your own data!
-              </>
+            <>
+              This demo account is read-only — your changes won't be saved.
+              Create a free account to track your own data.
+            </>
             )}
           </DialogDescription>
         </DialogHeader>
