@@ -1,67 +1,70 @@
 
 
-## Make Feedback Section Collapsible
+## Default Sets/Reps in Code (Not Prompt)
 
 ### Overview
-Wrap the feedback section on the Admin page in a `CollapsibleSection` component, collapsed by default, to reduce visual clutter.
+Instead of updating the AI prompt, we'll apply sensible defaults in our normalization code when the AI returns an exercise with missing sets or reps. The user immediately sees these values and can edit them.
 
 ---
 
-### Changes Summary
+### Changes
 
 | File | Change |
 |------|--------|
-| `src/pages/Admin.tsx` | Wrap feedback content in `CollapsibleSection` |
+| `supabase/functions/analyze-weights/index.ts` | Apply defaults for missing sets/reps |
 
 ---
 
 ### Implementation
 
-**1. Add import:**
+**Lines 197-205** - After coercing to numbers, apply defaults before validation:
+
 ```typescript
-import { CollapsibleSection } from "@/components/CollapsibleSection";
-import { MessageSquare } from "lucide-react";
-```
+// Lenient coercion - accept nulls, undefined, strings, coerce to 0
+let sets = Number(exercise.sets) || 0;
+let reps = Number(exercise.reps) || 0;
+const weight_lbs = Number(exercise.weight_lbs) || 0;
+const duration_minutes = Number(exercise.duration_minutes) || 0;
+const distance_miles = Number(exercise.distance_miles) || 0;
 
-**2. Replace the feedback section (lines 277-334):**
+// Default missing sets/reps for weight exercises
+// User sees these immediately and can edit
+if (weight_lbs > 0 || (sets > 0 || reps > 0)) {
+  if (sets === 0) sets = 1;
+  if (reps === 0) reps = 10;
+}
 
-Before:
-```tsx
-{feedback && feedback.length > 0 && (
-  <div className="space-y-1">
-    <p className="font-medium text-xs text-muted-foreground">Recent Feedback</p>
-    {feedback.map((f) => (
-      // ... feedback items
-    ))}
-  </div>
-)}
-```
-
-After:
-```tsx
-{feedback && feedback.length > 0 && (
-  <CollapsibleSection
-    title={`Feedback (${feedback.length})`}
-    icon={MessageSquare}
-    defaultOpen={false}
-    storageKey="admin-feedback"
-    iconClassName="text-muted-foreground"
-  >
-    <div className="space-y-1">
-      {feedback.map((f) => (
-        // ... feedback items (unchanged)
-      ))}
-    </div>
-  </CollapsibleSection>
-)}
+// Valid if EITHER weight data OR cardio data present
+const hasWeightData = sets > 0 && reps > 0;
+const hasCardioData = duration_minutes > 0 || distance_miles > 0;
 ```
 
 ---
 
-### Result
+### Logic
 
-- Feedback section collapsed by default
-- Shows count in header: "Feedback (12)"
-- State persisted via localStorage key `section-admin-feedback`
-- Uses muted icon color to match admin page styling
+- If the AI returns **any** weight-related data (weight > 0, or sets > 0, or reps > 0), treat it as a weight exercise
+- Apply defaults: **1 set** if missing, **10 reps** if missing
+- Validation then passes because `sets > 0 && reps > 0` is true
+- User sees "1 set × 10 reps @ 75 lbs" and can immediately correct it
+
+---
+
+### Examples
+
+| Input | AI Returns | After Defaults | User Sees |
+|-------|-----------|----------------|-----------|
+| "chin ups 2 sets at 75lb" | sets=2, reps=null, weight=75 | sets=2, reps=10, weight=75 | 2×10 @ 75lb ✓ |
+| "bench 225" | sets=null, reps=null, weight=225 | sets=1, reps=10, weight=225 | 1×10 @ 225lb ✓ |
+| "3x10 squats 185" | sets=3, reps=10, weight=185 | unchanged | 3×10 @ 185lb ✓ |
+| "treadmill 30 min" | cardio data | unchanged (cardio path) | 30 min ✓ |
+
+---
+
+### Why This Is Better Than Prompt Changes
+
+- **Deterministic**: Always the same defaults, no AI interpretation variability
+- **Simpler**: One code change vs. prompt engineering
+- **Immediate feedback**: User sees defaults right away and can edit
+- **Follows Postel's Law**: "Be liberal in what you accept" - already the approach used for other fields
 
