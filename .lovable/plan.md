@@ -1,41 +1,44 @@
 
 
-## Fix Toggle Visibility in Dark Theme
+## Fix Toggle Thumb Visibility in Dark Mode
 
 ### Problem
-The "Show Weights" toggle is nearly invisible in dark mode because:
-- Track (off state): `bg-muted` = `hsl(217.2 32.6% 17.5%)`
-- Page background: `hsl(222.2 84% 4.9%)`
-
-These colors are too similar, causing the toggle to blend into the background.
+The toggle thumb (circle) is always `bg-white`, but in dark mode:
+- When **on**: `bg-primary` = `hsl(210 40% 98%)` — near white
+- White circle on near-white background = invisible
 
 ### Solution
-Add a border to the toggle track to define its shape regardless of background color.
+Change the thumb color based on toggle state:
+- When **off**: Keep white thumb (visible against dark `bg-muted` track)
+- When **on**: Use dark thumb (visible against light `bg-primary` track)
 
 ### Change
 
-**File:** `src/pages/Settings.tsx` (lines 267-270)
+**File:** `src/pages/Settings.tsx` (lines 272-276)
 
 ```typescript
 // Before
-className={cn(
-  "w-12 h-6 rounded-full transition-colors relative",
-  settings.showWeights ? "bg-primary" : "bg-muted"
-)}
+<span
+  className={cn(
+    "absolute left-0 top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform",
+    settings.showWeights ? "translate-x-6" : "translate-x-0.5"
+  )}
+/>
 
 // After
-className={cn(
-  "w-12 h-6 rounded-full transition-colors relative border",
-  settings.showWeights ? "bg-primary border-primary" : "bg-muted border-border"
-)}
+<span
+  className={cn(
+    "absolute left-0 top-0.5 w-5 h-5 rounded-full shadow transition-transform",
+    settings.showWeights 
+      ? "translate-x-6 bg-primary-foreground" 
+      : "translate-x-0.5 bg-white"
+  )}
+/>
 ```
 
 ### Why This Works
-- Adds `border` base class for consistent 1px border
-- When on: `border-primary` matches the filled background
-- When off: `border-border` provides visible outline in both themes
-  - Light mode: `hsl(214.3 31.8% 91.4%)` - visible gray
-  - Dark mode: `hsl(217.2 32.6% 30%)` - visible contrast against dark background
-
-This matches the design pattern already used for the theme and weight unit toggle buttons, which also use borders to define their bounds.
+- `bg-primary-foreground` in dark mode = `hsl(222.2 47.4% 11.2%)` — dark color
+- Dark thumb on light `bg-primary` track = visible
+- White thumb on dark `bg-muted` track = visible (existing behavior)
+- Light mode unchanged: both states still work correctly
 
