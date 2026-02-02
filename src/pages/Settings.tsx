@@ -222,15 +222,16 @@ export default function Settings() {
       {/* Preferences - theme and units */}
       <CollapsibleSection title="Preferences" icon={Settings2} storageKey="settings-preferences">
         <div className="space-y-4">
-          <div>
-            <p className="text-xs text-muted-foreground mb-2">Theme</p>
-            <div className="flex gap-2 max-w-xs">
+          {/* Theme */}
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">Theme</p>
+            <div className="flex gap-2">
               {themeOptions.map(({ value, label, icon: Icon }) => (
                 <button
                   key={value}
                   onClick={() => handleThemeChange(value)}
                   className={cn(
-                    "flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 transition-colors",
+                    "flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 transition-colors",
                     mounted && theme === value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50",
                   )}
                 >
@@ -240,36 +241,19 @@ export default function Settings() {
               ))}
             </div>
           </div>
-          {showWeights && (
-            <div>
-              <p className="text-xs text-muted-foreground mb-2">Weight Units</p>
-              <div className="flex gap-2 max-w-[160px]">
-                {weightUnitOptions.map(({ value, label }) => (
-                  <button
-                    key={value}
-                    onClick={() => handleWeightUnitChange(value)}
-                    className={cn(
-                      "flex flex-1 items-center justify-center rounded-lg border px-3 py-2 transition-colors",
-                      settings.weightUnit === value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50",
-                    )}
-                  >
-                    <span className="text-sm">{label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          
+          {/* Show Weights - before Weight Units */}
           {showWeightsFeature && (
-            <div>
-              <p className="text-xs text-muted-foreground mb-2">Show Weights</p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">Show Weights</p>
               <button
                 onClick={() => updateSettings({ showWeights: !settings.showWeights })}
-              className={cn(
-                "w-12 h-6 rounded-full transition-colors relative border",
-                settings.showWeights ? "bg-primary border-primary" : "bg-muted border-border"
-              )}
+                className={cn(
+                  "w-12 h-6 rounded-full transition-colors relative border",
+                  settings.showWeights ? "bg-primary border-primary" : "bg-muted border-border"
+                )}
               >
-              <span
+                <span
                   className={cn(
                     "absolute left-0 top-0.5 w-5 h-5 rounded-full shadow transition-transform",
                     settings.showWeights 
@@ -278,6 +262,27 @@ export default function Settings() {
                   )}
                 />
               </button>
+            </div>
+          )}
+          
+          {/* Weight Units - shown when weights enabled */}
+          {showWeights && (
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">Weight Units</p>
+              <div className="flex gap-2">
+                {weightUnitOptions.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => handleWeightUnitChange(value)}
+                    className={cn(
+                      "flex items-center justify-center rounded-lg border px-3 py-2 transition-colors",
+                      settings.weightUnit === value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50",
+                    )}
+                  >
+                    <span className="text-sm">{label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>
