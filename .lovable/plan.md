@@ -1,82 +1,165 @@
 
 
-## Improve Login Screen Visual Hierarchy
+## Demo Mode Preview - Reusing Existing Table Components
 
-The login screen currently has low contrast between the card and background, making it feel flat and "weird" in both light and dark modes.
-
----
-
-### Problem Analysis
-
-| Element | Light Mode | Dark Mode |
-|---------|------------|-----------|
-| Background | `hsl(220 14% 96%)` - very light gray | `hsl(222.2 84% 4.9%)` - very dark |
-| Card | `hsl(220 14% 96%)` - same as background | `hsl(222.2 84% 4.9%)` - same as background |
-| Separation | Thin 1px border only | Thin 1px border only |
-
-The card and background use the **same color**, relying only on a subtle border for separation.
+Show demo users what would be logged by reusing the existing `FoodItemsTable` and `WeightItemsTable` components in read-only mode.
 
 ---
 
-### Solution Options
+### Confirmed: Tables Are Already Factored for This
 
-**Option A: Add subtle shadow to card** (Recommended)
-- Add a soft shadow to the login card to create depth
-- Works well in both light and dark modes
-- Minimal change, keeps existing color scheme
+Both table components support all needed features:
 
-**Option B: Give card a distinct background**
-- Make the card slightly lighter/darker than the page background
-- Requires careful color selection for both themes
+| Prop | Purpose | Already Supported |
+|------|---------|-------------------|
+| `editable={false}` | Read-only display, no edit controls | Yes |
+| `entryBoundaries` | Groups items under a single entry | Yes |
+| `entryRawInputs` | Maps entry ID to original text | Yes |
+| `expandedEntryIds` | Tracks which entries are expanded | Yes |
+| `onToggleEntryExpand` | Callback to toggle expansion | Yes |
+| `showTotals` | Display totals row | Yes |
 
-**Option C: Remove the card border, use only shadow**
-- Cleaner, more modern look
-- Shadow provides sufficient separation
+No changes needed to the table components themselves.
 
 ---
 
-### Recommended Approach
+### New Component: `DemoPreviewDialog`
 
-Use **Option A** with enhanced shadow for the auth card specifically:
+A thin wrapper that:
+1. Creates a synthetic entry structure for the preview items
+2. Manages local expansion state
+3. Renders the appropriate table with `editable={false}`
 
-**Changes to `src/pages/Auth.tsx`:**
-- Add a stronger shadow class to the Card component on the login page
-- Use `shadow-lg` or a custom shadow for more pronounced depth
-- Consider removing or softening the border since shadow provides separation
-
-**Example styling:**
 ```tsx
-<Card className="w-full max-w-md shadow-lg border-0">
+// Core structure
+const previewEntryId = 'demo-preview';
+
+// Entry boundaries: single entry spanning all items
+const entryBoundaries = [{
+  entryId: previewEntryId,
+  startIndex: 0,
+  endIndex: items.length - 1
+}];
+
+// Raw input map
+const entryRawInputs = rawInput 
+  ? new Map([[previewEntryId, rawInput]]) 
+  : new Map();
+
+// Local expansion state
+const [expandedEntryIds, setExpandedEntryIds] = useState<Set<string>>(new Set());
+const handleToggleExpand = (entryId: string) => {
+  setExpandedEntryIds(prev => {
+    const next = new Set(prev);
+    next.has(entryId) ? next.delete(entryId) : next.add(entryId);
+    return next;
+  });
+};
 ```
 
-Or with a softer border:
+Then pass to table:
 ```tsx
-<Card className="w-full max-w-md shadow-lg border-border/50">
+<FoodItemsTable
+  items={itemsWithEntryId}
+  editable={false}
+  showHeader={true}
+  showTotals={true}
+  totalsPosition="bottom"
+  entryBoundaries={entryBoundaries}
+  entryRawInputs={entryRawInputs}
+  expandedEntryIds={expandedEntryIds}
+  onToggleEntryExpand={handleToggleExpand}
+/>
 ```
 
 ---
 
-### Visual Result
+### Implementation
 
-| Before | After |
-|--------|-------|
-| Flat card with thin border | Card "lifts" off the page with shadow |
-| Low visual hierarchy | Clear depth and focus on the form |
+**New file: `src/components/DemoPreviewDialog.tsx`**
+
+Props:
+- `mode: 'food' | 'weights'`
+- `open: boolean`
+- `onOpenChange: (open: boolean) => void`
+- `foodItems?: FoodItem[]`
+- `weightSets?: WeightSet[]`
+- `weightUnit?: WeightUnit`
+- `rawInput: string | null`
+
+Dialog content:
+- Title: "Here's what would be logged:"
+- Table component with expansion support
+- Footer: "Got it" (outline) | "Create Free Account" (primary)
+
+"Create Free Account" action:
+- Signs out the demo user
+- Navigates to /auth
 
 ---
 
-### Files to Change
+### Changes to Page Components
+
+**`src/pages/FoodLog.tsx`**
+
+Add state:
+```tsx
+const [demoPreviewOpen, setDemoPreviewOpen] = useState(false);
+const [demoPreviewItems, setDemoPreviewItems] = useState<FoodItem[]>([]);
+const [demoPreviewRawInput, setDemoPreviewRawInput] = useState<string | null>(null);
+```
+
+Update handlers to intercept after getting items:
+- `handleSubmit` - after `analyzeFood()` returns
+- `handleScanResult` - item already available
+- `handleLogSavedMeal` - items already available
+
+**`src/pages/WeightLog.tsx`**
+
+Same pattern:
+- `handleSubmit` - after `analyzeWeights()` returns
+- `handleLogSavedRoutine` - items already available
+
+**`src/components/LogInput.tsx`**
+
+Remove the early `isReadOnly` block in `handleSubmit` that currently prevents the submit from reaching the parent. Let the parent components handle the interception after getting data.
+
+---
+
+### Files Changed
 
 | File | Change |
 |------|--------|
-| `src/pages/Auth.tsx` | Update Card className to add shadow and optionally adjust border (in 3 places: main form, reset mode, password update mode) |
+| `src/components/DemoPreviewDialog.tsx` | **New** - Wrapper dialog using existing tables |
+| `src/pages/FoodLog.tsx` | Add preview state, intercept 3 handlers |
+| `src/pages/WeightLog.tsx` | Add preview state, intercept 2 handlers |
+| `src/components/LogInput.tsx` | Remove early isReadOnly block |
 
 ---
 
-### Technical Notes
+### Dialog Layout
 
-- The `shadow-lg` class from Tailwind provides: `0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)`
-- Works well in dark mode as shadows still provide depth perception
-- Alternatively, could use `shadow-xl` for even more pronounced effect
-- Keeping a subtle border (`border-border/50`) can help in dark mode where shadows are less visible
+```text
+┌─────────────────────────────────────────────────────┐
+│ Here's what would be logged:                        │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│  [Existing FoodItemsTable or WeightItemsTable       │
+│   with editable={false}, showing chevron for        │
+│   expansion, totals at bottom]                      │
+│                                                     │
+├─────────────────────────────────────────────────────┤
+│      [Got it]              [Create Free Account]    │
+└─────────────────────────────────────────────────────┘
+```
+
+---
+
+### Risk Assessment
+
+**Low risk** because:
+- Tables already support all needed props
+- No changes to table internals
+- Just wiring up existing components in a new context
+- Read-only mode is battle-tested in Settings page saved items
 
