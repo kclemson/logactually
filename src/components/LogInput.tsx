@@ -11,7 +11,6 @@ import { useScanBarcode } from "@/hooks/useScanBarcode";
 import { extractUpcFromText } from "@/lib/upc-utils";
 import { FoodItem } from "@/types/food";
 import { SavedExerciseSet } from "@/types/weight";
-import { useReadOnlyContext } from "@/contexts/ReadOnlyContext";
 import type { WeightUnit } from "@/lib/weight-units";
 
 // Mode-specific configurations
@@ -143,7 +142,6 @@ export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput
   const cameraSupported = getCameraSupport();
 
   const { lookupUpc, createFoodItemFromScan, isScanning } = useScanBarcode();
-  const { isReadOnly, triggerOverlay } = useReadOnlyContext();
 
   // Expose clear method to parent
   useImperativeHandle(ref, () => ({

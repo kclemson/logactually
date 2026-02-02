@@ -95,6 +95,7 @@ export function DemoPreviewDialog({
               showHeader={true}
               showTotals={true}
               totalsPosition="bottom"
+              showMacroPercentages={false}
               entryBoundaries={foodEntryBoundaries}
               entryRawInputs={entryRawInputs}
               expandedEntryIds={expandedEntryIds}
@@ -109,6 +110,7 @@ export function DemoPreviewDialog({
               showHeader={true}
               showTotals={true}
               totalsPosition="bottom"
+              showCardioLabel={true}
               entryBoundaries={weightEntryBoundaries}
               entryRawInputs={entryRawInputs}
               expandedEntryIds={expandedEntryIds}

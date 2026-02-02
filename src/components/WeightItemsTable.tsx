@@ -59,6 +59,8 @@ interface WeightItemsTableProps {
   entryRoutineNames?: Map<string, string>;
   /** Set of entry IDs that originated from a saved routine (even if routine was deleted) */
   entrySourceRoutineIds?: Set<string>;
+  /** When true, show "cardio" label for cardio items even in read-only mode */
+  showCardioLabel?: boolean;
 }
 
 export function WeightItemsTable({
@@ -81,6 +83,7 @@ export function WeightItemsTable({
   weightUnit = 'lbs',
   entryRoutineNames,
   entrySourceRoutineIds,
+  showCardioLabel = false,
 }: WeightItemsTableProps) {
   const { isReadOnly, triggerOverlay } = useReadOnlyContext();
   
@@ -406,12 +409,12 @@ export function WeightItemsTable({
                 </div>
               )}
 
-              {/* Sets, Reps, Weight - show "cardio" label for cardio items in editable mode */}
+              {/* Sets, Reps, Weight - show "cardio" label for cardio items */}
               {(() => {
                 const isCardioItem = item.weight_lbs === 0 && (item.duration_minutes ?? 0) > 0;
                 
-                if (editable && isCardioItem) {
-                  // For cardio items in editable mode, show a single "cardio" label spanning all 3 columns
+                if (isCardioItem && (editable || showCardioLabel)) {
+                  // For cardio items, show a single "cardio" label spanning all 3 columns
                   return (
                     <span className="col-span-3 text-center text-muted-foreground italic py-1">
                       cardio
@@ -419,7 +422,7 @@ export function WeightItemsTable({
                   );
                 }
                 
-                // Normal rendering for weight exercises (or read-only mode)
+                // Normal rendering for weight exercises
                 return (
                   <>
                     {/* Sets */}
