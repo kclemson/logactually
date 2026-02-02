@@ -9,6 +9,7 @@ import { FeedbackForm } from "@/components/FeedbackForm";
 // ============================================
 // prettier-ignore
 const CHANGELOG_ENTRIES = [
+{ date: "Feb-01", text: "Updated demo mode so you can see a preview of what would be logged based on the input you entered." },
   { date: "Jan-31", text: "Added support for Google authentication, and this changelog page." },
   { date: "Jan-30", text: "Added (minimal) support for cardio exercises - instead of erroring out, it will now log the items and show a 'cardio' label, with simple charts for cardio exercises on the Trends page. Running/walking/cycling charts also support switching between time-based view and mph-based view." },
   { date: "Jan-28", text: "Added user setting to show weights in Kg vs Lbs." },
