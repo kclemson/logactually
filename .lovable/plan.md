@@ -1,79 +1,44 @@
 
 
-## Add Simple Loading Overlay for Day Navigation
+## Fix: Preserve User-Entered Name in Create Saved Dialog
 
-Show a centered spinner in the content area while data is loading during day navigation, preventing the brief "empty day" flash.
-
----
-
-### Overview
-
-| Current | Proposed |
-|---------|----------|
-| Shows "No entries logged" during fetch | Shows spinner during fetch |
-| Brief flash before data appears | Smooth loading transition |
+Prevent the fallback name from overwriting a name the user has already entered.
 
 ---
 
-### Technical Changes
+### Root Cause
 
-#### 1. Update FoodLog.tsx
-
-Add a loading state check before the empty message:
+In `CreateSavedDialog.tsx` line 128, after analysis completes, the code unconditionally sets the name:
 
 ```tsx
-// Current logic:
-{displayItems.length > 0 && <FoodItemsTable ... />}
-{displayItems.length === 0 && !isAnalyzing && <EmptyMessage />}
-
-// New logic:
-{displayItems.length > 0 && <FoodItemsTable ... />}
-
-{displayItems.length === 0 && isFetching && (
-  <div className="flex justify-center py-8">
-    <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-  </div>
-)}
-
-{displayItems.length === 0 && !isFetching && !isAnalyzing && (
-  <EmptyMessage />
-)}
+setName(config.getFallbackName(result));
 ```
 
-#### 2. Update WeightLog.tsx
+This overwrites any name the user typed before submitting the ingredient description.
 
-Same pattern:
+---
+
+### Fix
+
+Only set the fallback name if the user hasn't already entered one:
 
 ```tsx
-{displayItems.length > 0 && <WeightItemsTable ... />}
+// Before
+setName(config.getFallbackName(result));
 
-{displayItems.length === 0 && isFetching && (
-  <div className="flex justify-center py-8">
-    <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-  </div>
-)}
-
-{displayItems.length === 0 && !isFetching && !isAnalyzing && (
-  <div className="text-center text-muted-foreground py-8">
-    No exercises logged for this day
-  </div>
-)}
+// After
+setName(prevName => prevName.trim() ? prevName : config.getFallbackName(result));
 ```
 
----
-
-### Behavior
-
-- **Navigating to a day with data**: Spinner shows briefly, then table appears
-- **Navigating to an empty day**: Spinner shows briefly, then "No entries" message appears  
-- **When data is cached**: No spinner (React Query returns cached data immediately)
+This uses the functional update form of `setName` to check the current value:
+- If user already typed a name → keep it
+- If name is empty → use the fallback from first item
 
 ---
 
-### Files Changed
+### File Changed
 
-| File | Changes |
-|------|---------|
-| `src/pages/FoodLog.tsx` | Add loading spinner condition before empty message |
-| `src/pages/WeightLog.tsx` | Add loading spinner condition before empty message |
+| File | Change |
+|------|--------|
+| `src/components/CreateSavedDialog.tsx` | Line 128: Preserve existing name when setting fallback |
 
