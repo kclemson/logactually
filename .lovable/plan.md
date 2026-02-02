@@ -1,12 +1,12 @@
 
 
-## Surgical Fix: Include Micros in Placeholder Filter
+## Admin Page: Show Spinner While Loading Users
 
 ### Problem
-The current filter discards items where all macros are zero, which incorrectly removes zero-calorie items like Diet Coke that have micronutrients.
+When the admin page loads, it briefly shows "No users found" before the user stats data arrives. This happens because the `useAdminUserStats()` hook's `isLoading` state isn't being checked.
 
 ### Solution
-Extend the existing OR chain to include micronutrients. An item is valid if ANY nutritional value is non-zero.
+Destructure `isLoading` from `useAdminUserStats()` and show a spinner instead of "No users found" while loading.
 
 ---
 
@@ -14,42 +14,41 @@ Extend the existing OR chain to include micronutrients. An item is valid if ANY 
 
 | File | Change |
 |------|--------|
-| `supabase/functions/analyze-food/index.ts` | Extend filter to include micros |
+| `src/pages/Admin.tsx` | Add loading check for user stats table |
 
 ---
 
-### Code Change
+### Code Changes
 
-**Line ~183, current:**
-```typescript
-const validItems = mergedItems.filter(item => 
-  item.calories > 0 || item.protein > 0 || item.carbs > 0 || item.fat > 0
-);
+**Line 31 - Destructure isLoading:**
+```tsx
+// Before
+const { data: userStats } = useAdminUserStats();
+
+// After
+const { data: userStats, isLoading: isUserStatsLoading } = useAdminUserStats();
 ```
 
-**Updated:**
-```typescript
-const validItems = mergedItems.filter(item => 
-  item.calories > 0 || 
-  item.protein > 0 || 
-  item.carbs > 0 || 
-  item.fat > 0 ||
-  (item.fiber || 0) > 0 ||
-  (item.sugar || 0) > 0 ||
-  (item.saturated_fat || 0) > 0 ||
-  (item.sodium || 0) > 0 ||
-  (item.cholesterol || 0) > 0
-);
+**Lines 113-227 - Add loading state to condition:**
+```tsx
+// Before
+{userStats && userStats.length > 0 ? (
+  <TooltipProvider>...</TooltipProvider>
+) : (
+  <p className="text-muted-foreground text-xs">No users found.</p>
+)}
+
+// After
+{isUserStatsLoading ? (
+  <div className="flex justify-center py-4">
+    <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+  </div>
+) : userStats && userStats.length > 0 ? (
+  <TooltipProvider>...</TooltipProvider>
+) : (
+  <p className="text-muted-foreground text-xs">No users found.</p>
+)}
 ```
 
----
-
-### Why This Works
-
-| Item | Passes? | Why |
-|------|---------|-----|
-| Diet Coke (0 cal, 30mg sodium) | ✓ | sodium > 0 |
-| Big Mac (563 cal) | ✓ | calories > 0 |
-| Medium Fries (320 cal) | ✓ | calories > 0 |
-| True placeholder (all zeros) | ✗ | Correctly filtered |
+This keeps the spinner small and inline (h-4 w-4) since it's just for the users table section, not the whole page.
 
