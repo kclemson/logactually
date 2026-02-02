@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useSearchParams } from 'react-router-dom';
 import { useEffect, useRef, useCallback } from 'react';
 import { useTheme } from 'next-themes';
 import { useQueryClient } from '@tanstack/react-query';
@@ -21,6 +21,8 @@ export function Layout() {
   const { isReadOnly } = useReadOnlyContext();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
+  const [searchParams] = useSearchParams();
+  const hideAdmin = searchParams.get('hideAdmin') === 'true';
 
   // One-time sync: If localStorage has no theme but DB does, apply DB value
   // This handles new device login or cleared cache scenarios
@@ -58,7 +60,7 @@ export function Layout() {
         mainContent
       )}
       <BottomNav />
-      {isAdmin && <DevToolsPanel />}
+      {isAdmin && !hideAdmin && <DevToolsPanel />}
     </div>
   );
 }
