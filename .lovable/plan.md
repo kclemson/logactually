@@ -1,23 +1,87 @@
 
 
-## Demo Mode Preview - COMPLETED
+## Demo Preview Dialog Fixes
 
-Demo users can now see what would be logged for all input types (text analysis, barcode scan, saved meals/routines) before being prompted to create an account.
+Two issues to address based on user feedback.
 
-### Implementation Summary
+---
+
+### Issue 1: Focus Outline on Chevron Button
+
+**Problem**: When the dialog opens, focus lands on the `›` chevron button (the first focusable element), showing a white browser default focus outline.
+
+**Root Cause**: The chevron `<button>` in both `FoodItemsTable` and `WeightItemsTable` lacks `focus:outline-none` or custom focus styling. When the Radix Dialog opens, it auto-focuses the first focusable element.
+
+**Fix**: Add `focus:outline-none focus-visible:outline-none` to the chevron button in both table components. This removes the default focus ring while still allowing keyboard navigation.
+
+**Files**: 
+- `src/components/FoodItemsTable.tsx` (lines ~423 and ~478)
+- `src/components/WeightItemsTable.tsx` (lines ~345 and ~387)
+
+---
+
+### Issue 2: Show User's Original Input
+
+**Current**: Dialog only shows "Here's what would be logged:" and the table.
+
+**Requested**: Add a section showing what the user entered before showing parsed results.
+
+**Design**:
+```text
+┌─────────────────────────────────────────────────────┐
+│ What you entered:                                   │
+│ "2 big macs and large fries"                       │
+│                                                     │
+│ Here's what would be logged:                        │
+│ [table...]                                          │
+└─────────────────────────────────────────────────────┘
+```
+
+**Implementation**: Add a conditional section in `DemoPreviewDialog` that displays `rawInput` when available (saved meals/routines won't have this).
+
+**File**: `src/components/DemoPreviewDialog.tsx`
+
+---
+
+### Files Changed
 
 | File | Change |
 |------|--------|
-| `src/components/DemoPreviewDialog.tsx` | **New** - Wrapper dialog reusing existing tables |
-| `src/pages/FoodLog.tsx` | Added demo preview for text, barcode, saved meals |
-| `src/pages/WeightLog.tsx` | Added demo preview for text, saved routines |
-| `src/components/LogInput.tsx` | Removed early isReadOnly block |
+| `src/components/FoodItemsTable.tsx` | Add `focus:outline-none` to chevron buttons |
+| `src/components/WeightItemsTable.tsx` | Add `focus:outline-none` to chevron buttons |
+| `src/components/DemoPreviewDialog.tsx` | Add "What you entered" section before title |
 
-### How it Works
+---
 
-1. Demo users (read-only) can submit text, scan barcodes, or select saved items
-2. The AI analysis runs normally, returning parsed items
-3. Instead of saving to database, items are shown in `DemoPreviewDialog`
-4. Dialog uses the same `FoodItemsTable`/`WeightItemsTable` with `editable={false}`
-5. Users can expand entries to see original raw input (same UX as main log)
-6. "Create Free Account" signs out and redirects to /auth
+### Technical Details
+
+**Chevron button fix** (both tables have two instances - editable and read-only branches):
+
+```tsx
+// Current
+className={cn(
+  "absolute inset-0 w-[44px] -left-3 flex items-center justify-center text-muted-foreground/60 hover:text-muted-foreground transition-transform text-xl",
+  isCurrentExpanded && "rotate-90"
+)}
+
+// Updated
+className={cn(
+  "absolute inset-0 w-[44px] -left-3 flex items-center justify-center text-muted-foreground/60 hover:text-muted-foreground transition-transform text-xl focus:outline-none focus-visible:outline-none",
+  isCurrentExpanded && "rotate-90"
+)}
+```
+
+**DemoPreviewDialog addition**:
+
+```tsx
+<DialogHeader>
+  {rawInput && (
+    <div className="text-sm mb-2">
+      <span className="text-muted-foreground">What you entered:</span>
+      <p className="mt-1 italic">"{rawInput}"</p>
+    </div>
+  )}
+  <DialogTitle>Here's what would be logged:</DialogTitle>
+</DialogHeader>
+```
+
