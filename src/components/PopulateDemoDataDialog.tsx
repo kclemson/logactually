@@ -182,30 +182,40 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
               className={cn(
                 "text-xs p-2 rounded border",
                 result.success
-                  ? "bg-green-500/10 border-green-500/30 text-green-600"
+                  ? result.status === 'processing'
+                    ? "bg-blue-500/10 border-blue-500/30 text-blue-600"
+                    : "bg-green-500/10 border-green-500/30 text-green-600"
                   : "bg-destructive/10 border-destructive/30 text-destructive"
               )}
             >
               {result.success ? (
-                <div className="space-y-1">
-                  <p className="font-medium">✓ Done!</p>
-                  {result.summary && (
-                    <ul className="list-disc list-inside">
-                      {result.summary.deleted?.foodEntries != null && (
-                        <li>Deleted {result.summary.deleted.foodEntries} food entries</li>
-                      )}
-                      {result.summary.deleted?.weightSets != null && (
-                        <li>Deleted {result.summary.deleted.weightSets} weight sets</li>
-                      )}
-                      {result.summary.foodEntries != null && <li>Created {result.summary.foodEntries} food entries</li>}
-                      {result.summary.weightSets != null && <li>Created {result.summary.weightSets} weight sets</li>}
-                      {result.summary.savedMeals != null && <li>Created {result.summary.savedMeals} saved meals</li>}
-                      {result.summary.savedRoutines != null && (
-                        <li>Created {result.summary.savedRoutines} saved routines</li>
-                      )}
-                    </ul>
-                  )}
-                </div>
+                result.status === 'processing' ? (
+                  <div className="space-y-1">
+                    <p className="font-medium">⏳ Processing in background</p>
+                    <p>{result.message}</p>
+                    <p className="text-muted-foreground mt-1">You can close this dialog.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <p className="font-medium">✓ Done!</p>
+                    {result.summary && (
+                      <ul className="list-disc list-inside">
+                        {result.summary.deleted?.foodEntries != null && (
+                          <li>Deleted {result.summary.deleted.foodEntries} food entries</li>
+                        )}
+                        {result.summary.deleted?.weightSets != null && (
+                          <li>Deleted {result.summary.deleted.weightSets} weight sets</li>
+                        )}
+                        {result.summary.foodEntries != null && <li>Created {result.summary.foodEntries} food entries</li>}
+                        {result.summary.weightSets != null && <li>Created {result.summary.weightSets} weight sets</li>}
+                        {result.summary.savedMeals != null && <li>Created {result.summary.savedMeals} saved meals</li>}
+                        {result.summary.savedRoutines != null && (
+                          <li>Created {result.summary.savedRoutines} saved routines</li>
+                        )}
+                      </ul>
+                    )}
+                  </div>
+                )
               ) : (
                 <p>Error: {result.error}</p>
               )}
@@ -217,12 +227,12 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
           <Button variant="ghost" onClick={handleClose} disabled={isLoading}>
             {result?.success ? "Close" : "Cancel"}
           </Button>
-          {!result?.success && (
+          {!result?.success && !result?.status && (
             <Button onClick={handleSubmit} disabled={isLoading}>
               {isLoading ? (
                 <>
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
-                  Populating...
+                  Starting...
                 </>
               ) : (
                 "Populate"

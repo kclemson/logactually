@@ -1,6 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getAnalyzeFoodPrompt, buildBulkFoodParsingPrompt } from '../_shared/prompts.ts';
 
+// Declare EdgeRuntime for background processing
+declare const EdgeRuntime: { waitUntil: (promise: Promise<unknown>) => void };
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
@@ -522,22 +525,47 @@ function generateWeightEntriesForDay(
 // SAVED ITEMS GENERATION
 // ============================================================================
 
-function generateSavedMeals(count: number): Array<{ name: string; original_input: string; food_items: unknown[]; use_count: number }> {
+function generateSavedMeals(
+  count: number,
+  parsedCache: Map<string, ParsedFoodItem[]>
+): Array<{ name: string; original_input: string; food_items: unknown[]; use_count: number }> {
   const templates = shuffleArray(SAVED_MEAL_TEMPLATES).slice(0, count);
   
-  return templates.map(template => ({
-    name: template.name,
-    original_input: template.items.join(', '),
-    food_items: template.items.map((item, idx) => ({
-      uid: `saved-${Date.now()}-${idx}`,
-      description: item,
-      calories: randomInt(100, 500),
-      protein: randomInt(5, 40),
-      carbs: randomInt(10, 60),
-      fat: randomInt(3, 25),
-    })),
-    use_count: randomInt(2, 10),
-  }));
+  return templates.map(template => {
+    const originalInput = template.items.join(', ');
+    const parsedItems = parsedCache.get(originalInput) || [];
+    
+    return {
+      name: template.name,
+      original_input: originalInput,
+      food_items: parsedItems.length > 0
+        ? parsedItems.map((item, idx) => ({
+            uid: `saved-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 7)}`,
+            description: item.name,
+            portion: item.portion,
+            calories: item.calories,
+            protein: item.protein,
+            carbs: item.carbs,
+            fiber: item.fiber,
+            sugar: item.sugar,
+            fat: item.fat,
+            saturated_fat: item.saturated_fat,
+            sodium: item.sodium,
+            cholesterol: item.cholesterol,
+            confidence: item.confidence,
+          }))
+        : template.items.map((item, idx) => ({
+            // Fallback to basic structure if AI parsing failed
+            uid: `saved-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 7)}`,
+            description: item,
+            calories: 0,
+            protein: 0,
+            carbs: 0,
+            fat: 0,
+          })),
+      use_count: randomInt(2, 10),
+    };
+  });
 }
 
 function generateSavedRoutines(count: number): Array<{ name: string; original_input: string; exercise_sets: unknown[]; use_count: number }> {
@@ -565,6 +593,301 @@ function generateSavedRoutines(count: number): Array<{ name: string; original_in
     };
   });
 }
+
+// ============================================================================
+// BACKGROUND WORK FUNCTION
+// ============================================================================
+
+interface PopulationParams {
+  startDate: Date;
+  endDate: Date;
+  daysToPopulate: number;
+  generateFood: boolean;
+  generateWeights: boolean;
+  savedMealsCount: number;
+  savedRoutinesCount: number;
+  clearExisting: boolean;
+  weightConfig: WeightConfig;
+}
+
+async function doPopulationWork(
+  params: PopulationParams,
+  demoUserId: string,
+  // deno-lint-ignore no-explicit-any
+  serviceClient: any
+): Promise<void> {
+  const {
+    startDate,
+    endDate,
+    daysToPopulate,
+    generateFood,
+    generateWeights,
+    savedMealsCount,
+    savedRoutinesCount,
+    clearExisting,
+    weightConfig,
+  } = params;
+
+  try {
+    // Clear existing data if requested
+    if (clearExisting) {
+      console.log('Clearing existing data...');
+      
+      if (generateFood) {
+        const { error: clearFoodError } = await serviceClient
+          .from('food_entries')
+          .delete()
+          .eq('user_id', demoUserId)
+          .gte('eaten_date', formatDate(startDate))
+          .lte('eaten_date', formatDate(endDate));
+        
+        if (clearFoodError) console.error('Error clearing food:', clearFoodError);
+      }
+
+      if (generateWeights) {
+        const { error: clearWeightError } = await serviceClient
+          .from('weight_sets')
+          .delete()
+          .eq('user_id', demoUserId)
+          .gte('logged_date', formatDate(startDate))
+          .lte('logged_date', formatDate(endDate));
+        
+        if (clearWeightError) console.error('Error clearing weights:', clearWeightError);
+      }
+
+      if (savedMealsCount > 0) {
+        const { error: clearMealsError } = await serviceClient
+          .from('saved_meals')
+          .delete()
+          .eq('user_id', demoUserId);
+        
+        if (clearMealsError) console.error('Error clearing saved meals:', clearMealsError);
+      }
+
+      if (savedRoutinesCount > 0) {
+        const { error: clearRoutinesError } = await serviceClient
+          .from('saved_routines')
+          .delete()
+          .eq('user_id', demoUserId);
+        
+        if (clearRoutinesError) console.error('Error clearing saved routines:', clearRoutinesError);
+      }
+    }
+
+    // ========================================================================
+    // BULK AI PARSING FOR FOOD DATA
+    // ========================================================================
+    
+    const parsedCache = new Map<string, ParsedFoodItem[]>();
+    
+    if (generateFood) {
+      console.log('Starting bulk AI parsing for food entries...');
+      const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
+      
+      for (const mealType of mealTypes) {
+        const inputs = DEMO_FOOD_INPUTS[mealType];
+        const results = await bulkParseWithAI(inputs, mealType);
+        results.forEach((items, input) => parsedCache.set(input, items));
+      }
+      
+      console.log(`Parsed ${parsedCache.size} unique food inputs`);
+    }
+
+    // ========================================================================
+    // AI PARSING FOR SAVED MEALS
+    // ========================================================================
+    
+    if (savedMealsCount > 0) {
+      console.log('Starting AI parsing for saved meal templates...');
+      const savedMealInputs = SAVED_MEAL_TEMPLATES.slice(0, savedMealsCount)
+        .map(t => t.items.join(', '));
+      const savedMealResults = await bulkParseWithAI(savedMealInputs, 'savedmeals');
+      savedMealResults.forEach((items, input) => parsedCache.set(input, items));
+      console.log(`Parsed ${savedMealInputs.length} saved meal templates`);
+    }
+
+    // Select random days within range
+    const selectedDays = selectRandomDays(startDate, endDate, daysToPopulate);
+    console.log(`Selected ${selectedDays.length} days to populate`);
+
+    let foodEntriesCreated = 0;
+    let weightSetsCreated = 0;
+
+    // Generate data for each day
+    for (let i = 0; i < selectedDays.length; i++) {
+      const day = selectedDays[i];
+      const dateStr = formatDate(day);
+
+      // Generate food entries using cached AI results
+      if (generateFood) {
+        const mealTypes: Array<'breakfast' | 'lunch' | 'dinner' | 'snack'> = ['breakfast', 'lunch', 'dinner'];
+        
+        // Maybe add a snack (60% chance)
+        if (Math.random() < 0.6) {
+          mealTypes.push('snack');
+        }
+        
+        for (const mealType of mealTypes) {
+          // Pick a random input from this meal type, cycling through the 30 options
+          const inputs = DEMO_FOOD_INPUTS[mealType];
+          const rawInput = inputs[i % inputs.length];
+          const parsedItems = parsedCache.get(rawInput) || [];
+          
+          if (parsedItems.length === 0) {
+            console.warn(`No parsed items for: ${rawInput}`);
+            continue;
+          }
+          
+          // Calculate totals
+          const totalCalories = parsedItems.reduce((sum, item) => sum + (item.calories || 0), 0);
+          const totalProtein = parsedItems.reduce((sum, item) => sum + (item.protein || 0), 0);
+          const totalCarbs = parsedItems.reduce((sum, item) => sum + (item.carbs || 0), 0);
+          const totalFat = parsedItems.reduce((sum, item) => sum + (item.fat || 0), 0);
+          
+          const { error: foodError } = await serviceClient
+            .from('food_entries')
+            .insert({
+              user_id: demoUserId,
+              eaten_date: dateStr,
+              raw_input: rawInput,
+              food_items: parsedItems.map(item => ({
+                uid: crypto.randomUUID(),
+                description: item.name,
+                portion: item.portion,
+                calories: item.calories,
+                protein: item.protein,
+                carbs: item.carbs,
+                fiber: item.fiber,
+                sugar: item.sugar,
+                fat: item.fat,
+                saturated_fat: item.saturated_fat,
+                sodium: item.sodium,
+                cholesterol: item.cholesterol,
+                confidence: item.confidence,
+              })),
+              total_calories: totalCalories,
+              total_protein: totalProtein,
+              total_carbs: totalCarbs,
+              total_fat: totalFat,
+            });
+
+          if (foodError) {
+            console.error('Error inserting food entry:', foodError);
+          } else {
+            foodEntriesCreated++;
+          }
+        }
+      }
+
+      // Generate weight entries (roughly every other day)
+      if (generateWeights && Math.random() < 0.5) {
+        const { rawInput, exercises } = generateWeightEntriesForDay(
+          weightConfig,
+          i,
+          selectedDays.length
+        );
+        
+        const entryId = crypto.randomUUID();
+        
+        for (let j = 0; j < exercises.length; j++) {
+          const exercise = exercises[j];
+          const { error: weightError } = await serviceClient
+            .from('weight_sets')
+            .insert({
+              user_id: demoUserId,
+              entry_id: entryId,
+              logged_date: dateStr,
+              exercise_key: exercise.exercise_key,
+              description: exercise.description,
+              sets: exercise.sets,
+              reps: exercise.reps,
+              weight_lbs: exercise.weight_lbs,
+              raw_input: j === 0 ? rawInput : null,
+            });
+
+          if (weightError) {
+            console.error('Error inserting weight set:', weightError);
+          } else {
+            weightSetsCreated++;
+          }
+        }
+      }
+    }
+
+    // Generate saved meals with AI-parsed items
+    let savedMealsCreated = 0;
+    if (savedMealsCount > 0) {
+      const savedMeals = generateSavedMeals(savedMealsCount, parsedCache);
+      
+      for (const meal of savedMeals) {
+        const { error: mealError } = await serviceClient
+          .from('saved_meals')
+          .insert({
+            user_id: demoUserId,
+            name: meal.name,
+            original_input: meal.original_input,
+            food_items: meal.food_items,
+            use_count: meal.use_count,
+            last_used_at: new Date(Date.now() - randomInt(1, 14) * 24 * 60 * 60 * 1000).toISOString(),
+          });
+
+        if (mealError) {
+          console.error('Error inserting saved meal:', mealError);
+        } else {
+          savedMealsCreated++;
+        }
+      }
+    }
+
+    // Generate saved routines
+    let savedRoutinesCreated = 0;
+    if (savedRoutinesCount > 0) {
+      const savedRoutines = generateSavedRoutines(savedRoutinesCount);
+      
+      for (const routine of savedRoutines) {
+        const { error: routineError } = await serviceClient
+          .from('saved_routines')
+          .insert({
+            user_id: demoUserId,
+            name: routine.name,
+            original_input: routine.original_input,
+            exercise_sets: routine.exercise_sets,
+            use_count: routine.use_count,
+            last_used_at: new Date(Date.now() - randomInt(1, 14) * 24 * 60 * 60 * 1000).toISOString(),
+          });
+
+        if (routineError) {
+          console.error('Error inserting saved routine:', routineError);
+        } else {
+          savedRoutinesCreated++;
+        }
+      }
+    }
+
+    const summary = {
+      daysPopulated: selectedDays.length,
+      foodEntries: foodEntriesCreated,
+      weightSets: weightSetsCreated,
+      savedMeals: savedMealsCreated,
+      savedRoutines: savedRoutinesCreated,
+      parsedInputs: parsedCache.size,
+      dateRange: {
+        start: formatDate(startDate),
+        end: formatDate(endDate),
+      },
+    };
+
+    console.log('Population complete:', summary);
+  } catch (error) {
+    console.error('Error in background population work:', error);
+  }
+}
+
+// Handle shutdown gracefully
+addEventListener('beforeunload', (ev) => {
+  // deno-lint-ignore no-explicit-any
+  console.log('Function shutdown:', (ev as any).detail?.reason || 'unknown reason');
+});
 
 // ============================================================================
 // MAIN HANDLER
@@ -689,245 +1012,30 @@ Deno.serve(async (req) => {
       clearExisting,
     });
 
-    // Clear existing data if requested
-    if (clearExisting) {
-      console.log('Clearing existing data...');
-      
-      if (generateFood) {
-        const { error: clearFoodError } = await serviceClient
-          .from('food_entries')
-          .delete()
-          .eq('user_id', demoUserId)
-          .gte('eaten_date', formatDate(startDate))
-          .lte('eaten_date', formatDate(endDate));
-        
-        if (clearFoodError) console.error('Error clearing food:', clearFoodError);
-      }
-
-      if (generateWeights) {
-        const { error: clearWeightError } = await serviceClient
-          .from('weight_sets')
-          .delete()
-          .eq('user_id', demoUserId)
-          .gte('logged_date', formatDate(startDate))
-          .lte('logged_date', formatDate(endDate));
-        
-        if (clearWeightError) console.error('Error clearing weights:', clearWeightError);
-      }
-
-      if (savedMealsCount > 0) {
-        const { error: clearMealsError } = await serviceClient
-          .from('saved_meals')
-          .delete()
-          .eq('user_id', demoUserId);
-        
-        if (clearMealsError) console.error('Error clearing saved meals:', clearMealsError);
-      }
-
-      if (savedRoutinesCount > 0) {
-        const { error: clearRoutinesError } = await serviceClient
-          .from('saved_routines')
-          .delete()
-          .eq('user_id', demoUserId);
-        
-        if (clearRoutinesError) console.error('Error clearing saved routines:', clearRoutinesError);
-      }
-    }
-
-    // ========================================================================
-    // BULK AI PARSING FOR FOOD DATA
-    // ========================================================================
-    
-    const parsedCache = new Map<string, ParsedFoodItem[]>();
-    
-    if (generateFood) {
-      console.log('Starting bulk AI parsing for food entries...');
-      const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
-      
-      for (const mealType of mealTypes) {
-        const inputs = DEMO_FOOD_INPUTS[mealType];
-        const results = await bulkParseWithAI(inputs, mealType);
-        results.forEach((items, input) => parsedCache.set(input, items));
-      }
-      
-      console.log(`Parsed ${parsedCache.size} unique food inputs`);
-    }
-
-    // Select random days within range
-    const selectedDays = selectRandomDays(startDate, endDate, daysToPopulate);
-    console.log(`Selected ${selectedDays.length} days to populate`);
-
-    let foodEntriesCreated = 0;
-    let weightSetsCreated = 0;
-
-    // Generate data for each day
-    for (let i = 0; i < selectedDays.length; i++) {
-      const day = selectedDays[i];
-      const dateStr = formatDate(day);
-
-      // Generate food entries using cached AI results
-      if (generateFood) {
-        const mealTypes: Array<'breakfast' | 'lunch' | 'dinner' | 'snack'> = ['breakfast', 'lunch', 'dinner'];
-        
-        // Maybe add a snack (60% chance)
-        if (Math.random() < 0.6) {
-          mealTypes.push('snack');
-        }
-        
-        for (const mealType of mealTypes) {
-          // Pick a random input from this meal type, cycling through the 30 options
-          const inputs = DEMO_FOOD_INPUTS[mealType];
-          const rawInput = inputs[i % inputs.length];
-          const parsedItems = parsedCache.get(rawInput) || [];
-          
-          if (parsedItems.length === 0) {
-            console.warn(`No parsed items for: ${rawInput}`);
-            continue;
-          }
-          
-          // Calculate totals
-          const totalCalories = parsedItems.reduce((sum, item) => sum + (item.calories || 0), 0);
-          const totalProtein = parsedItems.reduce((sum, item) => sum + (item.protein || 0), 0);
-          const totalCarbs = parsedItems.reduce((sum, item) => sum + (item.carbs || 0), 0);
-          const totalFat = parsedItems.reduce((sum, item) => sum + (item.fat || 0), 0);
-          
-          const { error: foodError } = await serviceClient
-            .from('food_entries')
-            .insert({
-              user_id: demoUserId,
-              eaten_date: dateStr,
-              raw_input: rawInput,
-              food_items: parsedItems.map(item => ({
-                uid: crypto.randomUUID(),
-                description: item.name,
-                portion: item.portion,
-                calories: item.calories,
-                protein: item.protein,
-                carbs: item.carbs,
-                fiber: item.fiber,
-                sugar: item.sugar,
-                fat: item.fat,
-                saturated_fat: item.saturated_fat,
-                sodium: item.sodium,
-                cholesterol: item.cholesterol,
-                confidence: item.confidence,
-              })),
-              total_calories: totalCalories,
-              total_protein: totalProtein,
-              total_carbs: totalCarbs,
-              total_fat: totalFat,
-            });
-
-          if (foodError) {
-            console.error('Error inserting food entry:', foodError);
-          } else {
-            foodEntriesCreated++;
-          }
-        }
-      }
-
-      // Generate weight entries (roughly every other day)
-      if (generateWeights && Math.random() < 0.5) {
-        const { rawInput, exercises } = generateWeightEntriesForDay(
-          weightConfig,
-          i,
-          selectedDays.length
-        );
-        
-        const entryId = crypto.randomUUID();
-        
-        for (let j = 0; j < exercises.length; j++) {
-          const exercise = exercises[j];
-          const { error: weightError } = await serviceClient
-            .from('weight_sets')
-            .insert({
-              user_id: demoUserId,
-              entry_id: entryId,
-              logged_date: dateStr,
-              exercise_key: exercise.exercise_key,
-              description: exercise.description,
-              sets: exercise.sets,
-              reps: exercise.reps,
-              weight_lbs: exercise.weight_lbs,
-              raw_input: j === 0 ? rawInput : null,
-            });
-
-          if (weightError) {
-            console.error('Error inserting weight set:', weightError);
-          } else {
-            weightSetsCreated++;
-          }
-        }
-      }
-    }
-
-    // Generate saved meals
-    let savedMealsCreated = 0;
-    if (savedMealsCount > 0) {
-      const savedMeals = generateSavedMeals(savedMealsCount);
-      
-      for (const meal of savedMeals) {
-        const { error: mealError } = await serviceClient
-          .from('saved_meals')
-          .insert({
-            user_id: demoUserId,
-            name: meal.name,
-            original_input: meal.original_input,
-            food_items: meal.food_items,
-            use_count: meal.use_count,
-            last_used_at: new Date(Date.now() - randomInt(1, 14) * 24 * 60 * 60 * 1000).toISOString(),
-          });
-
-        if (mealError) {
-          console.error('Error inserting saved meal:', mealError);
-        } else {
-          savedMealsCreated++;
-        }
-      }
-    }
-
-    // Generate saved routines
-    let savedRoutinesCreated = 0;
-    if (savedRoutinesCount > 0) {
-      const savedRoutines = generateSavedRoutines(savedRoutinesCount);
-      
-      for (const routine of savedRoutines) {
-        const { error: routineError } = await serviceClient
-          .from('saved_routines')
-          .insert({
-            user_id: demoUserId,
-            name: routine.name,
-            original_input: routine.original_input,
-            exercise_sets: routine.exercise_sets,
-            use_count: routine.use_count,
-            last_used_at: new Date(Date.now() - randomInt(1, 14) * 24 * 60 * 60 * 1000).toISOString(),
-          });
-
-        if (routineError) {
-          console.error('Error inserting saved routine:', routineError);
-        } else {
-          savedRoutinesCreated++;
-        }
-      }
-    }
-
-    const summary = {
-      daysPopulated: selectedDays.length,
-      foodEntries: foodEntriesCreated,
-      weightSets: weightSetsCreated,
-      savedMeals: savedMealsCreated,
-      savedRoutines: savedRoutinesCreated,
-      parsedInputs: parsedCache.size,
-      dateRange: {
-        start: formatDate(startDate),
-        end: formatDate(endDate),
-      },
+    // Prepare params for background work
+    const populationParams: PopulationParams = {
+      startDate,
+      endDate,
+      daysToPopulate,
+      generateFood,
+      generateWeights,
+      savedMealsCount,
+      savedRoutinesCount,
+      clearExisting,
+      weightConfig,
     };
 
-    console.log('Population complete:', summary);
+    // Start background work using EdgeRuntime.waitUntil
+    EdgeRuntime.waitUntil(doPopulationWork(populationParams, demoUserId, serviceClient));
 
+    // Return immediately with processing status
     return new Response(
-      JSON.stringify({ success: true, summary }),
+      JSON.stringify({
+        success: true,
+        status: 'processing',
+        message: 'Population started. Check demo account in 1-2 minutes.',
+        estimatedTime: '1-2 minutes',
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: unknown) {
