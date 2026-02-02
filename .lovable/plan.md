@@ -1,54 +1,72 @@
 
 
-## Demo Preview Dialog Polish
+## Demo Preview Fixes
 
-Four refinements to improve the mobile experience and reduce promotional feel.
-
----
-
-### Issue 1: Reduce Dialog Padding on Mobile
-
-**Current**: `DialogContent` has `p-6` (24px) padding by default.
-
-**Fix**: Override in `DemoPreviewDialog` to use tighter padding on mobile: `p-4` or even `p-3`, with `sm:p-6` to preserve desktop padding.
-
-**Change**: Add `p-3 sm:p-6` to the `DialogContent` className override.
+Three issues to address:
 
 ---
 
-### Issue 2: Left-Align Text on Mobile
+### Issue 1: Dead Code Cleanup in LogInput
 
-**Root Cause**: `DialogHeader` in the UI component has `text-center sm:text-left` - so on mobile it centers, desktop left-aligns.
+**Confirmed:** Lines 14 and 146 of `LogInput.tsx` import and destructure `useReadOnlyContext`, but neither `isReadOnly` nor `triggerOverlay` are used anywhere in the component (the comment on lines 220-221 confirms the check moved to parent components).
 
-**Fix**: Override the `DialogHeader` className in `DemoPreviewDialog` to always be left-aligned: `text-left`.
+**Note:** `FoodItemsTable` and `WeightItemsTable` do actively use both values (to block edits and trigger the overlay when read-only users try to edit cells).
 
-**Change**: Add `className="text-left"` to `<DialogHeader>`.
-
----
-
-### Issue 3: Consistent Styling for Labels
-
-**Current**: 
-- "What you entered:" is `text-sm` (14px), muted color
-- "Here's what would be logged:" uses `DialogTitle` with `text-title` (18px, semi-bold styling)
-
-**Fix**: Don't use `DialogTitle` for "Here's what would be logged:". Instead, render both as simple styled text with the same treatment.
-
-**Design**:
-- Both labels: `text-sm text-muted-foreground` 
-- Both quoted values: normal text, smaller
-
-**Change**: Replace `<DialogTitle>` with a styled `<p>` matching the "What you entered" styling.
+**Fix:**
+- Remove import of `useReadOnlyContext` from line 14
+- Remove the destructuring call on line 146
 
 ---
 
-### Issue 4: Remove "Create Free Account" Button
+### Issue 2: Macro Percentages Causing Misalignment
 
-**Rationale**: Demo mode should feel exploratory, not promotional.
+In the screenshot, the "13%/46%/40%" text beneath the P/C/F total pushes the cell content down, misaligning it with "Total" and the calorie number.
 
-**Fix**: Remove the `<Button onClick={handleCreateAccount}>Create Free Account</Button>` entirely. Keep only "Got it".
+**Options:**
+1. Hide percentages entirely in demo preview
+2. Always hide percentages when `totalsPosition="bottom"` (they're less useful in compact contexts)
 
-**Additional cleanup**: Remove the now-unused `handleCreateAccount` function and `useNavigate` import.
+**Chosen approach:** Add a new prop `showMacroPercentages?: boolean` defaulting to `true`, so the demo preview can pass `showMacroPercentages={false}`.
+
+**Files:**
+- `src/components/FoodItemsTable.tsx` - add prop, conditionally render percentages
+- `src/components/DemoPreviewDialog.tsx` - pass `showMacroPercentages={false}`
+
+---
+
+### Issue 3: Cardio Display in Demo Preview
+
+**Problem:** The cardio "cardio" spanning label is only shown when `editable={true}`. Demo preview passes `editable={false}`, so cardio items show the awkward "—", "—", "30.0 min" format.
+
+**Simplest architectural fix:** Add a prop `showCardioLabel?: boolean` that, when true, triggers the cardio display even in read-only mode.
+
+**Logic change in WeightItemsTable:**
+```tsx
+// Before
+if (editable && isCardioItem) { ... }
+
+// After  
+if (isCardioItem && (editable || showCardioLabel)) { ... }
+```
+
+**Files:**
+- `src/components/WeightItemsTable.tsx` - add `showCardioLabel?: boolean` prop
+- `src/components/DemoPreviewDialog.tsx` - pass `showCardioLabel={true}`
+
+---
+
+### Issue 4: ReadOnlyOverlay Exclamation Point
+
+**File:** `src/components/ReadOnlyOverlay.tsx`
+
+Change line 45 from:
+```
+Create a free account to track your own data!
+```
+to:
+```
+Create a free account to track your own data.
+```
 
 ---
 
@@ -56,40 +74,70 @@ Four refinements to improve the mobile experience and reduce promotional feel.
 
 | File | Change |
 |------|--------|
-| `src/components/DemoPreviewDialog.tsx` | All 4 fixes |
+| `src/components/LogInput.tsx` | Remove unused `useReadOnlyContext` import and call |
+| `src/components/FoodItemsTable.tsx` | Add `showMacroPercentages` prop, conditionally render |
+| `src/components/WeightItemsTable.tsx` | Add `showCardioLabel` prop, update cardio condition |
+| `src/components/DemoPreviewDialog.tsx` | Pass `showMacroPercentages={false}` and `showCardioLabel={true}` |
+| `src/components/ReadOnlyOverlay.tsx` | Remove exclamation point from message |
 
 ---
 
 ### Technical Details
 
-**Updated structure:**
-
+**LogInput.tsx cleanup:**
 ```tsx
-<DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto p-3 sm:p-6">
-  <DialogHeader className="text-left">
-    {rawInput && (
-      <div className="text-sm mb-3">
-        <span className="text-muted-foreground">What you entered:</span>
-        <p className="mt-1 italic text-foreground">"{rawInput}"</p>
-      </div>
-    )}
-    <p className="text-sm text-muted-foreground">Here's what would be logged:</p>
-  </DialogHeader>
+// Remove line 14:
+// import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 
-  <div className="py-2">
-    {/* table... */}
-  </div>
-
-  <DialogFooter>
-    <Button variant="outline" onClick={() => onOpenChange(false)}>
-      Got it
-    </Button>
-  </DialogFooter>
-</DialogContent>
+// Remove line 146:
+// const { isReadOnly, triggerOverlay } = useReadOnlyContext();
 ```
 
-**Imports cleanup:**
-- Remove `useNavigate` (no longer navigating to auth)
-- Remove `DialogTitle` from imports (no longer using it)
-- Remove `supabase` import (no longer calling signOut)
+**FoodItemsTable.tsx - new prop and conditional:**
+```tsx
+// In props interface
+showMacroPercentages?: boolean;
+
+// In component destructuring
+showMacroPercentages = true,
+
+// In TotalsRow, wrap the percentage div:
+{showMacroPercentages && (
+  <div className="text-[9px] text-muted-foreground font-normal">
+    {proteinPct}%/{carbsPct}%/{fatPct}%
+  </div>
+)}
+```
+
+**WeightItemsTable.tsx - new prop and conditional:**
+```tsx
+// In props interface
+showCardioLabel?: boolean;
+
+// Update condition (around line 413):
+if (isCardioItem && (editable || showCardioLabel)) {
+  return (
+    <span className="col-span-3 text-center text-muted-foreground italic py-1">
+      cardio
+    </span>
+  );
+}
+```
+
+**DemoPreviewDialog.tsx - pass new props:**
+```tsx
+<FoodItemsTable
+  items={foodItemsWithEntryId}
+  editable={false}
+  showMacroPercentages={false}
+  // ... other props
+/>
+
+<WeightItemsTable
+  items={weightSetsWithEntryId}
+  editable={false}
+  showCardioLabel={true}
+  // ... other props
+/>
+```
 
