@@ -271,7 +271,7 @@ export default function Settings() {
               >
                 <span
                   className={cn(
-                    "absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform",
+                    "absolute left-0 top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform",
                     settings.showWeights ? "translate-x-6" : "translate-x-0.5"
                   )}
                 />
