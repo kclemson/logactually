@@ -95,3 +95,30 @@ export function interpolatePrompt(
       additionalContext ? `Additional context: "${additionalContext}"` : ''
     );
 }
+
+// ============================================================================
+// BULK PARSING PROMPT HELPER
+// Used by populate-demo-data to parse multiple food entries in a single AI call
+// ============================================================================
+
+export function buildBulkFoodParsingPrompt(inputs: string[]): string {
+  return `Parse these ${inputs.length} food entries. For each input, analyze it exactly as you would individually, extracting all food items with their nutritional information.
+
+Inputs:
+${inputs.map((input, i) => `${i + 1}. "${input}"`).join('\n')}
+
+Return JSON with results in the EXACT same order as the inputs above. Each result should contain the food_items array for that input:
+{
+  "results": [
+    { "food_items": [{ "name": "...", "portion": "...", "calories": 0, "protein": 0, "carbs": 0, "fiber": 0, "sugar": 0, "fat": 0, "saturated_fat": 0, "sodium": 0, "cholesterol": 0, "confidence": "high" }] },
+    { "food_items": [...] },
+    ...
+  ]
+}
+
+IMPORTANT:
+- Return exactly ${inputs.length} results, one for each input
+- Keep names short (max 25 characters)
+- Use realistic nutritional values based on typical serving sizes
+- Multi-item inputs (e.g., "eggs and toast") should have multiple items in their food_items array`;
+}

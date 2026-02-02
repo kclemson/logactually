@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { getAnalyzeFoodPrompt, buildBulkFoodParsingPrompt } from '../_shared/prompts.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -6,408 +7,289 @@ const corsHeaders = {
 };
 
 // ============================================================================
-// CONSTANTS AND DATA SETS
+// CONSTANTS
 // ============================================================================
 
 const DEMO_EMAIL = 'demo@logactually.com';
+const BATCH_SIZE = 10;
 
-// Recipe URLs with optional ingredient modifications
-const RECIPE_URLS = [
-  { url: 'https://www.bonappetit.com/recipe/cacio-e-pepe', name: 'Cacio e Pepe', optionalIngredients: ['pecorino', 'extra pepper'] },
-  { url: 'https://www.seriouseats.com/the-best-slow-cooked-bolognese-sauce-recipe', name: 'Bolognese', optionalIngredients: ['wine', 'milk'] },
-  { url: 'https://cooking.nytimes.com/recipes/1015819-chocolate-chip-cookies', name: 'Chocolate Chip Cookies', optionalIngredients: ['nuts', 'chocolate chips'] },
-  { url: 'https://www.allrecipes.com/recipe/23600/worlds-best-lasagna/', name: 'Lasagna', optionalIngredients: ['ricotta', 'italian sausage'] },
-  { url: 'https://minimalistbaker.com/easy-pad-thai/', name: 'Pad Thai', optionalIngredients: ['peanuts', 'tofu'] },
-  { url: 'https://www.budgetbytes.com/one-pot-chicken-and-rice/', name: 'Chicken and Rice', optionalIngredients: ['peas', 'carrots'] },
-  { url: 'https://www.simplyrecipes.com/recipes/homemade_pizza/', name: 'Homemade Pizza', optionalIngredients: ['pepperoni', 'olives'] },
-  { url: 'https://natashaskitchen.com/banana-bread-recipe-video/', name: 'Banana Bread', optionalIngredients: ['walnuts', 'chocolate chips'] },
-];
+// ============================================================================
+// DEMO FOOD INPUTS - Raw text inputs that will be parsed by AI
+// 30 inputs per meal type, covering variety of styles
+// ============================================================================
 
-// Brand names by category
-const BRANDS = {
-  protein: ['Quest', 'Kirkland', 'RXBAR', 'Built Bar', 'ONE Bar'],
-  yogurt: ['Chobani', 'Fage', "Siggi's", 'Oikos'],
-  frozen: ["Trader Joe's", "Amy's", 'Lean Cuisine', 'Healthy Choice'],
-  snacks: ['KIND', 'Clif', 'Nature Valley', 'LÄRABAR'],
-  drinks: ['Starbucks', "Dunkin'", 'Celsius', 'Liquid Death'],
-  grocery: ['Costco', 'Whole Foods', 'Aldi', 'Wegmans'],
-};
-
-// Common typos for realistic input
-const COMMON_TYPOS: Record<string, string[]> = {
-  'chicken': ['chiken', 'chicekn'],
-  'sandwich': ['sandwhich', 'sandwitch'],
-  'breakfast': ['breakfest', 'brekfast'],
-  'grilled': ['griled', 'grillled'],
-  'scrambled': ['scrambeld', 'scambled'],
-  'burrito': ['burito', 'buritto'],
-  'oatmeal': ['oatmal', 'oatmeel'],
-  'avocado': ['avacado', 'avocodo'],
-  'broccoli': ['brocoli', 'brocolli'],
-  'restaurant': ['restaraunt', 'resturant'],
+const DEMO_FOOD_INPUTS: Record<string, string[]> = {
+  breakfast: [
+    '2 eggs scrambled with buttered toast',
+    'greek yogurt with granola and blueberries',
+    'oatmeal with sliced banana and honey',
+    'everything bagel with cream cheese',
+    'whey protein shake with almond milk',
+    'overnight oats with chia seeds and berries',
+    'english muffin with peanut butter',
+    'bowl of cheerios with 2% milk',
+    'avocado toast on sourdough',
+    'smoothie with spinach, banana, protein powder',
+    'french toast with maple syrup (2 pieces)',
+    'breakfast burrito with eggs, cheese, and salsa',
+    'made scrambled eggs with cheddar cheese and some toast',
+    'had a big bowl of oatmeal with blueberries and honey',
+    'grabbed a breakfast sandwich from the cafe',
+    'just coffee and a banana this morning',
+    'Starbucks grande oat milk latte',
+    'Chobani greek yogurt strawberry',
+    'bacon and eggs with hashbrowns',
+    '3 pancakes with butter and syrup',
+    'hard boiled eggs (2) and an orange',
+    'yogurt parfait with granola',
+    'peanut butter banana smoothie',
+    'croissant with jam',
+    'cottage cheese with pineapple',
+    'breakfast quesadilla with eggs and cheese',
+    'cold brew coffee with oat milk',
+    'toast with almond butter and sliced banana',
+    'egg white omelette with spinach and feta',
+    'acai bowl with granola and fruit',
+  ],
+  lunch: [
+    'turkey sandwich on wheat with lettuce and tomato',
+    'big salad with grilled chicken',
+    'leftover spaghetti, about 2 cups',
+    'chicken noodle soup with crusty bread',
+    'chicken burrito bowl with rice beans and guac',
+    'salmon roll, 8 pieces',
+    'grilled cheese sandwich with tomato soup',
+    'chicken wrap with veggies and ranch',
+    'poke bowl with ahi tuna and rice',
+    'falafel bowl with hummus and tabbouleh',
+    'got chipotle - chicken bowl with guac',
+    'ate leftover chicken stir fry from last night',
+    'had a big salad with grilled chicken and ranch',
+    'sandwich from the deli, turkey and swiss',
+    'ramen from the place down the street',
+    'meal prep chicken and rice',
+    'panera bread bowl soup',
+    "Trader Joe's mandarin orange chicken",
+    'Costco rotisserie chicken (1/4)',
+    'caesar salad with grilled shrimp',
+    'veggie burger with sweet potato fries',
+    'tuna salad on whole wheat',
+    'leftover pizza (2 slices)',
+    'hummus and veggie wrap',
+    'mediterranean bowl with falafel',
+    'teriyaki chicken with steamed rice',
+    'BLT sandwich with chips',
+    'sushi bento box',
+    'greek salad with chicken',
+    'ham and cheese croissant',
+  ],
+  dinner: [
+    'baked salmon with roasted vegetables',
+    'chicken stir fry with mixed veggies',
+    'spaghetti with meat sauce, 2 cups',
+    '3 beef tacos with cheese and salsa',
+    '2 slices pepperoni pizza',
+    'cheeseburger with medium fries',
+    'grilled chicken breast with brown rice',
+    'shrimp scampi over linguine',
+    'beef and broccoli with steamed rice',
+    '2 baked chicken thighs, bone-in',
+    'cooked salmon in the air fryer with roasted veggies',
+    'ordered thai food - pad thai and spring rolls',
+    'homemade tacos with ground beef, like 3 of them',
+    'grilled chicken breast with quinoa and asparagus',
+    'spaghetti and meatballs, pretty big portion',
+    'went out for sushi, had about 12 pieces plus miso soup',
+    'made a big stir fry with tofu and vegetables',
+    "made this: https://www.bonappetit.com/recipe/cacio-e-pepe",
+    "made this: https://www.seriouseats.com/the-best-slow-cooked-bolognese-sauce-recipe",
+    'ribeye steak with baked potato',
+    'lasagna (one big slice) with garlic bread',
+    'grilled pork chops with applesauce',
+    'fish tacos with cabbage slaw',
+    'butter chicken with naan bread',
+    'roasted chicken with mashed potatoes',
+    'lamb chops with mint sauce',
+    'vegetable curry with jasmine rice',
+    'stuffed bell peppers',
+    'bbq pulled pork sandwich with coleslaw',
+    'chicken parmesan with pasta',
+  ],
+  snack: [
+    'apple slices with 2 tbsp peanut butter',
+    'handful of almonds, about 20',
+    'chocolate chip protein bar',
+    '1 medium banana',
+    'plain greek yogurt, 1 cup',
+    'string cheese, 2 sticks',
+    'baby carrots with hummus',
+    'handful of trail mix',
+    '3 cups popcorn, air popped',
+    '2 rice cakes with almond butter',
+    'needed something sweet so had some dark chocolate',
+    'protein shake after workout',
+    'handful of mixed nuts from the jar',
+    'an apple and some peanut butter',
+    'cheese and crackers',
+    'Quest protein bar cookies and cream',
+    'KIND dark chocolate nuts & sea salt bar',
+    'Clif chocolate chip bar',
+    'RXBAR chocolate sea salt',
+    'celery sticks with peanut butter',
+    'cottage cheese with berries',
+    'beef jerky (1 oz)',
+    'hard boiled egg',
+    'edamame (1 cup)',
+    'granola bar',
+    'frozen grapes',
+    'rice cakes with avocado',
+    'mini pretzels (1 oz)',
+    'dried mango slices',
+    'roasted chickpeas',
+  ],
 };
 
 // ============================================================================
-// POLISHED FOOD MAPPINGS
-// Maps sloppy raw inputs to structured, polished food items with realistic macros
+// AI PARSING TYPES AND HELPERS
 // ============================================================================
 
-interface PolishedFoodItem {
-  description: string;
-  portion: string;
+interface ParsedFoodItem {
+  name: string;
+  portion?: string;
   calories: number;
   protein: number;
   carbs: number;
+  fiber?: number;
+  sugar?: number;
   fat: number;
+  saturated_fat?: number;
+  sodium?: number;
+  cholesterol?: number;
+  confidence?: string;
 }
 
-interface PolishedFoodEntry {
-  rawInput: string;
-  items: PolishedFoodItem[];
+interface BulkParseResult {
+  results: Array<{ food_items: ParsedFoodItem[] }>;
 }
 
-const POLISHED_FOODS: Record<string, Record<string, PolishedFoodEntry[]>> = {
-  shorthand: {
-    breakfast: [
-      { rawInput: '2 eggs scrambled with buttered toast', items: [
-        { description: 'Scrambled Eggs', portion: '2 large', calories: 182, protein: 12, carbs: 2, fat: 14 },
-        { description: 'Buttered Toast', portion: '2 slices', calories: 186, protein: 4, carbs: 26, fat: 8 },
-      ]},
-      { rawInput: 'scrambled eggs, 2 large', items: [
-        { description: 'Scrambled Eggs', portion: '2 large', calories: 182, protein: 12, carbs: 2, fat: 14 },
-      ]},
-      { rawInput: 'oatmeal with sliced banana', items: [
-        { description: 'Oatmeal', portion: '1 cup cooked', calories: 158, protein: 6, carbs: 27, fat: 3 },
-        { description: 'Banana', portion: '1 medium', calories: 105, protein: 1, carbs: 27, fat: 0 },
-      ]},
-      { rawInput: 'bowl of cheerios with 2% milk', items: [
-        { description: 'Breakfast Cereal', portion: '1 cup', calories: 150, protein: 3, carbs: 33, fat: 1 },
-        { description: 'Milk', portion: '1 cup 2%', calories: 122, protein: 8, carbs: 12, fat: 5 },
-      ]},
-      { rawInput: 'greek yogurt with granola and blueberries', items: [
-        { description: 'Greek Yogurt', portion: '1 cup plain', calories: 130, protein: 17, carbs: 8, fat: 4 },
-        { description: 'Granola', portion: '1/2 cup', calories: 210, protein: 5, carbs: 34, fat: 7 },
-      ]},
-      { rawInput: 'everything bagel with cream cheese', items: [
-        { description: 'Plain Bagel', portion: '1 large', calories: 277, protein: 10, carbs: 54, fat: 2 },
-        { description: 'Cream Cheese', portion: '2 tbsp', calories: 99, protein: 2, carbs: 2, fat: 10 },
-      ]},
-      { rawInput: 'avocado toast on sourdough', items: [
-        { description: 'Avocado Toast', portion: '2 slices whole wheat', calories: 320, protein: 8, carbs: 28, fat: 22 },
-      ]},
-      { rawInput: 'whey protein shake with almond milk', items: [
-        { description: 'Whey Protein Shake', portion: '1 scoop with water', calories: 120, protein: 24, carbs: 3, fat: 1 },
-      ]},
-      { rawInput: 'overnight oats with chia seeds and berries', items: [
-        { description: 'Overnight Oats', portion: '1 jar with berries', calories: 340, protein: 12, carbs: 52, fat: 10 },
-      ]},
-      { rawInput: 'english muffin with peanut butter', items: [
-        { description: 'English Muffin', portion: '1 whole wheat', calories: 134, protein: 5, carbs: 26, fat: 1 },
-        { description: 'Peanut Butter', portion: '2 tbsp', calories: 188, protein: 8, carbs: 6, fat: 16 },
-      ]},
-    ],
-    lunch: [
-      { rawInput: 'turkey sandwich on wheat with lettuce and tomato', items: [
-        { description: 'Turkey Sandwich', portion: 'on whole wheat with lettuce, tomato', calories: 380, protein: 28, carbs: 36, fat: 12 },
-      ]},
-      { rawInput: 'big salad with grilled chicken', items: [
-        { description: 'Grilled Chicken Salad', portion: 'mixed greens, veggies', calories: 350, protein: 32, carbs: 18, fat: 16 },
-      ]},
-      { rawInput: 'leftover spaghetti, about 2 cups', items: [
-        { description: 'Pasta with Marinara', portion: '2 cups', calories: 420, protein: 14, carbs: 72, fat: 8 },
-      ]},
-      { rawInput: 'chicken noodle soup with crusty bread', items: [
-        { description: 'Chicken Noodle Soup', portion: '1.5 cups', calories: 180, protein: 12, carbs: 20, fat: 5 },
-        { description: 'Crusty Bread', portion: '1 slice', calories: 120, protein: 4, carbs: 22, fat: 2 },
-      ]},
-      { rawInput: 'chicken burrito bowl with rice beans and guac', items: [
-        { description: 'Burrito Bowl', portion: 'rice, beans, chicken, salsa', calories: 580, protein: 38, carbs: 62, fat: 18 },
-      ]},
-      { rawInput: 'salmon roll, 8 pieces', items: [
-        { description: 'Salmon Sushi Roll', portion: '8 pieces', calories: 320, protein: 16, carbs: 44, fat: 8 },
-      ]},
-      { rawInput: 'grilled cheese sandwich with tomato soup', items: [
-        { description: 'Grilled Cheese Sandwich', portion: '1 sandwich', calories: 440, protein: 16, carbs: 34, fat: 28 },
-      ]},
-      { rawInput: 'chicken wrap with veggies and ranch', items: [
-        { description: 'Grilled Chicken Wrap', portion: 'with veggies', calories: 420, protein: 30, carbs: 38, fat: 16 },
-      ]},
-      { rawInput: 'poke bowl with ahi tuna and rice', items: [
-        { description: 'Ahi Tuna Poke Bowl', portion: 'with rice and veggies', calories: 520, protein: 32, carbs: 58, fat: 16 },
-      ]},
-      { rawInput: 'falafel bowl with hummus and tabbouleh', items: [
-        { description: 'Mediterranean Bowl', portion: 'falafel, hummus, tabbouleh', calories: 580, protein: 18, carbs: 62, fat: 28 },
-      ]},
-    ],
-    dinner: [
-      { rawInput: 'baked salmon with roasted vegetables', items: [
-        { description: 'Baked Salmon', portion: '6 oz fillet', calories: 350, protein: 38, carbs: 0, fat: 20 },
-        { description: 'Roasted Vegetables', portion: '1.5 cups mixed', calories: 120, protein: 3, carbs: 18, fat: 5 },
-      ]},
-      { rawInput: 'chicken stir fry with mixed veggies', items: [
-        { description: 'Chicken Stir Fry', portion: 'with vegetables and sauce', calories: 420, protein: 34, carbs: 28, fat: 18 },
-      ]},
-      { rawInput: 'spaghetti with meat sauce, 2 cups', items: [
-        { description: 'Spaghetti Bolognese', portion: '2 cups', calories: 580, protein: 28, carbs: 68, fat: 20 },
-      ]},
-      { rawInput: '3 beef tacos with cheese and salsa', items: [
-        { description: 'Beef Tacos', portion: '3 soft shell', calories: 540, protein: 28, carbs: 42, fat: 28 },
-      ]},
-      { rawInput: '2 slices pepperoni pizza', items: [
-        { description: 'Pepperoni Pizza', portion: '2 large slices', calories: 560, protein: 22, carbs: 56, fat: 28 },
-      ]},
-      { rawInput: 'cheeseburger with medium fries', items: [
-        { description: 'Cheeseburger', portion: '1/4 lb with bun', calories: 530, protein: 28, carbs: 40, fat: 30 },
-        { description: 'French Fries', portion: 'medium', calories: 380, protein: 5, carbs: 48, fat: 18 },
-      ]},
-      { rawInput: 'grilled chicken breast with brown rice', items: [
-        { description: 'Grilled Chicken Breast', portion: '6 oz', calories: 280, protein: 52, carbs: 0, fat: 6 },
-        { description: 'Brown Rice', portion: '1 cup cooked', calories: 216, protein: 5, carbs: 45, fat: 2 },
-      ]},
-      { rawInput: 'shrimp scampi over linguine', items: [
-        { description: 'Shrimp Scampi', portion: 'over linguine', calories: 620, protein: 34, carbs: 58, fat: 26 },
-      ]},
-      { rawInput: 'beef and broccoli with steamed rice', items: [
-        { description: 'Beef and Broccoli', portion: 'with steamed rice', calories: 520, protein: 32, carbs: 48, fat: 22 },
-      ]},
-      { rawInput: '2 baked chicken thighs, bone-in', items: [
-        { description: 'Baked Chicken Thighs', portion: '2 thighs bone-in', calories: 440, protein: 42, carbs: 0, fat: 28 },
-      ]},
-    ],
-    snack: [
-      { rawInput: 'apple slices with 2 tbsp peanut butter', items: [
-        { description: 'Apple', portion: '1 medium', calories: 95, protein: 0, carbs: 25, fat: 0 },
-        { description: 'Peanut Butter', portion: '2 tbsp', calories: 188, protein: 8, carbs: 6, fat: 16 },
-      ]},
-      { rawInput: 'handful of almonds, about 20', items: [
-        { description: 'Almonds', portion: '1/4 cup (about 23)', calories: 207, protein: 8, carbs: 7, fat: 18 },
-      ]},
-      { rawInput: 'chocolate chip protein bar', items: [
-        { description: 'Protein Bar', portion: '1 bar', calories: 200, protein: 20, carbs: 22, fat: 7 },
-      ]},
-      { rawInput: '1 medium banana', items: [
-        { description: 'Banana', portion: '1 medium', calories: 105, protein: 1, carbs: 27, fat: 0 },
-      ]},
-      { rawInput: 'plain greek yogurt, 1 cup', items: [
-        { description: 'Greek Yogurt', portion: '1 cup plain', calories: 130, protein: 17, carbs: 8, fat: 4 },
-      ]},
-      { rawInput: 'string cheese, 2 sticks', items: [
-        { description: 'String Cheese', portion: '1 stick', calories: 80, protein: 7, carbs: 1, fat: 6 },
-      ]},
-      { rawInput: 'baby carrots with hummus', items: [
-        { description: 'Baby Carrots', portion: '1 cup', calories: 52, protein: 1, carbs: 12, fat: 0 },
-        { description: 'Hummus', portion: '1/4 cup', calories: 140, protein: 5, carbs: 12, fat: 9 },
-      ]},
-      { rawInput: 'handful of trail mix', items: [
-        { description: 'Trail Mix', portion: '1/4 cup', calories: 173, protein: 5, carbs: 16, fat: 11 },
-      ]},
-      { rawInput: '3 cups popcorn, air popped', items: [
-        { description: 'Popcorn', portion: '3 cups air-popped', calories: 93, protein: 3, carbs: 19, fat: 1 },
-      ]},
-      { rawInput: '2 rice cakes with almond butter', items: [
-        { description: 'Rice Cakes', portion: '2 cakes', calories: 70, protein: 2, carbs: 14, fat: 1 },
-      ]},
-    ],
-  },
-  casual: {
-    breakfast: [
-      { rawInput: 'made scrambled eggs with cheddar cheese and some toast', items: [
-        { description: 'Scrambled Eggs with Cheddar', portion: '2 eggs with 1 oz cheese', calories: 290, protein: 18, carbs: 2, fat: 22 },
-        { description: 'Buttered Toast', portion: '2 slices', calories: 186, protein: 4, carbs: 26, fat: 8 },
-      ]},
-      { rawInput: 'had a big bowl of oatmeal with blueberries and honey', items: [
-        { description: 'Oatmeal with Blueberries', portion: '1.5 cups with 1 tbsp honey', calories: 320, protein: 8, carbs: 62, fat: 5 },
-      ]},
-      { rawInput: 'grabbed a breakfast sandwich from the cafe', items: [
-        { description: 'Bacon Egg & Cheese Sandwich', portion: '1 sandwich on croissant', calories: 520, protein: 22, carbs: 38, fat: 32 },
-      ]},
-      { rawInput: 'just coffee and a banana this morning', items: [
-        { description: 'Black Coffee', portion: '12 oz', calories: 5, protein: 0, carbs: 1, fat: 0 },
-        { description: 'Banana', portion: '1 medium', calories: 105, protein: 1, carbs: 27, fat: 0 },
-      ]},
-      { rawInput: 'smoothie with spinach, banana, protein powder', items: [
-        { description: 'Green Protein Smoothie', portion: '16 oz', calories: 280, protein: 28, carbs: 35, fat: 4 },
-      ]},
-      { rawInput: 'french toast with maple syrup (2 pieces)', items: [
-        { description: 'French Toast', portion: '2 slices with syrup', calories: 420, protein: 12, carbs: 62, fat: 14 },
-      ]},
-      { rawInput: 'breakfast burrito with eggs, cheese, and salsa', items: [
-        { description: 'Breakfast Burrito', portion: '1 large with eggs, cheese, salsa', calories: 480, protein: 22, carbs: 42, fat: 24 },
-      ]},
-    ],
-    lunch: [
-      { rawInput: 'got chipotle - chicken bowl with guac', items: [
-        { description: 'Chipotle Chicken Burrito Bowl', portion: 'with rice, beans, guacamole, salsa', calories: 740, protein: 44, carbs: 72, fat: 28 },
-      ]},
-      { rawInput: 'ate leftover chicken stir fry from last night', items: [
-        { description: 'Leftover Chicken Stir Fry', portion: '1.5 cups with vegetables', calories: 380, protein: 32, carbs: 24, fat: 16 },
-      ]},
-      { rawInput: 'had a big salad with grilled chicken and ranch', items: [
-        { description: 'Grilled Chicken Salad', portion: 'large with ranch dressing', calories: 520, protein: 38, carbs: 18, fat: 34 },
-      ]},
-      { rawInput: 'sandwich from the deli, turkey and swiss', items: [
-        { description: 'Turkey & Swiss Deli Sandwich', portion: 'on sourdough with mayo', calories: 540, protein: 34, carbs: 42, fat: 26 },
-      ]},
-      { rawInput: 'ramen from the place down the street', items: [
-        { description: 'Tonkotsu Ramen', portion: 'large bowl with egg and chashu', calories: 680, protein: 32, carbs: 78, fat: 28 },
-      ]},
-      { rawInput: 'meal prep chicken and rice', items: [
-        { description: 'Meal Prep Chicken Breast', portion: '6 oz', calories: 280, protein: 52, carbs: 0, fat: 6 },
-        { description: 'Jasmine Rice', portion: '1 cup', calories: 205, protein: 4, carbs: 45, fat: 0 },
-      ]},
-      { rawInput: 'panera bread bowl soup', items: [
-        { description: 'Panera Broccoli Cheddar Soup', portion: 'in bread bowl', calories: 720, protein: 24, carbs: 88, fat: 28 },
-      ]},
-    ],
-    dinner: [
-      { rawInput: 'cooked salmon in the air fryer with roasted veggies', items: [
-        { description: 'Air Fried Salmon', portion: '6 oz fillet', calories: 350, protein: 38, carbs: 0, fat: 20 },
-        { description: 'Roasted Mixed Vegetables', portion: '1.5 cups', calories: 140, protein: 4, carbs: 20, fat: 6 },
-      ]},
-      { rawInput: 'ordered thai food - pad thai and spring rolls', items: [
-        { description: 'Pad Thai with Shrimp', portion: '1 order', calories: 520, protein: 22, carbs: 68, fat: 18 },
-        { description: 'Fresh Spring Rolls', portion: '2 rolls', calories: 160, protein: 6, carbs: 28, fat: 3 },
-      ]},
-      { rawInput: 'homemade tacos with ground beef, like 3 of them', items: [
-        { description: 'Ground Beef Tacos', portion: '3 tacos with toppings', calories: 620, protein: 32, carbs: 48, fat: 34 },
-      ]},
-      { rawInput: 'grilled chicken breast with quinoa and asparagus', items: [
-        { description: 'Grilled Chicken Breast', portion: '6 oz', calories: 280, protein: 52, carbs: 0, fat: 6 },
-        { description: 'Quinoa', portion: '1 cup cooked', calories: 222, protein: 8, carbs: 39, fat: 4 },
-        { description: 'Grilled Asparagus', portion: '1 cup', calories: 40, protein: 4, carbs: 7, fat: 0 },
-      ]},
-      { rawInput: 'spaghetti and meatballs, pretty big portion', items: [
-        { description: 'Spaghetti and Meatballs', portion: 'large serving with 4 meatballs', calories: 780, protein: 38, carbs: 82, fat: 32 },
-      ]},
-      { rawInput: 'went out for sushi, had about 12 pieces plus miso soup', items: [
-        { description: 'Assorted Sushi', portion: '12 pieces nigiri/maki', calories: 480, protein: 24, carbs: 66, fat: 12 },
-        { description: 'Miso Soup', portion: '1 cup', calories: 60, protein: 4, carbs: 6, fat: 2 },
-      ]},
-      { rawInput: 'made a big stir fry with tofu and vegetables', items: [
-        { description: 'Tofu Vegetable Stir Fry', portion: '2 cups with sauce', calories: 380, protein: 22, carbs: 32, fat: 18 },
-      ]},
-    ],
-    snack: [
-      { rawInput: 'needed something sweet so had some dark chocolate', items: [
-        { description: 'Dark Chocolate', portion: '2 squares (about 1 oz)', calories: 155, protein: 2, carbs: 13, fat: 11 },
-      ]},
-      { rawInput: 'protein shake after workout', items: [
-        { description: 'Whey Protein Shake', portion: '1 scoop with milk', calories: 220, protein: 28, carbs: 12, fat: 5 },
-      ]},
-      { rawInput: 'handful of mixed nuts from the jar', items: [
-        { description: 'Mixed Nuts', portion: '1/4 cup', calories: 210, protein: 6, carbs: 8, fat: 18 },
-      ]},
-      { rawInput: 'an apple and some peanut butter', items: [
-        { description: 'Apple with Peanut Butter', portion: '1 medium apple with 2 tbsp PB', calories: 283, protein: 8, carbs: 31, fat: 16 },
-      ]},
-      { rawInput: 'cheese and crackers', items: [
-        { description: 'Cheese and Crackers', portion: '1.5 oz cheese, 6 crackers', calories: 260, protein: 10, carbs: 18, fat: 16 },
-      ]},
-      { rawInput: 'leftover halloween candy (2 pieces)', items: [
-        { description: 'Chocolate Candy', portion: '2 fun-size bars', calories: 160, protein: 2, carbs: 22, fat: 8 },
-      ]},
-    ],
-  },
-  brand: {
-    breakfast: [
-      { rawInput: 'Starbucks grande oat milk latte', items: [
-        { description: 'Starbucks Grande Oat Milk Latte', portion: '16 oz', calories: 270, protein: 6, carbs: 43, fat: 7 },
-      ]},
-      { rawInput: 'Chobani greek yogurt strawberry', items: [
-        { description: 'Chobani Greek Yogurt Strawberry', portion: '5.3 oz container', calories: 120, protein: 12, carbs: 14, fat: 2 },
-      ]},
-    ],
-    lunch: [
-      { rawInput: "Trader Joe's mandarin orange chicken", items: [
-        { description: "Trader Joe's Mandarin Orange Chicken", portion: '1 cup', calories: 320, protein: 16, carbs: 38, fat: 12 },
-      ]},
-      { rawInput: 'Costco rotisserie chicken (1/4)', items: [
-        { description: 'Costco Rotisserie Chicken', portion: '1/4 bird', calories: 380, protein: 48, carbs: 0, fat: 20 },
-      ]},
-    ],
-    dinner: [
-      { rawInput: "Dunkin' bacon egg cheese on english muffin", items: [
-        { description: "Dunkin' Bacon Egg & Cheese", portion: 'on English muffin', calories: 470, protein: 20, carbs: 36, fat: 28 },
-      ]},
-    ],
-    snack: [
-      { rawInput: 'Quest protein bar cookies and cream', items: [
-        { description: 'Quest Protein Bar', portion: 'Cookies & Cream', calories: 200, protein: 21, carbs: 22, fat: 8 },
-      ]},
-      { rawInput: 'KIND dark chocolate nuts & sea salt bar', items: [
-        { description: 'KIND Bar', portion: 'Dark Chocolate Nuts & Sea Salt', calories: 200, protein: 6, carbs: 16, fat: 15 },
-      ]},
-      { rawInput: 'Clif chocolate chip bar', items: [
-        { description: 'Clif Bar Chocolate Chip', portion: '1 bar', calories: 250, protein: 9, carbs: 44, fat: 5 },
-      ]},
-      { rawInput: 'RXBAR chocolate sea salt', items: [
-        { description: 'RXBAR Chocolate Sea Salt', portion: '1 bar', calories: 210, protein: 12, carbs: 23, fat: 9 },
-      ]},
-    ],
-  },
-  recipe: {
-    dinner: [
-      { rawInput: 'made this: https://www.bonappetit.com/recipe/cacio-e-pepe', items: [
-        { description: 'Cacio e Pepe', portion: 'homemade, 1 large serving', calories: 520, protein: 18, carbs: 62, fat: 22 },
-      ]},
-      { rawInput: 'made this: https://www.seriouseats.com/the-best-slow-cooked-bolognese-sauce-recipe', items: [
-        { description: 'Slow-Cooked Bolognese', portion: 'over pasta', calories: 620, protein: 32, carbs: 58, fat: 28 },
-      ]},
-      { rawInput: 'made this: https://www.allrecipes.com/recipe/23600/worlds-best-lasagna/', items: [
-        { description: 'Homemade Lasagna', portion: '1 large slice', calories: 480, protein: 28, carbs: 38, fat: 24 },
-      ]},
-      { rawInput: 'made this: https://minimalistbaker.com/easy-pad-thai/', items: [
-        { description: 'Homemade Pad Thai', portion: '1 large serving', calories: 450, protein: 18, carbs: 58, fat: 16 },
-      ]},
-    ],
-    snack: [
-      { rawInput: 'made this: https://cooking.nytimes.com/recipes/1015819-chocolate-chip-cookies', items: [
-        { description: 'Homemade Chocolate Chip Cookies', portion: '2 cookies', calories: 280, protein: 3, carbs: 36, fat: 14 },
-      ]},
-      { rawInput: 'made this: https://natashaskitchen.com/banana-bread-recipe-video/', items: [
-        { description: 'Homemade Banana Bread', portion: '1 slice', calories: 220, protein: 3, carbs: 34, fat: 8 },
-      ]},
-    ],
-  },
-  barcode: {
-    snack: [
-      { rawInput: 'Scanned: 049000000443', items: [
-        { description: 'Coca-Cola Classic', portion: '12 oz can', calories: 140, protein: 0, carbs: 39, fat: 0 },
-      ]},
-      { rawInput: 'Scanned: 041270003209', items: [
-        { description: 'La Croix Sparkling Water', portion: '12 oz can', calories: 0, protein: 0, carbs: 0, fat: 0 },
-      ]},
-      { rawInput: 'Scanned: 818780010122', items: [
-        { description: 'RXBar Chocolate Sea Salt', portion: '1 bar', calories: 210, protein: 12, carbs: 23, fat: 9 },
-      ]},
-      { rawInput: 'Scanned: 888849000562', items: [
-        { description: 'Quest Protein Bar', portion: '1 bar', calories: 200, protein: 21, carbs: 22, fat: 8 },
-      ]},
-    ],
-    breakfast: [
-      { rawInput: 'Scanned: 038000138416', items: [
-        { description: "Kellogg's Frosted Flakes", portion: '1 cup with milk', calories: 290, protein: 9, carbs: 52, fat: 5 },
-      ]},
-      { rawInput: 'Scanned: 041196010176', items: [
-        { description: 'Oikos Triple Zero Yogurt', portion: '5.3 oz container', calories: 120, protein: 15, carbs: 14, fat: 0 },
-      ]},
-    ],
-    lunch: [
-      { rawInput: 'Scanned: 028400064057', items: [
-        { description: 'Doritos Nacho Cheese', portion: '1 oz bag', calories: 150, protein: 2, carbs: 18, fat: 8 },
-      ]},
-    ],
-    dinner: [
-      { rawInput: 'Scanned: 013000006408', items: [
-        { description: 'Heinz Ketchup', portion: '1 tbsp (with meal)', calories: 20, protein: 0, carbs: 5, fat: 0 },
-      ]},
-    ],
-  },
-};
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function callLovableAI(
+  systemPrompt: string,
+  userPrompt: string,
+  retries = 2
+): Promise<BulkParseResult> {
+  const apiKey = Deno.env.get('LOVABLE_API_KEY');
+  if (!apiKey) {
+    throw new Error('LOVABLE_API_KEY is not configured');
+  }
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      console.log(`AI call attempt ${attempt + 1}...`);
+      
+      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-3-flash-preview',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          temperature: 0.3,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`AI call failed: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content;
+      
+      if (!content) {
+        throw new Error('No content in AI response');
+      }
+
+      // Clean up potential markdown code blocks
+      let jsonStr = content.trim();
+      if (jsonStr.startsWith('```json')) {
+        jsonStr = jsonStr.slice(7);
+      } else if (jsonStr.startsWith('```')) {
+        jsonStr = jsonStr.slice(3);
+      }
+      if (jsonStr.endsWith('```')) {
+        jsonStr = jsonStr.slice(0, -3);
+      }
+      jsonStr = jsonStr.trim();
+
+      return JSON.parse(jsonStr) as BulkParseResult;
+    } catch (error) {
+      console.error(`AI call attempt ${attempt + 1} failed:`, error);
+      if (attempt === retries) {
+        throw error;
+      }
+      console.log(`Retrying in 1 second...`);
+      await delay(1000);
+    }
+  }
+
+  throw new Error('All AI call attempts failed');
+}
+
+async function bulkParseWithAI(
+  inputs: string[],
+  mealType: string
+): Promise<Map<string, ParsedFoodItem[]>> {
+  const results = new Map<string, ParsedFoodItem[]>();
+  const systemPrompt = getAnalyzeFoodPrompt('default');
+
+  console.log(`Processing ${inputs.length} ${mealType} inputs in batches of ${BATCH_SIZE}...`);
+
+  for (let i = 0; i < inputs.length; i += BATCH_SIZE) {
+    const batch = inputs.slice(i, i + BATCH_SIZE);
+    const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+    const totalBatches = Math.ceil(inputs.length / BATCH_SIZE);
+    
+    console.log(`  Batch ${batchNum}/${totalBatches} (${batch.length} items)`);
+
+    try {
+      const userPrompt = buildBulkFoodParsingPrompt(batch);
+      const response = await callLovableAI(systemPrompt, userPrompt);
+
+      if (response.results && Array.isArray(response.results)) {
+        response.results.forEach((r, idx) => {
+          if (idx < batch.length && r.food_items) {
+            results.set(batch[idx], r.food_items);
+          }
+        });
+      }
+    } catch (error) {
+      console.error(`  Batch ${batchNum} failed:`, error);
+      // Fall back to empty items for failed batch
+      batch.forEach(input => {
+        results.set(input, []);
+      });
+    }
+
+    // Small delay between batches to avoid rate limiting
+    if (i + BATCH_SIZE < inputs.length) {
+      await delay(200);
+    }
+  }
+
+  return results;
+}
 
 // ============================================================================
-// EXERCISE ABBREVIATIONS AND CASUAL FORMATS
-// Maps canonical exercise names to sloppy/abbreviated variations
+// EXERCISE ABBREVIATIONS AND DATA
 // ============================================================================
 
 const EXERCISE_ABBREVIATIONS: Record<string, string[]> = {
@@ -429,37 +311,6 @@ const EXERCISE_ABBREVIATIONS: Record<string, string[]> = {
   'Hammer Curl': ['hammers', 'hammer curls', 'neutral curls'],
 };
 
-// Different casual input format generators
-function generateCasualExerciseInput(
-  exerciseName: string,
-  weight: number,
-  sets: number,
-  reps: number
-): string {
-  // Get an abbreviation or use lowercase name
-  const abbreviations = EXERCISE_ABBREVIATIONS[exerciseName];
-  const name = abbreviations 
-    ? randomChoice(abbreviations) 
-    : exerciseName.toLowerCase().replace(/ /g, '');
-  
-  // Pick a random format
-  const formats = [
-    () => `${name} ${weight} ${sets}x${reps}`,           // "bench 135 3x10"
-    () => `${name} ${sets}x${reps} @ ${weight}`,         // "rdl 4x8 @ 95"
-    () => `${name} ${weight}lb ${sets}x${reps}`,         // "squats 185lb 4x6"
-    () => `${name} ${sets}x${reps} ${weight}lbs`,        // "ohp 3x8 95lbs"
-    () => `${name} ${weight} ${sets} sets ${reps} reps`, // "lat pull 80 4 sets 10 reps"
-    () => `${name} ${sets}sets ${reps}reps ${weight}`,   // "curls 3sets 10reps 25"
-  ];
-  
-  return randomChoice(formats)();
-}
-
-// ============================================================================
-// REMAINING ORIGINAL DATA STRUCTURES (for reference/compatibility)
-// ============================================================================
-
-// Exercises by category
 const EXERCISES = {
   machine: [
     { key: 'lat_pulldown', name: 'Lat Pulldown', startWeight: 70, maxProgress: 25 },
@@ -485,7 +336,6 @@ const EXERCISES = {
   ],
 };
 
-// Saved meal templates
 const SAVED_MEAL_TEMPLATES = [
   { name: 'Morning Coffee', items: ['grande oat milk latte', 'banana'] },
   { name: 'Chipotle Bowl', items: ['chicken burrito bowl with rice, beans, salsa, guac'] },
@@ -497,10 +347,9 @@ const SAVED_MEAL_TEMPLATES = [
   { name: 'Post-Workout', items: ['protein shake with banana', 'peanut butter toast'] },
 ];
 
-// Saved routine templates
 const SAVED_ROUTINE_TEMPLATES = [
   { name: 'Upper Body Day', exercises: ['bench_press', 'lat_pulldown', 'shoulder_press', 'bicep_curl', 'seated_row'] },
-  { name: 'Leg Day', exercises: ['squat', 'leg_press', 'leg_extension', 'leg_curl', 'calf_raise'] },
+  { name: 'Leg Day', exercises: ['squat', 'leg_press', 'leg_extension', 'leg_curl'] },
   { name: 'Full Body Quick', exercises: ['squat', 'bench_press', 'lat_pulldown', 'bicep_curl'] },
   { name: 'Push Day', exercises: ['bench_press', 'shoulder_press_machine', 'chest_press_machine', 'lateral_raise'] },
   { name: 'Pull Day', exercises: ['lat_pulldown', 'seated_row', 'bicep_curl', 'hammer_curl', 'dumbbell_row'] },
@@ -538,109 +387,31 @@ function selectRandomDays(startDate: Date, endDate: Date, count: number): Date[]
   return shuffleArray(days).slice(0, Math.min(count, days.length)).sort((a, b) => a.getTime() - b.getTime());
 }
 
-function applyTypo(text: string): string {
-  for (const [word, typos] of Object.entries(COMMON_TYPOS)) {
-    if (text.toLowerCase().includes(word) && Math.random() < 0.3) {
-      const regex = new RegExp(word, 'gi');
-      return text.replace(regex, randomChoice(typos));
-    }
-  }
-  return text;
-}
-
 function formatDate(date: Date): string {
   return date.toISOString().split('T')[0];
 }
 
-// ============================================================================
-// FOOD GENERATION
-// ============================================================================
-
-interface FoodConfig {
-  barcodeScanPercent: number;
-  shorthandPercent: number;
-  casualWithTyposPercent: number;
-  recipeLinksPercent: number;
-  brandNamesPercent: number;
-}
-
-const DEFAULT_FOOD_CONFIG: FoodConfig = {
-  barcodeScanPercent: 15,
-  shorthandPercent: 40,
-  casualWithTyposPercent: 20,
-  recipeLinksPercent: 5,
-  brandNamesPercent: 20,
-};
-
-function selectFoodEntryType(config: FoodConfig): 'barcode' | 'shorthand' | 'casual' | 'recipe' | 'brand' {
-  const rand = Math.random() * 100;
-  let cumulative = 0;
+function generateCasualExerciseInput(
+  exerciseName: string,
+  weight: number,
+  sets: number,
+  reps: number
+): string {
+  const abbreviations = EXERCISE_ABBREVIATIONS[exerciseName];
+  const name = abbreviations 
+    ? randomChoice(abbreviations) 
+    : exerciseName.toLowerCase().replace(/ /g, '');
   
-  cumulative += config.barcodeScanPercent;
-  if (rand < cumulative) return 'barcode';
+  const formats = [
+    () => `${name} ${weight} ${sets}x${reps}`,
+    () => `${name} ${sets}x${reps} @ ${weight}`,
+    () => `${name} ${weight}lb ${sets}x${reps}`,
+    () => `${name} ${sets}x${reps} ${weight}lbs`,
+    () => `${name} ${weight} ${sets} sets ${reps} reps`,
+    () => `${name} ${sets}sets ${reps}reps ${weight}`,
+  ];
   
-  cumulative += config.shorthandPercent;
-  if (rand < cumulative) return 'shorthand';
-  
-  cumulative += config.casualWithTyposPercent;
-  if (rand < cumulative) return 'casual';
-  
-  cumulative += config.recipeLinksPercent;
-  if (rand < cumulative) return 'recipe';
-  
-  return 'brand';
-}
-
-interface GeneratedFoodEntry {
-  rawInput: string;
-  items: PolishedFoodItem[];
-}
-
-function generateFoodEntriesForDay(config: FoodConfig): GeneratedFoodEntry[] {
-  const entries: GeneratedFoodEntry[] = [];
-  const mealTypes: Array<'breakfast' | 'lunch' | 'dinner' | 'snack'> = ['breakfast', 'lunch', 'dinner'];
-  
-  // Maybe add a snack (60% chance)
-  if (Math.random() < 0.6) {
-    mealTypes.push('snack');
-  }
-  
-  for (const mealType of mealTypes) {
-    const entryType = selectFoodEntryType(config);
-    
-    // Get the appropriate category from POLISHED_FOODS
-    const category = POLISHED_FOODS[entryType];
-    if (!category) {
-      // Fallback to shorthand
-      const fallbackMeals = POLISHED_FOODS.shorthand[mealType];
-      if (fallbackMeals?.length) {
-        const entry = randomChoice(fallbackMeals);
-        entries.push({ rawInput: entry.rawInput, items: entry.items });
-      }
-      continue;
-    }
-    
-    // Get meals for this meal type, or fall back to any available
-    let mealsForType = category[mealType];
-    if (!mealsForType || mealsForType.length === 0) {
-      // Try to find any meal type in this category
-      const availableTypes = Object.keys(category) as Array<'breakfast' | 'lunch' | 'dinner' | 'snack'>;
-      if (availableTypes.length > 0) {
-        mealsForType = category[randomChoice(availableTypes)];
-      }
-    }
-    
-    if (mealsForType && mealsForType.length > 0) {
-      const entry = randomChoice(mealsForType);
-      // Apply typo to casual entries sometimes
-      const rawInput = entryType === 'casual' && Math.random() < 0.3 
-        ? applyTypo(entry.rawInput) 
-        : entry.rawInput;
-      entries.push({ rawInput, items: entry.items });
-    }
-  }
-  
-  return entries;
+  return randomChoice(formats)();
 }
 
 // ============================================================================
@@ -738,11 +509,9 @@ function generateWeightEntriesForDay(
       weight_lbs: weight,
     });
     
-    // Generate casual/sloppy input using abbreviations
     inputParts.push(generateCasualExerciseInput(exercise.name, weight, sets, reps));
   }
   
-  // Combine into a single raw input with varied separators
   const separator = randomChoice([', ', '\n', ' | ', '; ']);
   const rawInput = inputParts.join(separator);
   
@@ -776,7 +545,6 @@ function generateSavedRoutines(count: number): Array<{ name: string; original_in
   
   return templates.map(template => {
     const exerciseSets = template.exercises.map(key => {
-      // Find exercise data from all categories
       const allExercises = [...EXERCISES.machine, ...EXERCISES.compound, ...EXERCISES.freeWeight];
       const exercise = allExercises.find(e => e.key === key) || { key, name: key, startWeight: 50 };
       
@@ -811,12 +579,10 @@ interface RequestParams {
   generateSavedMeals?: number;
   generateSavedRoutines?: number;
   clearExisting?: boolean;
-  food?: Partial<FoodConfig>;
   weights?: Partial<WeightConfig>;
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -835,7 +601,6 @@ Deno.serve(async (req) => {
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-    // Client for auth validation
     const authClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -866,29 +631,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Service role client for bypassing RLS
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get demo user ID
-    const { data: demoUsers, error: demoError } = await serviceClient
-      .from('profiles')
-      .select('id')
-      .eq('is_read_only', true);
-
-    if (demoError || !demoUsers || demoUsers.length === 0) {
-      // Try to find by looking up in auth.users (service role can access)
-      const { data: authData } = await serviceClient.auth.admin.listUsers();
-      const demoUser = authData?.users?.find(u => u.email === DEMO_EMAIL);
-      
-      if (!demoUser) {
-        return new Response(
-          JSON.stringify({ error: 'Demo user not found' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-    }
-
-    // Get demo user ID from auth
+    // Get demo user
     const { data: authData } = await serviceClient.auth.admin.listUsers();
     const demoAuthUser = authData?.users?.find(u => u.email === DEMO_EMAIL);
     
@@ -913,7 +658,7 @@ Deno.serve(async (req) => {
       // Empty body is fine, use defaults
     }
 
-    // Apply defaults - extend 30 days into the future so demo always has "today" data
+    // Apply defaults - extend 30 days into the future
     const today = new Date();
     const ninetyDaysAgo = new Date(today);
     ninetyDaysAgo.setDate(today.getDate() - 90);
@@ -923,7 +668,6 @@ Deno.serve(async (req) => {
 
     const startDate = params.startDate ? new Date(params.startDate) : ninetyDaysAgo;
     const endDate = params.endDate ? new Date(params.endDate) : thirtyDaysFromNow;
-    // Calculate total days in range to fill all days by default
     const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     const daysToPopulate = params.daysToPopulate ?? totalDays;
     const generateFood = params.generateFood ?? true;
@@ -932,7 +676,6 @@ Deno.serve(async (req) => {
     const savedRoutinesCount = params.generateSavedRoutines ?? 4;
     const clearExisting = params.clearExisting ?? false;
 
-    const foodConfig: FoodConfig = { ...DEFAULT_FOOD_CONFIG, ...params.food };
     const weightConfig: WeightConfig = { ...DEFAULT_WEIGHT_CONFIG, ...params.weights };
 
     console.log('Parameters:', {
@@ -991,6 +734,25 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ========================================================================
+    // BULK AI PARSING FOR FOOD DATA
+    // ========================================================================
+    
+    const parsedCache = new Map<string, ParsedFoodItem[]>();
+    
+    if (generateFood) {
+      console.log('Starting bulk AI parsing for food entries...');
+      const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
+      
+      for (const mealType of mealTypes) {
+        const inputs = DEMO_FOOD_INPUTS[mealType];
+        const results = await bulkParseWithAI(inputs, mealType);
+        results.forEach((items, input) => parsedCache.set(input, items));
+      }
+      
+      console.log(`Parsed ${parsedCache.size} unique food inputs`);
+    }
+
     // Select random days within range
     const selectedDays = selectRandomDays(startDate, endDate, daysToPopulate);
     console.log(`Selected ${selectedDays.length} days to populate`);
@@ -1003,31 +765,52 @@ Deno.serve(async (req) => {
       const day = selectedDays[i];
       const dateStr = formatDate(day);
 
-      // Generate food entries with polished items
+      // Generate food entries using cached AI results
       if (generateFood) {
-        const foodEntries = generateFoodEntriesForDay(foodConfig);
+        const mealTypes: Array<'breakfast' | 'lunch' | 'dinner' | 'snack'> = ['breakfast', 'lunch', 'dinner'];
         
-        for (const entry of foodEntries) {
-          // Calculate totals from items
-          const totalCalories = entry.items.reduce((sum, item) => sum + item.calories, 0);
-          const totalProtein = entry.items.reduce((sum, item) => sum + item.protein, 0);
-          const totalCarbs = entry.items.reduce((sum, item) => sum + item.carbs, 0);
-          const totalFat = entry.items.reduce((sum, item) => sum + item.fat, 0);
+        // Maybe add a snack (60% chance)
+        if (Math.random() < 0.6) {
+          mealTypes.push('snack');
+        }
+        
+        for (const mealType of mealTypes) {
+          // Pick a random input from this meal type, cycling through the 30 options
+          const inputs = DEMO_FOOD_INPUTS[mealType];
+          const rawInput = inputs[i % inputs.length];
+          const parsedItems = parsedCache.get(rawInput) || [];
+          
+          if (parsedItems.length === 0) {
+            console.warn(`No parsed items for: ${rawInput}`);
+            continue;
+          }
+          
+          // Calculate totals
+          const totalCalories = parsedItems.reduce((sum, item) => sum + (item.calories || 0), 0);
+          const totalProtein = parsedItems.reduce((sum, item) => sum + (item.protein || 0), 0);
+          const totalCarbs = parsedItems.reduce((sum, item) => sum + (item.carbs || 0), 0);
+          const totalFat = parsedItems.reduce((sum, item) => sum + (item.fat || 0), 0);
           
           const { error: foodError } = await serviceClient
             .from('food_entries')
             .insert({
               user_id: demoUserId,
               eaten_date: dateStr,
-              raw_input: entry.rawInput,
-              food_items: entry.items.map(item => ({
+              raw_input: rawInput,
+              food_items: parsedItems.map(item => ({
                 uid: crypto.randomUUID(),
-                description: item.description,
+                description: item.name,
                 portion: item.portion,
                 calories: item.calories,
                 protein: item.protein,
                 carbs: item.carbs,
+                fiber: item.fiber,
+                sugar: item.sugar,
                 fat: item.fat,
+                saturated_fat: item.saturated_fat,
+                sodium: item.sodium,
+                cholesterol: item.cholesterol,
+                confidence: item.confidence,
               })),
               total_calories: totalCalories,
               total_protein: totalProtein,
@@ -1066,7 +849,7 @@ Deno.serve(async (req) => {
               sets: exercise.sets,
               reps: exercise.reps,
               weight_lbs: exercise.weight_lbs,
-              raw_input: j === 0 ? rawInput : null, // Only first exercise gets raw input
+              raw_input: j === 0 ? rawInput : null,
             });
 
           if (weightError) {
@@ -1134,6 +917,7 @@ Deno.serve(async (req) => {
       weightSets: weightSetsCreated,
       savedMeals: savedMealsCreated,
       savedRoutines: savedRoutinesCreated,
+      parsedInputs: parsedCache.size,
       dateRange: {
         start: formatDate(startDate),
         end: formatDate(endDate),
