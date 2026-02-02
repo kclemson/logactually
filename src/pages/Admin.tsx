@@ -8,6 +8,7 @@ import { format, parseISO, isToday } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { PopulateDemoDataDialog } from "@/components/PopulateDemoDataDialog";
 
 const USER_NAMES: Record<number, string> = {
   1: "KC",
@@ -24,6 +25,7 @@ const USER_NAMES: Record<number, string> = {
 export default function Admin() {
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
+  const [showPopulateDialog, setShowPopulateDialog] = useState(false);
 
   // All hooks must be called before any conditional returns
   const { data: isAdmin, isLoading: isAdminLoading } = useIsAdmin();
@@ -330,6 +332,15 @@ export default function Admin() {
           ))}
         </div>
       )}
+
+      {/* Populate Demo Data */}
+      <div className="pt-2 border-t border-border">
+        <Button variant="outline" size="sm" className="text-xs" onClick={() => setShowPopulateDialog(true)}>
+          Populate Demo Data
+        </Button>
+      </div>
+
+      <PopulateDemoDataDialog open={showPopulateDialog} onOpenChange={setShowPopulateDialog} />
     </div>
   );
 }
