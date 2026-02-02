@@ -125,7 +125,7 @@ export function CreateSavedDialog<TItem, TSaved>({
       setState('editing');
       
       // Set name immediately using fallback
-      setName(config.getFallbackName(result));
+      setName(prevName => prevName.trim() ? prevName : config.getFallbackName(result));
     } else {
       setState('input');
     }
