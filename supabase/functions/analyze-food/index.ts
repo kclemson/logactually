@@ -197,9 +197,17 @@ serve(async (req) => {
       };
     });
 
-    // Filter out placeholder items (all macros zero = AI couldn't identify real food)
+    // Filter out placeholder items (all nutritional values zero = AI couldn't identify real food)
     const validItems = mergedItems.filter(item => 
-      item.calories > 0 || item.protein > 0 || item.carbs > 0 || item.fat > 0
+      item.calories > 0 || 
+      item.protein > 0 || 
+      item.carbs > 0 || 
+      item.fat > 0 ||
+      (item.fiber || 0) > 0 ||
+      (item.sugar || 0) > 0 ||
+      (item.saturated_fat || 0) > 0 ||
+      (item.sodium || 0) > 0 ||
+      (item.cholesterol || 0) > 0
     );
 
     // Calculate totals
