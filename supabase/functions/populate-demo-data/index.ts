@@ -699,8 +699,8 @@ async function doPopulationWork(
     
     if (savedMealsCount > 0) {
       console.log('Starting AI parsing for saved meal templates...');
-      const savedMealInputs = SAVED_MEAL_TEMPLATES.slice(0, savedMealsCount)
-        .map(t => t.items.join(', '));
+      // Parse ALL templates so any shuffled selection will have cached data
+      const savedMealInputs = SAVED_MEAL_TEMPLATES.map(t => t.items.join(', '));
       const savedMealResults = await bulkParseWithAI(savedMealInputs, 'savedmeals');
       savedMealResults.forEach((items, input) => parsedCache.set(input, items));
       console.log(`Parsed ${savedMealInputs.length} saved meal templates`);
