@@ -11,6 +11,7 @@ import { LogInput, LogInputRef } from '@/components/LogInput';
 import { WeightItemsTable } from '@/components/WeightItemsTable';
 import { CreateRoutineDialog } from '@/components/CreateRoutineDialog';
 import { SaveRoutineDialog } from '@/components/SaveRoutineDialog';
+import { DemoPreviewDialog } from '@/components/DemoPreviewDialog';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -20,6 +21,7 @@ import { useEditableItems } from '@/hooks/useEditableItems';
 import { useSavedRoutines } from '@/hooks/useSavedRoutines';
 import { useSaveRoutine } from '@/hooks/useSavedRoutines';
 import { useUserSettings } from '@/hooks/useUserSettings';
+import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { WeightSet, WeightEditableField, SavedExerciseSet } from '@/types/weight';
 
 const WEIGHT_EDITABLE_FIELDS: WeightEditableField[] = ['description', 'sets', 'reps', 'weight_lbs'];
@@ -64,6 +66,11 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
     rawInput: string | null;
     exerciseSets: WeightSet[];
   } | null>(null);
+
+  // Demo preview state (for read-only demo users)
+  const [demoPreviewOpen, setDemoPreviewOpen] = useState(false);
+  const [demoPreviewSets, setDemoPreviewSets] = useState<WeightSet[]>([]);
+  const [demoPreviewRawInput, setDemoPreviewRawInput] = useState<string | null>(null);
   
   const dateStr = initialDate;
   const selectedDate = parseISO(initialDate);
@@ -76,6 +83,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   const saveRoutineMutation = useSaveRoutine();
   const { settings } = useUserSettings();
   const { data: savedRoutines } = useSavedRoutines();
+  const { isReadOnly } = useReadOnlyContext();
   
   const weightInputRef = useRef<LogInputRef>(null);
 
@@ -235,16 +243,45 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   const handleSubmit = async (text: string) => {
     const result = await analyzeWeights(text);
     if (result) {
+      // Demo mode: show preview instead of saving
+      if (isReadOnly) {
+        const setsWithUids = result.exercises.map(exercise => ({
+          ...exercise,
+          id: crypto.randomUUID(),
+          uid: crypto.randomUUID(),
+          entryId: 'demo-preview',
+        })) as WeightSet[];
+        setDemoPreviewSets(setsWithUids);
+        setDemoPreviewRawInput(text);
+        setDemoPreviewOpen(true);
+        weightInputRef.current?.clear();
+        return;
+      }
+
       createEntryFromExercises(result.exercises, text);
     }
   };
 
   // Handle logging a saved routine
   const handleLogSavedRoutine = useCallback((exerciseSets: SavedExerciseSet[], routineId: string) => {
+    // Demo mode: show preview instead of saving
+    if (isReadOnly) {
+      const setsWithUids = exerciseSets.map(set => ({
+        ...set,
+        id: crypto.randomUUID(),
+        uid: crypto.randomUUID(),
+        entryId: 'demo-preview',
+      })) as WeightSet[];
+      setDemoPreviewSets(setsWithUids);
+      setDemoPreviewRawInput(null); // Saved routines don't have raw input to show
+      setDemoPreviewOpen(true);
+      return;
+    }
+
     // SavedExerciseSet already contains only persistent fields, spread for future-proofing
     const exercises = exerciseSets.map(set => ({ ...set }));
     createEntryFromExercises(exercises, `From saved routine`, routineId);
-  }, [createEntryFromExercises]);
+  }, [createEntryFromExercises, isReadOnly]);
 
   // Auto-save handler for single field updates
   const handleItemUpdate = useCallback((index: number, field: keyof WeightSet, value: string | number) => {
@@ -449,6 +486,16 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
           isSaving={saveRoutineMutation.isPending}
         />
       )}
+
+      {/* Demo Preview Dialog (for read-only demo users) */}
+      <DemoPreviewDialog
+        mode="weights"
+        open={demoPreviewOpen}
+        onOpenChange={setDemoPreviewOpen}
+        weightSets={demoPreviewSets}
+        weightUnit={settings.weightUnit}
+        rawInput={demoPreviewRawInput}
+      />
     </div>
   );
 };

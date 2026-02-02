@@ -10,6 +10,7 @@ import { FoodItemsTable } from '@/components/FoodItemsTable';
 import { SaveMealDialog } from '@/components/SaveMealDialog';
 import { CreateMealDialog } from '@/components/CreateMealDialog';
 import { SimilarMealPrompt } from '@/components/SimilarMealPrompt';
+import { DemoPreviewDialog } from '@/components/DemoPreviewDialog';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -17,6 +18,7 @@ import { useAnalyzeFood } from '@/hooks/useAnalyzeFood';
 import { useFoodEntries } from '@/hooks/useFoodEntries';
 import { useEditableFoodItems } from '@/hooks/useEditableItems';
 import { useSavedMeals, useSaveMeal, useLogSavedMeal } from '@/hooks/useSavedMeals';
+import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { findSimilarMeals, createItemsSignature, SimilarMealMatch } from '@/lib/text-similarity';
 import { FoodItem, SavedMeal, calculateTotals } from '@/types/food';
 
@@ -58,6 +60,11 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     text: string;
     items: FoodItem[];
   } | null>(null);
+
+  // Demo preview state (for read-only demo users)
+  const [demoPreviewOpen, setDemoPreviewOpen] = useState(false);
+  const [demoPreviewItems, setDemoPreviewItems] = useState<FoodItem[]>([]);
+  const [demoPreviewRawInput, setDemoPreviewRawInput] = useState<string | null>(null);
   
   // Date is stable for this component instance - derived from props, no state needed
   const dateStr = initialDate;
@@ -71,6 +78,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   const { data: savedMeals } = useSavedMeals();
   const saveMeal = useSaveMeal();
   const logSavedMeal = useLogSavedMeal();
+  const { isReadOnly } = useReadOnlyContext();
   
   
   const foodInputRef = useRef<LogInputRef>(null);
@@ -231,6 +239,19 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   const handleSubmit = async (text: string) => {
     const result = await analyzeFood(text);
     if (result) {
+      // Demo mode: show preview instead of saving
+      if (isReadOnly) {
+        const itemsWithUids = result.food_items.map(item => ({
+          ...item,
+          uid: crypto.randomUUID(),
+        }));
+        setDemoPreviewItems(itemsWithUids);
+        setDemoPreviewRawInput(text);
+        setDemoPreviewOpen(true);
+        foodInputRef.current?.clear();
+        return;
+      }
+
       // Check for similar saved meals
       if (savedMeals && savedMeals.length > 0) {
         const itemsSignature = createItemsSignature(result.food_items);
@@ -288,6 +309,18 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
 
   // Handle direct scan results (when barcode lookup succeeds)
   const handleScanResult = async (foodItem: Omit<FoodItem, 'uid' | 'entryId'>, originalInput: string) => {
+    // Demo mode: show preview instead of saving
+    if (isReadOnly) {
+      const itemWithUid = {
+        ...foodItem,
+        uid: crypto.randomUUID(),
+      };
+      setDemoPreviewItems([itemWithUid]);
+      setDemoPreviewRawInput(originalInput);
+      setDemoPreviewOpen(true);
+      return;
+    }
+
     const entryId = crypto.randomUUID();
     const itemWithUid = {
       ...foodItem,
@@ -320,6 +353,18 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
 
   // Handle logging a saved meal from popover
   const handleLogSavedMeal = async (foodItems: FoodItem[], mealId: string) => {
+    // Demo mode: show preview instead of saving
+    if (isReadOnly) {
+      const itemsWithUids = foodItems.map(item => ({
+        ...item,
+        uid: crypto.randomUUID(),
+      }));
+      setDemoPreviewItems(itemsWithUids);
+      setDemoPreviewRawInput(null); // Saved meals don't have raw input to show
+      setDemoPreviewOpen(true);
+      return;
+    }
+
     createEntryFromItems(foodItems, null, mealId);
   };
 
@@ -616,6 +661,15 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
           showLogPrompt={true}
         />
       )}
+
+      {/* Demo Preview Dialog (for read-only demo users) */}
+      <DemoPreviewDialog
+        mode="food"
+        open={demoPreviewOpen}
+        onOpenChange={setDemoPreviewOpen}
+        foodItems={demoPreviewItems}
+        rawInput={demoPreviewRawInput}
+      />
     </div>
   );
 };

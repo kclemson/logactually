@@ -217,11 +217,8 @@ export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput
     const trimmed = text.trim();
     if (!trimmed || isBusy) return;
 
-    // Block submit for read-only users
-    if (isReadOnly) {
-      triggerOverlay();
-      return;
-    }
+    // Note: read-only check moved to parent components (FoodLog/WeightLog)
+    // This allows demo users to see AI analysis results before the preview dialog
 
     // Food mode: Check for UPC pattern - route to database lookup instead of AI
     if (mode === 'food') {
