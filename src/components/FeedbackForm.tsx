@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useReadOnlyContext } from "@/contexts/ReadOnlyContext";
 import { MessageSquare, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,6 +39,7 @@ export function FeedbackForm() {
   const { data: feedbackHistory } = useUserFeedback();
   const deleteFeedback = useDeleteFeedback();
   const markRead = useMarkFeedbackRead();
+  const { isReadOnly } = useReadOnlyContext();
 
   // Mark unread responses as read when component mounts
   useEffect(() => {
@@ -64,25 +66,27 @@ export function FeedbackForm() {
         <h2 className="text-sm font-medium">{FEEDBACK_CONTENT.title}</h2>
       </div>
 
-      <div className="space-y-2">
-        <Textarea
-          placeholder={FEEDBACK_CONTENT.placeholder}
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          className="min-h-[80px] text-sm resize-none"
-          maxLength={1000}
-        />
-        <div className="flex items-center gap-3">
-          <Button size="sm" onClick={handleSubmit} disabled={!message.trim() || submitFeedback.isPending}>
-            {submitFeedback.isPending ? FEEDBACK_CONTENT.submittingButton : FEEDBACK_CONTENT.submitButton}
-          </Button>
-          {showSuccess && (
-            <span className="text-sm text-muted-foreground animate-in fade-in">
-              {FEEDBACK_CONTENT.successMessage}
-            </span>
-          )}
+      {!isReadOnly && (
+        <div className="space-y-2">
+          <Textarea
+            placeholder={FEEDBACK_CONTENT.placeholder}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            className="min-h-[80px] text-sm resize-none"
+            maxLength={1000}
+          />
+          <div className="flex items-center gap-3">
+            <Button size="sm" onClick={handleSubmit} disabled={!message.trim() || submitFeedback.isPending}>
+              {submitFeedback.isPending ? FEEDBACK_CONTENT.submittingButton : FEEDBACK_CONTENT.submitButton}
+            </Button>
+            {showSuccess && (
+              <span className="text-sm text-muted-foreground animate-in fade-in">
+                {FEEDBACK_CONTENT.successMessage}
+              </span>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {feedbackHistory && feedbackHistory.length > 0 && (
         <div className="pt-4 border-t space-y-3">
