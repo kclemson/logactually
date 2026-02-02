@@ -142,7 +142,7 @@ export default function Auth() {
   if (isUpdatingPassword) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <Card className="w-full max-w-md">
+        <Card className="w-full max-w-md shadow-lg border-border/50">
           <CardHeader className="text-center">
             <img src="/logactually-logo-horiz.png" alt={APP_NAME} className="h-16 mx-auto mb-2" />
             <CardTitle className="text-2xl font-bold">{APP_NAME}</CardTitle>
@@ -184,7 +184,7 @@ export default function Auth() {
   if (isResetMode) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <Card className="w-full max-w-md">
+        <Card className="w-full max-w-md shadow-lg border-border/50">
           <CardHeader className="text-center">
             <img src="/logactually-logo-horiz.png" alt={APP_NAME} className="h-16 mx-auto mb-2" />
             <CardTitle className="text-2xl font-bold">{APP_NAME}</CardTitle>
@@ -250,7 +250,7 @@ export default function Auth() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md shadow-lg border-border/50">
         <CardHeader className="text-center">
           <img src="/logactually-logo-horiz.png" alt={APP_NAME} className="h-16 mx-auto mb-2" />
           <CardTitle className="text-2xl font-bold">{APP_NAME}</CardTitle>
