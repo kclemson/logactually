@@ -20,7 +20,7 @@ const CHANGELOG_ENTRIES = [
   { date: "Jan-23", text: "It's alive! v1 of app published with support for food logging & AI integration, editing logged items (and editing calories auto-scales protein/carbs/fat), charts for trends over time, mobile & desktop layouts, PWA support for pinning to home screen." },
 ];
 
-const LAST_UPDATED = "Jan-31-26";
+const LAST_UPDATED = "Feb-01-26";
 // ============================================
 
 export default function Changelog() {
