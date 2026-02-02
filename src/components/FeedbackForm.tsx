@@ -43,8 +43,15 @@ export function FeedbackForm() {
 
   // Mark unread responses as read when component mounts
   useEffect(() => {
-    markRead.mutate();
-  }, []);
+    if (!isReadOnly) {
+      markRead.mutate();
+    }
+  }, [isReadOnly]);
+
+  // Hide entire section for read-only users
+  if (isReadOnly) {
+    return null;
+  }
 
   const handleSubmit = async () => {
     if (!message.trim()) return;
