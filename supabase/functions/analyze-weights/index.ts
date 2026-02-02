@@ -195,11 +195,18 @@ serve(async (req) => {
       }
       
       // Lenient coercion - accept nulls, undefined, strings, coerce to 0
-      const sets = Number(exercise.sets) || 0;
-      const reps = Number(exercise.reps) || 0;
+      let sets = Number(exercise.sets) || 0;
+      let reps = Number(exercise.reps) || 0;
       const weight_lbs = Number(exercise.weight_lbs) || 0;
       const duration_minutes = Number(exercise.duration_minutes) || 0;
       const distance_miles = Number(exercise.distance_miles) || 0;
+      
+      // Default missing sets/reps for weight exercises
+      // User sees these immediately and can edit
+      if (weight_lbs > 0 || sets > 0 || reps > 0) {
+        if (sets === 0) sets = 1;
+        if (reps === 0) reps = 10;
+      }
       
       // Valid if EITHER weight data OR cardio data present
       const hasWeightData = sets > 0 && reps > 0;
