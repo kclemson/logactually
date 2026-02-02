@@ -1,98 +1,152 @@
 
 
-## Make Demo Raw Inputs More Natural (Without Going Overboard)
+## Add Admin UI for Populate Demo Data Edge Function
 
-### Problem
-The "shorthand" category has inputs that are too clean and simple (e.g., "greek yogurt", "protein bar", "eggs and toast"). These don't demonstrate the app's natural language parsing power.
-
-### Approach
-Rewrite the **shorthand** category inputs to be more realistic - the way people actually type when they're being descriptive but efficient. Not overly casual ("from that cafe") but not robotic either.
+### Overview
+Add a button to the Admin page that opens a dialog for running the `populate-demo-data` edge function with customizable parameters.
 
 ---
 
-### Guiding Principles
+### Current Parameters (from edge function)
 
-**DO:**
-- Include quantities naturally: "2 eggs scrambled with toast"
-- Use abbreviations people actually use: "pb", "w/", "oz"
-- Include prep methods: "grilled chicken over rice"
-- Mention sizes/amounts: "handful of almonds", "big salad"
-- Use natural phrasing: "chicken and rice", not "grilled chicken and rice"
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `startDate` | string | 90 days ago | Start of date range |
+| `endDate` | string | 30 days from now | End of date range |
+| `daysToPopulate` | number | All days in range | How many days to generate data for |
+| `generateFood` | boolean | true | Generate food entries |
+| `generateWeights` | boolean | true | Generate weight entries |
+| `generateSavedMeals` | number | 5 | How many saved meals to create |
+| `generateSavedRoutines` | number | 4 | How many saved routines to create |
+| `clearExisting` | boolean | false | Delete existing data in range first |
+| `food` | object | - | Food generation percentages |
+| `weights` | object | - | Weight exercise category percentages |
 
-**DON'T:**
-- Add filler words: "probably", "just", "honestly"
-- Reference vague places: "from the place", "from that cafe"  
-- Add opinions: "too much ranch", "turned out great"
-- Over-explain: "the kirkland ones from costco"
+**Food Config Options:**
+- `barcodeScanPercent` (default: 15)
+- `shorthandPercent` (default: 40)
+- `casualWithTyposPercent` (default: 20)
+- `recipeLinksPercent` (default: 5)
+- `brandNamesPercent` (default: 20)
+
+**Weight Config Options:**
+- `machinePercent` (default: 40)
+- `compoundPercent` (default: 30)
+- `freeWeightPercent` (default: 30)
+- `progressionMultiplier` (default: 1.0)
 
 ---
 
-### File Changed
+### Recommended UI Fields
+
+For the admin UI, prioritize the most commonly needed controls:
+
+**Essential (always visible):**
+1. **Date Range** - Start and End date pickers
+2. **Clear Existing** - Checkbox (dangerous, show warning)
+
+**Optional (collapsed/advanced section):**
+3. **Generate Food** - Checkbox
+4. **Generate Weights** - Checkbox
+5. **Days to Populate** - Number input (useful for partial fills)
+6. **Saved Meals Count** - Number input
+7. **Saved Routines Count** - Number input
+
+**Skip for now:**
+- Food/Weight config percentages (advanced tuning, rarely needed)
+
+---
+
+### Files Changed
 
 | File | Change |
 |------|--------|
-| `supabase/functions/populate-demo-data/index.ts` | Rewrite shorthand rawInput strings (~40 entries) |
+| `src/pages/Admin.tsx` | Add "Populate Demo Data" button and dialog |
+| `src/hooks/usePopulateDemoData.ts` (new) | Hook to call the edge function |
 
 ---
 
-### Examples of Changes
+### UI Design
 
-**Breakfast shorthand:**
+**Button placement:** Below the feedback section, as a small admin tool
 
-| Before | After |
-|--------|-------|
-| `eggs and toast` | `2 eggs scrambled with buttered toast` |
-| `yogurt and granola` | `greek yogurt with granola and blueberries` |
-| `avocado toast` | `avocado toast on sourdough` |
-| `protein shake` | `whey protein shake with almond milk` |
-| `overnight oats` | `overnight oats with chia and berries` |
-| `english muffin with pb` | `english muffin with peanut butter` |
+**Dialog contents:**
+```text
+┌─────────────────────────────────────────────┐
+│  Populate Demo Data                         │
+├─────────────────────────────────────────────┤
+│  Date Range                                 │
+│  [Start Date Picker] to [End Date Picker]   │
+│                                             │
+│  ☑ Clear existing data in range             │
+│    ⚠ This will delete existing entries      │
+│                                             │
+│  Options                                    │
+│  ☑ Generate Food    ☑ Generate Weights      │
+│  Saved Meals: [5]   Saved Routines: [4]     │
+│                                             │
+│  [Cancel]                        [Populate] │
+└─────────────────────────────────────────────┘
+```
 
-**Lunch shorthand:**
+**Loading state:** Button shows spinner and disables while running
 
-| Before | After |
-|--------|-------|
-| `turkey sandwich` | `turkey sandwich on wheat with lettuce and tomato` |
-| `salad with chicken` | `big salad with grilled chicken` |
-| `leftover pasta` | `leftover spaghetti, about 2 cups` |
-| `burrito bowl` | `chicken burrito bowl with rice beans and guac` |
-| `sushi (8 pieces)` | `salmon roll, 8 pieces` |
-| `mediterranean bowl` | `falafel bowl with hummus and tabbouleh` |
-
-**Dinner shorthand:**
-
-| Before | After |
-|--------|-------|
-| `salmon and veggies` | `baked salmon with roasted vegetables` |
-| `chicken stir fry` | `chicken stir fry with mixed veggies` |
-| `tacos (3)` | `3 beef tacos with cheese and salsa` |
-| `pizza (2 slices)` | `2 slices pepperoni pizza` |
-| `burger and fries` | `cheeseburger with medium fries` |
-| `shrimp scampi` | `shrimp scampi over linguine` |
-
-**Snack shorthand:**
-
-| Before | After |
-|--------|-------|
-| `apple with peanut butter` | `apple slices with 2 tbsp peanut butter` |
-| `handful of almonds` | `handful of almonds, maybe 20` |
-| `protein bar` | `chocolate protein bar` |
-| `greek yogurt` | `plain greek yogurt, 1 cup` |
-| `carrots and hummus` | `baby carrots with hummus` |
-| `popcorn` | `3 cups popcorn, air popped` |
+**Success/Error:** Toast or inline message with summary
 
 ---
 
-### Scope
+### Implementation Details
 
-Only updating the **shorthand** category (lines 70-210). The **casual** category already has good natural phrasing, and **brand/recipe/barcode** have specific formats that should stay as-is.
+**New hook: `src/hooks/usePopulateDemoData.ts`**
+```tsx
+interface PopulateDemoDataParams {
+  startDate: string;
+  endDate: string;
+  clearExisting?: boolean;
+  generateFood?: boolean;
+  generateWeights?: boolean;
+  generateSavedMeals?: number;
+  generateSavedRoutines?: number;
+}
+
+export function usePopulateDemoData() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [result, setResult] = useState<{ success: boolean; summary?: any; error?: string } | null>(null);
+
+  const populate = async (params: PopulateDemoDataParams) => {
+    setIsLoading(true);
+    setResult(null);
+    
+    const { data, error } = await supabase.functions.invoke('populate-demo-data', {
+      body: params,
+    });
+    
+    setIsLoading(false);
+    
+    if (error) {
+      setResult({ success: false, error: error.message });
+    } else {
+      setResult({ success: true, summary: data.summary });
+    }
+  };
+
+  return { populate, isLoading, result };
+}
+```
+
+**Admin page additions:**
+- Import dialog components and date picker
+- Add state for dialog open/closed
+- Add form state for parameters
+- Call hook on submit
+- Show result summary
 
 ---
 
-### Summary
+### Technical Notes
 
-Changes make inputs:
-- More descriptive (quantities, prep methods, specifics)
-- Still efficient (no fluff, no opinions)
-- Realistic (how someone tracking macros would actually type)
+1. The edge function already has admin auth check built-in
+2. Uses `supabase.functions.invoke` which passes the user's auth token
+3. Date pickers should default to reasonable ranges (last 90 days to +30 days)
+4. Clear existing is the most dangerous option - show a warning
 
