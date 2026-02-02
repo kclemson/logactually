@@ -1,105 +1,76 @@
 
 
-## Add "Regenerate Saved Items Only" Button
+## Bug Fix: Saved Meals Shuffle Mismatch
 
-### Overview
-Add a quick action button to the PopulateDemoDataDialog that regenerates only saved meals and saved routines, without touching food entries or weight entries. This is useful for testing/iterating on the saved items data without waiting for the full AI parsing of 120+ food inputs.
+### Problem Identified
+
+The saved meals show 0 calories because of a **shuffle mismatch** between parsing and generation:
+
+1. **AI Parsing (line 702-703)**: Slices first 5 templates, then parses them
+   ```typescript
+   const savedMealInputs = SAVED_MEAL_TEMPLATES.slice(0, savedMealsCount)
+     .map(t => t.items.join(', '));
+   // Parses: "Morning Coffee", "Chipotle Bowl", "Weeknight Salmon", "Protein Snack", "Pizza Night"
+   ```
+
+2. **Generation (line 532)**: Shuffles ALL templates, then slices first 5
+   ```typescript
+   const templates = shuffleArray(SAVED_MEAL_TEMPLATES).slice(0, count);
+   // Could pick: "Pizza Night", "Post-Workout", "Lunch Salad", "Quick Breakfast", "Chipotle Bowl"
+   ```
+
+3. **Cache lookup (line 536)**: Looks for the shuffled templates in the cache
+   ```typescript
+   const parsedItems = parsedCache.get(originalInput) || [];
+   // "Post-Workout" and "Lunch Salad" were never parsed → returns [] → uses fallback with 0 values
+   ```
+
+### Solution
+
+Change the AI parsing to parse ALL templates, not just the first N. This ensures any shuffled combination will find its cached data.
 
 ---
 
-### Changes Summary
+### Changes
 
 | File | Change |
 |------|--------|
-| `src/components/PopulateDemoDataDialog.tsx` | Add "Regenerate Saved Only" button that calls populate with food/weights disabled |
+| `supabase/functions/populate-demo-data/index.ts` | Parse all 8 saved meal templates instead of just the first `savedMealsCount` |
 
 ---
 
-### Implementation Details
+### Implementation
 
-The edge function already supports this use case - it accepts `generateFood: false` and `generateWeights: false` while still processing saved meals and routines. We just need a UI shortcut.
-
-**Add a secondary button in the dialog footer:**
-
-```tsx
-<DialogFooter className="flex gap-2">
-  <Button variant="ghost" onClick={handleClose} disabled={isLoading}>
-    {result?.success ? "Close" : "Cancel"}
-  </Button>
-  
-  {!result?.success && !result?.status && (
-    <>
-      {/* New quick action button */}
-      <Button 
-        variant="outline" 
-        onClick={handleRegenerateSavedOnly} 
-        disabled={isLoading}
-      >
-        {isLoading ? "Starting..." : "Saved Only"}
-      </Button>
-      
-      <Button onClick={handleSubmit} disabled={isLoading}>
-        {isLoading ? (
-          <>
-            <span className="spinner" />
-            Starting...
-          </>
-        ) : (
-          "Populate All"
-        )}
-      </Button>
-    </>
-  )}
-</DialogFooter>
-```
-
-**Add the handler:**
-
+**Before (line 702-703):**
 ```typescript
-const handleRegenerateSavedOnly = async () => {
-  const params: PopulateDemoDataParams = {
-    startDate: format(startDate, "yyyy-MM-dd"),
-    endDate: format(endDate, "yyyy-MM-dd"),
-    clearExisting: true,  // Always clear saved items first
-    generateFood: false,
-    generateWeights: false,
-    generateSavedMeals: savedMealsCount,
-    generateSavedRoutines: savedRoutinesCount,
-  };
-  await populate(params);
-};
+const savedMealInputs = SAVED_MEAL_TEMPLATES.slice(0, savedMealsCount)
+  .map(t => t.items.join(', '));
 ```
 
----
-
-### Why This Works Fast
-
-When `generateFood: false` and `generateWeights: false`:
-1. No food AI parsing batches (skips 12 batches, ~60-90 sec)
-2. No weight entry generation
-3. Only parses saved meal templates (1 batch, ~8 sec)
-4. Only generates saved routines (no AI needed, instant)
-
-**Estimated time: ~10 seconds** vs 1-2 minutes for full population.
-
----
-
-### UI Layout
-
-The dialog footer will have three buttons when no result is shown:
-
-```text
-[Cancel]          [Saved Only]          [Populate All]
-   ghost             outline              primary
+**After:**
+```typescript
+// Parse ALL templates so any shuffled selection will have cached data
+const savedMealInputs = SAVED_MEAL_TEMPLATES.map(t => t.items.join(', '));
 ```
 
-After clicking either action button, the result display appears and only "Close" remains.
+This adds only 3 more items to the single batch (8 total vs 5), no additional AI calls needed since batch size is 10.
 
 ---
 
-### Edge Cases
+### Why This Works
 
-- The "Saved Only" button will always clear existing saved meals/routines first (sets `clearExisting: true`)
-- Date range is still passed but only used for `last_used_at` timestamps on saved items
-- If saved meals count is 0, only routines are regenerated (and vice versa)
+With all 8 templates parsed upfront:
+- Shuffle can pick any 5 of 8 templates
+- All 8 are in the cache
+- Every lookup succeeds
+- Real macros displayed instead of zeros
+
+---
+
+### Technical Notes
+
+- Change is on line 702-703 in `doPopulationWork` function
+- Single line change, low risk
+- No performance impact (still 1 batch for 8 items)
+- The generation shuffle remains useful for variety in which meals appear
 
