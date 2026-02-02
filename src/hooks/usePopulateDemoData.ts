@@ -26,6 +26,8 @@ interface PopulateResult {
   success: boolean;
   summary?: PopulateSummary;
   error?: string;
+  message?: string;
+  status?: 'processing' | 'complete';
 }
 
 export function usePopulateDemoData() {
@@ -44,7 +46,12 @@ export function usePopulateDemoData() {
       if (error) {
         setResult({ success: false, error: error.message });
       } else {
-        setResult({ success: true, summary: data?.summary });
+        setResult({ 
+          success: true, 
+          summary: data?.summary,
+          message: data?.message,
+          status: data?.status || 'complete',
+        });
       }
     } catch (err) {
       setResult({ success: false, error: (err as Error).message });
