@@ -47,6 +47,19 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
     await populate(params);
   };
 
+  const handleRegenerateSavedOnly = async () => {
+    const params: PopulateDemoDataParams = {
+      startDate: format(startDate, "yyyy-MM-dd"),
+      endDate: format(endDate, "yyyy-MM-dd"),
+      clearExisting: true,
+      generateFood: false,
+      generateWeights: false,
+      generateSavedMeals: savedMealsCount,
+      generateSavedRoutines: savedRoutinesCount,
+    };
+    await populate(params);
+  };
+
   const handleClose = () => {
     reset();
     onOpenChange(false);
@@ -223,21 +236,30 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex gap-2">
           <Button variant="ghost" onClick={handleClose} disabled={isLoading}>
             {result?.success ? "Close" : "Cancel"}
           </Button>
           {!result?.success && !result?.status && (
-            <Button onClick={handleSubmit} disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
-                  Starting...
-                </>
-              ) : (
-                "Populate"
-              )}
-            </Button>
+            <>
+              <Button 
+                variant="outline" 
+                onClick={handleRegenerateSavedOnly} 
+                disabled={isLoading}
+              >
+                {isLoading ? "Starting..." : "Saved Only"}
+              </Button>
+              <Button onClick={handleSubmit} disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+                    Starting...
+                  </>
+                ) : (
+                  "Populate All"
+                )}
+              </Button>
+            </>
           )}
         </DialogFooter>
       </DialogContent>
