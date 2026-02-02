@@ -1,70 +1,82 @@
 
 
-## Default Sets/Reps in Code (Not Prompt)
+## Add "Show Weights" Toggle Setting
 
 ### Overview
-Instead of updating the AI prompt, we'll apply sensible defaults in our normalization code when the AI returns an exercise with missing sets or reps. The user immediately sees these values and can edit them.
+Add a user preference toggle in Settings → Preferences to control visibility of weight-tracking features. Uses positive framing with a simple toggle, defaulting to enabled.
 
 ---
 
-### Changes
+### Changes Summary
 
 | File | Change |
 |------|--------|
-| `supabase/functions/analyze-weights/index.ts` | Apply defaults for missing sets/reps |
+| `src/hooks/useUserSettings.ts` | Add `showWeights: boolean` to interface & defaults |
+| `src/pages/Settings.tsx` | Add toggle in Preferences section, conditionally hide weight-related settings |
+| `src/components/BottomNav.tsx` | Update visibility logic to include `settings.showWeights` |
+| `src/pages/Trends.tsx` | Update visibility logic to include `settings.showWeights` |
+| `src/pages/History.tsx` | Update visibility logic to include `settings.showWeights` |
 
 ---
 
-### Implementation
+### Implementation Details
 
-**Lines 197-205** - After coercing to numbers, apply defaults before validation:
+**1. UserSettings Hook**
 
 ```typescript
-// Lenient coercion - accept nulls, undefined, strings, coerce to 0
-let sets = Number(exercise.sets) || 0;
-let reps = Number(exercise.reps) || 0;
-const weight_lbs = Number(exercise.weight_lbs) || 0;
-const duration_minutes = Number(exercise.duration_minutes) || 0;
-const distance_miles = Number(exercise.distance_miles) || 0;
-
-// Default missing sets/reps for weight exercises
-// User sees these immediately and can edit
-if (weight_lbs > 0 || (sets > 0 || reps > 0)) {
-  if (sets === 0) sets = 1;
-  if (reps === 0) reps = 10;
+export interface UserSettings {
+  theme: 'light' | 'dark' | 'system';
+  weightUnit: WeightUnit;
+  showWeights: boolean;  // NEW
 }
 
-// Valid if EITHER weight data OR cardio data present
-const hasWeightData = sets > 0 && reps > 0;
-const hasCardioData = duration_minutes > 0 || distance_miles > 0;
+const DEFAULT_SETTINGS: UserSettings = {
+  theme: 'system',
+  weightUnit: 'lbs',
+  showWeights: true,    // Enabled by default
+};
+```
+
+**2. Settings Page UI**
+
+Add in Preferences section (after Weight Units, but only visible when weights are shown):
+
+```
+Show Weights
+[Toggle ✓]
+```
+
+Simple toggle button - when disabled, also hides:
+- "Saved Routines" section
+- "Weight Units" option
+- "Weights Log" export option
+
+**3. Visibility Logic Updates**
+
+In BottomNav, Trends, and History:
+
+```typescript
+const { settings } = useUserSettings();
+const showWeights = (FEATURES.WEIGHT_TRACKING || isAdmin) && settings.showWeights;
 ```
 
 ---
 
-### Logic
+### Areas Hidden When Toggle is Off
 
-- If the AI returns **any** weight-related data (weight > 0, or sets > 0, or reps > 0), treat it as a weight exercise
-- Apply defaults: **1 set** if missing, **10 reps** if missing
-- Validation then passes because `sets > 0 && reps > 0` is true
-- User sees "1 set × 10 reps @ 75 lbs" and can immediately correct it
-
----
-
-### Examples
-
-| Input | AI Returns | After Defaults | User Sees |
-|-------|-----------|----------------|-----------|
-| "chin ups 2 sets at 75lb" | sets=2, reps=null, weight=75 | sets=2, reps=10, weight=75 | 2×10 @ 75lb ✓ |
-| "bench 225" | sets=null, reps=null, weight=225 | sets=1, reps=10, weight=225 | 1×10 @ 225lb ✓ |
-| "3x10 squats 185" | sets=3, reps=10, weight=185 | unchanged | 3×10 @ 185lb ✓ |
-| "treadmill 30 min" | cardio data | unchanged (cardio path) | 30 min ✓ |
+| Location | What Gets Hidden |
+|----------|------------------|
+| Bottom Nav | "Weights" tab |
+| Trends | "Weights Trends" section |
+| History | Dumbbell icons, weight query disabled |
+| Settings | "Saved Routines", "Weight Units", weights export |
 
 ---
 
-### Why This Is Better Than Prompt Changes
+### Technical Notes
 
-- **Deterministic**: Always the same defaults, no AI interpretation variability
-- **Simpler**: One code change vs. prompt engineering
-- **Immediate feedback**: User sees defaults right away and can edit
-- **Follows Postel's Law**: "Be liberal in what you accept" - already the approach used for other fields
+- No database migration needed - JSONB blob handles new keys via spread/merge
+- Default `true` ensures existing users see no change
+- Toggle only appears when `FEATURES.WEIGHT_TRACKING` is enabled globally
+- Changes apply immediately (optimistic update pattern already in place)
 
