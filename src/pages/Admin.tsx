@@ -28,7 +28,7 @@ export default function Admin() {
   // All hooks must be called before any conditional returns
   const { data: isAdmin, isLoading: isAdminLoading } = useIsAdmin();
   const { data: stats, isLoading, error } = useAdminStats();
-  const { data: userStats } = useAdminUserStats();
+  const { data: userStats, isLoading: isUserStatsLoading } = useAdminUserStats();
   const { data: feedback } = useAdminFeedback();
   const respondToFeedback = useRespondToFeedback();
   const hasHover = useHasHover();
@@ -110,7 +110,11 @@ export default function Admin() {
         </div>
       </div>
 
-      {userStats && userStats.length > 0 ? (
+      {isUserStatsLoading ? (
+        <div className="flex justify-center py-4">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      ) : userStats && userStats.length > 0 ? (
         <TooltipProvider delayDuration={200}>
         <table className="w-auto text-xs">
           <thead>
