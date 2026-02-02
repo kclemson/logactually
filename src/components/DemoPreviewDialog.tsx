@@ -89,6 +89,12 @@ export function DemoPreviewDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
         <DialogHeader>
+          {rawInput && (
+            <div className="text-sm mb-2">
+              <span className="text-muted-foreground">What you entered:</span>
+              <p className="mt-1 italic">"{rawInput}"</p>
+            </div>
+          )}
           <DialogTitle>Here's what would be logged:</DialogTitle>
         </DialogHeader>
 

@@ -343,7 +343,7 @@ export function WeightItemsTable({
                           onClick={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
                           aria-label={isCurrentExpanded ? "Collapse entry" : "Expand entry"}
                           className={cn(
-                            "absolute inset-0 w-[44px] -left-3 flex items-center justify-center text-muted-foreground/60 hover:text-muted-foreground transition-transform text-xl",
+                            "absolute inset-0 w-[44px] -left-3 flex items-center justify-center text-muted-foreground/60 hover:text-muted-foreground transition-transform text-xl focus:outline-none focus-visible:outline-none",
                             isCurrentExpanded && "rotate-90"
                           )}
                         >
@@ -385,7 +385,7 @@ export function WeightItemsTable({
                           onClick={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
                           aria-label={isCurrentExpanded ? "Collapse entry" : "Expand entry"}
                           className={cn(
-                            "absolute inset-0 w-[44px] -left-3 flex items-center justify-center text-muted-foreground/60 hover:text-muted-foreground transition-transform text-xl",
+                            "absolute inset-0 w-[44px] -left-3 flex items-center justify-center text-muted-foreground/60 hover:text-muted-foreground transition-transform text-xl focus:outline-none focus-visible:outline-none",
                             isCurrentExpanded && "rotate-90"
                           )}
                         >
