@@ -1,16 +1,13 @@
 import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { FoodItemsTable } from '@/components/FoodItemsTable';
 import { WeightItemsTable } from '@/components/WeightItemsTable';
-import { supabase } from '@/integrations/supabase/client';
 import { FoodItem } from '@/types/food';
 import { WeightSet } from '@/types/weight';
 import type { WeightUnit } from '@/lib/weight-units';
@@ -34,7 +31,6 @@ export function DemoPreviewDialog({
   weightUnit = 'lbs',
   rawInput,
 }: DemoPreviewDialogProps) {
-  const navigate = useNavigate();
   const [expandedEntryIds, setExpandedEntryIds] = useState<Set<string>>(new Set());
 
   // Synthetic entry ID for preview
@@ -78,24 +74,17 @@ export function DemoPreviewDialog({
     entryId: previewEntryId,
   }));
 
-  // Sign out and navigate to auth page
-  const handleCreateAccount = async () => {
-    await supabase.auth.signOut();
-    navigate('/auth');
-    onOpenChange(false);
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto p-3 sm:p-6">
+        <DialogHeader className="text-left">
           {rawInput && (
-            <div className="text-sm mb-2">
+            <div className="text-sm mb-3">
               <span className="text-muted-foreground">What you entered:</span>
-              <p className="mt-1 italic">"{rawInput}"</p>
+              <p className="mt-1 italic text-foreground">"{rawInput}"</p>
             </div>
           )}
-          <DialogTitle>Here's what would be logged:</DialogTitle>
+          <p className="text-sm text-muted-foreground">Here's what would be logged:</p>
         </DialogHeader>
 
         <div className="py-2">
@@ -129,12 +118,9 @@ export function DemoPreviewDialog({
           )}
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter>
+          <Button variant="outline" className="w-full sm:w-auto" onClick={() => onOpenChange(false)}>
             Got it
-          </Button>
-          <Button onClick={handleCreateAccount}>
-            Create Free Account
           </Button>
         </DialogFooter>
       </DialogContent>
