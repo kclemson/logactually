@@ -1,45 +1,54 @@
 
 
-## Demo Preview Dialog Fixes
+## Demo Preview Dialog Polish
 
-Two issues to address based on user feedback.
-
----
-
-### Issue 1: Focus Outline on Chevron Button
-
-**Problem**: When the dialog opens, focus lands on the `›` chevron button (the first focusable element), showing a white browser default focus outline.
-
-**Root Cause**: The chevron `<button>` in both `FoodItemsTable` and `WeightItemsTable` lacks `focus:outline-none` or custom focus styling. When the Radix Dialog opens, it auto-focuses the first focusable element.
-
-**Fix**: Add `focus:outline-none focus-visible:outline-none` to the chevron button in both table components. This removes the default focus ring while still allowing keyboard navigation.
-
-**Files**: 
-- `src/components/FoodItemsTable.tsx` (lines ~423 and ~478)
-- `src/components/WeightItemsTable.tsx` (lines ~345 and ~387)
+Four refinements to improve the mobile experience and reduce promotional feel.
 
 ---
 
-### Issue 2: Show User's Original Input
+### Issue 1: Reduce Dialog Padding on Mobile
 
-**Current**: Dialog only shows "Here's what would be logged:" and the table.
+**Current**: `DialogContent` has `p-6` (24px) padding by default.
 
-**Requested**: Add a section showing what the user entered before showing parsed results.
+**Fix**: Override in `DemoPreviewDialog` to use tighter padding on mobile: `p-4` or even `p-3`, with `sm:p-6` to preserve desktop padding.
+
+**Change**: Add `p-3 sm:p-6` to the `DialogContent` className override.
+
+---
+
+### Issue 2: Left-Align Text on Mobile
+
+**Root Cause**: `DialogHeader` in the UI component has `text-center sm:text-left` - so on mobile it centers, desktop left-aligns.
+
+**Fix**: Override the `DialogHeader` className in `DemoPreviewDialog` to always be left-aligned: `text-left`.
+
+**Change**: Add `className="text-left"` to `<DialogHeader>`.
+
+---
+
+### Issue 3: Consistent Styling for Labels
+
+**Current**: 
+- "What you entered:" is `text-sm` (14px), muted color
+- "Here's what would be logged:" uses `DialogTitle` with `text-title` (18px, semi-bold styling)
+
+**Fix**: Don't use `DialogTitle` for "Here's what would be logged:". Instead, render both as simple styled text with the same treatment.
 
 **Design**:
-```text
-┌─────────────────────────────────────────────────────┐
-│ What you entered:                                   │
-│ "2 big macs and large fries"                       │
-│                                                     │
-│ Here's what would be logged:                        │
-│ [table...]                                          │
-└─────────────────────────────────────────────────────┘
-```
+- Both labels: `text-sm text-muted-foreground` 
+- Both quoted values: normal text, smaller
 
-**Implementation**: Add a conditional section in `DemoPreviewDialog` that displays `rawInput` when available (saved meals/routines won't have this).
+**Change**: Replace `<DialogTitle>` with a styled `<p>` matching the "What you entered" styling.
 
-**File**: `src/components/DemoPreviewDialog.tsx`
+---
+
+### Issue 4: Remove "Create Free Account" Button
+
+**Rationale**: Demo mode should feel exploratory, not promotional.
+
+**Fix**: Remove the `<Button onClick={handleCreateAccount}>Create Free Account</Button>` entirely. Keep only "Got it".
+
+**Additional cleanup**: Remove the now-unused `handleCreateAccount` function and `useNavigate` import.
 
 ---
 
@@ -47,41 +56,40 @@ Two issues to address based on user feedback.
 
 | File | Change |
 |------|--------|
-| `src/components/FoodItemsTable.tsx` | Add `focus:outline-none` to chevron buttons |
-| `src/components/WeightItemsTable.tsx` | Add `focus:outline-none` to chevron buttons |
-| `src/components/DemoPreviewDialog.tsx` | Add "What you entered" section before title |
+| `src/components/DemoPreviewDialog.tsx` | All 4 fixes |
 
 ---
 
 ### Technical Details
 
-**Chevron button fix** (both tables have two instances - editable and read-only branches):
+**Updated structure:**
 
 ```tsx
-// Current
-className={cn(
-  "absolute inset-0 w-[44px] -left-3 flex items-center justify-center text-muted-foreground/60 hover:text-muted-foreground transition-transform text-xl",
-  isCurrentExpanded && "rotate-90"
-)}
+<DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto p-3 sm:p-6">
+  <DialogHeader className="text-left">
+    {rawInput && (
+      <div className="text-sm mb-3">
+        <span className="text-muted-foreground">What you entered:</span>
+        <p className="mt-1 italic text-foreground">"{rawInput}"</p>
+      </div>
+    )}
+    <p className="text-sm text-muted-foreground">Here's what would be logged:</p>
+  </DialogHeader>
 
-// Updated
-className={cn(
-  "absolute inset-0 w-[44px] -left-3 flex items-center justify-center text-muted-foreground/60 hover:text-muted-foreground transition-transform text-xl focus:outline-none focus-visible:outline-none",
-  isCurrentExpanded && "rotate-90"
-)}
+  <div className="py-2">
+    {/* table... */}
+  </div>
+
+  <DialogFooter>
+    <Button variant="outline" onClick={() => onOpenChange(false)}>
+      Got it
+    </Button>
+  </DialogFooter>
+</DialogContent>
 ```
 
-**DemoPreviewDialog addition**:
-
-```tsx
-<DialogHeader>
-  {rawInput && (
-    <div className="text-sm mb-2">
-      <span className="text-muted-foreground">What you entered:</span>
-      <p className="mt-1 italic">"{rawInput}"</p>
-    </div>
-  )}
-  <DialogTitle>Here's what would be logged:</DialogTitle>
-</DialogHeader>
-```
+**Imports cleanup:**
+- Remove `useNavigate` (no longer navigating to auth)
+- Remove `DialogTitle` from imports (no longer using it)
+- Remove `supabase` import (no longer calling signOut)
 
