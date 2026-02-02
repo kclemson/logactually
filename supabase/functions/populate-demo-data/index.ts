@@ -923,7 +923,9 @@ Deno.serve(async (req) => {
 
     const startDate = params.startDate ? new Date(params.startDate) : ninetyDaysAgo;
     const endDate = params.endDate ? new Date(params.endDate) : thirtyDaysFromNow;
-    const daysToPopulate = params.daysToPopulate ?? 80; // Increased to cover extended range
+    // Calculate total days in range to fill all days by default
+    const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const daysToPopulate = params.daysToPopulate ?? totalDays;
     const generateFood = params.generateFood ?? true;
     const generateWeights = params.generateWeights ?? true;
     const savedMealsCount = params.generateSavedMeals ?? 5;
