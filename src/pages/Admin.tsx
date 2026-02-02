@@ -5,10 +5,12 @@ import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useAdminFeedback, useRespondToFeedback } from "@/hooks/feedback";
 import { useHasHover } from "@/hooks/use-has-hover";
 import { format, parseISO, isToday } from "date-fns";
+import { MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PopulateDemoDataDialog } from "@/components/PopulateDemoDataDialog";
+import { CollapsibleSection } from "@/components/CollapsibleSection";
 
 const USER_NAMES: Record<number, string> = {
   1: "KC",
@@ -276,61 +278,68 @@ export default function Admin() {
 
       {/* Feedback section */}
       {feedback && feedback.length > 0 && (
-        <div className="space-y-1">
-          <p className="font-medium text-xs text-muted-foreground">Recent Feedback</p>
-          {feedback.map((f) => (
-            <div key={f.id} className="text-xs border-b border-border/50 py-1 space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">
-                  {USER_NAMES[f.user_number] ?? `User #${f.user_number}`} • {format(parseISO(f.created_at), "MMM d")}
-                </span>
-                {replyingToId !== f.id && (
-                  <button
-                    className="text-[hsl(217_91%_60%)] underline hover:text-[hsl(217_91%_70%)]"
-                    onClick={() => handleStartReply(f.id, f.response)}
-                  >
-                    {f.response ? "Edit Reply" : "Reply"}
-                  </button>
-                )}
-              </div>
-              <p className="whitespace-pre-wrap">{f.message}</p>
-
-              {/* Show existing response */}
-              {f.response && replyingToId !== f.id && (
-                <div className="ml-2 pl-2 border-l-2 border-primary/30 text-muted-foreground">
-                  <span className="text-[10px]">Response ({format(parseISO(f.responded_at!), "MMM d")})</span>
-                  <p className="whitespace-pre-wrap">{f.response}</p>
-                </div>
-              )}
-
-              {/* Reply form */}
-              {replyingToId === f.id ? (
-                <div className="space-y-1 pt-1">
-                  <Textarea
-                    value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
-                    placeholder="Write a response..."
-                    className="min-h-[60px] text-xs"
-                    maxLength={1000}
-                  />
-                  <div className="flex gap-1">
-                    <Button
-                      size="sm"
-                      className="h-6 text-xs px-2"
-                      onClick={() => handleSendReply(f.id)}
-                      disabled={!replyText.trim() || respondToFeedback.isPending}
+        <CollapsibleSection
+          title={`Feedback (${feedback.length})`}
+          icon={MessageSquare}
+          defaultOpen={false}
+          storageKey="admin-feedback"
+          iconClassName="text-muted-foreground"
+        >
+          <div className="space-y-1">
+            {feedback.map((f) => (
+              <div key={f.id} className="text-xs border-b border-border/50 py-1 space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">
+                    {USER_NAMES[f.user_number] ?? `User #${f.user_number}`} • {format(parseISO(f.created_at), "MMM d")}
+                  </span>
+                  {replyingToId !== f.id && (
+                    <button
+                      className="text-[hsl(217_91%_60%)] underline hover:text-[hsl(217_91%_70%)]"
+                      onClick={() => handleStartReply(f.id, f.response)}
                     >
-                      {respondToFeedback.isPending ? "Sending..." : "Send"}
-                    </Button>
-                    <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={handleCancelReply}>
-                      Cancel
-                    </Button>
-                  </div>
+                      {f.response ? "Edit Reply" : "Reply"}
+                    </button>
+                  )}
                 </div>
-              ) : null}
-            </div>
-          ))}
-        </div>
+                <p className="whitespace-pre-wrap">{f.message}</p>
+
+                {/* Show existing response */}
+                {f.response && replyingToId !== f.id && (
+                  <div className="ml-2 pl-2 border-l-2 border-primary/30 text-muted-foreground">
+                    <span className="text-[10px]">Response ({format(parseISO(f.responded_at!), "MMM d")})</span>
+                    <p className="whitespace-pre-wrap">{f.response}</p>
+                  </div>
+                )}
+
+                {/* Reply form */}
+                {replyingToId === f.id ? (
+                  <div className="space-y-1 pt-1">
+                    <Textarea
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      placeholder="Write a response..."
+                      className="min-h-[60px] text-xs"
+                      maxLength={1000}
+                    />
+                    <div className="flex gap-1">
+                      <Button
+                        size="sm"
+                        className="h-6 text-xs px-2"
+                        onClick={() => handleSendReply(f.id)}
+                        disabled={!replyText.trim() || respondToFeedback.isPending}
+                      >
+                        {respondToFeedback.isPending ? "Sending..." : "Send"}
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={handleCancelReply}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </CollapsibleSection>
       )}
 
       {/* Populate Demo Data */}
