@@ -386,7 +386,7 @@ const Trends = () => {
   });
   const { data: isAdmin } = useIsAdmin();
   const { settings } = useUserSettings();
-  const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
+  const showWeights = (FEATURES.WEIGHT_TRACKING || isAdmin) && settings.showWeights;
   const mergeMutation = useMergeExercises();
 
   const handleExerciseBarClick = useCallback((date: string) => {

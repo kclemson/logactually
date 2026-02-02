@@ -7,11 +7,13 @@ import type { WeightUnit } from '@/lib/weight-units';
 export interface UserSettings {
   theme: 'light' | 'dark' | 'system';
   weightUnit: WeightUnit;
+  showWeights: boolean;
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
   theme: 'system',
   weightUnit: 'lbs',
+  showWeights: true,
 };
 
 export function useUserSettings() {
