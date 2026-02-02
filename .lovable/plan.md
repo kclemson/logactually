@@ -1,36 +1,79 @@
 
 
-## Filter Results Table by Test Type
+## Add Simple Loading Overlay for Day Navigation
 
-Replace `displayResults` with the already-defined `filteredResults` in three locations so the table only shows relevant items based on the selected test type.
+Show a centered spinner in the content area while data is loading during day navigation, preventing the brief "empty day" flash.
 
 ---
 
-### Root Cause
+### Overview
 
-The `getFilteredResults()` function (lines 348-357) already filters results correctly:
-- **Food mode**: Shows results with `food_items` in output
-- **Weights mode**: Shows results with `exercises` in output
-
-However, the table rendering still uses `displayResults` (unfiltered) instead of `filteredResults`.
+| Current | Proposed |
+|---------|----------|
+| Shows "No entries logged" during fetch | Shows spinner during fetch |
+| Brief flash before data appears | Smooth loading transition |
 
 ---
 
 ### Technical Changes
 
-**File: `src/components/DevToolsPanel.tsx`**
+#### 1. Update FoodLog.tsx
 
-| Line | Current | Change To |
-|------|---------|-----------|
-| 471 | `displayResults.length > 0` | `filteredResults.length > 0` |
-| 555 | `displayResults.map((result, i) =>` | `filteredResults.map((result, i) =>` |
-| 739 | `displayResults.map((result, i) =>` | `filteredResults.map((result, i) =>` |
+Add a loading state check before the empty message:
+
+```tsx
+// Current logic:
+{displayItems.length > 0 && <FoodItemsTable ... />}
+{displayItems.length === 0 && !isAnalyzing && <EmptyMessage />}
+
+// New logic:
+{displayItems.length > 0 && <FoodItemsTable ... />}
+
+{displayItems.length === 0 && isFetching && (
+  <div className="flex justify-center py-8">
+    <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+  </div>
+)}
+
+{displayItems.length === 0 && !isFetching && !isAnalyzing && (
+  <EmptyMessage />
+)}
+```
+
+#### 2. Update WeightLog.tsx
+
+Same pattern:
+
+```tsx
+{displayItems.length > 0 && <WeightItemsTable ... />}
+
+{displayItems.length === 0 && isFetching && (
+  <div className="flex justify-center py-8">
+    <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+  </div>
+)}
+
+{displayItems.length === 0 && !isFetching && !isAnalyzing && (
+  <div className="text-center text-muted-foreground py-8">
+    No exercises logged for this day
+  </div>
+)}
+```
 
 ---
 
-### Result
+### Behavior
 
-- Switching to **Food** mode shows only results with `food_items` data
-- Switching to **Weights** mode shows only results with `exercises` data
-- Results with errors are shown in both modes (preserved by the filter logic)
+- **Navigating to a day with data**: Spinner shows briefly, then table appears
+- **Navigating to an empty day**: Spinner shows briefly, then "No entries" message appears  
+- **When data is cached**: No spinner (React Query returns cached data immediately)
+
+---
+
+### Files Changed
+
+| File | Changes |
+|------|---------|
+| `src/pages/FoodLog.tsx` | Add loading spinner condition before empty message |
+| `src/pages/WeightLog.tsx` | Add loading spinner condition before empty message |
 
