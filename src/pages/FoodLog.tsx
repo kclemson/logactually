@@ -560,7 +560,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       </div>
 
       <section>
-        {displayItems.length > 0 ? (
+        {displayItems.length > 0 && (
           <FoodItemsTable
             items={displayItems}
             editable={true}
@@ -580,7 +580,15 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
             entryMealNames={entryMealNames}
             entrySourceMealIds={entrySourceMealIds}
           />
-        ) : (
+        )}
+
+        {displayItems.length === 0 && isFetching && (
+          <div className="flex justify-center py-8">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          </div>
+        )}
+
+        {displayItems.length === 0 && !isFetching && !isAnalyzing && (
           <p className="text-muted-foreground">
             {isTodaySelected ? 'No entries yet today.' : 'No entries for this day.'}
           </p>
