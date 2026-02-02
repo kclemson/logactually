@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
-
 import type { WeightUnit } from '@/lib/weight-units';
 
 export interface UserSettings {
@@ -18,18 +17,13 @@ const DEFAULT_SETTINGS: UserSettings = {
 
 export function useUserSettings() {
   const { user } = useAuth();
-  const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  // Fetch settings from database
-  useEffect(() => {
-    if (!user) {
-      setSettings(DEFAULT_SETTINGS);
-      setIsLoading(false);
-      return;
-    }
-
-    const fetchSettings = async () => {
+  const { data: settings = DEFAULT_SETTINGS, isLoading } = useQuery({
+    queryKey: ['user-settings', user?.id],
+    queryFn: async () => {
+      if (!user) return DEFAULT_SETTINGS;
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('settings')
@@ -38,43 +32,45 @@ export function useUserSettings() {
 
       if (error) {
         console.error('Failed to fetch settings:', error);
-      } else if (data?.settings) {
-        // Merge with defaults to ensure all keys exist
-        setSettings({ ...DEFAULT_SETTINGS, ...(data.settings as Partial<UserSettings>) });
+        return DEFAULT_SETTINGS;
       }
-      setIsLoading(false);
-    };
-
-    fetchSettings();
-  }, [user]);
-
-  // Update settings in database
-  const updateSettings = useCallback(
-    async (updates: Partial<UserSettings>) => {
-      if (!user) return;
-
-      // Store previous settings for potential rollback
-      let previousSettings: UserSettings;
       
-      // Use functional update to ensure we get latest state (avoids stale closures)
-      setSettings(current => {
-        previousSettings = current;
-        return { ...current, ...updates };
-      });
+      return { ...DEFAULT_SETTINGS, ...(data?.settings as Partial<UserSettings>) };
+    },
+    enabled: !!user,
+    staleTime: Infinity,
+  });
 
+  const { mutate: updateSettings } = useMutation({
+    mutationFn: async (updates: Partial<UserSettings>) => {
+      if (!user) throw new Error('No user');
+      
+      const newSettings = { ...settings, ...updates };
+      
       const { error } = await supabase
         .from('profiles')
-        .update({ settings: { ...previousSettings!, ...updates } })
+        .update({ settings: newSettings })
         .eq('id', user.id);
 
-      if (error) {
-        console.error('Failed to save settings:', error);
-        // Revert on error using the captured previous state
-        setSettings(previousSettings!);
-      }
+      if (error) throw error;
+      return newSettings;
     },
-    [user]  // Remove `settings` from dependencies to prevent stale closures
-  );
+    onMutate: async (updates) => {
+      await queryClient.cancelQueries({ queryKey: ['user-settings', user?.id] });
+      const previous = queryClient.getQueryData<UserSettings>(['user-settings', user?.id]);
+      
+      queryClient.setQueryData(['user-settings', user?.id], (old: UserSettings = DEFAULT_SETTINGS) => ({
+        ...old,
+        ...updates,
+      }));
+      
+      return { previous };
+    },
+    onError: (err, updates, context) => {
+      queryClient.setQueryData(['user-settings', user?.id], context?.previous);
+      console.error('Failed to save settings:', err);
+    },
+  });
 
   return { settings, updateSettings, isLoading };
 }
