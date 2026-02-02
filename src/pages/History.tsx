@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { FEATURES } from '@/lib/feature-flags';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { useUserSettings } from '@/hooks/useUserSettings';
 
 interface DaySummary {
   date: string;
@@ -35,7 +36,8 @@ const History = () => {
   const navigate = useNavigate();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const { data: isAdmin } = useIsAdmin();
-  const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
+  const { settings } = useUserSettings();
+  const showWeights = (FEATURES.WEIGHT_TRACKING || isAdmin) && settings.showWeights;
 
   // Fetch entries for the visible month range
   const monthStart = startOfMonth(currentMonth);

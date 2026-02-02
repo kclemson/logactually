@@ -3,14 +3,16 @@ import { Utensils, CalendarDays, TrendingUp, Settings, Shield, Dumbbell } from '
 import { cn } from '@/lib/utils';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { FEATURES } from '@/lib/feature-flags';
+import { useUserSettings } from '@/hooks/useUserSettings';
 
 export function BottomNav() {
   const { data: isAdmin } = useIsAdmin();
   const [searchParams] = useSearchParams();
+  const { settings } = useUserSettings();
   
   const hideAdmin = searchParams.get('hideAdmin') === 'true';
   const showAdmin = isAdmin && !hideAdmin;
-  const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
+  const showWeights = (FEATURES.WEIGHT_TRACKING || isAdmin) && settings.showWeights;
 
   const navItems = [
     { to: '/', icon: Utensils, label: 'Food' },

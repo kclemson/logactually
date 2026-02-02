@@ -30,7 +30,8 @@ export default function Settings() {
   const { settings, updateSettings, isLoading } = useUserSettings();
   const [mounted, setMounted] = useState(false);
   const { data: isAdmin } = useIsAdmin();
-  const showWeights = FEATURES.WEIGHT_TRACKING || isAdmin;
+  const showWeightsFeature = FEATURES.WEIGHT_TRACKING || isAdmin;
+  const showWeights = showWeightsFeature && settings.showWeights;
   const { isReadOnly } = useReadOnlyContext();
   const isDemoUser = user?.email === DEMO_EMAIL;
 
@@ -256,6 +257,25 @@ export default function Settings() {
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+          {showWeightsFeature && (
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">Show Weights</p>
+              <button
+                onClick={() => updateSettings({ showWeights: !settings.showWeights })}
+                className={cn(
+                  "w-12 h-6 rounded-full transition-colors relative",
+                  settings.showWeights ? "bg-primary" : "bg-muted"
+                )}
+              >
+                <span
+                  className={cn(
+                    "absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform",
+                    settings.showWeights ? "translate-x-6" : "translate-x-0.5"
+                  )}
+                />
+              </button>
             </div>
           )}
         </div>
