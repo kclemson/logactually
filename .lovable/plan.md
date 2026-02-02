@@ -1,152 +1,206 @@
 
 
-## Add Admin UI for Populate Demo Data Edge Function
+## Bulk AI Processing for Demo Data (10-15 Item Batches)
 
 ### Overview
-Add a button to the Admin page that opens a dialog for running the `populate-demo-data` edge function with customizable parameters.
+Refactor `populate-demo-data` to call the AI in small batches (10-15 items each) using the same system prompt as `analyze-food`. This ensures demo entries show realistic AI parsing behavior while avoiding timeout risks.
 
 ---
 
-### Current Parameters (from edge function)
+### Batch Strategy
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `startDate` | string | 90 days ago | Start of date range |
-| `endDate` | string | 30 days from now | End of date range |
-| `daysToPopulate` | number | All days in range | How many days to generate data for |
-| `generateFood` | boolean | true | Generate food entries |
-| `generateWeights` | boolean | true | Generate weight entries |
-| `generateSavedMeals` | number | 5 | How many saved meals to create |
-| `generateSavedRoutines` | number | 4 | How many saved routines to create |
-| `clearExisting` | boolean | false | Delete existing data in range first |
-| `food` | object | - | Food generation percentages |
-| `weights` | object | - | Weight exercise category percentages |
+| Meal Type | Inputs | Batches (10 each) |
+|-----------|--------|-------------------|
+| Breakfast | 30 | 3 |
+| Lunch | 30 | 3 |
+| Dinner | 30 | 3 |
+| Snack | 30 | 3 |
+| **Total** | **120** | **12 calls** |
 
-**Food Config Options:**
-- `barcodeScanPercent` (default: 15)
-- `shorthandPercent` (default: 40)
-- `casualWithTyposPercent` (default: 20)
-- `recipeLinksPercent` (default: 5)
-- `brandNamesPercent` (default: 20)
-
-**Weight Config Options:**
-- `machinePercent` (default: 40)
-- `compoundPercent` (default: 30)
-- `freeWeightPercent` (default: 30)
-- `progressionMultiplier` (default: 1.0)
+Estimated time: 30-60 seconds total (vs 3-5 min for individual calls)
 
 ---
 
-### Recommended UI Fields
-
-For the admin UI, prioritize the most commonly needed controls:
-
-**Essential (always visible):**
-1. **Date Range** - Start and End date pickers
-2. **Clear Existing** - Checkbox (dangerous, show warning)
-
-**Optional (collapsed/advanced section):**
-3. **Generate Food** - Checkbox
-4. **Generate Weights** - Checkbox
-5. **Days to Populate** - Number input (useful for partial fills)
-6. **Saved Meals Count** - Number input
-7. **Saved Routines Count** - Number input
-
-**Skip for now:**
-- Food/Weight config percentages (advanced tuning, rarely needed)
-
----
-
-### Files Changed
+### File Changes
 
 | File | Change |
 |------|--------|
-| `src/pages/Admin.tsx` | Add "Populate Demo Data" button and dialog |
-| `src/hooks/usePopulateDemoData.ts` (new) | Hook to call the edge function |
+| `supabase/functions/populate-demo-data/index.ts` | Replace `POLISHED_FOODS` with raw inputs + bulk AI logic |
+| `supabase/functions/_shared/prompts.ts` | Add bulk parsing prompt helper |
 
 ---
 
-### UI Design
+### New Data Structure
 
-**Button placement:** Below the feedback section, as a small admin tool
+Replace 400+ lines of pre-baked `POLISHED_FOODS` with simple input arrays:
 
-**Dialog contents:**
-```text
-┌─────────────────────────────────────────────┐
-│  Populate Demo Data                         │
-├─────────────────────────────────────────────┤
-│  Date Range                                 │
-│  [Start Date Picker] to [End Date Picker]   │
-│                                             │
-│  ☑ Clear existing data in range             │
-│    ⚠ This will delete existing entries      │
-│                                             │
-│  Options                                    │
-│  ☑ Generate Food    ☑ Generate Weights      │
-│  Saved Meals: [5]   Saved Routines: [4]     │
-│                                             │
-│  [Cancel]                        [Populate] │
-└─────────────────────────────────────────────┘
+```typescript
+const DEMO_FOOD_INPUTS = {
+  breakfast: [
+    '2 eggs scrambled with buttered toast',
+    'greek yogurt with granola and blueberries',
+    'oatmeal with sliced banana and honey',
+    'everything bagel with cream cheese',
+    'protein shake with banana',
+    // ... 30 total per meal type
+  ],
+  lunch: [...],
+  dinner: [...],
+  snack: [...],
+};
 ```
 
-**Loading state:** Button shows spinner and disables while running
-
-**Success/Error:** Toast or inline message with summary
-
 ---
 
-### Implementation Details
+### Bulk Parsing Logic
 
-**New hook: `src/hooks/usePopulateDemoData.ts`**
-```tsx
-interface PopulateDemoDataParams {
-  startDate: string;
-  endDate: string;
-  clearExisting?: boolean;
-  generateFood?: boolean;
-  generateWeights?: boolean;
-  generateSavedMeals?: number;
-  generateSavedRoutines?: number;
-}
+```typescript
+const BATCH_SIZE = 10;
 
-export function usePopulateDemoData() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [result, setResult] = useState<{ success: boolean; summary?: any; error?: string } | null>(null);
-
-  const populate = async (params: PopulateDemoDataParams) => {
-    setIsLoading(true);
-    setResult(null);
+async function bulkParseWithAI(inputs: string[]): Promise<Map<string, FoodItem[]>> {
+  const results = new Map<string, FoodItem[]>();
+  
+  // Process in batches of 10
+  for (let i = 0; i < inputs.length; i += BATCH_SIZE) {
+    const batch = inputs.slice(i, i + BATCH_SIZE);
     
-    const { data, error } = await supabase.functions.invoke('populate-demo-data', {
-      body: params,
+    const systemPrompt = getAnalyzeFoodPrompt('default');
+    const userPrompt = buildBulkUserPrompt(batch);
+    
+    const response = await callLovableAI(systemPrompt, userPrompt);
+    
+    // Map results back to input strings
+    response.results.forEach((r, idx) => {
+      results.set(batch[idx], r.food_items);
     });
     
-    setIsLoading(false);
-    
-    if (error) {
-      setResult({ success: false, error: error.message });
-    } else {
-      setResult({ success: true, summary: data.summary });
-    }
-  };
-
-  return { populate, isLoading, result };
+    // Small delay between batches
+    await delay(200);
+  }
+  
+  return results;
 }
 ```
 
-**Admin page additions:**
-- Import dialog components and date picker
-- Add state for dialog open/closed
-- Add form state for parameters
-- Call hook on submit
-- Show result summary
+---
+
+### Bulk User Prompt Template
+
+```typescript
+function buildBulkUserPrompt(inputs: string[]): string {
+  return `Parse these ${inputs.length} food entries. For each input, analyze it exactly as you would individually.
+
+Inputs:
+${inputs.map((input, i) => `${i + 1}. "${input}"`).join('\n')}
+
+Return JSON array with results in same order as inputs:
+{
+  "results": [
+    { "food_items": [{ "name": "...", "portion": "...", "calories": 0, ... }] },
+    ...
+  ]
+}`;
+}
+```
 
 ---
 
-### Technical Notes
+### Execution Flow
 
-1. The edge function already has admin auth check built-in
-2. Uses `supabase.functions.invoke` which passes the user's auth token
-3. Date pickers should default to reasonable ranges (last 90 days to +30 days)
-4. Clear existing is the most dangerous option - show a warning
+1. **Collect unique inputs**: All 120 raw input strings
+2. **Batch by meal type**: 3 batches of 10 per meal type = 12 total calls
+3. **Call AI for each batch**: With retry logic on failure
+4. **Cache results**: Map input string -> parsed food_items
+5. **Generate entries**: For each day in range, look up cached results
+6. **Insert to DB**: Same insert logic as before
+
+```typescript
+// Main flow
+const parsedCache = new Map<string, FoodItem[]>();
+
+for (const mealType of ['breakfast', 'lunch', 'dinner', 'snack']) {
+  const inputs = DEMO_FOOD_INPUTS[mealType];
+  const results = await bulkParseWithAI(inputs);
+  results.forEach((items, input) => parsedCache.set(input, items));
+}
+
+// For each day, use cached results
+for (const day of dateRange) {
+  const dayIndex = getDayIndex(day);
+  const breakfastInput = DEMO_FOOD_INPUTS.breakfast[dayIndex % 30];
+  const breakfastItems = parsedCache.get(breakfastInput);
+  // ... insert entry
+}
+```
+
+---
+
+### Error Handling
+
+```typescript
+async function callLovableAI(system: string, user: string, retries = 2): Promise<any> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('LOVABLE_API_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-3-flash-preview',
+          messages: [
+            { role: 'system', content: system },
+            { role: 'user', content: user },
+          ],
+          temperature: 0.3,
+        }),
+      });
+      
+      if (!response.ok) throw new Error(`AI call failed: ${response.status}`);
+      
+      const data = await response.json();
+      return JSON.parse(data.choices[0].message.content);
+    } catch (error) {
+      if (attempt === retries) throw error;
+      console.log(`Retry ${attempt + 1} for AI call...`);
+      await delay(1000);
+    }
+  }
+}
+```
+
+---
+
+### Input List (30 per meal type)
+
+Will curate 30 realistic inputs per category covering variety of:
+- Quantities and portions
+- Cooking methods
+- Common abbreviations
+- Multi-item meals
+- Simple vs complex entries
+
+Examples already defined in current codebase will be reused where appropriate.
+
+---
+
+### Weight Entries
+
+Keep weight generation as-is (local/deterministic) since:
+- Weight parsing is already standardized ("bench 135 3x10")
+- Less variation in output format
+- AI would return essentially same structure
+
+---
+
+### Summary
+
+| Aspect | Before | After |
+|--------|--------|-------|
+| Code lines | 400+ pre-baked | ~150 raw inputs |
+| AI calls | 0 (fake data) | 12 bulk calls |
+| Execution time | Instant | ~30-60 sec |
+| Demo realism | Fake outputs | Real AI parsing |
+| Maintenance | Update items+macros | Just update input strings |
 
