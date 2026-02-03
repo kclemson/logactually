@@ -58,6 +58,8 @@ interface FoodItemsTableProps {
   showInlineLabels?: boolean;
   /** When false, hide the macro percentages row in totals (default: true) */
   showMacroPercentages?: boolean;
+  /** When false, hide the divider line above totals row (default: true) */
+  showTotalsDivider?: boolean;
 }
 
 export function FoodItemsTable({
@@ -82,6 +84,7 @@ export function FoodItemsTable({
   entrySourceMealIds,
   showInlineLabels = false,
   showMacroPercentages = true,
+  showTotalsDivider = true,
 }: FoodItemsTableProps) {
   // Read-only mode blocks saves
   const { isReadOnly, triggerOverlay } = useReadOnlyContext();
@@ -296,7 +299,7 @@ export function FoodItemsTable({
       <div className={cn(
         'grid gap-0.5 items-center group',
         totalsPosition === 'top' && 'bg-slate-200 dark:bg-slate-700 rounded py-1.5 border border-slate-300 dark:border-slate-600',
-        totalsPosition === 'bottom' && 'pt-1.5 border-t-2 border-slate-300 dark:border-slate-600',
+        totalsPosition === 'bottom' && showTotalsDivider && 'pt-1.5 border-t-2 border-slate-300 dark:border-slate-600',
         gridCols
       )}>
         <span className={cn("px-1 font-semibold", showEntryDividers && "pl-4")}>Total</span>
