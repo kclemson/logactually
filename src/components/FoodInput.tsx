@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { SavedMealsPopover } from "@/components/SavedMealsPopover";
 import { useScanBarcode } from "@/hooks/useScanBarcode";
-import { extractUpcFromText } from "@/lib/upc-utils";
+import { extractUpcFromText, SCANNED_BARCODE_PREFIX } from "@/lib/upc-utils";
 import { FoodItem } from "@/types/food";
 
 const PLACEHOLDER_EXAMPLES = [
@@ -159,14 +159,14 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(function FoodI
       // Product found - add directly with scanned UPC as original input
       const foodItem = createFoodItemFromScan(result.data);
       if (onScanResult) {
-        onScanResult(foodItem, `Scanned: ${code}`);
+        onScanResult(foodItem, `${SCANNED_BARCODE_PREFIX} ${code}`);
       } else {
         // Fallback: submit as text if no direct handler
         onSubmit(result.data.description);
       }
     } else if ("notFound" in result && result.notFound) {
       // Not found - populate textarea and auto-submit to analyze-food
-      const fallbackText = `Scanned: ${code}`;
+      const fallbackText = `${SCANNED_BARCODE_PREFIX} ${code}`;
       setText(fallbackText);
       // Auto-submit after a brief moment so user sees what's happening
       setTimeout(() => {

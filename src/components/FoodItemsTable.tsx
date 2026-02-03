@@ -628,8 +628,8 @@ export function FoodItemsTable({
                   <div className="col-span-full pl-6 py-1 space-y-2">
                     {/* Only show raw input if NOT from a saved meal */}
                     {!isFromSavedMeal && currentRawInput && (
-                      <p className="text-sm text-muted-foreground">
-                        Logged as: <span className="italic">"{currentRawInput}"</span>
+                      <p className="text-sm text-muted-foreground italic">
+                        Logged as:{' '}<span className="not-italic">"{currentRawInput}"</span>
                       </p>
                     )}
                     {/* Show meal info if from saved meal, otherwise show "Save as meal" link */}

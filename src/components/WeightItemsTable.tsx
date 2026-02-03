@@ -655,8 +655,8 @@ export function WeightItemsTable({
                     
                     {/* Only show raw input if NOT from a saved routine */}
                     {!isFromSavedRoutine && currentRawInput && (
-                      <p className="text-sm text-muted-foreground">
-                        Logged as: <span className="italic">"{currentRawInput}"</span>
+                      <p className="text-sm text-muted-foreground italic">
+                        Logged as:{' '}<span className="not-italic">"{currentRawInput}"</span>
                       </p>
                     )}
                     {/* Show routine info if from saved routine, otherwise show "Save as routine" */}
