@@ -112,15 +112,30 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
   
   // Speed toggle for distance-based exercises (walk_run, cycling)
   const supportsSpeedToggle = isCardio && hasDistanceTracking(exercise.exercise_key);
-  const [showMph, setShowMph] = useState(() => {
-    if (!supportsSpeedToggle) return false;
-    return localStorage.getItem(`trends-mph-${exercise.exercise_key}`) === 'true';
+  
+  type CardioViewMode = 'time' | 'mph' | 'distance';
+  const [cardioMode, setCardioMode] = useState<CardioViewMode>(() => {
+    if (!supportsSpeedToggle) return 'time';
+    
+    // Check for new key first
+    const saved = localStorage.getItem(`trends-cardio-mode-${exercise.exercise_key}`);
+    if (saved === 'mph' || saved === 'distance') return saved;
+    
+    // Migration: convert old boolean to new mode
+    const legacyMph = localStorage.getItem(`trends-mph-${exercise.exercise_key}`);
+    if (legacyMph === 'true') {
+      localStorage.removeItem(`trends-mph-${exercise.exercise_key}`);
+      localStorage.setItem(`trends-cardio-mode-${exercise.exercise_key}`, 'mph');
+      return 'mph';
+    }
+    
+    return 'time';
   });
 
-  // Reset active bar when chart data changes (e.g., mph toggle)
+  // Reset active bar when chart data changes (e.g., mode toggle)
   useEffect(() => {
     setActiveBarIndex(null);
-  }, [showMph]);
+  }, [cardioMode]);
 
   const handleBarClick = (data: any, index: number) => {
     if (isTouchDevice) {
@@ -137,8 +152,8 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
   };
   
   const chartData = useMemo(() => {
-    // For mph mode, filter to only entries with distance data
-    const sourceData = showMph 
+    // For mph/distance modes, filter to only entries with distance data
+    const sourceData = (cardioMode === 'mph' || cardioMode === 'distance')
       ? exercise.weightData.filter(d => d.distance_miles && d.distance_miles > 0)
       : exercise.weightData;
     
@@ -166,6 +181,13 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
       // Count from right (end) to prioritize recent data - rightmost column always labeled
       const distanceFromEnd = dataLength - 1 - index;
       
+      // Label based on cardio mode: time shows duration, mph shows speed, distance shows miles
+      const cardioLabel = cardioMode === 'mph' 
+        ? `${mph}` 
+        : cardioMode === 'distance'
+          ? `${Number(d.distance_miles || 0).toFixed(1)}`
+          : `${Number(d.duration_minutes || 0).toFixed(1)}`;
+      
       return {
         ...d,
         rawDate: d.date, // Keep original date for navigation
@@ -173,15 +195,13 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
         dateLabel: format(new Date(`${d.date}T12:00:00`), "MMM d"),
         mph,
         pace,
-        // For weight exercises: "3×10×135"; for cardio in time mode: duration; in mph mode: mph value
-        label: isCardio 
-          ? (showMph ? `${mph}` : `${Number(d.duration_minutes || 0).toFixed(1)}`)
-          : `${d.sets}×${d.reps}×${displayWeight}`,
+        // For weight exercises: "3×10×135"; for cardio: mode-dependent label
+        label: isCardio ? cardioLabel : `${d.sets}×${d.reps}×${displayWeight}`,
         // Show label using right-to-left counting (distance 0 = rightmost column)
         showLabel: distanceFromEnd % labelInterval === 0,
       };
     });
-  }, [exercise.weightData, unit, isCardio, showMph]);
+  }, [exercise.weightData, unit, isCardio, cardioMode]);
 
   const maxWeightDisplay = unit === "kg" ? Math.round(exercise.maxWeight * LBS_TO_KG) : exercise.maxWeight;
 
@@ -251,9 +271,11 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
 
   const handleHeaderClick = supportsSpeedToggle 
     ? () => {
-        const newValue = !showMph;
-        localStorage.setItem(`trends-mph-${exercise.exercise_key}`, String(newValue));
-        setShowMph(newValue);
+        const nextMode: CardioViewMode = 
+          cardioMode === 'time' ? 'mph' :
+          cardioMode === 'mph' ? 'distance' : 'time';
+        localStorage.setItem(`trends-cardio-mode-${exercise.exercise_key}`, nextMode);
+        setCardioMode(nextMode);
       }
     : undefined;
 
@@ -276,7 +298,7 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
             <ChartTitle className="truncate">{exercise.description}</ChartTitle>
             <ChartSubtitle>
               {supportsSpeedToggle ? (
-                <>Cardio · {showMph ? 'mph' : 'time'} <span className="opacity-50">▾</span></>
+                <>Cardio · {cardioMode} <span className="opacity-50">▾</span></>
               ) : isCardio ? (
                 <>Cardio</>
               ) : (
@@ -352,7 +374,7 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
                   cursor={{ fill: "hsl(var(--muted)/0.3)" }}
                 />
                 <Bar 
-                  dataKey={isCardio ? (showMph ? "mph" : "duration_minutes") : "weight"} 
+                  dataKey={isCardio ? (cardioMode === 'mph' ? "mph" : cardioMode === 'distance' ? "distance_miles" : "duration_minutes") : "weight"}
                   fill="hsl(262 83% 58%)" 
                   radius={[2, 2, 0, 0]}
                   onClick={(data, index) => handleBarClick(data, index)}

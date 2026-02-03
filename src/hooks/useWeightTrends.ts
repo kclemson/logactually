@@ -19,6 +19,7 @@ export interface ExerciseTrend {
   sessionCount: number;
   maxWeight: number;
   maxDuration: number;  // For cardio exercises
+  maxDistance: number;  // Maximum distance in a single session
   weightData: WeightPoint[];
 }
 
@@ -59,6 +60,7 @@ export function useWeightTrends(days: number) {
             sessionCount: 0,
             maxWeight: 0,
             maxDuration: 0,
+            maxDistance: 0,
             weightData: [],
           });
         }
@@ -66,6 +68,7 @@ export function useWeightTrends(days: number) {
         const trend = exerciseMap.get(exerciseKey)!;
         trend.maxWeight = Math.max(trend.maxWeight, weight);
         trend.maxDuration = Math.max(trend.maxDuration, duration);
+        trend.maxDistance = Math.max(trend.maxDistance, distance);
 
         // For cardio, aggregate by date only; for weights, aggregate by date + weight
         const isCardio = duration > 0 && weight === 0;
