@@ -619,18 +619,34 @@ export function WeightItemsTable({
                   <div className="col-span-full pl-6 py-1 space-y-1">
                     {/* Cardio metadata - show for each cardio item */}
                     {cardioItems.map((ex, idx) => {
-                      const parts: string[] = [];
-                      if ((ex.duration_minutes ?? 0) > 0) {
-                        parts.push(formatDurationMmSs(Number(ex.duration_minutes)));
-                      }
-                      if ((ex.distance_miles ?? 0) > 0) {
-                        parts.push(`${ex.distance_miles} mi`);
+                      const duration = ex.duration_minutes ?? 0;
+                      const distance = ex.distance_miles ?? 0;
+                      
+                      // Calculate pace (min/mi) and speed (mph)
+                      const hasBothMetrics = duration > 0 && distance > 0;
+                      const paceDecimal = hasBothMetrics ? duration / distance : null;
+                      const mph = hasBothMetrics 
+                        ? (distance / (duration / 60)).toFixed(1) 
+                        : null;
+                      
+                      // Build display string
+                      let displayParts: string;
+                      if (hasBothMetrics) {
+                        const paceFormatted = formatDurationMmSs(paceDecimal!);
+                        const durationFormatted = formatDurationMmSs(duration);
+                        displayParts = `${paceFormatted}/mi, ${mph} mph, ${distance} mi in ${durationFormatted}`;
+                      } else if (duration > 0) {
+                        displayParts = formatDurationMmSs(duration);
+                      } else if (distance > 0) {
+                        displayParts = `${distance} mi`;
+                      } else {
+                        displayParts = '';
                       }
                       
                       return (
                         <p key={ex.uid || idx} className="text-sm text-muted-foreground">
                           <span className="font-medium">{ex.description}:</span>{' '}
-                          {parts.join(', ')}
+                          {displayParts}
                         </p>
                       );
                     })}
