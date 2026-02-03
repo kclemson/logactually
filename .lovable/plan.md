@@ -1,119 +1,83 @@
 
 
-## Reorganize Preferences Section Layout
+## Update Expanded Cardio Display Format
 
 ### Overview
-Reorder the preferences items and update the layout so each setting displays as a row with the label on the left and controls on the right.
+Update the expanded entry view for cardio exercises in the Weights tab to match the tooltip format from the Trends charts, showing pace, speed, and distance in a comma-separated single line.
 
 ---
 
-### Changes
-
-| Change | Description |
-|--------|-------------|
-| Reorder items | Move "Show Weights" above "Weight Units" |
-| Update layout | Each preference becomes a flex row with `justify-between` |
-
----
-
-### New Layout Structure
-
-Each preference row will use:
+### Current Format
 ```
-flex items-center justify-between
+1.18 mile run: 12:41, 1.18 mi
 ```
-- Label on left
-- Controls on right
 
----
+### New Format
+```
+1.18 mile run: 10:42/mi, 5.6 mph, 1.18 mi in 12:41
+```
 
-### Order After Change
-1. Theme (with 3 buttons right-aligned)
-2. Show Weights (toggle right-aligned)
-3. Weight Units (conditionally shown when weights enabled, 2 buttons right-aligned)
+Shows: pace (mm:ss/mi), speed (mph), distance with duration
 
 ---
 
 ### Implementation
 
-**File:** `src/pages/Settings.tsx` (lines 223-283)
+**File:** `src/components/WeightItemsTable.tsx` (lines 620-636)
+
+Update the cardio metadata rendering to calculate and display:
+1. **Pace** - `duration_minutes / distance_miles` formatted as mm:ss/mi
+2. **Speed** - `distance_miles / (duration_minutes / 60)` as mph
+3. **Distance with duration** - `X.XX mi in mm:ss`
 
 ```tsx
-{/* Preferences - theme and units */}
-<CollapsibleSection title="Preferences" icon={Settings2} storageKey="settings-preferences">
-  <div className="space-y-4">
-    {/* Theme */}
-    <div className="flex items-center justify-between">
-      <p className="text-xs text-muted-foreground">Theme</p>
-      <div className="flex gap-2">
-        {themeOptions.map(({ value, label, icon: Icon }) => (
-          <button
-            key={value}
-            onClick={() => handleThemeChange(value)}
-            className={cn(
-              "flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 transition-colors",
-              mounted && theme === value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50",
-            )}
-          >
-            <Icon className="h-4 w-4" />
-            <span className="text-sm">{label}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-    
-    {/* Show Weights - MOVED UP, now before Weight Units */}
-    {showWeightsFeature && (
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">Show Weights</p>
-        <button
-          onClick={() => updateSettings({ showWeights: !settings.showWeights })}
-          className={cn(
-            "w-12 h-6 rounded-full transition-colors relative border",
-            settings.showWeights ? "bg-primary border-primary" : "bg-muted border-border"
-          )}
-        >
-          <span
-            className={cn(
-              "absolute left-0 top-0.5 w-5 h-5 rounded-full shadow transition-transform",
-              settings.showWeights 
-                ? "translate-x-6 bg-primary-foreground" 
-                : "translate-x-0.5 bg-white"
-            )}
-          />
-        </button>
-      </div>
-    )}
-    
-    {/* Weight Units - now after Show Weights */}
-    {showWeights && (
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">Weight Units</p>
-        <div className="flex gap-2">
-          {weightUnitOptions.map(({ value, label }) => (
-            <button
-              key={value}
-              onClick={() => handleWeightUnitChange(value)}
-              className={cn(
-                "flex items-center justify-center rounded-lg border px-3 py-2 transition-colors",
-                settings.weightUnit === value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50",
-              )}
-            >
-              <span className="text-sm">{label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    )}
-  </div>
-</CollapsibleSection>
+{/* Cardio metadata - show for each cardio item */}
+{cardioItems.map((ex, idx) => {
+  const duration = ex.duration_minutes ?? 0;
+  const distance = ex.distance_miles ?? 0;
+  
+  // Calculate pace (min/mi) and speed (mph)
+  const hasBothMetrics = duration > 0 && distance > 0;
+  const paceDecimal = hasBothMetrics ? duration / distance : null;
+  const mph = hasBothMetrics 
+    ? (distance / (duration / 60)).toFixed(1) 
+    : null;
+  
+  // Build display string
+  let displayParts: string;
+  if (hasBothMetrics) {
+    const paceFormatted = formatDurationMmSs(paceDecimal!);
+    const durationFormatted = formatDurationMmSs(duration);
+    displayParts = `${paceFormatted}/mi, ${mph} mph, ${distance} mi in ${durationFormatted}`;
+  } else if (duration > 0) {
+    displayParts = formatDurationMmSs(duration);
+  } else if (distance > 0) {
+    displayParts = `${distance} mi`;
+  } else {
+    displayParts = '';
+  }
+  
+  return (
+    <p key={ex.uid || idx} className="text-sm text-muted-foreground">
+      <span className="font-medium">{ex.description}:</span>{' '}
+      {displayParts}
+    </p>
+  );
+})}
 ```
 
 ---
 
-### Key Layout Changes
-- Each row: `flex items-center justify-between` — label left, controls right
-- Removed `mb-2` from labels since they're now inline with controls
-- Removed `max-w-xs` and `max-w-[160px]` constraints — buttons flow naturally on the right
-- Removed `flex-1` from theme buttons so they don't stretch unnecessarily
+### Logic Summary
+
+| Data Available | Display Format |
+|----------------|----------------|
+| Both duration + distance | `10:42/mi, 5.6 mph, 1.18 mi in 12:41` |
+| Duration only | `12:41` |
+| Distance only | `1.18 mi` |
+
+---
+
+### Files Changed
+- `src/components/WeightItemsTable.tsx` - Update cardio metadata formatting in expanded view
 
