@@ -52,6 +52,7 @@ interface UserStats {
   saved_routines_count: number;
   last_active: string | null;
   login_count: number;
+  logins_today: number;
   food_today_details: TodayFoodDetail[] | null;
   weight_today_details: TodayWeightDetail[] | null;
 }

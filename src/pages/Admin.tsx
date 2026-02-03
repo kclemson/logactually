@@ -130,7 +130,8 @@ export default function Admin() {
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">SF</th>
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">W</th>
               <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">SW</th>
-              <th className="text-center py-0.5 font-medium text-muted-foreground">Logins</th>
+              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Logins</th>
+              <th className="text-center py-0.5 font-medium text-muted-foreground">L2day</th>
             </tr>
           </thead>
           <tbody>
@@ -239,8 +240,11 @@ export default function Admin() {
                 >
                   {user.saved_routines_count ?? 0}
                 </td>
-                <td className={`text-center py-0.5 ${(user.login_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}>
+                <td className={`text-center py-0.5 pr-2 ${(user.login_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}>
                   {user.login_count ?? 0}
+                </td>
+                <td className={`text-center py-0.5 ${(user.logins_today ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}>
+                  {user.logins_today ?? 0}
                 </td>
               </tr>
             ))}
