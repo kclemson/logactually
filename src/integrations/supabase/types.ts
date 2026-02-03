@@ -97,6 +97,24 @@ export type Database = {
           },
         ]
       }
+      login_events: {
+        Row: {
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -321,6 +339,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_login_count: {
+        Args: { timeframe_hours?: number; user_filter?: string }
+        Returns: number
+      }
       get_usage_stats:
         | { Args: { exclude_user_id?: string }; Returns: Json }
         | {

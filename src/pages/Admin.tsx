@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAdminStats, useAdminUserStats } from "@/hooks/useAdminStats";
+import { useLoginCount } from "@/hooks/useLoginCount";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useAdminFeedback, useRespondToFeedback } from "@/hooks/feedback";
 import { useHasHover } from "@/hooks/use-has-hover";
@@ -36,6 +37,10 @@ export default function Admin() {
   const { data: feedback } = useAdminFeedback();
   const respondToFeedback = useRespondToFeedback();
   const hasHover = useHasHover();
+  
+  const { data: demoLoginsTotal } = useLoginCount('demo', null);
+  const { data: demoLogins24h } = useLoginCount('demo', 24);
+  const { data: demoLogins7d } = useLoginCount('demo', 168);
 
   // Render nothing while checking admin status - no spinner, no flash
   if (isAdminLoading) {
@@ -90,13 +95,15 @@ export default function Admin() {
       <div className="grid grid-cols-[auto_auto_auto] gap-x-4 text-muted-foreground text-xs">
         {/* First column */}
         <div className="space-y-0">
-          <p className="font-medium">Users: {stats?.total_users ?? 0}</p>
-          <p className="font-medium">Logged Items: {stats?.total_entries ?? 0}</p>
+          <p>Users: {stats?.total_users ?? 0}</p>
+          <p>Logged Items: {stats?.total_entries ?? 0}</p>
         </div>
         
         {/* Second column */}
-        <div>
-          <p>Demo logins: {stats?.demo_logins ?? 0}</p>
+        <div className="space-y-0">
+          <p>Demo logins: {demoLoginsTotal ?? 0}</p>
+          <p>Demo 24h: {demoLogins24h ?? 0}</p>
+          <p>Demo 7d: {demoLogins7d ?? 0}</p>
         </div>
         
         {/* Third column */}
