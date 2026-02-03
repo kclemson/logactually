@@ -1,64 +1,147 @@
 
 
-## Italicize Full "From saved meal/routine" Line
+## Add Distance View to Cardio Charts
 
 ### Overview
-Update the "From saved meal:" and "From saved routine:" labels so the entire line is italicized (including the meal/routine name), while keeping the name styled in blue as a clickable link.
+Extend cardio charts (walk_run, cycling) to support a third view mode: **Distance**. This creates a 3-way toggle: Time → MPH → Distance → Time...
 
 ---
 
-### Current vs New Format
+### Key Considerations
 
-| Current | New |
-|---------|-----|
-| *From saved meal:* Yogurt + strawberries | *From saved meal: Yogurt + strawberries* |
-| *From saved routine:* Morning Stretch | *From saved routine: Morning Stretch* |
+**Data Availability**
+- Not all cardio entries have distance data (e.g., "30min on treadmill")
+- When distance view is selected, entries without distance will be filtered out (same approach as current MPH mode)
+- Chart subtitle will indicate when data is limited
 
-The meal/routine name remains blue and clickable, just now also italic.
+**Visual Design**
+
+| Mode | Y-axis | Bar Labels | Subtitle |
+|------|--------|------------|----------|
+| Time | `duration_minutes` | `30.0` (minutes) | Cardio · time ▾ |
+| MPH | `mph` | `5.1` | Cardio · mph ▾ |
+| Distance | `distance_miles` | `1.2` (miles) | Cardio · distance ▾ |
 
 ---
 
 ### Implementation
 
-**1. Update `src/components/FoodItemsTable.tsx`** (lines 640-647)
+**1. Change state from boolean to enum** (`src/pages/Trends.tsx`)
 
-Remove `not-italic` from the Link and the "(deleted)" span:
-
+Replace:
 ```tsx
-{mealName ? (
-  <Link 
-    to="/settings" 
-    className="text-blue-600 dark:text-blue-400 hover:underline"
-  >
-    {mealName}
-  </Link>
-) : (
-  <span>(deleted)</span>
-)}
+const [showMph, setShowMph] = useState(() => {
+  if (!supportsSpeedToggle) return false;
+  return localStorage.getItem(`trends-mph-${exercise.exercise_key}`) === 'true';
+});
 ```
 
-**2. Update `src/components/WeightItemsTable.tsx`** (lines 667-674)
+With a 3-option mode:
+```tsx
+type CardioViewMode = 'time' | 'mph' | 'distance';
 
-Same change for routines:
+const [cardioMode, setCardioMode] = useState<CardioViewMode>(() => {
+  if (!supportsSpeedToggle) return 'time';
+  const saved = localStorage.getItem(`trends-cardio-mode-${exercise.exercise_key}`);
+  if (saved === 'mph' || saved === 'distance') return saved;
+  return 'time';
+});
+```
+
+**2. Update localStorage migration**
+
+For backwards compatibility, also check for old `trends-mph-{key}` key:
+```tsx
+// Migration: convert old boolean to new mode
+const legacyMph = localStorage.getItem(`trends-mph-${exercise.exercise_key}`);
+if (legacyMph === 'true') {
+  localStorage.removeItem(`trends-mph-${exercise.exercise_key}`);
+  localStorage.setItem(`trends-cardio-mode-${exercise.exercise_key}`, 'mph');
+  return 'mph';
+}
+```
+
+**3. Update filter logic in chartData**
+
+Current MPH filter also applies to Distance mode (both require distance data):
+```tsx
+const sourceData = (cardioMode === 'mph' || cardioMode === 'distance')
+  ? exercise.weightData.filter(d => d.distance_miles && d.distance_miles > 0)
+  : exercise.weightData;
+```
+
+**4. Update bar labels**
 
 ```tsx
-{routineName ? (
-  <Link 
-    to="/settings" 
-    className="text-blue-600 dark:text-blue-400 hover:underline"
-  >
-    {routineName}
-  </Link>
-) : (
-  <span>(deleted)</span>
-)}
+label: isCardio 
+  ? (cardioMode === 'mph' 
+      ? `${mph}` 
+      : cardioMode === 'distance'
+        ? `${Number(d.distance_miles || 0).toFixed(1)}`
+        : `${Number(d.duration_minutes || 0).toFixed(1)}`)
+  : `${d.sets}×${d.reps}×${displayWeight}`,
+```
+
+**5. Update Bar dataKey**
+
+```tsx
+<Bar 
+  dataKey={isCardio 
+    ? (cardioMode === 'mph' ? "mph" : cardioMode === 'distance' ? "distance_miles" : "duration_minutes") 
+    : "weight"
+  }
+  // ...
+/>
+```
+
+**6. Update toggle cycle**
+
+Clicking header cycles: time → mph → distance → time:
+```tsx
+const handleHeaderClick = supportsSpeedToggle 
+  ? () => {
+      const nextMode: CardioViewMode = 
+        cardioMode === 'time' ? 'mph' :
+        cardioMode === 'mph' ? 'distance' : 'time';
+      localStorage.setItem(`trends-cardio-mode-${exercise.exercise_key}`, nextMode);
+      setCardioMode(nextMode);
+    }
+  : undefined;
+```
+
+**7. Update subtitle display**
+
+```tsx
+<ChartSubtitle>
+  {supportsSpeedToggle ? (
+    <>Cardio · {cardioMode} <span className="opacity-50">▾</span></>
+  ) : isCardio ? (
+    // ...
+  )}
+</ChartSubtitle>
+```
+
+**8. Update ExerciseTrend interface** (`src/hooks/useWeightTrends.ts`)
+
+Add `maxDistance` field for potential future use in subtitles:
+```tsx
+export interface ExerciseTrend {
+  // ... existing fields
+  maxDistance: number;  // Maximum distance in a single session
+}
+```
+
+And track it during aggregation:
+```tsx
+trend.maxDistance = Math.max(trend.maxDistance, distance);
 ```
 
 ---
 
 ### Files Changed
+
 | File | Change |
 |------|--------|
-| `src/components/FoodItemsTable.tsx` | Remove `not-italic` from meal name Link and deleted span |
-| `src/components/WeightItemsTable.tsx` | Remove `not-italic` from routine name Link and deleted span |
+| `src/pages/Trends.tsx` | Convert `showMph` boolean to `cardioMode` enum, update filter/label/toggle logic |
+| `src/hooks/useWeightTrends.ts` | Add `maxDistance` field to ExerciseTrend interface |
 
