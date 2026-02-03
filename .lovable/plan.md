@@ -1,9 +1,9 @@
 
 
-## Simplify "Logged as:" Styling
+## Italicize Full "From saved meal/routine" Line
 
 ### Overview
-Remove quotes and make the entire "Logged as:" line uniformly italic, matching the clean style of "From saved meal:" labels.
+Update the "From saved meal:" and "From saved routine:" labels so the entire line is italicized (including the meal/routine name), while keeping the name styled in blue as a clickable link.
 
 ---
 
@@ -11,36 +11,47 @@ Remove quotes and make the entire "Logged as:" line uniformly italic, matching t
 
 | Current | New |
 |---------|-----|
-| *Logged as:* "italian dry salame 5 pieces" | *Logged as: italian dry salame 5 pieces* |
-| *Logged as:* "Scanned barcode: 030000578339" | *Logged as: Scanned barcode: 030000578339* |
+| *From saved meal:* Yogurt + strawberries | *From saved meal: Yogurt + strawberries* |
+| *From saved routine:* Morning Stretch | *From saved routine: Morning Stretch* |
+
+The meal/routine name remains blue and clickable, just now also italic.
 
 ---
 
 ### Implementation
 
-**1. Update `src/components/FoodItemsTable.tsx`** (around line 630)
+**1. Update `src/components/FoodItemsTable.tsx`** (lines 640-647)
 
-Change from:
+Remove `not-italic` from the Link and the "(deleted)" span:
+
 ```tsx
-<p className="text-sm text-muted-foreground italic">
-  Logged as:{' '}<span className="not-italic">"{currentRawInput}"</span>
-</p>
+{mealName ? (
+  <Link 
+    to="/settings" 
+    className="text-blue-600 dark:text-blue-400 hover:underline"
+  >
+    {mealName}
+  </Link>
+) : (
+  <span>(deleted)</span>
+)}
 ```
 
-To:
-```tsx
-<p className="text-sm text-muted-foreground italic">
-  Logged as: {currentRawInput}
-</p>
-```
+**2. Update `src/components/WeightItemsTable.tsx`** (lines 667-674)
 
-**2. Update `src/components/WeightItemsTable.tsx`** (around line 657)
+Same change for routines:
 
-Same change:
 ```tsx
-<p className="text-sm text-muted-foreground italic">
-  Logged as: {currentRawInput}
-</p>
+{routineName ? (
+  <Link 
+    to="/settings" 
+    className="text-blue-600 dark:text-blue-400 hover:underline"
+  >
+    {routineName}
+  </Link>
+) : (
+  <span>(deleted)</span>
+)}
 ```
 
 ---
@@ -48,6 +59,6 @@ Same change:
 ### Files Changed
 | File | Change |
 |------|--------|
-| `src/components/FoodItemsTable.tsx` | Remove quotes and `not-italic` span |
-| `src/components/WeightItemsTable.tsx` | Remove quotes and `not-italic` span |
+| `src/components/FoodItemsTable.tsx` | Remove `not-italic` from meal name Link and deleted span |
+| `src/components/WeightItemsTable.tsx` | Remove `not-italic` from routine name Link and deleted span |
 
