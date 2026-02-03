@@ -1,86 +1,63 @@
 
 
-## Update User Stats to Use login_events Table
+## Remove login_count Column from Profiles
 
 ### Overview
 
-Replace the `profiles.login_count` counter with queries against the `login_events` table, enabling per-user time-windowed login metrics.
+Clean up the now-redundant `login_count` column from the `profiles` table since all login tracking now uses the `login_events` table.
 
 ---
 
-### Database Changes
+### Database Migration
 
-#### Update `get_user_stats` Function
+#### 1. Update `increment_login_count` Function
 
-Replace `p.login_count` with counts from `login_events`:
+Remove the `UPDATE profiles` statement - keep only the `INSERT INTO login_events`:
 
 ```sql
--- Replace this:
-p.login_count
+CREATE OR REPLACE FUNCTION public.increment_login_count(user_id uuid)
+RETURNS void
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+  INSERT INTO login_events (user_id)
+  VALUES (user_id);
+$$;
+```
 
--- With these:
-(SELECT COUNT(*) FROM login_events le WHERE le.user_id = p.id) as login_count,
-(SELECT COUNT(*) FROM login_events le 
- WHERE le.user_id = p.id 
- AND le.created_at > NOW() - INTERVAL '24 hours') as logins_today
+#### 2. Update `get_usage_stats` Function
+
+Replace the `demo_logins` calculation to use `login_events`:
+
+```sql
+'demo_logins', (
+  SELECT COUNT(*) 
+  FROM login_events le
+  JOIN profiles p ON le.user_id = p.id
+  WHERE p.is_read_only = true
+)
+```
+
+#### 3. Drop the Column
+
+```sql
+ALTER TABLE profiles DROP COLUMN login_count;
 ```
 
 ---
 
-### TypeScript Changes
+### No Code Changes Required
 
-#### Update `UserStats` Interface
-
-**File: `src/hooks/useAdminStats.ts`**
-
-Add `logins_today` field:
-
-```typescript
-interface UserStats {
-  // ... existing fields
-  login_count: number;
-  logins_today: number;  // NEW
-}
-```
+- `useAuth.tsx` and `Auth.tsx` call `increment_login_count` RPC which will continue to work
+- `useAdminStats.ts` uses `login_count` from `get_user_stats` which already queries `login_events`
+- TypeScript types will auto-regenerate after migration
 
 ---
 
-### UI Changes
+### Data Note
 
-**File: `src/pages/Admin.tsx`**
-
-Add "L2day" column to user stats table:
-
-| Header | Description |
-|--------|-------------|
-| Logins | Total logins (from `login_events`) |
-| L2day | Logins in last 24 hours |
-
-```tsx
-// Table header
-<th className="text-center py-0.5 font-medium text-muted-foreground">Logins</th>
-<th className="text-center py-0.5 font-medium text-muted-foreground">L2day</th>
-
-// Table row
-<td className={`text-center py-0.5 pr-2 ${(user.login_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}>
-  {user.login_count ?? 0}
-</td>
-<td className={`text-center py-0.5 ${(user.logins_today ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}>
-  {user.logins_today ?? 0}
-</td>
-```
-
----
-
-### Optional Cleanup
-
-Consider removing `login_count` column from `profiles` table in a future migration since it's now redundant. For now, we can leave it as a backup/historical reference.
-
----
-
-### Data Reset Note
-
-Since `login_events` is a new table, all users will show 0 logins initially. Going forward, every login will be tracked with full timestamp data.
+The historical `login_count` values in `profiles` will be lost. Going forward, all login metrics come from `login_events` which only has data from when it was created.
 
 ---
 
@@ -88,7 +65,5 @@ Since `login_events` is a new table, all users will show 0 logins initially. Goi
 
 | File | Change |
 |------|--------|
-| Database migration | Update `get_user_stats` to query `login_events` |
-| `src/hooks/useAdminStats.ts` | Add `logins_today` to `UserStats` interface |
-| `src/pages/Admin.tsx` | Add "L2day" column to user stats table |
+| Database migration | Update functions and drop column |
 
