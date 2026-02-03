@@ -10,16 +10,19 @@ import { FoodItemsTable } from '@/components/FoodItemsTable';
 import { SaveMealDialog } from '@/components/SaveMealDialog';
 import { CreateMealDialog } from '@/components/CreateMealDialog';
 import { SimilarMealPrompt } from '@/components/SimilarMealPrompt';
+import { SimilarEntryPrompt } from '@/components/SimilarEntryPrompt';
 import { DemoPreviewDialog } from '@/components/DemoPreviewDialog';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAnalyzeFood } from '@/hooks/useAnalyzeFood';
 import { useFoodEntries } from '@/hooks/useFoodEntries';
+import { useRecentFoodEntries } from '@/hooks/useRecentFoodEntries';
 import { useEditableFoodItems } from '@/hooks/useEditableItems';
 import { useSavedMeals, useSaveMeal, useLogSavedMeal } from '@/hooks/useSavedMeals';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
-import { findSimilarMeals, createItemsSignature, SimilarMealMatch } from '@/lib/text-similarity';
+import { findSimilarMeals, createItemsSignature, SimilarMealMatch, findSimilarEntry, SimilarEntryMatch } from '@/lib/text-similarity';
+import { detectHistoryReference, MIN_SIMILARITY_REQUIRED } from '@/lib/history-patterns';
 import { FoodItem, SavedMeal, calculateTotals } from '@/types/food';
 
 // Wrapper component: extracts date from URL, forces remount via key
@@ -54,11 +57,17 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   // State for create meal dialog
   const [createMealDialogOpen, setCreateMealDialogOpen] = useState(false);
 
-  // State for similar meal prompt
+  // State for similar meal prompt (from AI result matching saved meal)
   const [similarMatch, setSimilarMatch] = useState<SimilarMealMatch | null>(null);
   const [pendingAiResult, setPendingAiResult] = useState<{
     text: string;
     items: FoodItem[];
+  } | null>(null);
+
+  // State for similar entry prompt (from history reference detection)
+  const [pendingEntryMatch, setPendingEntryMatch] = useState<{
+    match: SimilarEntryMatch;
+    originalInput: string;
   } | null>(null);
 
   // Demo preview state (for read-only demo users)
@@ -76,6 +85,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   const { data: datesWithFood = [] } = useFoodDatesWithData(calendarMonth);
   const { analyzeFood, isAnalyzing, error: analyzeError, warning: analyzeWarning } = useAnalyzeFood();
   const { data: savedMeals } = useSavedMeals();
+  const { data: recentEntries } = useRecentFoodEntries(90); // 90 days for history matching
   const saveMeal = useSaveMeal();
   const logSavedMeal = useLogSavedMeal();
   const { isReadOnly } = useReadOnlyContext();
@@ -237,6 +247,24 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   }, [createEntry, dateStr, queryClient, markEntryAsNew]);
 
   const handleSubmit = async (text: string) => {
+    // 1. Check for history reference patterns BEFORE AI call (skip for demo mode)
+    if (!isReadOnly && recentEntries?.length) {
+      const historyRef = detectHistoryReference(text);
+      
+      if (historyRef.hasReference) {
+        const minSimilarity = MIN_SIMILARITY_REQUIRED[historyRef.confidence];
+        const match = findSimilarEntry(text, recentEntries, minSimilarity);
+        
+        if (match) {
+          // Found a match above threshold - show prompt instead of calling AI
+          setPendingEntryMatch({ match, originalInput: text });
+          return;
+        }
+        // No match found above threshold - fall through to AI analysis
+      }
+    }
+
+    // 2. No entry match (or no history reference) - call AI
     const result = await analyzeFood(text);
     if (result) {
       // Demo mode: show preview instead of saving
@@ -285,6 +313,45 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     setSimilarMatch(null);
     setPendingAiResult(null);
   }, []);
+
+  // Similar entry prompt handlers (for history reference detection)
+  const handleUsePastEntry = useCallback(async () => {
+    if (!pendingEntryMatch) return;
+    
+    // Use the historical entry's food items with original input text
+    createEntryFromItems(
+      pendingEntryMatch.match.entry.food_items, 
+      pendingEntryMatch.originalInput
+    );
+    
+    setPendingEntryMatch(null);
+    foodInputRef.current?.clear();
+  }, [pendingEntryMatch, createEntryFromItems]);
+
+  const dismissEntryMatch = useCallback(async () => {
+    if (!pendingEntryMatch) return;
+    
+    // User dismissed - fall back to AI analysis
+    const text = pendingEntryMatch.originalInput;
+    setPendingEntryMatch(null);
+    
+    const result = await analyzeFood(text);
+    if (result) {
+      // Check for similar saved meals
+      if (savedMeals && savedMeals.length > 0) {
+        const itemsSignature = createItemsSignature(result.food_items);
+        const match = findSimilarMeals(text, itemsSignature, savedMeals, 0.6);
+        
+        if (match) {
+          setPendingAiResult({ text, items: result.food_items });
+          setSimilarMatch(match);
+          return;
+        }
+      }
+      
+      createEntryFromItems(result.food_items, text);
+    }
+  }, [pendingEntryMatch, analyzeFood, savedMeals, createEntryFromItems]);
 
   // Handle direct scan results (when barcode lookup succeeds)
   const handleScanResult = async (foodItem: Omit<FoodItem, 'uid' | 'entryId'>, originalInput: string) => {
@@ -512,7 +579,19 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
           </div>
         )}
         
-        {/* Similar Meal Prompt */}
+        {/* Similar Entry Prompt (from history reference detection) */}
+        {pendingEntryMatch && (
+          <div className="mt-3">
+            <SimilarEntryPrompt
+              match={pendingEntryMatch.match}
+              onUsePastEntry={handleUsePastEntry}
+              onDismiss={dismissEntryMatch}
+              isLoading={isAnalyzing || createEntry.isPending}
+            />
+          </div>
+        )}
+
+        {/* Similar Meal Prompt (from AI result matching saved meal) */}
         {similarMatch && (
           <div className="mt-3">
             <SimilarMealPrompt

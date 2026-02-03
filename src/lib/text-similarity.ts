@@ -1,4 +1,4 @@
-import { FoodItem, SavedMeal } from '@/types/food';
+import { FoodItem, FoodEntry, SavedMeal } from '@/types/food';
 
 const STOP_WORDS = new Set([
   'a', 'an', 'the', 'with', 'of', 'from', 'and', 'at', 'in', 'on', 'for',
@@ -146,6 +146,57 @@ export function findSimilarMeals(
       if (itemsScore >= threshold && (!bestMatch || itemsScore > bestMatch.score)) {
         bestMatch = { meal, score: itemsScore, matchType: 'items' };
       }
+    }
+  }
+  
+  return bestMatch;
+}
+
+// =============================================================================
+// Similar Entry Matching (for history reference detection)
+// =============================================================================
+
+export interface SimilarEntryMatch {
+  entry: FoodEntry;
+  score: number;
+  matchType: 'input' | 'items';
+}
+
+/**
+ * Find the best matching past entry using text similarity.
+ * 
+ * Compares user input against:
+ * 1. raw_input (what user originally typed for each entry)
+ * 2. food item descriptions (the resulting food names)
+ * 
+ * @param inputText - User's current input
+ * @param recentEntries - Entries from the last N days
+ * @param minSimilarityRequired - Minimum Jaccard similarity score to consider a match
+ * @returns Best matching entry above threshold, or null
+ */
+export function findSimilarEntry(
+  inputText: string,
+  recentEntries: FoodEntry[],
+  minSimilarityRequired: number
+): SimilarEntryMatch | null {
+  const inputSig = preprocessText(inputText);
+  let bestMatch: SimilarEntryMatch | null = null;
+  
+  for (const entry of recentEntries) {
+    // Compare against raw_input (what user originally typed)
+    if (entry.raw_input) {
+      const entrySig = preprocessText(entry.raw_input);
+      const score = jaccardSimilarity(inputSig, entrySig);
+      if (score >= minSimilarityRequired && (!bestMatch || score > bestMatch.score)) {
+        bestMatch = { entry, score, matchType: 'input' };
+      }
+    }
+    
+    // Compare against food item descriptions
+    const entryItemsSig = createItemsSignature(entry.food_items);
+    const itemsScore = jaccardSimilarity(inputSig, entryItemsSig);
+    if (itemsScore >= minSimilarityRequired && (!bestMatch || itemsScore > bestMatch.score)) {
+      bestMatch = { entry, score: itemsScore, matchType: 'items' };
     }
   }
   
