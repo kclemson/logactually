@@ -163,17 +163,26 @@ export default function Admin() {
                     <TooltipContent className="max-w-lg text-xs space-y-1 bg-popover text-popover-foreground border whitespace-nowrap">
                       {user.food_today_details.map((entry, i) => (
                         <div key={i}>
-                          {entry.items?.map((item, j) => (
-                            <p key={j}>
-                              {entry.raw_input ? (
-                                <>
-                                  <span className="italic text-muted-foreground">"{entry.raw_input}"</span> → {item}
-                                </>
-                              ) : (
-                                <>• {item}</>
-                              )}
-                            </p>
-                          ))}
+                          {entry.raw_input ? (
+                            // Manual entry: show "input" → items
+                            entry.items?.length === 1 ? (
+                              <p><span className="italic text-muted-foreground">"{entry.raw_input}"</span> → {entry.items[0]}</p>
+                            ) : (
+                              <>
+                                <p className="italic text-muted-foreground">"{entry.raw_input}"</p>
+                                {entry.items?.map((item, j) => <p key={j} className="pl-2">→ {item}</p>)}
+                              </>
+                            )
+                          ) : entry.saved_meal_name ? (
+                            // Saved meal: show meal name header with items below
+                            <>
+                              <p className="text-muted-foreground">[{entry.saved_meal_name}]</p>
+                              {entry.items?.map((item, j) => <p key={j} className="pl-2">• {item}</p>)}
+                            </>
+                          ) : (
+                            // No context: just bullets
+                            entry.items?.map((item, j) => <p key={j}>• {item}</p>)
+                          )}
                         </div>
                       ))}
                     </TooltipContent>
@@ -197,6 +206,8 @@ export default function Admin() {
                         <div key={i}>
                           {entry.raw_input ? (
                             <p><span className="italic text-muted-foreground">"{entry.raw_input}"</span> → {entry.description}</p>
+                          ) : entry.saved_routine_name ? (
+                            <p><span className="text-muted-foreground">[{entry.saved_routine_name}]</span> {entry.description}</p>
                           ) : (
                             <p>• {entry.description}</p>
                           )}
