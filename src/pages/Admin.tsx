@@ -204,7 +204,7 @@ export default function Admin() {
                     <TooltipContent className="max-w-lg text-xs space-y-1 bg-popover text-popover-foreground border whitespace-nowrap">
                       {user.weight_today_details.map((entry, i) => (
                         <div key={i}>
-                          {entry.raw_input ? (
+                          {entry.raw_input && entry.raw_input !== "From saved routine" ? (
                             <p><span className="italic text-muted-foreground">"{entry.raw_input}"</span> → {entry.description}</p>
                           ) : entry.saved_routine_name ? (
                             <p><span className="text-muted-foreground">[{entry.saved_routine_name}]</span> {entry.description}</p>

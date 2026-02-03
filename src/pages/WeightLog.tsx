@@ -280,7 +280,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
 
     // SavedExerciseSet already contains only persistent fields, spread for future-proofing
     const exercises = exerciseSets.map(set => ({ ...set }));
-    createEntryFromExercises(exercises, `From saved routine`, routineId);
+    createEntryFromExercises(exercises, null, routineId);
   }, [createEntryFromExercises, isReadOnly]);
 
   // Auto-save handler for single field updates
