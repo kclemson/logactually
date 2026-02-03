@@ -160,13 +160,20 @@ export default function Admin() {
                         {user.entries_today}
                       </td>
                     </TooltipTrigger>
-                    <TooltipContent className="max-w-xs text-xs space-y-2 bg-popover text-popover-foreground border">
+                    <TooltipContent className="max-w-lg text-xs space-y-1 bg-popover text-popover-foreground border whitespace-nowrap">
                       {user.food_today_details.map((entry, i) => (
-                        <div key={i} className={i > 0 ? "border-t border-border pt-2" : ""}>
-                          {entry.raw_input && (
-                            <p className="italic text-muted-foreground mb-1">"{entry.raw_input}"</p>
-                          )}
-                          {entry.items?.map((item, j) => <p key={j}>• {item}</p>)}
+                        <div key={i}>
+                          {entry.items?.map((item, j) => (
+                            <p key={j}>
+                              {entry.raw_input ? (
+                                <>
+                                  <span className="italic text-muted-foreground">"{entry.raw_input}"</span> → {item}
+                                </>
+                              ) : (
+                                <>• {item}</>
+                              )}
+                            </p>
+                          ))}
                         </div>
                       ))}
                     </TooltipContent>
@@ -185,7 +192,7 @@ export default function Admin() {
                         {user.weight_today ?? 0}
                       </td>
                     </TooltipTrigger>
-                    <TooltipContent className="max-w-xs text-xs space-y-1 bg-popover text-popover-foreground border">
+                    <TooltipContent className="max-w-lg text-xs space-y-1 bg-popover text-popover-foreground border whitespace-nowrap">
                       {user.weight_today_details.map((entry, i) => (
                         <div key={i}>
                           {entry.raw_input ? (
