@@ -29,9 +29,18 @@ interface SaveRoutineDialogProps {
  * Weights: "Lat Pulldown (3x10 @ 65 lbs)"
  */
 function formatExerciseSummary(exercise: WeightSet, includeSpace = true): string {
-  const isCardio = exercise.weight_lbs === 0 && (exercise.duration_minutes ?? 0) > 0;
+  const isCardio = exercise.weight_lbs === 0 && 
+    ((exercise.duration_minutes ?? 0) > 0 || (exercise.distance_miles ?? 0) > 0);
   if (isCardio) {
-    return `${exercise.description} (${formatDurationMmSs(Number(exercise.duration_minutes))})`;
+    const duration = exercise.duration_minutes ?? 0;
+    const distance = exercise.distance_miles ?? 0;
+    if (duration > 0 && distance > 0) {
+      return `${exercise.description} (${formatDurationMmSs(duration)}, ${distance.toFixed(1)} mi)`;
+    } else if (distance > 0) {
+      return `${exercise.description} (${distance.toFixed(1)} mi)`;
+    } else {
+      return `${exercise.description} (${formatDurationMmSs(duration)})`;
+    }
   }
   const separator = includeSpace ? ' @ ' : ' @ ';
   return `${exercise.description} (${exercise.sets}x${exercise.reps}${separator}${exercise.weight_lbs} lbs)`;

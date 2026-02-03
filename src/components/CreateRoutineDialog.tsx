@@ -26,9 +26,18 @@ const WEIGHTS_CONFIG: CreateSavedDialogConfig<WeightSet, SavedRoutine> = {
   getFallbackName: (items) => {
     if (items.length === 0) return '';
     const first = items[0];
-    const isCardio = first.weight_lbs === 0 && (first.duration_minutes ?? 0) > 0;
+    const isCardio = first.weight_lbs === 0 && 
+      ((first.duration_minutes ?? 0) > 0 || (first.distance_miles ?? 0) > 0);
     if (isCardio) {
-      return `${first.description} (${formatDurationMmSs(Number(first.duration_minutes))})`;
+      const duration = first.duration_minutes ?? 0;
+      const distance = first.distance_miles ?? 0;
+      if (duration > 0 && distance > 0) {
+        return `${first.description} (${formatDurationMmSs(duration)}, ${distance.toFixed(1)} mi)`;
+      } else if (distance > 0) {
+        return `${first.description} (${distance.toFixed(1)} mi)`;
+      } else {
+        return `${first.description} (${formatDurationMmSs(duration)})`;
+      }
     }
     return `${first.description} (${first.sets}x${first.reps} @ ${first.weight_lbs} lbs)`;
   },

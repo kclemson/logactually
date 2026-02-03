@@ -107,8 +107,8 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
   const isTouchDevice = !useHasHover();
   const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
   
-  // Detect cardio exercise: has duration data and no meaningful weight
-  const isCardio = exercise.maxWeight === 0 && exercise.maxDuration > 0;
+  // Detect cardio exercise: has duration or distance data and no meaningful weight
+  const isCardio = exercise.maxWeight === 0 && (exercise.maxDuration > 0 || exercise.maxDistance > 0);
   
   // Speed toggle for distance-based exercises (walk_run, cycling)
   const supportsSpeedToggle = isCardio && hasDistanceTracking(exercise.exercise_key);

@@ -411,7 +411,8 @@ export function WeightItemsTable({
 
               {/* Sets, Reps, Weight - show "cardio" label for cardio items */}
               {(() => {
-                const isCardioItem = item.weight_lbs === 0 && (item.duration_minutes ?? 0) > 0;
+                const isCardioItem = item.weight_lbs === 0 && 
+                  ((item.duration_minutes ?? 0) > 0 || (item.distance_miles ?? 0) > 0);
                 
                 if (isCardioItem && (editable || showCardioLabel)) {
                   // For cardio items, show a single "cardio" label spanning all 3 columns
@@ -459,7 +460,7 @@ export function WeightItemsTable({
                       />
                     ) : (
                       <span className="px-1 py-1 text-center">
-                        {item.sets === 0 && (item.duration_minutes ?? 0) > 0 ? '—' : item.sets}
+                        {item.sets === 0 && ((item.duration_minutes ?? 0) > 0 || (item.distance_miles ?? 0) > 0) ? '—' : item.sets}
                       </span>
                     )}
 
@@ -497,7 +498,7 @@ export function WeightItemsTable({
                       />
                     ) : (
                       <span className="px-1 py-1 text-center">
-                        {item.reps === 0 && (item.duration_minutes ?? 0) > 0 ? '—' : item.reps}
+                        {item.reps === 0 && ((item.duration_minutes ?? 0) > 0 || (item.distance_miles ?? 0) > 0) ? '—' : item.reps}
                       </span>
                     )}
 
@@ -562,8 +563,10 @@ export function WeightItemsTable({
                       />
                     ) : (
                       <span className="px-1 py-1 text-center">
-                        {item.weight_lbs === 0 && (item.duration_minutes ?? 0) > 0 
-                          ? `${Number(item.duration_minutes).toFixed(1)} min`
+                        {item.weight_lbs === 0 && ((item.duration_minutes ?? 0) > 0 || (item.distance_miles ?? 0) > 0)
+                          ? ((item.duration_minutes ?? 0) > 0 
+                              ? `${Number(item.duration_minutes).toFixed(1)} min`
+                              : `${Number(item.distance_miles).toFixed(1)} mi`)
                           : formatWeight(item.weight_lbs, weightUnit, weightUnit === 'kg' ? 1 : 0)
                         }
                       </span>
