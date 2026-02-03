@@ -94,6 +94,8 @@ interface LogInputProps {
   placeholder?: string;
   /** Weights mode: user's preferred weight unit for placeholder examples */
   weightUnit?: WeightUnit;
+  /** Callback to dismiss similar meal prompt when user starts a new action */
+  onDismissSimilarMatch?: () => void;
 }
 
 export interface LogInputRef {
@@ -116,7 +118,7 @@ const getCameraSupport = (): boolean => {
 };
 
 export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput(
-  { mode, onSubmit, isLoading, onScanResult, onLogSavedMeal, onCreateNewMeal, onLogSavedRoutine, onCreateNewRoutine, placeholder: customPlaceholder, weightUnit },
+  { mode, onSubmit, isLoading, onScanResult, onLogSavedMeal, onCreateNewMeal, onLogSavedRoutine, onCreateNewRoutine, placeholder: customPlaceholder, weightUnit, onDismissSimilarMatch },
   ref,
 ) {
   const config = MODE_CONFIGS[mode];
@@ -199,6 +201,9 @@ export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput
       return;
     }
 
+    // Dismiss similar meal prompt when starting voice input
+    onDismissSimilarMatch?.();
+
     const recognition = getOrCreateRecognition();
     if (!recognition) return;
 
@@ -209,11 +214,14 @@ export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput
       console.error("Failed to start speech recognition:", error);
       setIsListening(false);
     }
-  }, [isListening, getOrCreateRecognition]);
+  }, [isListening, getOrCreateRecognition, onDismissSimilarMatch]);
 
   const handleSubmit = async () => {
     const trimmed = text.trim();
     if (!trimmed || isBusy) return;
+
+    // Dismiss similar meal prompt when submitting new input
+    onDismissSimilarMatch?.();
 
     // Note: read-only check moved to parent components (FoodLog/WeightLog)
     // This allows demo users to see AI analysis results before the preview dialog
@@ -242,6 +250,8 @@ export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput
 
   const handleBarcodeScan = async (code: string) => {
     setScannerOpen(false);
+    // Dismiss similar meal prompt when scanning
+    onDismissSimilarMatch?.();
     console.log("Barcode scanned:", code);
 
     const result = await lookupUpc(code);
@@ -314,13 +324,13 @@ export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput
           </Button>
         )}
         {showBarcode && (
-          <Button variant="outline" size="sm" className="px-2" onClick={() => setScannerOpen(true)} disabled={isBusy}>
+          <Button variant="outline" size="sm" className="px-2" onClick={() => { onDismissSimilarMatch?.(); setScannerOpen(true); }} disabled={isBusy}>
             <ScanBarcode className="h-4 w-4 mr-1" />
             Scan
           </Button>
         )}
         {showSaved && (
-          <Popover open={savedMealsOpen} onOpenChange={setSavedMealsOpen}>
+          <Popover open={savedMealsOpen} onOpenChange={(open) => { if (open) onDismissSimilarMatch?.(); setSavedMealsOpen(open); }}>
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className="px-2" disabled={isBusy}>
                 <Star className="h-4 w-4 mr-1" />
