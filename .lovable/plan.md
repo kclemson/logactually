@@ -1,72 +1,35 @@
 
 
-## Improve SimilarMealPrompt UX
+## Enhance SimilarMealPrompt with Match Label and Food Items Preview
 
 ### Changes Overview
 
-1. **Add X button** to allow dismissing without choosing an action
-2. **Auto-dismiss** when user starts a new input action (scan, voice, saved, or submit)
-3. **Update copy** with clearer text
-4. **Remove "Save as New"** button to simplify
-
----
-
-### Header Text Options
-
-| Option | Word Count |
-|--------|-----------|
-| "This looks like one of your saved meals:" | 8 |
-| "Looks like your saved meal:" | 5 |
-| "Matches saved meal:" | 3 |
-
-**Recommendation:** "Looks like your saved meal:" - keeps the friendly "looks like" tone while being concise and clearly indicating it's from their saved meals.
+1. **Add "match" back** to the percentage display - e.g., "(80% match)"
+2. **Show food items** from the saved meal in a non-editable preview using `FoodItemsTable`
 
 ---
 
 ### Updated Component UI
 
-**Before:**
+**Current:**
 ```
-This looks like "Yogurt + strawberries" (88% match)
-[ Use Saved ] [ Keep This ] [ Save as New ]
+                                                    [X]
+Looks like your saved meal: "Yogurt + strawberries" (80%)
+[ Use Saved Meal ] [ Dismiss ]
 ```
 
 **After:**
 ```
                                                     [X]
-Looks like your saved meal: "Yogurt + strawberries" (88%)
+Looks like your saved meal: "Yogurt + strawberries" (80% match)
+
+┌──────────────────────────────────────────────────────┐
+│  Vanilla Yogurt (1 container (4 oz))     90   4/16/2│
+│  Sliced Strawberries (1 cup)             53   1/13/0│
+└──────────────────────────────────────────────────────┘
+
 [ Use Saved Meal ] [ Dismiss ]
 ```
-
----
-
-### Copy Changes Summary
-
-| Element | Current | Proposed |
-|---------|---------|----------|
-| Header text | `This looks like` | `Looks like your saved meal:` |
-| Primary button | `Use Saved` | `Use Saved Meal` |
-| Secondary button | `Keep This` | `Dismiss` |
-| Third button | `Save as New` | *(removed)* |
-| Close button | *(none)* | X button in top-right |
-
----
-
-### Auto-Dismiss Behavior
-
-The prompt should automatically dismiss when the user takes any of these actions:
-- Clicks **Voice** button
-- Clicks **Scan** button  
-- Clicks **Saved** button (opens saved meals popover)
-- Clicks **Add Food** button (submits new input)
-- Starts a new barcode scan
-
-**Implementation approach:**
-- Add a new `onDismiss` callback prop to `LogInput` component
-- Call it at the start of: `toggleListening`, `setScannerOpen(true)`, `setSavedMealsOpen(true)`, and `handleSubmit`
-- In `FoodLog.tsx`, pass a callback that clears `similarMatch` and `pendingAiResult`
-
-This is cleaner than having FoodLog try to detect state changes in LogInput.
 
 ---
 
@@ -76,36 +39,56 @@ This is cleaner than having FoodLog try to detect state changes in LogInput.
 
 | Change | Description |
 |--------|-------------|
-| Add `onDismiss` prop | New optional prop for X button and parent-triggered dismiss |
-| Remove `onSaveAsNew` prop | No longer needed |
-| Add X button | Position absolute in top-right corner |
-| Update header text | "Looks like your saved meal:" |
-| Update button labels | "Use Saved Meal" and "Dismiss" |
-| Remove third button | Delete the "Save as New" button entirely |
-
-**File: `src/components/LogInput.tsx`**
-
-| Change | Description |
-|--------|-------------|
-| Add `onDismissSimilarMatch` prop | Optional callback for auto-dismiss |
-| Call dismiss on Voice click | Call before starting voice |
-| Call dismiss on Scan click | Call before opening scanner |
-| Call dismiss on Saved click | Call before opening popover |
-| Call dismiss on Submit | Call at start of handleSubmit |
-
-**File: `src/pages/FoodLog.tsx`**
-
-| Change | Description |
-|--------|-------------|
-| Add `dismissSimilarMatch` callback | Clears `similarMatch` and `pendingAiResult` state |
-| Remove `handleSaveAsNew` | No longer needed (can keep if you want, but unused) |
-| Pass dismiss callback to LogInput | Wire up the auto-dismiss |
-| Pass dismiss callback to SimilarMealPrompt | For X button |
-| Remove `onSaveAsNew` prop | From SimilarMealPrompt usage |
+| Add "match" to percentage | Change `({matchPercent}%)` to `({matchPercent}% match)` |
+| Import `FoodItemsTable` | Add import for the table component |
+| Import `useMemo` | For generating UIDs for items |
+| Add food items preview | Render `FoodItemsTable` with `editable={false}` |
+| Configure table props | `showHeader={false}`, `showTotals={true}`, `totalsPosition="bottom"`, `showInlineLabels={true}` |
 
 ---
 
-### Implementation Notes
+### FoodItemsTable Configuration for Preview
 
-The auto-dismiss on viewport resize behavior you noticed already exists because the component is conditionally rendered (`{similarMatch && ...}`). If a resize causes a re-render that clears the state somehow, it would dismiss. But that's likely coincidental - the explicit dismiss logic will make this behavior intentional and consistent.
+The table will be configured for a compact, read-only preview:
+
+```tsx
+<FoodItemsTable
+  items={itemsWithUids}
+  editable={false}
+  showHeader={false}
+  showTotals={true}
+  totalsPosition="bottom"
+  showInlineLabels={true}
+  showMacroPercentages={false}
+/>
+```
+
+This matches the Settings pattern but with:
+- `editable={false}` - No editing allowed
+- `showTotals={true}` - Show totals row so user can see the full meal value
+- `showMacroPercentages={false}` - Keep it compact
+
+---
+
+### Item UID Generation
+
+Similar to `SavedMealRow`, we need to add temporary UIDs for React keys:
+
+```tsx
+const itemsWithUids = useMemo(() => 
+  match.meal.food_items.map((item, idx) => ({
+    ...item,
+    uid: `similar-preview-${idx}`,
+  })),
+  [match.meal.food_items]
+);
+```
+
+---
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/components/SimilarMealPrompt.tsx` | Add "match" text, import and render FoodItemsTable preview |
 
