@@ -5,6 +5,23 @@ const STOP_WORDS = new Set([
   'to', 'my', 'some', 'like', 'about', 'around'
 ]);
 
+// Words that trigger history patterns but aren't food-related
+const HISTORY_REFERENCE_WORDS = new Set([
+  // Time references
+  'yesterday', 'yesterdays', 'today', 'monday', 'tuesday', 'wednesday', 
+  'thursday', 'friday', 'saturday', 'sunday', 'earlier', 'recently', 
+  'recent', 'before', 'last', 'week', 'night', 'morning', 'evening',
+  'afternoon', 'time', 'day', 'days', 'ago', 'while',
+  
+  // Portion/repetition signals  
+  'another', 'more', 'same', 'again', 'repeat', 'leftover', 'leftovers', 
+  'remaining', 'finished', 'rest', 'half', 'other', 'those', 'that',
+  'thing', 'one', 'ones',
+  
+  // Meal references
+  'breakfast', 'lunch', 'dinner', 'brunch', 'meal', 'snack',
+]);
+
 // Multi-word abbreviations (processed first, before punctuation removal)
 const MULTI_WORD_ABBREVIATIONS: Record<string, string> = {
   'fl oz': 'fluid ounce',
@@ -163,15 +180,79 @@ export interface SimilarEntryMatch {
 }
 
 /**
- * Find the best matching past entry using text similarity.
+ * Extract candidate food words by removing known noise (history references, stop words).
+ * Returns words that MIGHT be food-related - we can't verify they're actual foods,
+ * but we've filtered out words we know AREN'T foods.
  * 
- * Compares user input against:
- * 1. raw_input (what user originally typed for each entry)
- * 2. food item descriptions (the resulting food names)
+ * "another tilapia like from yesterday" → ["tilapia"]
+ */
+export function extractCandidateFoodWords(text: string): string[] {
+  let result = text.toLowerCase();
+  
+  // Expand abbreviations (same processing as preprocessText)
+  for (const [abbr, full] of Object.entries(MULTI_WORD_ABBREVIATIONS)) {
+    result = result.replace(new RegExp(escapeRegex(abbr), 'gi'), full);
+  }
+  result = result.replace(/[^\w\s]/g, ' ');
+  for (const [abbr, full] of Object.entries(SINGLE_WORD_ABBREVIATIONS)) {
+    result = result.replace(new RegExp(`\\b${escapeRegex(abbr)}\\b`, 'gi'), full);
+  }
+  
+  // Remove numbers
+  result = result.replace(/\d+/g, '');
+  
+  // Filter stop words AND history reference words
+  return result.split(/\s+/).filter(w => 
+    w && !STOP_WORDS.has(w) && !HISTORY_REFERENCE_WORDS.has(w)
+  );
+}
+
+/**
+ * Calculate hybrid similarity score combining containment and Jaccard.
+ * Containment is weighted higher (0.7) for threshold matching.
+ * Jaccard (0.3) helps rank between multiple viable matches.
+ */
+export function hybridSimilarityScore(
+  candidateFoodWords: string[], 
+  targetText: string
+): number {
+  if (candidateFoodWords.length === 0) return 0;
+  
+  const targetWords = targetText
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w && !STOP_WORDS.has(w));
+  
+  const inputSet = new Set(candidateFoodWords);
+  const targetSet = new Set(targetWords);
+  
+  // Containment: what fraction of input words appear in target
+  let matchedCount = 0;
+  for (const word of candidateFoodWords) {
+    if (targetSet.has(word)) matchedCount++;
+  }
+  const containment = matchedCount / candidateFoodWords.length;
+  
+  // Jaccard: intersection over union (for ranking)
+  const intersection = new Set([...inputSet].filter(x => targetSet.has(x)));
+  const union = new Set([...inputSet, ...targetSet]);
+  const jaccard = union.size > 0 ? intersection.size / union.size : 0;
+  
+  // Weighted combination
+  return (containment * 0.7) + (jaccard * 0.3);
+}
+
+/**
+ * Find the best matching past entry using hybrid similarity.
+ * 
+ * Uses word containment (70%) + Jaccard (30%) scoring:
+ * - Containment ensures short inputs like "tilapia" match long descriptions
+ * - Jaccard helps rank between multiple viable matches
  * 
  * @param inputText - User's current input
  * @param recentEntries - Entries from the last N days
- * @param minSimilarityRequired - Minimum Jaccard similarity score to consider a match
+ * @param minSimilarityRequired - Minimum hybrid score to consider a match
  * @returns Best matching entry above threshold, or null
  */
 export function findSimilarEntry(
@@ -179,24 +260,33 @@ export function findSimilarEntry(
   recentEntries: FoodEntry[],
   minSimilarityRequired: number
 ): SimilarEntryMatch | null {
-  const inputSig = preprocessText(inputText);
+  // Extract only candidate food words (strips "yesterday", "another", etc.)
+  const candidateFoodWords = extractCandidateFoodWords(inputText);
+  
+  // If no candidate food words remain, can't match
+  if (candidateFoodWords.length === 0) return null;
+  
   let bestMatch: SimilarEntryMatch | null = null;
   
   for (const entry of recentEntries) {
-    // Compare against raw_input (what user originally typed)
-    if (entry.raw_input) {
-      const entrySig = preprocessText(entry.raw_input);
-      const score = jaccardSimilarity(inputSig, entrySig);
-      if (score >= minSimilarityRequired && (!bestMatch || score > bestMatch.score)) {
-        bestMatch = { entry, score, matchType: 'input' };
-      }
-    }
+    // Build combined description from all food items
+    const itemsDescription = entry.food_items
+      .map(item => item.description)
+      .join(' ');
     
-    // Compare against food item descriptions
-    const entryItemsSig = createItemsSignature(entry.food_items);
-    const itemsScore = jaccardSimilarity(inputSig, entryItemsSig);
+    // Calculate hybrid score against food items
+    const itemsScore = hybridSimilarityScore(candidateFoodWords, itemsDescription);
+    
     if (itemsScore >= minSimilarityRequired && (!bestMatch || itemsScore > bestMatch.score)) {
       bestMatch = { entry, score: itemsScore, matchType: 'items' };
+    }
+    
+    // Also check raw_input (skip scanned entries - their raw_input is just barcodes)
+    if (entry.raw_input && !entry.raw_input.startsWith('Scanned:')) {
+      const rawScore = hybridSimilarityScore(candidateFoodWords, entry.raw_input);
+      if (rawScore >= minSimilarityRequired && (!bestMatch || rawScore > bestMatch.score)) {
+        bestMatch = { entry, score: rawScore, matchType: 'input' };
+      }
     }
   }
   
