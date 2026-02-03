@@ -666,12 +666,12 @@ export function WeightItemsTable({
                         {routineName ? (
                           <Link 
                             to="/settings" 
-                            className="text-blue-600 dark:text-blue-400 hover:underline not-italic"
+                            className="text-blue-600 dark:text-blue-400 hover:underline"
                           >
                             {routineName}
                           </Link>
                         ) : (
-                          <span className="not-italic">(deleted)</span>
+                          <span>(deleted)</span>
                         )}
                       </p>
                     ) : onSaveAsRoutine && (
