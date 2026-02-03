@@ -25,6 +25,8 @@ interface UsageStats {
   users_with_saved_meals: number;
   avg_saved_meals_per_user: number;
   saved_meals_used_last_7_days: number;
+  // Saved routines metrics
+  total_saved_routines: number;
 }
 
 interface TodayFoodDetail {
