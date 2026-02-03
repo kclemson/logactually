@@ -281,31 +281,10 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     setPendingAiResult(null);
   };
 
-  const handleKeepThis = () => {
-    if (!pendingAiResult) return;
-    
-    createEntryFromItems(pendingAiResult.items, pendingAiResult.text);
-    
+  const dismissSimilarMatch = useCallback(() => {
     setSimilarMatch(null);
     setPendingAiResult(null);
-  };
-
-  const handleSaveAsNew = () => {
-    if (!pendingAiResult) return;
-    
-    // First save the entry
-    createEntryFromItems(pendingAiResult.items, pendingAiResult.text);
-    
-    // Then open save meal dialog
-    setSaveMealDialogData({
-      entryId: '', // Not from an existing entry
-      rawInput: pendingAiResult.text,
-      foodItems: pendingAiResult.items,
-    });
-    
-    setSimilarMatch(null);
-    setPendingAiResult(null);
-  };
+  }, []);
 
   // Handle direct scan results (when barcode lookup succeeds)
   const handleScanResult = async (foodItem: Omit<FoodItem, 'uid' | 'entryId'>, originalInput: string) => {
@@ -519,6 +498,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
           onScanResult={handleScanResult}
           onLogSavedMeal={handleLogSavedMeal}
           onCreateNewMeal={() => setCreateMealDialogOpen(true)}
+          onDismissSimilarMatch={dismissSimilarMatch}
           isLoading={isAnalyzing || createEntry.isPending}
         />
         {analyzeError && (
@@ -538,8 +518,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
             <SimilarMealPrompt
               match={similarMatch}
               onUseSaved={handleUseSaved}
-              onKeepThis={handleKeepThis}
-              onSaveAsNew={handleSaveAsNew}
+              onDismiss={dismissSimilarMatch}
               isLoading={logSavedMeal.isPending || createEntry.isPending}
             />
           </div>
