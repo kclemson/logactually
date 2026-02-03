@@ -1,52 +1,63 @@
 
 
-## Fix: Stop Storing "From saved routine" Placeholder
+## Reorganize Admin Stats Layout + Add Saved Routines Count
 
-### Root Cause
+### New Layout
 
-On **line 283** in `src/pages/WeightLog.tsx`:
-
-```typescript
-createEntryFromExercises(exercises, `From saved routine`, routineId);
-```
-
-When you log a saved routine, the code explicitly stores `"From saved routine"` as the `raw_input` field. This is redundant because:
-1. We already pass `routineId` as `source_routine_id`
-2. The database function now resolves the actual routine name
-
-Editing entries afterward doesn't affect this - the placeholder text is set at creation time.
-
----
-
-### Fix
-
-Change line 283 from:
-```typescript
-createEntryFromExercises(exercises, `From saved routine`, routineId);
-```
-
-To:
-```typescript
-createEntryFromExercises(exercises, null, routineId);
+```text
+┌─────────────────┬─────────────────┬──────────────────┐
+│ Users: X        │ Demo logins: Z  │ Saved Meals: A   │
+│ Logged Items: Y │                 │ Saved Routines: B│
+└─────────────────┴─────────────────┴──────────────────┘
 ```
 
 ---
 
-### Additional Fix for Display
+### Changes Required
 
-Since existing data already has this placeholder, also update the tooltip logic to handle it:
+#### 1. Database Migration
+Add `total_saved_routines` to the `get_usage_stats` function:
 
-**File: `src/pages/Admin.tsx` (weight tooltip)**
+```sql
+'total_saved_routines', (
+  SELECT COUNT(*) FROM saved_routines sr
+  JOIN profiles p ON sr.user_id = p.id
+  WHERE include_read_only OR NOT COALESCE(p.is_read_only, false)
+)
+```
 
-Change the condition to skip the placeholder text:
+#### 2. Update TypeScript Types
+**File: `src/hooks/useAdminStats.ts`**
+
+Add to `UsageStats` interface:
 ```typescript
-{entry.raw_input && entry.raw_input !== "From saved routine" ? (
-  <p>...</p>
-) : entry.saved_routine_name ? (
-  <p>...</p>
-) : (
-  <p>...</p>
-)}
+total_saved_routines: number;
+```
+
+#### 3. Reorganize Admin Layout
+**File: `src/pages/Admin.tsx` (lines 89-115)**
+
+Replace the current 3-column, 2-row grid with:
+
+```tsx
+<div className="grid grid-cols-[auto_auto_auto] gap-x-4 text-muted-foreground text-xs">
+  {/* First column */}
+  <div className="space-y-0">
+    <p className="font-medium">Users: {stats?.total_users ?? 0}</p>
+    <p className="font-medium">Logged Items: {stats?.total_entries ?? 0}</p>
+  </div>
+  
+  {/* Second column */}
+  <div>
+    <p>Demo logins: {stats?.demo_logins ?? 0}</p>
+  </div>
+  
+  {/* Third column */}
+  <div className="space-y-0">
+    <p>Saved Meals: {stats?.total_saved_meals ?? 0}</p>
+    <p>Saved Routines: {stats?.total_saved_routines ?? 0}</p>
+  </div>
+</div>
 ```
 
 ---
@@ -55,6 +66,7 @@ Change the condition to skip the placeholder text:
 
 | File | Change |
 |------|--------|
-| `src/pages/WeightLog.tsx` | Pass `null` instead of `"From saved routine"` placeholder |
-| `src/pages/Admin.tsx` | Handle legacy `"From saved routine"` values in tooltip |
+| Database migration | Add `total_saved_routines` to `get_usage_stats` function |
+| `src/hooks/useAdminStats.ts` | Add `total_saved_routines` to `UsageStats` interface |
+| `src/pages/Admin.tsx` | Reorganize stats grid to new 3-column layout |
 
