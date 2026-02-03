@@ -1,111 +1,87 @@
 
 
-## Fix Cardio Detection for Distance-Only Entries
+## Improve Admin Page Tooltip Formatting
 
 ### Overview
-When logging "5 mile run", the AI correctly parses it as cardio with `distance_miles: 5` but no `duration_minutes`. However, the UI only checks for `duration_minutes > 0` to detect cardio, so it fails to show the "cardio" label and instead displays 0/0/0 in the sets/reps/weight columns.
+Update the F2day (food) and W2day (weight) tooltips in the admin user stats table to be wider and use a consistent `→` format showing what was logged as what.
 
 ---
 
-### Root Cause
+### Changes
 
-The backend (edge function) correctly validates cardio as:
-```typescript
-const hasCardioData = duration_minutes > 0 || distance_miles > 0;
+**1. Widen both tooltips** (`src/pages/Admin.tsx`)
+
+Change `max-w-xs` (320px) to `max-w-lg` (512px) for both tooltips to prevent wrapping.
+
+**2. Update food tooltip format** (lines 163-172)
+
+Current format:
+```
+"200 g nonfat Greek yogurt"
+• Nonfat Greek Yogurt
 ```
 
-But the frontend checks only:
-```typescript
-const isCardioItem = weight_lbs === 0 && (duration_minutes ?? 0) > 0;
+New format using `→`:
+```
+"200 g nonfat Greek yogurt" → Nonfat Greek Yogurt
 ```
 
-This misses entries that have distance but no duration.
+When there are multiple items from one entry, show each on its own line with the arrow format:
+```
+"yogurt and granola" → Nonfat Greek Yogurt
+"yogurt and granola" → Honey Almond Granola
+```
+
+For entries without `raw_input`, fallback to bullet format: `• Item Name`
 
 ---
 
-### Solution
+### Implementation Details
 
-Update all cardio detection logic in the frontend to match the backend:
+**Food tooltip (lines 163-172)**
 
-```typescript
-// Before
-const isCardioItem = item.weight_lbs === 0 && (item.duration_minutes ?? 0) > 0;
-
-// After
-const isCardioItem = item.weight_lbs === 0 && 
-  ((item.duration_minutes ?? 0) > 0 || (item.distance_miles ?? 0) > 0);
+Replace the current structure with:
+```tsx
+<TooltipContent className="max-w-lg text-xs space-y-1 bg-popover text-popover-foreground border whitespace-nowrap">
+  {user.food_today_details.map((entry, i) => (
+    <div key={i}>
+      {entry.items?.map((item, j) => (
+        <p key={j}>
+          {entry.raw_input ? (
+            <>
+              <span className="italic text-muted-foreground">"{entry.raw_input}"</span> → {item}
+            </>
+          ) : (
+            <>• {item}</>
+          )}
+        </p>
+      ))}
+    </div>
+  ))}
+</TooltipContent>
 ```
 
----
+**Weight tooltip (lines 188-198)**
 
-### Files to Update
-
-**1. `src/components/WeightItemsTable.tsx`**
-
-| Line | Current | Updated |
-|------|---------|---------|
-| 414 | Main cardio check | Add `\|\| (item.distance_miles ?? 0) > 0` |
-| 462 | Sets fallback (show "—") | Add `\|\| (item.distance_miles ?? 0) > 0` |
-| 500 | Reps fallback (show "—") | Add `\|\| (item.distance_miles ?? 0) > 0` |
-| 565 | Weight column display | Add distance handling + show "5.0 mi" when no duration |
-
-**2. `src/components/SaveRoutineDialog.tsx`** (line 32)
-
-Update cardio check and handle distance-only display:
-```typescript
-const isCardio = exercise.weight_lbs === 0 && 
-  ((exercise.duration_minutes ?? 0) > 0 || (exercise.distance_miles ?? 0) > 0);
-if (isCardio) {
-  const duration = exercise.duration_minutes ?? 0;
-  const distance = exercise.distance_miles ?? 0;
-  if (duration > 0 && distance > 0) {
-    return `${exercise.description} (${formatDurationMmSs(duration)}, ${distance.toFixed(1)} mi)`;
-  } else if (distance > 0) {
-    return `${exercise.description} (${distance.toFixed(1)} mi)`;
-  } else {
-    return `${exercise.description} (${formatDurationMmSs(duration)})`;
-  }
-}
-```
-
-**3. `src/components/CreateRoutineDialog.tsx`** (line 29)
-
-Same pattern as SaveRoutineDialog.
-
-**4. `src/pages/Trends.tsx`** (line 111)
-
-Update the chart-level cardio detection:
-```typescript
-// Before
-const isCardio = exercise.maxWeight === 0 && exercise.maxDuration > 0;
-
-// After  
-const isCardio = exercise.maxWeight === 0 && 
-  (exercise.maxDuration > 0 || exercise.maxDistance > 0);
+Update width class:
+```tsx
+<TooltipContent className="max-w-lg text-xs space-y-1 bg-popover text-popover-foreground border whitespace-nowrap">
 ```
 
 ---
 
-### Display Logic for Weight Column
+### Visual Result
 
-When showing a cardio item in the weight column, prioritize appropriately:
-
-```typescript
-// Weight column for cardio
-if (duration > 0) {
-  return `${duration.toFixed(1)} min`;
-} else if (distance > 0) {
-  return `${distance.toFixed(1)} mi`;
-}
-```
+| Before | After |
+|--------|-------|
+| "200 g nonfat Greek yogurt"<br>• Nonfat Greek Yogurt | "200 g nonfat Greek yogurt" → Nonfat Greek Yogurt |
+| Multi-line wrapping text | Single row per item, wider tooltip |
 
 ---
 
-### Test Cases After Fix
+### Files Changed
 
-| Input | Expected Behavior |
-|-------|-------------------|
-| "30min on treadmill" | Shows "cardio" label, displays "30.0 min" |
-| "5 mile run" | Shows "cardio" label, displays "5.0 mi" |
-| "1.18 mile run in 12:41" | Shows "cardio" label, displays "12.7 min" |
+| File | Change |
+|------|--------|
+| `src/pages/Admin.tsx` | Widen tooltips to `max-w-lg`, add `whitespace-nowrap`, update food tooltip to use `→` format |
 
