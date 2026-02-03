@@ -37,10 +37,10 @@ export default function Admin() {
   const { data: feedback } = useAdminFeedback();
   const respondToFeedback = useRespondToFeedback();
   const hasHover = useHasHover();
-  
-  const { data: demoLoginsTotal } = useLoginCount('demo', null);
-  const { data: demoLogins24h } = useLoginCount('demo', 24);
-  const { data: demoLogins7d } = useLoginCount('demo', 168);
+
+  const { data: demoLoginsTotal } = useLoginCount("demo", null);
+  const { data: demoLogins24h } = useLoginCount("demo", 24);
+  const { data: demoLogins7d } = useLoginCount("demo", 168);
 
   // Render nothing while checking admin status - no spinner, no flash
   if (isAdminLoading) {
@@ -98,14 +98,14 @@ export default function Admin() {
           <p>Users: {stats?.total_users ?? 0}</p>
           <p>Logged Items: {stats?.total_entries ?? 0}</p>
         </div>
-        
+
         {/* Second column */}
         <div className="space-y-0">
           <p>Demo logins: {demoLoginsTotal ?? 0}</p>
-          <p>Demo 24h: {demoLogins24h ?? 0}</p>
-          <p>Demo 7d: {demoLogins7d ?? 0}</p>
+          <p>Last 24h: {demoLogins24h ?? 0}</p>
+          <p>Last 7d: {demoLogins7d ?? 0}</p>
         </div>
-        
+
         {/* Third column */}
         <div className="space-y-0">
           <p>Saved Meals: {stats?.total_saved_meals ?? 0}</p>
@@ -119,137 +119,158 @@ export default function Admin() {
         </div>
       ) : userStats && userStats.length > 0 ? (
         <TooltipProvider delayDuration={200}>
-        <table className="w-auto text-xs">
-          <thead>
-            <tr className="border-b">
-              <th className="text-left py-0.5 pr-2 font-medium text-muted-foreground whitespace-nowrap">User</th>
-              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Last</th>
-              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">F2day</th>
-              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">W2day</th>
-              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">F</th>
-              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">SF</th>
-              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">W</th>
-              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">SW</th>
-              <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Logins</th>
-              <th className="text-center py-0.5 font-medium text-muted-foreground">L2day</th>
-            </tr>
-          </thead>
-          <tbody>
-            {userStats.map((user) => (
-              <tr key={user.user_id} className="border-b border-border/50">
-                <td
-                  className={`py-0.5 pr-2 whitespace-nowrap ${
-                    user.entries_today > 0 ||
-                    (user.weight_today ?? 0) > 0 ||
-                    (user.last_active && isToday(parseISO(user.last_active)))
-                      ? "text-green-500"
-                      : ""
-                  }`}
-                >
-                  {USER_NAMES[user.user_number] ?? `User #${user.user_number}`}
-                </td>
-                <td
-                  className={`text-center py-0.5 pr-2 ${user.last_active && isToday(parseISO(user.last_active)) ? "text-green-500" : ""}`}
-                >
-                  {user.last_active ? format(parseISO(user.last_active), "MMM d") : "—"}
-                </td>
-                {hasHover && user.entries_today > 0 && user.food_today_details ? (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <td className="text-center py-0.5 pr-2 text-green-500 cursor-default">
-                        {user.entries_today}
-                      </td>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-lg text-xs space-y-1 bg-popover text-popover-foreground border whitespace-nowrap">
-                      {user.food_today_details.map((entry, i) => (
-                        <div key={i}>
-                          {entry.raw_input ? (
-                            // Manual entry: show "input" → items
-                            entry.items?.length === 1 ? (
-                              <p><span className="italic text-muted-foreground">"{entry.raw_input}"</span> → {entry.items[0]}</p>
-                            ) : (
-                              <>
-                                <p className="italic text-muted-foreground">"{entry.raw_input}"</p>
-                                {entry.items?.map((item, j) => <p key={j} className="pl-2">→ {item}</p>)}
-                              </>
-                            )
-                          ) : entry.saved_meal_name ? (
-                            // Saved meal: show meal name header with items below
-                            <>
-                              <p className="text-muted-foreground">[{entry.saved_meal_name}]</p>
-                              {entry.items?.map((item, j) => <p key={j} className="pl-2">• {item}</p>)}
-                            </>
-                          ) : (
-                            // No context: just bullets
-                            entry.items?.map((item, j) => <p key={j}>• {item}</p>)
-                          )}
-                        </div>
-                      ))}
-                    </TooltipContent>
-                  </Tooltip>
-                ) : (
-                  <td
-                    className={`text-center py-0.5 pr-2 ${user.entries_today > 0 ? "text-green-500" : "text-muted-foreground/50"}`}
-                  >
-                    {user.entries_today}
-                  </td>
-                )}
-                {hasHover && (user.weight_today ?? 0) > 0 && user.weight_today_details ? (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <td className="text-center py-0.5 pr-2 text-green-500 cursor-default">
-                        {user.weight_today ?? 0}
-                      </td>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-lg text-xs space-y-1 bg-popover text-popover-foreground border whitespace-nowrap">
-                      {user.weight_today_details.map((entry, i) => (
-                        <div key={i}>
-                          {entry.raw_input && entry.raw_input !== "From saved routine" ? (
-                            <p><span className="italic text-muted-foreground">"{entry.raw_input}"</span> → {entry.description}</p>
-                          ) : entry.saved_routine_name ? (
-                            <p><span className="text-muted-foreground">[{entry.saved_routine_name}]</span> {entry.description}</p>
-                          ) : (
-                            <p>• {entry.description}</p>
-                          )}
-                        </div>
-                      ))}
-                    </TooltipContent>
-                  </Tooltip>
-                ) : (
-                  <td
-                    className={`text-center py-0.5 pr-2 ${(user.weight_today ?? 0) > 0 ? "text-green-500" : "text-muted-foreground/50"}`}
-                  >
-                    {user.weight_today ?? 0}
-                  </td>
-                )}
-                <td className={`text-center py-0.5 pr-2 ${user.total_entries === 0 ? "text-muted-foreground/50" : ""}`}>
-                  {user.total_entries}
-                </td>
-                <td
-                  className={`text-center py-0.5 pr-2 ${(user.saved_meals_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
-                >
-                  {user.saved_meals_count ?? 0}
-                </td>
-                <td
-                  className={`text-center py-0.5 pr-2 ${(user.total_weight_entries ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
-                >
-                  {user.total_weight_entries ?? 0}
-                </td>
-                <td
-                  className={`text-center py-0.5 pr-2 ${(user.saved_routines_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
-                >
-                  {user.saved_routines_count ?? 0}
-                </td>
-                <td className={`text-center py-0.5 pr-2 ${(user.login_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}>
-                  {user.login_count ?? 0}
-                </td>
-                <td className={`text-center py-0.5 ${(user.logins_today ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}>
-                  {user.logins_today ?? 0}
-                </td>
+          <table className="w-auto text-xs">
+            <thead>
+              <tr className="border-b">
+                <th className="text-left py-0.5 pr-2 font-medium text-muted-foreground whitespace-nowrap">User</th>
+                <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Last</th>
+                <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">F2day</th>
+                <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">W2day</th>
+                <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">F</th>
+                <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">SF</th>
+                <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">W</th>
+                <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">SW</th>
+                <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Logins</th>
+                <th className="text-center py-0.5 font-medium text-muted-foreground">L2day</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {userStats.map((user) => (
+                <tr key={user.user_id} className="border-b border-border/50">
+                  <td
+                    className={`py-0.5 pr-2 whitespace-nowrap ${
+                      user.entries_today > 0 ||
+                      (user.weight_today ?? 0) > 0 ||
+                      (user.last_active && isToday(parseISO(user.last_active)))
+                        ? "text-green-500"
+                        : ""
+                    }`}
+                  >
+                    {USER_NAMES[user.user_number] ?? `User #${user.user_number}`}
+                  </td>
+                  <td
+                    className={`text-center py-0.5 pr-2 ${user.last_active && isToday(parseISO(user.last_active)) ? "text-green-500" : ""}`}
+                  >
+                    {user.last_active ? format(parseISO(user.last_active), "MMM d") : "—"}
+                  </td>
+                  {hasHover && user.entries_today > 0 && user.food_today_details ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <td className="text-center py-0.5 pr-2 text-green-500 cursor-default">{user.entries_today}</td>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-lg text-xs space-y-1 bg-popover text-popover-foreground border whitespace-nowrap">
+                        {user.food_today_details.map((entry, i) => (
+                          <div key={i}>
+                            {entry.raw_input ? (
+                              // Manual entry: show "input" → items
+                              entry.items?.length === 1 ? (
+                                <p>
+                                  <span className="italic text-muted-foreground">"{entry.raw_input}"</span> →{" "}
+                                  {entry.items[0]}
+                                </p>
+                              ) : (
+                                <>
+                                  <p className="italic text-muted-foreground">"{entry.raw_input}"</p>
+                                  {entry.items?.map((item, j) => (
+                                    <p key={j} className="pl-2">
+                                      → {item}
+                                    </p>
+                                  ))}
+                                </>
+                              )
+                            ) : entry.saved_meal_name ? (
+                              // Saved meal: show meal name header with items below
+                              <>
+                                <p className="text-muted-foreground">[{entry.saved_meal_name}]</p>
+                                {entry.items?.map((item, j) => (
+                                  <p key={j} className="pl-2">
+                                    • {item}
+                                  </p>
+                                ))}
+                              </>
+                            ) : (
+                              // No context: just bullets
+                              entry.items?.map((item, j) => <p key={j}>• {item}</p>)
+                            )}
+                          </div>
+                        ))}
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <td
+                      className={`text-center py-0.5 pr-2 ${user.entries_today > 0 ? "text-green-500" : "text-muted-foreground/50"}`}
+                    >
+                      {user.entries_today}
+                    </td>
+                  )}
+                  {hasHover && (user.weight_today ?? 0) > 0 && user.weight_today_details ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <td className="text-center py-0.5 pr-2 text-green-500 cursor-default">
+                          {user.weight_today ?? 0}
+                        </td>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-lg text-xs space-y-1 bg-popover text-popover-foreground border whitespace-nowrap">
+                        {user.weight_today_details.map((entry, i) => (
+                          <div key={i}>
+                            {entry.raw_input && entry.raw_input !== "From saved routine" ? (
+                              <p>
+                                <span className="italic text-muted-foreground">"{entry.raw_input}"</span> →{" "}
+                                {entry.description}
+                              </p>
+                            ) : entry.saved_routine_name ? (
+                              <p>
+                                <span className="text-muted-foreground">[{entry.saved_routine_name}]</span>{" "}
+                                {entry.description}
+                              </p>
+                            ) : (
+                              <p>• {entry.description}</p>
+                            )}
+                          </div>
+                        ))}
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <td
+                      className={`text-center py-0.5 pr-2 ${(user.weight_today ?? 0) > 0 ? "text-green-500" : "text-muted-foreground/50"}`}
+                    >
+                      {user.weight_today ?? 0}
+                    </td>
+                  )}
+                  <td
+                    className={`text-center py-0.5 pr-2 ${user.total_entries === 0 ? "text-muted-foreground/50" : ""}`}
+                  >
+                    {user.total_entries}
+                  </td>
+                  <td
+                    className={`text-center py-0.5 pr-2 ${(user.saved_meals_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
+                  >
+                    {user.saved_meals_count ?? 0}
+                  </td>
+                  <td
+                    className={`text-center py-0.5 pr-2 ${(user.total_weight_entries ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
+                  >
+                    {user.total_weight_entries ?? 0}
+                  </td>
+                  <td
+                    className={`text-center py-0.5 pr-2 ${(user.saved_routines_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
+                  >
+                    {user.saved_routines_count ?? 0}
+                  </td>
+                  <td
+                    className={`text-center py-0.5 pr-2 ${(user.login_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
+                  >
+                    {user.login_count ?? 0}
+                  </td>
+                  <td
+                    className={`text-center py-0.5 ${(user.logins_today ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
+                  >
+                    {user.logins_today ?? 0}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </TooltipProvider>
       ) : (
         <p className="text-muted-foreground text-xs">No users found.</p>
