@@ -29,11 +29,13 @@ interface UsageStats {
 
 interface TodayFoodDetail {
   raw_input: string | null;
+  saved_meal_name: string | null;
   items: string[] | null;
 }
 
 interface TodayWeightDetail {
   raw_input: string | null;
+  saved_routine_name: string | null;
   description: string;
 }
 
