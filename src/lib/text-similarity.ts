@@ -20,6 +20,10 @@ const HISTORY_REFERENCE_WORDS = new Set([
   
   // Meal references
   'breakfast', 'lunch', 'dinner', 'brunch', 'meal', 'snack',
+  
+  // Food action verbs (never food items themselves)
+  'had', 'have', 'ate', 'eaten', 'eating', 'eat', 
+  'made', 'make', 'cooked', 'ordered', 'got', 'grabbed', 'picked',
 ]);
 
 // Multi-word abbreviations (processed first, before punctuation removal)
