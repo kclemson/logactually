@@ -1,157 +1,111 @@
 
 
-## Extract Shared Food Response Schema
+## Improve SimilarMealPrompt UX
 
-### The Problem
+### Changes Overview
 
-Three places currently define the food item response format:
-1. `ANALYZE_FOOD_PROMPT_DEFAULT` (lines 11-27, 33-37)
-2. `ANALYZE_FOOD_PROMPT_EXPERIMENTAL` (lines 49-65, 71-75)  
-3. `buildBulkFoodParsingPrompt` (lines 113, 121)
-
-If you add a new nutrient field (like you did with fiber, sodium, etc.), you'd need to update all three places. The photo prompt would add a fourth.
+1. **Add X button** to allow dismissing without choosing an action
+2. **Auto-dismiss** when user starts a new input action (scan, voice, saved, or submit)
+3. **Update copy** with clearer text
+4. **Remove "Save as New"** button to simplify
 
 ---
 
-### What Should Be Shared (Single Source of Truth)
+### Header Text Options
 
-These are the parts that define **what data we want back** - the schema:
+| Option | Word Count |
+|--------|-----------|
+| "This looks like one of your saved meals:" | 8 |
+| "Looks like your saved meal:" | 5 |
+| "Matches saved meal:" | 3 |
 
-| Shared Constant | Content | Lines in Current File |
-|-----------------|---------|----------------------|
-| `FOOD_ITEM_FIELDS` | Field definitions (name, portion, calories...cholesterol) | 11-22 / 49-60 |
-| `FOOD_ITEM_JSON_EXAMPLE` | The JSON example object showing the schema | 36 / 74 / 113 |
-
----
-
-### What Should Stay Separate Per Prompt
-
-These parts are **context-specific** and should remain in each prompt template:
-
-| Part | Why Separate |
-|------|--------------|
-| System context intro | Different framing for text vs photo vs experimental |
-| Input placeholders | Text has `{{rawInput}}`, photo has none |
-| Portion guidance | "mentioned or reasonable default" vs "visual estimation" |
-| Confidence definitions | Could legitimately differ (brand lookup vs visual clarity) |
-| Edge case handling | Text: portion fallback. Photo: "no food = empty array" |
-| Naming guidance | Might want to tweak independently per prompt type |
+**Recommendation:** "Looks like your saved meal:" - keeps the friendly "looks like" tone while being concise and clearly indicating it's from their saved meals.
 
 ---
 
-### Proposed Shared Constants
+### Updated Component UI
 
-```typescript
-// ============================================================================
-// SHARED SCHEMA CONSTANTS
-// Single source of truth for food item response format
-// ============================================================================
+**Before:**
+```
+This looks like "Yogurt + strawberries" (88% match)
+[ Use Saved ] [ Keep This ] [ Save as New ]
+```
 
-/**
- * Nutritional field definitions - what we ask the AI to return for each food item.
- * Update this when adding/removing nutrient fields.
- */
-export const FOOD_ITEM_FIELDS = `- name: a SHORT, concise name (max 25 characters). Use common abbreviations. Do not include brand names unless essential for identification.
-- portion: the serving size mentioned or a reasonable default
-- calories: estimated calories (whole number)
-- protein: grams of protein (whole number)
-- carbs: grams of carbohydrates (whole number)
-- fiber: grams of dietary fiber (whole number)
-- sugar: grams of sugar (whole number)
-- fat: grams of fat (whole number)
-- saturated_fat: grams of saturated fat (whole number)
-- sodium: milligrams of sodium (whole number)
-- cholesterol: milligrams of cholesterol (whole number)`;
-
-/**
- * JSON example showing the exact schema structure.
- * Used in response format instructions across all prompts.
- */
-export const FOOD_ITEM_JSON_EXAMPLE = `{ "name": "Food name", "portion": "portion size", "calories": 0, "protein": 0, "carbs": 0, "fiber": 0, "sugar": 0, "fat": 0, "saturated_fat": 0, "sodium": 0, "cholesterol": 0, "confidence": "high", "source_note": "optional" }`;
+**After:**
+```
+                                                    [X]
+Looks like your saved meal: "Yogurt + strawberries" (88%)
+[ Use Saved Meal ] [ Dismiss ]
 ```
 
 ---
 
-### How Prompts Would Use Shared Constants
+### Copy Changes Summary
 
-**DEFAULT prompt** (showing only the changed parts):
-
-```typescript
-export const ANALYZE_FOOD_PROMPT_DEFAULT = `You are a nutrition expert...
-
-For each food item, provide:
-${FOOD_ITEM_FIELDS}
-- confidence: your certainty level for the nutritional data:
-  - "high" = known brand with verified nutritional data...
-  - "medium" = generic food with typical values...
-  - "low" = estimate based on similar foods...
-- source_note: (optional) brief note...
-
-Keep names short and generic...
-
-Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
-{
-  "food_items": [
-    ${FOOD_ITEM_JSON_EXAMPLE}
-  ]
-}`;
-```
-
-**PHOTO prompt** would use the same shared constants but with photo-specific confidence definitions.
-
-**BULK prompt** would reference `FOOD_ITEM_JSON_EXAMPLE` in its results format.
+| Element | Current | Proposed |
+|---------|---------|----------|
+| Header text | `This looks like` | `Looks like your saved meal:` |
+| Primary button | `Use Saved` | `Use Saved Meal` |
+| Secondary button | `Keep This` | `Dismiss` |
+| Third button | `Save as New` | *(removed)* |
+| Close button | *(none)* | X button in top-right |
 
 ---
 
-### Line-by-Line Change Table for prompts.ts
+### Auto-Dismiss Behavior
 
-| Lines | Current Content | After Refactor |
-|-------|----------------|----------------|
-| 1-3 | Comment header | Expanded to mention shared constants |
-| NEW | *(doesn't exist)* | Add `FOOD_ITEM_FIELDS` constant |
-| NEW | *(doesn't exist)* | Add `FOOD_ITEM_JSON_EXAMPLE` constant |
-| 11-22 | Inline field definitions | Replace with `${FOOD_ITEM_FIELDS}` |
-| 36 | Inline JSON example | Replace with `${FOOD_ITEM_JSON_EXAMPLE}` |
-| 49-60 | Inline field definitions (duplicate) | Replace with `${FOOD_ITEM_FIELDS}` |
-| 74 | Inline JSON example (duplicate) | Replace with `${FOOD_ITEM_JSON_EXAMPLE}` |
-| 113 | Inline JSON example in bulk prompt | Replace with `${FOOD_ITEM_JSON_EXAMPLE}` |
+The prompt should automatically dismiss when the user takes any of these actions:
+- Clicks **Voice** button
+- Clicks **Scan** button  
+- Clicks **Saved** button (opens saved meals popover)
+- Clicks **Add Food** button (submits new input)
+- Starts a new barcode scan
 
----
+**Implementation approach:**
+- Add a new `onDismiss` callback prop to `LogInput` component
+- Call it at the start of: `toggleListening`, `setScannerOpen(true)`, `setSavedMealsOpen(true)`, and `handleSubmit`
+- In `FoodLog.tsx`, pass a callback that clears `similarMatch` and `pendingAiResult`
 
-### What This Enables
-
-When you want to add a new field (e.g., `potassium`):
-
-**Before**: Update 3+ places, easy to miss one
-**After**: Update `FOOD_ITEM_FIELDS` and `FOOD_ITEM_JSON_EXAMPLE` once
+This is cleaner than having FoodLog try to detect state changes in LogInput.
 
 ---
 
-### What Stays Separate (Intentionally)
+### Technical Changes
 
-| Part | Stays In | Reason |
-|------|----------|--------|
-| Confidence definitions | Each prompt | Photo vs text have legitimately different confidence criteria |
-| `source_note` field | Each prompt | Tied to confidence, so kept together |
-| Portion guidance line | Each prompt | "mentioned" vs "visual estimation" |
-| System context | Each prompt | Input-type-specific framing |
+**File: `src/components/SimilarMealPrompt.tsx`**
+
+| Change | Description |
+|--------|-------------|
+| Add `onDismiss` prop | New optional prop for X button and parent-triggered dismiss |
+| Remove `onSaveAsNew` prop | No longer needed |
+| Add X button | Position absolute in top-right corner |
+| Update header text | "Looks like your saved meal:" |
+| Update button labels | "Use Saved Meal" and "Dismiss" |
+| Remove third button | Delete the "Save as New" button entirely |
+
+**File: `src/components/LogInput.tsx`**
+
+| Change | Description |
+|--------|-------------|
+| Add `onDismissSimilarMatch` prop | Optional callback for auto-dismiss |
+| Call dismiss on Voice click | Call before starting voice |
+| Call dismiss on Scan click | Call before opening scanner |
+| Call dismiss on Saved click | Call before opening popover |
+| Call dismiss on Submit | Call at start of handleSubmit |
+
+**File: `src/pages/FoodLog.tsx`**
+
+| Change | Description |
+|--------|-------------|
+| Add `dismissSimilarMatch` callback | Clears `similarMatch` and `pendingAiResult` state |
+| Remove `handleSaveAsNew` | No longer needed (can keep if you want, but unused) |
+| Pass dismiss callback to LogInput | Wire up the auto-dismiss |
+| Pass dismiss callback to SimilarMealPrompt | For X button |
+| Remove `onSaveAsNew` prop | From SimilarMealPrompt usage |
 
 ---
 
-### Files Changed
+### Implementation Notes
 
-| File | Change |
-|------|--------|
-| `supabase/functions/_shared/prompts.ts` | Extract shared constants, update all prompts to use them |
-
----
-
-### To Your Question About Scenarios
-
-You asked if there's a scenario where different food-processing functions should return different syntax. I can't think of one either. The **schema** (what fields exist and their types) should always be consistent so:
-- The frontend can parse any food result the same way
-- CSV export works consistently
-- TypeScript types stay accurate
-
-The only legitimate differences are in **how we ask** (framing, confidence criteria) not **what we get back** (the schema).
+The auto-dismiss on viewport resize behavior you noticed already exists because the component is conditionally rendered (`{similarMatch && ...}`). If a resize causes a re-render that clears the state somehow, it would dismiss. But that's likely coincidental - the explicit dismiss logic will make this behavior intentional and consistent.
 
