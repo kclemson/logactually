@@ -120,7 +120,6 @@ export type Database = {
           created_at: string
           id: string
           is_read_only: boolean
-          login_count: number
           settings: Json | null
           updated_at: string
           user_number: number
@@ -129,7 +128,6 @@ export type Database = {
           created_at?: string
           id: string
           is_read_only?: boolean
-          login_count?: number
           settings?: Json | null
           updated_at?: string
           user_number: number
@@ -138,7 +136,6 @@ export type Database = {
           created_at?: string
           id?: string
           is_read_only?: boolean
-          login_count?: number
           settings?: Json | null
           updated_at?: string
           user_number?: number
