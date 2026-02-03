@@ -44,17 +44,16 @@ export function SimilarMealPrompt({
       </p>
       
       {/* Food items preview */}
-      <div className="border rounded-md overflow-hidden bg-background/50">
-        <FoodItemsTable
-          items={itemsWithUids}
-          editable={false}
-          showHeader={false}
-          showTotals={true}
-          totalsPosition="bottom"
-          showInlineLabels={true}
-          showMacroPercentages={false}
-        />
-      </div>
+      <FoodItemsTable
+        items={itemsWithUids}
+        editable={false}
+        showHeader={false}
+        showTotals={true}
+        totalsPosition="bottom"
+        showInlineLabels={true}
+        showMacroPercentages={false}
+        showTotalsDivider={false}
+      />
       
       <div className="flex flex-wrap gap-2">
         <Button
