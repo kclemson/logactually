@@ -86,31 +86,23 @@ export default function Admin() {
 
   return (
     <div className="px-1 py-2 space-y-4">
-      {/* Stats grid: 3 columns, 2 rows */}
-      <div className="grid grid-cols-[auto_auto_auto] gap-x-1 gap-y-0.5 text-muted-foreground text-xs">
-        {/* Row 1: Headers */}
-        <p className="font-medium">Users: {stats?.total_users ?? 0}</p>
-        <p className="font-medium">Logged Items: {stats?.total_entries ?? 0}</p>
-        <p className="font-medium">Saved Meals: {stats?.total_saved_meals ?? 0}</p>
-
-        {/* Row 2: Sub-stats */}
+      {/* Stats grid: 3 columns */}
+      <div className="grid grid-cols-[auto_auto_auto] gap-x-4 text-muted-foreground text-xs">
+        {/* First column */}
         <div className="space-y-0">
+          <p className="font-medium">Users: {stats?.total_users ?? 0}</p>
+          <p className="font-medium">Logged Items: {stats?.total_entries ?? 0}</p>
+        </div>
+        
+        {/* Second column */}
+        <div>
           <p>Demo logins: {stats?.demo_logins ?? 0}</p>
-          <p>
-            Active RL7: {stats?.active_last_7_days ?? 0} ({pct(stats?.active_last_7_days ?? 0)}%)
-          </p>
-          <p>
-            Created RL7: {stats?.users_created_last_7_days ?? 0} ({pct(stats?.users_created_last_7_days ?? 0)}%)
-          </p>
         </div>
+        
+        {/* Third column */}
         <div className="space-y-0">
-          <p>Avg/user: {avgEntriesPerUser}</p>
-          <p>Created RL7: {stats?.entries_created_last_7_days ?? 0}</p>
-        </div>
-        <div className="space-y-0">
-          <p>Users w/SM: {stats?.users_with_saved_meals ?? 0}</p>
-          <p>Avg SM/user: {stats?.avg_saved_meals_per_user ?? 0}</p>
-          <p>SM used RL7: {stats?.saved_meals_used_last_7_days ?? 0}</p>
+          <p>Saved Meals: {stats?.total_saved_meals ?? 0}</p>
+          <p>Saved Routines: {stats?.total_saved_routines ?? 0}</p>
         </div>
       </div>
 
