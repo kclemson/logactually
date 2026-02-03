@@ -1,15 +1,17 @@
 // Shared prompt templates for the analyze-food edge function
 // Allows A/B testing different prompt versions
+// Contains shared schema constants for consistent food item response format
 
-export const ANALYZE_FOOD_PROMPT_DEFAULT = `You are a nutrition expert helping a user track their food intake for health goals. Accuracy is important. The user is logging food they consumed, so interpret their input as something they ate and identify the most likely food item(s).
+// ============================================================================
+// SHARED SCHEMA CONSTANTS
+// Single source of truth for food item response format
+// ============================================================================
 
-Analyze the following food description and extract individual food items with their nutritional information.
-
-Food description: "{{rawInput}}"
-{{additionalContext}}
-
-For each food item, provide:
-- name: a SHORT, concise name (max 25 characters). Use common abbreviations. Do not include brand names unless essential for identification.
+/**
+ * Nutritional field definitions - what we ask the AI to return for each food item.
+ * Update this when adding/removing nutrient fields.
+ */
+export const FOOD_ITEM_FIELDS = `- name: a SHORT, concise name (max 25 characters). Use common abbreviations. Do not include brand names unless essential for identification.
 - portion: the serving size mentioned or a reasonable default
 - calories: estimated calories (whole number)
 - protein: grams of protein (whole number)
@@ -19,7 +21,27 @@ For each food item, provide:
 - fat: grams of fat (whole number)
 - saturated_fat: grams of saturated fat (whole number)
 - sodium: milligrams of sodium (whole number)
-- cholesterol: milligrams of cholesterol (whole number)
+- cholesterol: milligrams of cholesterol (whole number)`;
+
+/**
+ * JSON example showing the exact schema structure.
+ * Used in response format instructions across all prompts.
+ */
+export const FOOD_ITEM_JSON_EXAMPLE = `{ "name": "Food name", "portion": "portion size", "calories": 0, "protein": 0, "carbs": 0, "fiber": 0, "sugar": 0, "fat": 0, "saturated_fat": 0, "sodium": 0, "cholesterol": 0, "confidence": "high", "source_note": "optional" }`;
+
+// ============================================================================
+// PROMPT TEMPLATES
+// ============================================================================
+
+export const ANALYZE_FOOD_PROMPT_DEFAULT = `You are a nutrition expert helping a user track their food intake for health goals. Accuracy is important. The user is logging food they consumed, so interpret their input as something they ate and identify the most likely food item(s).
+
+Analyze the following food description and extract individual food items with their nutritional information.
+
+Food description: "{{rawInput}}"
+{{additionalContext}}
+
+For each food item, provide:
+${FOOD_ITEM_FIELDS}
 - confidence: your certainty level for the nutritional data:
   - "high" = known brand with verified nutritional data, or very common food with well-established values
   - "medium" = generic food with typical values, reasonable confidence
@@ -33,7 +55,7 @@ Be reasonable with portion sizes. If no portion is specified, use typical servin
 Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
 {
   "food_items": [
-    { "name": "Food name", "portion": "portion size", "calories": 0, "protein": 0, "carbs": 0, "fiber": 0, "sugar": 0, "fat": 0, "saturated_fat": 0, "sodium": 0, "cholesterol": 0, "confidence": "high", "source_note": "optional" }
+    ${FOOD_ITEM_JSON_EXAMPLE}
   ]
 }`;
 
@@ -47,17 +69,7 @@ Food description: "{{rawInput}}"
 {{additionalContext}}
 
 For each food item, provide:
-- name: a SHORT, concise name (max 25 characters). Use common abbreviations. Do not include brand names unless essential for identification.
-- portion: the serving size mentioned or a reasonable default
-- calories: estimated calories (whole number)
-- protein: grams of protein (whole number)
-- carbs: grams of carbohydrates (whole number)
-- fiber: grams of dietary fiber (whole number)
-- sugar: grams of sugar (whole number)
-- fat: grams of fat (whole number)
-- saturated_fat: grams of saturated fat (whole number)
-- sodium: milligrams of sodium (whole number)
-- cholesterol: milligrams of cholesterol (whole number)
+${FOOD_ITEM_FIELDS}
 - confidence: your certainty level for the nutritional data:
   - "high" = known brand with verified nutritional data, or very common food with well-established values
   - "medium" = generic food with typical values, reasonable confidence
@@ -71,7 +83,7 @@ Be reasonable with portion sizes. If no portion is specified, use typical servin
 Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
 {
   "food_items": [
-    { "name": "Food name", "portion": "portion size", "calories": 0, "protein": 0, "carbs": 0, "fiber": 0, "sugar": 0, "fat": 0, "saturated_fat": 0, "sodium": 0, "cholesterol": 0, "confidence": "high", "source_note": "optional" }
+    ${FOOD_ITEM_JSON_EXAMPLE}
   ]
 }`;
 
@@ -110,7 +122,7 @@ ${inputs.map((input, i) => `${i + 1}. "${input}"`).join('\n')}
 Return JSON with results in the EXACT same order as the inputs above. Each result should contain the food_items array for that input:
 {
   "results": [
-    { "food_items": [{ "name": "...", "portion": "...", "calories": 0, "protein": 0, "carbs": 0, "fiber": 0, "sugar": 0, "fat": 0, "saturated_fat": 0, "sodium": 0, "cholesterol": 0, "confidence": "high" }] },
+    { "food_items": [${FOOD_ITEM_JSON_EXAMPLE}] },
     { "food_items": [...] },
     ...
   ]
