@@ -1,104 +1,45 @@
 
 
-## Parameterized Login Count Query
+## Update User Stats to Use login_events Table
 
 ### Overview
 
-Instead of hardcoding specific time windows in `get_usage_stats`, create a flexible RPC function that accepts user filter and timeframe parameters.
+Replace the `profiles.login_count` counter with queries against the `login_events` table, enabling per-user time-windowed login metrics.
 
 ---
 
-### Database Design
+### Database Changes
 
-#### New RPC Function: `get_login_count`
+#### Update `get_user_stats` Function
 
-```sql
-CREATE OR REPLACE FUNCTION public.get_login_count(
-  user_filter TEXT DEFAULT 'all',        -- 'demo', 'all', or a specific user_id
-  timeframe_hours INT DEFAULT NULL       -- NULL = all time, 24 = last day, 168 = last 7 days
-)
-RETURNS INT
-LANGUAGE plpgsql
-STABLE
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
-DECLARE
-  result INT;
-BEGIN
-  IF NOT has_role(auth.uid(), 'admin') THEN
-    RAISE EXCEPTION 'Admin access required';
-  END IF;
-
-  SELECT COUNT(*)::INT INTO result
-  FROM login_events le
-  JOIN profiles p ON le.user_id = p.id
-  WHERE 
-    -- User filter
-    CASE 
-      WHEN user_filter = 'demo' THEN p.is_read_only = true
-      WHEN user_filter = 'all' THEN true
-      ELSE le.user_id = user_filter::uuid
-    END
-    -- Timeframe filter
-    AND (timeframe_hours IS NULL OR le.created_at > NOW() - (timeframe_hours || ' hours')::interval);
-
-  RETURN result;
-END;
-$$;
-```
-
-#### Usage Examples
+Replace `p.login_count` with counts from `login_events`:
 
 ```sql
--- Demo logins in last 24 hours
-SELECT get_login_count('demo', 24);
+-- Replace this:
+p.login_count
 
--- Demo logins in last 7 days
-SELECT get_login_count('demo', 168);
-
--- All logins in last 30 days
-SELECT get_login_count('all', 720);
-
--- All-time demo logins
-SELECT get_login_count('demo', NULL);
-
--- Specific user's logins in last week
-SELECT get_login_count('user-uuid-here', 168);
+-- With these:
+(SELECT COUNT(*) FROM login_events le WHERE le.user_id = p.id) as login_count,
+(SELECT COUNT(*) FROM login_events le 
+ WHERE le.user_id = p.id 
+ AND le.created_at > NOW() - INTERVAL '24 hours') as logins_today
 ```
-
----
-
-### Simplified `get_usage_stats`
-
-Remove the hardcoded demo login time windows from `get_usage_stats`. Keep only `demo_logins` (all-time count from `login_count` on profile) for backward compatibility, or remove it entirely since it can now be queried via `get_login_count('demo', NULL)`.
 
 ---
 
 ### TypeScript Changes
 
-#### New Hook: `useLoginCount`
+#### Update `UserStats` Interface
 
-**File: `src/hooks/useLoginCount.ts`**
+**File: `src/hooks/useAdminStats.ts`**
+
+Add `logins_today` field:
 
 ```typescript
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-
-type UserFilter = 'demo' | 'all' | string; // string for specific user_id
-
-export function useLoginCount(userFilter: UserFilter, timeframeHours: number | null) {
-  return useQuery({
-    queryKey: ['login-count', userFilter, timeframeHours],
-    queryFn: async (): Promise<number> => {
-      const { data, error } = await supabase.rpc('get_login_count', {
-        user_filter: userFilter,
-        timeframe_hours: timeframeHours
-      });
-      if (error) throw error;
-      return data ?? 0;
-    },
-  });
+interface UserStats {
+  // ... existing fields
+  login_count: number;
+  logins_today: number;  // NEW
 }
 ```
 
@@ -108,38 +49,38 @@ export function useLoginCount(userFilter: UserFilter, timeframeHours: number | n
 
 **File: `src/pages/Admin.tsx`**
 
-Use the new hook to fetch demo login counts with different timeframes:
+Add "L2day" column to user stats table:
+
+| Header | Description |
+|--------|-------------|
+| Logins | Total logins (from `login_events`) |
+| L2day | Logins in last 24 hours |
 
 ```tsx
-const { data: demoLoginsTotal } = useLoginCount('demo', null);
-const { data: demoLogins24h } = useLoginCount('demo', 24);
-const { data: demoLogins7d } = useLoginCount('demo', 168);
+// Table header
+<th className="text-center py-0.5 font-medium text-muted-foreground">Logins</th>
+<th className="text-center py-0.5 font-medium text-muted-foreground">L2day</th>
 
-// In JSX
-<div className="space-y-0">
-  <p>Demo logins: {demoLoginsTotal ?? 0}</p>
-  <p>Demo 24h: {demoLogins24h ?? 0}</p>
-  <p>Demo 7d: {demoLogins7d ?? 0}</p>
-</div>
+// Table row
+<td className={`text-center py-0.5 pr-2 ${(user.login_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}>
+  {user.login_count ?? 0}
+</td>
+<td className={`text-center py-0.5 ${(user.logins_today ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}>
+  {user.logins_today ?? 0}
+</td>
 ```
 
 ---
 
-### Benefits
+### Optional Cleanup
 
-1. **Flexibility**: Query any user type with any timeframe
-2. **Future-proof**: Easy to add "All users 24h" or "Specific user 7d" without DB changes
-3. **Clean separation**: Login count logic isolated in its own function
-4. **Cacheable**: React Query caches each parameter combination separately
+Consider removing `login_count` column from `profiles` table in a future migration since it's now redundant. For now, we can leave it as a backup/historical reference.
 
 ---
 
-### Database Migration Summary
+### Data Reset Note
 
-1. Create `login_events` table with indexes and RLS
-2. Update `increment_login_count` to insert login events
-3. Create new `get_login_count` parameterized function
-4. Optionally remove demo login fields from `get_usage_stats`
+Since `login_events` is a new table, all users will show 0 logins initially. Going forward, every login will be tracked with full timestamp data.
 
 ---
 
@@ -147,8 +88,7 @@ const { data: demoLogins7d } = useLoginCount('demo', 168);
 
 | File | Change |
 |------|--------|
-| Database migration | Create `login_events` table, update `increment_login_count`, create `get_login_count` |
-| `src/hooks/useLoginCount.ts` | New hook for parameterized login count queries |
-| `src/hooks/useAdminStats.ts` | Remove demo login fields from interface (optional) |
-| `src/pages/Admin.tsx` | Remove `font-medium`, use new `useLoginCount` hook |
+| Database migration | Update `get_user_stats` to query `login_events` |
+| `src/hooks/useAdminStats.ts` | Add `logins_today` to `UserStats` interface |
+| `src/pages/Admin.tsx` | Add "L2day" column to user stats table |
 
