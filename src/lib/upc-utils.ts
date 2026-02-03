@@ -1,6 +1,9 @@
+/** Prefix used when logging scanned barcode entries */
+export const SCANNED_BARCODE_PREFIX = "Scanned barcode:";
+
 // Detect UPC patterns in text input to route to database lookup
 export function extractUpcFromText(input: string): string | null {
-  // "UPC code: 717524611109", "UPC: 717524611109", "barcode: 717524611109", "Scanned: 717524611109"
+  // "UPC code: 717524611109", "UPC: 717524611109", "barcode: 717524611109", "Scanned barcode: 717524611109"
   const prefixMatch = input.match(
     /(?:upc|barcode|scanned)(?:\s+(?:code|number))?[\s:]+(\d[\d\s]{6,})/i
   );
