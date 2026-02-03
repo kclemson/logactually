@@ -629,7 +629,7 @@ export function FoodItemsTable({
                     {/* Only show raw input if NOT from a saved meal */}
                     {!isFromSavedMeal && currentRawInput && (
                       <p className="text-sm text-muted-foreground italic">
-                        Logged as:{' '}<span className="not-italic">"{currentRawInput}"</span>
+                        Logged as: {currentRawInput}
                       </p>
                     )}
                     {/* Show meal info if from saved meal, otherwise show "Save as meal" link */}
