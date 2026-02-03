@@ -1,88 +1,62 @@
 
 
-## Enhance SimilarMealPrompt with Match Label and Food Items Preview
+## Simplify SimilarMealPrompt Food Items Preview
 
-### Changes Overview
+### Problem
 
-1. **Add "match" back** to the percentage display - e.g., "(80% match)"
-2. **Show food items** from the saved meal in a non-editable preview using `FoodItemsTable`
+The food items preview has too many visual dividers:
+1. A border/box around the entire list
+2. A line above the "Total" row
+
+This creates unnecessary visual noise for a simple preview.
 
 ---
 
-### Updated Component UI
+### Changes Overview
 
-**Current:**
+1. **Remove the border wrapper** around `FoodItemsTable` in `SimilarMealPrompt`
+2. **Add a prop to hide the totals divider line** in `FoodItemsTable`
+
+---
+
+### Visual Change
+
+**Before:**
 ```
-                                                    [X]
-Looks like your saved meal: "Yogurt + strawberries" (80%)
-[ Use Saved Meal ] [ Dismiss ]
+┌──────────────────────────────────────────────────────┐
+│  Vanilla Yogurt (1 container (4 oz))     90   4/16/2│
+│  Sliced Strawberries (1 cup)             53   1/13/0│
+├──────────────────────────────────────────────────────┤
+│  Total                                  143   5/29/2│
+└──────────────────────────────────────────────────────┘
 ```
 
 **After:**
 ```
-                                                    [X]
-Looks like your saved meal: "Yogurt + strawberries" (80% match)
-
-┌──────────────────────────────────────────────────────┐
-│  Vanilla Yogurt (1 container (4 oz))     90   4/16/2│
-│  Sliced Strawberries (1 cup)             53   1/13/0│
-└──────────────────────────────────────────────────────┘
-
-[ Use Saved Meal ] [ Dismiss ]
+  Vanilla Yogurt (1 container (4 oz))     90   4/16/2
+  Sliced Strawberries (1 cup)             53   1/13/0
+  Total                                  143   5/29/2
 ```
+
+No box, no divider line—just clean rows flowing into totals.
 
 ---
 
 ### Technical Changes
 
+**File: `src/components/FoodItemsTable.tsx`**
+
+| Change | Description |
+|--------|-------------|
+| Add `showTotalsDivider` prop | New optional prop, default `true` |
+| Update TotalsRow styling | Only apply `border-t-2` when `showTotalsDivider` is true |
+
 **File: `src/components/SimilarMealPrompt.tsx`**
 
 | Change | Description |
 |--------|-------------|
-| Add "match" to percentage | Change `({matchPercent}%)` to `({matchPercent}% match)` |
-| Import `FoodItemsTable` | Add import for the table component |
-| Import `useMemo` | For generating UIDs for items |
-| Add food items preview | Render `FoodItemsTable` with `editable={false}` |
-| Configure table props | `showHeader={false}`, `showTotals={true}`, `totalsPosition="bottom"`, `showInlineLabels={true}` |
-
----
-
-### FoodItemsTable Configuration for Preview
-
-The table will be configured for a compact, read-only preview:
-
-```tsx
-<FoodItemsTable
-  items={itemsWithUids}
-  editable={false}
-  showHeader={false}
-  showTotals={true}
-  totalsPosition="bottom"
-  showInlineLabels={true}
-  showMacroPercentages={false}
-/>
-```
-
-This matches the Settings pattern but with:
-- `editable={false}` - No editing allowed
-- `showTotals={true}` - Show totals row so user can see the full meal value
-- `showMacroPercentages={false}` - Keep it compact
-
----
-
-### Item UID Generation
-
-Similar to `SavedMealRow`, we need to add temporary UIDs for React keys:
-
-```tsx
-const itemsWithUids = useMemo(() => 
-  match.meal.food_items.map((item, idx) => ({
-    ...item,
-    uid: `similar-preview-${idx}`,
-  })),
-  [match.meal.food_items]
-);
-```
+| Remove wrapper div border | Remove `border rounded-md` and `bg-background/50` classes |
+| Pass `showTotalsDivider={false}` | Disable the line above totals |
 
 ---
 
@@ -90,5 +64,6 @@ const itemsWithUids = useMemo(() =>
 
 | File | Change |
 |------|--------|
-| `src/components/SimilarMealPrompt.tsx` | Add "match" text, import and render FoodItemsTable preview |
+| `src/components/FoodItemsTable.tsx` | Add `showTotalsDivider` prop |
+| `src/components/SimilarMealPrompt.tsx` | Remove border, pass `showTotalsDivider={false}` |
 
