@@ -634,7 +634,7 @@ export function WeightItemsTable({
                       if (hasBothMetrics) {
                         const paceFormatted = formatDurationMmSs(paceDecimal!);
                         const durationFormatted = formatDurationMmSs(duration);
-                        displayParts = `${paceFormatted}/mi, ${mph} mph, ${distance} mi in ${durationFormatted}`;
+                        displayParts = `${distance} mi in ${durationFormatted} (${paceFormatted}/mi, ${mph} mph)`;
                       } else if (duration > 0) {
                         displayParts = formatDurationMmSs(duration);
                       } else if (distance > 0) {
@@ -645,7 +645,9 @@ export function WeightItemsTable({
                       
                       return (
                         <p key={ex.uid || idx} className="text-sm text-muted-foreground">
-                          <span className="font-medium">{ex.description}:</span>{' '}
+                          {cardioItems.length > 1 && (
+                            <><span className="font-medium">{ex.description}:</span>{' '}</>
+                          )}
                           {displayParts}
                         </p>
                       );
