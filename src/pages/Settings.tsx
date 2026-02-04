@@ -181,6 +181,28 @@ export default function Settings() {
             ))}
           </ul>
         )}
+        {/* Suggest saves toggle */}
+        {!isReadOnly && (
+          <div className="flex items-center justify-between pt-3 mt-3 border-t border-border">
+            <p className="text-xs text-muted-foreground">Suggest saves</p>
+            <button
+              onClick={() => updateSettings({ suggestMealSaves: !settings.suggestMealSaves })}
+              className={cn(
+                "w-12 h-6 rounded-full transition-colors relative border",
+                settings.suggestMealSaves ? "bg-primary border-primary" : "bg-muted border-border"
+              )}
+            >
+              <span
+                className={cn(
+                  "absolute left-0 top-0.5 w-5 h-5 rounded-full shadow transition-transform",
+                  settings.suggestMealSaves 
+                    ? "translate-x-6 bg-primary-foreground" 
+                    : "translate-x-0.5 bg-white"
+                )}
+              />
+            </button>
+          </div>
+        )}
       </CollapsibleSection>
 
       {/* Saved Routines - weight tracking (gated by feature flag or admin) */}
@@ -215,6 +237,28 @@ export default function Settings() {
                 />
               ))}
             </ul>
+          )}
+          {/* Suggest saves toggle */}
+          {!isReadOnly && (
+            <div className="flex items-center justify-between pt-3 mt-3 border-t border-border">
+              <p className="text-xs text-muted-foreground">Suggest saves</p>
+              <button
+                onClick={() => updateSettings({ suggestRoutineSaves: !settings.suggestRoutineSaves })}
+                className={cn(
+                  "w-12 h-6 rounded-full transition-colors relative border",
+                  settings.suggestRoutineSaves ? "bg-primary border-primary" : "bg-muted border-border"
+                )}
+              >
+                <span
+                  className={cn(
+                    "absolute left-0 top-0.5 w-5 h-5 rounded-full shadow transition-transform",
+                    settings.suggestRoutineSaves 
+                      ? "translate-x-6 bg-primary-foreground" 
+                      : "translate-x-0.5 bg-white"
+                  )}
+                />
+              </button>
+            </div>
           )}
         </CollapsibleSection>
       )}

@@ -7,12 +7,16 @@ export interface UserSettings {
   theme: 'light' | 'dark' | 'system';
   weightUnit: WeightUnit;
   showWeights: boolean;
+  suggestMealSaves: boolean;
+  suggestRoutineSaves: boolean;
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
   theme: 'system',
   weightUnit: 'lbs',
   showWeights: true,
+  suggestMealSaves: true,
+  suggestRoutineSaves: true,
 };
 
 export function useUserSettings() {

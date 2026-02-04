@@ -11,6 +11,7 @@ import { SaveMealDialog } from '@/components/SaveMealDialog';
 import { CreateMealDialog } from '@/components/CreateMealDialog';
 import { SimilarMealPrompt } from '@/components/SimilarMealPrompt';
 import { SimilarEntryPrompt } from '@/components/SimilarEntryPrompt';
+import { SaveSuggestionPrompt } from '@/components/SaveSuggestionPrompt';
 import { DemoPreviewDialog } from '@/components/DemoPreviewDialog';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -20,9 +21,11 @@ import { useFoodEntries } from '@/hooks/useFoodEntries';
 import { useRecentFoodEntries } from '@/hooks/useRecentFoodEntries';
 import { useEditableFoodItems } from '@/hooks/useEditableItems';
 import { useSavedMeals, useSaveMeal, useLogSavedMeal } from '@/hooks/useSavedMeals';
+import { useUserSettings } from '@/hooks/useUserSettings';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { findSimilarMeals, createItemsSignature, SimilarMealMatch, findSimilarEntry, SimilarEntryMatch } from '@/lib/text-similarity';
 import { detectHistoryReference, MIN_SIMILARITY_REQUIRED } from '@/lib/history-patterns';
+import { detectRepeatedFoodEntry, isDismissed, dismissSuggestion, shouldShowOptOutLink, FoodSaveSuggestion } from '@/lib/repeated-entry-detection';
 import { FoodItem, SavedMeal, calculateTotals } from '@/types/food';
 
 // Wrapper component: extracts date from URL, forces remount via key
@@ -75,6 +78,11 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   const [demoPreviewItems, setDemoPreviewItems] = useState<FoodItem[]>([]);
   const [demoPreviewRawInput, setDemoPreviewRawInput] = useState<string | null>(null);
   
+  // Save suggestion state (for repeated entries detection)
+  const [saveSuggestion, setSaveSuggestion] = useState<FoodSaveSuggestion | null>(null);
+  const [saveSuggestionItems, setSaveSuggestionItems] = useState<FoodItem[]>([]);
+  const [createMealFromSuggestion, setCreateMealFromSuggestion] = useState(false);
+  
   // Date is stable for this component instance - derived from props, no state needed
   const dateStr = initialDate;
   const selectedDate = parseISO(initialDate);
@@ -88,6 +96,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   const { data: recentEntries } = useRecentFoodEntries(90); // 90 days for history matching
   const saveMeal = useSaveMeal();
   const logSavedMeal = useLogSavedMeal();
+  const { settings, updateSettings } = useUserSettings();
   const { isReadOnly } = useReadOnlyContext();
   
   
@@ -241,10 +250,19 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       
       markEntryAsNew(entryId);
       foodInputRef.current?.clear();
+      
+      // Check for repeated patterns (skip demo mode and saved meal entries)
+      if (!isReadOnly && settings.suggestMealSaves && recentEntries && !sourceMealId) {
+        const suggestion = detectRepeatedFoodEntry(items, recentEntries);
+        if (suggestion && !isDismissed(suggestion.signatureHash)) {
+          setSaveSuggestion(suggestion);
+          setSaveSuggestionItems([...suggestion.items]);
+        }
+      }
     } catch {
       // Error already logged by mutation's onError
     }
-  }, [createEntry, dateStr, queryClient, markEntryAsNew]);
+  }, [createEntry, dateStr, queryClient, markEntryAsNew, isReadOnly, settings.suggestMealSaves, recentEntries]);
 
   const handleSubmit = async (text: string) => {
     // 1. Check for history reference patterns BEFORE AI call (skip for demo mode)
@@ -312,6 +330,35 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   const dismissSimilarMatch = useCallback(() => {
     setSimilarMatch(null);
     setPendingAiResult(null);
+  }, []);
+
+  // Save suggestion handlers
+  const handleSaveSuggestion = useCallback(() => {
+    setCreateMealFromSuggestion(true);
+    setSaveSuggestion(null);
+  }, []);
+
+  const handleDismissSuggestion = useCallback(() => {
+    if (saveSuggestion) {
+      dismissSuggestion(saveSuggestion.signatureHash);
+    }
+    setSaveSuggestion(null);
+    setSaveSuggestionItems([]);
+  }, [saveSuggestion]);
+
+  const handleOptOutMealSuggestions = useCallback(() => {
+    updateSettings({ suggestMealSaves: false });
+    setSaveSuggestion(null);
+    setSaveSuggestionItems([]);
+  }, [updateSettings]);
+
+  const handleSuggestionItemsChange = useCallback((items: FoodItem[]) => {
+    setSaveSuggestionItems(items);
+  }, []);
+
+  const handleMealFromSuggestionCreated = useCallback((meal: SavedMeal, foodItems: FoodItem[]) => {
+    setCreateMealFromSuggestion(false);
+    setSaveSuggestionItems([]);
   }, []);
 
   // Similar entry prompt handlers (for history reference detection)
@@ -602,6 +649,38 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
             />
           </div>
         )}
+        
+        {/* Save Suggestion Prompt (for repeated entries) */}
+        {saveSuggestion && (
+          <div className="mt-3">
+            <SaveSuggestionPrompt<FoodItem>
+              mode="food"
+              matchCount={saveSuggestion.matchCount}
+              items={saveSuggestionItems}
+              onItemsChange={handleSuggestionItemsChange}
+              onSave={handleSaveSuggestion}
+              onDismiss={handleDismissSuggestion}
+              onOptOut={handleOptOutMealSuggestions}
+              showOptOutLink={shouldShowOptOutLink()}
+              renderItemsTable={(props) => (
+                <FoodItemsTable
+                  items={props.items}
+                  editable={props.editable}
+                  onUpdateItem={props.onUpdateItem}
+                  onUpdateItemBatch={props.onUpdateItemBatch}
+                  onRemoveItem={props.onRemoveItem}
+                  showHeader={false}
+                  showTotals={true}
+                  totalsPosition="bottom"
+                  showInlineLabels={true}
+                  showMacroPercentages={false}
+                  compact={true}
+                  showTotalsDivider={false}
+                />
+              )}
+            />
+          </div>
+        )}
       </section>
 
       {/* Date Navigation */}
@@ -717,6 +796,17 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
           onOpenChange={setCreateMealDialogOpen}
           onMealCreated={handleMealCreated}
           showLogPrompt={true}
+        />
+      )}
+
+      {/* Create Meal from Suggestion Dialog */}
+      {createMealFromSuggestion && (
+        <CreateMealDialog
+          open={createMealFromSuggestion}
+          onOpenChange={setCreateMealFromSuggestion}
+          onMealCreated={handleMealFromSuggestionCreated}
+          showLogPrompt={false}
+          initialItems={saveSuggestionItems}
         />
       )}
 
