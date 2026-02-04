@@ -324,10 +324,10 @@ function buildPatterns(strings: typeof HISTORY_PATTERN_STRINGS) {
     
     /**
      * Another references
-     * Examples: "another one of those", "another of the", "another one"
+     * Examples: "another tilapia", "another one of those", "another of the"
      */
     another: new RegExp(
-      `\\b${strings.repetition.another}\\s+(one|of)\\b`, 
+      `\\b${strings.repetition.another}\\s+\\w+`, 
       'i'
     ),
     

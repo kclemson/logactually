@@ -2,7 +2,7 @@ import { FoodItem, FoodEntry, SavedMeal } from '@/types/food';
 
 const STOP_WORDS = new Set([
   'a', 'an', 'the', 'with', 'of', 'from', 'and', 'at', 'in', 'on', 'for',
-  'to', 'my', 'some', 'like', 'about', 'around'
+  'to', 'my', 'some', 'like', 'about', 'around', 'i'
 ]);
 
 // Words that trigger history patterns but aren't food-related
