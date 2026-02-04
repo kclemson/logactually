@@ -222,7 +222,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   };
 
   // Helper to create and save entry from food items
-  const createEntryFromItems = useCallback(async (items: FoodItem[], rawInput: string | null, sourceMealId?: string) => {
+  const createEntryFromItems = useCallback(async (items: FoodItem[], rawInput: string | null, sourceMealId?: string, skipSaveSuggestion?: boolean) => {
     const entryId = crypto.randomUUID();
     const itemsWithUids = items.map(item => ({
       ...item,
@@ -251,8 +251,8 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       markEntryAsNew(entryId);
       foodInputRef.current?.clear();
       
-      // Check for repeated patterns (skip demo mode and saved meal entries)
-      if (!isReadOnly && settings.suggestMealSaves && recentEntries && !sourceMealId) {
+      // Check for repeated patterns (skip demo mode, saved meal entries, and dismissed similar meal)
+      if (!isReadOnly && settings.suggestMealSaves && recentEntries && !sourceMealId && !skipSaveSuggestion) {
         const suggestion = detectRepeatedFoodEntry(items, recentEntries);
         if (suggestion && !isDismissed(suggestion.signatureHash)) {
           setSaveSuggestion(suggestion);
@@ -329,8 +329,8 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
 
   const dismissSimilarMatch = useCallback(() => {
     if (pendingAiResult) {
-      // User dismissed the saved meal suggestion - log the AI-analyzed items instead
-      createEntryFromItems(pendingAiResult.items, pendingAiResult.text);
+      // User already has a saved meal but chose not to use it - don't suggest saving again
+      createEntryFromItems(pendingAiResult.items, pendingAiResult.text, undefined, true);
     }
     setSimilarMatch(null);
     setPendingAiResult(null);
