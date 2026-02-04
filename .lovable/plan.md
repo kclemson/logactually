@@ -1,28 +1,26 @@
 
-## Fix History Reference Detection for "another [food]" Pattern
 
-### Problem
-- "another tilapia fillet" doesn't trigger the similar entry feature at all
-- The pronoun "i" pollutes candidate food words in first-person inputs
+## Add Changelog Entry for Similar Entry Detection Feature
 
 ### Changes
 
-**File: `src/lib/text-similarity.ts`**
+**1. Copy the screenshot to public/changelog/**
 
-1. Add "i" to STOP_WORDS (line ~7):
+Copy the uploaded image to: `public/changelog/similar-entry.png`
+
+**2. Update `src/pages/Changelog.tsx`**
+
+Add new entry at the top of `CHANGELOG_ENTRIES` array (line 20):
 ```typescript
-const STOP_WORDS = new Set([
-  'a', 'an', 'the', 'with', 'of', 'from', 'and', 'at', 'in', 'on', 'for',
-  'to', 'my', 'some', 'like', 'about', 'around', 'i'  // ← add 'i'
-]);
+{ date: "Feb-04", text: "Added smart detection for similar past food entries - when logging something you've had before, it'll suggest using your previous entry.", image: "similar-entry.png" },
 ```
 
-**File: `src/lib/history-patterns.ts`**
-
-2. Update the "another" pattern to match "another [food]" directly (not just "another one/of"):
-   - Current: requires explicit "another one" or "another of the X"
-   - Fix: match "another" followed by any word that isn't a stop word
+Update `LAST_UPDATED` (line 31):
+```typescript
+const LAST_UPDATED = "Feb-04-26";
+```
 
 ### Result
-- "another tilapia fillet" will now trigger history reference detection
-- First-person inputs won't have "i" polluting the similarity calculation
+- New changelog entry with screenshot showing the "Use Past Entry" prompt
+- Entry dated Feb-04 with descriptive text about the feature
+
