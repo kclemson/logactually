@@ -69,7 +69,7 @@ export default function Changelog() {
                       <img 
                         src={`/changelog/${entry.image}`} 
                         alt={`Screenshot for ${entry.date} update`}
-                        className="mt-2 rounded-lg border border-border max-h-64 w-auto"
+                        className="mt-2 rounded-lg border border-border max-h-[150px] w-auto object-contain"
                       />
                     )}
                   </div>
