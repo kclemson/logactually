@@ -328,9 +328,13 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   };
 
   const dismissSimilarMatch = useCallback(() => {
+    if (pendingAiResult) {
+      // User dismissed the saved meal suggestion - log the AI-analyzed items instead
+      createEntryFromItems(pendingAiResult.items, pendingAiResult.text);
+    }
     setSimilarMatch(null);
     setPendingAiResult(null);
-  }, []);
+  }, [pendingAiResult, createEntryFromItems]);
 
   // Save suggestion handlers
   const handleSaveSuggestion = useCallback(() => {
