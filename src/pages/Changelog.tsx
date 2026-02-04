@@ -17,6 +17,7 @@ type ChangelogEntry = {
 
 // prettier-ignore
 const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+{ date: "Feb-04", text: "Added smart detection for similar past food entries - when logging something you've had before, it'll suggest using your previous entry.", image: "similar-entry.png" },
 { date: "Feb-01", text: "Updated demo mode so you can see a preview of what would be logged based on the input you entered." },
   { date: "Jan-31", text: "Added support for Google authentication, and this changelog page." },
   { date: "Jan-30", text: "Added (minimal) support for cardio exercises - instead of erroring out, it will now log the items and show a 'cardio' label, with simple charts for cardio exercises on the Trends page. Running/walking/cycling charts also support switching between time-based view and mph-based view." },
@@ -28,7 +29,7 @@ const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   { date: "Jan-23", text: "It's alive! v1 of app published with support for food logging & AI integration, editing logged items (and editing calories auto-scales protein/carbs/fat), charts for trends over time, mobile & desktop layouts, PWA support for pinning to home screen." },
 ];
 
-const LAST_UPDATED = "Feb-01-26";
+const LAST_UPDATED = "Feb-04-26";
 // ============================================
 
 export default function Changelog() {
