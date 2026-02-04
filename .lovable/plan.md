@@ -1,53 +1,31 @@
 
 
-## Improve Changelog Image Styling
+## Fix Changelog Image Aspect Ratio and Height
 
 ### Problem
-Currently, changelog images appear full-width and are not indented to align with the entry text. They also have no height constraint, potentially dominating the UI.
+The changelog image is being squished (aspect ratio not preserved) and should have a smaller max height of 150px instead of 256px.
 
 ### Changes
 
 **File: `src/pages/Changelog.tsx`**
 
-Update the list item structure to wrap both text and image in a flex column, so the image aligns with the text (not the date):
+Update the image className (line 69):
 
-Current structure (lines 63-73):
+Current:
 ```tsx
-<li key={index} className="text-sm">
-  <div className="flex gap-2">
-    <span className="...">{entry.date}:</span>
-    <span className="...">{entry.text}</span>
-  </div>
-  {entry.image && (
-    <img src={...} className="mt-2 ..." />
-  )}
-</li>
+className="mt-2 rounded-lg border border-border max-h-64 w-auto"
 ```
 
-New structure:
+New:
 ```tsx
-<li key={index} className="text-sm">
-  <div className="flex gap-2">
-    <span className="...">{entry.date}:</span>
-    <div className="flex flex-col">
-      <span className="...">{entry.text}</span>
-      {entry.image && (
-        <img 
-          src={...} 
-          className="mt-2 rounded-lg border border-border max-h-64 w-auto" 
-        />
-      )}
-    </div>
-  </div>
-</li>
+className="mt-2 rounded-lg border border-border max-h-[150px] w-auto object-contain"
 ```
 
-Key styling changes:
-- Move image inside a `flex flex-col` wrapper alongside the text
-- Add `max-h-64` (256px) to constrain image height
-- Change from `max-w-full` to `w-auto` so width scales with height constraint
+Changes:
+- `max-h-64` → `max-h-[150px]`: Reduces max height from 256px to 150px
+- Add `object-contain`: Preserves aspect ratio within the constrained dimensions
 
 ### Result
-- Images will be left-aligned with entry text, indented past the date column
-- Images capped at 256px height to avoid dominating the changelog
+- Image will maintain its original aspect ratio (no squishing)
+- Max height capped at 150px for a more compact changelog
 
