@@ -1,48 +1,72 @@
 
 
-## Add Recency Tiebreaker to Similar Entry Matching
+## Add Image Support to Changelog Entries
 
-### Problem
-When scores are very close (e.g., 0.80 vs 0.775), the algorithm picks the slightly higher score even if it's from an older entry. For generic inputs like "chicken", this means older entries can win over more recent ones.
+### Overview
 
-### Solution
-When two entries have similarity scores within a small tolerance (0.05), prefer the more recent entry.
+Extend the changelog entry structure to support optional images/screenshots that display below the text description. Images will be stored in a dedicated `/public/changelog/` subfolder to keep assets organized.
 
-### Change
+### Changes
 
-**File: `src/lib/text-similarity.ts`**
+**File: `src/pages/Changelog.tsx`**
 
-Update the comparison logic in `findSimilarEntry` (lines 284 and 291) to use a helper function that considers recency when scores are close.
+1. **Add a TypeScript type** for changelog entries with optional image:
 
 ```typescript
-// Helper: returns true if candidate should replace current best
-function isBetterMatch(
-  candidateScore: number,
-  candidateDate: string,
-  bestScore: number,
-  bestDate: string,
-  tolerance = 0.05
-): boolean {
-  const scoreDiff = candidateScore - bestScore;
-  
-  // Clear winner by score
-  if (scoreDiff > tolerance) return true;
-  if (scoreDiff < -tolerance) return false;
-  
-  // Scores within tolerance → prefer more recent
-  return new Date(candidateDate) > new Date(bestDate);
+type ChangelogEntry = {
+  date: string;
+  text: string;
+  image?: string; // Path relative to /public/changelog/, e.g., "dashboard.png"
+};
+```
+
+2. **Update the comment header** to document usage:
+
+```typescript
+// Each entry: { date: "Mon-DD", text: "description", image?: "feature.png" }
+// Images go in /public/changelog/ folder
+```
+
+3. **Update the list item rendering** to show images when present:
+
+```tsx
+<li key={index} className="text-sm">
+  <div className="flex gap-2">
+    <span className="text-muted-foreground shrink-0">{entry.date}:</span>
+    <span className="text-foreground">{entry.text}</span>
+  </div>
+  {entry.image && (
+    <img 
+      src={`/changelog/${entry.image}`} 
+      alt={`Screenshot for ${entry.date} update`}
+      className="mt-2 rounded-lg border border-border max-w-full"
+    />
+  )}
+</li>
+```
+
+### Folder Structure
+
+```
+public/
+├── changelog/           ← New folder for changelog screenshots
+│   └── (your images go here)
+├── favicon.ico
+├── logactually-logo-horiz.png
+└── ...
+```
+
+### Usage Example
+
+After adding an image to `/public/changelog/`:
+
+```typescript
+{ 
+  date: "Feb-04", 
+  text: "Added new dashboard with improved charts.", 
+  image: "dashboard-v2.png"  // References /public/changelog/dashboard-v2.png
 }
 ```
 
-Then update the two comparison points:
-- Line 284: Replace `itemsScore > bestMatch.score` with the new helper
-- Line 291: Replace `rawScore > bestMatch.score` with the new helper
-
-### Expected Result
-
-| Input | Before | After |
-|-------|--------|-------|
-| "another chicken like the other day" | Matches "Chicken Corn Chowder" (Jan 29, score 0.80) | Matches "Grilled chicken marinara" (Feb 1, score 0.775) ✅ |
-
-The 0.025 score difference is within tolerance, so recency wins.
+The image path in the entry is just the filename - the `/changelog/` prefix is added automatically in the rendering.
 
