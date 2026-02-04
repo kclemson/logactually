@@ -1,10 +1,10 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { CreateSavedDialog, CreateSavedDialogConfig } from './CreateSavedDialog';
 import { WeightItemsTable } from './WeightItemsTable';
 import { useAnalyzeWeights } from '@/hooks/useAnalyzeWeights';
 import { useSaveRoutine } from '@/hooks/useSavedRoutines';
 import { useEditableItems } from '@/hooks/useEditableItems';
-import { WeightSet, SavedRoutine, SavedExerciseSet, WeightEditableField } from '@/types/weight';
+import { WeightSet, SavedRoutine, SavedExerciseSet, WeightEditableField, AnalyzedExercise } from '@/types/weight';
 import { formatDurationMmSs } from '@/lib/weight-units';
 
 interface CreateRoutineDialogProps {
@@ -12,6 +12,8 @@ interface CreateRoutineDialogProps {
   onOpenChange: (open: boolean) => void;
   onRoutineCreated: (routine: SavedRoutine, exercises: WeightSet[]) => void;
   showLogPrompt?: boolean;
+  initialExercises?: AnalyzedExercise[];  // Skip analyze, go straight to editing
+  initialName?: string;                    // Optional default name
 }
 
 const WEIGHTS_CONFIG: CreateSavedDialogConfig<WeightSet, SavedRoutine> = {
@@ -51,9 +53,44 @@ export function CreateRoutineDialog({
   onOpenChange,
   onRoutineCreated,
   showLogPrompt = true,
+  initialExercises,
+  initialName,
 }: CreateRoutineDialogProps) {
+  // Convert initial exercises to WeightSet format if provided
+  const getInitialSets = (): WeightSet[] => (initialExercises || []).map(exercise => ({
+    id: crypto.randomUUID(),
+    uid: crypto.randomUUID(),
+    entryId: crypto.randomUUID(),
+    exercise_key: exercise.exercise_key,
+    description: exercise.description,
+    sets: exercise.sets,
+    reps: exercise.reps,
+    weight_lbs: exercise.weight_lbs,
+    duration_minutes: exercise.duration_minutes,
+    distance_miles: exercise.distance_miles,
+  }));
+  
   // Local items state for this dialog (not tied to DB)
-  const [localItems, setLocalItems] = useState<WeightSet[]>([]);
+  const [localItems, setLocalItems] = useState<WeightSet[]>(getInitialSets);
+  
+  // Initialize with initial exercises when provided
+  useEffect(() => {
+    if (initialExercises && initialExercises.length > 0) {
+      const sets: WeightSet[] = initialExercises.map(exercise => ({
+        id: crypto.randomUUID(),
+        uid: crypto.randomUUID(),
+        entryId: crypto.randomUUID(),
+        exercise_key: exercise.exercise_key,
+        description: exercise.description,
+        sets: exercise.sets,
+        reps: exercise.reps,
+        weight_lbs: exercise.weight_lbs,
+        duration_minutes: exercise.duration_minutes,
+        distance_miles: exercise.distance_miles,
+      }));
+      setLocalItems(sets);
+    }
+  }, [initialExercises]);
   
   const { analyzeWeights, isAnalyzing, error } = useAnalyzeWeights();
   const saveRoutine = useSaveRoutine();

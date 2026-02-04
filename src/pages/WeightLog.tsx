@@ -11,18 +11,21 @@ import { LogInput, LogInputRef } from '@/components/LogInput';
 import { WeightItemsTable } from '@/components/WeightItemsTable';
 import { CreateRoutineDialog } from '@/components/CreateRoutineDialog';
 import { SaveRoutineDialog } from '@/components/SaveRoutineDialog';
+import { SaveSuggestionPrompt } from '@/components/SaveSuggestionPrompt';
 import { DemoPreviewDialog } from '@/components/DemoPreviewDialog';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAnalyzeWeights } from '@/hooks/useAnalyzeWeights';
 import { useWeightEntries } from '@/hooks/useWeightEntries';
+import { useRecentWeightEntries } from '@/hooks/useRecentWeightEntries';
 import { useEditableItems } from '@/hooks/useEditableItems';
 import { useSavedRoutines } from '@/hooks/useSavedRoutines';
 import { useSaveRoutine } from '@/hooks/useSavedRoutines';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
-import { WeightSet, WeightEditableField, SavedExerciseSet } from '@/types/weight';
+import { detectRepeatedWeightEntry, isDismissed, dismissSuggestion, shouldShowOptOutLink, WeightSaveSuggestion } from '@/lib/repeated-entry-detection';
+import { WeightSet, WeightEditableField, SavedExerciseSet, AnalyzedExercise } from '@/types/weight';
 
 const WEIGHT_EDITABLE_FIELDS: WeightEditableField[] = ['description', 'sets', 'reps', 'weight_lbs'];
 
@@ -72,6 +75,11 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   const [demoPreviewSets, setDemoPreviewSets] = useState<WeightSet[]>([]);
   const [demoPreviewRawInput, setDemoPreviewRawInput] = useState<string | null>(null);
   
+  // Save suggestion state (for repeated entries detection)
+  const [saveSuggestion, setSaveSuggestion] = useState<WeightSaveSuggestion | null>(null);
+  const [saveSuggestionExercises, setSaveSuggestionExercises] = useState<AnalyzedExercise[]>([]);
+  const [createRoutineFromSuggestion, setCreateRoutineFromSuggestion] = useState(false);
+  
   const dateStr = initialDate;
   const selectedDate = parseISO(initialDate);
   const isTodaySelected = isToday(selectedDate);
@@ -81,8 +89,9 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   const { data: datesWithWeights = [] } = useWeightDatesWithData(calendarMonth);
   const { analyzeWeights, isAnalyzing, error: analyzeError, warning: analyzeWarning } = useAnalyzeWeights();
   const saveRoutineMutation = useSaveRoutine();
-  const { settings } = useUserSettings();
+  const { settings, updateSettings } = useUserSettings();
   const { data: savedRoutines } = useSavedRoutines();
+  const { data: recentWeightEntries } = useRecentWeightEntries(90);
   const { isReadOnly } = useReadOnlyContext();
   
   const weightInputRef = useRef<LogInputRef>(null);
@@ -235,10 +244,30 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
       
       markEntryAsNew(entryId);
       weightInputRef.current?.clear();
+      
+      // Check for repeated patterns (skip demo mode and saved routine entries)
+      if (!isReadOnly && settings.suggestRoutineSaves && recentWeightEntries && !sourceRoutineId) {
+        // Convert exercises to AnalyzedExercise format for detection
+        const analyzedExercises: AnalyzedExercise[] = exercises.map(e => ({
+          exercise_key: e.exercise_key,
+          description: e.description,
+          sets: e.sets,
+          reps: e.reps,
+          weight_lbs: e.weight_lbs,
+          duration_minutes: e.duration_minutes,
+          distance_miles: e.distance_miles,
+        }));
+        
+        const suggestion = detectRepeatedWeightEntry(analyzedExercises, recentWeightEntries);
+        if (suggestion && !isDismissed(suggestion.signatureHash)) {
+          setSaveSuggestion(suggestion);
+          setSaveSuggestionExercises([...suggestion.exercises]);
+        }
+      }
     } catch {
       // Error already logged by mutation's onError
     }
-  }, [createEntry, dateStr, queryClient, markEntryAsNew]);
+  }, [createEntry, dateStr, queryClient, markEntryAsNew, isReadOnly, settings.suggestRoutineSaves, recentWeightEntries]);
 
   const handleSubmit = async (text: string) => {
     const result = await analyzeWeights(text);
@@ -342,6 +371,35 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
     );
   }, [saveRoutineDialogData, saveRoutineMutation]);
 
+  // Save suggestion handlers
+  const handleSaveSuggestion = useCallback(() => {
+    setCreateRoutineFromSuggestion(true);
+    setSaveSuggestion(null);
+  }, []);
+
+  const handleDismissSuggestion = useCallback(() => {
+    if (saveSuggestion) {
+      dismissSuggestion(saveSuggestion.signatureHash);
+    }
+    setSaveSuggestion(null);
+    setSaveSuggestionExercises([]);
+  }, [saveSuggestion]);
+
+  const handleOptOutRoutineSuggestions = useCallback(() => {
+    updateSettings({ suggestRoutineSaves: false });
+    setSaveSuggestion(null);
+    setSaveSuggestionExercises([]);
+  }, [updateSettings]);
+
+  const handleSuggestionExercisesChange = useCallback((items: AnalyzedExercise[]) => {
+    setSaveSuggestionExercises(items);
+  }, []);
+
+  const handleRoutineFromSuggestionCreated = useCallback(() => {
+    setCreateRoutineFromSuggestion(false);
+    setSaveSuggestionExercises([]);
+  }, []);
+
   return (
     <div className="space-y-4">
       {/* Weight Input Section */}
@@ -363,6 +421,39 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
         {analyzeWarning && (
           <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive mt-3">
             {analyzeWarning}
+          </div>
+        )}
+        
+        {/* Save Suggestion Prompt (for repeated entries) */}
+        {saveSuggestion && (
+          <div className="mt-3">
+            <SaveSuggestionPrompt<AnalyzedExercise>
+              mode="weights"
+              matchCount={saveSuggestion.matchCount}
+              items={saveSuggestionExercises}
+              onItemsChange={handleSuggestionExercisesChange}
+              onSave={handleSaveSuggestion}
+              onDismiss={handleDismissSuggestion}
+              onOptOut={handleOptOutRoutineSuggestions}
+              showOptOutLink={shouldShowOptOutLink()}
+              renderItemsTable={(props) => (
+                <WeightItemsTable
+                  items={props.items.map((e, i) => ({
+                    ...e,
+                    id: `suggestion-${i}`,
+                    uid: `suggestion-${i}`,
+                    entryId: 'suggestion',
+                  }))}
+                  editable={props.editable}
+                  onUpdateItem={(index, field, value) => {
+                    props.onUpdateItem(index, field as keyof AnalyzedExercise, value);
+                  }}
+                  onRemoveItem={props.onRemoveItem}
+                  showHeader={false}
+                  totalsPosition="bottom"
+                />
+              )}
+            />
           </div>
         )}
       </section>
@@ -468,6 +559,17 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
             handleLogSavedRoutine(exerciseSets, routine.id);
           }}
           showLogPrompt={true}
+        />
+      )}
+
+      {/* Create Routine from Suggestion Dialog */}
+      {createRoutineFromSuggestion && (
+        <CreateRoutineDialog
+          open={createRoutineFromSuggestion}
+          onOpenChange={setCreateRoutineFromSuggestion}
+          onRoutineCreated={handleRoutineFromSuggestionCreated}
+          showLogPrompt={false}
+          initialExercises={saveSuggestionExercises}
         />
       )}
 

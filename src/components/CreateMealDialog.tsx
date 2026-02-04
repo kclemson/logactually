@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { CreateSavedDialog, CreateSavedDialogConfig } from './CreateSavedDialog';
 import { FoodItemsTable } from './FoodItemsTable';
 import { useAnalyzeFood } from '@/hooks/useAnalyzeFood';
@@ -11,6 +11,8 @@ interface CreateMealDialogProps {
   onOpenChange: (open: boolean) => void;
   onMealCreated: (meal: SavedMeal, foodItems: FoodItem[]) => void;
   showLogPrompt?: boolean;
+  initialItems?: FoodItem[];  // Skip analyze, go straight to editing
+  initialName?: string;       // Optional default name
 }
 
 const FOOD_CONFIG: CreateSavedDialogConfig<FoodItem, SavedMeal> = {
@@ -36,9 +38,18 @@ export function CreateMealDialog({
   onOpenChange,
   onMealCreated,
   showLogPrompt = true,
+  initialItems,
+  initialName,
 }: CreateMealDialogProps) {
   // Local items state for this dialog (not tied to DB)
-  const [localItems, setLocalItems] = useState<FoodItem[]>([]);
+  const [localItems, setLocalItems] = useState<FoodItem[]>(initialItems || []);
+  
+  // Initialize with initial items when provided
+  useEffect(() => {
+    if (initialItems && initialItems.length > 0) {
+      setLocalItems(initialItems);
+    }
+  }, [initialItems]);
   
   const { analyzeFood, isAnalyzing, error } = useAnalyzeFood();
   const saveMeal = useSaveMeal();

@@ -26,7 +26,7 @@ export function useRecentFoodEntries(daysBack = 90) {
       
       const { data, error } = await supabase
         .from('food_entries')
-        .select('id, eaten_date, raw_input, food_items, total_calories, total_protein, total_carbs, total_fat, created_at')
+        .select('id, eaten_date, raw_input, food_items, total_calories, total_protein, total_carbs, total_fat, source_meal_id, created_at')
         .gte('eaten_date', cutoffDate)
         .order('eaten_date', { ascending: false })
         .order('created_at', { ascending: false });
@@ -66,7 +66,7 @@ export function useRecentFoodEntries(daysBack = 90) {
           // Ensure these fields exist with defaults
           updated_at: entry.created_at,
           user_id: user?.id || '',
-          source_meal_id: null,
+          source_meal_id: (entry as any).source_meal_id || null,
         } as FoodEntry;
       });
     },
