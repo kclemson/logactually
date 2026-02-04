@@ -242,9 +242,6 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
       // Wait for cache to update so entry is in DOM
       await queryClient.invalidateQueries({ queryKey: ['weight-sets', dateStr] });
       
-      // Invalidate recent entries cache so next detection sees this entry
-      queryClient.invalidateQueries({ queryKey: ['recent-weight-entries'] });
-      
       markEntryAsNew(entryId);
       weightInputRef.current?.clear();
       
