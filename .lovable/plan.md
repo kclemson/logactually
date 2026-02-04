@@ -1,82 +1,29 @@
 
 
-## Switch Save Suggestion Detection to Creation Time
+## Add Changelog Entry for Save Suggestion Feature
 
-### Why This Change
+### Changes
 
-Optimize for new user onboarding: when a user backdates historical entries in a single session (e.g., logging December, January, and February workouts all at once), they should immediately see "Save as Routine?" prompts based on their recent *logging activity*, not the calendar dates.
+#### 1. Copy uploaded screenshot
+Copy `user-uploads://image-552.png` to `public/changelog/save-suggestion.png`
 
-### Current Behavior
+#### 2. Update `src/pages/Changelog.tsx`
 
-| Hook | Current Filter |
-|------|----------------|
-| `useRecentFoodEntries` | `.gte('eaten_date', cutoffDate)` |
-| `useRecentWeightEntries` | `.gte('logged_date', cutoffDate)` |
-
-Both filter by the calendar date of the entry, meaning backdated entries outside the 90-day window are excluded from pattern detection.
-
-### New Behavior
-
-Switch both hooks to filter by `created_at` instead:
-- Detects patterns based on **when you logged** items
-- Backdated entries are included if logged recently
-- New users filling in historical data will see save suggestions immediately
-
----
-
-### Technical Changes
-
-#### File: `src/hooks/useRecentFoodEntries.ts`
-
-1. **Line 25**: Change cutoff to ISO timestamp for `created_at` comparison
-2. **Line 30**: Filter by `created_at` instead of `eaten_date`
-3. **Line 31-32**: Order by `created_at` for consistency
-4. **Update docstring** to reflect the change
-
+**Add new entry at top of array (line 19):**
 ```typescript
-// Line 25: Generate ISO timestamp instead of date string
-const cutoffDate = subDays(new Date(), daysBack).toISOString();
-
-// Line 30: Filter by created_at
-.gte('created_at', cutoffDate)
-
-// Lines 31-32: Order by created_at
-.order('created_at', { ascending: false })
+{ date: "Feb-04", text: "When you log similar items 3 or more times, you'll now get a suggestion to save them as a meal or routine for easier logging in the future.", image: "save-suggestion.png" },
 ```
 
-#### File: `src/hooks/useRecentWeightEntries.ts`
-
-1. **Line 18**: Change cutoff to ISO timestamp
-2. **Line 22**: Add `created_at` to the select fields
-3. **Line 23**: Filter by `created_at` instead of `logged_date`
-4. **Line 24**: Order by `created_at`
-
+**Update LAST_UPDATED (line 32):**
 ```typescript
-// Line 18: Generate ISO timestamp
-const cutoffDate = subDays(new Date(), daysBack).toISOString();
-
-// Line 22-24: Select created_at and filter/order by it
-.select('entry_id, logged_date, exercise_key, source_routine_id, created_at')
-.gte('created_at', cutoffDate)
-.order('created_at', { ascending: false })
+const LAST_UPDATED = "Feb-04-26";
 ```
 
 ---
 
-### Test Scenario: New User Backdating
+### Result
 
-1. Clear any existing data or use a fresh account
-2. Log "leg press 200 lbs" for **December 15** (backdated)
-3. Log "leg press 220 lbs" for **January 15** (backdated)  
-4. Log "leg press 230 lbs" for **today**
-
-**Expected**: After the 3rd log, see "You've logged similar exercises 3 times. Save as Routine?"
-
-**Old behavior**: Would NOT trigger because December 15 and January 15 might be outside the 90-day `logged_date` window.
-
----
-
-### Note
-
-This change is isolated to the detection hooks. The cache invalidation bug (new entries not refreshing the query) is a separate fix we'll tackle next.
+The changelog will show:
+- **Feb-04**: New save suggestion feature with screenshot
+- **Feb-03**: Similar entry detection (existing)
 
