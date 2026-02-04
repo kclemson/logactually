@@ -63,15 +63,17 @@ export default function Changelog() {
               <li key={index} className="text-sm">
                 <div className="flex gap-2">
                   <span className="text-muted-foreground shrink-0">{entry.date}:</span>
-                  <span className="text-foreground">{entry.text}</span>
+                  <div className="flex flex-col">
+                    <span className="text-foreground">{entry.text}</span>
+                    {entry.image && (
+                      <img 
+                        src={`/changelog/${entry.image}`} 
+                        alt={`Screenshot for ${entry.date} update`}
+                        className="mt-2 rounded-lg border border-border max-h-64 w-auto"
+                      />
+                    )}
+                  </div>
                 </div>
-                {entry.image && (
-                  <img 
-                    src={`/changelog/${entry.image}`} 
-                    alt={`Screenshot for ${entry.date} update`}
-                    className="mt-2 rounded-lg border border-border max-w-full"
-                  />
-                )}
               </li>
             ))}
           </ul>
