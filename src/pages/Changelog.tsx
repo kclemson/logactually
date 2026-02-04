@@ -5,10 +5,18 @@ import { FeedbackForm } from "@/components/FeedbackForm";
 
 // ============================================
 // CHANGELOG ENTRIES - Add new entries at the top
-// Each entry is one line: { date: "Mon-DD", text: "description" }
+// Each entry: { date: "Mon-DD", text: "description", image?: "feature.png" }
+// Images go in /public/changelog/ folder
 // ============================================
+
+type ChangelogEntry = {
+  date: string;
+  text: string;
+  image?: string; // Path relative to /public/changelog/, e.g., "dashboard.png"
+};
+
 // prettier-ignore
-const CHANGELOG_ENTRIES = [
+const CHANGELOG_ENTRIES: ChangelogEntry[] = [
 { date: "Feb-01", text: "Updated demo mode so you can see a preview of what would be logged based on the input you entered." },
   { date: "Jan-31", text: "Added support for Google authentication, and this changelog page." },
   { date: "Jan-30", text: "Added (minimal) support for cardio exercises - instead of erroring out, it will now log the items and show a 'cardio' label, with simple charts for cardio exercises on the Trends page. Running/walking/cycling charts also support switching between time-based view and mph-based view." },
@@ -51,9 +59,18 @@ export default function Changelog() {
           {/* Entries */}
           <ul className="space-y-3">
             {CHANGELOG_ENTRIES.map((entry, index) => (
-              <li key={index} className="flex gap-2 text-sm">
-                <span className="text-muted-foreground shrink-0">{entry.date}:</span>
-                <span className="text-foreground">{entry.text}</span>
+              <li key={index} className="text-sm">
+                <div className="flex gap-2">
+                  <span className="text-muted-foreground shrink-0">{entry.date}:</span>
+                  <span className="text-foreground">{entry.text}</span>
+                </div>
+                {entry.image && (
+                  <img 
+                    src={`/changelog/${entry.image}`} 
+                    alt={`Screenshot for ${entry.date} update`}
+                    className="mt-2 rounded-lg border border-border max-w-full"
+                  />
+                )}
               </li>
             ))}
           </ul>
