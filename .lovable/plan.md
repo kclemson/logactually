@@ -1,30 +1,48 @@
 
 
-## Quick Fix: Add Common Food-Action Verbs to Noise Filter
+## Add Recency Tiebreaker to Similar Entry Matching
+
+### Problem
+When scores are very close (e.g., 0.80 vs 0.775), the algorithm picks the slightly higher score even if it's from an older entry. For generic inputs like "chicken", this means older entries can win over more recent ones.
+
+### Solution
+When two entries have similarity scores within a small tolerance (0.05), prefer the more recent entry.
 
 ### Change
 
-Add common food-action verbs to `HISTORY_REFERENCE_WORDS` in `src/lib/text-similarity.ts`.
+**File: `src/lib/text-similarity.ts`**
 
-### Words to Add
+Update the comparison logic in `findSimilarEntry` (lines 284 and 291) to use a helper function that considers recency when scores are close.
 
 ```typescript
-// Food action verbs (never food items themselves)
-'had', 'have', 'ate', 'eaten', 'eating', 'eat', 
-'made', 'make', 'cooked', 'ordered', 'got', 'grabbed', 'picked'
+// Helper: returns true if candidate should replace current best
+function isBetterMatch(
+  candidateScore: number,
+  candidateDate: string,
+  bestScore: number,
+  bestDate: string,
+  tolerance = 0.05
+): boolean {
+  const scoreDiff = candidateScore - bestScore;
+  
+  // Clear winner by score
+  if (scoreDiff > tolerance) return true;
+  if (scoreDiff < -tolerance) return false;
+  
+  // Scores within tolerance → prefer more recent
+  return new Date(candidateDate) > new Date(bestDate);
+}
 ```
 
-### File to Modify
-
-**`src/lib/text-similarity.ts`** - Lines 17-23, expand the `HISTORY_REFERENCE_WORDS` constant.
+Then update the two comparison points:
+- Line 284: Replace `itemsScore > bestMatch.score` with the new helper
+- Line 291: Replace `rawScore > bestMatch.score` with the new helper
 
 ### Expected Result
 
 | Input | Before | After |
 |-------|--------|-------|
-| "another tilapia like the one I had the other day" | `["tilapia", "had"]` → score 0.41 → **no match** | `["tilapia"]` → score 0.78 → **match** ✅ |
+| "another chicken like the other day" | Matches "Chicken Corn Chowder" (Jan 29, score 0.80) | Matches "Grilled chicken marinara" (Feb 1, score 0.775) ✅ |
 
-### Why This Is Safe
-
-If we miss a noise word in the future, the worst case is a **false negative** (no match shown) — the user just types normally and gets AI analysis. That's far less annoying than a false positive suggesting the wrong food.
+The 0.025 score difference is within tolerance, so recency wins.
 
