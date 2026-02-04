@@ -1,114 +1,64 @@
 
-## Change: Use Most Recent Entries by Creation Date, Not Eaten Date
-
-### Current Behavior
-
-The `useRecentFoodEntries` hook queries entries where:
-```typescript
-.gte('eaten_date', cutoffDate)  // eaten_date >= 90 days ago
-```
-
-This means it looks at **entries with `eaten_date` within the last 90 days**, regardless of when they were actually created.
+## Fix: Invalidate Recent Entries Cache After Creating Entries
 
 ### Problem
 
-When backdating entries (e.g., adding food for December while it's February), the comparison pool is based on `eaten_date`. This doesn't capture the user's actual logging patterns - what matters is what they've **recently added**, not what dates those entries are for.
+The `recent-food-entries` query has a 5-minute `staleTime`. When you add entries across different days (especially when backdating), the cache remains "fresh" and doesn't include the entries you just created. The detection logic operates on a stale snapshot that's missing your recent additions.
 
-Example:
-- User logs "Costco hot dog" multiple times in January 2026
-- User backdates an entry to December 2025  
-- Detection should still recognize the pattern from January logs
+This explains why "costco hot dog" wasn't being detected - each new entry was being compared against a cache that didn't include the previous entries you'd just added.
 
 ### Solution
 
-Change the query from filtering by `eaten_date` to:
-1. Order by `created_at` descending
-2. Limit to the most recent N entries (not days)
-
-This better captures "what has the user been logging recently" rather than "what dates fall within a window."
+After creating any food entry, invalidate the `recent-food-entries` cache so the next detection check sees all recent entries including the one we just created.
 
 ### Implementation
 
-**File**: `src/hooks/useRecentFoodEntries.ts`
-
-```typescript
-// Before:
-export function useRecentFoodEntries(daysBack = 90) {
-  // ...
-  const cutoffDate = format(subDays(new Date(), daysBack), 'yyyy-MM-dd');
-  
-  const { data, error } = await supabase
-    .from('food_entries')
-    .select('...')
-    .gte('eaten_date', cutoffDate)
-    .order('eaten_date', { ascending: false })
-    .order('created_at', { ascending: false });
-
-// After:
-export function useRecentFoodEntries(limit = 500) {
-  // ...
-  // No date cutoff - just get the most recently CREATED entries
-  const { data, error } = await supabase
-    .from('food_entries')
-    .select('...')
-    .order('created_at', { ascending: false })
-    .limit(limit);
-```
-
 **File**: `src/pages/FoodLog.tsx`
 
-Update the hook call:
-```typescript
-// Before:
-const { data: recentEntries } = useRecentFoodEntries(90);
+**Change 1**: Invalidate cache after entry creation in `createEntryFromItems`
 
-// After:
-const { data: recentEntries } = useRecentFoodEntries(500);
+```typescript
+// After line 249 (after invalidating the per-day cache):
+await queryClient.invalidateQueries({ queryKey: ['food-entries', dateStr] });
+
+// ADD THIS:
+// Invalidate recent entries cache so next detection sees this entry
+queryClient.invalidateQueries({ queryKey: ['recent-food-entries'] });
 ```
 
-### Data Size Analysis
+**Change 2**: Invalidate cache after barcode scan in `handleScanResult`
 
-Original comment in the hook:
-> Average food_items size per entry: ~474 bytes
-> Worst case (10 entries/day x 90 days): ~550 KB
-
-With 500 entries:
-- 500 entries × 500 bytes ≈ 250 KB
-- This is actually smaller than the 90-day worst case
-- Well within acceptable limits for a cached query
-
-### Query Key Update
-
-The query key should reflect the new parameter:
 ```typescript
-// Before:
-queryKey: ['recent-food-entries', user?.id, daysBack]
+// After line 442 (after invalidating the per-day cache):
+await queryClient.invalidateQueries({ queryKey: ['food-entries', dateStr] });
 
-// After:
-queryKey: ['recent-food-entries', user?.id, limit]
+// ADD THIS:
+queryClient.invalidateQueries({ queryKey: ['recent-food-entries'] });
 ```
+
+**File**: `src/pages/WeightLog.tsx`
+
+**Change 3**: Apply same pattern for weight entries
+
+After creating weight entries, invalidate `recent-weight-entries` so the next detection check includes the new entry.
+
+### Why This Works
+
+| Before | After |
+|--------|-------|
+| Entry 1 created, cache still shows old data | Entry 1 created, cache invalidated |
+| Entry 2 detection uses stale cache (missing Entry 1) | Entry 2 detection refetches and sees Entry 1 |
+| Entry 3 detection uses stale cache (missing Entry 1 & 2) | Entry 3 detection refetches and sees Entry 1 & 2 |
+
+### Technical Detail
+
+- We use `queryClient.invalidateQueries()` without `await` for the recent entries cache
+- This triggers a background refetch without blocking the UI
+- The per-day cache (`food-entries`, `dateStr`) is still awaited since we need it for immediate display
 
 ### Files to Change
 
-| File | Change |
-|------|--------|
-| `src/hooks/useRecentFoodEntries.ts` | Replace date-based filter with `created_at` ordering + limit |
-| `src/pages/FoodLog.tsx` | Update hook call parameter from `90` to `500` |
-
-### Behavior Comparison
-
-| Scenario | Before | After |
-|----------|--------|-------|
-| Backdate entry to December | Only matches entries with Dec-Feb eaten_dates | Matches any of the 500 most recently created entries |
-| Forward-date entry to next month | Would miss it entirely | Included if recently created |
-| User with sparse logging | Gets very few entries | Gets up to 500 most recent regardless of date spread |
-| User with dense logging (10/day) | ~900 entries (90 days) | Capped at 500 entries |
-
-### Parallel Change for Weight Entries
-
-The same logic should apply to `useRecentWeightEntries.ts` for consistency:
-
-| File | Change |
-|------|--------|
-| `src/hooks/useRecentWeightEntries.ts` | Replace date-based filter with `created_at` ordering + limit |
-| `src/pages/WeightLog.tsx` | Update hook call parameter |
+| File | Changes |
+|------|---------|
+| `src/pages/FoodLog.tsx` | Add cache invalidation in `createEntryFromItems` and `handleScanResult` |
+| `src/pages/WeightLog.tsx` | Add cache invalidation in `createEntryFromExercises` |
