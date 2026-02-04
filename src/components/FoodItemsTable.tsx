@@ -60,6 +60,8 @@ interface FoodItemsTableProps {
   showMacroPercentages?: boolean;
   /** When false, hide the divider line above totals row (default: true) */
   showTotalsDivider?: boolean;
+  /** When true, use smaller text for compact preview contexts */
+  compact?: boolean;
 }
 
 export function FoodItemsTable({
@@ -85,6 +87,7 @@ export function FoodItemsTable({
   showInlineLabels = false,
   showMacroPercentages = true,
   showTotalsDivider = true,
+  compact = false,
 }: FoodItemsTableProps) {
   // Read-only mode blocks saves
   const { isReadOnly, triggerOverlay } = useReadOnlyContext();
@@ -302,12 +305,12 @@ export function FoodItemsTable({
         totalsPosition === 'bottom' && showTotalsDivider && 'pt-1.5 border-t-2 border-slate-300 dark:border-slate-600',
         gridCols
       )}>
-        <span className={cn("px-1 font-semibold", showEntryDividers && "pl-4")}>Total</span>
-        <span className="px-1 text-heading text-center">{Math.round(totals.calories)}</span>
-        <span className="px-1 text-heading text-center">
+        <span className={cn("px-1 font-semibold", showEntryDividers && "pl-4", compact && "text-sm")}>Total</span>
+        <span className={cn("px-1 text-center", compact ? "text-xs" : "text-heading")}>{Math.round(totals.calories)}</span>
+        <span className={cn("px-1 text-center", compact ? "text-xs" : "text-heading")}>
           <div>{Math.round(totals.protein)}/{Math.round(totals.carbs)}/{Math.round(totals.fat)}</div>
           {showMacroPercentages && (
-            <div className="text-[9px] text-muted-foreground font-normal">
+            <div className={cn("text-muted-foreground font-normal", compact ? "text-[8px]" : "text-[9px]")}>
               {proteinPct}%/{carbsPct}%/{fatPct}%
             </div>
           )}
@@ -378,7 +381,7 @@ export function FoodItemsTable({
 
       {/* Mini header when main header is hidden but labels requested */}
       {!showHeader && showInlineLabels && items.length > 0 && (
-        <div className={cn('grid gap-0.5 items-center text-[10px] text-muted-foreground', gridCols)}>
+        <div className={cn('grid gap-0.5 items-center text-muted-foreground', compact ? 'text-[9px]' : 'text-[10px]', gridCols)}>
           <span></span>
           <span className="px-1 text-center">Cal</span>
           <span className="px-1 text-center">P/C/F</span>
@@ -487,7 +490,7 @@ export function FoodItemsTable({
                 )}
                 <span 
                   title={getItemTooltip(item)}
-                  className="pl-1 pr-0 py-1 line-clamp-2 shrink min-w-0"
+                  className={cn("pl-1 pr-0 py-1 line-clamp-2 shrink min-w-0", compact && "text-sm")}
                 >
                   {item.description}
                   {item.portion && (
@@ -560,10 +563,10 @@ export function FoodItemsTable({
               </>
             ) : (
               <>
-                <span className="px-1 py-1 text-muted-foreground text-center">
+                <span className={cn("px-1 py-1 text-muted-foreground text-center", compact && "text-xs")}>
                   {item.calories}
                 </span>
-                <span className="px-1 py-1 text-muted-foreground text-center">
+                <span className={cn("px-1 py-1 text-muted-foreground text-center", compact && "text-xs")}>
                   {Math.round(item.protein)}/{Math.round(item.carbs)}/{Math.round(item.fat)}
                 </span>
               </>

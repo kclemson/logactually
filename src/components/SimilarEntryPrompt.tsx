@@ -55,6 +55,7 @@ export function SimilarEntryPrompt({
         totalsPosition="bottom"
         showInlineLabels={true}
         showMacroPercentages={false}
+        compact={true}
         showTotalsDivider={false}
       />
       

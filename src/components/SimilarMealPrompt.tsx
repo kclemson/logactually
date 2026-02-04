@@ -52,6 +52,7 @@ export function SimilarMealPrompt({
         totalsPosition="bottom"
         showInlineLabels={true}
         showMacroPercentages={false}
+        compact={true}
         showTotalsDivider={false}
       />
       
