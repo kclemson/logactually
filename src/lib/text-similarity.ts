@@ -248,11 +248,34 @@ export function hybridSimilarityScore(
 }
 
 /**
+ * Helper: returns true if candidate should replace current best match.
+ * When scores are within tolerance, prefer more recent entries.
+ */
+function isBetterMatch(
+  candidateScore: number,
+  candidateDate: string,
+  bestScore: number,
+  bestDate: string,
+  tolerance = 0.05
+): boolean {
+  const scoreDiff = candidateScore - bestScore;
+  
+  // Clear winner by score
+  if (scoreDiff > tolerance) return true;
+  if (scoreDiff < -tolerance) return false;
+  
+  // Scores within tolerance → prefer more recent
+  return new Date(candidateDate) > new Date(bestDate);
+}
+
+/**
  * Find the best matching past entry using hybrid similarity.
  * 
  * Uses word containment (70%) + Jaccard (30%) scoring:
  * - Containment ensures short inputs like "tilapia" match long descriptions
  * - Jaccard helps rank between multiple viable matches
+ * 
+ * When scores are within 0.05 tolerance, prefers more recent entries.
  * 
  * @param inputText - User's current input
  * @param recentEntries - Entries from the last N days
@@ -281,14 +304,16 @@ export function findSimilarEntry(
     // Calculate hybrid score against food items
     const itemsScore = hybridSimilarityScore(candidateFoodWords, itemsDescription);
     
-    if (itemsScore >= minSimilarityRequired && (!bestMatch || itemsScore > bestMatch.score)) {
+    if (itemsScore >= minSimilarityRequired && 
+        (!bestMatch || isBetterMatch(itemsScore, entry.eaten_date, bestMatch.score, bestMatch.entry.eaten_date))) {
       bestMatch = { entry, score: itemsScore, matchType: 'items' };
     }
     
     // Also check raw_input (skip scanned entries - their raw_input is just barcodes)
     if (entry.raw_input && !entry.raw_input.startsWith('Scanned:')) {
       const rawScore = hybridSimilarityScore(candidateFoodWords, entry.raw_input);
-      if (rawScore >= minSimilarityRequired && (!bestMatch || rawScore > bestMatch.score)) {
+      if (rawScore >= minSimilarityRequired && 
+          (!bestMatch || isBetterMatch(rawScore, entry.eaten_date, bestMatch.score, bestMatch.entry.eaten_date))) {
         bestMatch = { entry, score: rawScore, matchType: 'input' };
       }
     }
