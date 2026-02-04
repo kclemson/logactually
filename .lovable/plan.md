@@ -1,120 +1,114 @@
 
-## Fix: Coordinate Similar Meal Prompt and Save Suggestion Prompt
+## Change: Use Most Recent Entries by Creation Date, Not Eaten Date
+
+### Current Behavior
+
+The `useRecentFoodEntries` hook queries entries where:
+```typescript
+.gte('eaten_date', cutoffDate)  // eaten_date >= 90 days ago
+```
+
+This means it looks at **entries with `eaten_date` within the last 90 days**, regardless of when they were actually created.
 
 ### Problem
 
-The two features are stepping on each other:
+When backdating entries (e.g., adding food for December while it's February), the comparison pool is based on `eaten_date`. This doesn't capture the user's actual logging patterns - what matters is what they've **recently added**, not what dates those entries are for.
 
-1. **SimilarMealPrompt**: "Looks like your saved meal: Yogurt + strawberries. Use it?"
-2. User clicks "Dismiss" (meaning: "No, log what I typed instead")
-3. Entry gets logged...
-4. **SaveSuggestionPrompt**: "You've logged similar items 12 times. Save as meal?"
-
-This is nonsensical - they already HAVE a saved meal for this pattern! The prompt in step 4 should never appear.
-
-### Root Cause
-
-The `dismissSimilarMatch` handler logs the entry via `createEntryFromItems`, which then runs `detectRepeatedFoodEntry`. The detection logic doesn't know that:
-1. The user already has a saved meal matching this pattern
-2. They just deliberately chose not to use it
+Example:
+- User logs "Costco hot dog" multiple times in January 2026
+- User backdates an entry to December 2025  
+- Detection should still recognize the pattern from January logs
 
 ### Solution
 
-Skip the Save Suggestion detection when an entry is created as a result of dismissing a Similar Meal prompt. This can be done by passing a flag to `createEntryFromItems`.
+Change the query from filtering by `eaten_date` to:
+1. Order by `created_at` descending
+2. Limit to the most recent N entries (not days)
 
-```text
-Flow BEFORE fix:
-─────────────────
-Similar Meal detected → User dismisses → createEntryFromItems() 
-                                                    ↓
-                                         detectRepeatedFoodEntry() runs
-                                                    ↓
-                                         Save Suggestion shown ❌
-
-Flow AFTER fix:
-───────────────
-Similar Meal detected → User dismisses → createEntryFromItems(skipSaveSuggestion: true)
-                                                    ↓
-                                         Detection skipped ✓
-                                         No prompt ✓
-```
+This better captures "what has the user been logging recently" rather than "what dates fall within a window."
 
 ### Implementation
 
+**File**: `src/hooks/useRecentFoodEntries.ts`
+
+```typescript
+// Before:
+export function useRecentFoodEntries(daysBack = 90) {
+  // ...
+  const cutoffDate = format(subDays(new Date(), daysBack), 'yyyy-MM-dd');
+  
+  const { data, error } = await supabase
+    .from('food_entries')
+    .select('...')
+    .gte('eaten_date', cutoffDate)
+    .order('eaten_date', { ascending: false })
+    .order('created_at', { ascending: false });
+
+// After:
+export function useRecentFoodEntries(limit = 500) {
+  // ...
+  // No date cutoff - just get the most recently CREATED entries
+  const { data, error } = await supabase
+    .from('food_entries')
+    .select('...')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+```
+
 **File**: `src/pages/FoodLog.tsx`
 
-**Change 1**: Add optional `skipSaveSuggestion` parameter to `createEntryFromItems`
-
+Update the hook call:
 ```typescript
 // Before:
-const createEntryFromItems = useCallback(async (
-  items: FoodItem[], 
-  rawInput: string | null, 
-  sourceMealId?: string
-) => {
+const { data: recentEntries } = useRecentFoodEntries(90);
 
 // After:
-const createEntryFromItems = useCallback(async (
-  items: FoodItem[], 
-  rawInput: string | null, 
-  sourceMealId?: string,
-  skipSaveSuggestion?: boolean  // NEW
-) => {
+const { data: recentEntries } = useRecentFoodEntries(500);
 ```
 
-**Change 2**: Use the flag in the detection logic
+### Data Size Analysis
 
+Original comment in the hook:
+> Average food_items size per entry: ~474 bytes
+> Worst case (10 entries/day x 90 days): ~550 KB
+
+With 500 entries:
+- 500 entries × 500 bytes ≈ 250 KB
+- This is actually smaller than the 90-day worst case
+- Well within acceptable limits for a cached query
+
+### Query Key Update
+
+The query key should reflect the new parameter:
 ```typescript
 // Before:
-if (!isReadOnly && settings.suggestMealSaves && recentEntries && !sourceMealId) {
-  const suggestion = detectRepeatedFoodEntry(items, recentEntries);
-  // ...
-}
+queryKey: ['recent-food-entries', user?.id, daysBack]
 
 // After:
-if (!isReadOnly && settings.suggestMealSaves && recentEntries && !sourceMealId && !skipSaveSuggestion) {
-  const suggestion = detectRepeatedFoodEntry(items, recentEntries);
-  // ...
-}
+queryKey: ['recent-food-entries', user?.id, limit]
 ```
 
-**Change 3**: Pass `true` when dismissing a similar meal prompt
+### Files to Change
 
-```typescript
-// Before:
-const dismissSimilarMatch = useCallback(() => {
-  if (pendingAiResult) {
-    createEntryFromItems(pendingAiResult.items, pendingAiResult.text);
-  }
-  setSimilarMatch(null);
-  setPendingAiResult(null);
-}, [pendingAiResult, createEntryFromItems]);
+| File | Change |
+|------|--------|
+| `src/hooks/useRecentFoodEntries.ts` | Replace date-based filter with `created_at` ordering + limit |
+| `src/pages/FoodLog.tsx` | Update hook call parameter from `90` to `500` |
 
-// After:
-const dismissSimilarMatch = useCallback(() => {
-  if (pendingAiResult) {
-    // User already has a saved meal but chose not to use it - don't suggest saving again
-    createEntryFromItems(pendingAiResult.items, pendingAiResult.text, undefined, true);
-  }
-  setSimilarMatch(null);
-  setPendingAiResult(null);
-}, [pendingAiResult, createEntryFromItems]);
-```
+### Behavior Comparison
 
-### Why This Works
+| Scenario | Before | After |
+|----------|--------|-------|
+| Backdate entry to December | Only matches entries with Dec-Feb eaten_dates | Matches any of the 500 most recently created entries |
+| Forward-date entry to next month | Would miss it entirely | Included if recently created |
+| User with sparse logging | Gets very few entries | Gets up to 500 most recent regardless of date spread |
+| User with dense logging (10/day) | ~900 entries (90 days) | Capped at 500 entries |
 
-| Scenario | Behavior |
-|----------|----------|
-| Normal entry (no saved meal match) | Detection runs, may show Save Suggestion |
-| Entry from saved meal (`sourceMealId` set) | Already skipped by existing `!sourceMealId` check |
-| **Entry from dismissing Similar Meal prompt** | **Now skipped via `skipSaveSuggestion: true`** |
+### Parallel Change for Weight Entries
 
-### Single File Change
+The same logic should apply to `useRecentWeightEntries.ts` for consistency:
 
-| File | Changes |
-|------|---------|
-| `src/pages/FoodLog.tsx` | Add `skipSaveSuggestion` parameter; pass `true` in `dismissSimilarMatch` |
-
-### Edge Case Consideration
-
-The user might want to save a *modified* version of the meal. However, in this flow they're dismissing the similar meal prompt to log what they typed - they're not editing the items. If they wanted a saved meal, they would have clicked "Use Saved Meal". The current UX correctly assumes "Dismiss" means "I don't want to deal with saved meals right now."
+| File | Change |
+|------|--------|
+| `src/hooks/useRecentWeightEntries.ts` | Replace date-based filter with `created_at` ordering + limit |
+| `src/pages/WeightLog.tsx` | Update hook call parameter |
