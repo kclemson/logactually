@@ -1,38 +1,37 @@
 
 
-## Fix Changelog Image Styling
-
-### Problems
-1. Image is centered (should be left-aligned)
-2. Image has a border/box around it (user doesn't want this)
-3. Height of 150px is too small - user wants 200px
+## Update Changelog Screenshot and Date
 
 ### Changes
 
-**File: `src/pages/Changelog.tsx`** (line 72)
+**1. Copy new screenshot to public/changelog folder**
 
-Update the image className:
+Copy the uploaded image to replace/update the screenshot:
+- From: `user-uploads://image-536.png`
+- To: `public/changelog/similar-entry.png` (overwrite existing)
 
-Current:
+**2. Update `src/pages/Changelog.tsx`**
+
+Change the date for the most recent entry from "Feb-04" to "Feb-03" (line 21):
+
 ```tsx
-className="mt-2 rounded-lg border border-border max-h-[150px] w-auto object-contain"
+// Before
+{ date: "Feb-04", text: "Added smart detection...", image: "similar-entry.png" },
+
+// After
+{ date: "Feb-03", text: "Added smart detection...", image: "similar-entry.png" },
 ```
 
-New:
+Also update `LAST_UPDATED` constant (line 31):
 ```tsx
-className="mt-2 rounded-lg max-h-[200px] w-auto object-contain"
+// Before
+const LAST_UPDATED = "Feb-04-26";
+
+// After
+const LAST_UPDATED = "Feb-03-26";
 ```
-
-Changes:
-- Remove `border border-border`: Removes the box/border around the image
-- `max-h-[150px]` → `max-h-[200px]`: Increases max height to 200px
-- Keep `w-auto object-contain`: Preserves aspect ratio
-- Keep `rounded-lg`: Subtle rounding on image corners
-
-The image will naturally left-align within the flex container since there's no centering applied - the border removal should fix the visual "box" issue, and the flex-col container already left-aligns its children by default.
 
 ### Result
-- Image left-aligned with text (no centering)
-- No border/box around the image
-- Max height of 200px with preserved aspect ratio
+- New screenshot showing the "Use Past Entry" prompt will display for the Feb-03 changelog entry
+- Date correctly reflects Pacific timezone instead of UTC
 
