@@ -1,53 +1,120 @@
 
-
-## Fix: Dismiss Similar Meal Prompt Should Log AI-Analyzed Items
+## Fix: Coordinate Similar Meal Prompt and Save Suggestion Prompt
 
 ### Problem
 
-When the user types something like "1 activia vanilla yogurt and a cup of strawberries" and clicks "Add Food":
+The two features are stepping on each other:
 
-1. AI analyzes the input and returns structured food items
-2. System detects a similar saved meal ("Yogurt + strawberries")
-3. The `SimilarMealPrompt` appears with "Use Saved Meal" and "Dismiss" buttons
-4. **Bug**: If user clicks "Dismiss", the pending AI result is thrown away and nothing is logged
+1. **SimilarMealPrompt**: "Looks like your saved meal: Yogurt + strawberries. Use it?"
+2. User clicks "Dismiss" (meaning: "No, log what I typed instead")
+3. Entry gets logged...
+4. **SaveSuggestionPrompt**: "You've logged similar items 12 times. Save as meal?"
 
-The user expects "Dismiss" to mean "I don't want the saved meal, log what I typed instead" - but currently it just discards everything.
+This is nonsensical - they already HAVE a saved meal for this pattern! The prompt in step 4 should never appear.
+
+### Root Cause
+
+The `dismissSimilarMatch` handler logs the entry via `createEntryFromItems`, which then runs `detectRepeatedFoodEntry`. The detection logic doesn't know that:
+1. The user already has a saved meal matching this pattern
+2. They just deliberately chose not to use it
 
 ### Solution
 
-Update the `dismissSimilarMatch` handler to log the pending AI result before clearing state:
+Skip the Save Suggestion detection when an entry is created as a result of dismissing a Similar Meal prompt. This can be done by passing a flag to `createEntryFromItems`.
+
+```text
+Flow BEFORE fix:
+─────────────────
+Similar Meal detected → User dismisses → createEntryFromItems() 
+                                                    ↓
+                                         detectRepeatedFoodEntry() runs
+                                                    ↓
+                                         Save Suggestion shown ❌
+
+Flow AFTER fix:
+───────────────
+Similar Meal detected → User dismisses → createEntryFromItems(skipSaveSuggestion: true)
+                                                    ↓
+                                         Detection skipped ✓
+                                         No prompt ✓
+```
+
+### Implementation
 
 **File**: `src/pages/FoodLog.tsx`
 
-```typescript
-// Current (broken):
-const dismissSimilarMatch = useCallback(() => {
-  setSimilarMatch(null);
-  setPendingAiResult(null);
-}, []);
+**Change 1**: Add optional `skipSaveSuggestion` parameter to `createEntryFromItems`
 
-// Fixed:
+```typescript
+// Before:
+const createEntryFromItems = useCallback(async (
+  items: FoodItem[], 
+  rawInput: string | null, 
+  sourceMealId?: string
+) => {
+
+// After:
+const createEntryFromItems = useCallback(async (
+  items: FoodItem[], 
+  rawInput: string | null, 
+  sourceMealId?: string,
+  skipSaveSuggestion?: boolean  // NEW
+) => {
+```
+
+**Change 2**: Use the flag in the detection logic
+
+```typescript
+// Before:
+if (!isReadOnly && settings.suggestMealSaves && recentEntries && !sourceMealId) {
+  const suggestion = detectRepeatedFoodEntry(items, recentEntries);
+  // ...
+}
+
+// After:
+if (!isReadOnly && settings.suggestMealSaves && recentEntries && !sourceMealId && !skipSaveSuggestion) {
+  const suggestion = detectRepeatedFoodEntry(items, recentEntries);
+  // ...
+}
+```
+
+**Change 3**: Pass `true` when dismissing a similar meal prompt
+
+```typescript
+// Before:
 const dismissSimilarMatch = useCallback(() => {
   if (pendingAiResult) {
-    // User dismissed the saved meal suggestion - log the AI-analyzed items instead
     createEntryFromItems(pendingAiResult.items, pendingAiResult.text);
+  }
+  setSimilarMatch(null);
+  setPendingAiResult(null);
+}, [pendingAiResult, createEntryFromItems]);
+
+// After:
+const dismissSimilarMatch = useCallback(() => {
+  if (pendingAiResult) {
+    // User already has a saved meal but chose not to use it - don't suggest saving again
+    createEntryFromItems(pendingAiResult.items, pendingAiResult.text, undefined, true);
   }
   setSimilarMatch(null);
   setPendingAiResult(null);
 }, [pendingAiResult, createEntryFromItems]);
 ```
 
-### Behavior After Fix
+### Why This Works
 
-| Action | Result |
-|--------|--------|
-| Click "Use Saved Meal" | Logs the saved meal's items (existing behavior) |
-| Click "Dismiss" | **Logs the AI-analyzed items from user's input** (fixed) |
-| Click X button | Same as Dismiss - logs AI result |
+| Scenario | Behavior |
+|----------|----------|
+| Normal entry (no saved meal match) | Detection runs, may show Save Suggestion |
+| Entry from saved meal (`sourceMealId` set) | Already skipped by existing `!sourceMealId` check |
+| **Entry from dismissing Similar Meal prompt** | **Now skipped via `skipSaveSuggestion: true`** |
 
 ### Single File Change
 
-| File | Change |
-|------|--------|
-| `src/pages/FoodLog.tsx` | Update `dismissSimilarMatch` to call `createEntryFromItems` with `pendingAiResult` |
+| File | Changes |
+|------|---------|
+| `src/pages/FoodLog.tsx` | Add `skipSaveSuggestion` parameter; pass `true` in `dismissSimilarMatch` |
 
+### Edge Case Consideration
+
+The user might want to save a *modified* version of the meal. However, in this flow they're dismissing the similar meal prompt to log what they typed - they're not editing the items. If they wanted a saved meal, they would have clicked "Use Saved Meal". The current UX correctly assumes "Dismiss" means "I don't want to deal with saved meals right now."
