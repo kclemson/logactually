@@ -36,7 +36,7 @@ export function SimilarEntryPrompt({
       <button
         onClick={onDismiss}
         className="absolute top-2 right-2 p-1 rounded-sm hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-        aria-label="Dismiss"
+        aria-label="Log as new entry"
       >
         <X className="h-4 w-4" />
       </button>
@@ -74,7 +74,7 @@ export function SimilarEntryPrompt({
           onClick={onDismiss}
           disabled={isLoading}
         >
-          Dismiss
+          Log as New
         </Button>
       </div>
     </div>
