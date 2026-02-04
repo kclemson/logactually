@@ -9,7 +9,6 @@ import { LogInput, LogInputRef } from '@/components/LogInput';
 import { FoodItemsTable } from '@/components/FoodItemsTable';
 import { SaveMealDialog } from '@/components/SaveMealDialog';
 import { CreateMealDialog } from '@/components/CreateMealDialog';
-import { SimilarMealPrompt } from '@/components/SimilarMealPrompt';
 import { SimilarEntryPrompt } from '@/components/SimilarEntryPrompt';
 import { SaveSuggestionPrompt } from '@/components/SaveSuggestionPrompt';
 import { DemoPreviewDialog } from '@/components/DemoPreviewDialog';
@@ -23,7 +22,7 @@ import { useEditableFoodItems } from '@/hooks/useEditableItems';
 import { useSavedMeals, useSaveMeal, useLogSavedMeal } from '@/hooks/useSavedMeals';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
-import { findSimilarMeals, createItemsSignature, SimilarMealMatch, findSimilarEntry, SimilarEntryMatch } from '@/lib/text-similarity';
+import { findSimilarEntry, SimilarEntryMatch } from '@/lib/text-similarity';
 import { detectHistoryReference, MIN_SIMILARITY_REQUIRED } from '@/lib/history-patterns';
 import { detectRepeatedFoodEntry, isDismissed, dismissSuggestion, shouldShowOptOutLink, FoodSaveSuggestion } from '@/lib/repeated-entry-detection';
 import { FoodItem, SavedMeal, calculateTotals } from '@/types/food';
@@ -60,12 +59,6 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   // State for create meal dialog
   const [createMealDialogOpen, setCreateMealDialogOpen] = useState(false);
 
-  // State for similar meal prompt (from AI result matching saved meal)
-  const [similarMatch, setSimilarMatch] = useState<SimilarMealMatch | null>(null);
-  const [pendingAiResult, setPendingAiResult] = useState<{
-    text: string;
-    items: FoodItem[];
-  } | null>(null);
 
   // State for similar entry prompt (from history reference detection)
   const [pendingEntryMatch, setPendingEntryMatch] = useState<{
@@ -298,43 +291,11 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
         return;
       }
 
-      // Check for similar saved meals
-      if (savedMeals && savedMeals.length > 0) {
-        const itemsSignature = createItemsSignature(result.food_items);
-        const match = findSimilarMeals(text, itemsSignature, savedMeals, 0.6);
-        
-        if (match) {
-          // Show similar meal prompt
-          setPendingAiResult({ text, items: result.food_items });
-          setSimilarMatch(match);
-          return;
-        }
-      }
-
-      // No similar meal found - proceed normally
+      // Proceed with creating entry
       createEntryFromItems(result.food_items, text);
     }
   };
 
-  // Similar meal prompt handlers
-  const handleUseSaved = async () => {
-    if (!similarMatch) return;
-    
-    const foodItems = await logSavedMeal.mutateAsync(similarMatch.meal.id);
-    createEntryFromItems(foodItems, similarMatch.meal.original_input, similarMatch.meal.id);
-    
-    setSimilarMatch(null);
-    setPendingAiResult(null);
-  };
-
-  const dismissSimilarMatch = useCallback(() => {
-    if (pendingAiResult) {
-      // User dismissed the saved meal suggestion - log the AI-analyzed items instead
-      createEntryFromItems(pendingAiResult.items, pendingAiResult.text);
-    }
-    setSimilarMatch(null);
-    setPendingAiResult(null);
-  }, [pendingAiResult, createEntryFromItems]);
 
   // Save suggestion handlers
   const handleSaveSuggestion = useCallback(() => {
@@ -388,21 +349,9 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     
     const result = await analyzeFood(text);
     if (result) {
-      // Check for similar saved meals
-      if (savedMeals && savedMeals.length > 0) {
-        const itemsSignature = createItemsSignature(result.food_items);
-        const match = findSimilarMeals(text, itemsSignature, savedMeals, 0.6);
-        
-        if (match) {
-          setPendingAiResult({ text, items: result.food_items });
-          setSimilarMatch(match);
-          return;
-        }
-      }
-      
       createEntryFromItems(result.food_items, text);
     }
-  }, [pendingEntryMatch, analyzeFood, savedMeals, createEntryFromItems]);
+  }, [pendingEntryMatch, analyzeFood, createEntryFromItems]);
 
   // Handle direct scan results (when barcode lookup succeeds)
   const handleScanResult = async (foodItem: Omit<FoodItem, 'uid' | 'entryId'>, originalInput: string) => {
@@ -616,7 +565,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
           onScanResult={handleScanResult}
           onLogSavedMeal={handleLogSavedMeal}
           onCreateNewMeal={() => setCreateMealDialogOpen(true)}
-          onDismissSimilarMatch={dismissSimilarMatch}
+          
           isLoading={isAnalyzing || createEntry.isPending}
         />
         {analyzeError && (
@@ -642,17 +591,6 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
           </div>
         )}
 
-        {/* Similar Meal Prompt (from AI result matching saved meal) */}
-        {similarMatch && (
-          <div className="mt-3">
-            <SimilarMealPrompt
-              match={similarMatch}
-              onUseSaved={handleUseSaved}
-              onDismiss={dismissSimilarMatch}
-              isLoading={logSavedMeal.isPending || createEntry.isPending}
-            />
-          </div>
-        )}
         
         {/* Save Suggestion Prompt (for repeated entries) */}
         {saveSuggestion && (

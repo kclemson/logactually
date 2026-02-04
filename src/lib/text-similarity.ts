@@ -1,4 +1,4 @@
-import { FoodItem, FoodEntry, SavedMeal } from '@/types/food';
+import { FoodItem, FoodEntry } from '@/types/food';
 
 const STOP_WORDS = new Set([
   'a', 'an', 'the', 'with', 'of', 'from', 'and', 'at', 'in', 'on', 'for',
@@ -108,6 +108,7 @@ export function preprocessText(text: string): string {
 
 /**
  * Create a signature from food items' descriptions.
+ * Used when saving meals to generate the items_signature for storage.
  */
 export function createItemsSignature(items: FoodItem[]): string {
   const combined = items.map(item => item.description).join(' ');
@@ -131,47 +132,6 @@ export function jaccardSimilarity(a: string, b: string): number {
   return intersection.size / union.size;
 }
 
-export interface SimilarMealMatch {
-  meal: SavedMeal;
-  score: number;
-  matchType: 'input' | 'items';
-}
-
-/**
- * Find the best matching saved meal using dual-comparison:
- * - Compare input text against saved meal's input_signature
- * - Compare items signature against saved meal's items_signature
- * Returns the best match above threshold, or null if none found.
- */
-export function findSimilarMeals(
-  inputText: string,
-  itemsSignature: string,
-  savedMeals: SavedMeal[],
-  threshold = 0.6
-): SimilarMealMatch | null {
-  const inputSig = preprocessText(inputText);
-  let bestMatch: SimilarMealMatch | null = null;
-  
-  for (const meal of savedMeals) {
-    // Compare against input signature
-    if (meal.input_signature) {
-      const inputScore = jaccardSimilarity(inputSig, meal.input_signature);
-      if (inputScore >= threshold && (!bestMatch || inputScore > bestMatch.score)) {
-        bestMatch = { meal, score: inputScore, matchType: 'input' };
-      }
-    }
-    
-    // Compare against items signature
-    if (meal.items_signature) {
-      const itemsScore = jaccardSimilarity(itemsSignature, meal.items_signature);
-      if (itemsScore >= threshold && (!bestMatch || itemsScore > bestMatch.score)) {
-        bestMatch = { meal, score: itemsScore, matchType: 'items' };
-      }
-    }
-  }
-  
-  return bestMatch;
-}
 
 // =============================================================================
 // Fuzzy Matching Utilities
