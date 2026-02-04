@@ -29,12 +29,17 @@ const HELP_CONTENT = {
         text: 'Pin this app to your phone\'s home screen for quick access — tap Share (or your browser menu), then "Add to Home Screen."',
         highlights: ["Pin this app"],
       },
+      {
+        text: "Check out the changelog for the latest features and updates.",
+        highlights: ["changelog"],
+        link: "/changelog",
+      },
     ],
   },
 };
 // ============================================
 
-function highlightText(text: string, highlights: string[]) {
+function highlightText(text: string, highlights: string[], link?: string) {
   if (!highlights.length) return text;
 
   const pattern = new RegExp(`(${highlights.map((h) => h.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "gi");
@@ -42,6 +47,13 @@ function highlightText(text: string, highlights: string[]) {
 
   return parts.map((part, i) => {
     const isHighlight = highlights.some((h) => h.toLowerCase() === part.toLowerCase());
+    if (isHighlight && link) {
+      return (
+        <Link key={i} to={link} className="text-foreground underline underline-offset-2 hover:text-primary transition-colors">
+          {part}
+        </Link>
+      );
+    }
     return isHighlight ? (
       <span key={i} className="text-foreground">
         {part}
@@ -76,7 +88,7 @@ export default function Help() {
           {HELP_CONTENT.tips.items.map((item, index) => (
             <li key={index} className="flex gap-2">
               <span className="text-foreground">•</span>
-              <span>{highlightText(item.text, item.highlights)}</span>
+              <span>{highlightText(item.text, item.highlights, (item as { link?: string }).link)}</span>
             </li>
           ))}
         </ul>
@@ -92,13 +104,6 @@ export default function Help() {
           className="text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
         >
           Privacy & Security
-        </Link>
-        <span className="text-muted-foreground"> · </span>
-        <Link
-          to="/changelog"
-          className="text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
-        >
-          Changelog
         </Link>
       </div>
     </div>
