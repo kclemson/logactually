@@ -26,7 +26,8 @@ import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { findSimilarMeals, createItemsSignature, SimilarMealMatch, findSimilarEntry, SimilarEntryMatch } from '@/lib/text-similarity';
 import { detectHistoryReference, MIN_SIMILARITY_REQUIRED } from '@/lib/history-patterns';
 import { detectRepeatedFoodEntry, isDismissed, dismissSuggestion, shouldShowOptOutLink, FoodSaveSuggestion } from '@/lib/repeated-entry-detection';
-import { FoodItem, SavedMeal, calculateTotals } from '@/types/food';
+import { FoodItem, SavedMeal, calculateTotals, FoodEntry } from '@/types/food';
+import { useAuth } from '@/hooks/useAuth';
 
 // Wrapper component: extracts date from URL, forces remount via key
 const FoodLog = () => {
@@ -98,7 +99,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   const logSavedMeal = useLogSavedMeal();
   const { settings, updateSettings } = useUserSettings();
   const { isReadOnly } = useReadOnlyContext();
-  
+  const { user } = useAuth();
   
   const foodInputRef = useRef<LogInputRef>(null);
 
@@ -255,8 +256,16 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       foodInputRef.current?.clear();
       
       // Check for repeated patterns (skip demo mode, saved meal entries, and dismissed similar meal)
-      if (!isReadOnly && settings.suggestMealSaves && recentEntries && !sourceMealId && !skipSaveSuggestion) {
-        const suggestion = detectRepeatedFoodEntry(items, recentEntries);
+      if (!isReadOnly && settings.suggestMealSaves && !sourceMealId && !skipSaveSuggestion) {
+        // Get fresh cache data directly (avoids stale closure problem)
+        const freshRecentEntries = queryClient.getQueryData<FoodEntry[]>(
+          ['recent-food-entries', user?.id, 500]
+        ) ?? [];
+        
+        // Exclude the entry we just created (don't match against itself)
+        const historyEntries = freshRecentEntries.filter(e => e.id !== entryId);
+        
+        const suggestion = detectRepeatedFoodEntry(items, historyEntries);
         if (suggestion && !isDismissed(suggestion.signatureHash)) {
           setSaveSuggestion(suggestion);
           setSaveSuggestionItems([...suggestion.items]);
@@ -265,7 +274,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     } catch {
       // Error already logged by mutation's onError
     }
-  }, [createEntry, dateStr, queryClient, markEntryAsNew, isReadOnly, settings.suggestMealSaves, recentEntries]);
+  }, [createEntry, dateStr, queryClient, markEntryAsNew, isReadOnly, settings.suggestMealSaves, user?.id]);
 
   const handleSubmit = async (text: string) => {
     // 1. Check for history reference patterns BEFORE AI call (skip for demo mode)
