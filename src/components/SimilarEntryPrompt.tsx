@@ -43,7 +43,7 @@ export function SimilarEntryPrompt({
       <p className="text-sm pr-6">
         Looks like your entry from{' '}
         <span className="font-medium">{formattedDate}</span>{' '}
-        <span className="text-muted-foreground">({matchPercent}% match)</span>
+        <span className="text-muted-foreground">({matchPercent}% match):</span>
       </p>
       
       {/* Food items preview */}
