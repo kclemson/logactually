@@ -93,7 +93,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   const { data: datesWithFood = [] } = useFoodDatesWithData(calendarMonth);
   const { analyzeFood, isAnalyzing, error: analyzeError, warning: analyzeWarning } = useAnalyzeFood();
   const { data: savedMeals } = useSavedMeals();
-  const { data: recentEntries } = useRecentFoodEntries(90); // 90 days for history matching
+  const { data: recentEntries } = useRecentFoodEntries(); // 500 most recently created entries
   const saveMeal = useSaveMeal();
   const logSavedMeal = useLogSavedMeal();
   const { settings, updateSettings } = useUserSettings();

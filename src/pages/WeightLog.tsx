@@ -91,7 +91,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   const saveRoutineMutation = useSaveRoutine();
   const { settings, updateSettings } = useUserSettings();
   const { data: savedRoutines } = useSavedRoutines();
-  const { data: recentWeightEntries } = useRecentWeightEntries(90);
+  const { data: recentWeightEntries } = useRecentWeightEntries(); // 500 most recently created entries
   const { isReadOnly } = useReadOnlyContext();
   
   const weightInputRef = useRef<LogInputRef>(null);

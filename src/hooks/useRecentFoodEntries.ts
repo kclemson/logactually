@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { format, subDays } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { FoodEntry, FoodItem } from '@/types/food';
@@ -7,29 +6,27 @@ import { FoodEntry, FoodItem } from '@/types/food';
 /**
  * Fetch recent food entries for history matching.
  * 
- * Data size analysis (90 days):
+ * Uses the most recently CREATED entries (by created_at), not by eaten_date.
+ * This ensures pattern detection works correctly when backdating entries.
+ * 
+ * Data size analysis (500 entries):
  * - Average food_items size per entry: ~474 bytes
- * - Average raw_input size: ~36 bytes
- * - Worst case (10 entries/day x 90 days): ~550 KB
+ * - 500 entries × 500 bytes ≈ 250 KB
+ * - Well within acceptable limits for a cached query
  * 
- * This is well within acceptable limits for a cached query.
- * 
- * @param daysBack Number of days to look back (default: 90)
+ * @param limit Maximum number of entries to fetch (default: 500)
  */
-export function useRecentFoodEntries(daysBack = 90) {
+export function useRecentFoodEntries(limit = 500) {
   const { user } = useAuth();
   
   return useQuery({
-    queryKey: ['recent-food-entries', user?.id, daysBack],
+    queryKey: ['recent-food-entries', user?.id, limit],
     queryFn: async () => {
-      const cutoffDate = format(subDays(new Date(), daysBack), 'yyyy-MM-dd');
-      
       const { data, error } = await supabase
         .from('food_entries')
         .select('id, eaten_date, raw_input, food_items, total_calories, total_protein, total_carbs, total_fat, source_meal_id, created_at')
-        .gte('eaten_date', cutoffDate)
-        .order('eaten_date', { ascending: false })
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(limit);
       
       if (error) throw error;
       
