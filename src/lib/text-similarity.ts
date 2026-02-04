@@ -174,6 +174,64 @@ export function findSimilarMeals(
 }
 
 // =============================================================================
+// Fuzzy Matching Utilities
+// =============================================================================
+
+/**
+ * Calculate Levenshtein edit distance between two strings.
+ * Returns the minimum number of single-character edits needed.
+ */
+function levenshteinDistance(a: string, b: string): number {
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+
+  const matrix: number[][] = [];
+
+  for (let i = 0; i <= b.length; i++) {
+    matrix[i] = [i];
+  }
+  for (let j = 0; j <= a.length; j++) {
+    matrix[0][j] = j;
+  }
+
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      const cost = a[j - 1] === b[i - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,      // deletion
+        matrix[i][j - 1] + 1,      // insertion
+        matrix[i - 1][j - 1] + cost // substitution
+      );
+    }
+  }
+
+  return matrix[b.length][a.length];
+}
+
+/**
+ * Check if two words are a fuzzy match.
+ * - Exact match always succeeds
+ * - Short words (≤5 chars): allow 1 edit
+ * - Longer words: allow 2 edits
+ */
+function isFuzzyMatch(word1: string, word2: string): boolean {
+  if (word1 === word2) return true;
+  const minLen = Math.min(word1.length, word2.length);
+  const maxDistance = minLen <= 5 ? 1 : 2;
+  return levenshteinDistance(word1, word2) <= maxDistance;
+}
+
+/**
+ * Check if a word fuzzy-matches any word in a set.
+ */
+function fuzzySetHas(word: string, targetSet: Set<string>): boolean {
+  for (const target of targetSet) {
+    if (isFuzzyMatch(word, target)) return true;
+  }
+  return false;
+}
+
+// =============================================================================
 // Similar Entry Matching (for history reference detection)
 // =============================================================================
 
@@ -231,17 +289,21 @@ export function hybridSimilarityScore(
   const inputSet = new Set(candidateFoodWords);
   const targetSet = new Set(targetWords);
   
-  // Containment: what fraction of input words appear in target
+  // Containment: what fraction of input words appear in target (fuzzy)
   let matchedCount = 0;
   for (const word of candidateFoodWords) {
-    if (targetSet.has(word)) matchedCount++;
+    if (fuzzySetHas(word, targetSet)) matchedCount++;
   }
   const containment = matchedCount / candidateFoodWords.length;
   
-  // Jaccard: intersection over union (for ranking)
-  const intersection = new Set([...inputSet].filter(x => targetSet.has(x)));
+  // Jaccard: intersection over union (fuzzy matching for ranking)
+  let intersectionCount = 0;
+  for (const word of inputSet) {
+    if (fuzzySetHas(word, targetSet)) intersectionCount++;
+  }
+  const unionSize = inputSet.size + targetSet.size - intersectionCount;
   const union = new Set([...inputSet, ...targetSet]);
-  const jaccard = union.size > 0 ? intersection.size / union.size : 0;
+  const jaccard = unionSize > 0 ? intersectionCount / unionSize : 0;
   
   // Weighted combination
   return (containment * 0.7) + (jaccard * 0.3);
