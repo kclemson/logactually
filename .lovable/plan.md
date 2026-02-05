@@ -1,45 +1,60 @@
 
 
-## COMPLETED: Add Selection Mode with Full Context to Save Dialogs
+## Plan: Remove Nested Wrapper in Save Dialogs (Step 1 of 2)
 
-### Summary
-Implemented checkbox selection mode in `FoodItemsTable` and `WeightItemsTable` to display full item context in Save Meal/Routine dialogs instead of minimal text summaries.
+### Goal
+Remove the extra border/padding wrapper around each entry table in the Save dialogs. This is a dialog-only change with zero impact on shared components.
 
-### Changes Made
+### Changes
 
-#### 1. FoodItemsTable - Selection Mode Added
-**File:** `src/components/FoodItemsTable.tsx`
-- Added props: `selectable`, `selectedIndices`, `onSelectionChange`
-- Updated grid columns to include 24px checkbox column when `selectable=true`
-- Added checkbox rendering in header, data rows, and totals row
+#### SaveMealDialog.tsx
 
-#### 2. WeightItemsTable - Selection Mode Added  
-**File:** `src/components/WeightItemsTable.tsx`
-- Added props: `selectable`, `selectedIndices`, `onSelectionChange`, `compact`
-- Updated grid columns to include 24px checkbox column when `selectable=true`
-- Added checkbox rendering in header, data rows, and totals row
-- Added `compact` text styling for description cells
+**Line 151-154** - Remove wrapper styling:
+```tsx
+// Before
+<div 
+  key={entry.entryId} 
+  className="rounded border border-border/50 p-1.5"
+>
 
-#### 3. SaveMealDialog Updated
-**File:** `src/components/SaveMealDialog.tsx`
-- Replaced checkbox+text labels with `FoodItemsTable` instances
-- Each "other entry" now shows full nutritional context (calories, macros)
-- Selection toggles entire entry (all-or-nothing)
-- Uses `compact=true`, `showTotals=true`, `showInlineLabels=true`
+// After
+<div key={entry.entryId}>
+```
 
-#### 4. SaveRoutineDialog Updated
-**File:** `src/components/SaveRoutineDialog.tsx`
-- Added `weightUnit` prop for proper weight display
-- Replaced checkbox+text labels with `WeightItemsTable` instances
-- Each "other entry" now shows full exercise context (sets, reps, weight)
-- Uses `compact=true`, `showTotals=false`, `showInlineLabels=true`
+#### SaveRoutineDialog.tsx
 
-#### 5. WeightLog.tsx Updated
-**File:** `src/pages/WeightLog.tsx`
-- Passes `weightUnit={settings.weightUnit}` to SaveRoutineDialog
+**Line 177-180** - Same change:
+```tsx
+// Before
+<div 
+  key={entry.entryId} 
+  className="rounded border border-border/50 p-1.5"
+>
 
-### Visual Design
-- Checkbox column: 24px width, leftmost position
-- Tables wrapped in subtle border for visual grouping
-- Compact mode reduces text size for better fit in dialog context
-- "Show X more..." collapse behavior preserved
+// After
+<div key={entry.entryId}>
+```
+
+### Files Modified
+
+| File | Change |
+|------|--------|
+| `src/components/SaveMealDialog.tsx` | Remove `rounded border border-border/50 p-1.5` from entry wrapper |
+| `src/components/SaveRoutineDialog.tsx` | Remove `rounded border border-border/50 p-1.5` from entry wrapper |
+
+### What to Test
+
+After this change, open both Save dialogs with multiple entries from today and verify:
+- Entries are still visually separated (via `space-y-3` gap)
+- Less cramped appearance without nested borders
+- Checkboxes still align properly with content
+
+### Next Step
+
+Once you've reviewed this baseline, we can evaluate the shared component compact padding changes by looking at all usages:
+- SaveMealDialog (compact=true)
+- SaveRoutineDialog (compact=true)
+- SimilarEntryPrompt (compact=true)
+
+...at various viewport widths including mobile.
+
