@@ -12,12 +12,13 @@ import { FeedbackForm } from "@/components/FeedbackForm";
 type ChangelogEntry = {
   date: string;
   text: string;
-  image?: string; // Path relative to /public/changelog/, e.g., "dashboard.png"
+  image?: string;   // Single image (existing)
+  images?: string[]; // Multiple images side-by-side (new)
 };
 
 // prettier-ignore
 const CHANGELOG_ENTRIES: ChangelogEntry[] = [
-{ date: "Feb-04", text: "When you log similar items 3 or more times, you'll now get a suggestion to save them as a meal or routine for easier logging in the future.", image: "save-suggestion.png" },
+{ date: "Feb-04", text: "Log similar items 3+ times? You'll get a prompt to save them as a meal or routine. Already have one saved? You can update it with your latest values in one click.", images: ["save-suggestion-food.png", "save-suggestion-routine.png"] },
 { date: "Feb-03", text: "Added smart detection for similar past food entries - when logging something you've had before, it'll suggest using your previous entry.", image: "similar-entry.png" },
 { date: "Feb-01", text: "Updated demo mode so you can see a preview of what would be logged based on the input you entered." },
   { date: "Jan-31", text: "Added support for Google authentication, and this changelog page." },
@@ -72,6 +73,18 @@ export default function Changelog() {
                         alt={`Screenshot for ${entry.date} update`}
                         className="mt-2 rounded-lg max-h-[200px] w-auto object-contain"
                       />
+                    )}
+                    {entry.images && (
+                      <div className="flex gap-2 mt-2">
+                        {entry.images.map((img, i) => (
+                          <img 
+                            key={i}
+                            src={`/changelog/${img}`}
+                            alt={`Screenshot ${i + 1} for ${entry.date} update`}
+                            className="rounded-lg max-h-[200px] w-auto object-contain"
+                          />
+                        ))}
+                      </div>
                     )}
                   </div>
                 </div>
