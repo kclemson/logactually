@@ -1,28 +1,54 @@
 
-## Fix Demo Logins 24h Display
+## Fix: Restore Expand Chevron for Routine-Sourced Entries
 
-### Issues to Fix
+### What Happened
 
-1. **Duplicate line**: Remove the redundant "Last 24h" paragraph (lines 106-108)
-2. **Green only on number**: Update the original line (105) so only the count turns green, not the label
+During the Feb 4 "save suggestion" feature work, we cleaned up how routine logs are stored:
 
-### Solution
+- **Before**: `raw_input` was set to `"From saved routine"` as a placeholder
+- **After**: `raw_input` is `null`, with `source_routine_id` properly tracking the origin
 
-Replace lines 105-108 with a single line that wraps only the number in a conditional span:
-
+The change in `WeightLog.tsx` line 316 has the revealing comment:
 ```tsx
-// Before (lines 105-108)
-<p>Last 24h: {demoLogins24h ?? 0}</p>
-<p className={(demoLogins24h ?? 0) > 0 ? "text-green-500" : ""}>
-  Last 24h: {demoLogins24h ?? 0}
-</p>
-
-// After (single line)
-<p>Last 24h: <span className={(demoLogins24h ?? 0) > 0 ? "text-green-500" : ""}>{demoLogins24h ?? 0}</span></p>
+setDemoPreviewRawInput(null); // Saved routines don't have raw input to show
 ```
 
-### Files to Modify
+The assumption was correct that routines don't have *raw input*, but wrong that there's nothing to show - the routine name is still valuable information.
 
-| File | Change |
-|------|--------|
-| `src/pages/Admin.tsx` | Remove duplicate, wrap only the number in conditional green span |
+### Why It Broke
+
+`WeightItemsTable.tsx` only shows the expand chevron when `hasRawInput` is true:
+```tsx
+const hasRawInput = !!currentRawInput;
+// ...
+{isLastInEntry && hasRawInput ? (chevron) : null}
+```
+
+The `entrySourceRoutineIds` prop is passed but not used in this logic.
+
+### The Fix
+
+Update the expand condition to check for **either** raw input **or** routine source:
+
+**File: `src/components/WeightItemsTable.tsx`**
+
+```text
+Line ~366: Add isExpandable calculation
+Line ~389, ~431: Update render condition
+```
+
+```tsx
+// Add after line 366
+const isFromRoutine = currentEntryId ? entrySourceRoutineIds?.has(currentEntryId) : false;
+const isExpandable = hasRawInput || isFromRoutine;
+
+// Update conditions at lines 389 and 431
+{isLastInEntry && isExpandable ? ( ... ) : null}
+```
+
+### Why This Is Safe
+
+1. No database changes needed
+2. The expanded panel already handles routine display correctly (shows "From saved routine: [name]")
+3. Works for existing entries with `raw_input: null`
+4. Uses the semantically correct `source_routine_id` field
