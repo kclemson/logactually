@@ -80,7 +80,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   // Save suggestion state (for repeated entries detection)
   const [saveSuggestion, setSaveSuggestion] = useState<WeightSaveSuggestion | null>(null);
   const [saveSuggestionExercises, setSaveSuggestionExercises] = useState<AnalyzedExercise[]>([]);
-  const [createRoutineFromSuggestion, setCreateRoutineFromSuggestion] = useState(false);
+  // Note: createRoutineFromSuggestion state removed - direct save now used
   const [matchingRoutineForSuggestion, setMatchingRoutineForSuggestion] = useState<MatchingRoutine | null>(null);
   
   const dateStr = initialDate;
@@ -385,9 +385,33 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
 
   // Save suggestion handlers
   const handleSaveSuggestion = useCallback(() => {
-    setCreateRoutineFromSuggestion(true);
-    setSaveSuggestion(null);
-  }, []);
+    if (saveSuggestionExercises.length === 0) return;
+    
+    const exerciseSets: SavedExerciseSet[] = saveSuggestionExercises.map(e => ({
+      exercise_key: e.exercise_key,
+      description: e.description,
+      sets: e.sets,
+      reps: e.reps,
+      weight_lbs: e.weight_lbs,
+      duration_minutes: e.duration_minutes,
+      distance_miles: e.distance_miles,
+    }));
+    
+    const autoName = generateRoutineName(exerciseSets[0]);
+    
+    saveRoutineMutation.mutate({
+      name: autoName,
+      originalInput: null,
+      exerciseSets,
+      isAutoNamed: true,
+    }, {
+      onSuccess: () => {
+        setSaveSuggestion(null);
+        setSaveSuggestionExercises([]);
+        setMatchingRoutineForSuggestion(null);
+      }
+    });
+  }, [saveSuggestionExercises, saveRoutineMutation]);
 
   const handleDismissSuggestion = useCallback(() => {
     if (saveSuggestion) {
@@ -459,11 +483,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
     return map.size > 0 ? map : undefined;
   }, [matchingRoutineForSuggestion]);
 
-  const handleRoutineFromSuggestionCreated = useCallback(() => {
-    setCreateRoutineFromSuggestion(false);
-    setSaveSuggestionExercises([]);
-    setMatchingRoutineForSuggestion(null);
-  }, []);
+  // Note: handleRoutineFromSuggestionCreated removed - direct save now used
 
   return (
     <div className="space-y-4">
@@ -526,6 +546,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
                 diffs: diffsMap,
               } : undefined}
               onUpdate={handleUpdateExistingRoutine}
+              isLoading={saveRoutineMutation.isPending || updateSavedRoutine.isPending}
             />
           </div>
         )}
@@ -632,17 +653,6 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
             handleLogSavedRoutine(exerciseSets, routine.id);
           }}
           showLogPrompt={true}
-        />
-      )}
-
-      {/* Create Routine from Suggestion Dialog */}
-      {createRoutineFromSuggestion && (
-        <CreateRoutineDialog
-          open={createRoutineFromSuggestion}
-          onOpenChange={setCreateRoutineFromSuggestion}
-          onRoutineCreated={handleRoutineFromSuggestionCreated}
-          showLogPrompt={false}
-          initialExercises={saveSuggestionExercises}
         />
       )}
 
