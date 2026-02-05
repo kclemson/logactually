@@ -22,9 +22,10 @@ import { useRecentWeightEntries } from '@/hooks/useRecentWeightEntries';
 import { useEditableItems } from '@/hooks/useEditableItems';
 import { useSavedRoutines } from '@/hooks/useSavedRoutines';
 import { useSaveRoutine } from '@/hooks/useSavedRoutines';
+import { useUpdateSavedRoutine } from '@/hooks/useSavedRoutines';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
-import { detectRepeatedWeightEntry, isDismissed, dismissSuggestion, shouldShowOptOutLink, WeightSaveSuggestion } from '@/lib/repeated-entry-detection';
+import { detectRepeatedWeightEntry, isDismissed, dismissSuggestion, shouldShowOptOutLink, WeightSaveSuggestion, findMatchingSavedRoutine, MatchingRoutine } from '@/lib/repeated-entry-detection';
 import { WeightSet, WeightEditableField, SavedExerciseSet, AnalyzedExercise } from '@/types/weight';
 
 const WEIGHT_EDITABLE_FIELDS: WeightEditableField[] = ['description', 'sets', 'reps', 'weight_lbs'];
@@ -79,6 +80,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   const [saveSuggestion, setSaveSuggestion] = useState<WeightSaveSuggestion | null>(null);
   const [saveSuggestionExercises, setSaveSuggestionExercises] = useState<AnalyzedExercise[]>([]);
   const [createRoutineFromSuggestion, setCreateRoutineFromSuggestion] = useState(false);
+  const [matchingRoutineForSuggestion, setMatchingRoutineForSuggestion] = useState<MatchingRoutine | null>(null);
   
   const dateStr = initialDate;
   const selectedDate = parseISO(initialDate);
@@ -89,6 +91,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   const { data: datesWithWeights = [] } = useWeightDatesWithData(calendarMonth);
   const { analyzeWeights, isAnalyzing, error: analyzeError, warning: analyzeWarning } = useAnalyzeWeights();
   const saveRoutineMutation = useSaveRoutine();
+  const updateSavedRoutine = useUpdateSavedRoutine();
   const { settings, updateSettings } = useUserSettings();
   const { data: savedRoutines } = useSavedRoutines();
   const { data: recentWeightEntries } = useRecentWeightEntries(90);
@@ -260,8 +263,15 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
         
         const suggestion = detectRepeatedWeightEntry(analyzedExercises, recentWeightEntries);
         if (suggestion && !isDismissed(suggestion.signatureHash)) {
+          // Check if there's a matching saved routine to offer update
+          const matchingRoutine = findMatchingSavedRoutine(
+            analyzedExercises,
+            savedRoutines ?? []
+          );
+          
           setSaveSuggestion(suggestion);
           setSaveSuggestionExercises([...suggestion.exercises]);
+          setMatchingRoutineForSuggestion(matchingRoutine);
         }
       }
     } catch {
@@ -383,21 +393,66 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
     }
     setSaveSuggestion(null);
     setSaveSuggestionExercises([]);
+    setMatchingRoutineForSuggestion(null);
   }, [saveSuggestion]);
 
   const handleOptOutRoutineSuggestions = useCallback(() => {
     updateSettings({ suggestRoutineSaves: false });
     setSaveSuggestion(null);
     setSaveSuggestionExercises([]);
+    setMatchingRoutineForSuggestion(null);
   }, [updateSettings]);
 
   const handleSuggestionExercisesChange = useCallback((items: AnalyzedExercise[]) => {
     setSaveSuggestionExercises(items);
   }, []);
 
+  // Handle updating an existing saved routine from suggestion
+  const handleUpdateExistingRoutine = useCallback(() => {
+    if (!matchingRoutineForSuggestion) return;
+    
+    const exerciseSets: SavedExerciseSet[] = saveSuggestionExercises.map(e => ({
+      exercise_key: e.exercise_key,
+      description: e.description,
+      sets: e.sets,
+      reps: e.reps,
+      weight_lbs: e.weight_lbs,
+      duration_minutes: e.duration_minutes,
+      distance_miles: e.distance_miles,
+    }));
+    
+    updateSavedRoutine.mutate({
+      id: matchingRoutineForSuggestion.id,
+      exerciseSets,
+    }, {
+      onSuccess: () => {
+        setSaveSuggestion(null);
+        setSaveSuggestionExercises([]);
+        setMatchingRoutineForSuggestion(null);
+      }
+    });
+  }, [matchingRoutineForSuggestion, saveSuggestionExercises, updateSavedRoutine]);
+
+  // Convert diffs to Map for SaveSuggestionPrompt
+  const diffsMap = useMemo(() => {
+    if (!matchingRoutineForSuggestion) return undefined;
+    const map = new Map<number, { sets?: number; reps?: number; weight_lbs?: number }>();
+    for (const diff of matchingRoutineForSuggestion.diffs) {
+      if (diff.sets || diff.reps || diff.weight_lbs) {
+        map.set(diff.index, {
+          sets: diff.sets,
+          reps: diff.reps,
+          weight_lbs: diff.weight_lbs,
+        });
+      }
+    }
+    return map.size > 0 ? map : undefined;
+  }, [matchingRoutineForSuggestion]);
+
   const handleRoutineFromSuggestionCreated = useCallback(() => {
     setCreateRoutineFromSuggestion(false);
     setSaveSuggestionExercises([]);
+    setMatchingRoutineForSuggestion(null);
   }, []);
 
   return (
@@ -449,10 +504,18 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
                     props.onUpdateItem(index, field as keyof AnalyzedExercise, value);
                   }}
                   onRemoveItem={props.onRemoveItem}
-                  showHeader={false}
+                  showHeader={!!matchingRoutineForSuggestion}
                   showTotals={false}
+                  diffs={props.diffs}
+                  weightUnit={settings.weightUnit}
                 />
               )}
+              matchingRoutine={matchingRoutineForSuggestion ? {
+                id: matchingRoutineForSuggestion.id,
+                name: matchingRoutineForSuggestion.name,
+                diffs: diffsMap,
+              } : undefined}
+              onUpdate={handleUpdateExistingRoutine}
             />
           </div>
         )}

@@ -21,6 +21,12 @@ import { type WeightUnit, formatWeight, parseWeightToLbs, getWeightUnitLabel, fo
 
 type EditableFieldKey = 'description' | 'sets' | 'reps' | 'weight_lbs';
 
+interface DiffValues {
+  sets?: number;
+  reps?: number;
+  weight_lbs?: number;
+}
+
 interface EditingCell {
   index: number;
   field: EditableFieldKey;
@@ -61,7 +67,45 @@ interface WeightItemsTableProps {
   entrySourceRoutineIds?: Set<string>;
   /** When true, show "cardio" label for cardio items even in read-only mode */
   showCardioLabel?: boolean;
+  /** Map of item index to progression diffs for the update routine flow */
+  diffs?: Map<number, DiffValues>;
 }
+
+/**
+ * Helper component to render a diff value with appropriate styling.
+ */
+const DiffValue = ({ 
+  value, 
+  weightUnit,
+  isWeight = false,
+}: { 
+  value?: number; 
+  weightUnit?: WeightUnit;
+  isWeight?: boolean;
+}) => {
+  if (value === undefined || value === 0) return <span></span>;
+  
+  // For weight, convert from lbs to display unit
+  const displayValue = isWeight && weightUnit === 'kg' 
+    ? Math.round(value * 0.453592) 
+    : Math.abs(value);
+  
+  const sign = value > 0 ? '+' : '';
+  const formattedValue = isWeight 
+    ? `${sign}${value > 0 ? displayValue : -displayValue}`
+    : `${sign}${value}`;
+  
+  return (
+    <span className={cn(
+      "text-center text-xs font-medium",
+      value > 0 
+        ? "text-emerald-600 dark:text-emerald-400" 
+        : "text-amber-600 dark:text-amber-400"
+    )}>
+      {formattedValue}
+    </span>
+  );
+};
 
 export function WeightItemsTable({
   items,
@@ -84,6 +128,7 @@ export function WeightItemsTable({
   entryRoutineNames,
   entrySourceRoutineIds,
   showCardioLabel = false,
+  diffs,
 }: WeightItemsTableProps) {
   const { isReadOnly, triggerOverlay } = useReadOnlyContext();
   
@@ -603,6 +648,29 @@ export function WeightItemsTable({
                 )}
             </div>
             
+            {/* Diff row - show progression delta if provided */}
+            {diffs?.has(index) && (() => {
+              const diff = diffs.get(index)!;
+              const hasDiff = diff.sets || diff.reps || diff.weight_lbs;
+              if (!hasDiff) return null;
+              
+              return (
+                <div className={cn('grid gap-0.5 items-center', gridCols)}>
+                  <span className={cn("px-1", showEntryDividers && "pl-4")}></span>
+                  <span className="px-1 text-center">
+                    <DiffValue value={diff.sets} />
+                  </span>
+                  <span className="px-1 text-center">
+                    <DiffValue value={diff.reps} />
+                  </span>
+                  <span className="px-1 text-center">
+                    <DiffValue value={diff.weight_lbs} weightUnit={weightUnit} isWeight />
+                  </span>
+                  {hasDeleteColumn && <span></span>}
+                </div>
+              );
+            })()}
+
             {/* Expanded content section */}
             {showEntryDividers && isLastInEntry && isCurrentExpanded && (() => {
               // Check if this entry came from a saved routine (by ID, not name lookup)

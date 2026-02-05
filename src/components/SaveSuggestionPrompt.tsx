@@ -1,4 +1,4 @@
-import { ReactNode, useMemo, useState, useCallback } from 'react';
+import { ReactNode, useCallback } from 'react';
 import { X, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FoodItem } from '@/types/food';
@@ -19,8 +19,16 @@ interface SaveSuggestionPromptProps<T> {
     onUpdateItem: (index: number, field: keyof T, value: string | number) => void;
     onUpdateItemBatch: (index: number, updates: Partial<T>) => void;
     onRemoveItem: (index: number) => void;
+    diffs?: Map<number, { sets?: number; reps?: number; weight_lbs?: number }>;
   }) => ReactNode;
   isLoading?: boolean;
+  // New: matching routine info for update flow
+  matchingRoutine?: {
+    id: string;
+    name: string;
+    diffs?: Map<number, { sets?: number; reps?: number; weight_lbs?: number }>;
+  };
+  onUpdate?: () => void;  // Called when user clicks "Update Routine"
 }
 
 export function SaveSuggestionPrompt<T extends FoodItem | AnalyzedExercise>({
@@ -34,11 +42,13 @@ export function SaveSuggestionPrompt<T extends FoodItem | AnalyzedExercise>({
   showOptOutLink,
   renderItemsTable,
   isLoading,
+  matchingRoutine,
+  onUpdate,
 }: SaveSuggestionPromptProps<T>) {
   const itemLabel = mode === 'food' ? 'items' : 'exercises';
   const saveLabel = mode === 'food' ? 'Save as Meal' : 'Save as Routine';
+  const hasMatchingRoutine = !!matchingRoutine;
   
-  // Handle item updates
   const handleUpdateItem = useCallback((index: number, field: keyof T, value: string | number) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
@@ -69,8 +79,15 @@ export function SaveSuggestionPrompt<T extends FoodItem | AnalyzedExercise>({
       <div className="flex items-start gap-2 pr-6">
         <Lightbulb className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
         <p className="text-sm">
-          You've logged similar {itemLabel} <span className="font-medium">{matchCount} times</span>. 
-          Save for quick access?
+          {hasMatchingRoutine ? (
+            <>
+              You've logged this <span className="font-medium">{matchCount} times</span> and it matches your saved {mode === 'food' ? 'meal' : 'routine'} <span className="font-medium">"{matchingRoutine.name}"</span>. Update it?
+            </>
+          ) : (
+            <>
+              You've logged similar {itemLabel} <span className="font-medium">{matchCount} times</span>. Save for quick access?
+            </>
+          )}
         </p>
       </div>
       
@@ -81,33 +98,67 @@ export function SaveSuggestionPrompt<T extends FoodItem | AnalyzedExercise>({
         onUpdateItem: handleUpdateItem,
         onUpdateItemBatch: handleUpdateItemBatch,
         onRemoveItem: handleRemoveItem,
+        diffs: matchingRoutine?.diffs,
       })}
       
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          size="sm"
-          variant="default"
-          onClick={onSave}
-          disabled={isLoading || items.length === 0}
-        >
-          {saveLabel}
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={onDismiss}
-          disabled={isLoading}
-        >
-          Not Now
-        </Button>
+        {hasMatchingRoutine ? (
+          <>
+            <Button
+              size="sm"
+              variant="default"
+              onClick={onUpdate}
+              disabled={isLoading || items.length === 0}
+            >
+              Update Routine
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onSave}
+              disabled={isLoading || items.length === 0}
+            >
+              Save as New
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button
+              size="sm"
+              variant="default"
+              onClick={onSave}
+              disabled={isLoading || items.length === 0}
+            >
+              {saveLabel}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onDismiss}
+              disabled={isLoading}
+            >
+              Not Now
+            </Button>
+          </>
+        )}
         
         {/* Progressive opt-out link - only shows after 3+ dismissals */}
-        {showOptOutLink && (
+        {showOptOutLink && !hasMatchingRoutine && (
           <button
             onClick={onOptOut}
             className="text-xs text-muted-foreground hover:text-foreground hover:underline ml-auto"
           >
             Don't suggest saves
+          </button>
+        )}
+        
+        {/* Show dismiss option for update flow */}
+        {hasMatchingRoutine && (
+          <button
+            onClick={onDismiss}
+            className="text-xs text-muted-foreground hover:text-foreground hover:underline ml-auto"
+          >
+            Not now
           </button>
         )}
       </div>
