@@ -174,10 +174,7 @@ export function SaveRoutineDialog({
                   : new Set<number>();
 
                 return (
-                  <div 
-                    key={entry.entryId} 
-                    className="rounded border border-border/50 p-1.5"
-                  >
+                  <div key={entry.entryId}>
                     <WeightItemsTable
                       items={itemsWithUids}
                       editable={false}
