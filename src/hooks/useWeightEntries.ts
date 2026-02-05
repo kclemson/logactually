@@ -39,6 +39,7 @@ export function useWeightEntries(date: string) {
         distance_miles: row.distance_miles ?? null,
         rawInput: row.raw_input,
         sourceRoutineId: row.source_routine_id,
+        createdAt: row.created_at,
       }));
     },
     enabled: !!user,

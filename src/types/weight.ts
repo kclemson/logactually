@@ -21,6 +21,7 @@ export interface WeightSet {
   distance_miles?: number | null;    // For cardio (future)
   rawInput?: string | null; // Only present on first set of entry
   sourceRoutineId?: string | null; // Links to saved_routines.id when entry originated from a routine
+  createdAt?: string;     // Database created_at timestamp (optional for non-DB objects)
   editedFields?: WeightEditableField[];
 }
 

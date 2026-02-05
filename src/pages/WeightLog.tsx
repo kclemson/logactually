@@ -356,17 +356,11 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
 
   // Handle "Save as routine" from expanded entry
   const handleSaveAsRoutine = useCallback((entryId: string, rawInput: string | null, exerciseSets: WeightSet[]) => {
-    // Find the entry to get its created_at for chronological sorting
-    const entrySet = weightSets.find(s => s.entryId === entryId);
-    const createdAt = entrySet 
-      ? new Date(weightSets.filter(s => s.entryId === entryId)[0]?.id || Date.now()).toISOString() 
-      : new Date().toISOString();
-    
-    // We need the actual created_at from the first set of this entry
-    // Since weight_sets stores created_at per row, find the earliest for this entry
+    // Get the earliest createdAt from the entry's sets (query is ordered by created_at)
     const entrySets = weightSets.filter(s => s.entryId === entryId);
-    // Use a reasonable default - for now we'll sort by entry order in the array
-    setSaveRoutineDialogData({ entryId, rawInput, exerciseSets, createdAt: new Date().toISOString() });
+    const createdAt = entrySets[0]?.createdAt ?? new Date().toISOString();
+    
+    setSaveRoutineDialogData({ entryId, rawInput, exerciseSets, createdAt });
   }, [weightSets]);
 
   // Handle saving the routine
@@ -401,7 +395,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
     );
   }, [saveRoutineDialogData, saveRoutineMutation, weightSets]);
   
-  // Compute other entries for routine dialog (chronologically sorted)
+  // Compute other entries for routine dialog (chronologically sorted like food page)
   const otherEntriesForRoutineDialog = useMemo(() => {
     if (!saveRoutineDialogData) return [];
     
@@ -413,18 +407,22 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
       entryMap.set(set.entryId, existing);
     });
     
-    // Filter out current entry and convert to array
-    const otherEntryIds = Array.from(entryMap.keys()).filter(id => id !== saveRoutineDialogData.entryId);
+    // Build list of other entries with their createdAt
+    const currentCreatedAt = saveRoutineDialogData.createdAt;
+    const otherEntries = Array.from(entryMap.entries())
+      .filter(([id]) => id !== saveRoutineDialogData.entryId)
+      .map(([entryId, sets]) => ({
+        entryId,
+        exerciseSets: sets,
+        rawInput: sets[0]?.rawInput ?? null,
+        createdAt: sets[0]?.createdAt ?? '',
+      }));
     
-    return otherEntryIds
-      .map(entryId => {
-        const sets = entryMap.get(entryId) || [];
-        return {
-          entryId,
-          exerciseSets: sets,
-          rawInput: sets[0]?.rawInput ?? null,
-        };
-      });
+    // Sort: entries before current first (newest-first), then entries after current (oldest-first)
+    const before = otherEntries.filter(e => e.createdAt < currentCreatedAt).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const after = otherEntries.filter(e => e.createdAt >= currentCreatedAt).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    
+    return [...before, ...after];
   }, [saveRoutineDialogData, weightSets]);
 
   // Save suggestion handlers
