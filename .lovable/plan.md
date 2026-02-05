@@ -1,68 +1,51 @@
 
 
-## Simplify: Save Routine Directly Without Dialog
+## Fix: Direct Save for "Save as Meal" (No Toast)
 
-### Current Flow (Too Many Steps)
-1. User sees save suggestion with editable exercises
-2. User clicks "Save as Routine"
-3. Dialog opens (redundantly showing same exercises)
-4. User clicks "Save Routine" again
-5. Routine saved
+### Problem
 
-### New Flow (Direct Save)
-1. User sees save suggestion with editable exercises
-2. User clicks "Save as Routine"
-3. Routine saved immediately → Toast confirmation
+When clicking "Save as Meal" from the save suggestion prompt, it opens an empty dialog instead of directly saving. This is the same issue we just fixed for weight routines.
+
+### Solution
+
+Replace the dialog-opening logic with a direct `saveMeal.mutate()` call. The prompt will silently close on success - no toast confirmation needed.
 
 ---
 
 ### Implementation
 
-#### Update `WeightLog.tsx`
+**Update `src/pages/FoodLog.tsx`:**
 
-Replace the dialog-opening logic with direct save:
+**1. Replace `handleSaveSuggestion`:**
 
 ```typescript
-const handleSaveAsRoutine = useCallback(() => {
-  if (saveSuggestionExercises.length === 0) return;
+const handleSaveSuggestion = useCallback(() => {
+  if (saveSuggestionItems.length === 0) return;
   
-  const exerciseSets: SavedExerciseSet[] = saveSuggestionExercises.map(e => ({
-    exercise_key: e.exercise_key,
-    description: e.description,
-    sets: e.sets,
-    reps: e.reps,
-    weight_lbs: e.weight_lbs,
-    duration_minutes: e.duration_minutes,
-    distance_miles: e.distance_miles,
-  }));
+  // Generate name from first item (same logic as FOOD_CONFIG.getFallbackName)
+  const first = saveSuggestionItems[0].description;
+  const autoName = first.replace(/\s*\([^)]*\)\s*$/, '').trim() || first;
   
-  const autoName = generateRoutineName(exerciseSets[0]);
-  
-  saveRoutine.mutate({
+  saveMeal.mutate({
     name: autoName,
     originalInput: null,
-    exerciseSets,
-    isAutoNamed: true,
+    foodItems: saveSuggestionItems,
   }, {
     onSuccess: () => {
-      toast.success(`Saved "${autoName}" as a routine`);
       setSaveSuggestion(null);
-      setSaveSuggestionExercises([]);
+      setSaveSuggestionItems([]);
     }
   });
-}, [saveSuggestionExercises, saveRoutine]);
+}, [saveSuggestionItems, saveMeal]);
 ```
 
-#### Remove Dialog State
+**2. Remove redundant state/components:**
+- Remove `createMealFromSuggestion` state (line 77)
+- Remove `handleMealFromSuggestionCreated` callback (lines 324-327)
+- Remove the "Create Meal from Suggestion Dialog" JSX block
 
-Remove:
-- `showCreateRoutineDialog` state
-- `CreateRoutineDialog` component import (if only used for this flow)
-- The dialog JSX
-
-#### Update SaveSuggestionPrompt's `onSave` Handler
-
-The `onSave` prop already points to the save handler - just update what it does internally.
+**3. Add loading state:**
+- Pass `isLoading={saveMeal.isPending}` to `SaveSuggestionPrompt`
 
 ---
 
@@ -70,19 +53,14 @@ The `onSave` prop already points to the save handler - just update what it does 
 
 | File | Changes |
 |------|---------|
-| `src/pages/WeightLog.tsx` | Replace dialog-opening with direct `saveRoutine.mutate()` call |
+| `src/pages/FoodLog.tsx` | Replace dialog-opening with direct `saveMeal.mutate()` call; remove redundant state/dialog; add loading prop |
 
 ---
 
-### Edge Cases
+### Behavior After Fix
 
-1. **Save fails**: The mutation's `onError` shows a toast (already handled by the hook)
-2. **Empty exercises**: Button is already disabled when `items.length === 0`
-3. **User wants custom name**: They can use the "Create Routine" button in the header popover, which still opens the full dialog
-
----
-
-### Result
-
-One-click save from the suggestion prompt. The full `CreateRoutineDialog` remains available via the saved routines popover for users who want to create a routine from scratch with a custom name.
+1. User sees save suggestion with editable food items
+2. User clicks "Save as Meal"
+3. Prompt silently closes, meal is saved in background
+4. No toast, no dialog, no interruption
 
