@@ -364,6 +364,8 @@ export function WeightItemsTable({
         const isCurrentExpanded = currentEntryId ? expandedEntryIds?.has(currentEntryId) : false;
         const currentRawInput = currentEntryId ? entryRawInputs?.get(currentEntryId) : null;
         const hasRawInput = !!currentRawInput;
+        const isFromRoutine = currentEntryId ? entrySourceRoutineIds?.has(currentEntryId) : false;
+        const isExpandable = hasRawInput || isFromRoutine;
 
         return (
           <div key={item.uid || index} className="contents">
@@ -386,7 +388,7 @@ export function WeightItemsTable({
                 <div className="flex min-w-0">
                   {showEntryDividers && (
                     <div className="w-4 shrink-0 relative flex items-center justify-center self-stretch">
-                      {isLastInEntry && hasRawInput ? (
+                      {isLastInEntry && isExpandable ? (
                         <button
                           onClick={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
                           aria-label={isCurrentExpanded ? "Collapse entry" : "Expand entry"}
@@ -428,7 +430,7 @@ export function WeightItemsTable({
                 <div className="flex items-baseline min-w-0">
                   {showEntryDividers && (
                     <div className="w-4 shrink-0 relative flex items-center justify-center self-stretch">
-                      {isLastInEntry && hasRawInput ? (
+                      {isLastInEntry && isExpandable ? (
                         <button
                           onClick={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
                           aria-label={isCurrentExpanded ? "Collapse entry" : "Expand entry"}
