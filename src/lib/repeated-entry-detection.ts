@@ -37,6 +37,7 @@ export interface MatchingRoutine {
   name: string;
   similarity: number;
   diffs: ExerciseDiff[];
+  isAutoNamed: boolean;
 }
 
 export interface WeightEntryGrouped {
@@ -285,6 +286,7 @@ export function findMatchingSavedRoutine(
     name: bestMatch.routine.name,
     similarity: bestMatch.similarity,
     diffs,
+    isAutoNamed: bestMatch.routine.is_auto_named,
   };
 }
 

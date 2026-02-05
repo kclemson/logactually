@@ -27,6 +27,7 @@ import { useUserSettings } from '@/hooks/useUserSettings';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { detectRepeatedWeightEntry, isDismissed, dismissSuggestion, shouldShowOptOutLink, WeightSaveSuggestion, findMatchingSavedRoutine, MatchingRoutine } from '@/lib/repeated-entry-detection';
 import { WeightSet, WeightEditableField, SavedExerciseSet, AnalyzedExercise } from '@/types/weight';
+import { generateRoutineName } from '@/lib/routine-naming';
 
 const WEIGHT_EDITABLE_FIELDS: WeightEditableField[] = ['description', 'sets', 'reps', 'weight_lbs'];
 
@@ -358,7 +359,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   }, []);
 
   // Handle saving the routine
-  const handleSaveRoutineConfirm = useCallback((name: string) => {
+  const handleSaveRoutineConfirm = useCallback((name: string, isAutoNamed: boolean) => {
     if (!saveRoutineDialogData) return;
     
     // Strip runtime metadata, spread the rest for future-proofing
@@ -372,6 +373,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
         name,
         originalInput: saveRoutineDialogData.rawInput,
         exerciseSets,
+        isAutoNamed,
       },
       {
         onSuccess: () => {
@@ -421,9 +423,17 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
       distance_miles: e.distance_miles,
     }));
     
+    // Conditionally update name if it's auto-generated
+    let newName: string | undefined;
+    if (matchingRoutineForSuggestion.isAutoNamed && exerciseSets.length > 0) {
+      newName = generateRoutineName(exerciseSets[0]);
+    }
+    
     updateSavedRoutine.mutate({
       id: matchingRoutineForSuggestion.id,
+      name: newName,
       exerciseSets,
+      isAutoNamed: matchingRoutineForSuggestion.isAutoNamed ? true : undefined,
     }, {
       onSuccess: () => {
         setSaveSuggestion(null);

@@ -119,7 +119,7 @@ export function CreateRoutineDialog({
   // Wrap save mutation to match expected interface
   const saveResultAdapter = {
     mutate: (
-      params: { name: string; originalInput: string | null; items: WeightSet[] },
+      params: { name: string; originalInput: string | null; items: WeightSet[]; isAutoNamed: boolean },
       options: { onSuccess: (data: SavedRoutine) => void; onError: () => void }
     ) => {
       // Convert WeightSet[] to SavedExerciseSet[] (strip client-side metadata)
@@ -136,6 +136,7 @@ export function CreateRoutineDialog({
           name: params.name,
           originalInput: params.originalInput,
           exerciseSets,
+          isAutoNamed: params.isAutoNamed,
         },
         {
           onSuccess: (savedData) => {
