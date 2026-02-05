@@ -74,7 +74,6 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   // Save suggestion state (for repeated entries detection)
   const [saveSuggestion, setSaveSuggestion] = useState<FoodSaveSuggestion | null>(null);
   const [saveSuggestionItems, setSaveSuggestionItems] = useState<FoodItem[]>([]);
-  const [createMealFromSuggestion, setCreateMealFromSuggestion] = useState(false);
   
   // Date is stable for this component instance - derived from props, no state needed
   const dateStr = initialDate;
@@ -299,9 +298,23 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
 
   // Save suggestion handlers
   const handleSaveSuggestion = useCallback(() => {
-    setCreateMealFromSuggestion(true);
-    setSaveSuggestion(null);
-  }, []);
+    if (saveSuggestionItems.length === 0) return;
+    
+    // Generate name from first item (same logic as FOOD_CONFIG.getFallbackName)
+    const first = saveSuggestionItems[0].description;
+    const autoName = first.replace(/\s*\([^)]*\)\s*$/, '').trim() || first;
+    
+    saveMeal.mutate({
+      name: autoName,
+      originalInput: null,
+      foodItems: saveSuggestionItems,
+    }, {
+      onSuccess: () => {
+        setSaveSuggestion(null);
+        setSaveSuggestionItems([]);
+      }
+    });
+  }, [saveSuggestionItems, saveMeal]);
 
   const handleDismissSuggestion = useCallback(() => {
     if (saveSuggestion) {
@@ -319,11 +332,6 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
 
   const handleSuggestionItemsChange = useCallback((items: FoodItem[]) => {
     setSaveSuggestionItems(items);
-  }, []);
-
-  const handleMealFromSuggestionCreated = useCallback((meal: SavedMeal, foodItems: FoodItem[]) => {
-    setCreateMealFromSuggestion(false);
-    setSaveSuggestionItems([]);
   }, []);
 
   // Similar entry prompt handlers (for history reference detection)
@@ -604,6 +612,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
               onDismiss={handleDismissSuggestion}
               onOptOut={handleOptOutMealSuggestions}
               showOptOutLink={shouldShowOptOutLink()}
+              isLoading={saveMeal.isPending}
               renderItemsTable={(props) => (
                 <FoodItemsTable
                   items={props.items}
@@ -738,17 +747,6 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
           onOpenChange={setCreateMealDialogOpen}
           onMealCreated={handleMealCreated}
           showLogPrompt={true}
-        />
-      )}
-
-      {/* Create Meal from Suggestion Dialog */}
-      {createMealFromSuggestion && (
-        <CreateMealDialog
-          open={createMealFromSuggestion}
-          onOpenChange={setCreateMealFromSuggestion}
-          onMealCreated={handleMealFromSuggestionCreated}
-          showLogPrompt={false}
-          initialItems={saveSuggestionItems}
         />
       )}
 
