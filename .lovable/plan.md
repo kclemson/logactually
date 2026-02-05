@@ -1,60 +1,69 @@
 
 
-## Plan: Remove Nested Wrapper in Save Dialogs (Step 1 of 2)
+## Plan: Reduce Dialog-Specific Padding (Step 1b)
 
-### Goal
-Remove the extra border/padding wrapper around each entry table in the Save dialogs. This is a dialog-only change with zero impact on shared components.
+### Padding Sources Identified (Dialog-Only)
 
-### Changes
+Looking at the current SaveMealDialog structure:
+
+| Line | Element | Current | Issue |
+|------|---------|---------|-------|
+| 100 | DialogContent | `p-6` (24px) inherited | Large outer padding |
+| 107 | Main content wrapper | `py-4` (16px) | Extra vertical gap |
+| 108 | Name input section | `space-y-2` | Fine |
+| 135 | "Add more" section | `space-y-3 pt-2` | Extra top padding |
+
+### Proposed Changes
 
 #### SaveMealDialog.tsx
 
-**Line 151-154** - Remove wrapper styling:
-```tsx
-// Before
-<div 
-  key={entry.entryId} 
-  className="rounded border border-border/50 p-1.5"
->
+1. **Reduce DialogContent padding on mobile** (line 100):
+   ```tsx
+   // Add: p-4 sm:p-6
+   className="... p-4 sm:p-6 ..."
+   ```
 
-// After
-<div key={entry.entryId}>
-```
+2. **Reduce main content vertical padding** (line 107):
+   ```tsx
+   // Before
+   <div className="space-y-4 py-4">
+   
+   // After - reduce py-4 to py-2
+   <div className="space-y-3 py-2">
+   ```
+
+3. **Reduce "Add more" section top padding** (line 135):
+   ```tsx
+   // Before
+   <div className="space-y-3 pt-2 border-t">
+   
+   // After - reduce space-y-3 to space-y-2
+   <div className="space-y-2 pt-2 border-t">
+   ```
 
 #### SaveRoutineDialog.tsx
 
-**Line 177-180** - Same change:
-```tsx
-// Before
-<div 
-  key={entry.entryId} 
-  className="rounded border border-border/50 p-1.5"
->
+Apply the same changes for consistency.
 
-// After
-<div key={entry.entryId}>
-```
+### Summary of Changes
+
+| Element | Before | After |
+|---------|--------|-------|
+| Dialog outer padding | `p-6` | `p-4 sm:p-6` |
+| Content wrapper | `space-y-4 py-4` | `space-y-3 py-2` |
+| "Add more" section | `space-y-3` | `space-y-2` |
 
 ### Files Modified
 
-| File | Change |
-|------|--------|
-| `src/components/SaveMealDialog.tsx` | Remove `rounded border border-border/50 p-1.5` from entry wrapper |
-| `src/components/SaveRoutineDialog.tsx` | Remove `rounded border border-border/50 p-1.5` from entry wrapper |
+| File | Changes |
+|------|---------|
+| `src/components/SaveMealDialog.tsx` | Reduce padding values |
+| `src/components/SaveRoutineDialog.tsx` | Same padding reductions |
 
-### What to Test
+### What This Achieves
 
-After this change, open both Save dialogs with multiple entries from today and verify:
-- Entries are still visually separated (via `space-y-3` gap)
-- Less cramped appearance without nested borders
-- Checkboxes still align properly with content
-
-### Next Step
-
-Once you've reviewed this baseline, we can evaluate the shared component compact padding changes by looking at all usages:
-- SaveMealDialog (compact=true)
-- SaveRoutineDialog (compact=true)
-- SimilarEntryPrompt (compact=true)
-
-...at various viewport widths including mobile.
+- ~16px less vertical padding on the content area
+- Tighter spacing between entries in "Add more" section
+- More compact mobile layout with `p-4` instead of `p-6`
+- Still no changes to shared FoodItemsTable/WeightItemsTable
 
