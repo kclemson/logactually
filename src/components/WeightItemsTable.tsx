@@ -69,6 +69,14 @@ interface WeightItemsTableProps {
   showCardioLabel?: boolean;
   /** Map of item index to progression diffs for the update routine flow */
   diffs?: Map<number, DiffValues>;
+  /** When true, use smaller text for compact preview contexts */
+  compact?: boolean;
+  /** When true, show a checkbox column on the left for selection */
+  selectable?: boolean;
+  /** Which row indices are currently selected (controlled) */
+  selectedIndices?: Set<number>;
+  /** Callback when a row's checkbox is toggled */
+  onSelectionChange?: (index: number, selected: boolean) => void;
 }
 
 /**
@@ -129,6 +137,10 @@ export function WeightItemsTable({
   entrySourceRoutineIds,
   showCardioLabel = false,
   diffs,
+  compact = false,
+  selectable = false,
+  selectedIndices,
+  onSelectionChange,
 }: WeightItemsTableProps) {
   const { isReadOnly, triggerOverlay } = useReadOnlyContext();
   
@@ -239,11 +251,16 @@ export function WeightItemsTable({
   const hasEntryDeletion = entryBoundaries && onDeleteEntry;
   const showEntryDividers = entryBoundaries && entryBoundaries.length > 0;
 
-  // Grid: Description | Sets | Reps | Weight | Delete
-  const getGridCols = (showDelete: boolean) => {
-    return showDelete
-      ? 'grid-cols-[1fr_45px_45px_60px_24px]'
-      : 'grid-cols-[1fr_45px_45px_60px]';
+  // Grid: [Checkbox] | Description | Sets | Reps | Weight | [Delete]
+  const getGridCols = (showDelete: boolean, showCheckbox: boolean) => {
+    if (showCheckbox && showDelete) {
+      return 'grid-cols-[24px_1fr_45px_45px_60px_24px]';
+    } else if (showCheckbox) {
+      return 'grid-cols-[24px_1fr_45px_45px_60px]';
+    } else if (showDelete) {
+      return 'grid-cols-[1fr_45px_45px_60px_24px]';
+    }
+    return 'grid-cols-[1fr_45px_45px_60px]';
   };
 
   const isLastItemInEntry = (index: number): EntryBoundary | null => {
@@ -261,7 +278,7 @@ export function WeightItemsTable({
   // but data lookups use item.entryId directly to avoid race conditions
 
   const hasDeleteColumn = editable || hasEntryDeletion;
-  const gridCols = getGridCols(!!hasDeleteColumn);
+  const gridCols = getGridCols(!!hasDeleteColumn, selectable);
 
   const isNewEntry = (entryId: string | null): boolean => {
     return entryId ? (newEntryIds?.has(entryId) ?? false) : false;
@@ -274,7 +291,8 @@ export function WeightItemsTable({
       totalsPosition === 'bottom' && 'pt-1.5 border-t-2 border-slate-300 dark:border-slate-600',
       gridCols
     )}>
-      <span className={cn("px-1 font-semibold", showEntryDividers && "pl-4")}>Total</span>
+      {selectable && <span></span>}
+      <span className={cn("px-1 font-semibold", showEntryDividers && "pl-4", compact && "text-sm")}>Total</span>
       <span className="px-1 text-heading text-center">{totals.sets}</span>
       <span className="px-1 text-heading text-center">{totals.reps}</span>
       <span 
@@ -336,6 +354,7 @@ export function WeightItemsTable({
       {/* Header row */}
       {showHeader && (
         <div className={cn('grid gap-0.5 text-muted-foreground items-center text-xs', gridCols)}>
+          {selectable && <span></span>}
           <span className={cn("px-1", showEntryDividers && "pl-4")}></span>
           <span className="px-1 text-center">Sets</span>
           <span className="px-1 text-center">Reps</span>
@@ -346,7 +365,8 @@ export function WeightItemsTable({
 
       {/* Mini header when main header is hidden but labels requested */}
       {!showHeader && showInlineLabels && items.length > 0 && (
-        <div className={cn('grid gap-0.5 items-center text-[10px] text-muted-foreground', gridCols)}>
+        <div className={cn('grid gap-0.5 items-center text-muted-foreground', compact ? 'text-[10px]' : 'text-[10px]', gridCols)}>
+          {selectable && <span></span>}
           <span></span>
           <span className="px-1 text-center">Sets</span>
           <span className="px-1 text-center">Reps</span>
@@ -383,6 +403,17 @@ export function WeightItemsTable({
                 entryIsNew && isFirstInEntry && isLastInEntry && "rounded-md animate-outline-fade"
               )}
             >
+              {/* Checkbox cell for selection mode */}
+              {selectable && (
+                <div className="flex items-center justify-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedIndices?.has(index) ?? false}
+                    onChange={(e) => onSelectionChange?.(index, e.target.checked)}
+                    className="h-4 w-4 rounded border-input"
+                  />
+                </div>
+              )}
               {/* Description cell */}
               {editable ? (
                 <div className="flex min-w-0">
@@ -446,7 +477,7 @@ export function WeightItemsTable({
                   )}
                   <span 
                     title={item.description}
-                    className="pl-1 pr-0 py-1 line-clamp-2 shrink min-w-0"
+                    className={cn("pl-1 pr-0 py-1 line-clamp-2 shrink min-w-0", compact && "text-sm")}
                   >
                     {item.description}
                     {hasAnyEditedFields(item) && (

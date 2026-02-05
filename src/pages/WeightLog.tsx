@@ -712,6 +712,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
           onSave={handleSaveRoutineConfirm}
           isSaving={saveRoutineMutation.isPending}
           otherEntries={otherEntriesForRoutineDialog}
+          weightUnit={settings.weightUnit}
         />
       )}
 
