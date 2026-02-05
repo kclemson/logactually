@@ -102,10 +102,7 @@ export default function Admin() {
         {/* Second column */}
         <div className="space-y-0">
           <p>Demo logins: {demoLoginsTotal ?? 0}</p>
-          <p>Last 24h: {demoLogins24h ?? 0}</p>
-          <p className={(demoLogins24h ?? 0) > 0 ? "text-green-500" : ""}>
-            Last 24h: {demoLogins24h ?? 0}
-          </p>
+          <p>Last 24h: <span className={(demoLogins24h ?? 0) > 0 ? "text-green-500" : ""}>{demoLogins24h ?? 0}</span></p>
           <p>Last 7d: {demoLogins7d ?? 0}</p>
         </div>
 
