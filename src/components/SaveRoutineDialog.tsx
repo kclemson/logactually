@@ -12,7 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import { WeightSet } from '@/types/weight';
-import { formatDurationMmSs } from '@/lib/weight-units';
+import { type WeightUnit, formatDurationMmSs } from '@/lib/weight-units';
+import { WeightItemsTable } from '@/components/WeightItemsTable';
 
 const INITIAL_VISIBLE_COUNT = 2;
 
@@ -30,6 +31,8 @@ interface SaveRoutineDialogProps {
   onSave: (name: string, isAutoNamed: boolean, additionalEntryIds?: string[]) => void;
   isSaving: boolean;
   otherEntries?: OtherWeightEntry[];
+  /** Weight unit preference for display (lbs or kg) */
+  weightUnit?: WeightUnit;
 }
 
 /**
@@ -63,16 +66,6 @@ function getDefaultName(exerciseSets: WeightSet[]): string {
   return formatExerciseSummary(exerciseSets[0]);
 }
 
-/**
- * Format exercises for preview display (truncated list with ellipsis)
- */
-function formatEntryPreview(exerciseSets: WeightSet[]): string {
-  if (exerciseSets.length === 0) return '';
-  const first = exerciseSets[0].description;
-  if (exerciseSets.length === 1) return first;
-  return `${first}, +${exerciseSets.length - 1} more`;
-}
-
 export function SaveRoutineDialog({
   open,
   onOpenChange,
@@ -81,6 +74,7 @@ export function SaveRoutineDialog({
   onSave,
   isSaving,
   otherEntries,
+  weightUnit = 'lbs',
 }: SaveRoutineDialogProps) {
   // State is fresh on each mount since dialog unmounts when closed
   const [name, setName] = useState(() => getDefaultName(exerciseSets));
@@ -164,26 +158,41 @@ export function SaveRoutineDialog({
           
           {/* Add more from today section */}
           {otherEntries && otherEntries.length > 0 && (
-            <div className="space-y-2 pt-2 border-t">
+            <div className="space-y-3 pt-2 border-t">
               <p className="text-sm font-medium">Add more from today:</p>
               
-              {visibleEntries?.map(entry => (
-                <label 
-                  key={entry.entryId} 
-                  className="flex items-start gap-2 py-1.5 cursor-pointer hover:bg-muted/50 rounded px-1 -mx-1"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedEntryIds.has(entry.entryId)}
-                    onChange={() => toggleEntry(entry.entryId)}
-                    className="mt-0.5 h-4 w-4 rounded border-input"
-                    disabled={isSaving}
-                  />
-                  <span className="text-sm text-muted-foreground truncate">
-                    {formatEntryPreview(entry.exerciseSets)}
-                  </span>
-                </label>
-              ))}
+              {visibleEntries?.map(entry => {
+                const isSelected = selectedEntryIds.has(entry.entryId);
+                // Create items with temporary uids for the table
+                const itemsWithUids = entry.exerciseSets.map((set, i) => ({
+                  ...set,
+                  uid: `other-${entry.entryId}-${i}`,
+                }));
+                // When selected, all indices are selected; otherwise none
+                const selectedSet = isSelected
+                  ? new Set(itemsWithUids.map((_, i) => i))
+                  : new Set<number>();
+
+                return (
+                  <div 
+                    key={entry.entryId} 
+                    className="rounded border border-border/50 p-1.5"
+                  >
+                    <WeightItemsTable
+                      items={itemsWithUids}
+                      editable={false}
+                      selectable={true}
+                      selectedIndices={selectedSet}
+                      onSelectionChange={() => toggleEntry(entry.entryId)}
+                      showHeader={false}
+                      showTotals={false}
+                      compact={true}
+                      showInlineLabels={true}
+                      weightUnit={weightUnit}
+                    />
+                  </div>
+                );
+              })}
               
               {!showAllEntries && hiddenCount > 0 && (
                 <button 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 
 import { Loader2 } from 'lucide-react';
 import { FoodItem } from '@/types/food';
+import { FoodItemsTable } from '@/components/FoodItemsTable';
 
 const INITIAL_VISIBLE_COUNT = 2;
 
@@ -42,16 +43,6 @@ function getFallbackName(foodItems: FoodItem[]): string {
   // Remove portion info in parentheses
   const withoutPortion = first.replace(/\s*\([^)]*\)\s*$/, '').trim();
   return withoutPortion || first;
-}
-
-/**
- * Format items for preview display (truncated list with ellipsis)
- */
-function formatEntryPreview(items: FoodItem[]): string {
-  if (items.length === 0) return '';
-  const first = items[0].description.replace(/\s*\([^)]*\)\s*$/, '').trim();
-  if (items.length === 1) return first;
-  return `${first}, +${items.length - 1} more`;
 }
 
 export function SaveMealDialog({
@@ -141,26 +132,43 @@ export function SaveMealDialog({
           
           {/* Add more from today section */}
           {otherEntries && otherEntries.length > 0 && (
-            <div className="space-y-2 pt-2 border-t">
+            <div className="space-y-3 pt-2 border-t">
               <p className="text-sm font-medium">Add more from today:</p>
               
-              {visibleEntries?.map(entry => (
-                <label 
-                  key={entry.entryId} 
-                  className="flex items-start gap-2 py-1.5 cursor-pointer hover:bg-muted/50 rounded px-1 -mx-1"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedEntryIds.has(entry.entryId)}
-                    onChange={() => toggleEntry(entry.entryId)}
-                    className="mt-0.5 h-4 w-4 rounded border-input"
-                    disabled={isSaving}
-                  />
-                  <span className="text-sm text-muted-foreground truncate">
-                    {formatEntryPreview(entry.items)}
-                  </span>
-                </label>
-              ))}
+              {visibleEntries?.map(entry => {
+                const isSelected = selectedEntryIds.has(entry.entryId);
+                // Create items with temporary uids for the table
+                const itemsWithUids = entry.items.map((item, i) => ({
+                  ...item,
+                  uid: `other-${entry.entryId}-${i}`,
+                }));
+                // When selected, all indices are selected; otherwise none
+                const selectedSet = isSelected
+                  ? new Set(itemsWithUids.map((_, i) => i))
+                  : new Set<number>();
+
+                return (
+                  <div 
+                    key={entry.entryId} 
+                    className="rounded border border-border/50 p-1.5"
+                  >
+                    <FoodItemsTable
+                      items={itemsWithUids}
+                      editable={false}
+                      selectable={true}
+                      selectedIndices={selectedSet}
+                      onSelectionChange={() => toggleEntry(entry.entryId)}
+                      showHeader={false}
+                      showTotals={true}
+                      totalsPosition="bottom"
+                      compact={true}
+                      showInlineLabels={true}
+                      showMacroPercentages={false}
+                      showTotalsDivider={false}
+                    />
+                  </div>
+                );
+              })}
               
               {!showAllEntries && hiddenCount > 0 && (
                 <button 

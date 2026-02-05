@@ -62,6 +62,12 @@ interface FoodItemsTableProps {
   showTotalsDivider?: boolean;
   /** When true, use smaller text for compact preview contexts */
   compact?: boolean;
+  /** When true, show a checkbox column on the left for selection */
+  selectable?: boolean;
+  /** Which row indices are currently selected (controlled) */
+  selectedIndices?: Set<number>;
+  /** Callback when a row's checkbox is toggled */
+  onSelectionChange?: (index: number, selected: boolean) => void;
 }
 
 export function FoodItemsTable({
@@ -88,6 +94,9 @@ export function FoodItemsTable({
   showMacroPercentages = true,
   showTotalsDivider = true,
   compact = false,
+  selectable = false,
+  selectedIndices,
+  onSelectionChange,
 }: FoodItemsTableProps) {
   // Read-only mode blocks saves
   const { isReadOnly, triggerOverlay } = useReadOnlyContext();
@@ -254,9 +263,13 @@ export function FoodItemsTable({
   // Show dividers between entries when there are multiple entries
   const showEntryDividers = entryBoundaries && entryBoundaries.length > 0;
 
-  // Grid columns: Description | Calories | P/C/F (combined) | Delete
-  const getGridCols = (showDelete: boolean) => {
-    if (showDelete) {
+  // Grid columns: [Checkbox] | Description | Calories | P/C/F (combined) | [Delete]
+  const getGridCols = (showDelete: boolean, showCheckbox: boolean) => {
+    if (showCheckbox && showDelete) {
+      return 'grid-cols-[24px_1fr_50px_90px_24px]';
+    } else if (showCheckbox) {
+      return 'grid-cols-[24px_1fr_50px_90px]';
+    } else if (showDelete) {
       return 'grid-cols-[1fr_50px_90px_24px]';
     }
     return 'grid-cols-[1fr_50px_90px]';
@@ -279,7 +292,7 @@ export function FoodItemsTable({
   // but data lookups use item.entryId directly to avoid race conditions
 
   const hasDeleteColumn = editable || hasEntryDeletion;
-  const gridCols = getGridCols(!!hasDeleteColumn);
+  const gridCols = getGridCols(!!hasDeleteColumn, selectable);
 
   // Check if an entry ID is in the "new" set for grouped highlighting
   const isNewEntry = (entryId: string | null): boolean => {
@@ -305,6 +318,7 @@ export function FoodItemsTable({
         totalsPosition === 'bottom' && showTotalsDivider && 'pt-1.5 border-t-2 border-slate-300 dark:border-slate-600',
         gridCols
       )}>
+        {selectable && <span></span>}
         <span className={cn("px-1 font-semibold", showEntryDividers && "pl-4", compact && "text-sm")}>Total</span>
         <span className={cn("px-1 text-center", compact ? "text-xs" : "text-heading")}>{Math.round(totals.calories)}</span>
         <span className={cn("px-1 text-center", compact ? "text-xs" : "text-heading")}>
@@ -372,6 +386,7 @@ export function FoodItemsTable({
       {/* Header row */}
       {showHeader && (
         <div className={cn('grid gap-0.5 text-muted-foreground items-center text-xs', gridCols)}>
+          {selectable && <span></span>}
           <span className={cn("px-1", showEntryDividers && "pl-4")}></span>
           <span className="px-1 text-center">Calories</span>
           <span className="px-1 text-center">Protein/Carbs/Fat</span>
@@ -382,6 +397,7 @@ export function FoodItemsTable({
       {/* Mini header when main header is hidden but labels requested */}
       {!showHeader && showInlineLabels && items.length > 0 && (
         <div className={cn('grid gap-0.5 items-center text-muted-foreground', compact ? 'text-[9px]' : 'text-[10px]', gridCols)}>
+          {selectable && <span></span>}
           <span></span>
           <span className="px-1 text-center">Cal</span>
           <span className="px-1 text-center">P/C/F</span>
@@ -420,6 +436,17 @@ export function FoodItemsTable({
                 entryIsNew && isFirstInEntry && isLastInEntry && "rounded-md animate-outline-fade"
               )}
             >
+            {/* Checkbox cell for selection mode */}
+            {selectable && (
+              <div className="flex items-center justify-center">
+                <input
+                  type="checkbox"
+                  checked={selectedIndices?.has(index) ?? false}
+                  onChange={(e) => onSelectionChange?.(index, e.target.checked)}
+                  className="h-4 w-4 rounded border-input"
+                />
+              </div>
+            )}
             {/* Description cell (with chevron space when showing entry dividers) */}
             {editable ? (
               <div className="flex min-w-0">
