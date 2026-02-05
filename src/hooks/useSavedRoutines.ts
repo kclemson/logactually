@@ -35,6 +35,7 @@ interface SaveRoutineParams {
   name: string;
   originalInput: string | null;
   exerciseSets: SavedExerciseSet[];
+  isAutoNamed: boolean;
 }
 
 /**
@@ -45,7 +46,7 @@ export function useSaveRoutine() {
   const { user } = useAuth();
   
   return useMutation({
-    mutationFn: async ({ name, originalInput, exerciseSets }: SaveRoutineParams) => {
+    mutationFn: async ({ name, originalInput, exerciseSets, isAutoNamed }: SaveRoutineParams) => {
       if (!user) throw new Error('Not authenticated');
       
       const { data, error } = await supabase
@@ -55,6 +56,7 @@ export function useSaveRoutine() {
           name,
           original_input: originalInput,
           exercise_sets: exerciseSets as unknown as Json,
+          is_auto_named: isAutoNamed,
         }])
         .select()
         .single();
@@ -72,6 +74,7 @@ interface UpdateSavedRoutineParams {
   id: string;
   name?: string;
   exerciseSets?: SavedExerciseSet[];
+  isAutoNamed?: boolean;
 }
 
 /**
@@ -82,7 +85,7 @@ export function useUpdateSavedRoutine() {
   const { user } = useAuth();
   
   return useMutation({
-    mutationFn: async ({ id, name, exerciseSets }: UpdateSavedRoutineParams) => {
+    mutationFn: async ({ id, name, exerciseSets, isAutoNamed }: UpdateSavedRoutineParams) => {
       const updates: Record<string, unknown> = {};
       
       if (name !== undefined) {
@@ -93,6 +96,10 @@ export function useUpdateSavedRoutine() {
         // SavedExerciseSet already contains only persistent fields, spread for future-proofing
         const cleanedSets = exerciseSets.map(set => ({ ...set }));
         updates.exercise_sets = cleanedSets as unknown as Json;
+      }
+      
+      if (isAutoNamed !== undefined) {
+        updates.is_auto_named = isAutoNamed;
       }
       
       const { data, error } = await supabase

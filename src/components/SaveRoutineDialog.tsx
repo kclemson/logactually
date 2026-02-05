@@ -19,7 +19,7 @@ interface SaveRoutineDialogProps {
   onOpenChange: (open: boolean) => void;
   rawInput: string | null;
   exerciseSets: WeightSet[];
-  onSave: (name: string) => void;
+  onSave: (name: string, isAutoNamed: boolean) => void;
   isSaving: boolean;
 }
 
@@ -74,7 +74,7 @@ export function SaveRoutineDialog({
   const handleSave = () => {
     const trimmed = name.trim();
     if (trimmed) {
-      onSave(trimmed);
+      onSave(trimmed, !userHasTyped);
     }
   };
 

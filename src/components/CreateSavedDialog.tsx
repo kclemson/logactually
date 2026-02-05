@@ -59,7 +59,7 @@ export interface CreateSavedDialogProps<TItem, TSaved> {
     error: string | null;
   };
   saveResult: {
-    mutate: (params: { name: string; originalInput: string | null; items: TItem[] }, options: { onSuccess: (data: TSaved) => void; onError: () => void }) => void;
+    mutate: (params: { name: string; originalInput: string | null; items: TItem[]; isAutoNamed: boolean }, options: { onSuccess: (data: TSaved) => void; onError: () => void }) => void;
   };
   
   // Editable items hook result
@@ -95,6 +95,7 @@ export function CreateSavedDialog<TItem, TSaved>({
 }: CreateSavedDialogProps<TItem, TSaved>) {
   const [state, setState] = useState<DialogState>('input');
   const [name, setName] = useState('');
+  const [userHasTyped, setUserHasTyped] = useState(false);
   const [rawInput, setRawInput] = useState<string | null>(null);
   const [createdItem, setCreatedItem] = useState<TSaved | null>(null);
   
@@ -107,6 +108,7 @@ export function CreateSavedDialog<TItem, TSaved>({
   const closeAll = useCallback(() => {
     setState('input');
     setName('');
+    setUserHasTyped(false);
     setRawInput(null);
     setCreatedItem(null);
     setItems([]);
@@ -134,6 +136,7 @@ export function CreateSavedDialog<TItem, TSaved>({
   // Handle name input changes
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setName(e.target.value);
+    setUserHasTyped(true);
   };
 
   // Handle saving
@@ -148,6 +151,7 @@ export function CreateSavedDialog<TItem, TSaved>({
         name: trimmedName,
         originalInput: rawInput,
         items: displayItems,
+        isAutoNamed: !userHasTyped,
       },
       {
         onSuccess: (savedData) => {

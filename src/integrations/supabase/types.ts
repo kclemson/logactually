@@ -228,6 +228,7 @@ export type Database = {
           created_at: string
           exercise_sets: Json
           id: string
+          is_auto_named: boolean
           last_used_at: string | null
           name: string
           original_input: string | null
@@ -239,6 +240,7 @@ export type Database = {
           created_at?: string
           exercise_sets?: Json
           id?: string
+          is_auto_named?: boolean
           last_used_at?: string | null
           name: string
           original_input?: string | null
@@ -250,6 +252,7 @@ export type Database = {
           created_at?: string
           exercise_sets?: Json
           id?: string
+          is_auto_named?: boolean
           last_used_at?: string | null
           name?: string
           original_input?: string | null

@@ -2,6 +2,8 @@
 
 ## Add `is_auto_named` Column to Track Auto-Generated Routine Names
 
+**STATUS: IMPLEMENTED** ✅
+
 ### Overview
 
 Instead of using regex to detect if a routine name is auto-generated, we add an explicit boolean column to the database. This is cleaner, more reliable, and future-proof.

@@ -95,6 +95,7 @@ export interface SavedRoutine {
   exercise_sets: SavedExerciseSet[];
   use_count: number;
   last_used_at: string | null;
+  is_auto_named: boolean;
   created_at: string;
   updated_at: string;
 }
