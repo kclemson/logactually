@@ -450,7 +450,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
                   }}
                   onRemoveItem={props.onRemoveItem}
                   showHeader={false}
-                  totalsPosition="bottom"
+                  showTotals={false}
                 />
               )}
             />
