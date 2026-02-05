@@ -1,29 +1,28 @@
 
 
-## Add Changelog Entry for Save Suggestion Feature
+## Remove Totals Row from Save Suggestion Dialog
 
-### Changes
+### Problem
+The save suggestion prompt shows a confusing totals row where "Reps" displays `24` (sets × reps) while the individual row shows `8` (reps per set). This is misleading when users are previewing items to save as a routine.
 
-#### 1. Copy uploaded screenshot
-Copy `user-uploads://image-552.png` to `public/changelog/save-suggestion.png`
+### Solution
+Add `showTotals={false}` to the `WeightItemsTable` component in the save suggestion prompt.
 
-#### 2. Update `src/pages/Changelog.tsx`
+### File Change
 
-**Add new entry at top of array (line 19):**
+**`src/pages/WeightLog.tsx`** (line ~452-453)
+
+Change from:
 ```typescript
-{ date: "Feb-04", text: "When you log similar items 3 or more times, you'll now get a suggestion to save them as a meal or routine for easier logging in the future.", image: "save-suggestion.png" },
+showHeader={false}
+totalsPosition="bottom"
 ```
 
-**Update LAST_UPDATED (line 32):**
+To:
 ```typescript
-const LAST_UPDATED = "Feb-04-26";
+showHeader={false}
+showTotals={false}
 ```
 
----
-
-### Result
-
-The changelog will show:
-- **Feb-04**: New save suggestion feature with screenshot
-- **Feb-03**: Similar entry detection (existing)
+The `totalsPosition` prop becomes irrelevant when `showTotals={false}`, so it can be removed.
 
