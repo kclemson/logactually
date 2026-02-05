@@ -1,28 +1,28 @@
 
+## Fix Demo Logins 24h Display
 
-## Add Conditional Green Coloring for Demo Logins 24h
+### Issues to Fix
 
-### Change
+1. **Duplicate line**: Remove the redundant "Last 24h" paragraph (lines 106-108)
+2. **Green only on number**: Update the original line (105) so only the count turns green, not the label
 
-**`src/pages/Admin.tsx` line 105:**
+### Solution
+
+Replace lines 105-108 with a single line that wraps only the number in a conditional span:
 
 ```tsx
-// Before
+// Before (lines 105-108)
 <p>Last 24h: {demoLogins24h ?? 0}</p>
-
-// After  
 <p className={(demoLogins24h ?? 0) > 0 ? "text-green-500" : ""}>
   Last 24h: {demoLogins24h ?? 0}
 </p>
+
+// After (single line)
+<p>Last 24h: <span className={(demoLogins24h ?? 0) > 0 ? "text-green-500" : ""}>{demoLogins24h ?? 0}</span></p>
 ```
-
-### Pattern Reference
-
-This matches the existing pattern used for F2day and W2day columns (lines 143-161), where values > 0 get `text-green-500` styling.
 
 ### Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/pages/Admin.tsx` | Add conditional `text-green-500` class to "Last 24h" line |
-
+| `src/pages/Admin.tsx` | Remove duplicate, wrap only the number in conditional green span |
