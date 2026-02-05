@@ -1,51 +1,64 @@
 
 
-## Fix: Direct Save for "Save as Meal" (No Toast)
+## Update Changelog Entry for Feb-04
 
-### Problem
+### 1. Copy Images to Project
 
-When clicking "Save as Meal" from the save suggestion prompt, it opens an empty dialog instead of directly saving. This is the same issue we just fixed for weight routines.
+Copy both uploaded screenshots to the public/changelog folder:
+- `user-uploads://logactually-savessuggestions2.png` → `public/changelog/save-suggestion-food.png`
+- `user-uploads://logactually-savesuggestions.png` → `public/changelog/save-suggestion-routine.png`
 
-### Solution
+### 2. Extend ChangelogEntry Type
 
-Replace the dialog-opening logic with a direct `saveMeal.mutate()` call. The prompt will silently close on success - no toast confirmation needed.
-
----
-
-### Implementation
-
-**Update `src/pages/FoodLog.tsx`:**
-
-**1. Replace `handleSaveSuggestion`:**
+Update the type to support multiple images:
 
 ```typescript
-const handleSaveSuggestion = useCallback(() => {
-  if (saveSuggestionItems.length === 0) return;
-  
-  // Generate name from first item (same logic as FOOD_CONFIG.getFallbackName)
-  const first = saveSuggestionItems[0].description;
-  const autoName = first.replace(/\s*\([^)]*\)\s*$/, '').trim() || first;
-  
-  saveMeal.mutate({
-    name: autoName,
-    originalInput: null,
-    foodItems: saveSuggestionItems,
-  }, {
-    onSuccess: () => {
-      setSaveSuggestion(null);
-      setSaveSuggestionItems([]);
-    }
-  });
-}, [saveSuggestionItems, saveMeal]);
+type ChangelogEntry = {
+  date: string;
+  text: string;
+  image?: string;   // Single image (existing)
+  images?: string[]; // Multiple images side-by-side (new)
+};
 ```
 
-**2. Remove redundant state/components:**
-- Remove `createMealFromSuggestion` state (line 77)
-- Remove `handleMealFromSuggestionCreated` callback (lines 324-327)
-- Remove the "Create Meal from Suggestion Dialog" JSX block
+### 3. Update Rendering Logic
 
-**3. Add loading state:**
-- Pass `isLoading={saveMeal.isPending}` to `SaveSuggestionPrompt`
+Add conditional rendering for multiple images displayed in a flex row:
+
+```tsx
+{/* Single image */}
+{entry.image && !entry.images && (
+  <img ... />
+)}
+
+{/* Multiple images side-by-side */}
+{entry.images && (
+  <div className="flex gap-2 mt-2">
+    {entry.images.map((img, i) => (
+      <img 
+        key={i}
+        src={`/changelog/${img}`}
+        alt={`Screenshot ${i + 1} for ${entry.date} update`}
+        className="rounded-lg max-h-[200px] w-auto object-contain"
+      />
+    ))}
+  </div>
+)}
+```
+
+### 4. Update Feb-04 Entry
+
+```typescript
+{ 
+  date: "Feb-04", 
+  text: "Log similar items 3+ times? You'll get a prompt to save them as a meal or routine. Already have one saved? You can update it with your latest values in one click.", 
+  images: ["save-suggestion-food.png", "save-suggestion-routine.png"] 
+},
+```
+
+### 5. Delete Old Screenshot
+
+Remove `public/changelog/save-suggestion.png` (the old single screenshot).
 
 ---
 
@@ -53,14 +66,18 @@ const handleSaveSuggestion = useCallback(() => {
 
 | File | Changes |
 |------|---------|
-| `src/pages/FoodLog.tsx` | Replace dialog-opening with direct `saveMeal.mutate()` call; remove redundant state/dialog; add loading prop |
+| `src/pages/Changelog.tsx` | Extend type, update rendering, update Feb-04 entry text |
+| `public/changelog/` | Add 2 new images, remove old one |
 
 ---
 
-### Behavior After Fix
+### Text Options (Choose One)
 
-1. User sees save suggestion with editable food items
-2. User clicks "Save as Meal"
-3. Prompt silently closes, meal is saved in background
-4. No toast, no dialog, no interruption
+Pick whichever resonates:
+
+1. **Tighter**: "Log similar items 3+ times? You'll get a prompt to save them as a meal or routine. Already have one saved? You can update it with your latest values in one click."
+
+2. **Your original with minor polish**: "When you log similar items 3+ times, you'll get a suggestion to save them as a meal or routine for quicker logging. If you already have a similar one saved, you'll be prompted to update it instead."
+
+3. **Ultra-compact**: "Repeated entries (3+) now trigger save suggestions for meals/routines—or update prompts if one already exists."
 
