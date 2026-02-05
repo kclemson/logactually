@@ -148,10 +148,7 @@ export function SaveMealDialog({
                   : new Set<number>();
 
                 return (
-                  <div 
-                    key={entry.entryId} 
-                    className="rounded border border-border/50 p-1.5"
-                  >
+                  <div key={entry.entryId}>
                     <FoodItemsTable
                       items={itemsWithUids}
                       editable={false}
