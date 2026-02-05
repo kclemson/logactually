@@ -1,29 +1,28 @@
 
 
-## Fix: Add flex-wrap for Multi-Image Changelog
+## Add Conditional Green Coloring for Demo Logins 24h
 
 ### Change
 
-**`src/pages/Changelog.tsx` line 78:**
+**`src/pages/Admin.tsx` line 105:**
 
 ```tsx
 // Before
-<div className="flex gap-2 mt-2">
+<p>Last 24h: {demoLogins24h ?? 0}</p>
 
 // After  
-<div className="flex flex-wrap gap-2 mt-2">
+<p className={(demoLogins24h ?? 0) > 0 ? "text-green-500" : ""}>
+  Last 24h: {demoLogins24h ?? 0}
+</p>
 ```
 
-### Why This Works
+### Pattern Reference
 
-- `flex-wrap` allows flex items to wrap to the next line when they exceed container width
-- Images will stay side-by-side on desktop (both fit)
-- On mobile, the second image wraps below the first automatically
-- No breakpoint logic or responsive prefixes needed
+This matches the existing pattern used for F2day and W2day columns (lines 143-161), where values > 0 get `text-green-500` styling.
 
 ### Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/pages/Changelog.tsx` | Add `flex-wrap` to multi-image container class |
+| `src/pages/Admin.tsx` | Add conditional `text-green-500` class to "Last 24h" line |
 
