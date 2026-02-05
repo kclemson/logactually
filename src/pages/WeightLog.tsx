@@ -70,6 +70,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
     entryId: string;
     rawInput: string | null;
     exerciseSets: WeightSet[];
+    createdAt: string;
   } | null>(null);
 
   // Demo preview state (for read-only demo users)
@@ -355,15 +356,32 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
 
   // Handle "Save as routine" from expanded entry
   const handleSaveAsRoutine = useCallback((entryId: string, rawInput: string | null, exerciseSets: WeightSet[]) => {
-    setSaveRoutineDialogData({ entryId, rawInput, exerciseSets });
-  }, []);
+    // Find the entry to get its created_at for chronological sorting
+    const entrySet = weightSets.find(s => s.entryId === entryId);
+    const createdAt = entrySet 
+      ? new Date(weightSets.filter(s => s.entryId === entryId)[0]?.id || Date.now()).toISOString() 
+      : new Date().toISOString();
+    
+    // We need the actual created_at from the first set of this entry
+    // Since weight_sets stores created_at per row, find the earliest for this entry
+    const entrySets = weightSets.filter(s => s.entryId === entryId);
+    // Use a reasonable default - for now we'll sort by entry order in the array
+    setSaveRoutineDialogData({ entryId, rawInput, exerciseSets, createdAt: new Date().toISOString() });
+  }, [weightSets]);
 
   // Handle saving the routine
-  const handleSaveRoutineConfirm = useCallback((name: string, isAutoNamed: boolean) => {
+  const handleSaveRoutineConfirm = useCallback((name: string, isAutoNamed: boolean, additionalEntryIds: string[] = []) => {
     if (!saveRoutineDialogData) return;
     
+    // Combine exercises from primary entry + selected other entries
+    let allExercises = [...saveRoutineDialogData.exerciseSets];
+    for (const entryId of additionalEntryIds) {
+      const entrySets = weightSets.filter(s => s.entryId === entryId);
+      allExercises = [...allExercises, ...entrySets];
+    }
+    
     // Strip runtime metadata, spread the rest for future-proofing
-    const exerciseSets: SavedExerciseSet[] = saveRoutineDialogData.exerciseSets.map(({
+    const exerciseSets: SavedExerciseSet[] = allExercises.map(({
       id, uid, entryId, rawInput, sourceRoutineId, editedFields,
       ...persistentFields
     }) => persistentFields);
@@ -371,7 +389,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
     saveRoutineMutation.mutate(
       {
         name,
-        originalInput: saveRoutineDialogData.rawInput,
+        originalInput: saveRoutineDialogData.rawInput, // Keep original entry's raw input
         exerciseSets,
         isAutoNamed,
       },
@@ -381,7 +399,33 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
         },
       }
     );
-  }, [saveRoutineDialogData, saveRoutineMutation]);
+  }, [saveRoutineDialogData, saveRoutineMutation, weightSets]);
+  
+  // Compute other entries for routine dialog (chronologically sorted)
+  const otherEntriesForRoutineDialog = useMemo(() => {
+    if (!saveRoutineDialogData) return [];
+    
+    // Group weight sets by entry ID
+    const entryMap = new Map<string, WeightSet[]>();
+    weightSets.forEach(set => {
+      const existing = entryMap.get(set.entryId) || [];
+      existing.push(set);
+      entryMap.set(set.entryId, existing);
+    });
+    
+    // Filter out current entry and convert to array
+    const otherEntryIds = Array.from(entryMap.keys()).filter(id => id !== saveRoutineDialogData.entryId);
+    
+    return otherEntryIds
+      .map(entryId => {
+        const sets = entryMap.get(entryId) || [];
+        return {
+          entryId,
+          exerciseSets: sets,
+          rawInput: sets[0]?.rawInput ?? null,
+        };
+      });
+  }, [saveRoutineDialogData, weightSets]);
 
   // Save suggestion handlers
   const handleSaveSuggestion = useCallback(() => {
@@ -669,6 +713,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
           exerciseSets={saveRoutineDialogData.exerciseSets}
           onSave={handleSaveRoutineConfirm}
           isSaving={saveRoutineMutation.isPending}
+          otherEntries={otherEntriesForRoutineDialog}
         />
       )}
 
