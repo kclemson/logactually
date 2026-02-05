@@ -97,14 +97,14 @@ export function SaveMealDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>Save as Meal</DialogTitle>
           <DialogDescription>
             Give this meal a name to quickly log it again later.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
+        <div className="space-y-3 py-2">
           <div className="space-y-2">
             <Label htmlFor="meal-name">Meal name</Label>
             <Input
@@ -132,7 +132,7 @@ export function SaveMealDialog({
           
           {/* Add more from today section */}
           {otherEntries && otherEntries.length > 0 && (
-            <div className="space-y-3 pt-2 border-t">
+            <div className="space-y-2 pt-2 border-t">
               <p className="text-sm font-medium">Add more from today:</p>
               
               {visibleEntries?.map(entry => {
