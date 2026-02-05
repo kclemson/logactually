@@ -1,124 +1,68 @@
 
 
-## Add `is_auto_named` Column to Track Auto-Generated Routine Names
+## Simplify: Save Routine Directly Without Dialog
 
-**STATUS: IMPLEMENTED** ✅
+### Current Flow (Too Many Steps)
+1. User sees save suggestion with editable exercises
+2. User clicks "Save as Routine"
+3. Dialog opens (redundantly showing same exercises)
+4. User clicks "Save Routine" again
+5. Routine saved
 
-### Overview
-
-Instead of using regex to detect if a routine name is auto-generated, we add an explicit boolean column to the database. This is cleaner, more reliable, and future-proof.
-
----
-
-### Database Change
-
-**Add column to `saved_routines` table:**
-
-```sql
-ALTER TABLE saved_routines 
-ADD COLUMN is_auto_named boolean NOT NULL DEFAULT true;
-```
-
-Default is `true` because:
-- Almost no users have saved routines today
-- When we auto-detect and suggest "Update Routine", the name was auto-generated
-- The `SaveRoutineDialog` starts with the auto-generated name pre-filled
+### New Flow (Direct Save)
+1. User sees save suggestion with editable exercises
+2. User clicks "Save as Routine"
+3. Routine saved immediately → Toast confirmation
 
 ---
 
-### Logic Changes
+### Implementation
 
-#### 1. Track User Edits in Save Dialogs
+#### Update `WeightLog.tsx`
 
-Both dialogs already track whether the user typed in the name field:
-- `SaveRoutineDialog.tsx`: Has `userHasTyped` state (line 67)
-- `CreateRoutineDialog.tsx`: Uses shared `CreateSavedDialog` component
-
-**Update the save flow to pass `isAutoNamed`:**
-
-| User Action | `is_auto_named` Value |
-|-------------|----------------------|
-| Accepts default name without typing | `true` |
-| Types/edits the name field | `false` |
-
-#### 2. Update Hook Interfaces
-
-**`useSaveRoutine` params:**
-```typescript
-interface SaveRoutineParams {
-  name: string;
-  originalInput: string | null;
-  exerciseSets: SavedExerciseSet[];
-  isAutoNamed: boolean;  // NEW
-}
-```
-
-**`useUpdateSavedRoutine` params:**
-```typescript
-interface UpdateSavedRoutineParams {
-  id: string;
-  name?: string;
-  exerciseSets?: SavedExerciseSet[];
-  isAutoNamed?: boolean;  // NEW (only set when name changes)
-}
-```
-
-#### 3. Update Routine Flow
-
-In `WeightLog.tsx`, when updating an existing routine:
+Replace the dialog-opening logic with direct save:
 
 ```typescript
-const handleUpdateExistingRoutine = () => {
-  // Check if existing routine has auto-generated name
-  if (matchingRoutineForSuggestion.is_auto_named && exerciseSets.length > 0) {
-    // Regenerate name from first exercise
-    const newName = generateRoutineName(exerciseSets[0]);
-    updateSavedRoutine.mutate({
-      id: matchingRoutineForSuggestion.id,
-      name: newName,
-      exerciseSets,
-      isAutoNamed: true,  // Still auto-named
-    });
-  } else {
-    // Keep existing custom name
-    updateSavedRoutine.mutate({
-      id: matchingRoutineForSuggestion.id,
-      exerciseSets,  // name not included = unchanged
-    });
-  }
-};
+const handleSaveAsRoutine = useCallback(() => {
+  if (saveSuggestionExercises.length === 0) return;
+  
+  const exerciseSets: SavedExerciseSet[] = saveSuggestionExercises.map(e => ({
+    exercise_key: e.exercise_key,
+    description: e.description,
+    sets: e.sets,
+    reps: e.reps,
+    weight_lbs: e.weight_lbs,
+    duration_minutes: e.duration_minutes,
+    distance_miles: e.distance_miles,
+  }));
+  
+  const autoName = generateRoutineName(exerciseSets[0]);
+  
+  saveRoutine.mutate({
+    name: autoName,
+    originalInput: null,
+    exerciseSets,
+    isAutoNamed: true,
+  }, {
+    onSuccess: () => {
+      toast.success(`Saved "${autoName}" as a routine`);
+      setSaveSuggestion(null);
+      setSaveSuggestionExercises([]);
+    }
+  });
+}, [saveSuggestionExercises, saveRoutine]);
 ```
 
----
+#### Remove Dialog State
 
-### Type Updates
+Remove:
+- `showCreateRoutineDialog` state
+- `CreateRoutineDialog` component import (if only used for this flow)
+- The dialog JSX
 
-**`SavedRoutine` type in `src/types/weight.ts`:**
-```typescript
-export interface SavedRoutine {
-  id: string;
-  user_id: string;
-  name: string;
-  original_input: string | null;
-  exercise_sets: SavedExerciseSet[];
-  use_count: number;
-  last_used_at: string | null;
-  is_auto_named: boolean;  // NEW
-  created_at: string;
-  updated_at: string;
-}
-```
+#### Update SaveSuggestionPrompt's `onSave` Handler
 
-**`MatchingRoutine` type** (already in repeated-entry-detection.ts):
-```typescript
-export interface MatchingRoutine {
-  id: string;
-  name: string;
-  similarity: number;
-  diffs: ExerciseDiff[];
-  isAutoNamed: boolean;  // NEW - copy from saved routine
-}
-```
+The `onSave` prop already points to the save handler - just update what it does internally.
 
 ---
 
@@ -126,27 +70,19 @@ export interface MatchingRoutine {
 
 | File | Changes |
 |------|---------|
-| **Database migration** | Add `is_auto_named boolean NOT NULL DEFAULT true` column |
-| `src/types/weight.ts` | Add `is_auto_named` to `SavedRoutine` interface |
-| `src/hooks/useSavedRoutines.ts` | Add `isAutoNamed` param to save/update mutations |
-| `src/components/SaveRoutineDialog.tsx` | Pass `!userHasTyped` as `isAutoNamed` to onSave callback |
-| `src/components/CreateSavedDialog.tsx` | Track user edits to name field, pass `isAutoNamed` |
-| `src/lib/repeated-entry-detection.ts` | Add `isAutoNamed` to `MatchingRoutine` interface |
-| `src/lib/routine-naming.ts` | **New file**: `generateRoutineName()` helper (moved from SaveRoutineDialog) |
-| `src/pages/WeightLog.tsx` | Check `isAutoNamed` flag instead of regex; regenerate name if true |
+| `src/pages/WeightLog.tsx` | Replace dialog-opening with direct `saveRoutine.mutate()` call |
 
 ---
 
-### Migration Path for Existing Data
+### Edge Cases
 
-Since almost no users have saved routines today, we can safely default all existing routines to `is_auto_named = true`. If a user later edits the name manually (separate feature), we'd set it to `false` at that point.
+1. **Save fails**: The mutation's `onError` shows a toast (already handled by the hook)
+2. **Empty exercises**: Button is already disabled when `items.length === 0`
+3. **User wants custom name**: They can use the "Create Routine" button in the header popover, which still opens the full dialog
 
 ---
 
-### Benefits Over Regex
+### Result
 
-1. **Reliable**: No false positives if a user names their routine like "Squats (3x5 @ 225 lbs)"
-2. **Future-proof**: If we change the naming format, old routines still work correctly
-3. **Simple**: A boolean check is clearer than regex patterns
-4. **Explicit intent**: We're tracking what the user *did*, not guessing from the result
+One-click save from the suggestion prompt. The full `CreateRoutineDialog` remains available via the saved routines popover for users who want to create a routine from scratch with a custom name.
 
