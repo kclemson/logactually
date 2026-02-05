@@ -747,12 +747,12 @@ export function WeightItemsTable({
                           <span>(deleted)</span>
                         )}
                       </p>
-                    ) : onSaveAsRoutine && (
+                    ) : onSaveAsRoutine && currentEntryId && (
                       <button
                         onClick={() => {
                           // Gather all exercises in this entry
                           const entryExercises = items.filter(i => i.entryId === currentEntryId);
-                          onSaveAsRoutine(currentEntryId!, currentRawInput, entryExercises);
+                          onSaveAsRoutine(currentEntryId, currentRawInput ?? null, entryExercises);
                         }}
                         className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
                       >
