@@ -14,13 +14,22 @@ import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import { FoodItem } from '@/types/food';
 
+const INITIAL_VISIBLE_COUNT = 2;
+
+interface OtherFoodEntry {
+  entryId: string;
+  items: FoodItem[];
+  rawInput: string | null;
+}
+
 interface SaveMealDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   rawInput: string | null;
   foodItems: FoodItem[];
-  onSave: (name: string) => void;
+  onSave: (name: string, additionalEntryIds?: string[]) => void;
   isSaving: boolean;
+  otherEntries?: OtherFoodEntry[];
 }
 
 /**
@@ -35,6 +44,16 @@ function getFallbackName(foodItems: FoodItem[]): string {
   return withoutPortion || first;
 }
 
+/**
+ * Format items for preview display (truncated list with ellipsis)
+ */
+function formatEntryPreview(items: FoodItem[]): string {
+  if (items.length === 0) return '';
+  const first = items[0].description.replace(/\s*\([^)]*\)\s*$/, '').trim();
+  if (items.length === 1) return first;
+  return `${first}, +${items.length - 1} more`;
+}
+
 export function SaveMealDialog({
   open,
   onOpenChange,
@@ -42,18 +61,33 @@ export function SaveMealDialog({
   foodItems,
   onSave,
   isSaving,
+  otherEntries,
 }: SaveMealDialogProps) {
   // Initialize with fallback name - state resets on each mount since dialog unmounts when closed
   const [name, setName] = useState(() => getFallbackName(foodItems));
+  const [showAllEntries, setShowAllEntries] = useState(false);
+  const [selectedEntryIds, setSelectedEntryIds] = useState<Set<string>>(new Set());
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setName(e.target.value);
   };
 
+  const toggleEntry = (entryId: string) => {
+    setSelectedEntryIds(prev => {
+      const next = new Set(prev);
+      if (next.has(entryId)) {
+        next.delete(entryId);
+      } else {
+        next.add(entryId);
+      }
+      return next;
+    });
+  };
+
   const handleSave = () => {
     const trimmed = name.trim();
     if (trimmed) {
-      onSave(trimmed);
+      onSave(trimmed, Array.from(selectedEntryIds));
     }
   };
 
@@ -64,9 +98,15 @@ export function SaveMealDialog({
     }
   };
 
+  // Compute visible entries based on collapse state
+  const visibleEntries = showAllEntries
+    ? otherEntries
+    : otherEntries?.slice(0, INITIAL_VISIBLE_COUNT);
+  const hiddenCount = (otherEntries?.length ?? 0) - INITIAL_VISIBLE_COUNT;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md">
+      <DialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Save as Meal</DialogTitle>
           <DialogDescription>
@@ -98,6 +138,53 @@ export function SaveMealDialog({
               )}
             </ul>
           </div>
+          
+          {/* Add more from today section */}
+          {otherEntries && otherEntries.length > 0 && (
+            <div className="space-y-2 pt-2 border-t">
+              <p className="text-sm font-medium">Add more from today:</p>
+              
+              {visibleEntries?.map(entry => (
+                <label 
+                  key={entry.entryId} 
+                  className="flex items-start gap-2 py-1.5 cursor-pointer hover:bg-muted/50 rounded px-1 -mx-1"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedEntryIds.has(entry.entryId)}
+                    onChange={() => toggleEntry(entry.entryId)}
+                    className="mt-0.5 h-4 w-4 rounded border-input"
+                    disabled={isSaving}
+                  />
+                  <span className="text-sm text-muted-foreground truncate">
+                    {formatEntryPreview(entry.items)}
+                  </span>
+                </label>
+              ))}
+              
+              {!showAllEntries && hiddenCount > 0 && (
+                <button 
+                  type="button"
+                  onClick={() => setShowAllEntries(true)}
+                  className="text-sm text-primary hover:underline"
+                  disabled={isSaving}
+                >
+                  Show {hiddenCount} more...
+                </button>
+              )}
+              
+              {showAllEntries && otherEntries.length > INITIAL_VISIBLE_COUNT && (
+                <button 
+                  type="button"
+                  onClick={() => setShowAllEntries(false)}
+                  className="text-sm text-primary hover:underline"
+                  disabled={isSaving}
+                >
+                  Show less
+                </button>
+              )}
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>

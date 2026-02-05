@@ -53,6 +53,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     entryId: string;
     rawInput: string | null;
     foodItems: FoodItem[];
+    createdAt: string;
   } | null>(null);
   
 
@@ -430,18 +431,33 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
 
   // Handle save as meal from FoodItemsTable expando
   const handleSaveAsMeal = (entryId: string, rawInput: string | null, foodItems: FoodItem[]) => {
-    setSaveMealDialogData({ entryId, rawInput, foodItems });
+    const entry = entries.find(e => e.id === entryId);
+    setSaveMealDialogData({ 
+      entryId, 
+      rawInput, 
+      foodItems,
+      createdAt: entry?.created_at || new Date().toISOString(),
+    });
   };
 
   // Handle saving the meal
-  const handleSaveMealConfirm = (name: string) => {
+  const handleSaveMealConfirm = (name: string, additionalEntryIds: string[] = []) => {
     if (!saveMealDialogData) return;
+    
+    // Combine items from primary entry + selected other entries
+    let allItems = [...saveMealDialogData.foodItems];
+    for (const entryId of additionalEntryIds) {
+      const entry = entries.find(e => e.id === entryId);
+      if (entry) {
+        allItems = [...allItems, ...entry.food_items];
+      }
+    }
     
     saveMeal.mutate(
       {
         name,
-        originalInput: saveMealDialogData.rawInput,
-        foodItems: saveMealDialogData.foodItems,
+        originalInput: saveMealDialogData.rawInput, // Keep original entry's raw input
+        foodItems: allItems,
       },
       {
         onSuccess: () => {
@@ -450,6 +466,33 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       }
     );
   };
+  
+  // Compute other entries for meal dialog (chronologically sorted, prioritizing entries logged before current)
+  const otherEntriesForMealDialog = useMemo(() => {
+    if (!saveMealDialogData) return [];
+    
+    return entries
+      .filter(e => e.id !== saveMealDialogData.entryId)
+      .sort((a, b) => {
+        // Entries logged before current come first, newest-first
+        const currentTime = new Date(saveMealDialogData.createdAt).getTime();
+        const aTime = new Date(a.created_at).getTime();
+        const bTime = new Date(b.created_at).getTime();
+        
+        const aIsBefore = aTime < currentTime;
+        const bIsBefore = bTime < currentTime;
+        
+        if (aIsBefore && !bIsBefore) return -1;
+        if (!aIsBefore && bIsBefore) return 1;
+        if (aIsBefore && bIsBefore) return bTime - aTime; // newest first
+        return aTime - bTime; // oldest first
+      })
+      .map(e => ({
+        entryId: e.id,
+        items: e.food_items,
+        rawInput: e.raw_input,
+      }));
+  }, [saveMealDialogData, entries]);
 
   // Find which entry an item belongs to based on its index
   const findEntryForIndex = useCallback((index: number): { entryId: string; localIndex: number } | null => {
@@ -737,6 +780,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
           foodItems={saveMealDialogData.foodItems}
           onSave={handleSaveMealConfirm}
           isSaving={saveMeal.isPending}
+          otherEntries={otherEntriesForMealDialog}
         />
       )}
 
