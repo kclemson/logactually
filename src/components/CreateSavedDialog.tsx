@@ -201,7 +201,7 @@ export function CreateSavedDialog<TItem, TSaved>({
   return (
     <>
       <Dialog open={open && state !== 'prompting'} onOpenChange={onOpenChange}>
-        <DialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="left-4 right-4 top-4 translate-x-0 translate-y-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{config.title}</DialogTitle>
             <DialogDescription>{config.description}</DialogDescription>
@@ -284,7 +284,7 @@ export function CreateSavedDialog<TItem, TSaved>({
           }
         }}
       >
-        <AlertDialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md">
+        <AlertDialogContent className="left-4 right-4 top-4 translate-x-0 translate-y-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:w-full sm:max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>{config.savedTitle}</AlertDialogTitle>
             <AlertDialogDescription>
