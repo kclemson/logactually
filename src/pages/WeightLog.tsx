@@ -61,7 +61,7 @@ interface WeightLogContentProps {
 const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   const [, setSearchParams] = useSearchParams();
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(new Date()));
+  const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(selectedDate));
   const [expandedEntryIds, setExpandedEntryIds] = useState<Set<string>>(new Set());
   const [createRoutineDialogOpen, setCreateRoutineDialogOpen] = useState(false);
   
@@ -600,8 +600,8 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
           <PopoverTrigger asChild>
             <button
               className={cn(
-                "flex items-center gap-1.5 px-2 py-1 text-heading hover:underline",
-                "text-blue-600 dark:text-blue-400"
+                "flex items-center gap-1.5 px-2 py-1 text-heading",
+                "text-white underline decoration-2 underline-offset-4"
               )}
             >
               <CalendarIcon className="h-4 w-4" />
