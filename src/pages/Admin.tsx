@@ -29,6 +29,7 @@ export default function Admin() {
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const [showPopulateDialog, setShowPopulateDialog] = useState(false);
+  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
   // All hooks must be called before any conditional returns
   const { data: isAdmin, isLoading: isAdminLoading } = useIsAdmin();
@@ -119,6 +120,10 @@ export default function Admin() {
         </div>
       ) : userStats && userStats.length > 0 ? (
         <TooltipProvider delayDuration={200}>
+          {/* Dismiss backdrop for touch tooltips */}
+          {!hasHover && activeTooltip && (
+            <div className="fixed inset-0 z-40" onClick={() => setActiveTooltip(null)} />
+          )}
           <table className="w-auto text-xs">
             <thead>
               <tr className="border-b">
@@ -153,16 +158,23 @@ export default function Admin() {
                   >
                     {user.last_active ? format(parseISO(user.last_active), "MMM d") : "—"}
                   </td>
-                  {hasHover && user.entries_today > 0 && user.food_today_details ? (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <td className="text-center py-0.5 pr-2 text-green-500 cursor-default">{user.entries_today}</td>
-                      </TooltipTrigger>
+                  <Tooltip
+                    open={hasHover ? undefined : activeTooltip === `${user.user_id}-food`}
+                    onOpenChange={hasHover ? undefined : (open) => setActiveTooltip(open ? `${user.user_id}-food` : null)}
+                  >
+                    <TooltipTrigger asChild>
+                      <td
+                        className={`text-center py-0.5 pr-2 ${user.entries_today > 0 ? "text-green-500" : "text-muted-foreground/50"} ${user.entries_today > 0 && user.food_today_details ? "cursor-default" : ""}`}
+                        onClick={!hasHover && user.entries_today > 0 && user.food_today_details ? () => setActiveTooltip(activeTooltip === `${user.user_id}-food` ? null : `${user.user_id}-food`) : undefined}
+                      >
+                        {user.entries_today}
+                      </td>
+                    </TooltipTrigger>
+                    {user.entries_today > 0 && user.food_today_details && (
                       <TooltipContent className="max-w-lg text-xs space-y-1 bg-popover text-popover-foreground border whitespace-nowrap">
                         {user.food_today_details.map((entry, i) => (
                           <div key={i}>
                             {entry.raw_input ? (
-                              // Manual entry: show "input" → items
                               entry.items?.length === 1 ? (
                                 <p>
                                   <span className="italic text-muted-foreground">"{entry.raw_input}"</span> →{" "}
@@ -179,7 +191,6 @@ export default function Admin() {
                                 </>
                               )
                             ) : entry.saved_meal_name ? (
-                              // Saved meal: show meal name header with items below
                               <>
                                 <p className="text-muted-foreground">[{entry.saved_meal_name}]</p>
                                 {entry.items?.map((item, j) => (
@@ -189,27 +200,26 @@ export default function Admin() {
                                 ))}
                               </>
                             ) : (
-                              // No context: just bullets
                               entry.items?.map((item, j) => <p key={j}>• {item}</p>)
                             )}
                           </div>
                         ))}
                       </TooltipContent>
-                    </Tooltip>
-                  ) : (
-                    <td
-                      className={`text-center py-0.5 pr-2 ${user.entries_today > 0 ? "text-green-500" : "text-muted-foreground/50"}`}
-                    >
-                      {user.entries_today}
-                    </td>
-                  )}
-                  {hasHover && (user.weight_today ?? 0) > 0 && user.weight_today_details ? (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <td className="text-center py-0.5 pr-2 text-green-500 cursor-default">
-                          {user.weight_today ?? 0}
-                        </td>
-                      </TooltipTrigger>
+                    )}
+                  </Tooltip>
+                  <Tooltip
+                    open={hasHover ? undefined : activeTooltip === `${user.user_id}-weight`}
+                    onOpenChange={hasHover ? undefined : (open) => setActiveTooltip(open ? `${user.user_id}-weight` : null)}
+                  >
+                    <TooltipTrigger asChild>
+                      <td
+                        className={`text-center py-0.5 pr-2 ${(user.weight_today ?? 0) > 0 ? "text-green-500" : "text-muted-foreground/50"} ${(user.weight_today ?? 0) > 0 && user.weight_today_details ? "cursor-default" : ""}`}
+                        onClick={!hasHover && (user.weight_today ?? 0) > 0 && user.weight_today_details ? () => setActiveTooltip(activeTooltip === `${user.user_id}-weight` ? null : `${user.user_id}-weight`) : undefined}
+                      >
+                        {user.weight_today ?? 0}
+                      </td>
+                    </TooltipTrigger>
+                    {(user.weight_today ?? 0) > 0 && user.weight_today_details && (
                       <TooltipContent className="max-w-lg text-xs space-y-1 bg-popover text-popover-foreground border whitespace-nowrap">
                         {user.weight_today_details.map((entry, i) => (
                           <div key={i}>
@@ -229,64 +239,58 @@ export default function Admin() {
                           </div>
                         ))}
                       </TooltipContent>
-                    </Tooltip>
-                  ) : (
-                    <td
-                      className={`text-center py-0.5 pr-2 ${(user.weight_today ?? 0) > 0 ? "text-green-500" : "text-muted-foreground/50"}`}
-                    >
-                      {user.weight_today ?? 0}
-                    </td>
-                  )}
+                    )}
+                  </Tooltip>
                   <td
                     className={`text-center py-0.5 pr-2 ${user.total_entries === 0 ? "text-muted-foreground/50" : ""}`}
                   >
                     {user.total_entries}
                   </td>
-                  {hasHover && (user.saved_meals_count ?? 0) > 0 && user.saved_meal_names ? (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <td className="text-center py-0.5 pr-2 cursor-default">
-                          {user.saved_meals_count ?? 0}
-                        </td>
-                      </TooltipTrigger>
+                  <Tooltip
+                    open={hasHover ? undefined : activeTooltip === `${user.user_id}-meals`}
+                    onOpenChange={hasHover ? undefined : (open) => setActiveTooltip(open ? `${user.user_id}-meals` : null)}
+                  >
+                    <TooltipTrigger asChild>
+                      <td
+                        className={`text-center py-0.5 pr-2 ${(user.saved_meals_count ?? 0) === 0 ? "text-muted-foreground/50" : ""} ${(user.saved_meals_count ?? 0) > 0 && user.saved_meal_names ? "cursor-default" : ""}`}
+                        onClick={!hasHover && (user.saved_meals_count ?? 0) > 0 && user.saved_meal_names ? () => setActiveTooltip(activeTooltip === `${user.user_id}-meals` ? null : `${user.user_id}-meals`) : undefined}
+                      >
+                        {user.saved_meals_count ?? 0}
+                      </td>
+                    </TooltipTrigger>
+                    {(user.saved_meals_count ?? 0) > 0 && user.saved_meal_names && (
                       <TooltipContent className="max-w-lg text-xs space-y-0.5 bg-popover text-popover-foreground border">
                         {user.saved_meal_names.map((name, i) => (
                           <p key={i}>• {name}</p>
                         ))}
                       </TooltipContent>
-                    </Tooltip>
-                  ) : (
-                    <td
-                      className={`text-center py-0.5 pr-2 ${(user.saved_meals_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
-                    >
-                      {user.saved_meals_count ?? 0}
-                    </td>
-                  )}
+                    )}
+                  </Tooltip>
                   <td
                     className={`text-center py-0.5 pr-2 ${(user.total_weight_entries ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
                   >
                     {user.total_weight_entries ?? 0}
                   </td>
-                  {hasHover && (user.saved_routines_count ?? 0) > 0 && user.saved_routine_names ? (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <td className="text-center py-0.5 pr-2 cursor-default">
-                          {user.saved_routines_count ?? 0}
-                        </td>
-                      </TooltipTrigger>
+                  <Tooltip
+                    open={hasHover ? undefined : activeTooltip === `${user.user_id}-routines`}
+                    onOpenChange={hasHover ? undefined : (open) => setActiveTooltip(open ? `${user.user_id}-routines` : null)}
+                  >
+                    <TooltipTrigger asChild>
+                      <td
+                        className={`text-center py-0.5 pr-2 ${(user.saved_routines_count ?? 0) === 0 ? "text-muted-foreground/50" : ""} ${(user.saved_routines_count ?? 0) > 0 && user.saved_routine_names ? "cursor-default" : ""}`}
+                        onClick={!hasHover && (user.saved_routines_count ?? 0) > 0 && user.saved_routine_names ? () => setActiveTooltip(activeTooltip === `${user.user_id}-routines` ? null : `${user.user_id}-routines`) : undefined}
+                      >
+                        {user.saved_routines_count ?? 0}
+                      </td>
+                    </TooltipTrigger>
+                    {(user.saved_routines_count ?? 0) > 0 && user.saved_routine_names && (
                       <TooltipContent className="max-w-lg text-xs space-y-0.5 bg-popover text-popover-foreground border">
                         {user.saved_routine_names.map((name, i) => (
                           <p key={i}>• {name}</p>
                         ))}
                       </TooltipContent>
-                    </Tooltip>
-                  ) : (
-                    <td
-                      className={`text-center py-0.5 pr-2 ${(user.saved_routines_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
-                    >
-                      {user.saved_routines_count ?? 0}
-                    </td>
-                  )}
+                    )}
+                  </Tooltip>
                   <td
                     className={`text-center py-0.5 pr-2 ${(user.login_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
                   >
