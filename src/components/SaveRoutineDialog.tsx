@@ -194,6 +194,7 @@ export function SaveRoutineDialog({
               compact={true}
               showInlineLabels={true}
               weightUnit={weightUnit}
+              showCardioLabel={true}
             />
             
             {!showAllItems && hiddenCount > 0 && (
