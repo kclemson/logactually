@@ -12,10 +12,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 import { Loader2 } from 'lucide-react';
-import { FoodItem } from '@/types/food';
+import { FoodItem, calculateTotals } from '@/types/food';
 import { FoodItemsTable } from '@/components/FoodItemsTable';
 
-const INITIAL_VISIBLE_COUNT = 2;
+const INITIAL_VISIBLE_COUNT = 5;
 
 interface OtherFoodEntry {
   entryId: string;
@@ -28,7 +28,7 @@ interface SaveMealDialogProps {
   onOpenChange: (open: boolean) => void;
   rawInput: string | null;
   foodItems: FoodItem[];
-  onSave: (name: string, additionalEntryIds?: string[]) => void;
+  onSave: (name: string, selectedItems: FoodItem[]) => void;
   isSaving: boolean;
   otherEntries?: OtherFoodEntry[];
 }
@@ -56,20 +56,31 @@ export function SaveMealDialog({
 }: SaveMealDialogProps) {
   // Initialize with fallback name - state resets on each mount since dialog unmounts when closed
   const [name, setName] = useState(() => getFallbackName(foodItems));
-  const [showAllEntries, setShowAllEntries] = useState(false);
-  const [selectedEntryIds, setSelectedEntryIds] = useState<Set<string>>(new Set());
+  const [showAllItems, setShowAllItems] = useState(false);
+  
+  // Combine all items into one flat array (primary entry first, then others)
+  const allItems = useMemo(() => {
+    const items: FoodItem[] = [...foodItems];
+    otherEntries?.forEach(entry => items.push(...entry.items));
+    return items.map((item, i) => ({ ...item, uid: `combined-${i}` }));
+  }, [foodItems, otherEntries]);
+  
+  // Pre-select primary entry items (indices 0 to foodItems.length-1)
+  const [selectedIndices, setSelectedIndices] = useState<Set<number>>(() => 
+    new Set(foodItems.map((_, i) => i))
+  );
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setName(e.target.value);
   };
 
-  const toggleEntry = (entryId: string) => {
-    setSelectedEntryIds(prev => {
+  const handleSelectionChange = (index: number, selected: boolean) => {
+    setSelectedIndices(prev => {
       const next = new Set(prev);
-      if (next.has(entryId)) {
-        next.delete(entryId);
+      if (selected) {
+        next.add(index);
       } else {
-        next.add(entryId);
+        next.delete(index);
       }
       return next;
     });
@@ -77,23 +88,38 @@ export function SaveMealDialog({
 
   const handleSave = () => {
     const trimmed = name.trim();
-    if (trimmed) {
-      onSave(trimmed, Array.from(selectedEntryIds));
+    if (trimmed && selectedIndices.size > 0) {
+      // Collect selected items, strip the temporary uid
+      const selectedItems = allItems
+        .filter((_, i) => selectedIndices.has(i))
+        .map(({ uid, ...rest }) => rest as FoodItem);
+      onSave(trimmed, selectedItems);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && name.trim()) {
+    if (e.key === 'Enter' && name.trim() && selectedIndices.size > 0) {
       e.preventDefault();
       handleSave();
     }
   };
 
-  // Compute visible entries based on collapse state
-  const visibleEntries = showAllEntries
-    ? otherEntries
-    : otherEntries?.slice(0, INITIAL_VISIBLE_COUNT);
-  const hiddenCount = (otherEntries?.length ?? 0) - INITIAL_VISIBLE_COUNT;
+  // Compute visible items based on collapse state
+  const visibleItems = showAllItems 
+    ? allItems 
+    : allItems.slice(0, INITIAL_VISIBLE_COUNT);
+  const hiddenCount = allItems.length - INITIAL_VISIBLE_COUNT;
+  
+  // Filter selectedIndices to only include visible items for the table
+  const visibleSelectedIndices = useMemo(() => {
+    const visible = new Set<number>();
+    visibleItems.forEach((_, i) => {
+      if (selectedIndices.has(i)) visible.add(i);
+    });
+    return visible;
+  }, [visibleItems, selectedIndices]);
+
+  const hasMultipleItems = allItems.length > 1;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -118,84 +144,56 @@ export function SaveMealDialog({
               spellCheck={false}
             />
           </div>
-          <div className="text-sm text-muted-foreground">
-            <p className="font-medium mb-1">Items ({foodItems.length}):</p>
-            <ul className="list-disc list-inside space-y-0.5">
-              {foodItems.slice(0, 5).map((item, i) => (
-                <li key={i} className="truncate">{item.description}</li>
-              ))}
-              {foodItems.length > 5 && (
-                <li className="text-muted-foreground/70">+{foodItems.length - 5} more...</li>
-              )}
-            </ul>
-          </div>
           
-          {/* Add more from today section */}
-          {otherEntries && otherEntries.length > 0 && (
-            <div className="space-y-2 pt-2 border-t">
-              <p className="text-sm font-medium">Add more from today:</p>
-              
-              {visibleEntries?.map(entry => {
-                const isSelected = selectedEntryIds.has(entry.entryId);
-                // Create items with temporary uids for the table
-                const itemsWithUids = entry.items.map((item, i) => ({
-                  ...item,
-                  uid: `other-${entry.entryId}-${i}`,
-                }));
-                // When selected, all indices are selected; otherwise none
-                const selectedSet = isSelected
-                  ? new Set(itemsWithUids.map((_, i) => i))
-                  : new Set<number>();
-
-                return (
-                  <div key={entry.entryId}>
-                    <FoodItemsTable
-                      items={itemsWithUids}
-                      editable={false}
-                      selectable={true}
-                      selectedIndices={selectedSet}
-                      onSelectionChange={() => toggleEntry(entry.entryId)}
-                      showHeader={false}
-                      showTotals={true}
-                      totalsPosition="bottom"
-                      compact={true}
-                      showInlineLabels={true}
-                      showMacroPercentages={false}
-                      showTotalsDivider={false}
-                    />
-                  </div>
-                );
-              })}
-              
-              {!showAllEntries && hiddenCount > 0 && (
-                <button 
-                  type="button"
-                  onClick={() => setShowAllEntries(true)}
-                  className="text-sm text-primary hover:underline"
-                  disabled={isSaving}
-                >
-                  Show {hiddenCount} more...
-                </button>
-              )}
-              
-              {showAllEntries && otherEntries.length > INITIAL_VISIBLE_COUNT && (
-                <button 
-                  type="button"
-                  onClick={() => setShowAllEntries(false)}
-                  className="text-sm text-primary hover:underline"
-                  disabled={isSaving}
-                >
-                  Show less
-                </button>
-              )}
-            </div>
-          )}
+          {/* Single unified table for all items */}
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-muted-foreground">
+              Items ({selectedIndices.size} of {allItems.length} selected):
+            </p>
+            <FoodItemsTable
+              items={visibleItems}
+              editable={false}
+              selectable={hasMultipleItems}
+              selectedIndices={visibleSelectedIndices}
+              onSelectionChange={handleSelectionChange}
+              showHeader={true}
+              showTotals={true}
+              totalsPosition="bottom"
+              compact={true}
+              showInlineLabels={true}
+              showMacroPercentages={false}
+              showTotalsDivider={true}
+              totals={calculateTotals(allItems.filter((_, i) => selectedIndices.has(i)))}
+            />
+            
+            {!showAllItems && hiddenCount > 0 && (
+              <button 
+                type="button"
+                onClick={() => setShowAllItems(true)}
+                className="text-sm text-primary hover:underline"
+                disabled={isSaving}
+              >
+                Show {hiddenCount} more...
+              </button>
+            )}
+            
+            {showAllItems && allItems.length > INITIAL_VISIBLE_COUNT && (
+              <button 
+                type="button"
+                onClick={() => setShowAllItems(false)}
+                className="text-sm text-primary hover:underline"
+                disabled={isSaving}
+              >
+                Show less
+              </button>
+            )}
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={!name.trim() || isSaving}>
+          <Button onClick={handleSave} disabled={!name.trim() || selectedIndices.size === 0 || isSaving}>
             {isSaving ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-1" />

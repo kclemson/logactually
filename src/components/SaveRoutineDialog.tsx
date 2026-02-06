@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -15,7 +15,7 @@ import { WeightSet } from '@/types/weight';
 import { type WeightUnit, formatDurationMmSs } from '@/lib/weight-units';
 import { WeightItemsTable } from '@/components/WeightItemsTable';
 
-const INITIAL_VISIBLE_COUNT = 2;
+const INITIAL_VISIBLE_COUNT = 5;
 
 interface OtherWeightEntry {
   entryId: string;
@@ -28,7 +28,7 @@ interface SaveRoutineDialogProps {
   onOpenChange: (open: boolean) => void;
   rawInput: string | null;
   exerciseSets: WeightSet[];
-  onSave: (name: string, isAutoNamed: boolean, additionalEntryIds?: string[]) => void;
+  onSave: (name: string, isAutoNamed: boolean, selectedExercises: WeightSet[]) => void;
   isSaving: boolean;
   otherEntries?: OtherWeightEntry[];
   /** Weight unit preference for display (lbs or kg) */
@@ -79,21 +79,32 @@ export function SaveRoutineDialog({
   // State is fresh on each mount since dialog unmounts when closed
   const [name, setName] = useState(() => getDefaultName(exerciseSets));
   const [userHasTyped, setUserHasTyped] = useState(false);
-  const [showAllEntries, setShowAllEntries] = useState(false);
-  const [selectedEntryIds, setSelectedEntryIds] = useState<Set<string>>(new Set());
+  const [showAllItems, setShowAllItems] = useState(false);
+  
+  // Combine all exercises into one flat array (primary entry first, then others)
+  const allExercises = useMemo(() => {
+    const items: WeightSet[] = [...exerciseSets];
+    otherEntries?.forEach(entry => items.push(...entry.exerciseSets));
+    return items.map((item, i) => ({ ...item, uid: `combined-${i}` }));
+  }, [exerciseSets, otherEntries]);
+  
+  // Pre-select primary entry exercises (indices 0 to exerciseSets.length-1)
+  const [selectedIndices, setSelectedIndices] = useState<Set<number>>(() => 
+    new Set(exerciseSets.map((_, i) => i))
+  );
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setName(e.target.value);
     setUserHasTyped(true);
   };
 
-  const toggleEntry = (entryId: string) => {
-    setSelectedEntryIds(prev => {
+  const handleSelectionChange = (index: number, selected: boolean) => {
+    setSelectedIndices(prev => {
       const next = new Set(prev);
-      if (next.has(entryId)) {
-        next.delete(entryId);
+      if (selected) {
+        next.add(index);
       } else {
-        next.add(entryId);
+        next.delete(index);
       }
       return next;
     });
@@ -101,23 +112,38 @@ export function SaveRoutineDialog({
 
   const handleSave = () => {
     const trimmed = name.trim();
-    if (trimmed) {
-      onSave(trimmed, !userHasTyped, Array.from(selectedEntryIds));
+    if (trimmed && selectedIndices.size > 0) {
+      // Collect selected exercises, strip the temporary uid
+      const selectedExercises = allExercises
+        .filter((_, i) => selectedIndices.has(i))
+        .map(({ uid, ...rest }) => rest as WeightSet);
+      onSave(trimmed, !userHasTyped, selectedExercises);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && name.trim()) {
+    if (e.key === 'Enter' && name.trim() && selectedIndices.size > 0) {
       e.preventDefault();
       handleSave();
     }
   };
 
-  // Compute visible entries based on collapse state
-  const visibleEntries = showAllEntries
-    ? otherEntries
-    : otherEntries?.slice(0, INITIAL_VISIBLE_COUNT);
-  const hiddenCount = (otherEntries?.length ?? 0) - INITIAL_VISIBLE_COUNT;
+  // Compute visible items based on collapse state
+  const visibleItems = showAllItems 
+    ? allExercises 
+    : allExercises.slice(0, INITIAL_VISIBLE_COUNT);
+  const hiddenCount = allExercises.length - INITIAL_VISIBLE_COUNT;
+  
+  // Filter selectedIndices to only include visible items for the table
+  const visibleSelectedIndices = useMemo(() => {
+    const visible = new Set<number>();
+    visibleItems.forEach((_, i) => {
+      if (selectedIndices.has(i)) visible.add(i);
+    });
+    return visible;
+  }, [visibleItems, selectedIndices]);
+
+  const hasMultipleItems = allExercises.length > 1;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -142,84 +168,53 @@ export function SaveRoutineDialog({
               spellCheck={false}
             />
           </div>
-          <div className="text-sm text-muted-foreground">
-            <p className="font-medium mb-1">Exercises ({exerciseSets.length}):</p>
-            <ul className="list-disc list-inside space-y-0.5">
-              {exerciseSets.slice(0, 5).map((set, i) => (
-                <li key={i} className="truncate">
-                  {formatExerciseSummary(set, false)}
-                </li>
-              ))}
-              {exerciseSets.length > 5 && (
-                <li className="text-muted-foreground/70">+{exerciseSets.length - 5} more...</li>
-              )}
-            </ul>
-          </div>
           
-          {/* Add more from today section */}
-          {otherEntries && otherEntries.length > 0 && (
-            <div className="space-y-2 pt-2 border-t">
-              <p className="text-sm font-medium">Add more from today:</p>
-              
-              {visibleEntries?.map(entry => {
-                const isSelected = selectedEntryIds.has(entry.entryId);
-                // Create items with temporary uids for the table
-                const itemsWithUids = entry.exerciseSets.map((set, i) => ({
-                  ...set,
-                  uid: `other-${entry.entryId}-${i}`,
-                }));
-                // When selected, all indices are selected; otherwise none
-                const selectedSet = isSelected
-                  ? new Set(itemsWithUids.map((_, i) => i))
-                  : new Set<number>();
-
-                return (
-                  <div key={entry.entryId}>
-                    <WeightItemsTable
-                      items={itemsWithUids}
-                      editable={false}
-                      selectable={true}
-                      selectedIndices={selectedSet}
-                      onSelectionChange={() => toggleEntry(entry.entryId)}
-                      showHeader={false}
-                      showTotals={false}
-                      compact={true}
-                      showInlineLabels={true}
-                      weightUnit={weightUnit}
-                    />
-                  </div>
-                );
-              })}
-              
-              {!showAllEntries && hiddenCount > 0 && (
-                <button 
-                  type="button"
-                  onClick={() => setShowAllEntries(true)}
-                  className="text-sm text-primary hover:underline"
-                  disabled={isSaving}
-                >
-                  Show {hiddenCount} more...
-                </button>
-              )}
-              
-              {showAllEntries && otherEntries.length > INITIAL_VISIBLE_COUNT && (
-                <button 
-                  type="button"
-                  onClick={() => setShowAllEntries(false)}
-                  className="text-sm text-primary hover:underline"
-                  disabled={isSaving}
-                >
-                  Show less
-                </button>
-              )}
-            </div>
-          )}
+          {/* Single unified table for all exercises */}
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-muted-foreground">
+              Exercises ({selectedIndices.size} of {allExercises.length} selected):
+            </p>
+            <WeightItemsTable
+              items={visibleItems}
+              editable={false}
+              selectable={hasMultipleItems}
+              selectedIndices={visibleSelectedIndices}
+              onSelectionChange={handleSelectionChange}
+              showHeader={true}
+              showTotals={false}
+              compact={true}
+              showInlineLabels={true}
+              weightUnit={weightUnit}
+            />
+            
+            {!showAllItems && hiddenCount > 0 && (
+              <button 
+                type="button"
+                onClick={() => setShowAllItems(true)}
+                className="text-sm text-primary hover:underline"
+                disabled={isSaving}
+              >
+                Show {hiddenCount} more...
+              </button>
+            )}
+            
+            {showAllItems && allExercises.length > INITIAL_VISIBLE_COUNT && (
+              <button 
+                type="button"
+                onClick={() => setShowAllItems(false)}
+                className="text-sm text-primary hover:underline"
+                disabled={isSaving}
+              >
+                Show less
+              </button>
+            )}
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={!name.trim() || isSaving}>
+          <Button onClick={handleSave} disabled={!name.trim() || selectedIndices.size === 0 || isSaving}>
             {isSaving ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-1" />

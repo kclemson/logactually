@@ -440,24 +440,15 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     });
   };
 
-  // Handle saving the meal
-  const handleSaveMealConfirm = (name: string, additionalEntryIds: string[] = []) => {
+  // Handle saving the meal - receives selected items directly from dialog
+  const handleSaveMealConfirm = (name: string, selectedItems: FoodItem[]) => {
     if (!saveMealDialogData) return;
-    
-    // Combine items from primary entry + selected other entries
-    let allItems = [...saveMealDialogData.foodItems];
-    for (const entryId of additionalEntryIds) {
-      const entry = entries.find(e => e.id === entryId);
-      if (entry) {
-        allItems = [...allItems, ...entry.food_items];
-      }
-    }
     
     saveMeal.mutate(
       {
         name,
-        originalInput: saveMealDialogData.rawInput, // Keep original entry's raw input
-        foodItems: allItems,
+        originalInput: saveMealDialogData.rawInput,
+        foodItems: selectedItems,
       },
       {
         onSuccess: () => {
