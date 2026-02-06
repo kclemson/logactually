@@ -1,53 +1,96 @@
 
 
-## Plan: Fix Mobile Dialog Positioning for Save Meal/Routine Dialogs
+## Plan: Add Saved Item Names to `get_user_stats` RPC
 
-### Problem
-On mobile (especially when self-hosting on a phone), the Save Meal/Routine dialogs appear halfway off the top of the screen. This is because:
+### Overview
+Add two new fields to the existing `get_user_stats()` RPC to support tooltips on the SF (Saved Foods) and SW (Saved Weights) columns in the admin dashboard.
 
-1. The base Dialog styles use `top-[50%] translate-y-[-50%]` for vertical centering
-2. The mobile overrides only change horizontal positioning (`left-2 right-2 translate-x-0`)
-3. The vertical positioning remains unchanged, which can push tall dialogs above the viewport
+---
 
-### Solution
-Add explicit mobile vertical positioning to keep the dialog in view. Two options:
+### Database Migration
 
-**Option A (recommended):** Pin to top with padding on mobile
-```tsx
-// Add to mobile classes:
-top-4 translate-y-0 sm:top-[50%] sm:translate-y-[-50%]
+Update the `get_user_stats` function to include `saved_meal_names` and `saved_routine_names` arrays for each user.
+
+**New fields added to the SELECT:**
+```sql
+-- Saved meal names (ordered by most recently used)
+(
+  SELECT json_agg(sm2.name ORDER BY sm2.last_used_at DESC NULLS LAST)
+  FROM saved_meals sm2 
+  WHERE sm2.user_id = p.id
+) as saved_meal_names,
+
+-- Saved routine names (ordered by most recently used)
+(
+  SELECT json_agg(sr2.name ORDER BY sr2.last_used_at DESC NULLS LAST)
+  FROM saved_routines sr2 
+  WHERE sr2.user_id = p.id
+) as saved_routine_names
 ```
-This positions the dialog 16px from the top on mobile, then reverts to centered on desktop.
 
-**Option B:** Use a smaller top percentage
-```tsx
-top-[10%] translate-y-0 sm:top-[50%] sm:translate-y-[-50%]
+---
+
+### TypeScript Changes
+
+**File: `src/hooks/useAdminStats.ts`**
+
+Add to `UserStats` interface:
+```typescript
+interface UserStats {
+  // ... existing fields ...
+  saved_meal_names: string[] | null;
+  saved_routine_names: string[] | null;
+}
 ```
+
+---
+
+### UI Changes
+
+**File: `src/pages/Admin.tsx`**
+
+Add tooltips to the SF and SW columns following the existing pattern for F2day/W2day:
+
+**SF Column (lines 245-249):**
+```tsx
+{hasHover && (user.saved_meals_count ?? 0) > 0 && user.saved_meal_names ? (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <td className="text-center py-0.5 pr-2 cursor-default">
+        {user.saved_meals_count ?? 0}
+      </td>
+    </TooltipTrigger>
+    <TooltipContent className="max-w-lg text-xs space-y-0.5 bg-popover text-popover-foreground border">
+      {user.saved_meal_names.map((name, i) => (
+        <p key={i}>• {name}</p>
+      ))}
+    </TooltipContent>
+  </Tooltip>
+) : (
+  <td className={`text-center py-0.5 pr-2 ${...}`}>
+    {user.saved_meals_count ?? 0}
+  </td>
+)}
+```
+
+**SW Column (lines 255-259):** Same pattern for `saved_routine_names`.
+
+---
 
 ### Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/components/SaveMealDialog.tsx` | Add mobile vertical positioning classes to DialogContent |
-| `src/components/SaveRoutineDialog.tsx` | Add mobile vertical positioning classes to DialogContent |
-| `src/components/CreateSavedDialog.tsx` | Add mobile vertical positioning classes to DialogContent |
+| Database migration | Update `get_user_stats()` to include name arrays |
+| `src/hooks/useAdminStats.ts` | Add `saved_meal_names` and `saved_routine_names` to interface |
+| `src/pages/Admin.tsx` | Add tooltips to SF and SW columns |
 
-### Implementation Detail
+---
 
-**Before (SaveMealDialog line 135):**
-```tsx
-<DialogContent className="left-2 right-2 translate-x-0 w-auto max-w-[calc(100vw-16px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md max-h-[90vh] overflow-y-auto p-3 sm:p-6">
-```
+### Technical Notes
 
-**After:**
-```tsx
-<DialogContent className="left-2 right-2 top-4 translate-x-0 translate-y-0 w-auto max-w-[calc(100vw-16px)] sm:left-[50%] sm:right-auto sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:w-full sm:max-w-md max-h-[90vh] overflow-y-auto p-3 sm:p-6">
-```
-
-Same pattern for SaveRoutineDialog and CreateSavedDialog.
-
-### Why This Works
-- `top-4` (16px from top) + `translate-y-0` on mobile → dialog is pinned near top
-- `sm:top-[50%] sm:translate-y-[-50%]` on desktop → reverts to centered
-- Combined with `max-h-[90vh] overflow-y-auto`, ensures scrollable content stays in view
+- Names are ordered by `last_used_at DESC NULLS LAST` so most-recently-used appear first in the tooltip
+- Uses `json_agg` which returns `null` for users with no saved items (handled gracefully in UI)
+- Follows exact same tooltip pattern as existing F2day/W2day columns
+- No performance concern since this is admin-only and user count is small
 
