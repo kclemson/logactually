@@ -195,8 +195,11 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
         dateLabel: format(new Date(`${d.date}T12:00:00`), "MMM d"),
         mph,
         pace,
-        // For weight exercises: "3×10×135"; for cardio: mode-dependent label
-        label: isCardio ? cardioLabel : `${d.sets}×${d.reps}×${displayWeight}`,
+        // For weight exercises: "3×10×135" (uniform reps) or "1×22×135" (varying reps); for cardio: mode-dependent label
+        label: isCardio ? cardioLabel : 
+          d.repsPerSet !== undefined 
+            ? `${d.sets}×${d.repsPerSet}×${displayWeight}`  // Uniform: "3×10×135"
+            : `1×${d.reps}×${displayWeight}`,               // Varying: "1×22×135"
         // Show label using right-to-left counting (distance 0 = rightmost column)
         showLabel: distanceFromEnd % labelInterval === 0,
       };
@@ -365,8 +368,10 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
                           }
                           return duration;
                         }
-                        const { sets, reps, weight } = entry.payload;
-                        return `${sets} sets × ${reps} reps @ ${weight} ${unit}`;
+                        const { sets, reps, weight, repsPerSet } = entry.payload;
+                        return repsPerSet !== undefined
+                          ? `${sets} sets × ${repsPerSet} reps @ ${weight} ${unit}`
+                          : `${sets} sets, ${reps} total reps @ ${weight} ${unit}`;
                       }}
                     />
                   }
