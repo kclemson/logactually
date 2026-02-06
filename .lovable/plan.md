@@ -1,35 +1,53 @@
 
 
-## Plan: Add Feb-05 Changelog Entry
+## Plan: Fix Mobile Dialog Positioning for Save Meal/Routine Dialogs
 
-### Overview
-Add a new changelog entry for today's date with the uploaded screenshot showcasing the "Save as Meal" dialog with item selection.
+### Problem
+On mobile (especially when self-hosting on a phone), the Save Meal/Routine dialogs appear halfway off the top of the screen. This is because:
 
-### Image Handling
-- Copy the uploaded screenshot to `public/changelog/save-meal-select-items.png`
+1. The base Dialog styles use `top-[50%] translate-y-[-50%]` for vertical centering
+2. The mobile overrides only change horizontal positioning (`left-2 right-2 translate-x-0`)
+3. The vertical positioning remains unchanged, which can push tall dialogs above the viewport
 
-### Changelog Entry
+### Solution
+Add explicit mobile vertical positioning to keep the dialog in view. Two options:
 
-**Date**: Feb-05
+**Option A (recommended):** Pin to top with padding on mobile
+```tsx
+// Add to mobile classes:
+top-4 translate-y-0 sm:top-[50%] sm:translate-y-[-50%]
+```
+This positions the dialog 16px from the top on mobile, then reverts to centered on desktop.
 
-**Proposed text** (polished from your draft):
-> "The 'Save as Meal' and 'Save as Routine' shortcuts now let you include other items logged on the same day. Also added color-coded 'Add' buttons—blue for food, purple for exercise—to make it easier to tell which page you're on."
-
-This version:
-- Keeps it concise (matches existing entry lengths)
-- Leads with the feature, not the action ("now let you" vs "updated to let you")
-- Uses "color-coded" to explain the purpose clearly
-- Drops "routines" from the second sentence to avoid repetition with "Save as Routine"
+**Option B:** Use a smaller top percentage
+```tsx
+top-[10%] translate-y-0 sm:top-[50%] sm:translate-y-[-50%]
+```
 
 ### Files to Modify
 
 | File | Change |
 |------|--------|
-| `public/changelog/save-meal-select-items.png` | Copy uploaded image |
-| `src/pages/Changelog.tsx` | Add new entry at top of `CHANGELOG_ENTRIES` array and update `LAST_UPDATED` to "Feb-05-26" |
+| `src/components/SaveMealDialog.tsx` | Add mobile vertical positioning classes to DialogContent |
+| `src/components/SaveRoutineDialog.tsx` | Add mobile vertical positioning classes to DialogContent |
+| `src/components/CreateSavedDialog.tsx` | Add mobile vertical positioning classes to DialogContent |
 
-### New Entry Code
+### Implementation Detail
+
+**Before (SaveMealDialog line 135):**
 ```tsx
-{ date: "Feb-05", text: "The 'Save as Meal' and 'Save as Routine' shortcuts now let you include other items logged on the same day. Also added color-coded 'Add' buttons—blue for food, purple for exercise—to make it easier to tell which page you're on.", image: "save-meal-select-items.png" },
+<DialogContent className="left-2 right-2 translate-x-0 w-auto max-w-[calc(100vw-16px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md max-h-[90vh] overflow-y-auto p-3 sm:p-6">
 ```
+
+**After:**
+```tsx
+<DialogContent className="left-2 right-2 top-4 translate-x-0 translate-y-0 w-auto max-w-[calc(100vw-16px)] sm:left-[50%] sm:right-auto sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:w-full sm:max-w-md max-h-[90vh] overflow-y-auto p-3 sm:p-6">
+```
+
+Same pattern for SaveRoutineDialog and CreateSavedDialog.
+
+### Why This Works
+- `top-4` (16px from top) + `translate-y-0` on mobile → dialog is pinned near top
+- `sm:top-[50%] sm:translate-y-[-50%]` on desktop → reverts to centered
+- Combined with `max-h-[90vh] overflow-y-auto`, ensures scrollable content stays in view
 
