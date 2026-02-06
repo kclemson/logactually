@@ -79,8 +79,8 @@ export function useWeightTrends(days: number) {
             : (d.date === row.logged_date && d.weight === weight)
         );
         
-        // Calculate reps per set for this row (for uniformity tracking)
-        const rowRepsPerSet = row.sets > 0 ? row.reps / row.sets : row.reps;
+        // reps is already per-set in the DB, use directly for uniformity tracking
+        const rowRepsPerSet = row.reps;
         
         if (existing) {
           existing.sets += row.sets;
