@@ -1,78 +1,42 @@
 
 
-## Fix: Hybrid "Sets × Reps" Display for Varying Rep Counts
+## Fix: repsPerSet Calculation Bug
 
-### Problem
+### Problem Identified
 
-When you do sets with different rep counts (10, 5, 7), the chart currently shows `3×22` which implies "3 sets of 22 reps each". But the actual meaning is "3 sets totaling 22 reps".
+The database stores reps as **per-set value**, not total reps:
+- "3 sets × 10 reps" → `sets=3, reps=10`
+- Volume = `sets × reps × weight` = 30 reps total
 
-### Your Solution
+My calculation `reps / sets = 10 / 3 = 3.333...` was dividing the per-set value by sets, producing fractional garbage.
 
-- **Consistent reps** (3 sets of 10): Keep showing `3×10` ✓
-- **Varying reps** (10, 5, 7): Show `1×22` (collapse to "1 set of 22 total reps")
+### The Fix
 
----
+**File: `src/hooks/useWeightTrends.ts`**
 
-### Implementation
-
-**File 1: `src/hooks/useWeightTrends.ts`**
-
-Add `repsPerSet` to track whether reps are uniform:
+Change the repsPerSet calculation from division to direct assignment:
 
 ```typescript
-export interface WeightPoint {
-  // ... existing fields
-  repsPerSet?: number;  // NEW: undefined if reps vary, number if consistent
-}
+// WRONG (current):
+const rowRepsPerSet = row.sets > 0 ? row.reps / row.sets : row.reps;
+
+// CORRECT:
+const rowRepsPerSet = row.reps;  // reps is already per-set in the DB
 ```
 
-During aggregation, track uniformity:
-- First set added: store `repsPerSet = row.reps` (assuming sets=1 per row from DB)
-- Merging sets: if new entry's reps differs, set `repsPerSet = undefined`
+That's it - single line fix. The uniformity tracking logic is already correct (comparing if values differ).
 
-**File 2: `src/pages/Trends.tsx`**
+### Why This Works
 
-Update bar label (around line 199):
+| Log Entry | DB: sets | DB: reps | rowRepsPerSet (fixed) |
+|-----------|----------|----------|----------------------|
+| 3×10 @ 135 | 3 | 10 | 10 ✓ |
+| 1×10 @ 65 | 1 | 10 | 10 ✓ |
+| 1×7 @ 65 | 1 | 7 | 7 (differs → undefined) |
 
-```typescript
-// Current:
-label: `${d.sets}×${d.reps}`
+### Result
 
-// Fixed:
-label: d.repsPerSet !== undefined 
-  ? `${d.sets}×${d.repsPerSet}`   // Uniform: "3×10"
-  : `1×${d.reps}`                  // Varying: "1×22"
-```
-
-Update tooltip (around line 369):
-
-```typescript
-// Current:
-return `${sets} sets × ${reps} reps @ ${weight} ${unit}`;
-
-// Fixed:
-return repsPerSet !== undefined
-  ? `${sets} sets × ${repsPerSet} reps @ ${weight} ${unit}`  // "3 sets × 10 reps"
-  : `${sets} sets, ${reps} total reps @ ${weight} ${unit}`;  // "3 sets, 22 total reps"
-```
-
----
-
-### Corrected Edge Cases
-
-| Scenario | Sets | Reps | repsPerSet | Label | Tooltip |
-|----------|------|------|------------|-------|---------|
-| 3×10 uniform | 3 | 30 | 10 | `3×10` | "3 sets × 10 reps @ 135 lbs" |
-| 10+5+7 varying | 3 | 22 | undefined | `1×22` | "3 sets, 22 total reps @ 135 lbs" |
-| Single "3×8" entry | 3 | 24 | 8 | `3×8` | "3 sets × 8 reps @ 135 lbs" |
-| Two "3×10" entries | 6 | 60 | 10 | `6×10` | "6 sets × 10 reps @ 135 lbs" |
-
----
-
-### Files to Modify
-
-| File | Changes |
-|------|---------|
-| `src/hooks/useWeightTrends.ts` | Add `repsPerSet` to `WeightPoint`, track uniformity during aggregation |
-| `src/pages/Trends.tsx` | Use `repsPerSet` for label + tooltip display logic |
+- "Lat Pulldown" with consistent 3×10 entries → shows `3×10` ✓
+- "Leg Extension" with 10, 5, 7 reps → shows `1×22` (collapsed)
+- No more `3.333333335` garbage labels
 
