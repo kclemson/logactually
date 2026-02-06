@@ -77,7 +77,7 @@ const PRIVACY_CONTENT = {
   },
   howBuilt: {
     title: "How This Was Built",
-    text: "This app was built using AI-assisted development tools. The security mechanisms described above — password hashing, data isolation, session management — are handled at the infrastructure level, not custom code. If I ever need to debug something that requires looking at raw data logged, I use my own data (since I use this app daily).",
+    text: "This app was built using AI-assisted development tools. The security mechanisms described above — password hashing, data isolation, session management — are handled at the infrastructure level, not custom code. If I ever need to debug something that requires looking at raw data logged, I use my own data (since I use this app daily). I do also sometimes look at the items that have been logged in order to understand how people are using the app, so I can make it better.",
     socialText:
       "I recently retired after >25 years in the tech industry — but once a product-maker, always a product-maker. I've done my best to make sure this app is built with care. You can find me on social media here:",
     socialLinks: [
