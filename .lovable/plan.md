@@ -1,75 +1,83 @@
 
-
-## Plan: Style Submit Buttons with Colors and Update Selected Date Styling
+## Plan: White Date Header with Underline + Calendar Month Initialization
 
 ### Overview
-Update the "Add Food" / "Adding..." button to have a blue background and the "Add Exercise" / "Adding..." button to have a purple background. Additionally, change the currently selected date in the calendar from a blue background (`bg-primary`) to a white underline instead.
-
-### Changes Required
+Three changes are needed:
+1. Style the date header ("Wed, Feb 4") as white text with an underline
+2. Keep the existing underline on the selected date in the calendar picker (already done)
+3. Initialize the calendar picker to show the month of the currently selected date
 
 ---
 
-### Part 1: Colored Submit Buttons in LogInput
+### Part 1: White Date Header with Underline
 
-**File**: `src/components/LogInput.tsx`
+**Files**: `src/pages/FoodLog.tsx` and `src/pages/WeightLog.tsx`
 
-Currently, the submit button uses the default Button styling (line 347):
+Both pages have identical date header styling around line 684-692 (FoodLog) and 600-610 (WeightLog):
+
+**Current (FoodLog line 684-692)**:
 ```tsx
-<Button onClick={handleSubmit} disabled={!text.trim() || isBusy} size="sm" className="flex-1 px-2">
-```
-
-**Change**: Add mode-aware background color classes:
-- Food mode: `bg-blue-600 hover:bg-blue-700 text-white`
-- Weights mode: `bg-purple-600 hover:bg-purple-700 text-white`
-
-Update to:
-```tsx
-<Button 
-  onClick={handleSubmit} 
-  disabled={!text.trim() || isBusy} 
-  size="sm" 
+<button
   className={cn(
-    "flex-1 px-2",
-    mode === 'food' 
-      ? "bg-blue-600 hover:bg-blue-700 text-white" 
-      : "bg-purple-600 hover:bg-purple-700 text-white"
+    "flex items-center gap-1.5 px-2 py-1 text-heading hover:underline",
+    "text-blue-600 dark:text-blue-400"
   )}
 >
+  <CalendarIcon className="h-4 w-4" />
+  {format(selectedDate, isTodaySelected ? "'Today,' MMM d" : 'EEE, MMM d')}
+</button>
 ```
 
-This applies to both the "Add Food" / "Add Exercise" labels AND the "Adding..." / loader states since they share the same button.
+**After fix**:
+```tsx
+<button
+  className={cn(
+    "flex items-center gap-1.5 px-2 py-1 text-heading",
+    "text-white underline decoration-2 underline-offset-4"
+  )}
+>
+  <CalendarIcon className="h-4 w-4" />
+  {format(selectedDate, isTodaySelected ? "'Today,' MMM d" : 'EEE, MMM d')}
+</button>
+```
+
+Changes:
+- Remove `hover:underline` (always show underline instead)
+- Remove blue color classes
+- Add white text with underline styling matching the calendar's selected day style
 
 ---
 
-### Part 2: Selected Date Styling - White Underline
+### Part 2: Initialize Calendar Month from Selected Date
 
-**File**: `src/components/ui/calendar.tsx`
+**Files**: `src/pages/FoodLog.tsx` and `src/pages/WeightLog.tsx`
 
-Currently, the selected date uses (line 42-43):
+Both pages initialize `calendarMonth` to the current month instead of the selected date's month:
+
+**FoodLog line 48** and **WeightLog line 64**:
 ```tsx
-day_selected:
-  "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(new Date()));
 ```
 
-**Change**: Replace background with a white underline indicator:
+**After fix**:
 ```tsx
-day_selected:
-  "bg-transparent underline decoration-2 underline-offset-4 decoration-white hover:bg-transparent focus:bg-transparent",
+const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(selectedDate));
 ```
 
-**Note**: This changes the selected day to have no background but a thick white underline beneath the date number. The text will maintain its default foreground color, and "hasData" modifiers (blue for food, purple for weights) will still show through since we're not overriding the text color.
+This ensures when viewing Jan 1 and clicking the date header, the calendar shows January instead of the current month (February).
 
 ---
 
-### Summary of Files to Modify
+### Summary of Changes
 
-| File | Change |
-|------|--------|
-| `src/components/LogInput.tsx` | Add mode-aware blue/purple background to submit button |
-| `src/components/ui/calendar.tsx` | Replace `day_selected` background with white underline |
+| File | Line | Change |
+|------|------|--------|
+| `src/pages/FoodLog.tsx` | 48 | Initialize `calendarMonth` from `selectedDate` |
+| `src/pages/FoodLog.tsx` | 685-688 | White text with underline styling |
+| `src/pages/WeightLog.tsx` | 64 | Initialize `calendarMonth` from `selectedDate` |
+| `src/pages/WeightLog.tsx` | 601-604 | White text with underline styling |
 
 ### Visual Result
-- Food page: Blue "Add Food" / "Adding..." button
-- Weights page: Purple "Add Exercise" / "Adding..." button  
-- Calendar: Selected date shows a white underline instead of a filled background, allowing the date's text color (blue/purple for dates with data) to remain visible
-
+- Date header displays in white with a subtle underline (matching the selected day in calendar)
+- Calendar popover opens showing the month of the date you're viewing
+- Users can still use "Go to Today" to quickly jump to the current month
