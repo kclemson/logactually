@@ -11,6 +11,7 @@ export interface WeightPoint {
   volume: number;  // Pre-calculated volume for accurate aggregation
   duration_minutes?: number;  // For cardio exercises
   distance_miles?: number;    // For distance-based cardio (walk_run, cycling)
+  repsPerSet?: number;  // undefined if reps vary across sets, number if consistent
 }
 
 export interface ExerciseTrend {
@@ -77,12 +78,20 @@ export function useWeightTrends(days: number) {
             ? d.date === row.logged_date 
             : (d.date === row.logged_date && d.weight === weight)
         );
+        
+        // Calculate reps per set for this row (for uniformity tracking)
+        const rowRepsPerSet = row.sets > 0 ? row.reps / row.sets : row.reps;
+        
         if (existing) {
           existing.sets += row.sets;
           existing.reps += row.reps;
           existing.volume += row.sets * row.reps * weight;
           existing.duration_minutes = (existing.duration_minutes || 0) + duration;
           existing.distance_miles = (existing.distance_miles || 0) + distance;
+          // Track reps uniformity: if new reps-per-set differs, mark as undefined
+          if (existing.repsPerSet !== undefined && existing.repsPerSet !== rowRepsPerSet) {
+            existing.repsPerSet = undefined;
+          }
         } else {
           trend.weightData.push({
             date: row.logged_date,
@@ -92,6 +101,7 @@ export function useWeightTrends(days: number) {
             volume: row.sets * row.reps * weight,
             duration_minutes: duration > 0 ? duration : undefined,
             distance_miles: distance > 0 ? distance : undefined,
+            repsPerSet: rowRepsPerSet,
           });
         }
       });
