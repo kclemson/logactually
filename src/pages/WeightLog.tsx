@@ -246,6 +246,8 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
       
       // Wait for cache to update so entry is in DOM
       await queryClient.invalidateQueries({ queryKey: ['weight-sets', dateStr] });
+      // Also invalidate the month's date cache so calendar highlighting updates
+      await queryClient.invalidateQueries({ queryKey: ['weight-dates', format(selectedDate, 'yyyy-MM')] });
       
       markEntryAsNew(entryId);
       weightInputRef.current?.clear();
