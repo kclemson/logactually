@@ -1,37 +1,26 @@
 
 
-## Plan: Reduce Horizontal Padding in Save Dialogs
+## Plan: Shorten Dialog Description Text
+
+### Problem
+The description "Give this meal a name to quickly log it again later." wraps with just "later." on its own line, which looks awkward.
+
+### Solution
+Shorten the description to fit on one line:
+
+**Current (52 chars):**
+> Give this meal a name to quickly log it again later.
+
+**Proposed (41 chars):**
+> Name this meal to quickly log it again.
 
 ### Changes
 
-Both `SaveMealDialog.tsx` and `SaveRoutineDialog.tsx` will get the same update to the `DialogContent` className:
+| File | Line | Current | Proposed |
+|------|------|---------|----------|
+| `src/components/SaveMealDialog.tsx` | 139 | "Give this meal a name to quickly log it again later." | "Name this meal to quickly log it again." |
+| `src/components/SaveRoutineDialog.tsx` | 163 | "Give this routine a name to quickly log it again later." | "Name this routine to quickly log it again." |
 
-**Current:**
-```tsx
-className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6"
-```
-
-**Proposed:**
-```tsx
-className="left-2 right-2 translate-x-0 w-auto max-w-[calc(100vw-16px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md max-h-[90vh] overflow-y-auto p-3 sm:p-6"
-```
-
-### Summary of Changes
-
-| Property | Current | Proposed | Effect |
-|----------|---------|----------|--------|
-| Outside margin | `left-4 right-4` (16px) | `left-2 right-2` (8px) | +8px content per side |
-| Max width | `calc(100vw-32px)` | `calc(100vw-16px)` | Matches new margins |
-| Inside padding | `p-4` (16px) | `p-3` (12px) | +4px content per side |
-
-**Net gain**: ~12px more horizontal content space per side on mobile.
-
-Desktop remains unchanged (`sm:p-6`).
-
-### Files Modified
-
-| File | Line | Change |
-|------|------|--------|
-| `src/components/SaveMealDialog.tsx` | 117 | Update DialogContent className |
-| `src/components/SaveRoutineDialog.tsx` | 141 | Update DialogContent className |
+### Result
+Both descriptions will fit on a single line at the current dialog width.
 
