@@ -1,33 +1,35 @@
 
 
-## Plan: Fix "Cannot access 'selectedDate' before initialization" Error
+## Plan: Add Feb-05 Changelog Entry
 
-### Problem
-The last edit introduced a bug by using `selectedDate` in a `useState` initializer before `selectedDate` is declared. This causes a JavaScript temporal dead zone error.
+### Overview
+Add a new changelog entry for today's date with the uploaded screenshot showcasing the "Save as Meal" dialog with item selection.
 
-**Current broken code (line 48):**
+### Image Handling
+- Copy the uploaded screenshot to `public/changelog/save-meal-select-items.png`
+
+### Changelog Entry
+
+**Date**: Feb-05
+
+**Proposed text** (polished from your draft):
+> "The 'Save as Meal' and 'Save as Routine' shortcuts now let you include other items logged on the same day. Also added color-coded 'Add' buttons—blue for food, purple for exercise—to make it easier to tell which page you're on."
+
+This version:
+- Keeps it concise (matches existing entry lengths)
+- Leads with the feature, not the action ("now let you" vs "updated to let you")
+- Uses "color-coded" to explain the purpose clearly
+- Drops "routines" from the second sentence to avoid repetition with "Save as Routine"
+
+### Files to Modify
+
+| File | Change |
+|------|--------|
+| `public/changelog/save-meal-select-items.png` | Copy uploaded image |
+| `src/pages/Changelog.tsx` | Add new entry at top of `CHANGELOG_ENTRIES` array and update `LAST_UPDATED` to "Feb-05-26" |
+
+### New Entry Code
 ```tsx
-const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(selectedDate));
-// ...
-const selectedDate = parseISO(initialDate); // selectedDate declared AFTER it's used!
+{ date: "Feb-05", text: "The 'Save as Meal' and 'Save as Routine' shortcuts now let you include other items logged on the same day. Also added color-coded 'Add' buttons—blue for food, purple for exercise—to make it easier to tell which page you're on.", image: "save-meal-select-items.png" },
 ```
-
-### Solution
-Use `initialDate` (which is available as a prop) and parse it inline:
-
-```tsx
-const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(parseISO(initialDate)));
-```
-
-### Files to Fix
-
-| File | Line | Change |
-|------|------|--------|
-| `src/pages/FoodLog.tsx` | 48 | Change `selectedDate` → `parseISO(initialDate)` |
-| `src/pages/WeightLog.tsx` | 64 | Same fix |
-
-### Result
-- Both pages will initialize without errors
-- Calendar will correctly open to the month of the currently selected date
-- No functional change in behavior, just fixes the variable ordering issue
 
