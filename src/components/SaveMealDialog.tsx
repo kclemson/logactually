@@ -21,6 +21,7 @@ interface OtherFoodEntry {
   entryId: string;
   items: FoodItem[];
   rawInput: string | null;
+  isFromSavedMeal: boolean;
 }
 
 interface SaveMealDialogProps {
@@ -59,9 +60,17 @@ export function SaveMealDialog({
   const [showAllItems, setShowAllItems] = useState(false);
   
   // Combine all items into one flat array (primary entry first, then others)
+  // Sort other entries: manual entries first, then saved meal entries
   const allItems = useMemo(() => {
     const items: FoodItem[] = [...foodItems];
-    otherEntries?.forEach(entry => items.push(...entry.items));
+    
+    const sortedOtherEntries = [...(otherEntries ?? [])].sort((a, b) => {
+      if (!a.isFromSavedMeal && b.isFromSavedMeal) return -1;
+      if (a.isFromSavedMeal && !b.isFromSavedMeal) return 1;
+      return 0; // Keep relative order within group (already sorted by proximity in parent)
+    });
+    
+    sortedOtherEntries.forEach(entry => items.push(...entry.items));
     return items.map((item, i) => ({ ...item, uid: `combined-${i}` }));
   }, [foodItems, otherEntries]);
   

@@ -409,6 +409,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
         exerciseSets: sets,
         rawInput: sets[0]?.rawInput ?? null,
         createdAt: sets[0]?.createdAt ?? '',
+        isFromSavedRoutine: !!sets[0]?.sourceRoutineId,
       }));
     
     // Sort: entries before current first (newest-first), then entries after current (oldest-first)

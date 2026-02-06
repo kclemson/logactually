@@ -482,6 +482,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
         entryId: e.id,
         items: e.food_items,
         rawInput: e.raw_input,
+        isFromSavedMeal: !!e.source_meal_id,
       }));
   }, [saveMealDialogData, entries]);
 

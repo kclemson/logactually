@@ -21,6 +21,7 @@ interface OtherWeightEntry {
   entryId: string;
   exerciseSets: WeightSet[];
   rawInput: string | null;
+  isFromSavedRoutine: boolean;
 }
 
 interface SaveRoutineDialogProps {
@@ -82,9 +83,17 @@ export function SaveRoutineDialog({
   const [showAllItems, setShowAllItems] = useState(false);
   
   // Combine all exercises into one flat array (primary entry first, then others)
+  // Sort other entries: manual entries first, then saved routine entries
   const allExercises = useMemo(() => {
     const items: WeightSet[] = [...exerciseSets];
-    otherEntries?.forEach(entry => items.push(...entry.exerciseSets));
+    
+    const sortedOtherEntries = [...(otherEntries ?? [])].sort((a, b) => {
+      if (!a.isFromSavedRoutine && b.isFromSavedRoutine) return -1;
+      if (a.isFromSavedRoutine && !b.isFromSavedRoutine) return 1;
+      return 0; // Keep relative order within group (already sorted by proximity in parent)
+    });
+    
+    sortedOtherEntries.forEach(entry => items.push(...entry.exerciseSets));
     return items.map((item, i) => ({ ...item, uid: `combined-${i}` }));
   }, [exerciseSets, otherEntries]);
   
