@@ -240,6 +240,8 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       
       // Wait for cache to update so entry is in DOM
       await queryClient.invalidateQueries({ queryKey: ['food-entries', dateStr] });
+      // Also invalidate the month's date cache so calendar highlighting updates
+      await queryClient.invalidateQueries({ queryKey: ['food-dates', format(selectedDate, 'yyyy-MM')] });
       
       markEntryAsNew(entryId);
       foodInputRef.current?.clear();
@@ -398,6 +400,8 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       });
       
       await queryClient.invalidateQueries({ queryKey: ['food-entries', dateStr] });
+      // Also invalidate the month's date cache so calendar highlighting updates
+      await queryClient.invalidateQueries({ queryKey: ['food-dates', format(selectedDate, 'yyyy-MM')] });
       
       markEntryAsNew(entryId);
       // Input already cleared by barcode scanner
