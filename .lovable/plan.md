@@ -1,26 +1,55 @@
 
 
-## Plan: Shorten Dialog Description Text
+## Plan: Fix Cardio Label Display in Save Routine Dialog
 
 ### Problem
-The description "Give this meal a name to quickly log it again later." wraps with just "later." on its own line, which looks awkward.
+In the "Save as Routine" dialog, cardio exercises like "Treadmill" display incorrectly:
+- **Sets column**: "—"
+- **Reps column**: "—"  
+- **Weight column**: "11.1 min" (the duration is jammed into the wrong column)
+
+This happens because `WeightItemsTable` has logic to show a single "cardio" label spanning all 3 columns, but this only activates when `editable={true}` OR `showCardioLabel={true}`. The dialog passes `editable={false}` and doesn't set `showCardioLabel`.
 
 ### Solution
-Shorten the description to fit on one line:
+Add `showCardioLabel={true}` to the `WeightItemsTable` in `SaveRoutineDialog`. This makes cardio items display correctly with a single centered "cardio" label spanning all three data columns.
 
-**Current (52 chars):**
-> Give this meal a name to quickly log it again later.
+### Technical Details
 
-**Proposed (41 chars):**
-> Name this meal to quickly log it again.
+**File**: `src/components/SaveRoutineDialog.tsx`
 
-### Changes
+**Line 186-197 (current)**:
+```tsx
+<WeightItemsTable
+  items={visibleItems}
+  editable={false}
+  selectable={hasMultipleItems}
+  selectedIndices={visibleSelectedIndices}
+  onSelectionChange={handleSelectionChange}
+  showHeader={true}
+  showTotals={false}
+  compact={true}
+  showInlineLabels={true}
+  weightUnit={weightUnit}
+/>
+```
 
-| File | Line | Current | Proposed |
-|------|------|---------|----------|
-| `src/components/SaveMealDialog.tsx` | 139 | "Give this meal a name to quickly log it again later." | "Name this meal to quickly log it again." |
-| `src/components/SaveRoutineDialog.tsx` | 163 | "Give this routine a name to quickly log it again later." | "Name this routine to quickly log it again." |
+**After fix**:
+```tsx
+<WeightItemsTable
+  items={visibleItems}
+  editable={false}
+  selectable={hasMultipleItems}
+  selectedIndices={visibleSelectedIndices}
+  onSelectionChange={handleSelectionChange}
+  showHeader={true}
+  showTotals={false}
+  compact={true}
+  showInlineLabels={true}
+  weightUnit={weightUnit}
+  showCardioLabel={true}
+/>
+```
 
 ### Result
-Both descriptions will fit on a single line at the current dialog width.
+Cardio exercises in the Save Routine dialog will display with a centered italic "cardio" label spanning the Sets, Reps, and Weight columns instead of the incorrect "— / — / 11.1 min" mapping.
 
