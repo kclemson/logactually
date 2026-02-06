@@ -363,19 +363,12 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
     setSaveRoutineDialogData({ entryId, rawInput, exerciseSets, createdAt });
   }, [weightSets]);
 
-  // Handle saving the routine
-  const handleSaveRoutineConfirm = useCallback((name: string, isAutoNamed: boolean, additionalEntryIds: string[] = []) => {
+  // Handle saving the routine - receives selected exercises directly from dialog
+  const handleSaveRoutineConfirm = useCallback((name: string, isAutoNamed: boolean, selectedExercises: WeightSet[]) => {
     if (!saveRoutineDialogData) return;
     
-    // Combine exercises from primary entry + selected other entries
-    let allExercises = [...saveRoutineDialogData.exerciseSets];
-    for (const entryId of additionalEntryIds) {
-      const entrySets = weightSets.filter(s => s.entryId === entryId);
-      allExercises = [...allExercises, ...entrySets];
-    }
-    
     // Strip runtime metadata, spread the rest for future-proofing
-    const exerciseSets: SavedExerciseSet[] = allExercises.map(({
+    const exerciseSets: SavedExerciseSet[] = selectedExercises.map(({
       id, uid, entryId, rawInput, sourceRoutineId, editedFields,
       ...persistentFields
     }) => persistentFields);
@@ -383,7 +376,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
     saveRoutineMutation.mutate(
       {
         name,
-        originalInput: saveRoutineDialogData.rawInput, // Keep original entry's raw input
+        originalInput: saveRoutineDialogData.rawInput,
         exerciseSets,
         isAutoNamed,
       },
@@ -393,7 +386,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
         },
       }
     );
-  }, [saveRoutineDialogData, saveRoutineMutation, weightSets]);
+  }, [saveRoutineDialogData, saveRoutineMutation]);
   
   // Compute other entries for routine dialog (chronologically sorted like food page)
   const otherEntriesForRoutineDialog = useMemo(() => {
