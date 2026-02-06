@@ -55,6 +55,8 @@ interface UserStats {
   logins_today: number;
   food_today_details: TodayFoodDetail[] | null;
   weight_today_details: TodayWeightDetail[] | null;
+  saved_meal_names: string[] | null;
+  saved_routine_names: string[] | null;
 }
 
 export function useAdminStats() {

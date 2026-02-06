@@ -242,21 +242,51 @@ export default function Admin() {
                   >
                     {user.total_entries}
                   </td>
-                  <td
-                    className={`text-center py-0.5 pr-2 ${(user.saved_meals_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
-                  >
-                    {user.saved_meals_count ?? 0}
-                  </td>
+                  {hasHover && (user.saved_meals_count ?? 0) > 0 && user.saved_meal_names ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <td className="text-center py-0.5 pr-2 cursor-default">
+                          {user.saved_meals_count ?? 0}
+                        </td>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-lg text-xs space-y-0.5 bg-popover text-popover-foreground border">
+                        {user.saved_meal_names.map((name, i) => (
+                          <p key={i}>• {name}</p>
+                        ))}
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <td
+                      className={`text-center py-0.5 pr-2 ${(user.saved_meals_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
+                    >
+                      {user.saved_meals_count ?? 0}
+                    </td>
+                  )}
                   <td
                     className={`text-center py-0.5 pr-2 ${(user.total_weight_entries ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
                   >
                     {user.total_weight_entries ?? 0}
                   </td>
-                  <td
-                    className={`text-center py-0.5 pr-2 ${(user.saved_routines_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
-                  >
-                    {user.saved_routines_count ?? 0}
-                  </td>
+                  {hasHover && (user.saved_routines_count ?? 0) > 0 && user.saved_routine_names ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <td className="text-center py-0.5 pr-2 cursor-default">
+                          {user.saved_routines_count ?? 0}
+                        </td>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-lg text-xs space-y-0.5 bg-popover text-popover-foreground border">
+                        {user.saved_routine_names.map((name, i) => (
+                          <p key={i}>• {name}</p>
+                        ))}
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <td
+                      className={`text-center py-0.5 pr-2 ${(user.saved_routines_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
+                    >
+                      {user.saved_routines_count ?? 0}
+                    </td>
+                  )}
                   <td
                     className={`text-center py-0.5 pr-2 ${(user.login_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
                   >
