@@ -160,7 +160,7 @@ export function SaveRoutineDialog({
         <DialogHeader>
           <DialogTitle>Save as Routine</DialogTitle>
           <DialogDescription>
-            Give this routine a name to quickly log it again later.
+            Name this routine to quickly log it again.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-2">
