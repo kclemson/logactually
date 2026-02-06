@@ -45,7 +45,7 @@ interface FoodLogContentProps {
 const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   const [, setSearchParams] = useSearchParams();
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(selectedDate));
+  const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(parseISO(initialDate)));
   const [expandedEntryIds, setExpandedEntryIds] = useState<Set<string>>(new Set());
   
   // State for save meal dialog (from existing entry)
