@@ -1,45 +1,78 @@
 
 
-## Fix: Strip `editedFields` When Logging Saved Meals
+## Fix: Hybrid "Sets × Reps" Display for Varying Rep Counts
 
-### Summary
+### Problem
 
-Only saved meals are affected by the asterisk bug. Saved routines use a separate `SavedExerciseSet` type that explicitly excludes `editedFields`, so they're already clean.
+When you do sets with different rep counts (10, 5, 7), the chart currently shows `3×22` which implies "3 sets of 22 reps each". But the actual meaning is "3 sets totaling 22 reps".
+
+### Your Solution
+
+- **Consistent reps** (3 sets of 10): Keep showing `3×10` ✓
+- **Varying reps** (10, 5, 7): Show `1×22` (collapse to "1 set of 22 total reps")
 
 ---
 
-### Single File Change
+### Implementation
 
-**File: `src/hooks/useSavedMeals.ts`**
+**File 1: `src/hooks/useWeightTrends.ts`**
 
-Update `useLogSavedMeal` (around line 157) to strip `editedFields` when returning items:
+Add `repsPerSet` to track whether reps are uniform:
+
+```typescript
+export interface WeightPoint {
+  // ... existing fields
+  repsPerSet?: number;  // NEW: undefined if reps vary, number if consistent
+}
+```
+
+During aggregation, track uniformity:
+- First set added: store `repsPerSet = row.reps` (assuming sets=1 per row from DB)
+- Merging sets: if new entry's reps differs, set `repsPerSet = undefined`
+
+**File 2: `src/pages/Trends.tsx`**
+
+Update bar label (around line 199):
 
 ```typescript
 // Current:
-return (meal.food_items as unknown as FoodItem[]) ?? [];
+label: `${d.sets}×${d.reps}`
 
 // Fixed:
-const items = (meal.food_items as unknown as FoodItem[]) ?? [];
-return items.map(({ editedFields, ...rest }) => rest as FoodItem);
+label: d.repsPerSet !== undefined 
+  ? `${d.sets}×${d.repsPerSet}`   // Uniform: "3×10"
+  : `1×${d.reps}`                  // Varying: "1×22"
+```
+
+Update tooltip (around line 369):
+
+```typescript
+// Current:
+return `${sets} sets × ${reps} reps @ ${weight} ${unit}`;
+
+// Fixed:
+return repsPerSet !== undefined
+  ? `${sets} sets × ${repsPerSet} reps @ ${weight} ${unit}`  // "3 sets × 10 reps"
+  : `${sets} sets, ${reps} total reps @ ${weight} ${unit}`;  // "3 sets, 22 total reps"
 ```
 
 ---
 
-### Why Routines Don't Need This
+### Corrected Edge Cases
 
-| Aspect | Saved Meals | Saved Routines |
-|--------|-------------|----------------|
-| Storage type | `FoodItem[]` (includes `editedFields`) | `SavedExerciseSet[]` (excludes `editedFields`) |
-| Logging return type | `FoodItem[]` | `SavedExerciseSet[]` |
-| Issue present? | Yes | No |
-
-The weight tracking feature was designed with a separate "clean" type (`SavedExerciseSet`) specifically for persistence, while food tracking reuses the full `FoodItem` type throughout. This is a good pattern - we might consider adding a similar `SavedFoodItem` type in the future, but for now, stripping at log-time is the minimal fix.
+| Scenario | Sets | Reps | repsPerSet | Label | Tooltip |
+|----------|------|------|------------|-------|---------|
+| 3×10 uniform | 3 | 30 | 10 | `3×10` | "3 sets × 10 reps @ 135 lbs" |
+| 10+5+7 varying | 3 | 22 | undefined | `1×22` | "3 sets, 22 total reps @ 135 lbs" |
+| Single "3×8" entry | 3 | 24 | 8 | `3×8` | "3 sets × 8 reps @ 135 lbs" |
+| Two "3×10" entries | 6 | 60 | 10 | `6×10` | "6 sets × 10 reps @ 135 lbs" |
 
 ---
 
-### Result After Fix
+### Files to Modify
 
-- Log "ChocZero white chocolate square" → appears **without** asterisk
-- View saved meal in Settings → asterisk still visible (historical context preserved)
-- Edit something after logging → asterisk appears correctly
+| File | Changes |
+|------|---------|
+| `src/hooks/useWeightTrends.ts` | Add `repsPerSet` to `WeightPoint`, track uniformity during aggregation |
+| `src/pages/Trends.tsx` | Use `repsPerSet` for label + tooltip display logic |
 
