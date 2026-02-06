@@ -344,7 +344,17 @@ export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput
             </PopoverContent>
           </Popover>
         )}
-        <Button onClick={handleSubmit} disabled={!text.trim() || isBusy} size="sm" className="flex-1 px-2">
+        <Button 
+          onClick={handleSubmit} 
+          disabled={!text.trim() || isBusy} 
+          size="sm" 
+          className={cn(
+            "flex-1 px-2",
+            mode === 'food' 
+              ? "bg-blue-600 hover:bg-blue-700 text-white" 
+              : "bg-purple-600 hover:bg-purple-700 text-white"
+          )}
+        >
           {isBusy ? (
             <>
               <Loader2 className="mr-1 h-4 w-4 animate-spin" />
