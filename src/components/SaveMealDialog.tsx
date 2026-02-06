@@ -136,7 +136,7 @@ export function SaveMealDialog({
         <DialogHeader>
           <DialogTitle>Save as Meal</DialogTitle>
           <DialogDescription>
-            Give this meal a name to quickly log it again later.
+            Name this meal to quickly log it again.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-2">
