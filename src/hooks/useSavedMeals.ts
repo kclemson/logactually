@@ -186,7 +186,9 @@ export function useLogSavedMeal() {
       
       if (updateError) throw updateError;
       
-      return (meal.food_items as unknown as FoodItem[]) ?? [];
+      // Strip editedFields so logged entries start fresh (no asterisk)
+      const items = (meal.food_items as unknown as FoodItem[]) ?? [];
+      return items.map(({ editedFields, ...rest }) => rest as FoodItem);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['saved-meals'] });
