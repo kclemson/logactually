@@ -1,57 +1,64 @@
 
-## Fix Race Condition in History Reference Logging
 
-### Problem
+## Add Color-Coded Columns to Admin Dashboard
 
-When logging comma-separated historical references like "leftover fried rice, leftover curry":
+### Overview
 
-1. First item matches correctly → prompt appears → user clicks "Log Past Entry" ✓
-2. Second item prompt appears automatically (delightful!) 
-3. User clicks to log second item → **fails silently**
+Apply blue color scheme to food-related columns and purple to weight-related columns for visual distinction, while preserving the existing green "today" indicators on F2day and W2day.
 
-### Root Cause
+### Color Scheme
 
-In `handleUsePastEntry`, the async `createEntryFromItems` is not awaited:
+| Type | Active (> 0) | Inactive (= 0) |
+|------|-------------|---------------|
+| **Food** | `text-blue-500` | `text-blue-400/50` |
+| **Weight** | `text-purple-500` | `text-purple-400/50` |
+
+### Columns to Update
+
+**User Stats Table:**
+| Column | Line | Current | New |
+|--------|------|---------|-----|
+| F (total_entries) | 244-248 | no color / muted/50 | blue-500 / blue-400/50 |
+| SF (saved_meals_count) | 254-258 | no color / muted/50 | blue-500 / blue-400/50 |
+| W (total_weight_entries) | 269-273 | no color / muted/50 | purple-500 / purple-400/50 |
+| SW (saved_routines_count) | 279-283 | no color / muted/50 | purple-500 / purple-400/50 |
+
+**Daily Stats Table:**
+| Column | Line | Current | New |
+|--------|------|---------|-----|
+| Food Logged (entry_count) | 330-331 | no color / muted/50 | blue-500 / blue-400/50 |
+| Weight Logged (weight_count) | 333-336 | no color / muted/50 | purple-500 / purple-400/50 |
+
+### Unchanged Columns
+
+- **F2day** (line 167): Keeps `text-green-500` for today activity
+- **W2day** (line 216): Keeps `text-green-500` for today activity
+
+### Implementation Details
+
+**File**: `src/pages/Admin.tsx`
+
+Each cell update follows this pattern:
 
 ```typescript
-const handleUsePastEntry = useCallback(async () => {
-  if (!pendingEntryMatch) return;
-  
-  createEntryFromItems(...);     // ← Missing await
-  
-  setPendingEntryMatch(null);    // Runs before save completes
-  foodInputRef.current?.clear();
-}, [...]);
+// Before (F column - line 245)
+className={`text-center py-0.5 pr-2 ${user.total_entries === 0 ? "text-muted-foreground/50" : ""}`}
+
+// After
+className={`text-center py-0.5 pr-2 ${user.total_entries === 0 ? "text-blue-400/50" : "text-blue-500"}`}
 ```
-
-The state clears before the first save finishes, causing timing issues when the second prompt triggers.
-
-### Solution
-
-Add `await` before `createEntryFromItems`:
 
 ```typescript
-const handleUsePastEntry = useCallback(async () => {
-  if (!pendingEntryMatch) return;
-  
-  await createEntryFromItems(
-    pendingEntryMatch.match.entry.food_items, 
-    pendingEntryMatch.originalInput
-  );
-  
-  setPendingEntryMatch(null);
-  foodInputRef.current?.clear();
-}, [pendingEntryMatch, createEntryFromItems]);
+// Before (W column - line 270)
+className={`text-center py-0.5 pr-2 ${(user.total_weight_entries ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
+
+// After
+className={`text-center py-0.5 pr-2 ${(user.total_weight_entries ?? 0) === 0 ? "text-purple-400/50" : "text-purple-500"}`}
 ```
-
-### Files to Modify
-
-| File | Change |
-|------|--------|
-| `src/pages/FoodLog.tsx` | Add `await` before `createEntryFromItems` at line 345 |
 
 ### Result
 
-- Each entry fully saves before state clears
-- Sequential prompts for comma-separated items work correctly
-- The "delightful" experience of seeing prompts one after another continues to work
+- Food columns (F, SF, Food Logged) will be blue-tinted
+- Weight columns (W, SW, Weight Logged) will be purple-tinted
+- Today columns (F2day, W2day) retain green highlighting for at-a-glance activity tracking
+
