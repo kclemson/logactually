@@ -1,74 +1,57 @@
 
+## Fix Race Condition in History Reference Logging
 
-## Add Touch Support for Admin Tooltips
+### Problem
 
-### Current State
-- Radix tooltips already in use for desktop (hover)
-- `hasHover` check completely hides tooltips on touch devices
-- Touch users cannot access the detailed information at all
+When logging comma-separated historical references like "leftover fried rice, leftover curry":
+
+1. First item matches correctly → prompt appears → user clicks "Log Past Entry" ✓
+2. Second item prompt appears automatically (delightful!) 
+3. User clicks to log second item → **fails silently**
+
+### Root Cause
+
+In `handleUsePastEntry`, the async `createEntryFromItems` is not awaited:
+
+```typescript
+const handleUsePastEntry = useCallback(async () => {
+  if (!pendingEntryMatch) return;
+  
+  createEntryFromItems(...);     // ← Missing await
+  
+  setPendingEntryMatch(null);    // Runs before save completes
+  foodInputRef.current?.clear();
+}, [...]);
+```
+
+The state clears before the first save finishes, causing timing issues when the second prompt triggers.
 
 ### Solution
-Use Radix Tooltip's **controlled mode** on touch devices to enable tap-to-toggle:
+
+Add `await` before `createEntryFromItems`:
 
 ```typescript
-// Desktop: uncontrolled (hover)
-<Tooltip>...</Tooltip>
-
-// Touch: controlled (tap)
-<Tooltip open={isOpen} onOpenChange={setIsOpen}>
-  <TooltipTrigger onClick={() => setIsOpen(!isOpen)}>
-```
-
-### Implementation
-
-**1. Add state to track active tooltip**
-```typescript
-const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
-```
-
-**2. Create helper component or inline pattern**
-For each tooltipped cell, instead of:
-```typescript
-{hasHover && data ? (
-  <Tooltip>...</Tooltip>
-) : (
-  <td>...</td>
-)}
-```
-
-Do:
-```typescript
-<Tooltip 
-  open={hasHover ? undefined : activeTooltip === cellId}
-  onOpenChange={hasHover ? undefined : (open) => setActiveTooltip(open ? cellId : null)}
->
-  <TooltipTrigger asChild>
-    <td 
-      onClick={!hasHover && data ? () => setActiveTooltip(activeTooltip === cellId ? null : cellId) : undefined}
-    >
-      ...
-    </td>
-  </TooltipTrigger>
-  {data && <TooltipContent>...</TooltipContent>}
-</Tooltip>
-```
-
-**3. Dismiss on outside tap**
-Add a backdrop when tooltip is open on touch:
-```typescript
-{!hasHover && activeTooltip && (
-  <div className="fixed inset-0 z-40" onClick={() => setActiveTooltip(null)} />
-)}
+const handleUsePastEntry = useCallback(async () => {
+  if (!pendingEntryMatch) return;
+  
+  await createEntryFromItems(
+    pendingEntryMatch.match.entry.food_items, 
+    pendingEntryMatch.originalInput
+  );
+  
+  setPendingEntryMatch(null);
+  foodInputRef.current?.clear();
+}, [pendingEntryMatch, createEntryFromItems]);
 ```
 
 ### Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/pages/Admin.tsx` | Add `activeTooltip` state, update tooltip cells to use controlled mode on touch, add dismiss backdrop |
+| `src/pages/FoodLog.tsx` | Add `await` before `createEntryFromItems` at line 345 |
 
-### User Experience
-- **Desktop**: Unchanged - hover shows tooltip
-- **Touch**: Tap cell to show tooltip, tap elsewhere to dismiss
-- Only one tooltip visible at a time on touch
+### Result
 
+- Each entry fully saves before state clears
+- Sequential prompts for comma-separated items work correctly
+- The "delightful" experience of seeing prompts one after another continues to work
