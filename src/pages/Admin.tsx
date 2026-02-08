@@ -242,7 +242,7 @@ export default function Admin() {
                     )}
                   </Tooltip>
                   <td
-                    className={`text-center py-0.5 pr-2 ${user.total_entries === 0 ? "text-muted-foreground/50" : ""}`}
+                    className={`text-center py-0.5 pr-2 ${user.total_entries === 0 ? "text-blue-400/50" : "text-blue-500"}`}
                   >
                     {user.total_entries}
                   </td>
@@ -252,7 +252,7 @@ export default function Admin() {
                   >
                     <TooltipTrigger asChild>
                       <td
-                        className={`text-center py-0.5 pr-2 ${(user.saved_meals_count ?? 0) === 0 ? "text-muted-foreground/50" : ""} ${(user.saved_meals_count ?? 0) > 0 && user.saved_meal_names ? "cursor-default" : ""}`}
+                        className={`text-center py-0.5 pr-2 ${(user.saved_meals_count ?? 0) === 0 ? "text-blue-400/50" : "text-blue-500"} ${(user.saved_meals_count ?? 0) > 0 && user.saved_meal_names ? "cursor-default" : ""}`}
                         onClick={!hasHover && (user.saved_meals_count ?? 0) > 0 && user.saved_meal_names ? () => setActiveTooltip(activeTooltip === `${user.user_id}-meals` ? null : `${user.user_id}-meals`) : undefined}
                       >
                         {user.saved_meals_count ?? 0}
@@ -267,7 +267,7 @@ export default function Admin() {
                     )}
                   </Tooltip>
                   <td
-                    className={`text-center py-0.5 pr-2 ${(user.total_weight_entries ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
+                    className={`text-center py-0.5 pr-2 ${(user.total_weight_entries ?? 0) === 0 ? "text-purple-400/50" : "text-purple-500"}`}
                   >
                     {user.total_weight_entries ?? 0}
                   </td>
@@ -277,7 +277,7 @@ export default function Admin() {
                   >
                     <TooltipTrigger asChild>
                       <td
-                        className={`text-center py-0.5 pr-2 ${(user.saved_routines_count ?? 0) === 0 ? "text-muted-foreground/50" : ""} ${(user.saved_routines_count ?? 0) > 0 && user.saved_routine_names ? "cursor-default" : ""}`}
+                        className={`text-center py-0.5 pr-2 ${(user.saved_routines_count ?? 0) === 0 ? "text-purple-400/50" : "text-purple-500"}`}
                         onClick={!hasHover && (user.saved_routines_count ?? 0) > 0 && user.saved_routine_names ? () => setActiveTooltip(activeTooltip === `${user.user_id}-routines` ? null : `${user.user_id}-routines`) : undefined}
                       >
                         {user.saved_routines_count ?? 0}
@@ -327,11 +327,11 @@ export default function Admin() {
             {stats.daily_stats.slice(0, 7).map((row) => (
               <tr key={row.stat_date} className="border-b border-border/50">
                 <td className="py-0.5 pr-2 whitespace-nowrap">{format(parseISO(row.stat_date), "MMM-dd")}</td>
-                <td className={`text-center py-0.5 pr-2 ${row.entry_count === 0 ? "text-muted-foreground/50" : ""}`}>
+                <td className={`text-center py-0.5 pr-2 ${row.entry_count === 0 ? "text-blue-400/50" : "text-blue-500"}`}>
                   {row.entry_count}
                 </td>
                 <td
-                  className={`text-center py-0.5 pr-2 ${(row.weight_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
+                  className={`text-center py-0.5 pr-2 ${(row.weight_count ?? 0) === 0 ? "text-purple-400/50" : "text-purple-500"}`}
                 >
                   {row.weight_count ?? 0}
                 </td>
