@@ -341,8 +341,8 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   const handleUsePastEntry = useCallback(async () => {
     if (!pendingEntryMatch) return;
     
-    // Use the historical entry's food items with original input text
-    createEntryFromItems(
+    // Await the entry creation to prevent race conditions with sequential prompts
+    await createEntryFromItems(
       pendingEntryMatch.match.entry.food_items, 
       pendingEntryMatch.originalInput
     );
