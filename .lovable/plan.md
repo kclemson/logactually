@@ -1,31 +1,60 @@
 
 
-## Split "Seated Leg Curl" Into Its Own Exercise Key
+## Apple Health Export Explorer (Admin Tool)
 
-### Problem
-Currently, "Seated Leg Curl" (the hamstring curl machine) and "Leg Curl" (the Precor machine) are both mapped to the same `leg_curl` exercise key. They are different machines and should be tracked separately.
+### Goal
+Build a temporary exploration tool in the Admin page that lets you pick your 2.6GB `export.xml` file and uses `file.slice()` to stream through it in chunks, extracting sample `<Workout>` elements and their child elements so we can see exactly what fields Apple Health provides. This will inform the real import feature design.
 
-### Data Migration
-Update the one existing database row (Feb 9, description "Seated Leg Curl") to use the new `seated_leg_curl` key.
+### What it does
+- File picker for the `export.xml` file
+- Streams through the file in ~1MB chunks using `file.slice()` + `FileReader`
+- Scans for `<Workout` elements and extracts the first ~20 complete workout records (with all child elements like `WorkoutStatistics`, `WorkoutEvent`, `MetadataEntry`, etc.)
+- Displays a progress bar (bytes read / total bytes)
+- Renders the raw XML of each found workout in a scrollable panel so you can inspect every attribute and child element
+- Also collects a summary: unique `workoutActivityType` values found, unique child element tag names, unique metadata keys
 
-### Code Changes
+### Why this approach
+- No upload needed -- everything runs locally in the browser
+- We only need ~20 sample workouts to understand the full data structure
+- The streaming approach handles the 2.6GB file without memory issues
+- Building it in Admin means it's already gated behind your admin role
 
-**1. `supabase/functions/_shared/exercises.ts`**
-- Split the current `leg_curl` entry: remove "seated leg curl" and "hamstring curl" from its aliases
-- Add a new `seated_leg_curl` entry:
-  - Name: "Seated Leg Curl"
-  - Aliases: "seated hamstring curl", "hamstring curl", "hamstring curl machine"
-  - Primary muscle: Hamstrings
-- Keep `leg_curl` with remaining aliases: "lying leg curl", "prone leg curl"
+### Implementation
 
-**2. `src/lib/exercise-metadata.ts`**
-- Add `seated_leg_curl: { primary: 'Hamstrings' }` entry
-- Keep `leg_curl: { primary: 'Hamstrings' }` as-is
+**New file: `src/components/AppleHealthExplorer.tsx`**
+- File input that accepts `.xml`
+- On file select, begins streaming with `file.slice(offset, offset + CHUNK_SIZE)`
+- Uses TextDecoder to convert chunks to text
+- Maintains a sliding buffer to catch `<Workout ...>...</Workout>` blocks that may span chunk boundaries
+- Stops after collecting 20 workout elements or reaching end of file
+- Displays:
+  - Progress bar with "Scanning... 450MB / 2.6GB"
+  - Summary table: workout types found, count of each
+  - List of unique child element names (e.g., `WorkoutStatistics`, `WorkoutEvent`, `MetadataEntry`, `WorkoutRoute`)
+  - List of unique metadata keys
+  - Raw XML of each sample workout in a collapsible code block
 
-**3. Database** (data update)
-- Update the one row with `description = 'Seated Leg Curl'` to `exercise_key = 'seated_leg_curl'`
+**Modified file: `src/pages/Admin.tsx`**
+- Add a "Health Export Explorer" collapsible section at the bottom (before the Populate Demo Data button)
+- Renders the `AppleHealthExplorer` component
 
-### Files Changed
-- `supabase/functions/_shared/exercises.ts` -- split aliases, add new entry
-- `src/lib/exercise-metadata.ts` -- add `seated_leg_curl` entry
-- Database data update for the one existing row
+### Technical Details
+
+The parser logic (simplified):
+```text
+1. Read 1MB chunk via file.slice()
+2. Append to text buffer
+3. Search buffer for complete <Workout ...>...</Workout> blocks
+4. When found, extract and store the raw XML string
+5. Trim buffer to after the last extracted block
+6. Repeat until 20 workouts found or EOF
+```
+
+Key considerations:
+- Buffer needs to handle a `<Workout>` block spanning two chunks (keep last ~50KB of previous chunk)
+- Some `<Workout>` elements may be large if they contain embedded `<WorkoutRoute>` with GPS points -- we'll capture the first 20 regardless but truncate display if a single workout is huge
+- We skip `<Record>` elements entirely (those are the millions of heart rate samples, steps, etc. that make up the bulk of the file)
+
+### After exploration
+Once we can see the actual XML structure, we'll have the information needed to design the real import feature with confidence about which fields exist and how they're structured. This temporary tool can be removed afterward.
+
