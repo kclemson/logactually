@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, LabelList } from "recharts";
+import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, LabelList, ReferenceLine } from "recharts";
 import { Card, CardContent, CardHeader, ChartTitle } from "@/components/ui/card";
 import { useHasHover } from "@/hooks/use-has-hover";
 
@@ -126,6 +126,7 @@ interface FoodChartProps {
   onNavigate: (date: string) => void;
   useFullWidthLabels?: boolean;
   height?: string;
+  referenceLine?: { value: number; color?: string };
 }
 
 export const FoodChart = ({
@@ -136,6 +137,7 @@ export const FoodChart = ({
   onNavigate,
   useFullWidthLabels = false,
   height = "h-24",
+  referenceLine,
 }: FoodChartProps) => {
   const isTouchDevice = !useHasHover();
   const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
@@ -183,6 +185,15 @@ export const FoodChart = ({
                   tickMargin={2}
                   height={16}
                 />
+                {referenceLine && (
+                  <ReferenceLine
+                    y={referenceLine.value}
+                    stroke={referenceLine.color || "hsl(var(--muted-foreground))"}
+                    strokeDasharray="4 3"
+                    strokeWidth={1}
+                    ifOverflow="extendDomain"
+                  />
+                )}
                 <Tooltip
                   wrapperStyle={{ pointerEvents: 'auto', zIndex: 50 }}
                   active={isTouchDevice ? activeBarIndex !== null : undefined}
@@ -249,6 +260,7 @@ interface StackedMacroChartProps {
   labelDataKey?: string;
   labelColor?: string;
   height?: string;
+  referenceLine?: { value: number; color?: string };
 }
 
 export const StackedMacroChart = ({
@@ -263,6 +275,7 @@ export const StackedMacroChart = ({
   labelDataKey,
   labelColor,
   height = "h-24",
+  referenceLine,
 }: StackedMacroChartProps) => {
   const isTouchDevice = !useHasHover();
   const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
@@ -317,6 +330,15 @@ export const StackedMacroChart = ({
                   tickMargin={2}
                   height={16}
                 />
+                {referenceLine && (
+                  <ReferenceLine
+                    y={referenceLine.value}
+                    stroke={referenceLine.color || "hsl(var(--muted-foreground))"}
+                    strokeDasharray="4 3"
+                    strokeWidth={1}
+                    ifOverflow="extendDomain"
+                  />
+                )}
                 <Tooltip
                   wrapperStyle={{ pointerEvents: 'auto', zIndex: 50 }}
                   active={isTouchDevice ? activeBarIndex !== null : undefined}

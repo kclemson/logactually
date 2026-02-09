@@ -686,6 +686,7 @@ const Trends = () => {
                 dataKey="calories"
                 color={CHART_COLORS.calories}
                 onNavigate={(date) => navigate(`/?date=${date}`)}
+                referenceLine={settings.dailyCalorieTarget ? { value: settings.dailyCalorieTarget, color: "hsl(var(--muted-foreground))" } : undefined}
               />
 
               {/* Macro Split Chart (100% stacked by calorie %) */}
@@ -719,6 +720,7 @@ const Trends = () => {
               labelDataKey="calories"
               labelColor={CHART_COLORS.calories}
               height="h-28"
+              referenceLine={settings.dailyCalorieTarget ? { value: settings.dailyCalorieTarget, color: "hsl(var(--muted-foreground))" } : undefined}
             />
 
             {/* Row 2: Protein + Carbs + Fat */}
