@@ -2,7 +2,8 @@ import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 
 const CHUNK_SIZE = 1024 * 1024; // 1MB
-const MAX_WORKOUTS = 20;
+const SAMPLES_PER_TYPE = 3;
+const MAX_TOTAL_SAMPLES = 50;
 const OVERLAP_SIZE = 50 * 1024; // 50KB overlap to catch spanning blocks
 
 interface WorkoutSample {
@@ -25,20 +26,15 @@ function extractAttribute(xml: string, attr: string): string {
 function extractChildInfo(xml: string): { childNames: string[]; metaKeys: string[] } {
   const childNames: string[] = [];
   const metaKeys: string[] = [];
-
-  // Find all child element tag names
   const tagRegex = /<(\w+)\s/g;
   let m: RegExpExecArray | null;
   while ((m = tagRegex.exec(xml)) !== null) {
     if (m[1] !== "Workout") childNames.push(m[1]);
   }
-
-  // Find MetadataEntry keys
   const metaRegex = /key="([^"]*)"/g;
   while ((m = metaRegex.exec(xml)) !== null) {
     metaKeys.push(m[1]);
   }
-
   return { childNames, metaKeys };
 }
 
@@ -49,92 +45,90 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
+function shortType(t: string): string {
+  return t.replace("HKWorkoutActivityType", "");
+}
+
 export function AppleHealthExplorer() {
-  const [workouts, setWorkouts] = useState<WorkoutSample[]>([]);
+  const [samplesByType, setSamplesByType] = useState<Record<string, WorkoutSample[]>>({});
   const [summary, setSummary] = useState<ScanSummary | null>(null);
   const [scanning, setScanning] = useState(false);
-  const [progress, setProgress] = useState({ read: 0, total: 0 });
-  const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+  const [progress, setProgress] = useState({ read: 0, total: 0, found: 0 });
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const abortRef = useRef(false);
 
   const scan = useCallback(async (file: File) => {
     setScanning(true);
     setDone(false);
-    setWorkouts([]);
+    setSamplesByType({});
     setSummary(null);
-    setProgress({ read: 0, total: file.size });
+    setProgress({ read: 0, total: file.size, found: 0 });
     abortRef.current = false;
 
     const decoder = new TextDecoder("utf-8");
-    const found: WorkoutSample[] = [];
+    const samples: Record<string, WorkoutSample[]> = {};
     const summ: ScanSummary = {
       workoutTypes: {},
       childElementNames: new Set(),
       metadataKeys: new Set(),
     };
+    let totalSamples = 0;
+    let totalFound = 0;
 
     let buffer = "";
     let offset = 0;
 
-    while (offset < file.size && found.length < MAX_WORKOUTS && !abortRef.current) {
+    while (offset < file.size && !abortRef.current) {
       const end = Math.min(offset + CHUNK_SIZE, file.size);
       const blob = file.slice(offset, end);
       const arrayBuf = await blob.arrayBuffer();
       const text = decoder.decode(arrayBuf, { stream: end < file.size });
-
       buffer += text;
 
       // Extract complete <Workout ...>...</Workout> blocks
       let searchFrom = 0;
-      while (found.length < MAX_WORKOUTS) {
+      while (true) {
         const startTag = buffer.indexOf("<Workout ", searchFrom);
         if (startTag === -1) break;
 
-        const endTag = buffer.indexOf("</Workout>", startTag);
-        if (endTag === -1) break; // incomplete block, wait for more data
+        // Check self-closing first
+        const closeSlash = buffer.indexOf("/>", startTag);
+        const closeAngle = buffer.indexOf(">", startTag);
+        const isSelfClosing = closeSlash !== -1 && closeAngle !== -1 && closeSlash + 1 === closeAngle;
 
-        const endPos = endTag + "</Workout>".length;
-        const workoutXml = buffer.substring(startTag, endPos);
+        let workoutXml: string;
+        let endPos: number;
+
+        if (isSelfClosing) {
+          endPos = closeSlash + 2;
+          workoutXml = buffer.substring(startTag, endPos);
+        } else {
+          const endTag = buffer.indexOf("</Workout>", startTag);
+          if (endTag === -1) break; // incomplete, wait for more data
+          endPos = endTag + "</Workout>".length;
+          workoutXml = buffer.substring(startTag, endPos);
+        }
 
         const activityType = extractAttribute(workoutXml, "workoutActivityType");
-        found.push({ xml: workoutXml, activityType });
+        totalFound++;
 
-        // Update summary
+        // Always count
         summ.workoutTypes[activityType] = (summ.workoutTypes[activityType] ?? 0) + 1;
+
+        // Collect child/meta info
         const { childNames, metaKeys } = extractChildInfo(workoutXml);
         childNames.forEach((n) => summ.childElementNames.add(n));
         metaKeys.forEach((k) => summ.metadataKeys.add(k));
 
-        searchFrom = endPos;
-      }
-
-      // Also check for self-closing <Workout ... /> elements
-      let selfSearchFrom = 0;
-      while (found.length < MAX_WORKOUTS) {
-        const idx = buffer.indexOf("<Workout ", selfSearchFrom);
-        if (idx === -1) break;
-        
-        // Check if this is a self-closing tag (no children)
-        const closeSlash = buffer.indexOf("/>", idx);
-        const closeAngle = buffer.indexOf(">", idx);
-        
-        if (closeSlash !== -1 && closeAngle !== -1 && closeSlash < closeAngle) {
-          // Self-closing, but we likely already grabbed the ones with </Workout>
-          // Skip duplicates
-          const endPos = closeSlash + 2;
-          const workoutXml = buffer.substring(idx, endPos);
-          
-          // Only add if not already found (check by position)
-          if (!found.some((w) => w.xml === workoutXml)) {
-            const activityType = extractAttribute(workoutXml, "workoutActivityType");
-            found.push({ xml: workoutXml, activityType });
-            summ.workoutTypes[activityType] = (summ.workoutTypes[activityType] ?? 0) + 1;
-          }
-          selfSearchFrom = endPos;
-        } else {
-          break;
+        // Store sample if under limit for this type
+        if (!samples[activityType]) samples[activityType] = [];
+        if (samples[activityType].length < SAMPLES_PER_TYPE && totalSamples < MAX_TOTAL_SAMPLES) {
+          samples[activityType].push({ xml: workoutXml, activityType });
+          totalSamples++;
         }
+
+        searchFrom = endPos;
       }
 
       // Keep overlap from end of buffer for spanning blocks
@@ -143,13 +137,13 @@ export function AppleHealthExplorer() {
       }
 
       offset = end;
-      setProgress({ read: end, total: file.size });
+      setProgress({ read: end, total: file.size, found: totalFound });
 
       // Yield to UI
       await new Promise((r) => setTimeout(r, 0));
     }
 
-    setWorkouts(found);
+    setSamplesByType(samples);
     setSummary(summ);
     setScanning(false);
     setDone(true);
@@ -165,6 +159,9 @@ export function AppleHealthExplorer() {
   };
 
   const pct = progress.total > 0 ? (progress.read / progress.total) * 100 : 0;
+  const sortedTypes = summary
+    ? Object.entries(summary.workoutTypes).sort((a, b) => b[1] - a[1])
+    : [];
 
   return (
     <div className="space-y-3">
@@ -183,7 +180,6 @@ export function AppleHealthExplorer() {
         )}
       </div>
 
-      {/* Progress bar */}
       {(scanning || done) && (
         <div className="space-y-1">
           <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
@@ -194,20 +190,21 @@ export function AppleHealthExplorer() {
           </div>
           <p className="text-xs text-muted-foreground">
             {scanning ? "Scanning" : "Done"} — {formatBytes(progress.read)} / {formatBytes(progress.total)}
-            {workouts.length > 0 && ` — ${workouts.length} workouts found`}
+            {progress.found > 0 && ` — ${progress.found} workouts found`}
           </p>
         </div>
       )}
 
-      {/* Summary */}
       {summary && (
         <div className="space-y-2">
           <div>
-            <p className="text-xs font-medium text-muted-foreground mb-1">Workout Types</p>
+            <p className="text-xs font-medium text-muted-foreground mb-1">
+              Workout Types ({sortedTypes.length} types, {Object.values(summary.workoutTypes).reduce((a, b) => a + b, 0)} total)
+            </p>
             <div className="flex flex-wrap gap-1">
-              {Object.entries(summary.workoutTypes).map(([type, count]) => (
+              {sortedTypes.map(([type, count]) => (
                 <span key={type} className="text-[10px] bg-muted px-1.5 py-0.5 rounded">
-                  {type.replace("HKWorkoutActivityType", "")} ({count})
+                  {shortType(type)} ({count})
                 </span>
               ))}
             </div>
@@ -237,28 +234,35 @@ export function AppleHealthExplorer() {
         </div>
       )}
 
-      {/* Workout samples */}
-      {workouts.length > 0 && (
-        <div className="space-y-1">
-          <p className="text-xs font-medium text-muted-foreground">Sample Workouts</p>
-          {workouts.map((w, i) => (
-            <div key={i} className="border border-border/50 rounded">
-              <button
-                className="w-full text-left text-xs px-2 py-1 hover:bg-muted/50 flex justify-between items-center"
-                onClick={() => setExpandedIdx(expandedIdx === i ? null : i)}
-              >
-                <span>
-                  #{i + 1} — {w.activityType.replace("HKWorkoutActivityType", "")}
-                </span>
-                <span className="text-muted-foreground">{expandedIdx === i ? "▼" : "▶"}</span>
-              </button>
-              {expandedIdx === i && (
-                <pre className="text-[10px] p-2 overflow-x-auto max-h-[400px] overflow-y-auto bg-muted/30 border-t border-border/50 whitespace-pre-wrap break-all">
-                  {w.xml.length > 50000 ? w.xml.substring(0, 50000) + "\n\n... [truncated]" : w.xml}
-                </pre>
-              )}
-            </div>
-          ))}
+      {/* Samples grouped by type */}
+      {Object.keys(samplesByType).length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">Sample Workouts (up to {SAMPLES_PER_TYPE} per type)</p>
+          {Object.entries(samplesByType)
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .map(([type, samples]) => (
+              <div key={type} className="border border-border/50 rounded">
+                <button
+                  className="w-full text-left text-xs px-2 py-1 hover:bg-muted/50 flex justify-between items-center font-medium"
+                  onClick={() => setExpandedKey(expandedKey === type ? null : type)}
+                >
+                  <span>{shortType(type)} ({samples.length} samples)</span>
+                  <span className="text-muted-foreground">{expandedKey === type ? "▼" : "▶"}</span>
+                </button>
+                {expandedKey === type && (
+                  <div className="border-t border-border/50">
+                    {samples.map((w, i) => (
+                      <pre
+                        key={i}
+                        className="text-[10px] p-2 overflow-x-auto max-h-[400px] overflow-y-auto bg-muted/30 whitespace-pre-wrap break-all border-b border-border/30 last:border-b-0"
+                      >
+                        {w.xml.length > 50000 ? w.xml.substring(0, 50000) + "\n\n... [truncated]" : w.xml}
+                      </pre>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
         </div>
       )}
     </div>
