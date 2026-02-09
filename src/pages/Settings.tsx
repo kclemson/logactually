@@ -111,37 +111,46 @@ export default function Settings() {
     <div className="space-y-4">
       {/* Account section */}
       <CollapsibleSection title="Account" icon={User} storageKey="settings-account">
-        <div className="space-y-3">
+        <div className="space-y-4">
+          {/* Email row */}
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground">Email</p>
-              <p className="text-sm text-muted-foreground">{user?.email}</p>
-            </div>
-            {!isDemoUser && (
-              <button
-                onClick={() => setDeleteAccountOpen(true)}
-                className="text-sm text-muted-foreground hover:text-destructive hover:underline"
-              >
-                Delete account
-              </button>
-            )}
+            <p className="text-xs text-muted-foreground">Email</p>
+            <p className="text-sm text-muted-foreground">{user?.email}</p>
           </div>
-          <div className="space-y-1">
-            {!isReadOnly && (
-              <button
-                onClick={() => setChangePasswordOpen(true)}
-                className="w-full text-left py-2 hover:bg-accent/50 transition-colors text-sm text-foreground"
-              >
-                Change Password
-              </button>
-            )}
+          {/* Security row */}
+          {(!isReadOnly || !isDemoUser) && (
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">Security</p>
+              <div className="flex gap-2">
+                {!isReadOnly && (
+                  <button
+                    onClick={() => setChangePasswordOpen(true)}
+                    className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors"
+                  >
+                    Change Password
+                  </button>
+                )}
+                {!isDemoUser && (
+                  <button
+                    onClick={() => setDeleteAccountOpen(true)}
+                    className="rounded-lg border border-destructive/30 px-3 py-2 text-sm text-destructive hover:bg-destructive/5 transition-colors"
+                  >
+                    Delete Account
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+          {/* Session row */}
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">Session</p>
             <button
               onClick={async () => {
                 setIsSigningOut(true);
                 await signOut({ clearQueryCache: () => queryClient.clear() });
               }}
               disabled={isSigningOut}
-              className="w-full text-left py-2 hover:bg-accent/50 transition-colors text-sm text-foreground disabled:opacity-50"
+              className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors disabled:opacity-50"
             >
               {isSigningOut ? 'Signing out...' : 'Sign Out'}
             </button>
@@ -354,29 +363,39 @@ export default function Settings() {
 
       {/* Export as CSV */}
       <CollapsibleSection title="Export to CSV" icon={Download} storageKey="settings-export">
-        <div className="space-y-1">
-          <button 
-            onClick={exportDailyTotals} 
-            disabled={isExporting || isReadOnly}
-            className="w-full text-left py-2 hover:bg-accent/50 transition-colors text-sm text-foreground disabled:opacity-50"
-          >
-            Food Daily Totals
-          </button>
-          <button 
-            onClick={exportFoodLog} 
-            disabled={isExporting || isReadOnly}
-            className="w-full text-left py-2 hover:bg-accent/50 transition-colors text-sm text-foreground disabled:opacity-50"
-          >
-            Food Log
-          </button>
+        <div className="space-y-4">
+          {/* Food row */}
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">Food</p>
+            <div className="flex gap-2">
+              <button
+                onClick={exportDailyTotals}
+                disabled={isExporting || isReadOnly}
+                className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors disabled:opacity-50"
+              >
+                Daily Totals
+              </button>
+              <button
+                onClick={exportFoodLog}
+                disabled={isExporting || isReadOnly}
+                className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors disabled:opacity-50"
+              >
+                Detailed Log
+              </button>
+            </div>
+          </div>
+          {/* Weights row */}
           {showWeights && (
-            <button 
-              onClick={exportWeightLog} 
-              disabled={isExporting || isReadOnly}
-              className="w-full text-left py-2 hover:bg-accent/50 transition-colors text-sm text-foreground disabled:opacity-50"
-            >
-              Weights Log
-            </button>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">Weights</p>
+              <button
+                onClick={exportWeightLog}
+                disabled={isExporting || isReadOnly}
+                className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors disabled:opacity-50"
+              >
+                Detailed Log
+              </button>
+            </div>
           )}
           {isReadOnly && (
             <p className="text-xs text-muted-foreground mt-2">
