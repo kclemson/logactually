@@ -1,26 +1,26 @@
 
 
-## Hide Calorie Target Dot for Today in Calendar View
+## Add Colored Indicator Circles to Calorie Target Description
 
 ### What Changes
 
-The calorie target dot currently shows on today's cell in the History calendar (visible as the green dot on Feb 9 in the screenshot). It should be hidden for today, matching the Food Log behavior where the dot only appears for past days.
+Update the subtitle text under "Daily Calorie Target" in Settings to show the three colored dot indicators inline, replacing "Show color indicators on calendar view" with "Show `●` `●` `●` color indicators on calendar view" where the dots are green, amber, and red respectively.
 
-### Fix
+### Technical Details
 
-In `src/pages/History.tsx`, add `!isTodayDate` to the condition that renders the target dot inside the calendar cell.
+In `src/pages/Settings.tsx`, update the description `<p>` tag (currently around line 168) from:
 
 ```
-// Before
-{settings.dailyCalorieTarget && settings.dailyCalorieTarget > 0 && (
-  <span className={...}>●</span>
-)}
-
-// After
-{!isTodayDate && settings.dailyCalorieTarget && settings.dailyCalorieTarget > 0 && (
-  <span className={...}>●</span>
-)}
+<p className="text-[10px] text-muted-foreground/70">Show color indicators on calendar view</p>
 ```
 
-Single condition addition, one file affected.
+To:
+
+```
+<p className="text-[10px] text-muted-foreground/70">
+  Show <span className="text-green-500 dark:text-green-400">●</span> <span className="text-amber-500 dark:text-amber-400">●</span> <span className="text-rose-500 dark:text-rose-400">●</span> color indicators on calendar view
+</p>
+```
+
+The color classes match the existing `getTargetDotColor` function in `src/lib/calorie-target.ts`. Single line change, one file affected.
 
