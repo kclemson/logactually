@@ -596,7 +596,10 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
           <ChevronLeft className="h-5 w-5" />
         </Button>
         
-        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+        <Popover open={calendarOpen} onOpenChange={(open) => {
+          if (open) setCalendarMonth(startOfMonth(selectedDate));
+          setCalendarOpen(open);
+        }}>
           <PopoverTrigger asChild>
             <button
               className={cn(
@@ -624,6 +627,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
             </div>
             <Calendar
               mode="single"
+              month={calendarMonth}
               selected={selectedDate}
               onSelect={handleDateSelect}
               onMonthChange={setCalendarMonth}
