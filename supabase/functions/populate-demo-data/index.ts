@@ -16,6 +16,63 @@ const corsHeaders = {
 const DEMO_EMAIL = 'demo@logactually.com';
 const BATCH_SIZE = 10;
 
+// Calorie target distribution for demo data
+const DAILY_CALORIE_TARGET = 2000;
+const CALORIE_TIERS = {
+  green: { min: 1700, max: 2050, percent: 75 },   // at or below target
+  amber: { min: 2050, max: 2200, percent: 15 },    // slightly over
+  red:   { min: 2200, max: 2600, percent: 10 },     // well over
+} as const;
+
+type CalorieTier = keyof typeof CALORIE_TIERS;
+
+/** Assign each day index to a calorie tier based on the 75/15/10 distribution. */
+function assignDayTiers(totalDays: number): CalorieTier[] {
+  const tiers: CalorieTier[] = [];
+  const greenCount = Math.round(totalDays * CALORIE_TIERS.green.percent / 100);
+  const amberCount = Math.round(totalDays * CALORIE_TIERS.amber.percent / 100);
+  // Red gets the rest
+  const redCount = totalDays - greenCount - amberCount;
+
+  for (let i = 0; i < greenCount; i++) tiers.push('green');
+  for (let i = 0; i < amberCount; i++) tiers.push('amber');
+  for (let i = 0; i < redCount; i++) tiers.push('red');
+
+  // Shuffle so tiers are distributed randomly across days
+  return shuffleArray(tiers);
+}
+
+/** Pre-compute total calories for each cached food input. */
+function buildCalorieIndex(
+  parsedCache: Map<string, ParsedFoodItem[]>
+): Map<string, number> {
+  const index = new Map<string, number>();
+  for (const [input, items] of parsedCache) {
+    index.set(input, items.reduce((sum, item) => sum + (item.calories || 0), 0));
+  }
+  return index;
+}
+
+/** Pick the meal from `candidates` whose calories bring `currentTotal` closest to `targetTotal`. */
+function pickClosestMeal(
+  candidates: string[],
+  calorieIndex: Map<string, number>,
+  currentTotal: number,
+  targetTotal: number,
+): string {
+  let bestInput = candidates[0];
+  let bestDiff = Infinity;
+  for (const input of candidates) {
+    const cals = calorieIndex.get(input) || 0;
+    const diff = Math.abs((currentTotal + cals) - targetTotal);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      bestInput = input;
+    }
+  }
+  return bestInput;
+}
+
 // ============================================================================
 // DEMO FOOD INPUTS - Raw text inputs that will be parsed by AI
 // 30 inputs per meal type, covering variety of styles
@@ -713,44 +770,93 @@ async function doPopulationWork(
     let foodEntriesCreated = 0;
     let weightSetsCreated = 0;
 
+    // Pre-compute calorie index for budget-aware selection
+    const calorieIndex = buildCalorieIndex(parsedCache);
+
+    // Assign calorie tiers to each day
+    const dayTiers = assignDayTiers(selectedDays.length);
+    console.log(`Calorie tier distribution: green=${dayTiers.filter(t => t === 'green').length}, amber=${dayTiers.filter(t => t === 'amber').length}, red=${dayTiers.filter(t => t === 'red').length}`);
+
     // Generate data for each day
     for (let i = 0; i < selectedDays.length; i++) {
       const day = selectedDays[i];
       const dateStr = formatDate(day);
 
-      // Generate food entries using cached AI results
+      // Generate food entries using budget-aware selection
       if (generateFood) {
-        const mealTypes: Array<'breakfast' | 'lunch' | 'dinner' | 'snack'> = ['breakfast', 'lunch', 'dinner'];
-        
-        // Maybe add a snack (60% chance)
-        if (Math.random() < 0.6) {
-          mealTypes.push('snack');
+        const tier = dayTiers[i];
+        const tierConfig = CALORIE_TIERS[tier];
+        const dailyBudget = randomInt(tierConfig.min, tierConfig.max);
+
+        // Track meals selected for this day
+        const dayMeals: Array<{ rawInput: string; parsedItems: ParsedFoodItem[] }> = [];
+        let runningCalories = 0;
+
+        // 1. Pick breakfast (random)
+        const breakfastInputs = DEMO_FOOD_INPUTS.breakfast.filter(inp => parsedCache.has(inp) && (parsedCache.get(inp)?.length || 0) > 0);
+        if (breakfastInputs.length > 0) {
+          const bInput = randomChoice(breakfastInputs);
+          const bItems = parsedCache.get(bInput)!;
+          dayMeals.push({ rawInput: bInput, parsedItems: bItems });
+          runningCalories += calorieIndex.get(bInput) || 0;
         }
-        
-        for (const mealType of mealTypes) {
-          // Pick a random input from this meal type, cycling through the 30 options
-          const inputs = DEMO_FOOD_INPUTS[mealType];
-          const rawInput = inputs[i % inputs.length];
-          const parsedItems = parsedCache.get(rawInput) || [];
-          
-          if (parsedItems.length === 0) {
-            console.warn(`No parsed items for: ${rawInput}`);
-            continue;
+
+        // 2. Pick lunch (random)
+        const lunchInputs = DEMO_FOOD_INPUTS.lunch.filter(inp => parsedCache.has(inp) && (parsedCache.get(inp)?.length || 0) > 0);
+        if (lunchInputs.length > 0) {
+          const lInput = randomChoice(lunchInputs);
+          const lItems = parsedCache.get(lInput)!;
+          dayMeals.push({ rawInput: lInput, parsedItems: lItems });
+          runningCalories += calorieIndex.get(lInput) || 0;
+        }
+
+        // 3. Pick dinner — choose the one that brings total closest to budget
+        const dinnerInputs = DEMO_FOOD_INPUTS.dinner.filter(inp => parsedCache.has(inp) && (parsedCache.get(inp)?.length || 0) > 0);
+        if (dinnerInputs.length > 0) {
+          const dInput = pickClosestMeal(dinnerInputs, calorieIndex, runningCalories, dailyBudget);
+          const dItems = parsedCache.get(dInput)!;
+          dayMeals.push({ rawInput: dInput, parsedItems: dItems });
+          runningCalories += calorieIndex.get(dInput) || 0;
+        }
+
+        // 4. Optionally add snack to nudge toward budget
+        const snackInputs = DEMO_FOOD_INPUTS.snack.filter(inp => parsedCache.has(inp) && (parsedCache.get(inp)?.length || 0) > 0);
+        if (snackInputs.length > 0) {
+          const calorieGap = dailyBudget - runningCalories;
+          // Add snack if we're more than 200 cal under budget
+          if (calorieGap > 200) {
+            const sInput = pickClosestMeal(snackInputs, calorieIndex, runningCalories, dailyBudget);
+            const sItems = parsedCache.get(sInput)!;
+            dayMeals.push({ rawInput: sInput, parsedItems: sItems });
+            runningCalories += calorieIndex.get(sInput) || 0;
           }
-          
-          // Calculate totals
-          const totalCalories = parsedItems.reduce((sum, item) => sum + (item.calories || 0), 0);
-          const totalProtein = parsedItems.reduce((sum, item) => sum + (item.protein || 0), 0);
-          const totalCarbs = parsedItems.reduce((sum, item) => sum + (item.carbs || 0), 0);
-          const totalFat = parsedItems.reduce((sum, item) => sum + (item.fat || 0), 0);
-          
+          // If still under by >150, add a second snack
+          const remainingGap = dailyBudget - runningCalories;
+          if (remainingGap > 150 && snackInputs.length > 1) {
+            const usedSnacks = dayMeals.filter(m => DEMO_FOOD_INPUTS.snack.includes(m.rawInput)).map(m => m.rawInput);
+            const availableSnacks = snackInputs.filter(s => !usedSnacks.includes(s));
+            if (availableSnacks.length > 0) {
+              const s2Input = pickClosestMeal(availableSnacks, calorieIndex, runningCalories, dailyBudget);
+              const s2Items = parsedCache.get(s2Input)!;
+              dayMeals.push({ rawInput: s2Input, parsedItems: s2Items });
+            }
+          }
+        }
+
+        // Insert all meals for this day
+        for (const meal of dayMeals) {
+          const totalCalories = meal.parsedItems.reduce((sum, item) => sum + (item.calories || 0), 0);
+          const totalProtein = meal.parsedItems.reduce((sum, item) => sum + (item.protein || 0), 0);
+          const totalCarbs = meal.parsedItems.reduce((sum, item) => sum + (item.carbs || 0), 0);
+          const totalFat = meal.parsedItems.reduce((sum, item) => sum + (item.fat || 0), 0);
+
           const { error: foodError } = await serviceClient
             .from('food_entries')
             .insert({
               user_id: demoUserId,
               eaten_date: dateStr,
-              raw_input: rawInput,
-              food_items: parsedItems.map(item => ({
+              raw_input: meal.rawInput,
+              food_items: meal.parsedItems.map(item => ({
                 uid: crypto.randomUUID(),
                 description: item.name,
                 portion: item.portion,
