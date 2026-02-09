@@ -209,7 +209,7 @@ const History = () => {
                   ? (
                     <>
                       {`${Math.round(summary.totalCalories).toLocaleString()}cal`}
-                      {settings.dailyCalorieTarget && settings.dailyCalorieTarget > 0 && (
+                      {!isTodayDate && settings.dailyCalorieTarget && settings.dailyCalorieTarget > 0 && (
                         <span className={`text-[10px] ml-0.5 leading-none relative top-[-0.5px] ${getTargetDotColor(summary.totalCalories, settings.dailyCalorieTarget)}`}>●</span>
                       )}
                     </>
