@@ -1,35 +1,52 @@
 
 
-## Five Polish Fixes for Calorie Target Feature
+## Restyle Account and Export Action Items
 
-### 1. Fix input styling (placeholder centering, text alignment, width)
+### Account Section
 
-Change the input from `text-right` to `text-center` so both the "Not set" placeholder and entered values are centered. Reduce width from `w-24` to `w-20` since values are at most 5 digits.
+Replace the current layout with four clean labeled rows using the consistent label-left, value/buttons-right pattern:
 
-### 2. Reorder "Daily Calorie Target" above "Show Weights"
+```text
+┌──────────────────────────────────────────────────────┐
+│  Email                          user@example.com     │
+│  Security          [Change Password] [Delete Account]│
+│  Session                               [Sign Out]   │
+└──────────────────────────────────────────────────────┘
+```
 
-Within the Preferences section, move the Daily Calorie Target block to sit between Theme and Show Weights. This creates a hierarchy: general (theme) → food (calorie target) → weights (show weights, weight units).
+- **Email**: Label on the left, email address right-justified as read-only text (same `text-sm` styling as other values)
+- **Security**: "Change Password" (hidden when read-only) + "Delete Account" (hidden for demo users), right-aligned outlined buttons. "Delete Account" uses a destructive style (`text-destructive border-destructive/30 hover:bg-destructive/5`)
+- **Session**: "Sign Out" button, right-aligned
 
-### 3. Move Preferences section above Saved Meals
+### Export Section
 
-Reorder the top-level collapsible sections so Preferences comes right after Account, before Saved Meals and Saved Routines. This way toggling "Show Weights" won't cause as much UI jitter since Saved Routines (which conditionally appears) is below Preferences.
+Replace the stacked full-width text rows with labeled rows:
 
-New order:
-1. Account
-2. Preferences
-3. Saved Meals
-4. Saved Routines
-5. Export to CSV
-6. About
+```text
+┌────────────────────────────────────────────────┐
+│  Food        [Daily Totals]  [Detailed Log]    │
+│  Weights                     [Detailed Log]    │
+└────────────────────────────────────────────────┘
+```
 
-### 4. Make the calendar dot slightly larger and vertically centered
+- **Food**: "Daily Totals" and "Detailed Log" buttons
+- **Weights**: "Detailed Log" button (only when weights enabled)
+- All disabled when exporting or read-only
+- Read-only hint message preserved
 
-Change the dot from `text-[8px]` to `text-[10px]` (matching the calorie text size) and add `align-middle` or use `leading-none` to vertically center it with the calorie text. Also adjust margin from `ml-[1px]` to `ml-0.5`.
+### Button Style
 
-### 5. Files changed
+All action buttons use the same outlined style as Theme/Weight Units:
+
+```
+rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors
+```
+
+Exception: "Delete Account" uses `text-destructive border-destructive/30 hover:bg-destructive/5`.
+
+### File Changed
 
 | File | Changes |
 |------|---------|
-| `src/pages/Settings.tsx` | Reorder sections (Preferences before Saved Meals); move Daily Calorie Target above Show Weights; fix input classes (`text-center`, `w-20`) |
-| `src/pages/History.tsx` | Change dot from `text-[8px]` to `text-[10px]`, add vertical alignment |
+| `src/pages/Settings.tsx` | Account section: replace email display + floating delete link with "Email" labeled row (address right-justified); add "Security" row with Change Password + Delete Account buttons; add "Session" row with Sign Out button. Export section: replace three stacked text buttons with "Food" and "Weights" labeled rows containing outlined buttons. |
 
