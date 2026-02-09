@@ -122,20 +122,20 @@ export default function Settings() {
             <div className="flex items-center justify-between">
               <p className="text-xs text-muted-foreground">Security</p>
               <div className="flex gap-2">
-                {!isReadOnly && (
-                  <button
-                    onClick={() => setChangePasswordOpen(true)}
-                    className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors"
-                  >
-                    Change Password
-                  </button>
-                )}
                 {!isDemoUser && (
                   <button
                     onClick={() => setDeleteAccountOpen(true)}
                     className="rounded-lg border border-destructive/30 px-3 py-2 text-sm text-destructive hover:bg-destructive/5 transition-colors"
                   >
                     Delete Account
+                  </button>
+                )}
+                {!isReadOnly && (
+                  <button
+                    onClick={() => setChangePasswordOpen(true)}
+                    className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors"
+                  >
+                    Change Password
                   </button>
                 )}
               </div>
