@@ -751,6 +751,8 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
             onSaveAsMeal={handleSaveAsMeal}
             entryMealNames={entryMealNames}
             entrySourceMealIds={entrySourceMealIds}
+            dailyCalorieTarget={settings.dailyCalorieTarget ?? undefined}
+            showCalorieTargetDot={!isTodaySelected}
           />
         )}
 
