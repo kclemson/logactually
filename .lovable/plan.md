@@ -1,96 +1,35 @@
 
 
-## Calorie Target with Tiered Indicator Dot
+## Five Polish Fixes for Calorie Target Feature
 
-### Overview
+### 1. Fix input styling (placeholder centering, text alignment, width)
 
-Add a "Daily Calorie Target" setting with a helper description, and use a forgiving threshold system on the History calendar where being slightly over (up to 2.5%) still counts as green.
+Change the input from `text-right` to `text-center` so both the "Not set" placeholder and entered values are centered. Reduce width from `w-24` to `w-20` since values are at most 5 digits.
 
-### Updated Thresholds
+### 2. Reorder "Daily Calorie Target" above "Show Weights"
 
-| Condition | Dot Color | Example (1,500 target) |
-|-----------|-----------|----------------------|
-| No target set | No dot | -- |
-| Within 2.5% over (or under) | Green | up to 1,537 cal |
-| Over 2.5% to 10% over | Amber | 1,538 - 1,650 cal |
-| More than 10% over | Rose | 1,651+ cal |
+Within the Preferences section, move the Daily Calorie Target block to sit between Theme and Show Weights. This creates a hierarchy: general (theme) → food (calorie target) → weights (show weights, weight units).
 
-### Settings Description
+### 3. Move Preferences section above Saved Meals
 
-Below the "Daily Calorie Target" label, the helper text reads:
+Reorder the top-level collapsible sections so Preferences comes right after Account, before Saved Meals and Saved Routines. This way toggling "Show Weights" won't cause as much UI jitter since Saved Routines (which conditionally appears) is below Preferences.
 
-```
-Daily Calorie Target
-Show color indicators on calendar view         [ Not set ]
-```
+New order:
+1. Account
+2. Preferences
+3. Saved Meals
+4. Saved Routines
+5. Export to CSV
+6. About
 
-### Files to Change
+### 4. Make the calendar dot slightly larger and vertically centered
 
-| File | Change |
-|------|--------|
-| `src/hooks/useUserSettings.ts` | Add `dailyCalorieTarget: number \| null` to interface and defaults |
-| `src/pages/Settings.tsx` | Add input with two-line label (title + helper text) in Preferences section |
-| `src/pages/History.tsx` | Add colored dot with updated threshold logic |
+Change the dot from `text-[8px]` to `text-[10px]` (matching the calorie text size) and add `align-middle` or use `leading-none` to vertically center it with the calorie text. Also adjust margin from `ml-[1px]` to `ml-0.5`.
 
-### Technical Details
+### 5. Files changed
 
-**1. UserSettings** (`src/hooks/useUserSettings.ts`)
-
-```typescript
-interface UserSettings {
-  // ...existing
-  dailyCalorieTarget: number | null;
-}
-
-const DEFAULT_SETTINGS = {
-  // ...existing
-  dailyCalorieTarget: null,
-};
-```
-
-**2. Settings UI** (`src/pages/Settings.tsx`)
-
-New row in Preferences section:
-
-```typescript
-<div className="flex items-center justify-between">
-  <div>
-    <p className="text-xs text-muted-foreground">Daily Calorie Target</p>
-    <p className="text-[10px] text-muted-foreground/70">Show color indicators on calendar view</p>
-  </div>
-  <Input
-    type="number"
-    placeholder="Not set"
-    value={settings.dailyCalorieTarget ?? ''}
-    onChange={(e) => {
-      const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
-      updateSettings({ dailyCalorieTarget: val });
-    }}
-    className="w-24 h-8 text-right text-sm"
-    min={0}
-    max={99999}
-  />
-</div>
-```
-
-**3. Calendar dot logic** (`src/pages/History.tsx`)
-
-```typescript
-function getTargetDotColor(calories: number, target: number): string {
-  const overPercent = ((calories - target) / target) * 100;
-  if (overPercent <= 2.5) return "text-green-500 dark:text-green-400";
-  if (overPercent <= 10) return "text-amber-500 dark:text-amber-400";
-  return "text-rose-500 dark:text-rose-400";
-}
-```
-
-The dot (`●`) appears after the calorie text at `text-[8px]` size, only when a target is set and the day has entries. Calorie text stays blue.
-
-### Edge Cases
-
-- **Target of 0 or null**: no dot, calendar unchanged
-- **Exactly at target**: green (0% over)
-- **2.5% over** (e.g. 1,537 on 1,500): green -- still on-target
-- **3% over** (e.g. 1,545 on 1,500): amber -- minor overage
-- **Under target**: always green (negative percentage)
+| File | Changes |
+|------|---------|
+| `src/pages/Settings.tsx` | Reorder sections (Preferences before Saved Meals); move Daily Calorie Target above Show Weights; fix input classes (`text-center`, `w-20`) |
+| `src/pages/History.tsx` | Change dot from `text-[8px]` to `text-[10px]`, add vertical alignment |
 
