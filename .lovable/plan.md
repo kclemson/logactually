@@ -1,43 +1,31 @@
 
-## Add Calorie Target Reference Line to Charts
 
-### Overview
-When the user has a daily calorie target set, draw a slim dashed horizontal line at the target value on both the "Calories" chart and the "Combined Calories + Macros" chart on the Trends page.
+## Split "Seated Leg Curl" Into Its Own Exercise Key
 
-### Changes
+### Problem
+Currently, "Seated Leg Curl" (the hamstring curl machine) and "Leg Curl" (the Precor machine) are both mapped to the same `leg_curl` exercise key. They are different machines and should be tracked separately.
 
-**1. `src/components/trends/FoodChart.tsx`**
+### Data Migration
+Update the one existing database row (Feb 9, description "Seated Leg Curl") to use the new `seated_leg_curl` key.
 
-- Import `ReferenceLine` from `recharts`
-- Add optional `referenceLine` prop to `FoodChart`:
-  ```typescript
-  referenceLine?: { value: number; color?: string };
-  ```
-- Render a `<ReferenceLine>` inside the `<BarChart>` when the prop is provided:
-  ```tsx
-  <ReferenceLine
-    y={referenceLine.value}
-    stroke={referenceLine.color || "hsl(var(--muted-foreground))"}
-    strokeDasharray="4 3"
-    strokeWidth={1}
-    ifOverflow="extendDomain"
-  />
-  ```
-- Add the same optional `referenceLine` prop to `StackedMacroChart` and render the same `<ReferenceLine>` when provided.
+### Code Changes
 
-**2. `src/pages/Trends.tsx`**
+**1. `supabase/functions/_shared/exercises.ts`**
+- Split the current `leg_curl` entry: remove "seated leg curl" and "hamstring curl" from its aliases
+- Add a new `seated_leg_curl` entry:
+  - Name: "Seated Leg Curl"
+  - Aliases: "seated hamstring curl", "hamstring curl", "hamstring curl machine"
+  - Primary muscle: Hamstrings
+- Keep `leg_curl` with remaining aliases: "lying leg curl", "prone leg curl"
 
-- Pass the `referenceLine` prop to the Calories `FoodChart` and the Combined Calories + Macros `StackedMacroChart` when the user has a calorie target set:
-  ```tsx
-  referenceLine={settings.dailyCalorieTarget ? { value: settings.dailyCalorieTarget, color: "hsl(var(--muted-foreground))" } : undefined}
-  ```
+**2. `src/lib/exercise-metadata.ts`**
+- Add `seated_leg_curl: { primary: 'Hamstrings' }` entry
+- Keep `leg_curl: { primary: 'Hamstrings' }` as-is
 
-### Behavior
-- When no calorie target is set, no line appears (no visual change).
-- The line uses a muted foreground color with a dashed pattern so it's visible but unobtrusive in both light and dark themes.
-- `ifOverflow="extendDomain"` ensures the line is visible even if no bar reaches the target value.
-- No label on the line to keep it clean -- the user already knows their target from Settings, and the tooltip/labels show actual values.
+**3. Database** (data update)
+- Update the one row with `description = 'Seated Leg Curl'` to `exercise_key = 'seated_leg_curl'`
 
 ### Files Changed
-- `src/components/trends/FoodChart.tsx` -- add `referenceLine` prop to `FoodChart` and `StackedMacroChart`
-- `src/pages/Trends.tsx` -- pass the prop for the two calorie charts
+- `supabase/functions/_shared/exercises.ts` -- split aliases, add new entry
+- `src/lib/exercise-metadata.ts` -- add `seated_leg_curl` entry
+- Database data update for the one existing row
