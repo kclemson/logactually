@@ -149,6 +149,95 @@ export default function Settings() {
         </div>
       </CollapsibleSection>
 
+      {/* Preferences - theme and units */}
+      <CollapsibleSection title="Preferences" icon={Settings2} storageKey="settings-preferences">
+        <div className="space-y-4">
+          {/* Theme */}
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">Theme</p>
+            <div className="flex gap-2">
+              {themeOptions.map(({ value, label, icon: Icon }) => (
+                <button
+                  key={value}
+                  onClick={() => handleThemeChange(value)}
+                  className={cn(
+                    "flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 transition-colors",
+                    mounted && theme === value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50",
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="text-sm">{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          {/* Daily Calorie Target */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">Daily Calorie Target</p>
+              <p className="text-[10px] text-muted-foreground/70">Show color indicators on calendar view</p>
+            </div>
+            <input
+              type="number"
+              placeholder="Not set"
+              value={settings.dailyCalorieTarget ?? ''}
+              onChange={(e) => {
+                const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
+                updateSettings({ dailyCalorieTarget: val });
+              }}
+              className="w-20 h-8 text-center text-sm rounded-md border border-input bg-background px-2 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              min={0}
+              max={99999}
+            />
+          </div>
+
+          {/* Show Weights - before Weight Units */}
+          {showWeightsFeature && (
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">Show Weights</p>
+              <button
+                onClick={() => updateSettings({ showWeights: !settings.showWeights })}
+                className={cn(
+                  "w-12 h-6 rounded-full transition-colors relative border",
+                  settings.showWeights ? "bg-primary border-primary" : "bg-muted border-border"
+                )}
+              >
+                <span
+                  className={cn(
+                    "absolute left-0 top-0.5 w-5 h-5 rounded-full shadow transition-transform",
+                    settings.showWeights 
+                      ? "translate-x-6 bg-primary-foreground" 
+                      : "translate-x-0.5 bg-white"
+                  )}
+                />
+              </button>
+            </div>
+          )}
+
+          {/* Weight Units - shown when weights enabled */}
+          {showWeights && (
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">Weight Units</p>
+              <div className="flex gap-2">
+                {weightUnitOptions.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => handleWeightUnitChange(value)}
+                    className={cn(
+                      "flex items-center justify-center rounded-lg border px-3 py-2 transition-colors",
+                      settings.weightUnit === value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50",
+                    )}
+                  >
+                    <span className="text-sm">{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </CollapsibleSection>
+
       {/* Saved Meals - frequently accessed */}
       <CollapsibleSection title="Saved Meals" icon={Star} storageKey="settings-meals">
         {/* Add button as first row */}
@@ -262,95 +351,6 @@ export default function Settings() {
           )}
         </CollapsibleSection>
       )}
-
-      {/* Preferences - theme and units */}
-      <CollapsibleSection title="Preferences" icon={Settings2} storageKey="settings-preferences">
-        <div className="space-y-4">
-          {/* Theme */}
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">Theme</p>
-            <div className="flex gap-2">
-              {themeOptions.map(({ value, label, icon: Icon }) => (
-                <button
-                  key={value}
-                  onClick={() => handleThemeChange(value)}
-                  className={cn(
-                    "flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 transition-colors",
-                    mounted && theme === value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50",
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  <span className="text-sm">{label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-          
-          {/* Show Weights - before Weight Units */}
-          {showWeightsFeature && (
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">Show Weights</p>
-              <button
-                onClick={() => updateSettings({ showWeights: !settings.showWeights })}
-                className={cn(
-                  "w-12 h-6 rounded-full transition-colors relative border",
-                  settings.showWeights ? "bg-primary border-primary" : "bg-muted border-border"
-                )}
-              >
-                <span
-                  className={cn(
-                    "absolute left-0 top-0.5 w-5 h-5 rounded-full shadow transition-transform",
-                    settings.showWeights 
-                      ? "translate-x-6 bg-primary-foreground" 
-                      : "translate-x-0.5 bg-white"
-                  )}
-                />
-              </button>
-            </div>
-          )}
-          
-          {/* Daily Calorie Target */}
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground">Daily Calorie Target</p>
-              <p className="text-[10px] text-muted-foreground/70">Show color indicators on calendar view</p>
-            </div>
-            <input
-              type="number"
-              placeholder="Not set"
-              value={settings.dailyCalorieTarget ?? ''}
-              onChange={(e) => {
-                const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
-                updateSettings({ dailyCalorieTarget: val });
-              }}
-              className="w-24 h-8 text-right text-sm rounded-md border border-input bg-background px-3 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              min={0}
-              max={99999}
-            />
-          </div>
-
-          {/* Weight Units - shown when weights enabled */}
-          {showWeights && (
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">Weight Units</p>
-              <div className="flex gap-2">
-                {weightUnitOptions.map(({ value, label }) => (
-                  <button
-                    key={value}
-                    onClick={() => handleWeightUnitChange(value)}
-                    className={cn(
-                      "flex items-center justify-center rounded-lg border px-3 py-2 transition-colors",
-                      settings.weightUnit === value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50",
-                    )}
-                  >
-                    <span className="text-sm">{label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </CollapsibleSection>
 
       {/* Export as CSV */}
       <CollapsibleSection title="Export to CSV" icon={Download} storageKey="settings-export">
