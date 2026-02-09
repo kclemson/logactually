@@ -6,12 +6,13 @@ import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useAdminFeedback, useRespondToFeedback } from "@/hooks/feedback";
 import { useHasHover } from "@/hooks/use-has-hover";
 import { format, parseISO, isToday } from "date-fns";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, FileSearch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PopulateDemoDataDialog } from "@/components/PopulateDemoDataDialog";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
+import { AppleHealthExplorer } from "@/components/AppleHealthExplorer";
 
 const USER_NAMES: Record<number, string> = {
   1: "KC",
@@ -417,6 +418,17 @@ export default function Admin() {
           </div>
         </CollapsibleSection>
       )}
+
+      {/* Health Export Explorer */}
+      <CollapsibleSection
+        title="Health Export Explorer"
+        icon={FileSearch}
+        defaultOpen={false}
+        storageKey="admin-health-explorer"
+        iconClassName="text-muted-foreground"
+      >
+        <AppleHealthExplorer />
+      </CollapsibleSection>
 
       {/* Populate Demo Data */}
       <div className="pt-2 border-t border-border">
