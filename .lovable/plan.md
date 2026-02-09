@@ -1,60 +1,32 @@
 
 
-## Apple Health Export Explorer (Admin Tool)
+## Fix: Collect Diverse Workout Samples
 
-### Goal
-Build a temporary exploration tool in the Admin page that lets you pick your 2.6GB `export.xml` file and uses `file.slice()` to stream through it in chunks, extracting sample `<Workout>` elements and their child elements so we can see exactly what fields Apple Health provides. This will inform the real import feature design.
+### Problem
+The explorer stops after finding 20 total workouts. Since walking entries appear first and are numerous, all 20 samples end up being walking. Other workout types (running, cycling, strength training, etc.) that appear later in the file are never reached.
 
-### What it does
-- File picker for the `export.xml` file
-- Streams through the file in ~1MB chunks using `file.slice()` + `FileReader`
-- Scans for `<Workout` elements and extracts the first ~20 complete workout records (with all child elements like `WorkoutStatistics`, `WorkoutEvent`, `MetadataEntry`, etc.)
-- Displays a progress bar (bytes read / total bytes)
-- Renders the raw XML of each found workout in a scrollable panel so you can inspect every attribute and child element
-- Also collects a summary: unique `workoutActivityType` values found, unique child element tag names, unique metadata keys
+### Solution
+Change the collection strategy:
+- **Scan the entire file** (don't stop early at 20)
+- Collect up to **3 samples per workout type** (to see variety within each type)
+- Track **all** workout type counts across the full file (for the summary)
+- Still cap total stored samples at a reasonable limit (e.g., 50) to avoid memory issues from very large workout blocks
 
-### Why this approach
-- No upload needed -- everything runs locally in the browser
-- We only need ~20 sample workouts to understand the full data structure
-- The streaming approach handles the 2.6GB file without memory issues
-- Building it in Admin means it's already gated behind your admin role
+### Changes
 
-### Implementation
+**File: `src/components/AppleHealthExplorer.tsx`**
 
-**New file: `src/components/AppleHealthExplorer.tsx`**
-- File input that accepts `.xml`
-- On file select, begins streaming with `file.slice(offset, offset + CHUNK_SIZE)`
-- Uses TextDecoder to convert chunks to text
-- Maintains a sliding buffer to catch `<Workout ...>...</Workout>` blocks that may span chunk boundaries
-- Stops after collecting 20 workout elements or reaching end of file
-- Displays:
-  - Progress bar with "Scanning... 450MB / 2.6GB"
-  - Summary table: workout types found, count of each
-  - List of unique child element names (e.g., `WorkoutStatistics`, `WorkoutEvent`, `MetadataEntry`, `WorkoutRoute`)
-  - List of unique metadata keys
-  - Raw XML of each sample workout in a collapsible code block
+1. Remove the `MAX_WORKOUTS = 20` early-stop logic
+2. Change `workouts` state to store samples grouped by type
+3. During scanning:
+   - Always increment the count per workout type in the summary
+   - Only store the raw XML if we have fewer than 3 samples of that type
+   - Continue scanning through the entire file regardless of samples collected
+4. Update the display to group samples by workout type so you can see examples of each
 
-**Modified file: `src/pages/Admin.tsx`**
-- Add a "Health Export Explorer" collapsible section at the bottom (before the Populate Demo Data button)
-- Renders the `AppleHealthExplorer` component
-
-### Technical Details
-
-The parser logic (simplified):
-```text
-1. Read 1MB chunk via file.slice()
-2. Append to text buffer
-3. Search buffer for complete <Workout ...>...</Workout> blocks
-4. When found, extract and store the raw XML string
-5. Trim buffer to after the last extracted block
-6. Repeat until 20 workouts found or EOF
-```
-
-Key considerations:
-- Buffer needs to handle a `<Workout>` block spanning two chunks (keep last ~50KB of previous chunk)
-- Some `<Workout>` elements may be large if they contain embedded `<WorkoutRoute>` with GPS points -- we'll capture the first 20 regardless but truncate display if a single workout is huge
-- We skip `<Record>` elements entirely (those are the millions of heart rate samples, steps, etc. that make up the bulk of the file)
-
-### After exploration
-Once we can see the actual XML structure, we'll have the information needed to design the real import feature with confidence about which fields exist and how they're structured. This temporary tool can be removed afterward.
+### Expected Result
+After a full scan (should take ~30-60 seconds for 2.6GB), you'll see:
+- Complete summary of every workout type and how many of each exist
+- 2-3 sample XML blocks for each type (running, cycling, strength, etc.)
+- Full list of all child elements and metadata keys across all types
 
