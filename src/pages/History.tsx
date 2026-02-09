@@ -194,7 +194,7 @@ const History = () => {
               onClick={() => handleDayClick(day)}
               disabled={isFutureDate}
               className={cn(
-                "grid grid-rows-3 items-center justify-items-center p-1.5 min-h-[64px] rounded-xl transition-colors",
+                "grid grid-rows-3 content-center items-center justify-items-center p-1.5 min-h-[64px] rounded-xl transition-colors",
                 isFutureDate && "bg-muted/20 text-muted-foreground/50 cursor-default",
                 !isCurrentMonth && !isFutureDate && "bg-muted/30 hover:bg-muted/50 text-muted-foreground/60 cursor-pointer",
                 isCurrentMonth && !isFutureDate && !hasEntries && !hasWeights && "bg-muted/40 hover:bg-muted/60 cursor-pointer",
