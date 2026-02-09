@@ -1,20 +1,20 @@
 
 
-## Fix Calendar Cell Vertical Centering
+## Fix Calendar Cell Vertical Centering (Take 2)
 
-### Problem
+### Root Cause
 
-The 3-row grid inside each calendar day cell uses `items-center` (centers items within their row tracks) but lacks `content-center` (centers the row tracks themselves within the container). This causes the group of rows to sit at the bottom of the cell rather than being vertically centered.
+`grid-rows-3` expands to `grid-template-rows: repeat(3, 1fr)`. The three `1fr` tracks always stretch to consume the full container height, leaving zero free space for `content-center` to work with. That is why the previous one-word fix was invisible.
 
 ### Solution
 
-Add `content-center` to the button's className so the three grid rows (calories, day number, dumbbell) are centered as a group within the cell.
+On line 197 of `src/pages/History.tsx`, replace `grid-rows-3` with `grid-rows-[auto_auto_auto]`. Each row then sizes to its content, and `content-center` vertically centers the group within the cell's `min-h-[64px]`.
 
 ### File Changed
 
 | File | Change |
 |------|--------|
-| `src/pages/History.tsx` | Line 197: Add `content-center` to the button className, changing `grid grid-rows-3 items-center justify-items-center` to `grid grid-rows-3 content-center items-center justify-items-center` |
+| `src/pages/History.tsx` | Line 197: `grid-rows-3` becomes `grid-rows-[auto_auto_auto]` (rest of the class list unchanged) |
 
-Single one-word addition. No other changes needed.
+One class name swap, no other changes.
 
