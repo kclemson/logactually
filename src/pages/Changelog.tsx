@@ -7,6 +7,9 @@ import { FeedbackForm } from "@/components/FeedbackForm";
 // CHANGELOG ENTRIES - Add new entries at the top
 // Each entry: { date: "Mon-DD", text: "description", image?: "feature.png" }
 // Images go in /public/changelog/ folder
+//
+// NOTE: When updating entries, also update the changelog link text
+// in src/pages/Settings.tsx which displays the last-updated date to users.
 // ============================================
 
 type ChangelogEntry = {
