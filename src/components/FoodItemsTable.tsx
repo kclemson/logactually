@@ -325,7 +325,7 @@ export function FoodItemsTable({
       )}>
         {selectable && <span></span>}
         <span className={cn("px-1 font-semibold", showEntryDividers && "pl-4", compact && "text-sm")}>Total</span>
-        <span className={cn("px-1 text-center", compact ? "text-xs" : "text-heading")}>
+        <span className={cn("px-1 text-center inline-flex items-center justify-center", compact ? "text-xs" : "text-heading")}>
           {Math.round(totals.calories)}
           {showCalorieTargetDot && dailyCalorieTarget && dailyCalorieTarget > 0 && (
             <span className={`text-[10px] ml-0.5 leading-none relative top-[-0.5px] ${getTargetDotColor(totals.calories, dailyCalorieTarget)}`}>●</span>
