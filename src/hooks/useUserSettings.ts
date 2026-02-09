@@ -9,6 +9,7 @@ export interface UserSettings {
   showWeights: boolean;
   suggestMealSaves: boolean;
   suggestRoutineSaves: boolean;
+  dailyCalorieTarget: number | null;
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
@@ -17,6 +18,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   showWeights: true,
   suggestMealSaves: true,
   suggestRoutineSaves: true,
+  dailyCalorieTarget: null,
 };
 
 export function useUserSettings() {
