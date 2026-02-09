@@ -17,6 +17,7 @@ import {
 import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
+import { getTargetDotColor } from '@/lib/calorie-target';
 
 type EditableFieldKey = 'description' | 'calories';
 
@@ -68,6 +69,8 @@ interface FoodItemsTableProps {
   selectedIndices?: Set<number>;
   /** Callback when a row's checkbox is toggled */
   onSelectionChange?: (index: number, selected: boolean) => void;
+  dailyCalorieTarget?: number;
+  showCalorieTargetDot?: boolean;
 }
 
 export function FoodItemsTable({
@@ -97,6 +100,8 @@ export function FoodItemsTable({
   selectable = false,
   selectedIndices,
   onSelectionChange,
+  dailyCalorieTarget,
+  showCalorieTargetDot = false,
 }: FoodItemsTableProps) {
   // Read-only mode blocks saves
   const { isReadOnly, triggerOverlay } = useReadOnlyContext();
@@ -320,7 +325,12 @@ export function FoodItemsTable({
       )}>
         {selectable && <span></span>}
         <span className={cn("px-1 font-semibold", showEntryDividers && "pl-4", compact && "text-sm")}>Total</span>
-        <span className={cn("px-1 text-center", compact ? "text-xs" : "text-heading")}>{Math.round(totals.calories)}</span>
+        <span className={cn("px-1 text-center", compact ? "text-xs" : "text-heading")}>
+          {Math.round(totals.calories)}
+          {showCalorieTargetDot && dailyCalorieTarget && dailyCalorieTarget > 0 && (
+            <span className={`text-[10px] ml-0.5 leading-none relative top-[-0.5px] ${getTargetDotColor(totals.calories, dailyCalorieTarget)}`}>●</span>
+          )}
+        </span>
         <span className={cn("px-1 text-center", compact ? "text-xs" : "text-heading")}>
           <div>{Math.round(totals.protein)}/{Math.round(totals.carbs)}/{Math.round(totals.fat)}</div>
           {showMacroPercentages && (
