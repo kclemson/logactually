@@ -32,6 +32,13 @@ interface WeightDaySummary {
   exerciseCount: number;
 }
 
+function getTargetDotColor(calories: number, target: number): string {
+  const overPercent = ((calories - target) / target) * 100;
+  if (overPercent <= 2.5) return "text-green-500 dark:text-green-400";
+  if (overPercent <= 10) return "text-amber-500 dark:text-amber-400";
+  return "text-rose-500 dark:text-rose-400";
+}
+
 const History = () => {
   const navigate = useNavigate();
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -205,7 +212,14 @@ const History = () => {
                   : "invisible"
               )}>
                 {hasEntries && isCurrentMonth 
-                  ? `${Math.round(summary.totalCalories).toLocaleString()}cal` 
+                  ? (
+                    <>
+                      {`${Math.round(summary.totalCalories).toLocaleString()}cal`}
+                      {settings.dailyCalorieTarget && settings.dailyCalorieTarget > 0 && (
+                        <span className={`text-[8px] ml-[1px] ${getTargetDotColor(summary.totalCalories, settings.dailyCalorieTarget)}`}>●</span>
+                      )}
+                    </>
+                  )
                   : "\u00A0"}
               </span>
               

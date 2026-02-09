@@ -309,6 +309,26 @@ export default function Settings() {
             </div>
           )}
           
+          {/* Daily Calorie Target */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">Daily Calorie Target</p>
+              <p className="text-[10px] text-muted-foreground/70">Show color indicators on calendar view</p>
+            </div>
+            <input
+              type="number"
+              placeholder="Not set"
+              value={settings.dailyCalorieTarget ?? ''}
+              onChange={(e) => {
+                const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
+                updateSettings({ dailyCalorieTarget: val });
+              }}
+              className="w-24 h-8 text-right text-sm rounded-md border border-input bg-background px-3 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              min={0}
+              max={99999}
+            />
+          </div>
+
           {/* Weight Units - shown when weights enabled */}
           {showWeights && (
             <div className="flex items-center justify-between">
