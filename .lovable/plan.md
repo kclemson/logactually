@@ -1,26 +1,41 @@
 
 
-## Add Colored Indicator Circles to Calorie Target Description
+## Fix Calendar Picker Defaulting to Wrong Month
 
-### What Changes
+### Problem
+When viewing a date in a past month (e.g., January) and clicking the date header to open the calendar picker, it shows the current real-world month (February) instead of the month of the selected date. The "days with food logged" blue indicators also don't show because the data query is tied to `calendarMonth`, which is out of sync.
 
-Update the subtitle text under "Daily Calorie Target" in Settings to show the three colored dot indicators inline, replacing "Show color indicators on calendar view" with "Show `●` `●` `●` color indicators on calendar view" where the dots are green, amber, and red respectively.
+### Root Cause
+The `Calendar` component doesn't receive a controlled `month` prop, so react-day-picker defaults to today's month. While `calendarMonth` state is initialized correctly on mount, it's never reset when the popover re-opens.
+
+### Fix (2 changes in `src/pages/FoodLog.tsx`)
+
+1. **Reset `calendarMonth` when popover opens** -- Add an `onOpenChange` handler to the Popover that resets `calendarMonth` to the selected date's month whenever it opens.
+
+2. **Pass `month` prop to Calendar** -- Add `month={calendarMonth}` so the calendar display is controlled by state rather than defaulting to today.
+
+Same fix should also be applied to `src/pages/WeightLog.tsx` which has the identical pattern.
 
 ### Technical Details
 
-In `src/pages/Settings.tsx`, update the description `<p>` tag (currently around line 168) from:
+**FoodLog.tsx** (and matching changes in WeightLog.tsx):
 
+```tsx
+// Popover -- add onOpenChange
+<Popover open={calendarOpen} onOpenChange={(open) => {
+  if (open) setCalendarMonth(startOfMonth(selectedDate));
+  setCalendarOpen(open);
+}}>
+
+// Calendar -- add month prop
+<Calendar
+  mode="single"
+  month={calendarMonth}
+  selected={selectedDate}
+  onSelect={handleDateSelect}
+  onMonthChange={setCalendarMonth}
+  ...
+/>
 ```
-<p className="text-[10px] text-muted-foreground/70">Show color indicators on calendar view</p>
-```
 
-To:
-
-```
-<p className="text-[10px] text-muted-foreground/70">
-  Show <span className="text-green-500 dark:text-green-400">●</span> <span className="text-amber-500 dark:text-amber-400">●</span> <span className="text-rose-500 dark:text-rose-400">●</span> color indicators on calendar view
-</p>
-```
-
-The color classes match the existing `getTargetDotColor` function in `src/lib/calorie-target.ts`. Single line change, one file affected.
-
+Two files changed, minimal edits per file.
