@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from "react";
+import { Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const CHUNK_SIZE = 1024 * 1024; // 1MB
@@ -56,7 +57,15 @@ export function AppleHealthExplorer() {
   const [progress, setProgress] = useState({ read: 0, total: 0, found: 0 });
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [copiedType, setCopiedType] = useState<string | null>(null);
   const abortRef = useRef(false);
+
+  const handleCopy = useCallback(async (type: string, samples: WorkoutSample[]) => {
+    const text = samples.map((s) => s.xml).join("\n\n---\n\n");
+    await navigator.clipboard.writeText(text);
+    setCopiedType(type);
+    setTimeout(() => setCopiedType(null), 2000);
+  }, []);
 
   const scan = useCallback(async (file: File) => {
     setScanning(true);
@@ -242,13 +251,21 @@ export function AppleHealthExplorer() {
             .sort((a, b) => a[0].localeCompare(b[0]))
             .map(([type, samples]) => (
               <div key={type} className="border border-border/50 rounded">
-                <button
-                  className="w-full text-left text-xs px-2 py-1 hover:bg-muted/50 flex justify-between items-center font-medium"
-                  onClick={() => setExpandedKey(expandedKey === type ? null : type)}
-                >
-                  <span>{shortType(type)} ({samples.length} samples)</span>
-                  <span className="text-muted-foreground">{expandedKey === type ? "▼" : "▶"}</span>
-                </button>
+                <div className="flex items-center">
+                  <button
+                    className="flex-1 text-left text-xs px-2 py-1 hover:bg-muted/50 flex justify-between items-center font-medium"
+                    onClick={() => setExpandedKey(expandedKey === type ? null : type)}
+                  >
+                    <span>{shortType(type)} ({samples.length} samples)</span>
+                    <span className="text-muted-foreground">{expandedKey === type ? "▼" : "▶"}</span>
+                  </button>
+                  <button
+                    className="text-[10px] px-2 py-1 hover:bg-muted/50 text-muted-foreground flex items-center gap-1"
+                    onClick={() => handleCopy(type, samples)}
+                  >
+                    {copiedType === type ? <><Check className="h-3 w-3" /> Copied</> : <><Copy className="h-3 w-3" /> Copy</>}
+                  </button>
+                </div>
                 {expandedKey === type && (
                   <div className="border-t border-border/50">
                     {samples.map((w, i) => (
