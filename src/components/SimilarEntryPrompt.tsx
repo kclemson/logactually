@@ -66,7 +66,7 @@ export function SimilarEntryPrompt({
           onClick={onUsePastEntry}
           disabled={isLoading}
         >
-          Log Past Entry
+          Log this
         </Button>
         <Button
           size="sm"
