@@ -52,6 +52,7 @@ export const EXERCISE_MUSCLE_GROUPS: Record<string, ExerciseMuscles> = {
   hack_squat: { primary: 'Quads', secondary: ['Glutes'] },
   leg_extension: { primary: 'Quads' },
   leg_curl: { primary: 'Hamstrings' },
+  seated_leg_curl: { primary: 'Hamstrings' },
   romanian_deadlift: { primary: 'Hamstrings', secondary: ['Glutes', 'Lower Back'] },
   hip_thrust: { primary: 'Glutes', secondary: ['Hamstrings'] },
   calf_raise: { primary: 'Calves' },
