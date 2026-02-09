@@ -1,64 +1,96 @@
 
 
-## Add Color-Coded Columns to Admin Dashboard
+## Calorie Target with Tiered Indicator Dot
 
 ### Overview
 
-Apply blue color scheme to food-related columns and purple to weight-related columns for visual distinction, while preserving the existing green "today" indicators on F2day and W2day.
+Add a "Daily Calorie Target" setting with a helper description, and use a forgiving threshold system on the History calendar where being slightly over (up to 2.5%) still counts as green.
 
-### Color Scheme
+### Updated Thresholds
 
-| Type | Active (> 0) | Inactive (= 0) |
-|------|-------------|---------------|
-| **Food** | `text-blue-500` | `text-blue-400/50` |
-| **Weight** | `text-purple-500` | `text-purple-400/50` |
+| Condition | Dot Color | Example (1,500 target) |
+|-----------|-----------|----------------------|
+| No target set | No dot | -- |
+| Within 2.5% over (or under) | Green | up to 1,537 cal |
+| Over 2.5% to 10% over | Amber | 1,538 - 1,650 cal |
+| More than 10% over | Rose | 1,651+ cal |
 
-### Columns to Update
+### Settings Description
 
-**User Stats Table:**
-| Column | Line | Current | New |
-|--------|------|---------|-----|
-| F (total_entries) | 244-248 | no color / muted/50 | blue-500 / blue-400/50 |
-| SF (saved_meals_count) | 254-258 | no color / muted/50 | blue-500 / blue-400/50 |
-| W (total_weight_entries) | 269-273 | no color / muted/50 | purple-500 / purple-400/50 |
-| SW (saved_routines_count) | 279-283 | no color / muted/50 | purple-500 / purple-400/50 |
+Below the "Daily Calorie Target" label, the helper text reads:
 
-**Daily Stats Table:**
-| Column | Line | Current | New |
-|--------|------|---------|-----|
-| Food Logged (entry_count) | 330-331 | no color / muted/50 | blue-500 / blue-400/50 |
-| Weight Logged (weight_count) | 333-336 | no color / muted/50 | purple-500 / purple-400/50 |
-
-### Unchanged Columns
-
-- **F2day** (line 167): Keeps `text-green-500` for today activity
-- **W2day** (line 216): Keeps `text-green-500` for today activity
-
-### Implementation Details
-
-**File**: `src/pages/Admin.tsx`
-
-Each cell update follows this pattern:
-
-```typescript
-// Before (F column - line 245)
-className={`text-center py-0.5 pr-2 ${user.total_entries === 0 ? "text-muted-foreground/50" : ""}`}
-
-// After
-className={`text-center py-0.5 pr-2 ${user.total_entries === 0 ? "text-blue-400/50" : "text-blue-500"}`}
+```
+Daily Calorie Target
+Show color indicators on calendar view         [ Not set ]
 ```
 
-```typescript
-// Before (W column - line 270)
-className={`text-center py-0.5 pr-2 ${(user.total_weight_entries ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
+### Files to Change
 
-// After
-className={`text-center py-0.5 pr-2 ${(user.total_weight_entries ?? 0) === 0 ? "text-purple-400/50" : "text-purple-500"}`}
+| File | Change |
+|------|--------|
+| `src/hooks/useUserSettings.ts` | Add `dailyCalorieTarget: number \| null` to interface and defaults |
+| `src/pages/Settings.tsx` | Add input with two-line label (title + helper text) in Preferences section |
+| `src/pages/History.tsx` | Add colored dot with updated threshold logic |
+
+### Technical Details
+
+**1. UserSettings** (`src/hooks/useUserSettings.ts`)
+
+```typescript
+interface UserSettings {
+  // ...existing
+  dailyCalorieTarget: number | null;
+}
+
+const DEFAULT_SETTINGS = {
+  // ...existing
+  dailyCalorieTarget: null,
+};
 ```
 
-### Result
+**2. Settings UI** (`src/pages/Settings.tsx`)
 
-- Food columns (F, SF, Food Logged) will be blue-tinted
-- Weight columns (W, SW, Weight Logged) will be purple-tinted
-- Today columns (F2day, W2day) retain green highlighting for at-a-glance activity tracking
+New row in Preferences section:
+
+```typescript
+<div className="flex items-center justify-between">
+  <div>
+    <p className="text-xs text-muted-foreground">Daily Calorie Target</p>
+    <p className="text-[10px] text-muted-foreground/70">Show color indicators on calendar view</p>
+  </div>
+  <Input
+    type="number"
+    placeholder="Not set"
+    value={settings.dailyCalorieTarget ?? ''}
+    onChange={(e) => {
+      const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
+      updateSettings({ dailyCalorieTarget: val });
+    }}
+    className="w-24 h-8 text-right text-sm"
+    min={0}
+    max={99999}
+  />
+</div>
+```
+
+**3. Calendar dot logic** (`src/pages/History.tsx`)
+
+```typescript
+function getTargetDotColor(calories: number, target: number): string {
+  const overPercent = ((calories - target) / target) * 100;
+  if (overPercent <= 2.5) return "text-green-500 dark:text-green-400";
+  if (overPercent <= 10) return "text-amber-500 dark:text-amber-400";
+  return "text-rose-500 dark:text-rose-400";
+}
+```
+
+The dot (`●`) appears after the calorie text at `text-[8px]` size, only when a target is set and the day has entries. Calorie text stays blue.
+
+### Edge Cases
+
+- **Target of 0 or null**: no dot, calendar unchanged
+- **Exactly at target**: green (0% over)
+- **2.5% over** (e.g. 1,537 on 1,500): green -- still on-target
+- **3% over** (e.g. 1,545 on 1,500): amber -- minor overage
+- **Under target**: always green (negative percentage)
 
