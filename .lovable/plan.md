@@ -1,20 +1,22 @@
 
 
-## Set Demo Account Daily Calorie Target to 2000
+## Fix Vertical Alignment of Calorie Target Dot in Food Log Totals
 
 ### What Changes
 
-Update the demo account's profile settings in the database to include a `dailyCalorieTarget` of 2000, so the calorie indicator dots appear in the demo account on both History and Food Log pages.
+The colored dot next to the calorie total in the totals row is bottom-justified instead of vertically centered -- the same issue previously fixed on the History calendar.
 
-### Approach
+### Fix
 
-Run a SQL migration that updates the `settings` JSONB column on the demo account's profile row, merging in `{"dailyCalorieTarget": 2000}` while preserving any existing settings.
+In `src/components/FoodItemsTable.tsx` (line 328), add `inline-flex items-center` to the calories `<span>` so the dot aligns to the vertical center of the number.
 
-### Technical Details
+```
+// Before
+<span className={cn("px-1 text-center", compact ? "text-xs" : "text-heading")}>
 
-| Step | Detail |
-|------|--------|
-| SQL Migration | `UPDATE profiles SET settings = COALESCE(settings, '{}'::jsonb) \|\| '{"dailyCalorieTarget": 2000}'::jsonb WHERE id = (SELECT id FROM auth.users WHERE email = 'demo@logactually.com');` |
+// After
+<span className={cn("px-1 text-center inline-flex items-center justify-center", compact ? "text-xs" : "text-heading")}>
+```
 
-Single database change, no code modifications needed.
+Single line change, no other files affected.
 
