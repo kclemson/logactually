@@ -25,7 +25,7 @@ const CHUNK_SIZE = 1024 * 1024; // 1MB
 const OVERLAP_SIZE = 50 * 1024; // 50KB overlap for spanning blocks
 const BATCH_SIZE = 50;
 
-type Phase = "config" | "scanning" | "select" | "preview" | "importing" | "done";
+type Phase = "config" | "scanning" | "select" | "importing" | "done";
 
 interface TypeSummary {
   count: number;
@@ -66,9 +66,8 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
   const [allWorkouts, setAllWorkouts] = useState<ParsedWorkout[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
 
-  // Preview
-  const [previewNew, setPreviewNew] = useState(0);
-  const [previewSkip, setPreviewSkip] = useState(0);
+
+  // Import
 
   // Import
   const [importProgress, setImportProgress] = useState({ done: 0, total: 0 });
@@ -217,48 +216,6 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
     [allWorkouts, selectedTypes]
   );
 
-  const handlePreview = async () => {
-    if (!user) return;
-    setError(null);
-    setPhase("preview");
-
-
-
-    const exerciseKeys = [...new Set(selectedWorkouts.map((w) => w.mapping.exercise_key))];
-    const dates = selectedWorkouts.map((w) => w.loggedDate);
-    const minDate = dates.reduce((a, b) => (a < b ? a : b), dates[0]);
-    const maxDate = dates.reduce((a, b) => (a > b ? a : b), dates[0]);
-
-    const { data: existing, error: err } = await supabase
-      .from("weight_sets")
-      .select("exercise_key, logged_date, duration_minutes")
-      .eq("user_id", user.id)
-      .eq("raw_input", APPLE_HEALTH_RAW_INPUT)
-      .in("exercise_key", exerciseKeys)
-      .gte("logged_date", minDate)
-      .lte("logged_date", maxDate);
-
-    if (err) {
-      setError("Failed to check for duplicates: " + err.message);
-      setPhase("select");
-      return;
-    }
-
-    const existingSet = new Set(
-      (existing ?? []).map((e) => `${e.exercise_key}|${e.logged_date}|${Math.round(Number(e.duration_minutes) || 0)}`)
-    );
-
-    let newCount = 0;
-    let skipCount = 0;
-    for (const w of selectedWorkouts) {
-      const key = `${w.mapping.exercise_key}|${w.loggedDate}|${Math.round(w.durationMinutes || 0)}`;
-      if (existingSet.has(key)) skipCount++;
-      else newCount++;
-    }
-
-    setPreviewNew(newCount);
-    setPreviewSkip(skipCount);
-  };
 
   const handleImport = async () => {
     if (!user) return;
@@ -424,7 +381,7 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
       )}
 
       {/* Type selection */}
-      {(phase === "select" || phase === "preview") && sortedTypes.length > 0 && (
+      {phase === "select" && sortedTypes.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs font-medium text-muted-foreground">
             Workout types found ({allWorkouts.length} workouts in range)
@@ -450,39 +407,15 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
             })}
           </div>
 
-          {phase === "select" && (
             <Button
               size="sm"
-              onClick={handlePreview}
+              onClick={handleImport}
               disabled={selectedTypes.size === 0}
               className="text-xs"
             >
-              Preview Import
-            </Button>
-          )}
-        </div>
-      )}
-
-      {/* Preview */}
-      {phase === "preview" && (
-        <div className="space-y-3 p-3 border border-border rounded-lg bg-muted/30">
-          <div className="text-sm">
-            <span className="font-medium">{previewNew}</span> new workout{previewNew !== 1 ? "s" : ""} to import
-            {previewSkip > 0 && (
-              <span className="text-muted-foreground">
-                {" "}· {previewSkip} already imported (will skip)
-              </span>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Button size="sm" onClick={handleImport} disabled={previewNew === 0} className="text-xs">
               <Upload className="h-3.5 w-3.5 mr-1" />
-              Confirm Import
+              Import
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setPhase("select")} className="text-xs">
-              Back
-            </Button>
-          </div>
         </div>
       )}
 
