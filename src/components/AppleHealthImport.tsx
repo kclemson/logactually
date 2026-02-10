@@ -54,7 +54,6 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
 
   // Config phase
   const [fromDate, setFromDate] = useState<string>("");
-  const [skipDuplicates, setSkipDuplicates] = useState(true);
   const [lastImportLoaded, setLastImportLoaded] = useState(false);
 
   // Scanning
@@ -222,11 +221,7 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
     setError(null);
     setPhase("preview");
 
-    if (!skipDuplicates) {
-      setPreviewNew(selectedWorkouts.length);
-      setPreviewSkip(0);
-      return;
-    }
+
 
     const exerciseKeys = [...new Set(selectedWorkouts.map((w) => w.mapping.exercise_key))];
     const dates = selectedWorkouts.map((w) => w.loggedDate);
@@ -271,7 +266,7 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
 
     let toImport = selectedWorkouts;
 
-    if (skipDuplicates) {
+    {
       const exerciseKeys = [...new Set(toImport.map((w) => w.mapping.exercise_key))];
       const dates = toImport.map((w) => w.loggedDate);
       const minDate = dates.reduce((a, b) => (a < b ? a : b), dates[0]);
@@ -359,30 +354,6 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
             />
           </div>
 
-          {/* Duplicate handling */}
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className="text-xs text-muted-foreground">Skip duplicates</p>
-              <p className="text-[10px] text-muted-foreground/70">Only detects prior Apple Health imports</p>
-            </div>
-            <button
-              onClick={() => setSkipDuplicates(!skipDuplicates)}
-              className={cn(
-                "w-12 h-6 rounded-full transition-colors relative border flex-shrink-0",
-                skipDuplicates ? "bg-primary border-primary" : "bg-muted border-border"
-              )}
-            >
-              <span
-                className={cn(
-                  "absolute left-0 top-0.5 w-5 h-5 rounded-full shadow transition-transform",
-                  skipDuplicates
-                    ? "translate-x-6 bg-primary-foreground"
-                    : "translate-x-0.5 bg-white"
-                )}
-              />
-            </button>
-          </div>
-
           {/* File picker */}
           {phase === "config" && (
             <div>
@@ -465,7 +436,7 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
         <div className="space-y-3 p-3 border border-border rounded-lg bg-muted/30">
           <div className="text-sm">
             <span className="font-medium">{previewNew}</span> new workout{previewNew !== 1 ? "s" : ""} to import
-            {skipDuplicates && previewSkip > 0 && (
+            {previewSkip > 0 && (
               <span className="text-muted-foreground">
                 {" "}· {previewSkip} already imported (will skip)
               </span>
