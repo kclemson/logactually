@@ -1,28 +1,29 @@
 
 
-## Simplify Apple Health Import Dialog
+## Apple Health Import Dialog UX Improvements
 
-### 1. Remove "Skip duplicates" toggle -- always skip silently
+### 1. Reduce dialog header/subheader font size
 
-The toggle and its subtitle ("Only detects prior Apple Health imports") will be removed entirely. Duplicate detection will always run automatically during preview and import. This means:
+The DialogTitle and DialogDescription are using default sizes that feel oversized for this utility dialog. Shrink the title and remove or shrink the description so the content feels proportional.
 
-- Remove the `skipDuplicates` state variable
-- Remove the toggle UI block
-- In `handlePreview` and `handleImport`, always run the duplicate-check logic (remove the `if (skipDuplicates)` conditionals)
+### 2. Replace native file input with a styled button
 
-### 2. Fix default date showing just the month
+The native `<input type="file">` shows "No file chosen" text which is unnecessary since the UI transitions away once a file is picked. Replace it with a hidden file input triggered by a styled Button, showing just "Choose File" (or "Select export.xml").
 
-The `defaultFromDate` function returns an ISO date string like `"2025-11-12"`, but the date input may be selecting just the month portion on some browsers. The real issue is the date is set asynchronously after mount -- during the initial render `fromDate` is `""`. This should be fine for the `<input type="date">`, so the likely fix is just cosmetic. However, looking at the screenshot, the date `11/12/2025` is actually correct (90 days back from ~Feb 2026). The user said the "month" is selected by default -- this appears to be browser behavior where the month portion of the date field is highlighted/focused. This is native browser behavior and not something we control. I'll note this in the plan but won't change anything for it.
+### 3. Make scanning/results feel like a continuation, not a new dialog
+
+Currently the date picker and header/description persist across phases, making it feel like the dialog reset. The fix:
+- Only show the date picker and file chooser in the `config` phase
+- Once scanning starts, hide those and show progress inline
+- After scanning, show results (type selection, preview, import progress, done) without the date/file UI cluttering things up
+
+This means changing the condition `(phase === "config" || phase === "select" || phase === "preview")` for the date picker to just `phase === "config"`.
 
 ### Technical Details
 
 **File: `src/components/AppleHealthImport.tsx`**
 
-- **Remove state**: Delete `const [skipDuplicates, setSkipDuplicates] = useState(true);`
-- **Remove UI**: Delete the entire "Skip duplicates" toggle block (~15 lines in the config section)
-- **`handlePreview`**: Remove the `if (!skipDuplicates)` early return -- always run the duplicate check
-- **`handleImport`**: Remove the `if (skipDuplicates)` guard -- always filter out duplicates before inserting
-- **Preview display**: Keep showing the "X already imported (will skip)" count in the preview phase so users know what's happening, but remove the `skipDuplicates &&` condition from that display
-
-No changes needed for the date field -- the "month selected" appearance is native browser focus behavior on `<input type="date">`.
+- **Dialog header**: Add `className="text-base"` to DialogTitle and `className="text-xs"` to DialogDescription to reduce visual weight
+- **File input**: Replace the native `<input type="file">` with a hidden ref-based input and a `<Button>` that triggers it. Label: "Select export.xml"
+- **Phase visibility**: Change line 344 from `(phase === "config" || phase === "select" || phase === "preview")` to just `phase === "config"` so the date picker and file chooser disappear after scanning begins. The results phases (select, preview, importing, done) will show their content without the config UI, making the dialog feel like a smooth progression
 
