@@ -530,13 +530,13 @@ export function AppleHealthImport() {
       {/* Trigger row */}
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted-foreground">
-          Import from Apple Health{" "}
-          <button
+        Import from Apple Health{" "}
+          (<button
             onClick={() => setShowInstructions(!showInstructions)}
-            className="underline underline-offset-2 hover:text-foreground transition-colors"
+            className="text-xs underline underline-offset-2 hover:text-foreground transition-colors py-1"
           >
-            {showInstructions ? "(hide)" : "(see how)"}
-          </button>
+            {showInstructions ? "hide" : "see how"}
+          </button>)
         </p>
         <button
           onClick={() => setDialogOpen(true)}
