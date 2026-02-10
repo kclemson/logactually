@@ -1,24 +1,27 @@
 
 
-## Add Changelog Entry for Feb-10
+## Fix: Non-Deterministic Ordering of Weight Entries
 
-### Changes
+### Problem
 
-**1. Copy the uploaded screenshot to `public/changelog/`**
+Apple Health imports insert many entries with the same `created_at` timestamp. The `useWeightEntries` query only sorts by `created_at`, so when the query re-runs (e.g., after adding a new entry like "30m bike ride"), the database returns identically-timestamped rows in a different arbitrary order, making it look like existing entries changed values.
 
-Save `user-uploads://image-653.png` as `public/changelog/apple-health-import.png`.
+### Fix
 
-**2. Add new entry to `src/pages/Changelog.tsx`**
+Add a secondary sort on `id` in `useWeightEntries.ts` to guarantee deterministic ordering when `created_at` values are tied.
 
-Insert a new entry at the top of `CHANGELOG_ENTRIES` (line 24):
+**File: `src/hooks/useWeightEntries.ts` (line 24)**
 
+Change:
+```typescript
+.order('created_at', { ascending: true });
 ```
-{ date: "Feb-10", text: "Added support for importing workouts from Apple Health. If you use an Apple Watch, export your exercise data on your phone and then import that XML file in Settings. Also improved general UX for cardio.", image: "apple-health-import.png" },
+
+To:
+```typescript
+.order('created_at', { ascending: true })
+.order('id', { ascending: true });
 ```
 
-Update `LAST_UPDATED` from `"Feb-09-26"` to `"Feb-10-26"` (line 39).
-
-**3. Update Settings link text (`src/pages/Settings.tsx`)**
-
-Line 417: Change `Changelog (last updated Feb-09)` to `Changelog (last updated Feb-10)`.
+This is a one-line addition. The `id` column (UUID) is unique per row, so it breaks all ties deterministically. No other files need changes.
 
