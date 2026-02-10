@@ -1,25 +1,69 @@
 
 
-## Trim Distance (Miles) to 2 Decimal Places
-
-### Problem
-
-Distance values like `1.380000000000001` are showing up due to floating-point aggregation. This affects the Trends page tooltips, chart labels, and the Weight Log's cardio shorthand and expanded detail view.
+## Walking Chart Tweaks: Remove mph Mode + Simplify Duration Labels
 
 ### Changes
 
-All distance display points will use `.toFixed(2)` instead of raw values or `.toFixed(1)`.
+**1. Remove "mph" from Walking's chart mode cycle**
 
-**File: `src/components/WeightItemsTable.tsx`**
+Currently, clicking the Walking chart header cycles through: time -> mph -> distance. For `exercise_subtype === 'walking'`, this will change to: time -> distance (skipping mph).
 
-Three locations:
-1. **Line 501** (cardio shorthand label): `dist.toFixed(1)` changes to `dist.toFixed(2)`
-2. **Line 654/660** (weight column fallback for cardio): `Number(item.distance_miles).toFixed(1)` changes to `Number(item.distance_miles).toFixed(2)`
-3. **Lines 754, 758** (expanded entry detail view): raw `${distance}` changes to `${distance.toFixed(2)}`
+**2. Simplify duration labels for Walking**
 
-**File: `src/pages/Trends.tsx`**
+Walking durations don't need seconds precision. The bar labels above columns will show whole-minute or h:mm format instead of decimal minutes:
+- Under 60 min: `47` (just the number, since the subtitle says "time")
+- 60+ min: `1:05`
 
-Two locations:
-1. **Line 188** (chart bar label in distance mode): `.toFixed(1)` changes to `.toFixed(2)`
-2. **Lines 351, 361, 367** (tooltip): raw `${distance}` references change to use `.toFixed(2)`
+This only affects the bar labels on top of columns, not the tooltip (which will continue showing full detail).
+
+### Technical Details (single file: `src/pages/Trends.tsx`)
+
+**A. Pass `exercise_subtype` into mode cycle logic (~line 275-283)**
+
+The `handleHeaderClick` mode cycle will skip 'mph' when `exercise.exercise_subtype === 'walking'`:
+
+```typescript
+const isWalking = exercise.exercise_subtype === 'walking';
+
+const handleHeaderClick = supportsSpeedToggle 
+  ? () => {
+      const nextMode: CardioViewMode = 
+        isWalking
+          ? (cardioMode === 'time' ? 'distance' : 'time')      // skip mph
+          : (cardioMode === 'time' ? 'mph' : cardioMode === 'mph' ? 'distance' : 'time');
+      localStorage.setItem(`trends-cardio-mode-${exercise.exercise_key}`, nextMode);
+      setCardioMode(nextMode);
+    }
+  : undefined;
+```
+
+Also guard the initial state: if a walking chart has 'mph' saved in localStorage, fall back to 'time'.
+
+**B. Simplify walking duration bar labels (~line 185-189)**
+
+For walking exercises in "time" mode, format the label as whole minutes or h:mm instead of decimal:
+
+```typescript
+const cardioLabel = cardioMode === 'mph' 
+  ? `${mph}` 
+  : cardioMode === 'distance'
+    ? `${Number(d.distance_miles || 0).toFixed(2)}`
+    : isWalking
+      ? formatWalkingDuration(Number(d.duration_minutes || 0))  // "47" or "1:05"
+      : `${Number(d.duration_minutes || 0).toFixed(1)}`;
+```
+
+Where `formatWalkingDuration` is a small inline helper:
+
+```typescript
+function formatWalkingDuration(minutes: number): string {
+  const rounded = Math.round(minutes);
+  if (rounded >= 60) {
+    const h = Math.floor(rounded / 60);
+    const m = rounded % 60;
+    return `${h}:${m.toString().padStart(2, '0')}`;
+  }
+  return `${rounded}`;
+}
+```
 
