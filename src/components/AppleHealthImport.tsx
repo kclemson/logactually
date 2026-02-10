@@ -356,7 +356,7 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
           </div>
 
           {/* Styled file picker */}
-          <div>
+          <div className="flex justify-center">
             <input
               ref={fileInputRef}
               type="file"
@@ -504,6 +504,7 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
 export function AppleHealthImport() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
+  const [showDialogInstructions, setShowDialogInstructions] = useState(false);
 
   return (
     <>
@@ -548,8 +549,27 @@ export function AppleHealthImport() {
             <DialogHeader>
               <DialogTitle className="text-base">Import from Apple Health</DialogTitle>
               <DialogDescription className="text-xs">
-                Select your exported Apple Health XML file to import workouts.
+                Select your exported Apple Health XML file to import workouts.{" "}
+                 <button
+                   onClick={() => setShowDialogInstructions((v) => !v)}
+                   className="underline underline-offset-2 hover:text-foreground transition-colors"
+                 >
+                   ({showDialogInstructions ? "hide" : "see how"})
+                 </button>
               </DialogDescription>
+              {showDialogInstructions && (
+                <p className="text-xs text-muted-foreground leading-relaxed bg-muted/30 rounded-lg p-3 mt-2">
+                  To export from your iPhone: open the <strong>Health</strong> app → tap your profile picture → <strong>Export All Health Data</strong>. Save and unzip the file, then select <code className="text-[11px] bg-muted px-1 rounded">export.xml</code> in the import dialog.{" "}
+                  <a
+                    href="https://support.apple.com/guide/iphone/share-your-health-data-iph5ede58c3d/ios"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline underline-offset-2"
+                  >
+                    Learn more from Apple
+                  </a>
+                </p>
+              )}
             </DialogHeader>
             <AppleHealthImportDialog onClose={() => setDialogOpen(false)} />
           </DialogContent>
