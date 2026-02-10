@@ -60,6 +60,7 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
   const [phase, setPhase] = useState<Phase>("config");
   const [progress, setProgress] = useState({ read: 0, total: 0, found: 0 });
   const abortRef = useRef(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Results
   const [typeSummaries, setTypeSummaries] = useState<Record<string, TypeSummary>>({});
@@ -341,7 +342,7 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
   return (
     <div className="space-y-4">
       {/* Config phase */}
-      {(phase === "config" || phase === "select" || phase === "preview") && (
+      {phase === "config" && (
         <>
           {/* Date picker */}
           <div className="flex items-center justify-between">
@@ -354,18 +355,26 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
             />
           </div>
 
-          {/* File picker */}
-          {phase === "config" && (
-            <div>
-              <input
-                type="file"
-                accept=".xml"
-                onChange={handleFileChange}
-                disabled={!fromDate}
-                className="text-xs text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-primary file:text-primary-foreground file:cursor-pointer disabled:opacity-50 hover:file:bg-primary/90"
-              />
-            </div>
-          )}
+          {/* Styled file picker */}
+          <div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xml"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={!fromDate}
+              className="text-xs"
+            >
+              <Upload className="h-3.5 w-3.5 mr-1" />
+              Select export.xml
+            </Button>
+          </div>
         </>
       )}
 
@@ -537,8 +546,8 @@ export function AppleHealthImport() {
         {dialogOpen && (
           <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Import from Apple Health</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="text-base">Import from Apple Health</DialogTitle>
+              <DialogDescription className="text-xs">
                 Select your exported Apple Health XML file to import workouts.
               </DialogDescription>
             </DialogHeader>
