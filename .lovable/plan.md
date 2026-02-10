@@ -1,23 +1,27 @@
 
 
-## Replace Native Date Input with Shadcn Calendar Picker
+## Fix Dialog Closing When Selecting Calendar Date
 
-The native browser `<input type="date">` has uncontrollable behavior -- clicking "Today" closes the picker. Replacing it with the Shadcn Calendar + Popover component gives us full control over the interaction.
+This is a known Radix UI issue: when a Popover is nested inside a Dialog, selecting a date in the Calendar causes the Popover to close, and the closing Popover triggers the Dialog's "outside click" handler, which closes the Dialog too.
 
-### Changes
+### Fix
 
 **File: `src/components/AppleHealthImport.tsx`**
 
-1. **Add imports**: `format` from `date-fns`, `CalendarIcon` from `lucide-react`, `Calendar` from `@/components/ui/calendar`, `Popover`/`PopoverTrigger`/`PopoverContent` from `@/components/ui/popover`, `cn` from `@/lib/utils`.
+Add `onInteractOutside` to the `DialogContent` to prevent the Dialog from closing when the user interacts with the calendar popover portal. The popover renders in a portal outside the DialogContent DOM, so the Dialog thinks it's an outside click.
 
-2. **Change `fromDate` state type** from `string` to `Date | undefined`. Update the default date logic to produce a `Date` object instead of an ISO string.
+Change:
+```tsx
+<DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+```
 
-3. **Replace the native `<input type="date">`** (lines 332-339) with a Popover-based calendar picker:
-   - A Button trigger showing the formatted date (or "Pick a date" placeholder)
-   - A PopoverContent containing the Calendar component in `mode="single"`
-   - The calendar stays open when selecting a date -- no auto-close on "today"
+To:
+```tsx
+<DialogContent
+  className="max-w-md max-h-[80vh] overflow-y-auto"
+  onInteractOutside={(e) => e.preventDefault()}
+>
+```
 
-4. **Update references to `fromDate`**: Anywhere that passes `fromDate` as a string (e.g., to the `scan` function and the cutoff date comparison), convert with `format(fromDate, 'yyyy-MM-dd')` or use the Date object directly as appropriate.
-
-5. **Update the last-import-date loader**: Convert the loaded `logged_date` string to a `Date` object when setting state, and adjust `defaultFromDate` to return a `Date`.
+This prevents the Dialog from closing on any outside interaction (including the calendar popover portal clicks). The user can still close the dialog via the X button or Escape key.
 
