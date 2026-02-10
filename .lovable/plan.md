@@ -1,27 +1,19 @@
 
 
-## Fix Dialog Closing When Selecting Calendar Date
+## Move Apple Health Import Below Exports and Update Label
 
-This is a known Radix UI issue: when a Popover is nested inside a Dialog, selecting a date in the Calendar causes the Popover to close, and the closing Popover triggers the Dialog's "outside click" handler, which closes the Dialog too.
+Two changes in `src/pages/Settings.tsx`:
 
-### Fix
+1. **Move `<AppleHealthImport />`** from above the export rows (lines 368-371) to below the exercise export row (after line 396), keeping the same `showWeights && !isReadOnly` guard.
 
-**File: `src/components/AppleHealthImport.tsx`**
+2. **Update label text** in `src/components/AppleHealthImport.tsx` (line 491): Change `"Import from Apple Health"` to `"Import workouts from Apple Health"` -- the "(see how)" link already exists and stays as-is.
 
-Add `onInteractOutside` to the `DialogContent` to prevent the Dialog from closing when the user interacts with the calendar popover portal. The popover renders in a portal outside the DialogContent DOM, so the Dialog thinks it's an outside click.
+### Technical details
 
-Change:
-```tsx
-<DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-```
+**`src/pages/Settings.tsx`** (Import and Export section):
+- Remove lines 368-371 (the Apple Health import block above exports)
+- Insert `{showWeights && !isReadOnly && <AppleHealthImport />}` after the exercise export block (after line 396, before the `isReadOnly` message)
 
-To:
-```tsx
-<DialogContent
-  className="max-w-md max-h-[80vh] overflow-y-auto"
-  onInteractOutside={(e) => e.preventDefault()}
->
-```
-
-This prevents the Dialog from closing on any outside interaction (including the calendar popover portal clicks). The user can still close the dialog via the X button or Escape key.
+**`src/components/AppleHealthImport.tsx`** (line 491):
+- Change `Import from Apple Health` to `Import workouts from Apple Health`
 
