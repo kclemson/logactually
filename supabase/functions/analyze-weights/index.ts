@@ -170,8 +170,11 @@ serve(async (req) => {
       const hasCardioData = duration_minutes > 0 || distance_miles > 0;
       
       if (!hasWeightData && !hasCardioData) {
-        console.error("[analyze-weights] Exercise has neither weight nor cardio data:", exercise);
-        throw new Error("Could not understand exercise. Include sets/reps/weight or duration/distance.");
+        const knownCardioKeys = ['walk_run', 'cycling', 'elliptical', 'rowing', 'stair_climber', 'swimming', 'jump_rope'];
+        if (!knownCardioKeys.includes(String(exercise.exercise_key))) {
+          console.error("[analyze-weights] Exercise has neither weight nor cardio data:", exercise);
+          throw new Error("Could not understand exercise. Include sets/reps/weight or duration/distance.");
+        }
       }
 
       // Validate and sanitize exercise_metadata
