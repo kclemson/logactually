@@ -1,6 +1,10 @@
 import { useState, useRef, useCallback, useMemo } from "react";
-import { Upload, AlertCircle } from "lucide-react";
+import { Upload, AlertCircle, CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -40,11 +44,11 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
-function defaultFromDate(lastImportDate: string | null): string {
-  if (lastImportDate) return lastImportDate;
+function defaultFromDate(lastImportDate: string | null): Date {
+  if (lastImportDate) return new Date(lastImportDate + "T00:00:00");
   const d = new Date();
   d.setDate(d.getDate() - 90);
-  return d.toISOString().split("T")[0];
+  return d;
 }
 
 /** The dialog content with all import workflow logic. Resets on unmount. */
@@ -52,7 +56,7 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
   const { user } = useAuth();
 
   // Config phase
-  const [fromDate, setFromDate] = useState<string>("");
+  const [fromDate, setFromDate] = useState<Date | undefined>();
   const [lastImportLoaded, setLastImportLoaded] = useState(false);
 
   // Scanning
@@ -199,7 +203,7 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && fromDate) scan(file, fromDate);
+    if (file && fromDate) scan(file, format(fromDate, "yyyy-MM-dd"));
   };
 
   const toggleType = (type: string) => {
@@ -331,12 +335,30 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
           {/* Date picker */}
           <div className="flex items-center justify-between">
             <p className="text-xs text-muted-foreground">Import workouts since</p>
-            <input
-              type="date"
-              value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
-              className="h-8 text-sm rounded-md border border-input bg-background px-2 flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "h-8 text-sm justify-start text-left font-normal",
+                    !fromDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="h-3.5 w-3.5 mr-1" />
+                  {fromDate ? format(fromDate, "MMM d, yyyy") : "Pick a date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="single"
+                  selected={fromDate}
+                  onSelect={setFromDate}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Styled file picker */}
