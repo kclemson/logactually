@@ -372,34 +372,34 @@ export default function Settings() {
 
           {/* Food export row */}
           <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">Export food to CSV</p>
+            <p className="text-xs text-muted-foreground">Export to CSV</p>
             <div className="flex gap-2">
               <button
                 onClick={exportDailyTotals}
                 disabled={isExporting || isReadOnly}
                 className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors disabled:opacity-50"
               >
-                Daily Totals
+                Daily Food Totals
               </button>
               <button
                 onClick={exportFoodLog}
                 disabled={isExporting || isReadOnly}
                 className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors disabled:opacity-50"
               >
-                Detailed Log
+                Detailed Food Log
               </button>
             </div>
           </div>
           {/* Exercise export row */}
           {showWeights && (
             <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">Export exercise to CSV</p>
+              <p className="text-xs text-muted-foreground">Export to CSV</p>
               <button
                 onClick={exportWeightLog}
                 disabled={isExporting || isReadOnly}
                 className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors disabled:opacity-50"
               >
-                Detailed Log
+                Detailed Exercise Log
               </button>
             </div>
           )}
