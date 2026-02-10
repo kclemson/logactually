@@ -1,91 +1,115 @@
 
 
-## Add `exercise_subtype` Column for Granular Activity Tracking
+## Add `exercise_metadata` Support (DB + Client + Experimental Prompt)
 
-### Problem
+### Overview
 
-The `walk_run` exercise key intentionally consolidates walking, running, hiking, and treadmill activities because manual text input is often ambiguous. But Apple Health data is precise -- importing 2,847 walks and 156 runs into the same `walk_run` bucket would make charts and trends useless, with walks drowning out runs.
+Two parallel tracks:
+1. **Ship now:** Database column, types, data persistence, and CSV export -- these are safe, no behavior change for users until the AI actually returns metadata.
+2. **Experimental only:** Move the weights prompt into `_shared/prompts.ts` with default/experimental versioning (matching the food pattern), and add the `exercise_metadata` extraction instructions only to the experimental prompt. This lets you test via the DevTools prompt eval panel before promoting to production.
 
-### Solution
+### Your question about multi-field examples
 
-Add an optional `exercise_subtype` text column to `weight_sets`. When present, charts and trends can split data by subtype. When absent (legacy manual entries), everything works exactly as it does today.
+Good instinct. Yes -- the response format example should show an `exercise_metadata` object with more than one field so the AI learns the structure. The example will be:
 
-### Schema Change
-
-**`weight_sets` table:** Add `exercise_subtype` (text, nullable, default NULL)
-
-Example values by exercise_key:
-
-```text
-exercise_key  | exercise_subtype
---------------|-----------------
-walk_run      | walking
-walk_run      | running
-walk_run      | hiking
-walk_run      | NULL          (ambiguous manual entry)
-cycling       | indoor
-cycling       | outdoor
-cycling       | NULL          (manual entry)
-swimming      | pool
-swimming      | open_water
-swimming      | NULL
+```json
+{ "exercise_key": "walk_run", "exercise_subtype": "running", "description": "Hard Treadmill Run", "duration_minutes": 20, "distance_miles": 2.1, "exercise_metadata": { "incline_pct": 5, "effort": 8, "calories_burned": 320 } }
 ```
 
-### How It Flows Through the System
+This shows all three fields together so the AI sees how to combine them.
 
-**Apple Health Import (always sets subtype):**
-- HKWorkoutActivityTypeWalking -> exercise_key: `walk_run`, exercise_subtype: `walking`
-- HKWorkoutActivityTypeRunning -> exercise_key: `walk_run`, exercise_subtype: `running`
-- HKWorkoutActivityTypeHiking -> exercise_key: `walk_run`, exercise_subtype: `hiking`
-- HKWorkoutActivityTypeCycling + HKIndoorWorkout=1 -> `cycling`, subtype: `indoor`
-- HKWorkoutActivityTypeCycling + HKIndoorWorkout=0 -> `cycling`, subtype: `outdoor`
-- HKWorkoutActivityTypeSwimming + HKSwimmingLocationType=1 -> `swimming`, subtype: `pool`
+---
 
-**Manual entry via analyze-weights (optionally sets subtype):**
-- "ran 3 miles 25 min" -> exercise_key: `walk_run`, exercise_subtype: `running`
-- "treadmill 30 min" -> exercise_key: `walk_run`, exercise_subtype: `NULL` (ambiguous)
-- "hiked 5 miles" -> exercise_key: `walk_run`, exercise_subtype: `hiking`
+### 1. Database migration
 
-**Existing data:** All current rows get `NULL` subtype. No behavior change.
+```sql
+ALTER TABLE public.weight_sets ADD COLUMN exercise_metadata jsonb DEFAULT NULL;
+```
 
-### Chart/Trends Behavior
+### 2. Type updates (`src/types/weight.ts`)
 
-The trends page (`useWeightTrends.ts`) currently aggregates by `exercise_key`. With subtypes:
+Add `exercise_metadata?: Record<string, number> | null` to `WeightSet`, `WeightSetRow`, `AnalyzedExercise`, and `SavedExerciseSet`.
 
-- If a `walk_run` exercise has rows with subtypes, show them as **separate trend entries**: "Walking", "Running", "Hiking"
-- Rows with NULL subtype stay grouped as "Walk / Run" (the current behavior)
-- The description field on each trend entry comes from the subtype display name when available
-- This means a user who only manually logs will see no change; a user who imports Apple Health data will see their walks and runs as separate charts
+### 3. Data persistence (`src/hooks/useWeightEntries.ts`)
 
-### Files to Change
+- Read: map `row.exercise_metadata` through on fetch
+- Write: include `exercise_metadata` in insert rows
 
-1. **Database migration** - Add `exercise_subtype` column to `weight_sets`
+### 4. Analyze hook (`src/hooks/useAnalyzeWeights.ts`)
 
-2. **`src/types/weight.ts`** - Add `exercise_subtype?: string | null` to `WeightSet`, `WeightSetRow`, `AnalyzedExercise`, and `SavedExerciseSet`
+Pass `exercise_metadata` through from the edge function response (it will be null/undefined from the default prompt, populated from experimental).
 
-3. **`src/hooks/useWeightTrends.ts`** - Change aggregation key from just `exercise_key` to `exercise_key + (exercise_subtype || '')`. When subtype exists, use its display name as the trend description
+### 5. CSV export (`src/lib/csv-export.ts` + `src/hooks/useExportData.ts`)
 
-4. **`src/lib/exercise-metadata.ts`** - Add subtype-aware display names and muscle group lookups (subtypes inherit from parent key, e.g., `walking` inherits Cardio from `walk_run`)
+- Add `exercise_metadata` to `WeightSetExport` interface
+- Add three CSV columns: `Incline (%)`, `Effort (1-10)`, `Calories Burned`
+- Fetch `exercise_metadata` in the export query
 
-5. **`supabase/functions/_shared/exercises.ts`** and **`supabase/functions/analyze-weights/index.ts`** - Add optional `exercise_subtype` to the AI response schema so the normalizer can set it when the input is unambiguous
+### 6. Move weights prompt to `_shared/prompts.ts`
 
-6. **`src/hooks/useAppleHealthImport.ts`** (new, part of the import feature) - Set subtype based on Apple Health workout activity type mapping
+Extract the inline `ANALYZE_WEIGHTS_PROMPT` from `analyze-weights/index.ts` into `_shared/prompts.ts` as two versions:
 
-7. **`src/components/WeightItemsTable.tsx`** - Display subtype in the description when present (e.g., show "Running" instead of generic "Walk / Run")
+- `ANALYZE_WEIGHTS_PROMPT_DEFAULT` -- identical to today's prompt (no behavior change)
+- `ANALYZE_WEIGHTS_PROMPT_EXPERIMENTAL` -- adds the exercise metadata section and multi-field example
 
-### What This Does NOT Change
+Add a `getAnalyzeWeightsPrompt(version)` function matching the existing `getAnalyzeFoodPrompt(version)` pattern.
 
-- Saved routines: subtypes are informational, not required. A saved routine with `walk_run` exercises works fine without subtypes
-- History page calendar: still just checks if weight_sets exist for a date
-- Existing manual entry flow: no UI changes needed, the AI normalizer optionally populates it
+### 7. Update `analyze-weights/index.ts`
 
-### Implementation Order
+- Import `getAnalyzeWeightsPrompt` and `PromptVersion` from `_shared/prompts.ts`
+- Accept `promptVersion` from request body (same as analyze-food does)
+- Select prompt based on version
+- Add metadata sanitization in the normalizer (allowlist: `incline_pct`, `effort`, `calories_burned`; coerce to numbers; clamp effort to 1-10)
+- Include `exercise_metadata` in the normalized output
 
-This is a prerequisite for the Apple Health import feature. Recommended sequence:
-1. Database migration (add column)
-2. Type updates
-3. Trends aggregation update
-4. Exercise metadata updates
-5. AI normalizer update (edge function)
-6. Then build the import feature on top
+### 8. Experimental prompt additions (exact text)
 
+Added between the cardio section and response format section:
+
+```text
+## EXERCISE METADATA (optional)
+
+If the user explicitly mentions any of the following, include an "exercise_metadata" object on that exercise. Only include fields that are clearly stated or strongly implied. Omit the entire object if none apply.
+
+- incline_pct: treadmill or machine incline as a number (e.g., "5% incline" -> 5, "incline 12" -> 12)
+- effort: perceived effort on a 1-10 scale. Map natural language to this scale:
+  - 1-2: recovery, very easy, barely trying
+  - 3-4: easy, light, comfortable
+  - 5-6: moderate, steady, medium effort
+  - 7-8: hard, challenging, tough, difficult
+  - 9-10: all-out, maximum effort, brutal, hardest ever
+  - If the user gives a numeric rating (e.g., "8/10 difficulty"), use that number directly
+- calories_burned: calories the user says they burned (e.g., "burned 350 cal" -> 350)
+```
+
+Updated response format example:
+
+```json
+{
+  "exercises": [
+    { "exercise_key": "bench_press", "description": "Bench Press", "sets": 3, "reps": 10, "weight_lbs": 135 },
+    { "exercise_key": "walk_run", "exercise_subtype": "running", "description": "Hard Treadmill Run", "duration_minutes": 20, "distance_miles": 2.1, "exercise_metadata": { "incline_pct": 5, "effort": 8, "calories_burned": 320 } },
+    { "exercise_key": "walk_run", "description": "Treadmill Walk", "duration_minutes": 30 }
+  ]
+}
+```
+
+Note: one exercise has all three metadata fields, one has none -- this teaches the AI both patterns.
+
+### What does NOT change
+
+- Default prompt behavior (production users see zero change)
+- WeightItemsTable UI
+- Trends/charts
+- Saved routines
+
+### Testing flow
+
+After deploying, go to the Admin page, switch test type to "weights" and prompt version to "experimental", then run test cases like:
+- "really hard treadmill run at 5% incline for 20 min"
+- "easy walk 30 minutes"
+- "bench press 3x10 135 medium effort"
+- "burned 400 calories on elliptical 30 min"
+- "8/10 difficulty cycling 45 min"
+
+Once you're happy with the results, we promote the experimental prompt to default.
