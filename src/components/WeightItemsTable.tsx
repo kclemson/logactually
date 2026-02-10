@@ -493,10 +493,23 @@ export function WeightItemsTable({
                   ((item.duration_minutes ?? 0) > 0 || (item.distance_miles ?? 0) > 0);
                 
                 if (isCardioItem && (editable || showCardioLabel)) {
-                  // For cardio items, show a single "cardio" label spanning all 3 columns
+                  // Build a data-driven shorthand label for cardio items
+                  const parts: string[] = [];
+                  const dist = item.distance_miles ?? 0;
+                  const dur = item.duration_minutes ?? 0;
+
+                  if (dist > 0) parts.push(`${dist.toFixed(1)} mi`);
+                  if (dur > 0) parts.push(formatDurationMmSs(dur));
+                  if (dist > 0 && dur > 0) {
+                    const mph = dist / (dur / 60);
+                    parts.push(`${mph.toFixed(1)} mph`);
+                  }
+
+                  const label = parts.length > 0 ? parts.join(', ') : 'cardio';
+
                   return (
-                    <span className="col-span-3 text-center text-muted-foreground italic py-1">
-                      cardio
+                    <span className="col-span-3 text-center text-xs text-muted-foreground italic py-1">
+                      {label}
                     </span>
                   );
                 }
