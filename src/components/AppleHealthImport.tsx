@@ -349,20 +349,35 @@ export function AppleHealthImport() {
     return b[1].count - a[1].count;
   });
 
+  const [showInstructions, setShowInstructions] = useState(false);
+
   return (
     <div className="space-y-4">
-      {/* Instructions */}
-      <p className="text-xs text-muted-foreground leading-relaxed">
-        To export from your iPhone: open the <strong>Health</strong> app → tap your profile picture → <strong>Export All Health Data</strong>. Save and unzip the file, then select <code className="text-[11px] bg-muted px-1 rounded">export.xml</code> below.{" "}
-        <a
-          href="https://support.apple.com/guide/iphone/share-your-health-data-iph5ede58c3d/ios"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline underline-offset-2"
+      {/* Header row */}
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">Import from Apple Health</p>
+        <button
+          onClick={() => setShowInstructions(!showInstructions)}
+          className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
         >
-          Learn more from Apple
-        </a>
-      </p>
+          {showInstructions ? "hide" : "(see how)"}
+        </button>
+      </div>
+
+      {/* Collapsible instructions */}
+      {showInstructions && (
+        <p className="text-xs text-muted-foreground leading-relaxed bg-muted/30 rounded-lg p-3">
+          To export from your iPhone: open the <strong>Health</strong> app → tap your profile picture → <strong>Export All Health Data</strong>. Save and unzip the file, then select <code className="text-[11px] bg-muted px-1 rounded">export.xml</code> below.{" "}
+          <a
+            href="https://support.apple.com/guide/iphone/share-your-health-data-iph5ede58c3d/ios"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline underline-offset-2"
+          >
+            Learn more from Apple
+          </a>
+        </p>
+      )}
 
       {/* Config phase */}
       {(phase === "config" || phase === "select" || phase === "preview") && (

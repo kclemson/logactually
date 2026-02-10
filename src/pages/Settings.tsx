@@ -365,20 +365,14 @@ export default function Settings() {
       {/* Import and Export */}
       <CollapsibleSection title="Import and Export" icon={ArrowDownUp} storageKey="settings-export">
         <div className="space-y-4">
-          {/* Import sub-section */}
+          {/* Apple Health import */}
           {showWeights && !isReadOnly && (
-            <>
-              <p className="text-xs font-medium text-muted-foreground">Import</p>
-              <AppleHealthImport />
-            </>
+            <AppleHealthImport />
           )}
-
-          {/* Export sub-section */}
-          <p className="text-xs font-medium text-muted-foreground">Export</p>
 
           {/* Food export row */}
           <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">Food</p>
+            <p className="text-xs text-muted-foreground">Export food to CSV</p>
             <div className="flex gap-2">
               <button
                 onClick={exportDailyTotals}
@@ -399,7 +393,7 @@ export default function Settings() {
           {/* Exercise export row */}
           {showWeights && (
             <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">Exercise</p>
+              <p className="text-xs text-muted-foreground">Export exercise to CSV</p>
               <button
                 onClick={exportWeightLog}
                 disabled={isExporting || isReadOnly}
