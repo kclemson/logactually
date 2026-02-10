@@ -21,7 +21,8 @@ export function useWeightEntries(date: string) {
         .from('weight_sets')
         .select('*')
         .eq('logged_date', date)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true });
 
       if (error) throw error;
 
