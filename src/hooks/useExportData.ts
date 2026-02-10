@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { FoodEntry, FoodItem } from '@/types/food';
-import { exportDailyTotals, exportFoodLog, exportWeightLog as exportWeightLogCSV, WeightSetExport } from '@/lib/csv-export';
+import { exportFoodLog, exportWeightLog as exportWeightLogCSV, WeightSetExport } from '@/lib/csv-export';
 
 export function useExportData() {
   const [isExporting, setIsExporting] = useState(false);
@@ -65,18 +65,6 @@ export function useExportData() {
     }));
   };
 
-  const handleExportDailyTotals = async () => {
-    setIsExporting(true);
-    try {
-      const entries = await fetchAllEntries();
-      exportDailyTotals(entries);
-    } catch (error) {
-      console.error('Export failed:', error);
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
   const handleExportFoodLog = async () => {
     setIsExporting(true);
     try {
@@ -103,7 +91,6 @@ export function useExportData() {
 
   return {
     isExporting,
-    exportDailyTotals: handleExportDailyTotals,
     exportFoodLog: handleExportFoodLog,
     exportWeightLog: handleExportWeightLog,
   };

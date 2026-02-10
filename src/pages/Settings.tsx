@@ -57,7 +57,7 @@ export default function Settings() {
   const [expandedRoutineIds, setExpandedRoutineIds] = useState<Set<string>>(new Set());
 
   // Export data
-  const { isExporting, exportDailyTotals, exportFoodLog, exportWeightLog } = useExportData();
+  const { isExporting, exportFoodLog, exportWeightLog } = useExportData();
 
   // Avoid hydration mismatch
   useEffect(() => {
@@ -373,22 +373,13 @@ export default function Settings() {
           {/* Food export row */}
           <div className="flex items-center justify-between">
             <p className="text-xs text-muted-foreground">Export to CSV</p>
-            <div className="flex gap-2">
-              <button
-                onClick={exportDailyTotals}
-                disabled={isExporting || isReadOnly}
-                className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors disabled:opacity-50"
-              >
-                Daily Food Totals
-              </button>
-              <button
-                onClick={exportFoodLog}
-                disabled={isExporting || isReadOnly}
-                className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors disabled:opacity-50"
-              >
-                Detailed Food Log
-              </button>
-            </div>
+            <button
+              onClick={exportFoodLog}
+              disabled={isExporting || isReadOnly}
+              className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors disabled:opacity-50"
+            >
+              Detailed Food Log
+            </button>
           </div>
           {/* Exercise export row */}
           {showWeights && (
