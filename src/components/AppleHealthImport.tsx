@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useMemo } from "react";
 import { Upload, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -9,7 +9,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   ACTIVITY_MAP,
@@ -75,6 +74,7 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
   const [importProgress, setImportProgress] = useState({ done: 0, total: 0 });
   const [importedCount, setImportedCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [showInstructions, setShowInstructions] = useState(false);
 
   // Load last import date on mount
   if (!lastImportLoaded && user) {
@@ -334,19 +334,46 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
   const pct = progress.total > 0 ? (progress.read / progress.total) * 100 : 0;
   const importPct = importProgress.total > 0 ? (importProgress.done / importProgress.total) * 100 : 0;
 
-  const sortedTypes = Object.entries(typeSummaries).sort((a, b) => {
-    if (a[1].mapped !== b[1].mapped) return a[1].mapped ? -1 : 1;
-    return b[1].count - a[1].count;
-  });
+  const sortedTypes = Object.entries(typeSummaries)
+    .filter(([_, info]) => info.mapped)
+    .sort((a, b) => b[1].count - a[1].count);
 
   return (
     <div className="space-y-4">
+      {/* Description + see how (config phase only) */}
+      {phase === "config" && (
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">
+            First, export your exercise data from the Health app on your phone.{" "}
+            (<button
+              onClick={() => setShowInstructions((v) => !v)}
+              className="text-xs underline underline-offset-2 hover:text-foreground transition-colors"
+            >
+              {showInstructions ? "hide" : "see how"}
+            </button>)
+          </p>
+          {showInstructions && (
+            <p className="text-xs text-muted-foreground leading-relaxed bg-muted/30 rounded-lg p-3">
+              Open the <strong>Health</strong> app → tap your profile picture → <strong>Export All Health Data</strong>. Save and unzip the file, then select <code className="text-[11px] bg-muted px-1 rounded">export.xml</code> below.{" "}
+              <a
+                href="https://support.apple.com/guide/iphone/share-your-health-data-iph5ede58c3d/ios"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2"
+              >
+                Learn more
+              </a>
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Config phase */}
       {phase === "config" && (
         <>
           {/* Date picker */}
           <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">Import workouts from</p>
+            <p className="text-xs text-muted-foreground">Import workouts since</p>
             <input
               type="date"
               value={fromDate}
@@ -403,28 +430,24 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
             Workout types found ({allWorkouts.length} workouts in range)
           </p>
           <div className="space-y-1">
-            {sortedTypes.map(([type, info]) => (
-              <label
-                key={type}
-                className={cn(
-                  "flex items-center gap-2 py-1 text-sm",
-                  !info.mapped && "opacity-40 cursor-not-allowed"
-                )}
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedTypes.has(type)}
-                  onChange={() => info.mapped && toggleType(type)}
-                  disabled={!info.mapped}
-                  className="rounded border-border"
-                />
-                <span>{info.description}</span>
-                <span className="text-xs text-muted-foreground">({info.count})</span>
-                {!info.mapped && (
-                  <span className="text-[10px] text-muted-foreground">(not supported)</span>
-                )}
-              </label>
-            ))}
+            {sortedTypes.map(([type, info]) => {
+              const inRangeCount = allWorkouts.filter((w) => w.activityType === type).length;
+              return (
+                <label
+                  key={type}
+                  className="flex items-center gap-2 py-1 text-sm"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedTypes.has(type)}
+                    onChange={() => toggleType(type)}
+                    className="rounded border-border"
+                  />
+                  <span>{info.description}</span>
+                  <span className="text-xs text-muted-foreground">({inRangeCount})</span>
+                </label>
+              );
+            })}
           </div>
 
           {phase === "select" && (
@@ -504,7 +527,6 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
 export function AppleHealthImport() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
-  const [showDialogInstructions, setShowDialogInstructions] = useState(false);
 
   return (
     <>
@@ -548,28 +570,6 @@ export function AppleHealthImport() {
           <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-base">Import from Apple Health</DialogTitle>
-              <DialogDescription className="text-xs">
-                Select your exported Apple Health XML file to import workouts.{" "}
-                 <button
-                   onClick={() => setShowDialogInstructions((v) => !v)}
-                   className="underline underline-offset-2 hover:text-foreground transition-colors"
-                 >
-                   ({showDialogInstructions ? "hide" : "see how"})
-                 </button>
-              </DialogDescription>
-              {showDialogInstructions && (
-                <p className="text-xs text-muted-foreground leading-relaxed bg-muted/30 rounded-lg p-3 mt-2">
-                  To export from your iPhone: open the <strong>Health</strong> app → tap your profile picture → <strong>Export All Health Data</strong>. Save and unzip the file, then select <code className="text-[11px] bg-muted px-1 rounded">export.xml</code> in the import dialog.{" "}
-                  <a
-                    href="https://support.apple.com/guide/iphone/share-your-health-data-iph5ede58c3d/ios"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline underline-offset-2"
-                  >
-                    Learn more from Apple
-                  </a>
-                </p>
-              )}
             </DialogHeader>
             <AppleHealthImportDialog onClose={() => setDialogOpen(false)} />
           </DialogContent>
