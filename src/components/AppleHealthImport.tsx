@@ -1,0 +1,537 @@
+import { useState, useRef, useCallback, useMemo } from "react";
+import { Upload, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import {
+  ACTIVITY_MAP,
+  MAPPED_TYPES,
+  APPLE_HEALTH_RAW_INPUT,
+  shortTypeName,
+  extractAttribute,
+  parseStartDate,
+  parseWorkoutBlock,
+  type ParsedWorkout,
+} from "@/lib/apple-health-mapping";
+
+const CHUNK_SIZE = 1024 * 1024; // 1MB
+const OVERLAP_SIZE = 50 * 1024; // 50KB overlap for spanning blocks
+const BATCH_SIZE = 50;
+
+type Phase = "config" | "scanning" | "select" | "preview" | "importing" | "done";
+
+interface TypeSummary {
+  count: number;
+  mapped: boolean;
+  description: string;
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(0)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
+function defaultFromDate(lastImportDate: string | null): string {
+  if (lastImportDate) return lastImportDate;
+  const d = new Date();
+  d.setDate(d.getDate() - 90);
+  return d.toISOString().split("T")[0];
+}
+
+export function AppleHealthImport() {
+  const { user } = useAuth();
+
+  // Config phase
+  const [fromDate, setFromDate] = useState<string>("");
+  const [skipDuplicates, setSkipDuplicates] = useState(true);
+  const [lastImportLoaded, setLastImportLoaded] = useState(false);
+
+  // Scanning
+  const [phase, setPhase] = useState<Phase>("config");
+  const [progress, setProgress] = useState({ read: 0, total: 0, found: 0 });
+  const abortRef = useRef(false);
+
+  // Results
+  const [typeSummaries, setTypeSummaries] = useState<Record<string, TypeSummary>>({});
+  const [allWorkouts, setAllWorkouts] = useState<ParsedWorkout[]>([]);
+  const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
+
+  // Preview
+  const [previewNew, setPreviewNew] = useState(0);
+  const [previewSkip, setPreviewSkip] = useState(0);
+
+  // Import
+  const [importProgress, setImportProgress] = useState({ done: 0, total: 0 });
+  const [importedCount, setImportedCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load last import date on mount
+  if (!lastImportLoaded && user) {
+    setLastImportLoaded(true);
+    supabase
+      .from("weight_sets")
+      .select("logged_date")
+      .eq("user_id", user.id)
+      .eq("raw_input", APPLE_HEALTH_RAW_INPUT)
+      .order("logged_date", { ascending: false })
+      .limit(1)
+      .then(({ data }) => {
+        const lastDate = data?.[0]?.logged_date ?? null;
+        setFromDate(defaultFromDate(lastDate));
+      });
+  }
+
+  const scan = useCallback(async (file: File, cutoffDate: string) => {
+    setPhase("scanning");
+    setError(null);
+    abortRef.current = false;
+    setAllWorkouts([]);
+    setTypeSummaries({});
+
+    const cutoff = new Date(cutoffDate);
+    const decoder = new TextDecoder("utf-8");
+    const workouts: ParsedWorkout[] = [];
+    const types: Record<string, TypeSummary> = {};
+    let totalFound = 0;
+
+    // Reverse streaming: start from end of file
+    let endOffset = file.size;
+    let carryover = "";
+    let stoppedEarly = false;
+
+    while (endOffset > 0 && !abortRef.current) {
+      const startOffset = Math.max(0, endOffset - CHUNK_SIZE);
+      const blob = file.slice(startOffset, endOffset);
+      const arrayBuf = await blob.arrayBuffer();
+      const text = decoder.decode(arrayBuf, { stream: startOffset > 0 });
+
+      // Prepend carryover from previous (later in file) chunk
+      const combined = text + carryover;
+
+      // Extract <Workout ...>...</Workout> and self-closing <Workout ... /> blocks
+      let searchFrom = 0;
+      const chunkWorkouts: ParsedWorkout[] = [];
+      let oldestInChunk: Date | null = null;
+
+      while (true) {
+        const startTag = combined.indexOf("<Workout ", searchFrom);
+        if (startTag === -1) break;
+
+        const closeSlash = combined.indexOf("/>", startTag);
+        const closeAngle = combined.indexOf(">", startTag);
+        const isSelfClosing = closeSlash !== -1 && closeAngle !== -1 && closeSlash + 1 === closeAngle;
+
+        let workoutXml: string;
+        let endPos: number;
+
+        if (isSelfClosing) {
+          endPos = closeSlash + 2;
+          workoutXml = combined.substring(startTag, endPos);
+        } else {
+          const endTag = combined.indexOf("</Workout>", startTag);
+          if (endTag === -1) break;
+          endPos = endTag + "</Workout>".length;
+          workoutXml = combined.substring(startTag, endPos);
+        }
+
+        const activityType = extractAttribute(workoutXml, "workoutActivityType");
+        if (activityType) {
+          totalFound++;
+          const isMapped = MAPPED_TYPES.has(activityType);
+          const desc = isMapped ? ACTIVITY_MAP[activityType].description : shortTypeName(activityType);
+
+          if (!types[activityType]) {
+            types[activityType] = { count: 0, mapped: isMapped, description: desc };
+          }
+          types[activityType].count++;
+
+          if (isMapped) {
+            const parsed = parseWorkoutBlock(workoutXml);
+            if (parsed) {
+              if (parsed.startDate < cutoff) {
+                oldestInChunk = parsed.startDate;
+              } else {
+                chunkWorkouts.push(parsed);
+              }
+            }
+          }
+
+          // Track oldest date in chunk
+          const sd = parseStartDate(workoutXml);
+          if (sd && (!oldestInChunk || sd < oldestInChunk)) {
+            oldestInChunk = sd;
+          }
+        }
+
+        searchFrom = endPos;
+      }
+
+      workouts.push(...chunkWorkouts);
+
+      // Keep overlap for spanning blocks
+      if (startOffset > 0) {
+        carryover = combined.substring(0, OVERLAP_SIZE);
+      }
+
+      setProgress({ read: file.size - startOffset, total: file.size, found: totalFound });
+
+      // If the oldest record in this chunk is before our cutoff, we can stop
+      if (oldestInChunk && oldestInChunk < cutoff) {
+        stoppedEarly = true;
+        break;
+      }
+
+      endOffset = startOffset;
+      // Yield to UI
+      await new Promise((r) => setTimeout(r, 0));
+    }
+
+    setAllWorkouts(workouts);
+    setTypeSummaries(types);
+
+    // Auto-select all mapped types
+    const mappedKeys = Object.entries(types)
+      .filter(([_, v]) => v.mapped)
+      .map(([k]) => k);
+    setSelectedTypes(new Set(mappedKeys));
+    setPhase("select");
+  }, []);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && fromDate) scan(file, fromDate);
+  };
+
+  const toggleType = (type: string) => {
+    setSelectedTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+  };
+
+  const selectedWorkouts = useMemo(
+    () => allWorkouts.filter((w) => selectedTypes.has(w.activityType)),
+    [allWorkouts, selectedTypes]
+  );
+
+  const handlePreview = async () => {
+    if (!user) return;
+    setError(null);
+    setPhase("preview");
+
+    if (!skipDuplicates) {
+      setPreviewNew(selectedWorkouts.length);
+      setPreviewSkip(0);
+      return;
+    }
+
+    // Query existing apple-health imports for the selected types and date range
+    const exerciseKeys = [...new Set(selectedWorkouts.map((w) => w.mapping.exercise_key))];
+    const dates = selectedWorkouts.map((w) => w.loggedDate);
+    const minDate = dates.reduce((a, b) => (a < b ? a : b), dates[0]);
+    const maxDate = dates.reduce((a, b) => (a > b ? a : b), dates[0]);
+
+    const { data: existing, error: err } = await supabase
+      .from("weight_sets")
+      .select("exercise_key, logged_date, duration_minutes")
+      .eq("user_id", user.id)
+      .eq("raw_input", APPLE_HEALTH_RAW_INPUT)
+      .in("exercise_key", exerciseKeys)
+      .gte("logged_date", minDate)
+      .lte("logged_date", maxDate);
+
+    if (err) {
+      setError("Failed to check for duplicates: " + err.message);
+      setPhase("select");
+      return;
+    }
+
+    // Build a set of existing entries for fast lookup
+    const existingSet = new Set(
+      (existing ?? []).map((e) => `${e.exercise_key}|${e.logged_date}|${Math.round(Number(e.duration_minutes) || 0)}`)
+    );
+
+    let newCount = 0;
+    let skipCount = 0;
+    for (const w of selectedWorkouts) {
+      const key = `${w.mapping.exercise_key}|${w.loggedDate}|${Math.round(w.durationMinutes || 0)}`;
+      if (existingSet.has(key)) skipCount++;
+      else newCount++;
+    }
+
+    setPreviewNew(newCount);
+    setPreviewSkip(skipCount);
+  };
+
+  const handleImport = async () => {
+    if (!user) return;
+    setPhase("importing");
+    setError(null);
+
+    // Filter to non-duplicate workouts
+    let toImport = selectedWorkouts;
+
+    if (skipDuplicates) {
+      const exerciseKeys = [...new Set(toImport.map((w) => w.mapping.exercise_key))];
+      const dates = toImport.map((w) => w.loggedDate);
+      const minDate = dates.reduce((a, b) => (a < b ? a : b), dates[0]);
+      const maxDate = dates.reduce((a, b) => (a > b ? a : b), dates[0]);
+
+      const { data: existing } = await supabase
+        .from("weight_sets")
+        .select("exercise_key, logged_date, duration_minutes")
+        .eq("user_id", user.id)
+        .eq("raw_input", APPLE_HEALTH_RAW_INPUT)
+        .in("exercise_key", exerciseKeys)
+        .gte("logged_date", minDate)
+        .lte("logged_date", maxDate);
+
+      const existingSet = new Set(
+        (existing ?? []).map((e) => `${e.exercise_key}|${e.logged_date}|${Math.round(Number(e.duration_minutes) || 0)}`)
+      );
+
+      toImport = toImport.filter((w) => {
+        const key = `${w.mapping.exercise_key}|${w.loggedDate}|${Math.round(w.durationMinutes || 0)}`;
+        return !existingSet.has(key);
+      });
+    }
+
+    setImportProgress({ done: 0, total: toImport.length });
+
+    let imported = 0;
+    for (let i = 0; i < toImport.length; i += BATCH_SIZE) {
+      const batch = toImport.slice(i, i + BATCH_SIZE);
+      const rows = batch.map((w) => ({
+        user_id: user.id,
+        entry_id: crypto.randomUUID(),
+        logged_date: w.loggedDate,
+        exercise_key: w.mapping.exercise_key,
+        exercise_subtype: w.mapping.exercise_subtype,
+        description: w.mapping.description,
+        duration_minutes: w.durationMinutes,
+        distance_miles: w.distanceMiles,
+        exercise_metadata: w.caloriesBurned ? { calories_burned: w.caloriesBurned } : null,
+        sets: 1,
+        reps: 1,
+        weight_lbs: 0,
+        raw_input: APPLE_HEALTH_RAW_INPUT,
+      }));
+
+      const { error: insertErr } = await supabase.from("weight_sets").insert(rows);
+      if (insertErr) {
+        setError(`Import failed at batch ${Math.floor(i / BATCH_SIZE) + 1}: ${insertErr.message}`);
+        break;
+      }
+
+      imported += batch.length;
+      setImportProgress({ done: imported, total: toImport.length });
+    }
+
+    setImportedCount(imported);
+    setPhase("done");
+  };
+
+  const handleCancel = () => {
+    abortRef.current = true;
+  };
+
+  const pct = progress.total > 0 ? (progress.read / progress.total) * 100 : 0;
+  const importPct = importProgress.total > 0 ? (importProgress.done / importProgress.total) * 100 : 0;
+
+  const sortedTypes = Object.entries(typeSummaries).sort((a, b) => {
+    // Mapped first, then by count
+    if (a[1].mapped !== b[1].mapped) return a[1].mapped ? -1 : 1;
+    return b[1].count - a[1].count;
+  });
+
+  return (
+    <div className="space-y-4">
+      {/* Instructions */}
+      <p className="text-xs text-muted-foreground leading-relaxed">
+        To export from your iPhone: open the <strong>Health</strong> app → tap your profile picture → <strong>Export All Health Data</strong>. Save and unzip the file, then select <code className="text-[11px] bg-muted px-1 rounded">export.xml</code> below.{" "}
+        <a
+          href="https://support.apple.com/guide/iphone/share-your-health-data-iph5ede58c3d/ios"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-2"
+        >
+          Learn more from Apple
+        </a>
+      </p>
+
+      {/* Config phase */}
+      {(phase === "config" || phase === "select" || phase === "preview") && (
+        <>
+          {/* From date */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">Import from</p>
+            </div>
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="h-8 text-sm rounded-md border border-input bg-background px-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+
+          {/* Duplicate handling */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">Skip previously imported duplicates</p>
+              <p className="text-[10px] text-muted-foreground/70">Only detects duplicates from prior Apple Health imports, not manually logged workouts</p>
+            </div>
+            <button
+              onClick={() => setSkipDuplicates(!skipDuplicates)}
+              className={cn(
+                "w-12 h-6 rounded-full transition-colors relative border flex-shrink-0",
+                skipDuplicates ? "bg-primary border-primary" : "bg-muted border-border"
+              )}
+            >
+              <span
+                className={cn(
+                  "absolute left-0 top-0.5 w-5 h-5 rounded-full shadow transition-transform",
+                  skipDuplicates
+                    ? "translate-x-6 bg-primary-foreground"
+                    : "translate-x-0.5 bg-white"
+                )}
+              />
+            </button>
+          </div>
+
+          {/* File picker */}
+          {phase === "config" && (
+            <div className="flex items-center gap-2">
+              <input
+                type="file"
+                accept=".xml"
+                onChange={handleFileChange}
+                disabled={!fromDate}
+                className="text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-muted file:text-muted-foreground disabled:opacity-50"
+              />
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Scanning progress */}
+      {phase === "scanning" && (
+        <div className="space-y-2">
+          <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+            <div className="bg-primary h-full transition-all duration-200" style={{ width: `${pct}%` }} />
+          </div>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">
+              Scanning — {formatBytes(progress.read)} / {formatBytes(progress.total)}
+              {progress.found > 0 && ` — ${progress.found} workouts found`}
+            </p>
+            <Button variant="ghost" size="sm" className="text-xs h-6" onClick={handleCancel}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Type selection */}
+      {(phase === "select" || phase === "preview") && sortedTypes.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">
+            Workout types found ({allWorkouts.length} workouts in range)
+          </p>
+          <div className="space-y-1">
+            {sortedTypes.map(([type, info]) => (
+              <label
+                key={type}
+                className={cn(
+                  "flex items-center gap-2 py-1 text-sm",
+                  !info.mapped && "opacity-40 cursor-not-allowed"
+                )}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedTypes.has(type)}
+                  onChange={() => info.mapped && toggleType(type)}
+                  disabled={!info.mapped}
+                  className="rounded border-border"
+                />
+                <span>{info.description}</span>
+                <span className="text-xs text-muted-foreground">({info.count})</span>
+                {!info.mapped && (
+                  <span className="text-[10px] text-muted-foreground">(not supported)</span>
+                )}
+              </label>
+            ))}
+          </div>
+
+          {phase === "select" && (
+            <Button
+              size="sm"
+              onClick={handlePreview}
+              disabled={selectedTypes.size === 0}
+              className="text-xs"
+            >
+              Preview Import
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Preview */}
+      {phase === "preview" && (
+        <div className="space-y-3 p-3 border border-border rounded-lg bg-muted/30">
+          <div className="text-sm">
+            <span className="font-medium">{previewNew}</span> new workout{previewNew !== 1 ? "s" : ""} to import
+            {skipDuplicates && previewSkip > 0 && (
+              <span className="text-muted-foreground">
+                {" "}· {previewSkip} already imported (will skip)
+              </span>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={handleImport} disabled={previewNew === 0} className="text-xs">
+              <Upload className="h-3.5 w-3.5 mr-1" />
+              Confirm Import
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setPhase("select")} className="text-xs">
+              Back
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Importing progress */}
+      {phase === "importing" && (
+        <div className="space-y-2">
+          <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+            <div className="bg-primary h-full transition-all duration-200" style={{ width: `${importPct}%` }} />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Importing — {importProgress.done} / {importProgress.total}
+          </p>
+        </div>
+      )}
+
+      {/* Done */}
+      {phase === "done" && (
+        <div className="p-3 border border-border rounded-lg bg-muted/30">
+          <p className="text-sm font-medium">
+            ✓ Imported {importedCount} workout{importedCount !== 1 ? "s" : ""}
+          </p>
+        </div>
+      )}
+
+      {/* Error */}
+      {error && (
+        <div className="flex items-start gap-2 text-xs text-destructive">
+          <AlertCircle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+    </div>
+  );
+}

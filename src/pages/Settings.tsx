@@ -1,5 +1,5 @@
 import { useTheme } from "next-themes";
-import { Moon, Sun, Monitor, Star, Download, Plus, Dumbbell, User, Settings2, Info } from "lucide-react";
+import { Moon, Sun, Monitor, Star, Download, Plus, Dumbbell, User, Settings2, Info, Smartphone } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { WeightUnit } from "@/lib/weight-units";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,7 @@ import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 import { DeleteAccountDialog } from "@/components/DeleteAccountDialog";
 import { useReadOnlyContext } from "@/contexts/ReadOnlyContext";
 import { DEMO_EMAIL } from "@/lib/demo-mode";
+import { AppleHealthImport } from "@/components/AppleHealthImport";
 export default function Settings() {
   const { user, signOut } = useAuth();
   const queryClient = useQueryClient();
@@ -358,6 +359,13 @@ export default function Settings() {
               </button>
             </div>
           )}
+        </CollapsibleSection>
+      )}
+
+      {/* Import from Apple Health - gated behind showWeights and !isReadOnly */}
+      {showWeights && !isReadOnly && (
+        <CollapsibleSection title="Import from Apple Health" icon={Smartphone} storageKey="settings-apple-health">
+          <AppleHealthImport />
         </CollapsibleSection>
       )}
 
