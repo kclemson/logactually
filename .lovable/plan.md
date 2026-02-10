@@ -1,47 +1,40 @@
 
 
-## Rename "Weights" to "Exercise" + Merge Import/Export Sections
+## Simplify Import and Export Section
 
-### 1. Rename user-facing "Weights" labels to "Exercise"
+### Changes
 
-All user-visible occurrences of "Weights" or "Weight" (where it refers to the exercise feature, not the weight-unit setting) get renamed:
+**`src/pages/Settings.tsx`** -- Remove the "Import" and "Export" sub-headers. Update the row labels to be self-describing:
 
-| File | Current | New |
-|---|---|---|
-| `src/components/BottomNav.tsx` | `label: 'Weights'` | `label: 'Exercise'` |
-| `src/pages/Settings.tsx` | `"Show Weights"` | `"Show Exercise"` |
-| `src/pages/Settings.tsx` | `"Weights"` (export row label) | `"Exercise"` |
-| `src/pages/Settings.tsx` | Comment `"weight tracking"` references | Updated comments |
-| `src/pages/Help.tsx` | `"show weight in Kgs"` | `"show exercise weight in Kgs"` |
-| `src/pages/Help.tsx` | `"weight lifting routine"` | `"exercise routine"` |
-| `src/components/DevToolsPanel.tsx` | `<SelectItem value="weights">Weights</SelectItem>` | `...Exercise...` |
+Layout becomes:
 
-Internal variable names (`showWeights`, `weightSets`, etc.) and the URL route `/weights` stay unchanged -- this is a label-only change.
-
-### 2. Merge "Import from Apple Health" into "Export to CSV" as a combined "Import and Export" section
-
-**Section title**: "Export to CSV" becomes **"Import and Export"**
-
-**Icon**: Keep `Download` (or switch to `ArrowUpDown` / `ArrowDownUp` for a combined metaphor -- `ArrowDownUp` from lucide works well).
-
-**Layout inside the section**:
-
-```
-Import
-  Apple Health     [instructions + file picker inline, gated by showExercise + !isReadOnly]
-
-Export
-  Food             [Daily Totals]  [Detailed Log]
-  Exercise         [Detailed Log]   (gated by showExercise)
-  (read-only msg if applicable)
+```text
+Import and Export
+  Import from Apple Health  (see how)       [gated: showWeights + !isReadOnly]
+  Export food to CSV         [Daily Totals] [Detailed Log]
+  Export exercise to CSV     [Detailed Log]  [gated: showWeights]
+  (read-only message if applicable)
 ```
 
-The Apple Health import content moves from its own `CollapsibleSection` into a sub-area at the top of this combined section, separated from the export rows by a subtle border or heading.
+No "Import" or "Export" headings -- the row labels themselves indicate direction.
 
-### Files Changed
+**`src/components/AppleHealthImport.tsx`** -- Restructure the component:
 
-1. **`src/components/BottomNav.tsx`** -- Change nav label from `'Weights'` to `'Exercise'`
-2. **`src/pages/Settings.tsx`** -- Rename labels, remove the standalone Apple Health collapsible, merge its content into the export section (now "Import and Export"), rename "Weights" export label to "Exercise"
-3. **`src/pages/Help.tsx`** -- Update two help text strings
-4. **`src/components/DevToolsPanel.tsx`** -- Update select item label
+- Remove the block of instructions text that's always visible at the top
+- The top-level row shows: left side "Import from Apple Health", right side a "(see how)" link
+- Clicking "(see how)" toggles a small inline panel below the row with the export instructions text (the "To export from your iPhone..." paragraph)
+- The rest of the import UI (date picker, duplicate toggle, file picker, scanning, preview, etc.) stays below, unchanged
+- The instructions panel is a simple `useState<boolean>` toggle -- no separate component needed
+
+### Technical Details
+
+In `Settings.tsx`:
+- Remove `<p className="text-xs font-medium text-muted-foreground">Import</p>` and the Export equivalent
+- Change "Food" label to "Export food to CSV"
+- Change "Exercise" label to "Export exercise to CSV"
+
+In `AppleHealthImport.tsx`:
+- Add a `showInstructions` state (default false)
+- Replace the always-visible instructions paragraph with a row: label on left, "(see how)" clickable text on right
+- Below that row, conditionally render the instructions paragraph when `showInstructions` is true
 
