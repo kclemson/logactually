@@ -1,29 +1,25 @@
 
 
-## Apple Health Import Dialog UX Improvements
+## Apple Health Import Dialog Tweaks
 
-### 1. Reduce dialog header/subheader font size
+### 1. Center the "Select export.xml" button
 
-The DialogTitle and DialogDescription are using default sizes that feel oversized for this utility dialog. Shrink the title and remove or shrink the description so the content feels proportional.
+Add `flex justify-center` to the wrapper div around the file picker button so it's horizontally centered in the dialog.
 
-### 2. Replace native file input with a styled button
+### 2. Move "see how" instructions into the dialog
 
-The native `<input type="file">` shows "No file chosen" text which is unnecessary since the UI transitions away once a file is picked. Replace it with a hidden file input triggered by a styled Button, showing just "Choose File" (or "Select export.xml").
+Replace the static `DialogDescription` ("Select your exported Apple Health XML file...") with a collapsible "see how" link inside the dialog's description area. This reuses the same instructions text currently shown on the Settings page, but places it where it's contextually relevant -- right in the import dialog.
 
-### 3. Make scanning/results feel like a continuation, not a new dialog
-
-Currently the date picker and header/description persist across phases, making it feel like the dialog reset. The fix:
-- Only show the date picker and file chooser in the `config` phase
-- Once scanning starts, hide those and show progress inline
-- After scanning, show results (type selection, preview, import progress, done) without the date/file UI cluttering things up
-
-This means changing the condition `(phase === "config" || phase === "select" || phase === "preview")` for the date picker to just `phase === "config"`.
+The instructions on the Settings row can stay as-is (they're useful there too), or we can keep only the dialog version. Since the dialog is the entry point for the action, having it there makes most sense. I'll keep both for now since they serve slightly different contexts.
 
 ### Technical Details
 
 **File: `src/components/AppleHealthImport.tsx`**
 
-- **Dialog header**: Add `className="text-base"` to DialogTitle and `className="text-xs"` to DialogDescription to reduce visual weight
-- **File input**: Replace the native `<input type="file">` with a hidden ref-based input and a `<Button>` that triggers it. Label: "Select export.xml"
-- **Phase visibility**: Change line 344 from `(phase === "config" || phase === "select" || phase === "preview")` to just `phase === "config"` so the date picker and file chooser disappear after scanning begins. The results phases (select, preview, importing, done) will show their content without the config UI, making the dialog feel like a smooth progression
+**Center button** (line 359): Change `<div>` to `<div className="flex justify-center">` around the file picker button.
+
+**Add "see how" to dialog description** (lines 549-552): Replace the static DialogDescription with a version that includes a collapsible "see how" link and the instructions block. This requires:
+- Add a `showInstructions` state to `AppleHealthImportDialog`
+- Replace DialogDescription content with: "Select your exported Apple Health XML file to import workouts." followed by a "(see how)" toggle link
+- When expanded, show the same instructions paragraph below the description (inside the dialog header area)
 
