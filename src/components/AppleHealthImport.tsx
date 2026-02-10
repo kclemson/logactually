@@ -522,7 +522,10 @@ export function AppleHealthImport() {
       {/* Import dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         {dialogOpen && (
-          <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogContent
+            className="max-w-md max-h-[80vh] overflow-y-auto"
+            onInteractOutside={(e) => e.preventDefault()}
+          >
             <DialogHeader>
               <DialogTitle className="text-base">Import from Apple Health</DialogTitle>
             </DialogHeader>
