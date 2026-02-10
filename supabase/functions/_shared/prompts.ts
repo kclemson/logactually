@@ -210,7 +210,7 @@ For cardio or duration-based exercises, provide:
 - exercise_key: a canonical snake_case identifier from the reference below
 - description: a user-friendly, context-specific name (e.g., "Treadmill Jog", "Morning Walk", "5K Run", "Spin Class")
 - duration_minutes: duration in minutes (number), if relevant
-- distance_miles: distance in miles (number), if relevant. Convert km to miles (1km = 0.621mi).
+- distance_miles: distance in miles (number), if available. Convert km to miles (1km = 0.621mi).
 
 CANONICAL CARDIO EXERCISES (prefer these keys when applicable):
 {{cardioExerciseReference}}
