@@ -151,13 +151,27 @@ For cardio or duration-based exercises, provide:
 CANONICAL CARDIO EXERCISES (prefer these keys when applicable):
 {{cardioExerciseReference}}
 
+## EXERCISE METADATA (optional)
+
+If the user explicitly mentions any of the following, include an "exercise_metadata" object on that exercise. Only include fields that are clearly stated or strongly implied. Omit the entire object if none apply.
+
+- incline_pct: treadmill or machine incline as a number (e.g., "5% incline" -> 5, "incline 12" -> 12)
+- effort: perceived effort on a 1-10 scale. Map natural language to this scale:
+  - 1-2: recovery, very easy, barely trying
+  - 3-4: easy, light, comfortable
+  - 5-6: moderate, steady, medium effort
+  - 7-8: hard, challenging, tough, difficult
+  - 9-10: all-out, maximum effort, brutal, hardest ever
+  - If the user gives a numeric rating (e.g., "8/10 difficulty"), use that number directly
+- calories_burned: calories the user says they burned (e.g., "burned 350 cal" -> 350)
+
 ## RESPONSE FORMAT
 
 Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
 {
   "exercises": [
     { "exercise_key": "bench_press", "description": "Bench Press", "sets": 3, "reps": 10, "weight_lbs": 135 },
-    { "exercise_key": "walk_run", "exercise_subtype": "running", "description": "5K Run", "duration_minutes": 25, "distance_miles": 3.1 },
+    { "exercise_key": "walk_run", "exercise_subtype": "running", "description": "Hard Treadmill Run", "duration_minutes": 20, "distance_miles": 2.1, "exercise_metadata": { "incline_pct": 5, "effort": 8, "calories_burned": 320 } },
     { "exercise_key": "walk_run", "description": "Treadmill Walk", "duration_minutes": 30 }
   ]
 }`;
