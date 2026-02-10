@@ -191,7 +191,15 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
       await new Promise((r) => setTimeout(r, 0));
     }
 
-    setAllWorkouts(workouts);
+    // Deduplicate workouts from chunk overlap
+    const seen = new Set<string>();
+    const uniqueWorkouts = workouts.filter((w) => {
+      const key = `${w.mapping.exercise_key}|${w.loggedDate}|${Math.round(w.durationMinutes || 0)}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    setAllWorkouts(uniqueWorkouts);
     setTypeSummaries(types);
 
     const mappedKeys = Object.entries(types)
