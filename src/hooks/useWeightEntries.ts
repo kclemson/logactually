@@ -31,6 +31,7 @@ export function useWeightEntries(date: string) {
         uid: row.id, // Use database ID as UID for existing rows
         entryId: row.entry_id,
         exercise_key: row.exercise_key,
+        exercise_subtype: row.exercise_subtype ?? null,
         description: row.description,
         sets: row.sets,
         reps: row.reps,
@@ -62,6 +63,7 @@ export function useWeightEntries(date: string) {
         entry_id: params.entry_id,
         logged_date: params.logged_date,
         exercise_key: set.exercise_key,
+        exercise_subtype: set.exercise_subtype ?? null,
         description: set.description,
         sets: set.sets,
         reps: set.reps,

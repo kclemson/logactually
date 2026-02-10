@@ -1,0 +1,1 @@
+ALTER TABLE public.weight_sets ADD COLUMN exercise_subtype text DEFAULT NULL;

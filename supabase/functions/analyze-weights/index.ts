@@ -17,6 +17,7 @@ Workout description: "{{rawInput}}"
 
 For weight exercises, provide:
 - exercise_key: a canonical snake_case identifier. PREFER using keys from the reference list below when the user's input matches. You may create new keys for exercises not in the list.
+- exercise_subtype: (optional) a more specific activity subtype when the input is unambiguous. For walk_run: use "running" if clearly running/jogging, "walking" if clearly walking, "hiking" if clearly hiking. For cycling: use "indoor" or "outdoor" if clear. For swimming: use "pool" or "open_water" if clear. Omit if ambiguous (e.g., "treadmill 30 min" could be walking or running).
 - description: a user-friendly name for the exercise (e.g., "Lat Pulldown", "Bench Press")
 - sets: number of sets performed (integer)
 - reps: number of reps per set (integer)
@@ -51,8 +52,8 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
 {
   "exercises": [
     { "exercise_key": "bench_press", "description": "Bench Press", "sets": 3, "reps": 10, "weight_lbs": 135 },
-    { "exercise_key": "walk_run", "description": "Treadmill Walk", "duration_minutes": 30 },
-    { "exercise_key": "walk_run", "description": "5K Run", "duration_minutes": 25, "distance_miles": 3.1 }
+    { "exercise_key": "walk_run", "exercise_subtype": "running", "description": "5K Run", "duration_minutes": 25, "distance_miles": 3.1 },
+    { "exercise_key": "walk_run", "description": "Treadmill Walk", "duration_minutes": 30 }
   ]
 }`;
 
@@ -219,6 +220,7 @@ serve(async (req) => {
       
       normalizedExercises.push({
         exercise_key: String(exercise.exercise_key),
+        exercise_subtype: exercise.exercise_subtype ? String(exercise.exercise_subtype) : null,
         description: String(exercise.description),
         sets: Math.round(sets),
         reps: Math.round(reps),
