@@ -5,6 +5,13 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
   ACTIVITY_MAP,
   MAPPED_TYPES,
   APPLE_HEALTH_RAW_INPUT,
@@ -41,7 +48,8 @@ function defaultFromDate(lastImportDate: string | null): string {
   return d.toISOString().split("T")[0];
 }
 
-export function AppleHealthImport() {
+/** The dialog content with all import workflow logic. Resets on unmount. */
+function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
   const { user } = useAuth();
 
   // Config phase
@@ -97,10 +105,8 @@ export function AppleHealthImport() {
     const types: Record<string, TypeSummary> = {};
     let totalFound = 0;
 
-    // Reverse streaming: start from end of file
     let endOffset = file.size;
     let carryover = "";
-    let stoppedEarly = false;
 
     while (endOffset > 0 && !abortRef.current) {
       const startOffset = Math.max(0, endOffset - CHUNK_SIZE);
@@ -108,10 +114,8 @@ export function AppleHealthImport() {
       const arrayBuf = await blob.arrayBuffer();
       const text = decoder.decode(arrayBuf, { stream: startOffset > 0 });
 
-      // Prepend carryover from previous (later in file) chunk
       const combined = text + carryover;
 
-      // Extract <Workout ...>...</Workout> and self-closing <Workout ... /> blocks
       let searchFrom = 0;
       const chunkWorkouts: ParsedWorkout[] = [];
       let oldestInChunk: Date | null = null;
@@ -159,7 +163,6 @@ export function AppleHealthImport() {
             }
           }
 
-          // Track oldest date in chunk
           const sd = parseStartDate(workoutXml);
           if (sd && (!oldestInChunk || sd < oldestInChunk)) {
             oldestInChunk = sd;
@@ -171,28 +174,23 @@ export function AppleHealthImport() {
 
       workouts.push(...chunkWorkouts);
 
-      // Keep overlap for spanning blocks
       if (startOffset > 0) {
         carryover = combined.substring(0, OVERLAP_SIZE);
       }
 
       setProgress({ read: file.size - startOffset, total: file.size, found: totalFound });
 
-      // If the oldest record in this chunk is before our cutoff, we can stop
       if (oldestInChunk && oldestInChunk < cutoff) {
-        stoppedEarly = true;
         break;
       }
 
       endOffset = startOffset;
-      // Yield to UI
       await new Promise((r) => setTimeout(r, 0));
     }
 
     setAllWorkouts(workouts);
     setTypeSummaries(types);
 
-    // Auto-select all mapped types
     const mappedKeys = Object.entries(types)
       .filter(([_, v]) => v.mapped)
       .map(([k]) => k);
@@ -230,7 +228,6 @@ export function AppleHealthImport() {
       return;
     }
 
-    // Query existing apple-health imports for the selected types and date range
     const exerciseKeys = [...new Set(selectedWorkouts.map((w) => w.mapping.exercise_key))];
     const dates = selectedWorkouts.map((w) => w.loggedDate);
     const minDate = dates.reduce((a, b) => (a < b ? a : b), dates[0]);
@@ -251,7 +248,6 @@ export function AppleHealthImport() {
       return;
     }
 
-    // Build a set of existing entries for fast lookup
     const existingSet = new Set(
       (existing ?? []).map((e) => `${e.exercise_key}|${e.logged_date}|${Math.round(Number(e.duration_minutes) || 0)}`)
     );
@@ -273,7 +269,6 @@ export function AppleHealthImport() {
     setPhase("importing");
     setError(null);
 
-    // Filter to non-duplicate workouts
     let toImport = selectedWorkouts;
 
     if (skipDuplicates) {
@@ -344,59 +339,31 @@ export function AppleHealthImport() {
   const importPct = importProgress.total > 0 ? (importProgress.done / importProgress.total) * 100 : 0;
 
   const sortedTypes = Object.entries(typeSummaries).sort((a, b) => {
-    // Mapped first, then by count
     if (a[1].mapped !== b[1].mapped) return a[1].mapped ? -1 : 1;
     return b[1].count - a[1].count;
   });
 
-  const [showInstructions, setShowInstructions] = useState(false);
-
   return (
     <div className="space-y-4">
-      {/* Header + date picker row */}
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs text-muted-foreground">
-          Import from Apple Health{" "}
-          <button
-            onClick={() => setShowInstructions(!showInstructions)}
-            className="underline underline-offset-2 hover:text-foreground transition-colors"
-          >
-            {showInstructions ? "(hide)" : "(see how)"}
-          </button>
-          {" "}from:
-        </p>
-        <input
-          type="date"
-          value={fromDate}
-          onChange={(e) => setFromDate(e.target.value)}
-          className="h-8 text-sm rounded-md border border-input bg-background px-2 flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-      </div>
-
-      {/* Collapsible instructions */}
-      {showInstructions && (
-        <p className="text-xs text-muted-foreground leading-relaxed bg-muted/30 rounded-lg p-3">
-          To export from your iPhone: open the <strong>Health</strong> app → tap your profile picture → <strong>Export All Health Data</strong>. Save and unzip the file, then select <code className="text-[11px] bg-muted px-1 rounded">export.xml</code> below.{" "}
-          <a
-            href="https://support.apple.com/guide/iphone/share-your-health-data-iph5ede58c3d/ios"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline underline-offset-2"
-          >
-            Learn more from Apple
-          </a>
-        </p>
-      )}
-
       {/* Config phase */}
       {(phase === "config" || phase === "select" || phase === "preview") && (
         <>
+          {/* Date picker */}
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">Import workouts from</p>
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="h-8 text-sm rounded-md border border-input bg-background px-2 flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
 
           {/* Duplicate handling */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <div>
-              <p className="text-xs text-muted-foreground">Skip previously imported duplicates</p>
-              <p className="text-[10px] text-muted-foreground/70">Only detects duplicates from prior Apple Health imports, not manually logged workouts</p>
+              <p className="text-xs text-muted-foreground">Skip duplicates</p>
+              <p className="text-[10px] text-muted-foreground/70">Only detects prior Apple Health imports</p>
             </div>
             <button
               onClick={() => setSkipDuplicates(!skipDuplicates)}
@@ -418,13 +385,13 @@ export function AppleHealthImport() {
 
           {/* File picker */}
           {phase === "config" && (
-            <div className="flex items-center gap-2">
+            <div>
               <input
                 type="file"
                 accept=".xml"
                 onChange={handleFileChange}
                 disabled={!fromDate}
-                className="text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-muted file:text-muted-foreground disabled:opacity-50"
+                className="text-xs text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-primary file:text-primary-foreground file:cursor-pointer disabled:opacity-50 hover:file:bg-primary/90"
               />
             </div>
           )}
@@ -530,10 +497,15 @@ export function AppleHealthImport() {
 
       {/* Done */}
       {phase === "done" && (
-        <div className="p-3 border border-border rounded-lg bg-muted/30">
-          <p className="text-sm font-medium">
-            ✓ Imported {importedCount} workout{importedCount !== 1 ? "s" : ""}
-          </p>
+        <div className="space-y-3">
+          <div className="p-3 border border-border rounded-lg bg-muted/30">
+            <p className="text-sm font-medium">
+              ✓ Imported {importedCount} workout{importedCount !== 1 ? "s" : ""}
+            </p>
+          </div>
+          <Button size="sm" variant="ghost" onClick={onClose} className="text-xs">
+            Close
+          </Button>
         </div>
       )}
 
@@ -545,5 +517,64 @@ export function AppleHealthImport() {
         </div>
       )}
     </div>
+  );
+}
+
+/** Renders a trigger row in Settings + a dialog for the full import workflow. */
+export function AppleHealthImport() {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
+
+  return (
+    <>
+      {/* Trigger row */}
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">
+          Import from Apple Health{" "}
+          <button
+            onClick={() => setShowInstructions(!showInstructions)}
+            className="underline underline-offset-2 hover:text-foreground transition-colors"
+          >
+            {showInstructions ? "(hide)" : "(see how)"}
+          </button>
+        </p>
+        <button
+          onClick={() => setDialogOpen(true)}
+          className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors"
+        >
+          Import...
+        </button>
+      </div>
+
+      {/* Collapsible instructions */}
+      {showInstructions && (
+        <p className="text-xs text-muted-foreground leading-relaxed bg-muted/30 rounded-lg p-3">
+          To export from your iPhone: open the <strong>Health</strong> app → tap your profile picture → <strong>Export All Health Data</strong>. Save and unzip the file, then select <code className="text-[11px] bg-muted px-1 rounded">export.xml</code> in the import dialog.{" "}
+          <a
+            href="https://support.apple.com/guide/iphone/share-your-health-data-iph5ede58c3d/ios"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline underline-offset-2"
+          >
+            Learn more from Apple
+          </a>
+        </p>
+      )}
+
+      {/* Import dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        {dialogOpen && (
+          <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Import from Apple Health</DialogTitle>
+              <DialogDescription>
+                Select your exported Apple Health XML file to import workouts.
+              </DialogDescription>
+            </DialogHeader>
+            <AppleHealthImportDialog onClose={() => setDialogOpen(false)} />
+          </DialogContent>
+        )}
+      </Dialog>
+    </>
   );
 }
