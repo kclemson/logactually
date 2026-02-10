@@ -353,15 +353,24 @@ export function AppleHealthImport() {
 
   return (
     <div className="space-y-4">
-      {/* Header row */}
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">Import from Apple Health</p>
-        <button
-          onClick={() => setShowInstructions(!showInstructions)}
-          className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
-        >
-          {showInstructions ? "hide" : "(see how)"}
-        </button>
+      {/* Header + date picker row */}
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground">
+          Import from Apple Health{" "}
+          <button
+            onClick={() => setShowInstructions(!showInstructions)}
+            className="underline underline-offset-2 hover:text-foreground transition-colors"
+          >
+            {showInstructions ? "(hide)" : "(see how)"}
+          </button>
+          {" "}from:
+        </p>
+        <input
+          type="date"
+          value={fromDate}
+          onChange={(e) => setFromDate(e.target.value)}
+          className="h-8 text-sm rounded-md border border-input bg-background px-2 flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        />
       </div>
 
       {/* Collapsible instructions */}
@@ -382,18 +391,6 @@ export function AppleHealthImport() {
       {/* Config phase */}
       {(phase === "config" || phase === "select" || phase === "preview") && (
         <>
-          {/* From date */}
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground">Import from</p>
-            </div>
-            <input
-              type="date"
-              value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
-              className="h-8 text-sm rounded-md border border-input bg-background px-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-          </div>
 
           {/* Duplicate handling */}
           <div className="flex items-center justify-between">
