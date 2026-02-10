@@ -84,6 +84,7 @@ type WeightsColumnKey =
   | 'source'
   | 'prompt'
   | 'exercise'
+  | 'key'
   | 'sets'
   | 'reps'
   | 'weight'
@@ -133,6 +134,7 @@ export function DevToolsPanel() {
     source: 50,
     prompt: 50,
     exercise: 150,
+    key: 100,
     sets: 40,
     reps: 40,
     weight: 50,
@@ -716,6 +718,10 @@ export function DevToolsPanel() {
                             <span className="font-medium text-xs">Exercise</span>
                             <WeightsResizeHandle columnKey="exercise" />
                           </th>
+                          <th className="relative px-1 py-1 text-left" style={{ width: weightsColumnWidths.key }} title="Exercise key">
+                            <span className="font-medium text-xs">Key</span>
+                            <WeightsResizeHandle columnKey="key" />
+                          </th>
                           <th className="relative px-1 py-1 text-right" style={{ width: weightsColumnWidths.sets }} title="Sets">
                             <span className="font-medium text-xs">Sets</span>
                             <WeightsResizeHandle columnKey="sets" />
@@ -770,6 +776,13 @@ export function DevToolsPanel() {
                                   <div className="space-y-0.5">
                                     {result.output?.exercises?.map((e, idx) => (
                                       <div key={idx} className="truncate" title={e.description}>{e.description}</div>
+                                    ))}
+                                  </div>
+                                </td>
+                                <td className="px-1 py-1 text-xs text-muted-foreground" style={{ width: weightsColumnWidths.key, maxWidth: weightsColumnWidths.key }}>
+                                  <div className="space-y-0.5">
+                                    {result.output?.exercises?.map((e, idx) => (
+                                      <div key={idx} className="truncate" title={e.exercise_key}>{e.exercise_key}</div>
                                     ))}
                                   </div>
                                 </td>
