@@ -1,44 +1,47 @@
 
 
-## Replace "cardio" Label with Contextual Shorthand
+## Add Hours Support to Duration Formatting
 
-### What Changes
+### Problem
 
-The static "cardio" text spanning the Sets/Reps/Weight columns for cardio exercises will be replaced with a compact, data-driven summary in italicized, muted styling.
+`formatDurationMmSs` outputs `89:14` for a 89-minute walk instead of `1:29:14`. Any activity over 60 minutes looks wrong.
 
-### Shorthand Format
+### Solution
 
-| Data Available | Display |
-|---|---|
-| Distance + Duration | *1.5 mi, 17:33, 5.1 mph* |
-| Duration only | *15:30* |
-| Distance only | *2.0 mi* |
-| Neither | *cardio* |
+Update the single `formatDurationMmSs` function in `src/lib/weight-units.ts` to handle hours. When duration is >= 60 minutes, format as `h:mm:ss`; otherwise keep the current `m:ss` format.
 
-Speed (mph) is only shown when both distance and duration are available.
-
-### Technical Details
-
-**File: `src/components/WeightItemsTable.tsx`**
-
-In the cardio label rendering section (~lines 491-501), replace the hardcoded `"cardio"` string with a computed label:
+### Updated Function
 
 ```typescript
-const parts: string[] = [];
-const dist = item.distance_miles ?? 0;
-const dur = item.duration_minutes ?? 0;
+export function formatDurationMmSs(decimalMinutes: number): string {
+  const totalSeconds = Math.round(decimalMinutes * 60);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
 
-if (dist > 0) parts.push(`${dist.toFixed(1)} mi`);
-if (dur > 0) parts.push(formatDurationMmSs(dur));
-if (dist > 0 && dur > 0) {
-  const mph = dist / (dur / 60);
-  parts.push(`${mph.toFixed(1)} mph`);
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
-
-const label = parts.length > 0 ? parts.join(', ') : 'cardio';
 ```
 
-The label renders with the existing italic + `text-muted-foreground` styling already applied to the "cardio" text. Will also add `formatDurationMmSs` import from `@/lib/weight-units`. Text size drops to `text-xs` to fit longer labels.
+### Output Examples
 
-No other files need changes.
+| Input (min) | Before | After |
+|---|---|---|
+| 11.5 | 11:30 | 11:30 |
+| 89.23 | 89:14 | 1:29:14 |
+| 125.0 | 125:00 | 2:05:00 |
+| 0.5 | 0:30 | 0:30 |
+
+### Scope
+
+Only one file changes: `src/lib/weight-units.ts`. Since every caller already uses this function, the fix propagates automatically to:
+- Weight log cardio shorthand labels
+- Trends page tooltips (pace `/mi` and duration)
+- Routine naming in save/create dialogs
+- Routine naming utility
+
+No caller changes needed.
 
