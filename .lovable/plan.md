@@ -1,23 +1,17 @@
 
 
-## Add Generic "Derive What You Can" Instruction to Experimental Prompt
+## Copy Derivation Instruction to Default Prompt
 
 ### Change
 
-**File: `supabase/functions/_shared/prompts.ts`** (experimental prompt only)
+**File: `supabase/functions/_shared/prompts.ts`**
 
-After the `distance_miles` bullet (around line 213), add a new standalone instruction:
+Add the same generic derivation line that's already in the experimental prompt to `ANALYZE_WEIGHTS_PROMPT_DEFAULT`, in the same position -- after the `distance_miles` bullet (around line 139):
 
 ```
 If the user provides two values that allow calculating a third (e.g., speed + duration → distance, duration + distance → speed), perform the calculation and include the derived value.
 ```
 
-This keeps it generic so it covers all combinations (speed+duration, distance+duration, distance+speed) without being specific to any single derivation.
-
-### No example change needed
-
-The existing response format example already shows `duration_minutes` and `distance_miles` together, which is sufficient. Adding the generic instruction should be enough to nudge the AI to derive missing values from whatever is provided.
-
 ### Deployment
-- Redeploy the `analyze-weights` edge function after the edit.
+- Redeploy the `analyze-weights` edge function.
 
