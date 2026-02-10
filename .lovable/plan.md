@@ -1,22 +1,23 @@
 
 
-## Remove Preview Phase from Apple Health Import
+## Replace Native Date Input with Shadcn Calendar Picker
 
-The preview step is now redundant since duplicates are always silently skipped. The flow should go directly from type selection to importing.
+The native browser `<input type="date">` has uncontrollable behavior -- clicking "Today" closes the picker. Replacing it with the Shadcn Calendar + Popover component gives us full control over the interaction.
 
 ### Changes
 
 **File: `src/components/AppleHealthImport.tsx`**
 
-1. **Remove the `preview` phase entirely** from the Phase type and all related state/UI:
-   - Remove `"preview"` from the `Phase` type
-   - Remove `previewNew` and `previewSkip` state variables
-   - Remove the `handlePreview` function
-   - Remove the preview UI block (`phase === "preview"`)
+1. **Add imports**: `format` from `date-fns`, `CalendarIcon` from `lucide-react`, `Calendar` from `@/components/ui/calendar`, `Popover`/`PopoverTrigger`/`PopoverContent` from `@/components/ui/popover`, `cn` from `@/lib/utils`.
 
-2. **Rename "Preview Import" button to "Import"** in the select phase, and wire it directly to `handleImport`
+2. **Change `fromDate` state type** from `string` to `Date | undefined`. Update the default date logic to produce a `Date` object instead of an ISO string.
 
-3. **Simplify `handleImport`**: It already does its own duplicate check before inserting -- no changes needed to the import logic itself
+3. **Replace the native `<input type="date">`** (lines 332-339) with a Popover-based calendar picker:
+   - A Button trigger showing the formatted date (or "Pick a date" placeholder)
+   - A PopoverContent containing the Calendar component in `mode="single"`
+   - The calendar stays open when selecting a date -- no auto-close on "today"
 
-4. **Clean up select phase condition**: Change `(phase === "select" || phase === "preview")` to just `phase === "select"` since preview no longer exists
+4. **Update references to `fromDate`**: Anywhere that passes `fromDate` as a string (e.g., to the `scan` function and the cutoff date comparison), convert with `format(fromDate, 'yyyy-MM-dd')` or use the Date object directly as appropriate.
+
+5. **Update the last-import-date loader**: Convert the loaded `logged_date` string to a `Date` object when setting state, and adjust `defaultFromDate` to return a `Date`.
 
