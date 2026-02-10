@@ -18,6 +18,16 @@ import { useMergeExercises } from "@/hooks/useMergeExercises";
 import { DuplicateExercisePrompt, type DuplicateGroup } from "@/components/DuplicateExercisePrompt";
 import { getMuscleGroupDisplayWithTooltip, hasDistanceTracking } from "@/lib/exercise-metadata";
 import { cn } from "@/lib/utils";
+
+function formatWalkingDuration(minutes: number): string {
+  const rounded = Math.round(minutes);
+  if (rounded >= 60) {
+    const h = Math.floor(rounded / 60);
+    const m = rounded % 60;
+    return `${h}:${m.toString().padStart(2, '0')}`;
+  }
+  return `${rounded}`;
+}
 import { useHasHover } from "@/hooks/use-has-hover";
 import { FoodChart, StackedMacroChart, VolumeChart } from "@/components/trends/FoodChart";
 
@@ -114,19 +124,25 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
   const supportsSpeedToggle = isCardio && hasDistanceTracking(exercise.exercise_key);
   
   type CardioViewMode = 'time' | 'mph' | 'distance';
+  const isWalking = exercise.exercise_subtype === 'walking';
+  
   const [cardioMode, setCardioMode] = useState<CardioViewMode>(() => {
     if (!supportsSpeedToggle) return 'time';
     
     // Check for new key first
     const saved = localStorage.getItem(`trends-cardio-mode-${exercise.exercise_key}`);
+    // Walking doesn't support mph mode — fall back to 'time'
+    if (saved === 'mph' && isWalking) return 'time';
     if (saved === 'mph' || saved === 'distance') return saved;
     
     // Migration: convert old boolean to new mode
     const legacyMph = localStorage.getItem(`trends-mph-${exercise.exercise_key}`);
     if (legacyMph === 'true') {
       localStorage.removeItem(`trends-mph-${exercise.exercise_key}`);
-      localStorage.setItem(`trends-cardio-mode-${exercise.exercise_key}`, 'mph');
-      return 'mph';
+      if (!isWalking) {
+        localStorage.setItem(`trends-cardio-mode-${exercise.exercise_key}`, 'mph');
+        return 'mph';
+      }
     }
     
     return 'time';
@@ -186,7 +202,9 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
         ? `${mph}` 
         : cardioMode === 'distance'
           ? `${Number(d.distance_miles || 0).toFixed(2)}`
-          : `${Number(d.duration_minutes || 0).toFixed(1)}`;
+          : isWalking
+            ? formatWalkingDuration(Number(d.duration_minutes || 0))
+            : `${Number(d.duration_minutes || 0).toFixed(1)}`;
       
       return {
         ...d,
@@ -275,8 +293,9 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
   const handleHeaderClick = supportsSpeedToggle 
     ? () => {
         const nextMode: CardioViewMode = 
-          cardioMode === 'time' ? 'mph' :
-          cardioMode === 'mph' ? 'distance' : 'time';
+          isWalking
+            ? (cardioMode === 'time' ? 'distance' : 'time')
+            : (cardioMode === 'time' ? 'mph' : cardioMode === 'mph' ? 'distance' : 'time');
         localStorage.setItem(`trends-cardio-mode-${exercise.exercise_key}`, nextMode);
         setCardioMode(nextMode);
       }
