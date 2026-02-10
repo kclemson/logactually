@@ -414,7 +414,7 @@ export default function Settings() {
             to="/changelog"
             className="block text-sm text-foreground hover:underline underline-offset-2 transition-colors"
           >
-            Changelog (last updated Feb-09)
+            Changelog (last updated Feb-10)
           </Link>
         </div>
       </CollapsibleSection>
