@@ -400,7 +400,7 @@ export function DevToolsPanel() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="food">Food</SelectItem>
-                    <SelectItem value="weights">Weights</SelectItem>
+                    <SelectItem value="weights">Exercise</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
