@@ -1,14 +1,32 @@
 
+## Fix "(see how)" Link Styling
 
-## Update Export Labels in Settings
+**File: `src/components/AppleHealthImport.tsx`** (lines 533-539)
 
-**File: `src/pages/Settings.tsx`**
+Three fixes that were approved earlier but not applied:
 
-Five string changes, no logic changes:
+1. **Move parentheses outside the button** so the underline only covers "see how" / "hide", not the parens
+2. **Add `text-xs`** to the button so font size matches the surrounding label on mobile
+3. **Add `py-1`** for a better touch target
 
-1. "Daily Totals" → "Daily Food Totals"
-2. "Detailed Log" (food row) → "Detailed Food Log"
-3. "Export food to CSV" → "Export to CSV"
-4. "Detailed Log" (exercise row) → "Detailed Exercise Log"
-5. "Export exercise to CSV" → "Export to CSV"
+Change from:
+```tsx
+Import from Apple Health{" "}
+<button
+  onClick={() => setShowInstructions(!showInstructions)}
+  className="underline underline-offset-2 hover:text-foreground transition-colors"
+>
+  {showInstructions ? "(hide)" : "(see how)"}
+</button>
+```
 
+To:
+```tsx
+Import from Apple Health{" "}
+(<button
+  onClick={() => setShowInstructions(!showInstructions)}
+  className="text-xs underline underline-offset-2 hover:text-foreground transition-colors py-1"
+>
+  {showInstructions ? "hide" : "see how"}
+</button>)
+```
