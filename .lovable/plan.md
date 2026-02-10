@@ -1,67 +1,40 @@
 
 
-## Add Activity-Specific Icons to Calendar
+## Show "cardio" Label for Exercises Without Duration/Distance
 
-### What Changes
+### Problem
 
-Each calendar day cell currently shows a single dumbbell icon for any exercise. After this change, it will show specific icons based on what was logged:
+When logging something like "swam 20 laps", the AI may return a tiny estimated distance (e.g., 0.02 mi) or -- after the validation softening -- no duration/distance at all. In both cases, showing "0.02 mi" or "0 lbs" is unhelpful. These should just display "cardio".
 
-- **Dumbbell** -- lifting/strength exercises only
-- **Footprints** -- walk/run
-- **Bike** -- cycling
-- **Activity** (pulse line) -- other cardio (swimming, elliptical, rowing, stair climber, jump rope)
+### Changes (2 files)
 
-Multiple icons can appear side-by-side if a day has mixed activity types.
+**1. Soften validation (`supabase/functions/analyze-weights/index.ts`)**
 
-### Technical Details (single file: `src/pages/History.tsx`)
-
-**1. Import changes**
-
-Add `Footprints`, `Bike`, `Activity` to the Lucide import. Import `isCardioExercise` from `@/lib/exercise-metadata`.
-
-**2. Update the weight entries query**
-
-Change `.select('logged_date')` to `.select('logged_date, exercise_key')` so we know what type of exercise each row is.
-
-**3. Update `WeightDaySummary` interface**
+This is the already-approved change: allow known cardio keys through the validation even without `duration_minutes` or `distance_miles`. Add a fallback before the error throw:
 
 ```typescript
-interface WeightDaySummary {
-  date: string;
-  hasLifting: boolean;
-  hasRunWalk: boolean;
-  hasCycling: boolean;
-  hasOtherCardio: boolean;
+if (!hasWeightData && !hasCardioData) {
+  const knownCardioKeys = ['walk_run', 'cycling', 'elliptical', 'rowing', 'stair_climber', 'swimming', 'jump_rope'];
+  if (!knownCardioKeys.includes(String(exercise.exercise_key))) {
+    console.error(/*...*/);
+    throw new Error("Could not understand exercise...");
+  }
 }
 ```
 
-**4. Update aggregation logic**
+**2. Update display logic (`src/components/WeightItemsTable.tsx`)**
 
-For each row, classify by `exercise_key`:
-- `walk_run` sets `hasRunWalk`
-- `cycling` sets `hasCycling`
-- Other keys where `isCardioExercise()` returns true set `hasOtherCardio`
-- Everything else sets `hasLifting`
+Two spots need updating:
 
-**5. Update the `hasWeights` check**
+**(a) The `isCardioItem` detection (around line 492)**: Currently only triggers when `duration_minutes > 0 || distance_miles > 0`. Add a fallback: also treat items as cardio when `weight_lbs === 0` and `isCardioExercise(exercise_key)` returns true. This catches entries where neither duration nor distance was provided.
 
-Currently `hasWeights` checks `!!weightByDate.get(dateStr)`. This stays the same -- it means "has any exercise", used for background color and visibility.
+**(b) The compact weight column display (around line 657)**: Currently shows `X.XX mi` or `X.X min` for cardio. Add a fallback for known cardio exercises with no meaningful duration/distance -- display "cardio" instead of a near-zero metric.
 
-**6. Update Row 3 icon rendering**
+The logic becomes:
+- Has duration? Show duration (e.g., "30.0 min")
+- Has distance but no duration? Show distance (e.g., "2.00 mi")  
+- Known cardio with neither? Show "cardio"
+- Otherwise: show weight as before
 
-Replace the single dumbbell with a flex row of conditional icons:
-
-```tsx
-<span className={cn(
-  "h-3 flex items-center justify-center gap-0.5",
-  !(hasWeights && isCurrentMonth) && "invisible"
-)}>
-  {weightData?.hasLifting && <Dumbbell className="h-3 w-3 text-purple-500 dark:text-purple-400" />}
-  {weightData?.hasRunWalk && <Footprints className="h-3 w-3 text-purple-500 dark:text-purple-400" />}
-  {weightData?.hasCycling && <Bike className="h-3 w-3 text-purple-500 dark:text-purple-400" />}
-  {weightData?.hasOtherCardio && <Activity className="h-3 w-3 text-purple-500 dark:text-purple-400" />}
-</span>
-```
-
-At most 4 tiny icons (12px each + 2px gaps = ~54px), which fits within the ~50-55px cell width. In practice, 3+ categories on a single day would be rare.
+This requires importing `isCardioExercise` from `@/lib/exercise-metadata` into `WeightItemsTable.tsx` and checking `item.exercise_key` against it.
 
