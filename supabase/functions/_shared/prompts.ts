@@ -148,6 +148,8 @@ For cardio or duration-based exercises, provide:
 - duration_minutes: duration in minutes (number), if relevant
 - distance_miles: distance in miles (number), if relevant. Convert km to miles (1km = 0.621mi).
 
+If the user provides two values that allow calculating a third (e.g., speed + duration → distance, duration + distance → speed), perform the calculation and include the derived value.
+
 CANONICAL CARDIO EXERCISES (prefer these keys when applicable):
 {{cardioExerciseReference}}
 
