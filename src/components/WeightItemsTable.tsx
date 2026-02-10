@@ -18,6 +18,7 @@ import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { type WeightUnit, formatWeight, parseWeightToLbs, getWeightUnitLabel, formatDurationMmSs } from '@/lib/weight-units';
+import { isCardioExercise } from '@/lib/exercise-metadata';
 
 type EditableFieldKey = 'description' | 'sets' | 'reps' | 'weight_lbs';
 
@@ -489,8 +490,10 @@ export function WeightItemsTable({
 
               {/* Sets, Reps, Weight - show "cardio" label for cardio items */}
               {(() => {
+                const hasDuration = (item.duration_minutes ?? 0) > 0;
+                const hasDistance = (item.distance_miles ?? 0) > 0;
                 const isCardioItem = item.weight_lbs === 0 && 
-                  ((item.duration_minutes ?? 0) > 0 || (item.distance_miles ?? 0) > 0);
+                  (hasDuration || hasDistance || isCardioExercise(item.exercise_key));
                 
                 if (isCardioItem && (editable || showCardioLabel)) {
                   // Build a data-driven shorthand label for cardio items
@@ -654,12 +657,16 @@ export function WeightItemsTable({
                       />
                     ) : (
                       <span className="px-1 py-1 text-center">
-                        {item.weight_lbs === 0 && ((item.duration_minutes ?? 0) > 0 || (item.distance_miles ?? 0) > 0)
-                          ? ((item.duration_minutes ?? 0) > 0 
-                              ? `${Number(item.duration_minutes).toFixed(1)} min`
-                              : `${Number(item.distance_miles).toFixed(2)} mi`)
-                          : formatWeight(item.weight_lbs, weightUnit, weightUnit === 'kg' ? 1 : 0)
-                        }
+                        {(() => {
+                          const dur = item.duration_minutes ?? 0;
+                          const dist = item.distance_miles ?? 0;
+                          if (item.weight_lbs === 0 && (dur > 0 || dist > 0 || isCardioExercise(item.exercise_key))) {
+                            if (dur > 0) return `${Number(dur).toFixed(1)} min`;
+                            if (dist > 0) return `${Number(dist).toFixed(2)} mi`;
+                            return 'cardio';
+                          }
+                          return formatWeight(item.weight_lbs, weightUnit, weightUnit === 'kg' ? 1 : 0);
+                        })()}
                       </span>
                     )}
                   </>
