@@ -288,6 +288,7 @@ export type Database = {
           duration_minutes: number | null
           entry_id: string
           exercise_key: string
+          exercise_metadata: Json | null
           exercise_subtype: string | null
           id: string
           logged_date: string
@@ -306,6 +307,7 @@ export type Database = {
           duration_minutes?: number | null
           entry_id: string
           exercise_key: string
+          exercise_metadata?: Json | null
           exercise_subtype?: string | null
           id?: string
           logged_date?: string
@@ -324,6 +326,7 @@ export type Database = {
           duration_minutes?: number | null
           entry_id?: string
           exercise_key?: string
+          exercise_metadata?: Json | null
           exercise_subtype?: string | null
           id?: string
           logged_date?: string

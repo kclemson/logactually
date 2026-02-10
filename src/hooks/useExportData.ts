@@ -47,7 +47,7 @@ export function useExportData() {
   const fetchAllWeightSets = async (): Promise<WeightSetExport[]> => {
     const { data, error } = await supabase
       .from('weight_sets')
-      .select('logged_date, created_at, description, sets, reps, weight_lbs, raw_input')
+      .select('logged_date, created_at, description, sets, reps, weight_lbs, raw_input, exercise_metadata')
       .order('logged_date', { ascending: true })
       .order('created_at', { ascending: true });
 
@@ -61,6 +61,7 @@ export function useExportData() {
       reps: row.reps,
       weight_lbs: Number(row.weight_lbs),
       raw_input: row.raw_input,
+      exercise_metadata: row.exercise_metadata as Record<string, number> | null,
     }));
   };
 

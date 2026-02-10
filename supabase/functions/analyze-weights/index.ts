@@ -1,61 +1,15 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getWeightExerciseReferenceForPrompt, getCardioExerciseReferenceForPrompt } from "../_shared/exercises.ts";
+import { getAnalyzeWeightsPrompt, interpolateWeightsPrompt, type PromptVersion } from "../_shared/prompts.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const ANALYZE_WEIGHTS_PROMPT = `You are a fitness assistant helping a user log their workouts. Parse natural language workout descriptions and extract structured exercise data.
-
-Analyze the following workout description and extract individual exercises with their set, rep, and weight information.
-
-Workout description: "{{rawInput}}"
-
-## WEIGHT EXERCISES
-
-For weight exercises, provide:
-- exercise_key: a canonical snake_case identifier. PREFER using keys from the reference list below when the user's input matches. You may create new keys for exercises not in the list.
-- exercise_subtype: (optional) a more specific activity subtype when the input is unambiguous. For walk_run: use "running" if clearly running/jogging, "walking" if clearly walking, "hiking" if clearly hiking. For cycling: use "indoor" or "outdoor" if clear. For swimming: use "pool" or "open_water" if clear. Omit if ambiguous (e.g., "treadmill 30 min" could be walking or running).
-- description: a user-friendly name for the exercise (e.g., "Lat Pulldown", "Bench Press")
-- sets: number of sets performed (integer)
-- reps: number of reps per set (integer)
-- weight_lbs: weight in pounds (number)
-
-CANONICAL WEIGHT EXERCISES (prefer these keys when applicable):
-{{weightExerciseReference}}
-
-Handle common patterns like:
-- "3x10 lat pulldown at 100 lbs" → 3 sets, 10 reps, 100 lbs
-- "bench press 4 sets of 8 reps at 135" → 4 sets, 8 reps, 135 lbs
-- "3 sets 10 reps squats 225" → 3 sets, 10 reps, 225 lbs
-- "the machine where you pull the bar down to your chest" → lat_pulldown
-- "leg pushing machine where you sit at an angle" → leg_press
-
-Default to lbs for weight if no unit is specified.
-
-## CARDIO / DURATION EXERCISES
-
-For cardio or duration-based exercises, provide:
-- exercise_key: a canonical snake_case identifier from the reference below
-- description: a user-friendly, context-specific name (e.g., "Treadmill Jog", "Morning Walk", "5K Run", "Spin Class")
-- duration_minutes: duration in minutes (number), if relevant
-- distance_miles: distance in miles (number), if relevant. Convert km to miles (1km = 0.621mi).
-
-CANONICAL CARDIO EXERCISES (prefer these keys when applicable):
-{{cardioExerciseReference}}
-
-## RESPONSE FORMAT
-
-Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
-{
-  "exercises": [
-    { "exercise_key": "bench_press", "description": "Bench Press", "sets": 3, "reps": 10, "weight_lbs": 135 },
-    { "exercise_key": "walk_run", "exercise_subtype": "running", "description": "5K Run", "duration_minutes": 25, "distance_miles": 3.1 },
-    { "exercise_key": "walk_run", "description": "Treadmill Walk", "duration_minutes": 30 }
-  ]
-}`;
+// Allowlisted exercise_metadata keys with validation
+const METADATA_ALLOWLIST = ['incline_pct', 'effort', 'calories_burned'] as const;
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -89,7 +43,7 @@ serve(async (req) => {
     }
 
     // Parse request body
-    const { rawInput } = await req.json();
+    const { rawInput, promptVersion } = await req.json();
     if (!rawInput || typeof rawInput !== "string") {
       return new Response(
         JSON.stringify({ error: "Missing rawInput" }),
@@ -110,13 +64,17 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Build the prompt
-    const prompt = ANALYZE_WEIGHTS_PROMPT
-      .replace("{{rawInput}}", rawInput)
-      .replace("{{weightExerciseReference}}", getWeightExerciseReferenceForPrompt())
-      .replace("{{cardioExerciseReference}}", getCardioExerciseReferenceForPrompt());
+    // Build the prompt using versioned templates
+    const version: PromptVersion = promptVersion === 'experimental' ? 'experimental' : 'default';
+    const template = getAnalyzeWeightsPrompt(version);
+    const prompt = interpolateWeightsPrompt(
+      template,
+      rawInput,
+      getWeightExerciseReferenceForPrompt(),
+      getCardioExerciseReferenceForPrompt(),
+    );
 
-    console.log(`[analyze-weights] Processing: "${rawInput.substring(0, 100)}..."`);
+    console.log(`[analyze-weights] Processing (${version}): "${rawInput.substring(0, 100)}..."`);
     const startTime = Date.now();
 
     // Call Lovable AI Gateway
@@ -166,7 +124,6 @@ serve(async (req) => {
     // Parse JSON response (handle potential markdown wrapping)
     let parsed;
     try {
-      // Remove markdown code blocks if present
       let cleanContent = content.trim();
       if (cleanContent.startsWith("```json")) {
         cleanContent = cleanContent.slice(7);
@@ -203,7 +160,6 @@ serve(async (req) => {
       const distance_miles = Number(exercise.distance_miles) || 0;
       
       // Default missing sets/reps for weight exercises
-      // User sees these immediately and can edit
       if (weight_lbs > 0 || sets > 0 || reps > 0) {
         if (sets === 0) sets = 1;
         if (reps === 0) reps = 10;
@@ -217,6 +173,25 @@ serve(async (req) => {
         console.error("[analyze-weights] Exercise has neither weight nor cardio data:", exercise);
         throw new Error("Could not understand exercise. Include sets/reps/weight or duration/distance.");
       }
+
+      // Validate and sanitize exercise_metadata
+      let exercise_metadata: Record<string, number> | null = null;
+      if (exercise.exercise_metadata && typeof exercise.exercise_metadata === 'object' && !Array.isArray(exercise.exercise_metadata)) {
+        const cleaned: Record<string, number> = {};
+        for (const key of METADATA_ALLOWLIST) {
+          const val = Number(exercise.exercise_metadata[key]);
+          if (val > 0 && isFinite(val)) {
+            if (key === 'effort') {
+              cleaned[key] = Math.min(10, Math.max(1, Math.round(val)));
+            } else {
+              cleaned[key] = Math.round(val * 10) / 10;
+            }
+          }
+        }
+        if (Object.keys(cleaned).length > 0) {
+          exercise_metadata = cleaned;
+        }
+      }
       
       normalizedExercises.push({
         exercise_key: String(exercise.exercise_key),
@@ -224,9 +199,10 @@ serve(async (req) => {
         description: String(exercise.description),
         sets: Math.round(sets),
         reps: Math.round(reps),
-        weight_lbs: Math.round(weight_lbs * 10) / 10, // Round to 1 decimal
+        weight_lbs: Math.round(weight_lbs * 10) / 10,
         duration_minutes: hasCardioData && duration_minutes > 0 ? Math.round(duration_minutes * 100) / 100 : null,
         distance_miles: hasCardioData && distance_miles > 0 ? Math.round(distance_miles * 100) / 100 : null,
+        exercise_metadata,
       });
     }
 

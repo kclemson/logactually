@@ -20,6 +20,7 @@ export interface WeightSet {
   weight_lbs: number;
   duration_minutes?: number | null;  // For cardio exercises
   distance_miles?: number | null;    // For cardio (future)
+  exercise_metadata?: Record<string, number> | null; // Optional metadata (incline, effort, calories_burned)
   rawInput?: string | null; // Only present on first set of entry
   sourceRoutineId?: string | null; // Links to saved_routines.id when entry originated from a routine
   createdAt?: string;     // Database created_at timestamp (optional for non-DB objects)
@@ -55,6 +56,7 @@ export interface WeightSetRow {
   weight_lbs: number;
   duration_minutes: number | null;
   distance_miles: number | null;
+  exercise_metadata: Record<string, number> | null;
   raw_input: string | null;
   source_routine_id: string | null;
   created_at: string;
@@ -73,6 +75,7 @@ export interface AnalyzedExercise {
   weight_lbs: number;
   duration_minutes?: number | null;
   distance_miles?: number | null;
+  exercise_metadata?: Record<string, number> | null;
 }
 
 /**
@@ -87,6 +90,7 @@ export interface SavedExerciseSet {
   weight_lbs: number;
   duration_minutes?: number | null;
   distance_miles?: number | null;
+  exercise_metadata?: Record<string, number> | null;
 }
 
 /**

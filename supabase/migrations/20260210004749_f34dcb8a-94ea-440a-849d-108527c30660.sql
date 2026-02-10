@@ -1,0 +1,1 @@
+ALTER TABLE public.weight_sets ADD COLUMN exercise_metadata jsonb DEFAULT NULL;
