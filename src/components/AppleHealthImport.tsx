@@ -488,7 +488,7 @@ export function AppleHealthImport() {
       {/* Trigger row */}
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted-foreground">
-        Import from Apple Health{" "}
+        Import workouts from Apple Health{" "}
           (<button
             onClick={() => setShowInstructions(!showInstructions)}
             className="text-xs underline underline-offset-2 hover:text-foreground transition-colors py-1"
