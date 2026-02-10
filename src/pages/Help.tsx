@@ -18,11 +18,11 @@ const HELP_CONTENT = {
         highlights: ["editing calories"],
       },
       {
-        text: "Select the > next to a row to see what you originally wrote, and then save it as a meal or weight lifting routine for easy access in the future.",
+        text: "Select the > next to a row to see what you originally wrote, and then save it as a meal or exercise routine for easy access in the future.",
         highlights: ["save it"],
       },
       {
-        text: "Switch to dark theme, show weight in Kgs, or export to CSV in Settings.",
+        text: "Switch to dark theme, show exercise weight in Kgs, or export to CSV in Settings.",
         highlights: ["Export to CSV"],
       },
       {

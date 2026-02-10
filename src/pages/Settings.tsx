@@ -1,5 +1,5 @@
 import { useTheme } from "next-themes";
-import { Moon, Sun, Monitor, Star, Download, Plus, Dumbbell, User, Settings2, Info, Smartphone } from "lucide-react";
+import { Moon, Sun, Monitor, Star, ArrowDownUp, Plus, Dumbbell, User, Settings2, Info } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { WeightUnit } from "@/lib/weight-units";
 import { cn } from "@/lib/utils";
@@ -202,10 +202,10 @@ export default function Settings() {
             />
           </div>
 
-          {/* Show Weights - before Weight Units */}
+          {/* Show Exercise toggle */}
           {showWeightsFeature && (
             <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">Show Weights</p>
+              <p className="text-xs text-muted-foreground">Show Exercise</p>
               <button
                 onClick={() => updateSettings({ showWeights: !settings.showWeights })}
                 className={cn(
@@ -362,17 +362,21 @@ export default function Settings() {
         </CollapsibleSection>
       )}
 
-      {/* Import from Apple Health - gated behind showWeights and !isReadOnly */}
-      {showWeights && !isReadOnly && (
-        <CollapsibleSection title="Import from Apple Health" icon={Smartphone} storageKey="settings-apple-health">
-          <AppleHealthImport />
-        </CollapsibleSection>
-      )}
-
-      {/* Export as CSV */}
-      <CollapsibleSection title="Export to CSV" icon={Download} storageKey="settings-export">
+      {/* Import and Export */}
+      <CollapsibleSection title="Import and Export" icon={ArrowDownUp} storageKey="settings-export">
         <div className="space-y-4">
-          {/* Food row */}
+          {/* Import sub-section */}
+          {showWeights && !isReadOnly && (
+            <>
+              <p className="text-xs font-medium text-muted-foreground">Import</p>
+              <AppleHealthImport />
+            </>
+          )}
+
+          {/* Export sub-section */}
+          <p className="text-xs font-medium text-muted-foreground">Export</p>
+
+          {/* Food export row */}
           <div className="flex items-center justify-between">
             <p className="text-xs text-muted-foreground">Food</p>
             <div className="flex gap-2">
@@ -392,10 +396,10 @@ export default function Settings() {
               </button>
             </div>
           </div>
-          {/* Weights row */}
+          {/* Exercise export row */}
           {showWeights && (
             <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">Weights</p>
+              <p className="text-xs text-muted-foreground">Exercise</p>
               <button
                 onClick={exportWeightLog}
                 disabled={isExporting || isReadOnly}
