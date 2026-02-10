@@ -12,12 +12,13 @@ import {
   startOfWeek,
   endOfWeek,
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Dumbbell } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Dumbbell, Footprints, Bike, Activity } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { FEATURES } from '@/lib/feature-flags';
+import { isCardioExercise } from '@/lib/exercise-metadata';
 import { getTargetDotColor } from '@/lib/calorie-target';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useUserSettings } from '@/hooks/useUserSettings';
@@ -30,7 +31,10 @@ interface DaySummary {
 
 interface WeightDaySummary {
   date: string;
-  exerciseCount: number;
+  hasLifting: boolean;
+  hasRunWalk: boolean;
+  hasCycling: boolean;
+  hasOtherCardio: boolean;
 }
 
 const History = () => {
@@ -81,22 +85,38 @@ const History = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('weight_sets')
-        .select('logged_date')
+        .select('logged_date, exercise_key')
         .gte('logged_date', format(monthStart, 'yyyy-MM-dd'))
         .lte('logged_date', format(monthEnd, 'yyyy-MM-dd'));
 
       if (error) throw error;
 
-      // Count unique entries per date
-      const countMap = new Map<string, number>();
+      // Classify exercises per date
+      const map = new Map<string, WeightDaySummary>();
       (data || []).forEach((entry) => {
-        countMap.set(entry.logged_date, (countMap.get(entry.logged_date) || 0) + 1);
+        if (!map.has(entry.logged_date)) {
+          map.set(entry.logged_date, {
+            date: entry.logged_date,
+            hasLifting: false,
+            hasRunWalk: false,
+            hasCycling: false,
+            hasOtherCardio: false,
+          });
+        }
+        const summary = map.get(entry.logged_date)!;
+        const key = entry.exercise_key;
+        if (key === 'walk_run') {
+          summary.hasRunWalk = true;
+        } else if (key === 'cycling') {
+          summary.hasCycling = true;
+        } else if (isCardioExercise(key)) {
+          summary.hasOtherCardio = true;
+        } else {
+          summary.hasLifting = true;
+        }
       });
 
-      return Array.from(countMap.entries()).map(([date, count]) => ({
-        date,
-        exerciseCount: count,
-      }));
+      return Array.from(map.values());
     },
     enabled: showWeights,
   });
@@ -180,7 +200,8 @@ const History = () => {
           const isTodayDate = isToday(day);
           const isFutureDate = day > new Date();
           const hasEntries = !!summary;
-          const hasWeights = showWeights && !!weightByDate.get(dateStr);
+          const weightData = weightByDate.get(dateStr);
+          const hasWeights = showWeights && !!weightData;
 
           return (
             <button
@@ -228,12 +249,15 @@ const History = () => {
                 {format(day, 'd')}
               </span>
 
-              {/* Row 3: Weight indicator (always takes space) */}
+              {/* Row 3: Exercise type indicators (always takes space) */}
               <span className={cn(
-                "h-3 w-3 flex items-center justify-center",
+                "h-3 flex items-center justify-center gap-0.5",
                 !(hasWeights && isCurrentMonth) && "invisible"
               )}>
-                <Dumbbell className="h-3 w-3 text-purple-500 dark:text-purple-400" />
+                {weightData?.hasLifting && <Dumbbell className="h-3 w-3 text-purple-500 dark:text-purple-400" />}
+                {weightData?.hasRunWalk && <Footprints className="h-3 w-3 text-purple-500 dark:text-purple-400" />}
+                {weightData?.hasCycling && <Bike className="h-3 w-3 text-purple-500 dark:text-purple-400" />}
+                {weightData?.hasOtherCardio && <Activity className="h-3 w-3 text-purple-500 dark:text-purple-400" />}
               </span>
             </button>
           );
