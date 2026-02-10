@@ -1,63 +1,44 @@
 
 
-## Fix: Add user_id Filter to All Delete Queries
+## Replace "cardio" Label with Contextual Shorthand
 
-You're right — even though RLS would protect against this in normal app usage, the admin SQL tool bypasses RLS, so every DELETE must include the user_id filter.
+### What Changes
 
-### Part 1: Database cleanup (corrected queries)
+The static "cardio" text spanning the Sets/Reps/Weight columns for cardio exercises will be replaced with a compact, data-driven summary in italicized, muted styling.
 
-**Delete apple-health-import runs on days with manual runs (23 rows):**
+### Shorthand Format
 
-```sql
-DELETE FROM weight_sets
-WHERE user_id = '83a923f5-10ac-4ba1-ae5a-b1f65b302239'
-  AND raw_input = 'apple-health-import'
-  AND exercise_key = 'walk_run'
-  AND LOWER(description) LIKE '%run%'
-  AND logged_date IN (
-    SELECT logged_date FROM weight_sets
-    WHERE user_id = '83a923f5-10ac-4ba1-ae5a-b1f65b302239'
-      AND raw_input IS DISTINCT FROM 'apple-health-import'
-      AND exercise_key = 'walk_run'
-      AND LOWER(description) LIKE '%run%'
-  );
-```
+| Data Available | Display |
+|---|---|
+| Distance + Duration | *1.5 mi, 17:33, 5.1 mph* |
+| Duration only | *15:30* |
+| Distance only | *2.0 mi* |
+| Neither | *cardio* |
 
-**Delete exact duplicate apple-health-import rows (keep one copy per group):**
+Speed (mph) is only shown when both distance and duration are available.
 
-```sql
-DELETE FROM weight_sets
-WHERE user_id = '83a923f5-10ac-4ba1-ae5a-b1f65b302239'
-  AND id IN (
-    SELECT id FROM (
-      SELECT id, ROW_NUMBER() OVER (
-        PARTITION BY exercise_key, logged_date, duration_minutes, distance_miles
-        ORDER BY created_at
-      ) AS rn
-      FROM weight_sets
-      WHERE user_id = '83a923f5-10ac-4ba1-ae5a-b1f65b302239'
-        AND raw_input = 'apple-health-import'
-    ) dupes
-    WHERE rn > 1
-  );
-```
+### Technical Details
 
-### Part 2: Code fix for future imports
+**File: `src/components/WeightItemsTable.tsx`**
 
-**File: `src/components/AppleHealthImport.tsx`**
-
-After the scan loop finishes building the `workouts` array, deduplicate before calling `setAllWorkouts`:
+In the cardio label rendering section (~lines 491-501), replace the hardcoded `"cardio"` string with a computed label:
 
 ```typescript
-const seen = new Set<string>();
-const uniqueWorkouts = workouts.filter((w) => {
-  const key = `${w.mapping.exercise_key}|${w.loggedDate}|${Math.round(w.durationMinutes || 0)}`;
-  if (seen.has(key)) return false;
-  seen.add(key);
-  return true;
-});
-setAllWorkouts(uniqueWorkouts);
+const parts: string[] = [];
+const dist = item.distance_miles ?? 0;
+const dur = item.duration_minutes ?? 0;
+
+if (dist > 0) parts.push(`${dist.toFixed(1)} mi`);
+if (dur > 0) parts.push(formatDurationMmSs(dur));
+if (dist > 0 && dur > 0) {
+  const mph = dist / (dur / 60);
+  parts.push(`${mph.toFixed(1)} mph`);
+}
+
+const label = parts.length > 0 ? parts.join(', ') : 'cardio';
 ```
 
-This prevents the 50KB chunk overlap from producing duplicate entries in future imports.
+The label renders with the existing italic + `text-muted-foreground` styling already applied to the "cardio" text. Will also add `formatDurationMmSs` import from `@/lib/weight-units`. Text size drops to `text-xs` to fit longer labels.
+
+No other files need changes.
 
