@@ -34,6 +34,7 @@ interface ExerciseItemOutput {
   weight_lbs: number;
   duration_minutes?: number | null;
   distance_miles?: number | null;
+  exercise_metadata?: Record<string, number> | null;
 }
 
 interface TestResult {
@@ -87,7 +88,8 @@ type WeightsColumnKey =
   | 'reps'
   | 'weight'
   | 'duration'
-  | 'distance';
+  | 'distance'
+  | 'meta';
 
 type ColumnKey = FoodColumnKey | WeightsColumnKey;
 
@@ -136,6 +138,7 @@ export function DevToolsPanel() {
     weight: 50,
     duration: 60,
     distance: 60,
+    meta: 120,
   });
 
   const { lookupUpc } = useScanBarcode();
@@ -733,6 +736,10 @@ export function DevToolsPanel() {
                             <span className="font-medium text-xs">Miles</span>
                             <WeightsResizeHandle columnKey="distance" />
                           </th>
+                          <th className="relative px-1 py-1 text-left" style={{ width: weightsColumnWidths.meta }} title="Exercise metadata">
+                            <span className="font-medium text-xs">Meta</span>
+                            <WeightsResizeHandle columnKey="meta" />
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
@@ -798,6 +805,23 @@ export function DevToolsPanel() {
                                   <div className="space-y-0.5">
                                     {result.output?.exercises?.map((e, idx) => (
                                       <div key={idx}>{e.distance_miles ?? '—'}</div>
+                                    ))}
+                                  </div>
+                                </td>
+                                <td className="px-1 py-1 text-xs text-muted-foreground" style={{ width: weightsColumnWidths.meta, maxWidth: weightsColumnWidths.meta }}>
+                                  <div className="space-y-0.5">
+                                    {result.output?.exercises?.map((e, idx) => (
+                                      <div key={idx} className="truncate" title={
+                                        e.exercise_metadata
+                                          ? Object.entries(e.exercise_metadata).map(([k, v]) => `${k}: ${v}`).join(', ')
+                                          : undefined
+                                      }>
+                                        {e.exercise_metadata
+                                          ? Object.entries(e.exercise_metadata)
+                                              .map(([k, v]) => `${k.replace(/_pct$/, '').replace('calories_burned', 'cal')}: ${v}`)
+                                              .join(', ')
+                                          : '—'}
+                                      </div>
                                     ))}
                                   </div>
                                 </td>
