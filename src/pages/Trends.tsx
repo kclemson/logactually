@@ -185,7 +185,7 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
       const cardioLabel = cardioMode === 'mph' 
         ? `${mph}` 
         : cardioMode === 'distance'
-          ? `${Number(d.distance_miles || 0).toFixed(1)}`
+          ? `${Number(d.distance_miles || 0).toFixed(2)}`
           : `${Number(d.duration_minutes || 0).toFixed(1)}`;
       
       return {
@@ -358,13 +358,13 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
                             return [
                               `${paceFormatted} /mi`,           // Pace in mm:ss
                               `${mph} mph`,                      // Speed
-                              `${distance} mi in ${duration}`   // Distance + Time combined
+                              `${Number(distance).toFixed(2)} mi in ${duration}`   // Distance + Time combined
                             ];
                           }
                           
                           // Fallback for cardio without distance (e.g., stationary bike with time only)
                           if (distance) {
-                            return [duration, `${distance} mi`];
+                            return [duration, `${Number(distance).toFixed(2)} mi`];
                           }
                           return duration;
                         }

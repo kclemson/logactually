@@ -498,7 +498,7 @@ export function WeightItemsTable({
                   const dist = item.distance_miles ?? 0;
                   const dur = item.duration_minutes ?? 0;
 
-                  if (dist > 0) parts.push(`${dist.toFixed(1)} mi`);
+                  if (dist > 0) parts.push(`${dist.toFixed(2)} mi`);
                   if (dur > 0) parts.push(formatDurationMmSs(dur));
                   if (dist > 0 && dur > 0) {
                     const mph = dist / (dur / 60);
@@ -657,7 +657,7 @@ export function WeightItemsTable({
                         {item.weight_lbs === 0 && ((item.duration_minutes ?? 0) > 0 || (item.distance_miles ?? 0) > 0)
                           ? ((item.duration_minutes ?? 0) > 0 
                               ? `${Number(item.duration_minutes).toFixed(1)} min`
-                              : `${Number(item.distance_miles).toFixed(1)} mi`)
+                              : `${Number(item.distance_miles).toFixed(2)} mi`)
                           : formatWeight(item.weight_lbs, weightUnit, weightUnit === 'kg' ? 1 : 0)
                         }
                       </span>
@@ -751,11 +751,11 @@ export function WeightItemsTable({
                       if (hasBothMetrics) {
                         const paceFormatted = formatDurationMmSs(paceDecimal!);
                         const durationFormatted = formatDurationMmSs(duration);
-                        displayParts = `${distance} mi in ${durationFormatted} (${paceFormatted}/mi, ${mph} mph)`;
+                        displayParts = `${distance.toFixed(2)} mi in ${durationFormatted} (${paceFormatted}/mi, ${mph} mph)`;
                       } else if (duration > 0) {
                         displayParts = formatDurationMmSs(duration);
                       } else if (distance > 0) {
-                        displayParts = `${distance} mi`;
+                        displayParts = `${distance.toFixed(2)} mi`;
                       } else {
                         displayParts = '';
                       }
