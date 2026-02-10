@@ -29,43 +29,6 @@ function downloadCSV(content: string, filename: string) {
 }
 
 /**
- * Export daily totals - one row per date with aggregated macros
- */
-export function exportDailyTotals(entries: FoodEntry[]) {
-  const byDate: Record<string, { calories: number; protein: number; carbs: number; fat: number }> = {};
-
-  entries.forEach((entry) => {
-    const date = entry.eaten_date;
-    if (!byDate[date]) {
-      byDate[date] = { calories: 0, protein: 0, carbs: 0, fat: 0 };
-    }
-    byDate[date].calories += entry.total_calories;
-    byDate[date].protein += entry.total_protein;
-    byDate[date].carbs += entry.total_carbs;
-    byDate[date].fat += entry.total_fat;
-  });
-
-  const headers = ['Date', 'Calories', 'Protein (g)', 'Carbs (g)', 'Fat (g)'];
-  const rows = Object.entries(byDate)
-    .sort(([a], [b]) => b.localeCompare(a))
-    .map(([date, totals]) => [
-      date,
-      totals.calories,
-      totals.protein,
-      totals.carbs,
-      totals.fat,
-    ]);
-
-  const csv = [
-    headers.join(','),
-    ...rows.map((row) => row.map(escapeCSV).join(',')),
-  ].join('\n');
-
-  const timestamp = format(new Date(), 'yyyy-MM-dd');
-  downloadCSV(csv, `daily-totals-${timestamp}.csv`);
-}
-
-/**
  * Export detailed food log - one row per food item
  */
 export function exportFoodLog(entries: FoodEntry[]) {
