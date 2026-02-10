@@ -16,6 +16,7 @@ export interface WeightPoint {
 
 export interface ExerciseTrend {
   exercise_key: string;
+  exercise_subtype?: string | null;
   description: string;
   sessionCount: number;
   maxWeight: number;
@@ -39,24 +40,28 @@ export function useWeightTrends(days: number) {
 
       const { data, error } = await supabase
         .from('weight_sets')
-        .select('exercise_key, description, sets, reps, weight_lbs, logged_date, duration_minutes, distance_miles')
+        .select('exercise_key, exercise_subtype, description, sets, reps, weight_lbs, logged_date, duration_minutes, distance_miles')
         .gte('logged_date', startDate)
         .order('logged_date', { ascending: true });
 
       if (error) throw error;
 
-      // Aggregate by exercise_key
+      // Aggregate by exercise_key + exercise_subtype
       const exerciseMap = new Map<string, ExerciseTrend>();
 
       (data || []).forEach(row => {
         const exerciseKey = row.exercise_key;
+        const subtype = row.exercise_subtype || null;
+        // Use subtype as part of the map key when present
+        const mapKey = subtype ? `${exerciseKey}::${subtype}` : exerciseKey;
         const weight = Number(row.weight_lbs);
         const duration = Number(row.duration_minutes) || 0;
         const distance = Number(row.distance_miles) || 0;
 
-        if (!exerciseMap.has(exerciseKey)) {
-          exerciseMap.set(exerciseKey, {
+        if (!exerciseMap.has(mapKey)) {
+          exerciseMap.set(mapKey, {
             exercise_key: exerciseKey,
+            exercise_subtype: subtype,
             description: row.description,
             sessionCount: 0,
             maxWeight: 0,
@@ -66,7 +71,7 @@ export function useWeightTrends(days: number) {
           });
         }
 
-        const trend = exerciseMap.get(exerciseKey)!;
+        const trend = exerciseMap.get(mapKey)!;
         trend.maxWeight = Math.max(trend.maxWeight, weight);
         trend.maxDuration = Math.max(trend.maxDuration, duration);
         trend.maxDistance = Math.max(trend.maxDistance, distance);

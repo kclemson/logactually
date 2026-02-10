@@ -13,6 +13,7 @@ export interface WeightSet {
   uid: string;            // Client-side tracking for React keys
   entryId: string;        // Groups exercises logged together (maps to entry_id)
   exercise_key: string;   // Canonical identifier for trending: 'lat_pulldown', 'bench_press'
+  exercise_subtype?: string | null; // Optional granularity: 'walking', 'running', 'hiking' within walk_run
   description: string;    // User-friendly name: "Lat Pulldown"
   sets: number;
   reps: number;
@@ -47,6 +48,7 @@ export interface WeightSetRow {
   entry_id: string;
   logged_date: string;
   exercise_key: string;
+  exercise_subtype: string | null;
   description: string;
   sets: number;
   reps: number;
@@ -64,6 +66,7 @@ export interface WeightSetRow {
  */
 export interface AnalyzedExercise {
   exercise_key: string;
+  exercise_subtype?: string | null;
   description: string;
   sets: number;
   reps: number;
@@ -77,6 +80,7 @@ export interface AnalyzedExercise {
  */
 export interface SavedExerciseSet {
   exercise_key: string;
+  exercise_subtype?: string | null;
   description: string;
   sets: number;
   reps: number;

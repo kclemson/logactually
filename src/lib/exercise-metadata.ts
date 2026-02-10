@@ -99,7 +99,25 @@ export const EXERCISE_MUSCLE_GROUPS: Record<string, ExerciseMuscles> = {
   stair_climber: { primary: 'Cardio', isCardio: true },
   swimming: { primary: 'Cardio', isCardio: true },
   jump_rope: { primary: 'Cardio', isCardio: true },
+  functional_strength: { primary: 'Full Body' },
 };
+
+// Subtype display names: maps exercise_subtype values to user-friendly labels
+export const EXERCISE_SUBTYPE_DISPLAY: Record<string, string> = {
+  walking: 'Walking',
+  running: 'Running',
+  hiking: 'Hiking',
+  indoor: 'Indoor',
+  outdoor: 'Outdoor',
+  pool: 'Pool',
+  open_water: 'Open Water',
+};
+
+// Returns a user-friendly display name for a subtype, or null
+export function getSubtypeDisplayName(subtype: string | null | undefined): string | null {
+  if (!subtype) return null;
+  return EXERCISE_SUBTYPE_DISPLAY[subtype] || subtype.charAt(0).toUpperCase() + subtype.slice(1);
+}
 
 // Check if an exercise is cardio-based
 export function isCardioExercise(exerciseKey: string): boolean {
