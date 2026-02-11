@@ -1,24 +1,25 @@
 
 
-## Add Changelog Entry for Calorie Burn Estimation
+## Add Lightbox Photo Viewer to Changelog
 
-### What happens
+### What it does
 
-Add a **new** entry at the top of the changelog array (position 0), keeping the existing Feb-11 photo-food-logging entry intact.
+Clicking/tapping a changelog image opens a full-screen overlay showing the image at its natural size. Clicking the overlay background or an X button closes it. No dependencies needed -- just a simple React state + portal approach.
 
-### File changes
+### Implementation
 
-**`src/pages/Changelog.tsx`**
+**File: `src/pages/Changelog.tsx`**
 
-Add this line at the top of the `CHANGELOG_ENTRIES` array (before the existing Feb-11 entry):
+1. Add state to track which image is currently open: `const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)`
 
-```ts
-{ date: "Feb-11", text: "Added estimated calorie burn for exercises. Enable it in Settings to see per-exercise and daily burn estimates on your Weight Log, calculated using MET values from the 2024 Compendium of Physical Activities. Optionally provide your body weight, height, age, and metabolic profile to narrow the estimated range.", image: "calorie-burn-config.png" },
-```
+2. Make all changelog `<img>` elements clickable by adding `onClick={() => setLightboxSrc(src)}` and `cursor-pointer` styling.
 
-No other entries are modified or removed. `LAST_UPDATED` is already "Feb-11-26" so no change needed. Settings page link text is already current.
+3. Render a lightbox overlay when `lightboxSrc` is set:
+   - Fixed full-screen backdrop (`fixed inset-0 z-50 bg-black/90`)
+   - Centered image with `max-w-[90vw] max-h-[90vh] object-contain`
+   - X button in top-right corner to close
+   - Click on backdrop also closes
+   - Stop propagation on image click so clicking the image itself doesn't close
 
-### Asset
-
-Copy the uploaded screenshot to `public/changelog/calorie-burn-config.png`.
+This keeps it minimal -- no extra components or libraries. Works on both mobile and desktop.
 
