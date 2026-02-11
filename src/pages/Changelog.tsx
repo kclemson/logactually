@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -47,6 +47,15 @@ export default function Changelog() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!lightboxSrc) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLightboxSrc(null);
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [lightboxSrc]);
 
   const handleClose = () => {
     navigate(user ? "/" : "/auth");
@@ -116,22 +125,26 @@ export default function Changelog() {
       {/* Lightbox */}
       {lightboxSrc && (
         <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center"
           onClick={() => setLightboxSrc(null)}
         >
-          <button
-            className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors"
-            onClick={() => setLightboxSrc(null)}
-            aria-label="Close image"
-          >
-            <X className="h-6 w-6" />
-          </button>
-          <img
-            src={lightboxSrc}
-            alt="Enlarged screenshot"
-            className="max-w-[90vw] max-h-[90vh] object-contain"
+          <div
+            className="relative max-w-3xl w-auto mx-4 bg-background rounded-lg p-2"
             onClick={(e) => e.stopPropagation()}
-          />
+          >
+            <button
+              className="absolute -top-3 -right-3 bg-background rounded-full p-1 text-muted-foreground hover:text-foreground transition-colors shadow-md"
+              onClick={() => setLightboxSrc(null)}
+              aria-label="Close image"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <img
+              src={lightboxSrc}
+              alt="Enlarged screenshot"
+              className="max-h-[85vh] w-auto object-contain rounded"
+            />
+          </div>
         </div>
       )}
     </div>
