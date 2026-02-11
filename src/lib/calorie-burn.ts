@@ -229,6 +229,54 @@ export function inchesToCm(inches: number): number {
 }
 
 // ---------------------------------------------------------------------------
+// BMR-aware metabolic scaling
+// ---------------------------------------------------------------------------
+
+// Reference person: 170cm, 30 years old
+const REFERENCE_HEIGHT_CM = 170;
+const REFERENCE_AGE = 30;
+
+/**
+ * Compute a BMR scaling factor using the Mifflin-St Jeor equation.
+ * Returns `userBMR / referenceBMR` so calories scale up/down based on
+ * how the user's metabolism differs from a "typical" person of the same weight.
+ *
+ * Returns 1.0 when height or age is missing (no adjustment possible).
+ */
+export function getBmrScalingFactor(settings: CalorieBurnSettings): number {
+  if (settings.heightInches == null || settings.age == null || settings.bodyWeightLbs == null) {
+    return 1.0;
+  }
+
+  const weightKg = settings.bodyWeightLbs * 0.453592;
+  const heightCm = settings.heightInches * 2.54;
+
+  // Mifflin-St Jeor: male offset = -5, female offset = -161
+  const maleBmr = (w: number, h: number, a: number) => 10 * w + 6.25 * h - 5 * a - 5;
+  const femaleBmr = (w: number, h: number, a: number) => 10 * w + 6.25 * h - 5 * a - 161;
+
+  let userBmr: number;
+  let refBmr: number;
+
+  if (settings.bodyComposition === 'male') {
+    userBmr = maleBmr(weightKg, heightCm, settings.age);
+    refBmr = maleBmr(weightKg, REFERENCE_HEIGHT_CM, REFERENCE_AGE);
+  } else if (settings.bodyComposition === 'female') {
+    userBmr = femaleBmr(weightKg, heightCm, settings.age);
+    refBmr = femaleBmr(weightKg, REFERENCE_HEIGHT_CM, REFERENCE_AGE);
+  } else {
+    // Population average: midpoint of male and female
+    userBmr = (maleBmr(weightKg, heightCm, settings.age) + femaleBmr(weightKg, heightCm, settings.age)) / 2;
+    refBmr = (maleBmr(weightKg, REFERENCE_HEIGHT_CM, REFERENCE_AGE) + femaleBmr(weightKg, REFERENCE_HEIGHT_CM, REFERENCE_AGE)) / 2;
+  }
+
+  // Guard against division by zero or negative BMR
+  if (refBmr <= 0 || userBmr <= 0) return 1.0;
+
+  return userBmr / refBmr;
+}
+
+// ---------------------------------------------------------------------------
 // Main estimation function
 // ---------------------------------------------------------------------------
 
@@ -264,17 +312,14 @@ export function estimateCalorieBurn(
   const isCardio = isCardioExercise(exercise.exercise_key);
 
   if (exercise.duration_minutes != null && exercise.duration_minutes > 0) {
-    // Use actual duration for cardio
     const hours = exercise.duration_minutes / 60;
     durationLow = hours;
     durationHigh = hours;
   } else if (!isCardio && exercise.sets > 0) {
-    // Estimate from sets for strength
     const est = estimateStrengthDuration(exercise.sets, exercise.reps);
     durationLow = est.low;
     durationHigh = est.high;
   } else {
-    // No duration info at all - can't estimate
     return { type: 'range', low: 0, high: 0 };
   }
 
@@ -293,9 +338,12 @@ export function estimateCalorieBurn(
   // 7. Composition multiplier
   const comp = getCompositionMultiplier(settings.bodyComposition);
 
-  // 8. Calculate
-  const low = Math.round(met.low * weightKgLow * durationLow * comp);
-  const high = Math.round(met.high * weightKgHigh * durationHigh * comp);
+  // 8. BMR metabolic scaling (age + height aware)
+  const bmrScale = getBmrScalingFactor(settings);
+
+  // 9. Calculate
+  const low = Math.round(met.low * weightKgLow * durationLow * comp * bmrScale);
+  const high = Math.round(met.high * weightKgHigh * durationHigh * comp * bmrScale);
 
   return { type: 'range', low, high };
 }

@@ -248,8 +248,14 @@ export function CalorieBurnDialog({
             </button>
           </div>
 
-          {settings.calorieBurnEnabled && (
-            <>
+          <div
+            className={cn(
+              "grid transition-[grid-template-rows] duration-300 ease-in-out",
+              settings.calorieBurnEnabled ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+            )}
+          >
+            <div className="overflow-hidden">
+              <div className="space-y-5 pt-1">
               {/* Live preview */}
               <div className="space-y-1.5">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -402,8 +408,9 @@ export function CalorieBurnDialog({
                   number directly.
                 </p>
               </div>
-            </>
-          )}
+              </div>
+            </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

@@ -7,6 +7,7 @@ import {
   applyInclineBonus,
   estimateStrengthDuration,
   getCompositionMultiplier,
+  getBmrScalingFactor,
   cmToInches,
   inchesToCm,
   formatCalorieBurnValue,
@@ -494,5 +495,87 @@ describe('formatCalorieBurnValue', () => {
 
   it('formats equal low/high', () => {
     expect(formatCalorieBurnValue({ type: 'range', low: 100, high: 100 })).toBe('~100');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BMR scaling factor
+// ---------------------------------------------------------------------------
+
+describe('getBmrScalingFactor', () => {
+  it('returns 1.0 when age is missing', () => {
+    expect(getBmrScalingFactor(settingsWith({ bodyWeightLbs: 160, heightInches: 70, age: null }))).toBe(1.0);
+  });
+
+  it('returns 1.0 when height is missing', () => {
+    expect(getBmrScalingFactor(settingsWith({ bodyWeightLbs: 160, heightInches: null, age: 30 }))).toBe(1.0);
+  });
+
+  it('returns ~1.0 for reference person (170cm, 30yo)', () => {
+    const factor = getBmrScalingFactor(settingsWith({
+      bodyWeightLbs: 160,
+      heightInches: cmToInches(170),
+      age: 30,
+    }));
+    expect(factor).toBeCloseTo(1.0, 2);
+  });
+
+  it('older age reduces the factor', () => {
+    const young = getBmrScalingFactor(settingsWith({
+      bodyWeightLbs: 160, heightInches: 70, age: 20,
+    }));
+    const old = getBmrScalingFactor(settingsWith({
+      bodyWeightLbs: 160, heightInches: 70, age: 60,
+    }));
+    expect(old).toBeLessThan(young);
+  });
+
+  it('taller height increases the factor', () => {
+    const short = getBmrScalingFactor(settingsWith({
+      bodyWeightLbs: 160, heightInches: 60, age: 30,
+    }));
+    const tall = getBmrScalingFactor(settingsWith({
+      bodyWeightLbs: 160, heightInches: 76, age: 30,
+    }));
+    expect(tall).toBeGreaterThan(short);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Age affects calorie estimates end-to-end
+// ---------------------------------------------------------------------------
+
+describe('age affects calorie estimates', () => {
+  const exercise: ExerciseInput = {
+    exercise_key: 'walk_run',
+    exercise_subtype: 'running',
+    sets: 0,
+    reps: 0,
+    weight_lbs: 0,
+    duration_minutes: 30,
+  };
+
+  it('changing age by decades changes estimates', () => {
+    const base = { bodyWeightLbs: 160, heightInches: 70 };
+    const young = estimateCalorieBurn(exercise, settingsWith({ ...base, age: 20 }));
+    const old = estimateCalorieBurn(exercise, settingsWith({ ...base, age: 60 }));
+
+    expect(young.type).toBe('range');
+    expect(old.type).toBe('range');
+    if (young.type === 'range' && old.type === 'range') {
+      expect(young.low).toBeGreaterThan(old.low);
+      expect(young.high).toBeGreaterThan(old.high);
+    }
+  });
+
+  it('age has no effect without height', () => {
+    const base = { bodyWeightLbs: 160, heightInches: null as number | null };
+    const age20 = estimateCalorieBurn(exercise, settingsWith({ ...base, age: 20 }));
+    const age60 = estimateCalorieBurn(exercise, settingsWith({ ...base, age: 60 }));
+
+    if (age20.type === 'range' && age60.type === 'range') {
+      expect(age20.low).toBe(age60.low);
+      expect(age20.high).toBe(age60.high);
+    }
   });
 });
