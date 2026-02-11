@@ -138,7 +138,19 @@ export function CalorieBurnDialog({
   }, [previewExercises, burnSettings, settings.weightUnit]);
 
   const handleToggle = () => {
-    updateSettings({ calorieBurnEnabled: !settings.calorieBurnEnabled });
+    if (settings.calorieBurnEnabled) {
+      updateSettings({
+        calorieBurnEnabled: false,
+        bodyWeightLbs: null,
+        heightInches: null,
+        age: null,
+        bodyComposition: null,
+        defaultIntensity: null,
+      });
+      setHeightDisplay('');
+    } else {
+      updateSettings({ calorieBurnEnabled: true });
+    }
   };
 
   const handleWeightChange = (val: string) => {
