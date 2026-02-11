@@ -779,7 +779,7 @@ export function WeightItemsTable({
                       }
                       
                       return (
-                        <p key={ex.uid || idx} className="text-sm text-muted-foreground">
+                        <p key={ex.uid || idx} className="text-xs text-muted-foreground">
                           {cardioItems.length > 1 && (
                             <><span className="font-medium">{ex.description}:</span>{' '}</>
                           )}
@@ -808,7 +808,7 @@ export function WeightItemsTable({
                         ? parts[0].display
                         : parts.map(p => `${p.display} (${p.name})`).join(', ');
                       return (
-                        <p className="text-sm text-muted-foreground italic">
+                        <p className="text-xs text-muted-foreground italic">
                           Estimated calories burned: {detail}
                         </p>
                       );
@@ -816,13 +816,13 @@ export function WeightItemsTable({
 
                     {/* Only show raw input if NOT from a saved routine */}
                     {!isFromSavedRoutine && currentRawInput && (
-                      <p className="text-sm text-muted-foreground italic">
+                      <p className="text-xs text-muted-foreground italic">
                         Logged as: {currentRawInput}
                       </p>
                     )}
                     {/* Show routine info if from saved routine, otherwise show "Save as routine" */}
                     {isFromSavedRoutine ? (
-                      <p className="text-sm text-muted-foreground italic">
+                      <p className="text-xs text-muted-foreground italic">
                         From saved routine:{' '}
                         {routineName ? (
                           <Link 
@@ -842,7 +842,7 @@ export function WeightItemsTable({
                           const entryExercises = items.filter(i => i.entryId === currentEntryId);
                           onSaveAsRoutine(currentEntryId, currentRawInput ?? null, entryExercises);
                         }}
-                        className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                        className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
                       >
                         Save as routine
                       </button>
