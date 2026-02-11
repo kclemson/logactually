@@ -1,54 +1,65 @@
 
 
-## Height Input: Support `5'1"` Format
+## Fix: Height (and Age) Should Impact Previews Independently
 
-### What changes
+### Root cause
 
-Replace the numeric height input with a text input that accepts the common `5'1"` format when the unit is set to **ft/in** (renamed from "in"). When the unit is **cm**, it stays as a plain number input.
+In `getBmrScalingFactor`, there's an early return:
 
-The user types naturally -- `5'1`, `5'1"`, `5 1`, or even just `61` (total inches) -- and the system parses it into total inches for storage.
+```typescript
+if (settings.heightInches == null || settings.age == null || settings.bodyWeightLbs == null) {
+  return 1.0;
+}
+```
 
-### How it works
+This means height changes do **nothing** unless the user has also filled in both weight and age. Since height and age are optional "narrows the range" fields, requiring all three defeats the purpose.
 
-**Parsing logic** (new helper, e.g. `parseFeetInchesInput`):
-- `5'1` or `5'1"` or `5' 1"` -- 5 feet 1 inch = 61 inches
-- `5'` or `5'0` -- 5 feet 0 inches = 60 inches
-- `5'11` -- 5 feet 11 inches = 71 inches
-- Plain number like `61` -- treated as total inches (for users who prefer that)
-- Returns `null` if unparseable
+### Fix
 
-**Display logic** (new helper, e.g. `formatInchesAsFeetInches`):
-- Converts stored `heightInches` (e.g. 61) back to `5'1"` for display
-- `Math.floor(inches / 12)` for feet, `inches % 12` for remaining inches
+Change `getBmrScalingFactor` to use **reference values** for any missing fields, so each field independently contributes:
 
-**Unit toggle behavior:**
-- Rename the unit labels from `in` / `cm` to `ft` / `cm` to make the feet+inches format clear
-- When switching ft to cm: parse current display, convert total inches to cm
-- When switching cm to ft: parse cm value, convert to inches, format as `5'1"`
+- Missing weight: use midpoint of the default population range (160 lbs)
+- Missing height: use reference height (170 cm / ~67 inches)
+- Missing age: use reference age (30)
 
-### Technical Details
+The function should only return 1.0 when **both** height and age are missing (since those are the only two fields that differ between user and reference -- weight cancels out in the ratio when both use the same value).
 
-**`src/components/CalorieBurnDialog.tsx`**:
+### Technical details
 
-1. Change the height input from `type="number"` to `type="text"` when unit is ft (keep number for cm)
-2. Update placeholder from `"—"` to `5'7"` when in ft mode, `170` when in cm mode
-3. Update `handleHeightChange` to use the parser when unit is ft
-4. Update `handleHeightUnitChange` to convert between ft display and cm display
-5. Update initial `heightDisplay` state to format as `5'1"` when unit is ft
-6. Rename unit button labels from `in`/`cm` to `ft`/`cm`
+**`src/lib/calorie-burn.ts`** -- update `getBmrScalingFactor`:
 
-**`src/hooks/useUserSettings.ts`**:
+Replace the all-or-nothing null check with individual fallbacks:
 
-- Update the `heightUnit` type from `'in' | 'cm'` to `'ft' | 'cm'` (the stored value in inches remains unchanged -- only the display unit label changes)
-- Update default from `'in'` to `'ft'`
+```typescript
+export function getBmrScalingFactor(settings: CalorieBurnSettings): number {
+  const heightInches = settings.heightInches;
+  const age = settings.age;
 
-**`src/lib/calorie-burn.ts`** (if `heightUnit` is referenced there):
+  // If neither height nor age is provided, no adjustment is possible
+  // (weight cancels out in the ratio)
+  if (heightInches == null && age == null) {
+    return 1.0;
+  }
 
-- Update any references to `'in'` to `'ft'` for consistency
+  // Use actual weight or population midpoint (weight mostly cancels
+  // in the ratio, but is needed for the equation)
+  const weightKg = (settings.bodyWeightLbs ?? 160) * 0.453592;
+  const heightCm = heightInches != null ? heightInches * 2.54 : REFERENCE_HEIGHT_CM;
+  const userAge = age ?? REFERENCE_AGE;
 
-**Migration for existing users**: If a user already has `heightUnit: 'in'` stored, treat `'in'` as equivalent to `'ft'` in the display logic (backwards compatible).
+  // ... rest of Mifflin-St Jeor computation unchanged ...
+}
+```
 
-### Files Changed
-- `src/components/CalorieBurnDialog.tsx` -- new parse/format helpers, text input for ft mode, updated unit labels
-- `src/hooks/useUserSettings.ts` -- update heightUnit type to `'ft' | 'cm'`
-- `src/lib/calorie-burn.ts` -- update heightUnit references if any
+This way:
+- Changing height alone adjusts the ratio (user height vs reference 170cm)
+- Changing age alone adjusts the ratio (user age vs reference 30)
+- Weight, when provided, makes the ratio slightly more accurate but doesn't gate the feature
+
+**`src/lib/calorie-burn.test.ts`** -- update test expectations:
+
+Update existing tests that may assume 1.0 is returned when only one field is set, and add a test that verifies height-only changes produce different scaling factors.
+
+### Files changed
+- `src/lib/calorie-burn.ts` -- relax null guard in `getBmrScalingFactor`
+- `src/lib/calorie-burn.test.ts` -- update/add test cases
