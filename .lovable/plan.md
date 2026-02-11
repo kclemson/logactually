@@ -1,65 +1,46 @@
 
 
-## Fix: Height (and Age) Should Impact Previews Independently
+## Add lbs/kg Unit Toggle to Body Weight Row
 
-### Root cause
+### What changes
 
-In `getBmrScalingFactor`, there's an early return:
-
-```typescript
-if (settings.heightInches == null || settings.age == null || settings.bodyWeightLbs == null) {
-  return 1.0;
-}
-```
-
-This means height changes do **nothing** unless the user has also filled in both weight and age. Since height and age are optional "narrows the range" fields, requiring all three defeats the purpose.
-
-### Fix
-
-Change `getBmrScalingFactor` to use **reference values** for any missing fields, so each field independently contributes:
-
-- Missing weight: use midpoint of the default population range (160 lbs)
-- Missing height: use reference height (170 cm / ~67 inches)
-- Missing age: use reference age (30)
-
-The function should only return 1.0 when **both** height and age are missing (since those are the only two fields that differ between user and reference -- weight cancels out in the ratio when both use the same value).
+Replace the static weight unit label (`lbs` or `kg`) next to the body weight input with an interactive toggle (matching the height row's `ft`/`cm` toggle). The default selection comes from the user's app-wide `weightUnit` setting, but they can switch locally within the dialog. The stored value remains `bodyWeightLbs` (in lbs) -- only the display/input conversion changes.
 
 ### Technical details
 
-**`src/lib/calorie-burn.ts`** -- update `getBmrScalingFactor`:
+**`src/components/CalorieBurnDialog.tsx`**:
 
-Replace the all-or-nothing null check with individual fallbacks:
+1. Add a local state `bodyWeightUnit` initialized from `settings.weightUnit` (either `'lbs'` or `'kg'`).
 
-```typescript
-export function getBmrScalingFactor(settings: CalorieBurnSettings): number {
-  const heightInches = settings.heightInches;
-  const age = settings.age;
+2. Replace `displayWeight()` and `handleWeightChange` to use `bodyWeightUnit` instead of `settings.weightUnit`:
+   - Display: convert stored `bodyWeightLbs` to the local unit for display
+   - Input: convert user entry back to lbs for storage
 
-  // If neither height nor age is provided, no adjustment is possible
-  // (weight cancels out in the ratio)
-  if (heightInches == null && age == null) {
-    return 1.0;
-  }
+3. Add `handleBodyWeightUnitChange(unit)` that:
+   - Converts the current displayed value from old unit to new unit (using the display value, same pattern as height)
+   - Updates `bodyWeightUnit` state
 
-  // Use actual weight or population midpoint (weight mostly cancels
-  // in the ratio, but is needed for the equation)
-  const weightKg = (settings.bodyWeightLbs ?? 160) * 0.453592;
-  const heightCm = heightInches != null ? heightInches * 2.54 : REFERENCE_HEIGHT_CM;
-  const userAge = age ?? REFERENCE_AGE;
+4. Replace the static `<span>{settings.weightUnit}</span>` with the same toggle button pattern used for height:
+   ```tsx
+   <div className="flex gap-0.5">
+     {(['lbs', 'kg'] as const).map((unit) => (
+       <button
+         key={unit}
+         onClick={() => handleBodyWeightUnitChange(unit)}
+         className={cn(
+           "text-xs px-1.5 py-0.5 rounded transition-colors",
+           bodyWeightUnit === unit
+             ? "bg-primary/10 text-foreground font-medium"
+             : "text-muted-foreground hover:text-foreground"
+         )}
+       >
+         {unit}
+       </button>
+     ))}
+   </div>
+   ```
 
-  // ... rest of Mifflin-St Jeor computation unchanged ...
-}
-```
-
-This way:
-- Changing height alone adjusts the ratio (user height vs reference 170cm)
-- Changing age alone adjusts the ratio (user age vs reference 30)
-- Weight, when provided, makes the ratio slightly more accurate but doesn't gate the feature
-
-**`src/lib/calorie-burn.test.ts`** -- update test expectations:
-
-Update existing tests that may assume 1.0 is returned when only one field is set, and add a test that verifies height-only changes produce different scaling factors.
+No changes to `useUserSettings.ts` or the database -- this is purely a local display concern within the dialog. The app-wide `weightUnit` setting remains unchanged.
 
 ### Files changed
-- `src/lib/calorie-burn.ts` -- relax null guard in `getBmrScalingFactor`
-- `src/lib/calorie-burn.test.ts` -- update/add test cases
+- `src/components/CalorieBurnDialog.tsx` -- add local `bodyWeightUnit` state, unit toggle buttons, and conversion logic
