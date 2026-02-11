@@ -26,7 +26,7 @@ import { useUpdateSavedRoutine } from '@/hooks/useSavedRoutines';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { detectRepeatedWeightEntry, isDismissed, dismissSuggestion, shouldShowOptOutLink, WeightSaveSuggestion, findMatchingSavedRoutine, MatchingRoutine } from '@/lib/repeated-entry-detection';
-import { estimateTotalCalorieBurn, formatCalorieBurnTotal, type CalorieBurnSettings, type ExerciseInput } from '@/lib/calorie-burn';
+import { estimateTotalCalorieBurn, type CalorieBurnSettings, type ExerciseInput } from '@/lib/calorie-burn';
 import { WeightSet, WeightEditableField, SavedExerciseSet, AnalyzedExercise } from '@/types/weight';
 import { generateRoutineName } from '@/lib/routine-naming';
 
@@ -673,29 +673,24 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
             entryRoutineNames={entryRoutineNames}
             entrySourceRoutineIds={entrySourceRoutineIds}
             calorieBurnSettings={settings.calorieBurnEnabled ? settings as CalorieBurnSettings : undefined}
+            totalCalorieBurnDisplay={settings.calorieBurnEnabled ? (() => {
+              const exercises: ExerciseInput[] = displayItems.map(item => ({
+                exercise_key: item.exercise_key,
+                exercise_subtype: item.exercise_subtype,
+                sets: item.sets,
+                reps: item.reps,
+                weight_lbs: item.weight_lbs,
+                duration_minutes: item.duration_minutes,
+                distance_miles: item.distance_miles,
+                exercise_metadata: item.exercise_metadata,
+              }));
+              const total = estimateTotalCalorieBurn(exercises, settings as CalorieBurnSettings);
+              if (total.type === 'exact') return total.value > 0 ? `(~${total.value} cal)` : undefined;
+              if (total.low === 0 && total.high === 0) return undefined;
+              if (total.low === total.high) return `(~${total.low} cal)`;
+              return `(~${total.low}-${total.high} cal)`;
+            })() : undefined}
           />
-
-          {/* Daily calorie burn summary */}
-          {settings.calorieBurnEnabled && (() => {
-            const exercises: ExerciseInput[] = displayItems.map(item => ({
-              exercise_key: item.exercise_key,
-              exercise_subtype: item.exercise_subtype,
-              sets: item.sets,
-              reps: item.reps,
-              weight_lbs: item.weight_lbs,
-              duration_minutes: item.duration_minutes,
-              distance_miles: item.distance_miles,
-              exercise_metadata: item.exercise_metadata,
-            }));
-            const total = estimateTotalCalorieBurn(exercises, settings as CalorieBurnSettings);
-            const display = formatCalorieBurnTotal(total);
-            if (!display) return null;
-            return (
-              <p className="text-xs text-muted-foreground/70 italic text-center">
-                {display}
-              </p>
-            );
-          })()}
         </>
       )}
 
