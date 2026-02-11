@@ -16,6 +16,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { EXERCISE_MUSCLE_GROUPS } from '@/lib/exercise-metadata';
 
 interface CalorieBurnDialogProps {
   open: boolean;
@@ -24,25 +25,32 @@ interface CalorieBurnDialogProps {
   updateSettings: (updates: Partial<UserSettings>) => void;
 }
 
-// Fallback sample exercises when user has none logged
-const SAMPLE_EXERCISES: ExerciseInput[] = [
+// Build cardio keys from the single source of truth
+const CARDIO_KEYS = Object.entries(EXERCISE_MUSCLE_GROUPS)
+  .filter(([, v]) => v.isCardio)
+  .map(([k]) => k);
+
+// Fallback samples – split by type
+const SAMPLE_CARDIO: ExerciseInput[] = [
   { exercise_key: 'walk_run', exercise_subtype: 'walking', sets: 0, reps: 0, weight_lbs: 0, duration_minutes: 25 },
   { exercise_key: 'walk_run', exercise_subtype: 'running', sets: 0, reps: 0, weight_lbs: 0, duration_minutes: 30 },
-  { exercise_key: 'elliptical', sets: 0, reps: 0, weight_lbs: 0, duration_minutes: 20 },
-  { exercise_key: 'bench_press', sets: 3, reps: 10, weight_lbs: 135 },
+];
+
+const SAMPLE_STRENGTH: ExerciseInput[] = [
+  { exercise_key: 'lat_pulldown', sets: 3, reps: 10, weight_lbs: 60 },
+  { exercise_key: 'leg_press', sets: 3, reps: 10, weight_lbs: 150 },
 ];
 
 const SAMPLE_LABELS: Record<string, string> = {
   'walk_run/walking': 'Walking 25 min',
   'walk_run/running': 'Running 30 min',
-  'elliptical/': 'Elliptical 20 min',
-  'bench_press/': 'Bench Press 3×10 @135',
+  'lat_pulldown/': 'Lat Pulldown 3×10 @60',
+  'leg_press/': 'Leg Press 3×10 @150',
 };
 
 function exerciseLabel(ex: ExerciseInput): string {
   const key = `${ex.exercise_key}/${ex.exercise_subtype || ''}`;
   if (SAMPLE_LABELS[key]) return SAMPLE_LABELS[key];
-  // Build from data
   const desc = ex.exercise_key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   if (ex.duration_minutes && ex.duration_minutes > 0) {
     return `${desc} ${ex.duration_minutes} min`;
@@ -63,47 +71,42 @@ export function CalorieBurnDialog({
 }: CalorieBurnDialogProps) {
   const { user } = useAuth();
 
-  // Fetch user's recent distinct exercises for preview
+  // Fetch user's top exercises via RPC (2 cardio + 2 strength by frequency)
   const { data: userExercises } = useQuery({
     queryKey: ['calorie-burn-preview-exercises', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data, error } = await supabase
-        .from('weight_sets')
-        .select('exercise_key, exercise_subtype, sets, reps, weight_lbs, duration_minutes, distance_miles, exercise_metadata, description')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(50);
-
+      const { data, error } = await supabase.rpc('get_top_exercises', {
+        p_user_id: user.id,
+        p_cardio_keys: CARDIO_KEYS,
+      });
       if (error || !data?.length) return [];
-
-      // Deduplicate by exercise_key
-      const seen = new Set<string>();
-      const result: (ExerciseInput & { description: string })[] = [];
-      for (const row of data) {
-        if (seen.has(row.exercise_key)) continue;
-        seen.add(row.exercise_key);
-        result.push({
-          exercise_key: row.exercise_key,
-          exercise_subtype: row.exercise_subtype,
-          sets: row.sets,
-          reps: row.reps,
-          weight_lbs: row.weight_lbs,
-          duration_minutes: row.duration_minutes,
-          distance_miles: row.distance_miles,
-          exercise_metadata: row.exercise_metadata as Record<string, number> | null,
-          description: row.description,
-        });
-        if (result.length >= 5) break;
-      }
-      return result;
+      return data as (ExerciseInput & { description: string; is_cardio: boolean; frequency: number })[];
     },
     enabled: !!user && open,
     staleTime: 60_000,
   });
 
-  const previewExercises = userExercises?.length ? userExercises : SAMPLE_EXERCISES;
-  const isUsingSamples = !userExercises?.length;
+  // Assemble 2 cardio + 2 strength, filling gaps with samples
+  const { previewExercises, isUsingSamples } = useMemo(() => {
+    const userCardio = (userExercises || []).filter(e => e.is_cardio);
+    const userStrength = (userExercises || []).filter(e => !e.is_cardio);
+
+    const cardio: ExerciseInput[] = [...userCardio];
+    let usedSamples = false;
+    for (let i = cardio.length; i < 2; i++) {
+      cardio.push(SAMPLE_CARDIO[i]);
+      usedSamples = true;
+    }
+
+    const strength: ExerciseInput[] = [...userStrength];
+    for (let i = strength.length; i < 2; i++) {
+      strength.push(SAMPLE_STRENGTH[i]);
+      usedSamples = true;
+    }
+
+    return { previewExercises: [...cardio, ...strength], isUsingSamples: usedSamples };
+  }, [userExercises]);
 
   // Compute live estimates from current settings
   const burnSettings: CalorieBurnSettings = useMemo(() => ({
@@ -211,6 +214,7 @@ export function CalorieBurnDialog({
   ];
 
   const inputClass = "w-20 h-8 text-center text-sm rounded-md border border-input bg-background px-2 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  const rightColClass = "flex items-center gap-1 justify-end w-[7.5rem]";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -262,7 +266,7 @@ export function CalorieBurnDialog({
                     <p className="text-sm">Body weight</p>
                     <p className="text-[10px] text-muted-foreground/70">Biggest factor (~2-3x impact)</p>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className={rightColClass}>
                     <input
                       type="number"
                       placeholder="—"
@@ -273,9 +277,8 @@ export function CalorieBurnDialog({
                       max={999}
                     />
                     <span className="text-xs text-muted-foreground w-6">{settings.weightUnit}</span>
+                  </div>
                 </div>
-              </div>
-
 
                 {/* Height */}
                 <div className="flex items-center justify-between">
@@ -283,13 +286,13 @@ export function CalorieBurnDialog({
                     <p className="text-sm">Height</p>
                     <p className="text-[10px] text-muted-foreground/70">Used for metabolic rate</p>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className={rightColClass}>
                     <input
                       type="number"
                       placeholder="—"
                       value={heightDisplay}
                       onChange={(e) => handleHeightChange(e.target.value)}
-                      className={inputClass}
+                      className={cn(inputClass, "w-16")}
                       min={1}
                       max={300}
                     />
@@ -318,7 +321,7 @@ export function CalorieBurnDialog({
                     <p className="text-sm">Age</p>
                     <p className="text-[10px] text-muted-foreground/70">~5% per decade</p>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className={rightColClass}>
                     <input
                       type="number"
                       placeholder="—"
@@ -328,7 +331,6 @@ export function CalorieBurnDialog({
                       min={10}
                       max={120}
                     />
-                    <span className="text-xs text-muted-foreground w-6"></span>
                   </div>
                 </div>
 
@@ -366,7 +368,7 @@ export function CalorieBurnDialog({
                     <p className="text-sm">Default intensity</p>
                     <p className="text-[10px] text-muted-foreground/70">Used when you don't log effort. Blank = full range.</p>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className={rightColClass}>
                     <input
                       type="number"
                       placeholder="—"

@@ -349,6 +349,26 @@ export type Database = {
         Args: { timeframe_hours?: number; user_filter?: string }
         Returns: number
       }
+      get_top_exercises: {
+        Args: {
+          p_cardio_keys: string[]
+          p_limit_per_group?: number
+          p_user_id: string
+        }
+        Returns: {
+          description: string
+          distance_miles: number
+          duration_minutes: number
+          exercise_key: string
+          exercise_metadata: Json
+          exercise_subtype: string
+          frequency: number
+          is_cardio: boolean
+          reps: number
+          sets: number
+          weight_lbs: number
+        }[]
+      }
       get_usage_stats:
         | { Args: { exclude_user_id?: string }; Returns: Json }
         | {
