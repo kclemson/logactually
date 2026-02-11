@@ -218,8 +218,8 @@ export function CalorieBurnDialog({
     { value: 'male', label: 'Male' },
   ];
 
-  const inputClass = "w-20 h-8 text-center text-sm rounded-md border border-input bg-background px-2 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
-  const rightColClass = "flex items-center gap-1 justify-end w-[7.5rem]";
+  const inputClass = "w-16 h-8 text-center text-sm rounded-md border border-input bg-background px-2 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  const rightColClass = "flex items-center gap-1 justify-end w-[8.5rem]";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -282,7 +282,7 @@ export function CalorieBurnDialog({
                       min={50}
                       max={999}
                     />
-                    <span className="text-xs text-muted-foreground w-6">{settings.weightUnit}</span>
+                    <span className="text-xs text-muted-foreground w-8">{settings.weightUnit}</span>
                   </div>
                 </div>
 
@@ -298,11 +298,11 @@ export function CalorieBurnDialog({
                       placeholder="—"
                       value={heightDisplay}
                       onChange={(e) => handleHeightChange(e.target.value)}
-                      className={cn(inputClass, "w-16")}
+                      className={inputClass}
                       min={1}
                       max={300}
                     />
-                    <div className="flex gap-0.5">
+                    <div className="w-8 flex justify-end gap-0.5">
                       {(['in', 'cm'] as const).map((unit) => (
                         <button
                           key={unit}
@@ -337,6 +337,7 @@ export function CalorieBurnDialog({
                       min={10}
                       max={120}
                     />
+                    <span className="w-8" />
                   </div>
                 </div>
 
@@ -380,11 +381,11 @@ export function CalorieBurnDialog({
                       placeholder="—"
                       value={settings.defaultIntensity ?? ''}
                       onChange={(e) => handleIntensityChange(e.target.value)}
-                      className={cn(inputClass, "w-14")}
+                      className={inputClass}
                       min={1}
                       max={10}
                     />
-                    <span className="text-xs text-muted-foreground w-6">/10</span>
+                    <span className="text-xs text-muted-foreground w-8">/10</span>
                   </div>
                 </div>
               </div>
