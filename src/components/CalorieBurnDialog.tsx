@@ -10,7 +10,7 @@ import {
   cmToInches,
   inchesToCm,
   estimateCalorieBurn,
-  formatCalorieBurn,
+  formatCalorieBurnValue,
   type ExerciseInput,
   type CalorieBurnSettings,
 } from '@/lib/calorie-burn';
@@ -129,7 +129,8 @@ export function CalorieBurnDialog({
     return previewExercises.map((ex) => {
       const result = estimateCalorieBurn(ex, burnSettings);
       const label = exerciseLabel(ex, settings.weightUnit);
-      return { label, estimate: formatCalorieBurn(result) };
+      const value = formatCalorieBurnValue(result);
+      return { label, estimate: value ? `${value} cal` : '' };
     });
   }, [previewExercises, burnSettings, settings.weightUnit]);
 
