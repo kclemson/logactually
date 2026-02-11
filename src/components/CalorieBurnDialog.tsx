@@ -134,15 +134,6 @@ export function CalorieBurnDialog({
     });
   }, [previewExercises, burnSettings, settings.weightUnit]);
 
-  // Local display value for height in the user's preferred unit
-  const [heightDisplay, setHeightDisplay] = useState<string>(() => {
-    if (settings.heightInches == null) return '';
-    if (settings.heightUnit === 'cm') {
-      return String(Math.round(inchesToCm(settings.heightInches)));
-    }
-    return String(settings.heightInches);
-  });
-
   const handleToggle = () => {
     updateSettings({ calorieBurnEnabled: !settings.calorieBurnEnabled });
   };
@@ -167,26 +158,99 @@ export function CalorieBurnDialog({
     return String(settings.bodyWeightLbs);
   };
 
+  // ---------------------------------------------------------------------------
+  // Feet+inches parsing & formatting helpers
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Parse user input like `5'1`, `5'1"`, `5' 1"`, `5 1`, or plain `61`
+   * into total inches. Returns null if unparseable.
+   */
+  function parseFeetInchesInput(input: string): number | null {
+    const trimmed = input.trim();
+    if (!trimmed) return null;
+
+    // Try feet'inches pattern: 5'1, 5'1", 5' 1", 5'
+    const feetInchesMatch = trimmed.match(/^(\d+)\s*['′]\s*(\d*)\s*["″]?\s*$/);
+    if (feetInchesMatch) {
+      const feet = parseInt(feetInchesMatch[1], 10);
+      const inches = feetInchesMatch[2] ? parseInt(feetInchesMatch[2], 10) : 0;
+      if (inches >= 0 && inches < 12) {
+        return feet * 12 + inches;
+      }
+      return null;
+    }
+
+    // Try "5 11" pattern (space-separated feet inches)
+    const spaceSepMatch = trimmed.match(/^(\d+)\s+(\d+)$/);
+    if (spaceSepMatch) {
+      const feet = parseInt(spaceSepMatch[1], 10);
+      const inches = parseInt(spaceSepMatch[2], 10);
+      if (inches >= 0 && inches < 12) {
+        return feet * 12 + inches;
+      }
+      return null;
+    }
+
+    // Plain number — treat as total inches
+    const num = parseFloat(trimmed);
+    if (!isNaN(num) && num > 0) return num;
+
+    return null;
+  }
+
+  /** Convert total inches (e.g. 61) to display string like `5'1"` */
+  function formatInchesAsFeetInches(totalInches: number): string {
+    const feet = Math.floor(totalInches / 12);
+    const inches = Math.round(totalInches % 12);
+    return `${feet}'${inches}"`;
+  }
+
+  // Determine effective unit — treat legacy 'in' as 'ft'
+  const effectiveHeightUnit = (settings.heightUnit === 'cm' ? 'cm' : 'ft') as 'ft' | 'cm';
+
+  // Local display value for height in the user's preferred unit
+  const [heightDisplay, setHeightDisplay] = useState<string>(() => {
+    if (settings.heightInches == null) return '';
+    if (effectiveHeightUnit === 'cm') {
+      return String(Math.round(inchesToCm(settings.heightInches)));
+    }
+    return formatInchesAsFeetInches(settings.heightInches);
+  });
+
   const handleHeightChange = (val: string) => {
     setHeightDisplay(val);
     if (val === '') {
       updateSettings({ heightInches: null });
       return;
     }
-    const num = parseFloat(val);
-    if (!isNaN(num) && num > 0) {
-      const inches = settings.heightUnit === 'cm' ? cmToInches(num) : num;
-      updateSettings({ heightInches: Math.round(inches * 10) / 10 });
+    if (effectiveHeightUnit === 'ft') {
+      const inches = parseFeetInchesInput(val);
+      if (inches != null) {
+        updateSettings({ heightInches: Math.round(inches * 10) / 10 });
+      }
+    } else {
+      const num = parseFloat(val);
+      if (!isNaN(num) && num > 0) {
+        const inches = cmToInches(num);
+        updateSettings({ heightInches: Math.round(inches * 10) / 10 });
+      }
     }
   };
 
-  const handleHeightUnitChange = (unit: 'in' | 'cm') => {
-    const currentVal = parseFloat(heightDisplay);
-    if (!isNaN(currentVal) && currentVal > 0) {
-      if (settings.heightUnit === 'in' && unit === 'cm') {
-        setHeightDisplay(String(Math.round(currentVal * 2.54)));
-      } else if (settings.heightUnit === 'cm' && unit === 'in') {
-        setHeightDisplay(String(Math.round(cmToInches(currentVal) * 10) / 10));
+  const handleHeightUnitChange = (unit: 'ft' | 'cm') => {
+    if (effectiveHeightUnit === unit) return;
+
+    if (effectiveHeightUnit === 'ft' && unit === 'cm') {
+      const inches = parseFeetInchesInput(heightDisplay);
+      if (inches != null && inches > 0) {
+        setHeightDisplay(String(Math.round(inches * 2.54)));
+      }
+    } else if (effectiveHeightUnit === 'cm' && unit === 'ft') {
+      const cm = parseFloat(heightDisplay);
+      if (!isNaN(cm) && cm > 0) {
+        const inches = cmToInches(cm);
+        setHeightDisplay(formatInchesAsFeetInches(inches));
       }
     }
     updateSettings({ heightUnit: unit });
@@ -302,22 +366,21 @@ export function CalorieBurnDialog({
                   </div>
                   <div className={rightColClass}>
                     <input
-                      type="number"
-                      placeholder="—"
+                      type={effectiveHeightUnit === 'ft' ? 'text' : 'number'}
+                      placeholder={effectiveHeightUnit === 'ft' ? `5'7"` : '170'}
                       value={heightDisplay}
                       onChange={(e) => handleHeightChange(e.target.value)}
                       className={inputClass}
-                      min={1}
-                      max={300}
+                      inputMode={effectiveHeightUnit === 'ft' ? undefined : 'numeric'}
                     />
                     <div className="flex gap-0.5">
-                      {(['in', 'cm'] as const).map((unit) => (
+                      {(['ft', 'cm'] as const).map((unit) => (
                         <button
                           key={unit}
                           onClick={() => handleHeightUnitChange(unit)}
                           className={cn(
                             "text-xs px-1.5 py-0.5 rounded transition-colors",
-                            settings.heightUnit === unit
+                            effectiveHeightUnit === unit
                               ? "bg-primary/10 text-foreground font-medium"
                               : "text-muted-foreground hover:text-foreground"
                           )}
