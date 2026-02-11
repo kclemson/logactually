@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { AskTrendsAIDialog } from "@/components/AskTrendsAIDialog";
 import { useNavigate } from "react-router-dom";
 import { format, subDays, startOfDay } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
@@ -437,6 +438,8 @@ const Trends = () => {
   const { settings } = useUserSettings();
   const showWeights = (FEATURES.WEIGHT_TRACKING || isAdmin) && settings.showWeights;
   const mergeMutation = useMergeExercises();
+  const [foodAIOpen, setFoodAIOpen] = useState(false);
+  const [exerciseAIOpen, setExerciseAIOpen] = useState(false);
 
   const handleExerciseBarClick = useCallback((date: string) => {
     navigate(`/weights?date=${date}`);
@@ -694,7 +697,7 @@ const Trends = () => {
       </div>
 
       {/* Food Trends Section */}
-      <CollapsibleSection title="Food Trends" icon={UtensilsCrossed} defaultOpen={true} storageKey="trends-food">
+      <CollapsibleSection title="Food Trends" icon={UtensilsCrossed} defaultOpen={true} storageKey="trends-food" headerAction={<button onClick={() => setFoodAIOpen(true)} className="text-xs text-primary hover:underline flex items-center gap-1">Ask AI</button>}>
         {isLoading ? (
           <div className="flex justify-center py-8">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -768,7 +771,7 @@ const Trends = () => {
 
       {/* Weight Trends Section */}
       {showWeights && (
-        <CollapsibleSection title="Exercise Trends" icon={Dumbbell} iconClassName="text-[hsl(262_83%_58%)]" defaultOpen={true} storageKey="trends-weights">
+        <CollapsibleSection title="Exercise Trends" icon={Dumbbell} iconClassName="text-[hsl(262_83%_58%)]" defaultOpen={true} storageKey="trends-weights" headerAction={<button onClick={() => setExerciseAIOpen(true)} className="text-xs text-primary hover:underline flex items-center gap-1">Ask AI</button>}>
           {weightLoading ? (
             <div className="flex justify-center py-8">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -833,6 +836,8 @@ const Trends = () => {
           )}
         </CollapsibleSection>
       )}
+      <AskTrendsAIDialog mode="food" open={foodAIOpen} onOpenChange={setFoodAIOpen} />
+      <AskTrendsAIDialog mode="exercise" open={exerciseAIOpen} onOpenChange={setExerciseAIOpen} />
     </div>
   );
 };

@@ -11,6 +11,7 @@ import {
   inchesToCm,
   estimateCalorieBurn,
   formatCalorieBurnValue,
+  formatInchesAsFeetInches,
   type ExerciseInput,
   type CalorieBurnSettings,
 } from '@/lib/calorie-burn';
@@ -221,12 +222,7 @@ export function CalorieBurnDialog({
     return null;
   }
 
-  /** Convert total inches (e.g. 61) to display string like `5'1"` */
-  function formatInchesAsFeetInches(totalInches: number): string {
-    const feet = Math.floor(totalInches / 12);
-    const inches = Math.round(totalInches % 12);
-    return `${feet}'${inches}"`;
-  }
+  // formatInchesAsFeetInches is now imported from @/lib/calorie-burn
 
   // Determine effective unit — treat legacy 'in' as 'ft'
   const effectiveHeightUnit = (settings.heightUnit === 'cm' ? 'cm' : 'ft') as 'ft' | 'cm';

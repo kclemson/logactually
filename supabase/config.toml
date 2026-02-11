@@ -30,3 +30,6 @@ verify_jwt = false
 
 [functions.analyze-food-photo]
 verify_jwt = false
+
+[functions.ask-trends-ai]
+verify_jwt = false

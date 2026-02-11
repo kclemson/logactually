@@ -403,9 +403,48 @@ export function formatCalorieBurnValue(result: CalorieBurnResult): string {
 
 
 /**
- * Build a short summary string for the settings entry point.
- * e.g. "160 lbs, moderate" or "Not configured"
+ * Format total inches as feet'inches" string, e.g. 61 -> 5'1"
  */
+export function formatInchesAsFeetInches(totalInches: number): string {
+  const feet = Math.floor(totalInches / 12);
+  const inches = Math.round(totalInches % 12);
+  return `${feet}'${inches}"`;
+}
+
+/**
+ * Build a short inline summary of the user's configured biometric stats.
+ * Returns null if no biometric fields are set (signals: hide the checkbox).
+ * e.g. "150 lbs, 5'1\", 48 years old, male"
+ */
+export function formatProfileStatsSummary(settings: {
+  bodyWeightLbs?: number | null;
+  heightInches?: number | null;
+  heightUnit?: 'ft' | 'cm';
+  age?: number | null;
+  bodyComposition?: 'female' | 'male' | null;
+}): string | null {
+  const parts: string[] = [];
+
+  if (settings.bodyWeightLbs != null) {
+    parts.push(`${settings.bodyWeightLbs} lbs`);
+  }
+  if (settings.heightInches != null) {
+    if (settings.heightUnit === 'cm') {
+      parts.push(`${Math.round(settings.heightInches * 2.54)} cm`);
+    } else {
+      parts.push(formatInchesAsFeetInches(settings.heightInches));
+    }
+  }
+  if (settings.age != null) {
+    parts.push(`${settings.age} years old`);
+  }
+  if (settings.bodyComposition != null) {
+    parts.push(settings.bodyComposition);
+  }
+
+  return parts.length > 0 ? parts.join(', ') : null;
+}
+
 export function formatCalorieBurnSettingsSummary(settings: CalorieBurnSettings): string {
   if (!settings.calorieBurnEnabled) return '';
 
