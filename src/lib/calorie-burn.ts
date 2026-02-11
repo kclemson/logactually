@@ -343,8 +343,8 @@ export function formatCalorieBurn(result: CalorieBurnResult): string {
     return `~${result.value} cal (reported)`;
   }
   if (result.low === 0 && result.high === 0) return '';
-  if (result.low === result.high) return `~${result.low} cal est.`;
-  return `~${result.low}-${result.high} cal est.`;
+  if (result.low === result.high) return `~${result.low} cal`;
+  return `~${result.low}-${result.high} cal`;
 }
 
 export function formatCalorieBurnTotal(result: CalorieBurnResult): string {
