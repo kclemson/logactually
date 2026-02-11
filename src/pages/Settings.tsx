@@ -1,9 +1,11 @@
 import { useTheme } from "next-themes";
-import { Moon, Sun, Monitor, Star, ArrowDownUp, Plus, Dumbbell, User, Settings2, Info } from "lucide-react";
+import { Moon, Sun, Monitor, Star, ArrowDownUp, Plus, Dumbbell, User, Settings2, Info, Flame } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { WeightUnit } from "@/lib/weight-units";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
+import { formatCalorieBurnSettingsSummary } from "@/lib/calorie-burn";
+import { CalorieBurnDialog } from "@/components/CalorieBurnDialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { useSavedMeals, useUpdateSavedMeal, useDeleteSavedMeal } from "@/hooks/useSavedMeals";
@@ -39,6 +41,7 @@ export default function Settings() {
   // Password change dialog
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+  const [calorieBurnDialogOpen, setCalorieBurnDialogOpen] = useState(false);
 
   // Saved meals
   const { data: savedMeals, isLoading: mealsLoading } = useSavedMeals();
@@ -243,6 +246,24 @@ export default function Settings() {
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Calorie Burn Estimates - shown when weights enabled */}
+          {showWeights && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Flame className="h-3.5 w-3.5 text-muted-foreground" />
+                <p className="text-xs text-muted-foreground">Calorie Burn Estimates</p>
+              </div>
+              <button
+                onClick={() => setCalorieBurnDialogOpen(true)}
+                className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors"
+              >
+                {settings.calorieBurnEnabled
+                  ? formatCalorieBurnSettingsSummary(settings) || 'Configured'
+                  : 'Set up'}
+              </button>
             </div>
           )}
         </div>
@@ -450,6 +471,16 @@ export default function Settings() {
 
       {/* Delete Account Dialog */}
       {deleteAccountOpen && <DeleteAccountDialog open={deleteAccountOpen} onOpenChange={setDeleteAccountOpen} />}
+
+      {/* Calorie Burn Dialog */}
+      {calorieBurnDialogOpen && (
+        <CalorieBurnDialog
+          open={calorieBurnDialogOpen}
+          onOpenChange={setCalorieBurnDialogOpen}
+          settings={settings}
+          updateSettings={updateSettings}
+        />
+      )}
     </div>
   );
 }

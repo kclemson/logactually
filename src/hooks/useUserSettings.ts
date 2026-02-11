@@ -10,6 +10,14 @@ export interface UserSettings {
   suggestMealSaves: boolean;
   suggestRoutineSaves: boolean;
   dailyCalorieTarget: number | null;
+  // Calorie burn estimation
+  calorieBurnEnabled: boolean;
+  bodyWeightLbs: number | null;
+  heightInches: number | null;
+  heightUnit: 'in' | 'cm';
+  age: number | null;
+  bodyComposition: 'female' | 'male' | null;
+  defaultIntensity: number | null;
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
@@ -19,6 +27,13 @@ const DEFAULT_SETTINGS: UserSettings = {
   suggestMealSaves: true,
   suggestRoutineSaves: true,
   dailyCalorieTarget: null,
+  calorieBurnEnabled: false,
+  bodyWeightLbs: null,
+  heightInches: null,
+  heightUnit: 'in',
+  age: null,
+  bodyComposition: null,
+  defaultIntensity: null,
 };
 
 export function useUserSettings() {

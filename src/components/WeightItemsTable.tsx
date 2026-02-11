@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { type WeightUnit, formatWeight, parseWeightToLbs, getWeightUnitLabel, formatDurationMmSs } from '@/lib/weight-units';
 import { isCardioExercise } from '@/lib/exercise-metadata';
+import { estimateCalorieBurn, formatCalorieBurn, type CalorieBurnSettings, type ExerciseInput } from '@/lib/calorie-burn';
 
 type EditableFieldKey = 'description' | 'sets' | 'reps' | 'weight_lbs';
 
@@ -72,6 +73,8 @@ interface WeightItemsTableProps {
   diffs?: Map<number, DiffValues>;
   /** When true, use smaller text for compact preview contexts */
   compact?: boolean;
+  /** Calorie burn settings for per-exercise estimation */
+  calorieBurnSettings?: CalorieBurnSettings;
   /** When true, show a checkbox column on the left for selection */
   selectable?: boolean;
   /** Which row indices are currently selected (controlled) */
@@ -142,6 +145,7 @@ export function WeightItemsTable({
   selectable = false,
   selectedIndices,
   onSelectionChange,
+  calorieBurnSettings,
 }: WeightItemsTableProps) {
   const { isReadOnly, triggerOverlay } = useReadOnlyContext();
   
@@ -700,6 +704,31 @@ export function WeightItemsTable({
                 )
                 )}
             </div>
+
+            {/* Calorie burn estimate per exercise */}
+            {calorieBurnSettings?.calorieBurnEnabled && (() => {
+              const exerciseInput: ExerciseInput = {
+                exercise_key: item.exercise_key,
+                exercise_subtype: item.exercise_subtype,
+                sets: item.sets,
+                reps: item.reps,
+                weight_lbs: item.weight_lbs,
+                duration_minutes: item.duration_minutes,
+                distance_miles: item.distance_miles,
+                exercise_metadata: item.exercise_metadata,
+              };
+              const result = estimateCalorieBurn(exerciseInput, calorieBurnSettings);
+              const display = formatCalorieBurn(result);
+              if (!display) return null;
+              return (
+                <div className={cn('grid gap-0.5 items-center', gridCols)}>
+                  {selectable && <span></span>}
+                  <span className={cn("px-1 text-[11px] text-muted-foreground/70 italic", showEntryDividers && "pl-5")}>
+                    {display}
+                  </span>
+                </div>
+              );
+            })()}
             
             {/* Diff row - show progression delta if provided */}
             {diffs?.has(index) && (() => {

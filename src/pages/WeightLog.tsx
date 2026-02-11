@@ -26,6 +26,7 @@ import { useUpdateSavedRoutine } from '@/hooks/useSavedRoutines';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { detectRepeatedWeightEntry, isDismissed, dismissSuggestion, shouldShowOptOutLink, WeightSaveSuggestion, findMatchingSavedRoutine, MatchingRoutine } from '@/lib/repeated-entry-detection';
+import { estimateTotalCalorieBurn, formatCalorieBurnTotal, type CalorieBurnSettings, type ExerciseInput } from '@/lib/calorie-burn';
 import { WeightSet, WeightEditableField, SavedExerciseSet, AnalyzedExercise } from '@/types/weight';
 import { generateRoutineName } from '@/lib/routine-naming';
 
@@ -654,23 +655,48 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
 
       {/* Weight Items Table */}
       {displayItems.length > 0 && (
-        <WeightItemsTable
-          items={displayItems}
-          editable
-          onUpdateItem={handleItemUpdate}
-          onRemoveItem={handleItemRemove}
-          newEntryIds={newEntryIds}
-          entryBoundaries={entryBoundaries}
-          onDeleteEntry={handleDeleteEntry}
-          onDeleteAll={handleDeleteAll}
-          entryRawInputs={entryRawInputs}
-          expandedEntryIds={expandedEntryIds}
-          onToggleEntryExpand={handleToggleEntryExpand}
-          onSaveAsRoutine={handleSaveAsRoutine}
-          weightUnit={settings.weightUnit}
-          entryRoutineNames={entryRoutineNames}
-          entrySourceRoutineIds={entrySourceRoutineIds}
-        />
+        <>
+          <WeightItemsTable
+            items={displayItems}
+            editable
+            onUpdateItem={handleItemUpdate}
+            onRemoveItem={handleItemRemove}
+            newEntryIds={newEntryIds}
+            entryBoundaries={entryBoundaries}
+            onDeleteEntry={handleDeleteEntry}
+            onDeleteAll={handleDeleteAll}
+            entryRawInputs={entryRawInputs}
+            expandedEntryIds={expandedEntryIds}
+            onToggleEntryExpand={handleToggleEntryExpand}
+            onSaveAsRoutine={handleSaveAsRoutine}
+            weightUnit={settings.weightUnit}
+            entryRoutineNames={entryRoutineNames}
+            entrySourceRoutineIds={entrySourceRoutineIds}
+            calorieBurnSettings={settings.calorieBurnEnabled ? settings as CalorieBurnSettings : undefined}
+          />
+
+          {/* Daily calorie burn summary */}
+          {settings.calorieBurnEnabled && (() => {
+            const exercises: ExerciseInput[] = displayItems.map(item => ({
+              exercise_key: item.exercise_key,
+              exercise_subtype: item.exercise_subtype,
+              sets: item.sets,
+              reps: item.reps,
+              weight_lbs: item.weight_lbs,
+              duration_minutes: item.duration_minutes,
+              distance_miles: item.distance_miles,
+              exercise_metadata: item.exercise_metadata,
+            }));
+            const total = estimateTotalCalorieBurn(exercises, settings as CalorieBurnSettings);
+            const display = formatCalorieBurnTotal(total);
+            if (!display) return null;
+            return (
+              <p className="text-xs text-muted-foreground/70 italic text-center">
+                {display}
+              </p>
+            );
+          })()}
+        </>
       )}
 
       {displayItems.length === 0 && isFetching && (
