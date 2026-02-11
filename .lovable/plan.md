@@ -1,43 +1,39 @@
 
 
-## Clean Up Calorie Formatting at the Source
+## Refactor: Remove formatCalorieBurn and formatCalorieBurnTotal, standardize on formatCalorieBurnValue
 
 ### What changes
 
-Instead of calling `formatCalorieBurn()` and then stripping " cal" / " (reported)" suffixes, add a new lean formatter function that returns only the numeric range string.
+Remove the two "opinionated" formatters that bake in suffixes/labels. All call sites will use `formatCalorieBurnValue` (numeric-only) and add labels at the render site.
+
+### Caller audit (complete)
+
+| Function | File | Line | Status |
+|---|---|---|---|
+| `formatCalorieBurn` | `CalorieBurnDialog.tsx` | 132 | Needs update |
+| `formatCalorieBurn` | `calorie-burn.test.ts` | 483-498 | Needs update |
+| `formatCalorieBurnTotal` | `calorie-burn.test.ts` | 501-504 | Needs update |
+| `formatCalorieBurnValue` | `WeightItemsTable.tsx` | 804 | Already migrated |
+| `formatCalorieBurnValue` | `WeightLog.tsx` | 688 | Already migrated |
+| `formatCalorieBurnSettingsSummary` | `Settings.tsx` | 266 | Unrelated, no change |
 
 ### Technical Details
 
 **`src/lib/calorie-burn.ts`:**
+- Delete `formatCalorieBurn` (lines 348-355)
+- Delete `formatCalorieBurnTotal` (lines 357-365)
+- Keep `formatCalorieBurnValue` and `formatCalorieBurnSettingsSummary`
 
-Add a new function `formatCalorieBurnValue` that returns just the numeric portion:
+**`src/components/CalorieBurnDialog.tsx`:**
+- Change import from `formatCalorieBurn` to `formatCalorieBurnValue`
+- Update line 132: use `formatCalorieBurnValue(result)` and append " cal" at the render site if the value is non-empty
 
-```ts
-export function formatCalorieBurnValue(result: CalorieBurnResult): string {
-  if (result.type === 'exact') {
-    return `~${result.value}`;
-  }
-  if (result.low === 0 && result.high === 0) return '';
-  if (result.low === result.high) return `~${result.low}`;
-  return `~${result.low}-${result.high}`;
-}
-```
-
-The existing `formatCalorieBurn` stays unchanged for any other call sites that still want the " cal" suffix.
-
-**`src/components/WeightItemsTable.tsx`:**
-
-- Import `formatCalorieBurnValue` instead of (or in addition to) `formatCalorieBurn`.
-- Use `formatCalorieBurnValue` when building the expanded section calorie display, so no suffix stripping is needed.
-- Single exercise: `Estimated calories burned: ~159-238`
-- Multi-exercise: `Estimated calories burned: ~12-18 (Leg Extension), ~159-238 (Squat)`
-
-**`src/pages/WeightLog.tsx`:**
-
-- The total calorie display passed as a prop also currently uses `formatCalorieBurnTotal` which includes "Est. burn:" prefix. Check if this should also use the new lean formatter to build the `(~81-157 cal)` string more cleanly. Currently lines 678-698 already format it as `(${display})` -- switching to `formatCalorieBurnValue` + wrapping with `(${value} cal)` would be cleaner than stripping from `formatCalorieBurnTotal`.
+**`src/lib/calorie-burn.test.ts`:**
+- Remove `formatCalorieBurn` and `formatCalorieBurnTotal` test blocks
+- Replace with `formatCalorieBurnValue` tests covering: range, exact, zero, equal low/high
 
 ### Files Changed
-- `src/lib/calorie-burn.ts` -- add `formatCalorieBurnValue`
-- `src/components/WeightItemsTable.tsx` -- use new formatter, no suffix stripping
-- `src/pages/WeightLog.tsx` -- use new formatter for total display prop
+- `src/lib/calorie-burn.ts` -- remove two functions
+- `src/components/CalorieBurnDialog.tsx` -- switch to new formatter
+- `src/lib/calorie-burn.test.ts` -- update tests
 
