@@ -344,13 +344,14 @@ export function CalorieBurnDialog({
 
               {/* Your info section */}
               <div className="space-y-3">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Your info (narrows the range)</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Your info</p>
+                <p className="text-[11px] text-muted-foreground/70 -mt-1">These details help narrow the estimated calorie burn range.</p>
 
                 {/* Body weight */}
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm">Body weight</p>
-                    <p className="text-[10px] text-muted-foreground/70">Biggest factor (~2-3x impact)</p>
+                    <p className="text-[10px] text-muted-foreground/70">Largest effect (~30-50%)</p>
                   </div>
                   <div className={rightColClass}>
                     <input
@@ -385,7 +386,7 @@ export function CalorieBurnDialog({
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm">Height</p>
-                    <p className="text-[10px] text-muted-foreground/70">Used for metabolic rate</p>
+                    <p className="text-[10px] text-muted-foreground/70">Moderate effect (~10-15%)</p>
                   </div>
                   <div className={rightColClass}>
                     <input
@@ -419,7 +420,7 @@ export function CalorieBurnDialog({
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm">Age</p>
-                    <p className="text-[10px] text-muted-foreground/70">~5% per decade</p>
+                    <p className="text-[10px] text-muted-foreground/70">Small effect (~5% per decade)</p>
                   </div>
                   <div className={rightColClass}>
                     <input
@@ -438,8 +439,8 @@ export function CalorieBurnDialog({
                 {/* Body composition */}
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm">Body composition</p>
-                    <p className="text-[10px] text-muted-foreground/70">~5-10% difference</p>
+                    <p className="text-sm">Metabolic profile</p>
+                    <p className="text-[10px] text-muted-foreground/70">Moderate effect (~5-10%)</p>
                   </div>
                   <div className="flex gap-1">
                     {compositionOptions.map(({ value, label }) => (
