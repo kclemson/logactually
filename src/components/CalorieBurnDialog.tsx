@@ -214,7 +214,7 @@ export function CalorieBurnDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md">
+      <DialogContent className="left-2 right-2 translate-x-0 w-auto max-w-[calc(100vw-16px)] p-4 sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md">
         <div className="space-y-5">
           {/* Toggle as header */}
           <div className="flex items-center justify-between">
@@ -240,10 +240,10 @@ export function CalorieBurnDialog({
           {settings.calorieBurnEnabled && (
             <>
               {/* Live preview */}
-              <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-1.5">
-                {isUsingSamples && (
-                  <p className="text-[10px] text-muted-foreground/70 mb-1">Example exercises</p>
-                )}
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  {isUsingSamples ? 'Preview (examples)' : 'Preview'}
+                </p>
                 {previews.map((p, i) => (
                   <div key={i} className="flex items-center justify-between text-sm">
                     <span className="text-foreground truncate mr-3">{p.label}</span>
@@ -273,8 +273,9 @@ export function CalorieBurnDialog({
                       max={999}
                     />
                     <span className="text-xs text-muted-foreground w-6">{settings.weightUnit}</span>
-                  </div>
                 </div>
+              </div>
+
 
                 {/* Height */}
                 <div className="flex items-center justify-between">
