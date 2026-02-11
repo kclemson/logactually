@@ -311,7 +311,12 @@ export function WeightItemsTable({
             onOpenChange={hasHover ? undefined : (open) => setActiveTooltip(open ? 'total' : null)}
           >
             <TooltipTrigger asChild>
-              <span className="text-[11px] font-normal italic text-muted-foreground ml-1 cursor-help">{totalCalorieBurnDisplay}</span>
+              <span
+                className="text-[11px] font-normal italic text-muted-foreground ml-1 cursor-help"
+                onClick={!hasHover ? () => setActiveTooltip(prev => prev === 'total' ? null : 'total') : undefined}
+                tabIndex={0}
+                role="button"
+              >{totalCalorieBurnDisplay}</span>
             </TooltipTrigger>
             <TooltipContent sideOffset={5} onPointerDownOutside={(e) => e.preventDefault()}>Refine this estimate with your weight, height, and age in Settings.</TooltipContent>
           </Tooltip>
@@ -371,7 +376,7 @@ export function WeightItemsTable({
   );
 
   return (
-    <TooltipProvider delayDuration={300}>
+    <TooltipProvider delayDuration={150}>
     <div className="space-y-1">
       {/* Totals at top */}
       {showTotals && items.length > 0 && totalsPosition === 'top' && <TotalsRow />}
@@ -791,7 +796,12 @@ export function WeightItemsTable({
                           onOpenChange={hasHover ? undefined : (open) => setActiveTooltip(open ? `detail-${currentEntryId}` : null)}
                         >
                           <TooltipTrigger asChild>
-                            <p className="text-xs text-muted-foreground italic cursor-help">
+                            <p
+                              className="text-xs text-muted-foreground italic cursor-help"
+                              onClick={!hasHover ? () => setActiveTooltip(prev => prev === `detail-${currentEntryId}` ? null : `detail-${currentEntryId}`) : undefined}
+                              tabIndex={0}
+                              role="button"
+                            >
                               Estimated calories burned: {detail}
                             </p>
                           </TooltipTrigger>
