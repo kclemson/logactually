@@ -81,6 +81,8 @@ interface WeightItemsTableProps {
   selectedIndices?: Set<number>;
   /** Callback when a row's checkbox is toggled */
   onSelectionChange?: (index: number, selected: boolean) => void;
+  /** Pre-formatted total calorie burn display string, e.g. "(~81-157 cal)" */
+  totalCalorieBurnDisplay?: string;
 }
 
 /**
@@ -146,6 +148,7 @@ export function WeightItemsTable({
   selectedIndices,
   onSelectionChange,
   calorieBurnSettings,
+  totalCalorieBurnDisplay,
 }: WeightItemsTableProps) {
   const { isReadOnly, triggerOverlay } = useReadOnlyContext();
   
@@ -297,7 +300,10 @@ export function WeightItemsTable({
       gridCols
     )}>
       {selectable && <span></span>}
-      <span className={cn("px-1 font-semibold", showEntryDividers && "pl-4", compact && "text-sm")}>Total</span>
+      <span className={cn("px-1 font-semibold", showEntryDividers && "pl-4", compact && "text-sm")}>
+        Total
+        {totalCalorieBurnDisplay && <span className="text-[11px] font-normal italic text-muted-foreground ml-1">{totalCalorieBurnDisplay}</span>}
+      </span>
       <span className="px-1 text-heading text-center">{totals.sets}</span>
       <span className="px-1 text-heading text-center">{totals.reps}</span>
       <span 
@@ -705,30 +711,6 @@ export function WeightItemsTable({
                 )}
             </div>
 
-            {/* Calorie burn estimate per exercise */}
-            {calorieBurnSettings?.calorieBurnEnabled && (() => {
-              const exerciseInput: ExerciseInput = {
-                exercise_key: item.exercise_key,
-                exercise_subtype: item.exercise_subtype,
-                sets: item.sets,
-                reps: item.reps,
-                weight_lbs: item.weight_lbs,
-                duration_minutes: item.duration_minutes,
-                distance_miles: item.distance_miles,
-                exercise_metadata: item.exercise_metadata,
-              };
-              const result = estimateCalorieBurn(exerciseInput, calorieBurnSettings);
-              const display = formatCalorieBurn(result);
-              if (!display) return null;
-              return (
-                <div className={cn('grid gap-0.5 items-center', gridCols)}>
-                  {selectable && <span></span>}
-                  <span className={cn("px-1 text-[11px] text-muted-foreground/70 italic", showEntryDividers && "pl-5")}>
-                    {display}
-                  </span>
-                </div>
-              );
-            })()}
             
             {/* Diff row - show progression delta if provided */}
             {diffs?.has(index) && (() => {
@@ -806,6 +788,31 @@ export function WeightItemsTable({
                       );
                     })}
                     
+                    {/* Per-exercise calorie burn estimates */}
+                    {calorieBurnSettings?.calorieBurnEnabled && entryExercises.map((ex, idx) => {
+                      const exerciseInput: ExerciseInput = {
+                        exercise_key: ex.exercise_key,
+                        exercise_subtype: ex.exercise_subtype,
+                        sets: ex.sets,
+                        reps: ex.reps,
+                        weight_lbs: ex.weight_lbs,
+                        duration_minutes: ex.duration_minutes,
+                        distance_miles: ex.distance_miles,
+                        exercise_metadata: ex.exercise_metadata,
+                      };
+                      const result = estimateCalorieBurn(exerciseInput, calorieBurnSettings);
+                      const display = formatCalorieBurn(result);
+                      if (!display) return null;
+                      return (
+                        <p key={`cal-${ex.uid || idx}`} className="text-sm text-muted-foreground">
+                          {entryExercises.length > 1 && (
+                            <><span className="font-medium">{ex.description}:</span>{' '}</>
+                          )}
+                          {display}
+                        </p>
+                      );
+                    })}
+
                     {/* Only show raw input if NOT from a saved routine */}
                     {!isFromSavedRoutine && currentRawInput && (
                       <p className="text-sm text-muted-foreground italic">
