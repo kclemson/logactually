@@ -298,11 +298,11 @@ export function CalorieBurnDialog({
                       placeholder="—"
                       value={heightDisplay}
                       onChange={(e) => handleHeightChange(e.target.value)}
-                      className={inputClass}
+                      className="w-12 h-8 text-center text-sm rounded-md border border-input bg-background px-1 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       min={1}
                       max={300}
                     />
-                    <div className="w-8 flex justify-end gap-0.5">
+                    <div className="flex gap-0.5">
                       {(['in', 'cm'] as const).map((unit) => (
                         <button
                           key={unit}
