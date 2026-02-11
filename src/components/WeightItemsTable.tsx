@@ -313,7 +313,7 @@ export function WeightItemsTable({
             <TooltipTrigger asChild>
               <span className="text-[11px] font-normal italic text-muted-foreground ml-1 cursor-help">{totalCalorieBurnDisplay}</span>
             </TooltipTrigger>
-            <TooltipContent>Refine this estimate with your weight, height, and age in Settings.</TooltipContent>
+            <TooltipContent sideOffset={5} onPointerDownOutside={(e) => e.preventDefault()}>Refine this estimate with your weight, height, and age in Settings.</TooltipContent>
           </Tooltip>
         )}
       </span>
@@ -371,7 +371,7 @@ export function WeightItemsTable({
   );
 
   return (
-    <TooltipProvider>
+    <TooltipProvider delayDuration={300}>
     <div className="space-y-1">
       {/* Totals at top */}
       {showTotals && items.length > 0 && totalsPosition === 'top' && <TotalsRow />}
@@ -795,7 +795,7 @@ export function WeightItemsTable({
                               Estimated calories burned: {detail}
                             </p>
                           </TooltipTrigger>
-                          <TooltipContent>Refine this estimate with your weight, height, and age in Settings.</TooltipContent>
+                          <TooltipContent sideOffset={5} onPointerDownOutside={(e) => e.preventDefault()}>Refine this estimate with your weight, height, and age in Settings.</TooltipContent>
                         </Tooltip>
                       );
                     })()}
