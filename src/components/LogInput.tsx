@@ -1,10 +1,11 @@
 import { useState, useImperativeHandle, forwardRef, useRef, useCallback, useEffect } from "react";
-import { Mic, Send, Loader2, ScanBarcode, Star } from "lucide-react";
+import { Mic, Send, Loader2, ScanBarcode, Star, Camera, ImagePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
+import { PhotoCapture, PhotoCaptureRef } from "@/components/PhotoCapture";
 import { SavedMealsPopover } from "@/components/SavedMealsPopover";
 import { SavedRoutinesPopover } from "@/components/SavedRoutinesPopover";
 import { useScanBarcode } from "@/hooks/useScanBarcode";
@@ -82,6 +83,8 @@ interface LogInputProps {
   isLoading?: boolean;
   /** Food mode only: handler for barcode scan results */
   onScanResult?: (foodItem: Omit<FoodItem, "uid" | "entryId">, originalInput: string) => void;
+  /** Food mode: handler for photo analysis */
+  onPhotoSubmit?: (base64: string) => void;
   /** Food mode: handler for logging saved meals */
   onLogSavedMeal?: (foodItems: FoodItem[], mealId: string) => void;
   /** Food mode: callback when user clicks "Add New" in saved meals popover */
@@ -116,7 +119,7 @@ const getCameraSupport = (): boolean => {
 };
 
 export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput(
-  { mode, onSubmit, isLoading, onScanResult, onLogSavedMeal, onCreateNewMeal, onLogSavedRoutine, onCreateNewRoutine, placeholder: customPlaceholder, weightUnit },
+  { mode, onSubmit, isLoading, onScanResult, onPhotoSubmit, onLogSavedMeal, onCreateNewMeal, onLogSavedRoutine, onCreateNewRoutine, placeholder: customPlaceholder, weightUnit },
   ref,
 ) {
   const config = MODE_CONFIGS[mode];
@@ -126,6 +129,8 @@ export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput
   const [isListening, setIsListening] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [savedMealsOpen, setSavedMealsOpen] = useState(false);
+  const [photoPopoverOpen, setPhotoPopoverOpen] = useState(false);
+  const photoCaptureRef = useRef<PhotoCaptureRef>(null);
   // Stable random index per component instance
   const [randomIndex] = useState(() => Math.floor(Math.random() * 100));
   // Derive placeholder from current placeholders (updates when weightUnit changes)
@@ -280,8 +285,14 @@ export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput
     }
   };
 
+  const handlePhotoSelected = useCallback((base64: string) => {
+    setPhotoPopoverOpen(false);
+    onPhotoSubmit?.(base64);
+  }, [onPhotoSubmit]);
+
   const isBusy = isLoading || isScanning;
   const showBarcode = config.showBarcodeScanner && cameraSupported && mode === 'food';
+  const showPhoto = mode === 'food' && onPhotoSubmit;
   const showSaved = config.showSavedButton && (mode === 'food' ? onLogSavedMeal : onLogSavedRoutine);
 
   return (
@@ -309,14 +320,46 @@ export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput
             disabled={isBusy}
             className={cn("px-2", isListening && "bg-destructive text-destructive-foreground hover:bg-destructive hover:text-destructive-foreground")}
           >
-            <Mic className="h-4 w-4 mr-1" />
-            {isListening ? "Stop" : "Voice"}
+            <Mic className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">{isListening ? "Stop" : "Voice"}</span>
           </Button>
+        )}
+        {showPhoto && (
+          <Popover open={photoPopoverOpen} onOpenChange={setPhotoPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="px-2" disabled={isBusy}>
+                <Camera className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Photo</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-48 p-1" align="start">
+              <button
+                className="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-sm hover:bg-accent"
+                onClick={() => {
+                  photoCaptureRef.current?.openCamera();
+                  setPhotoPopoverOpen(false);
+                }}
+              >
+                <Camera className="h-4 w-4" />
+                Take Photo
+              </button>
+              <button
+                className="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-sm hover:bg-accent"
+                onClick={() => {
+                  photoCaptureRef.current?.openGallery();
+                  setPhotoPopoverOpen(false);
+                }}
+              >
+                <ImagePlus className="h-4 w-4" />
+                Choose Photo
+              </button>
+            </PopoverContent>
+          </Popover>
         )}
         {showBarcode && (
           <Button variant="outline" size="sm" className="px-2" onClick={() => setScannerOpen(true)} disabled={isBusy}>
-            <ScanBarcode className="h-4 w-4 mr-1" />
-            Scan
+            <ScanBarcode className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">Scan</span>
           </Button>
         )}
         {showSaved && (
@@ -373,6 +416,9 @@ export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput
 
       {showBarcode && (
         <BarcodeScanner open={scannerOpen} onClose={() => setScannerOpen(false)} onScan={handleBarcodeScan} />
+      )}
+      {showPhoto && (
+        <PhotoCapture ref={photoCaptureRef} onPhotoSelected={handlePhotoSelected} />
       )}
     </div>
   );

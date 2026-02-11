@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAnalyzeFood } from '@/hooks/useAnalyzeFood';
+import { useAnalyzeFoodPhoto } from '@/hooks/useAnalyzeFoodPhoto';
 import { useFoodEntries } from '@/hooks/useFoodEntries';
 import { useRecentFoodEntries } from '@/hooks/useRecentFoodEntries';
 import { useEditableFoodItems } from '@/hooks/useEditableItems';
@@ -85,6 +86,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   const { entries, isFetching, createEntry, updateEntry, deleteEntry, deleteAllByDate } = useFoodEntries(dateStr);
   const { data: datesWithFood = [] } = useFoodDatesWithData(calendarMonth);
   const { analyzeFood, isAnalyzing, error: analyzeError, warning: analyzeWarning } = useAnalyzeFood();
+  const { analyzePhoto, isAnalyzing: isAnalyzingPhoto, error: photoError } = useAnalyzeFoodPhoto();
   const { data: savedMeals } = useSavedMeals();
   const { data: recentEntries } = useRecentFoodEntries(90); // 90 days for history matching
   const saveMeal = useSaveMeal();
@@ -298,8 +300,24 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     }
   };
 
+  const handlePhotoSubmit = useCallback(async (base64: string) => {
+    const result = await analyzePhoto(base64);
+    if (result) {
+      if (isReadOnly) {
+        const itemsWithUids = result.food_items.map(item => ({
+          ...item,
+          uid: crypto.randomUUID(),
+        }));
+        setDemoPreviewItems(itemsWithUids);
+        setDemoPreviewRawInput("photo");
+        setDemoPreviewOpen(true);
+        return;
+      }
+      createEntryFromItems(result.food_items, "photo");
+    }
+  }, [analyzePhoto, isReadOnly, createEntryFromItems]);
 
-  // Save suggestion handlers
+
   const handleSaveSuggestion = useCallback(() => {
     if (saveSuggestionItems.length === 0) return;
     
@@ -610,14 +628,20 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
           ref={foodInputRef}
           onSubmit={handleSubmit}
           onScanResult={handleScanResult}
+          onPhotoSubmit={handlePhotoSubmit}
           onLogSavedMeal={handleLogSavedMeal}
           onCreateNewMeal={() => setCreateMealDialogOpen(true)}
           
-          isLoading={isAnalyzing || createEntry.isPending}
+          isLoading={isAnalyzing || isAnalyzingPhoto || createEntry.isPending}
         />
         {analyzeError && (
           <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive mt-3">
             Analysis failed: {analyzeError}
+          </div>
+        )}
+        {photoError && (
+          <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive mt-3">
+            Photo analysis failed: {photoError}
           </div>
         )}
         {analyzeWarning && (

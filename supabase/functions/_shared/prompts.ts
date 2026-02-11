@@ -267,6 +267,36 @@ export function interpolateWeightsPrompt(
 // Used by populate-demo-data to parse multiple food entries in a single AI call
 // ============================================================================
 
+// ============================================================================
+// PHOTO ANALYSIS PROMPT
+// Used by analyze-food-photo to identify food from images
+// ============================================================================
+
+export function buildPhotoAnalysisPrompt(): string {
+  return `You are a nutrition expert. Analyze the food visible in this photo and extract individual food items with their nutritional information.
+
+Identify every distinct food item you can see. Estimate portion sizes based on visual cues (plate size, utensils, containers, etc.).
+
+For each food item, provide:
+${FOOD_ITEM_FIELDS}
+- confidence: your certainty level for the nutritional data:
+  - "high" = clearly identifiable food with well-known nutritional values
+  - "medium" = likely identification, reasonable nutritional estimate
+  - "low" = uncertain identification or hard to estimate portions visually
+- source_note: (optional) brief note about what you see and how you estimated
+
+Keep names short and generic - focus on identifying the food type clearly in few words.
+
+If you cannot identify any food in the image, return an empty food_items array.
+
+Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
+{
+  "food_items": [
+    ${FOOD_ITEM_JSON_EXAMPLE}
+  ]
+}`;
+}
+
 export function buildBulkFoodParsingPrompt(inputs: string[]): string {
   return `Parse these ${inputs.length} food entries. For each input, analyze it exactly as you would individually, extracting all food items with their nutritional information.
 
