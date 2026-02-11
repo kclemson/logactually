@@ -777,29 +777,6 @@ const Trends = () => {
             <div className="py-8 text-center text-muted-foreground">No weight training data for this period</div>
           ) : (
             <div className="space-y-3">
-              {/* Volume + Calorie Burn charts */}
-              {(volumeByDay.length > 0 || calorieBurnChartData.length > 0) && (
-                <div className="grid grid-cols-2 gap-3">
-                  {volumeByDay.length > 0 && (
-                    <VolumeChart
-                      title={`Total Volume (${settings.weightUnit})`}
-                      chartData={volumeByDay}
-                      color={CHART_COLORS.trainingVolume}
-                      unit={settings.weightUnit}
-                      onNavigate={(date) => navigate(`/weights?date=${date}`)}
-                    />
-                  )}
-                  {calorieBurnChartData.length > 0 && (
-                    <CalorieBurnChart
-                      title="Est. Calorie Burn"
-                      chartData={calorieBurnChartData}
-                      color={CHART_COLORS.calorieBurn}
-                      onNavigate={(date) => navigate(`/weights?date=${date}`)}
-                    />
-                  )}
-                </div>
-              )}
-
               {/* Duplicate exercise prompt */}
               {duplicateGroups.length > 0 && (
                 <DuplicateExercisePrompt
@@ -810,8 +787,25 @@ const Trends = () => {
                 />
               )}
 
-              {/* Exercise charts in 2-column grid */}
+              {/* All exercise charts in a single 2-column grid */}
               <div className="grid grid-cols-2 gap-3">
+                {volumeByDay.length > 0 && (
+                  <VolumeChart
+                    title={`Total Volume (${settings.weightUnit})`}
+                    chartData={volumeByDay}
+                    color={CHART_COLORS.trainingVolume}
+                    unit={settings.weightUnit}
+                    onNavigate={(date) => navigate(`/weights?date=${date}`)}
+                  />
+                )}
+                {calorieBurnChartData.length > 0 && (
+                  <CalorieBurnChart
+                    title="Est. Calorie Burn"
+                    chartData={calorieBurnChartData}
+                    color={CHART_COLORS.calorieBurn}
+                    onNavigate={(date) => navigate(`/weights?date=${date}`)}
+                  />
+                )}
                 {visibleExercises.map((exercise) => (
                   <ExerciseChart 
                     key={exercise.exercise_key} 
