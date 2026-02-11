@@ -254,12 +254,7 @@ export default function Settings() {
             <div className="flex items-center justify-between">
               <p className="text-xs text-muted-foreground">Show estimated calorie burn</p>
               <button
-                onClick={() => {
-                  if (!settings.calorieBurnEnabled) {
-                    updateSettings({ calorieBurnEnabled: true });
-                  }
-                  setCalorieBurnDialogOpen(true);
-                }}
+              onClick={() => setCalorieBurnDialogOpen(true)}
                 className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors"
               >
                 {settings.calorieBurnEnabled ? 'Configure' : 'Set up'}
