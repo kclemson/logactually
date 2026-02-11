@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { type WeightUnit, formatWeight, parseWeightToLbs, getWeightUnitLabel, formatDurationMmSs } from '@/lib/weight-units';
 import { isCardioExercise } from '@/lib/exercise-metadata';
-import { estimateCalorieBurn, formatCalorieBurn, type CalorieBurnSettings, type ExerciseInput } from '@/lib/calorie-burn';
+import { estimateCalorieBurn, formatCalorieBurnValue, type CalorieBurnSettings, type ExerciseInput } from '@/lib/calorie-burn';
 
 type EditableFieldKey = 'description' | 'sets' | 'reps' | 'weight_lbs';
 
@@ -789,29 +789,30 @@ export function WeightItemsTable({
                     })}
                     
                     {/* Per-exercise calorie burn estimates */}
-                    {calorieBurnSettings?.calorieBurnEnabled && entryExercises.map((ex, idx) => {
-                      const exerciseInput: ExerciseInput = {
-                        exercise_key: ex.exercise_key,
-                        exercise_subtype: ex.exercise_subtype,
-                        sets: ex.sets,
-                        reps: ex.reps,
-                        weight_lbs: ex.weight_lbs,
-                        duration_minutes: ex.duration_minutes,
-                        distance_miles: ex.distance_miles,
-                        exercise_metadata: ex.exercise_metadata,
-                      };
-                      const result = estimateCalorieBurn(exerciseInput, calorieBurnSettings);
-                      const display = formatCalorieBurn(result);
-                      if (!display) return null;
+                    {calorieBurnSettings?.calorieBurnEnabled && (() => {
+                      const parts = entryExercises.map(ex => {
+                        const result = estimateCalorieBurn({
+                          exercise_key: ex.exercise_key,
+                          exercise_subtype: ex.exercise_subtype,
+                          sets: ex.sets,
+                          reps: ex.reps,
+                          weight_lbs: ex.weight_lbs,
+                          duration_minutes: ex.duration_minutes,
+                          distance_miles: ex.distance_miles,
+                          exercise_metadata: ex.exercise_metadata,
+                        }, calorieBurnSettings);
+                        return { name: ex.description, display: formatCalorieBurnValue(result) };
+                      }).filter(p => p.display);
+                      if (parts.length === 0) return null;
+                      const detail = parts.length === 1
+                        ? parts[0].display
+                        : parts.map(p => `${p.display} (${p.name})`).join(', ');
                       return (
-                        <p key={`cal-${ex.uid || idx}`} className="text-sm text-muted-foreground">
-                          {entryExercises.length > 1 && (
-                            <><span className="font-medium">{ex.description}:</span>{' '}</>
-                          )}
-                          {display}
+                        <p className="text-sm text-muted-foreground italic">
+                          Estimated calories burned: {detail}
                         </p>
                       );
-                    })}
+                    })()}
 
                     {/* Only show raw input if NOT from a saved routine */}
                     {!isFromSavedRoutine && currentRawInput && (

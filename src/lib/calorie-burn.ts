@@ -338,6 +338,13 @@ export function estimateTotalCalorieBurn(
 // Display helpers
 // ---------------------------------------------------------------------------
 
+export function formatCalorieBurnValue(result: CalorieBurnResult): string {
+  if (result.type === 'exact') return `~${result.value}`;
+  if (result.low === 0 && result.high === 0) return '';
+  if (result.low === result.high) return `~${result.low}`;
+  return `~${result.low}-${result.high}`;
+}
+
 export function formatCalorieBurn(result: CalorieBurnResult): string {
   if (result.type === 'exact') {
     return `~${result.value} cal (reported)`;
