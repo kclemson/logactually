@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import type { WeightUnit } from "@/lib/weight-units";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
-import { formatCalorieBurnSettingsSummary } from "@/lib/calorie-burn";
+
 import { CalorieBurnDialog } from "@/components/CalorieBurnDialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUserSettings } from "@/hooks/useUserSettings";
@@ -262,9 +262,7 @@ export default function Settings() {
                 }}
                 className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors"
               >
-                {settings.calorieBurnEnabled
-                  ? formatCalorieBurnSettingsSummary(settings) || 'Configured'
-                  : 'Set up'}
+                {settings.calorieBurnEnabled ? 'Configure' : 'Set up'}
               </button>
             </div>
           )}
