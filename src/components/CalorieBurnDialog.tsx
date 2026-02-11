@@ -18,7 +18,7 @@ import type { WeightUnit } from '@/lib/weight-units';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { EXERCISE_MUSCLE_GROUPS } from '@/lib/exercise-metadata';
+import { EXERCISE_MUSCLE_GROUPS, getSubtypeDisplayName } from '@/lib/exercise-metadata';
 
 interface CalorieBurnDialogProps {
   open: boolean;
@@ -35,18 +35,20 @@ const CARDIO_KEYS = Object.entries(EXERCISE_MUSCLE_GROUPS)
 // Fallback samples – split by type
 const SAMPLE_CARDIO: ExerciseInput[] = [
   { exercise_key: 'walk_run', exercise_subtype: 'walking', sets: 0, reps: 0, weight_lbs: 0, duration_minutes: 25 },
-  { exercise_key: 'walk_run', exercise_subtype: 'running', sets: 0, reps: 0, weight_lbs: 0, duration_minutes: 30 },
+  { exercise_key: 'cycling', sets: 0, reps: 0, weight_lbs: 0, duration_minutes: 30 },
 ];
 
 const SAMPLE_STRENGTH: ExerciseInput[] = [
-  { exercise_key: 'lat_pulldown', sets: 3, reps: 10, weight_lbs: 60 },
-  { exercise_key: 'leg_press', sets: 3, reps: 10, weight_lbs: 150 },
+  { exercise_key: 'bench_press', sets: 3, reps: 10, weight_lbs: 135 },
+  { exercise_key: 'squat', sets: 3, reps: 10, weight_lbs: 185 },
 ];
 
 function exerciseLabel(ex: ExerciseInput, weightUnit: WeightUnit): string {
+  const subtypeName = getSubtypeDisplayName(ex.exercise_subtype);
   const name = 'description' in ex && (ex as any).description
     ? (ex as any).description
-    : ex.exercise_key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    : subtypeName
+      ?? ex.exercise_key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
   const details: string[] = [];
 
