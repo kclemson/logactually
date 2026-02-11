@@ -468,7 +468,7 @@ export function CalorieBurnDialog({
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm">Default intensity</p>
-                    <p className="text-[10px] text-muted-foreground/70">Used when you don't log effort. Blank = full range.</p>
+                    <p className="text-[10px] text-muted-foreground/70">Assumed when effort isn't specified. Blank = full range.</p>
                   </div>
                   <div className={rightColClass}>
                     <input
@@ -489,11 +489,12 @@ export function CalorieBurnDialog({
               <div className="space-y-2 border-t border-border pt-4">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">What affects your estimates</p>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  The biggest factors are your body weight and exercise intensity.
-                  Include details like "hard effort", "8/10 intensity", or "12% incline"
-                  when logging workouts to get narrower ranges. If your device reports
-                  calories burned (e.g. Apple Watch), mention it and we'll use that
-                  number directly.
+                  Each of the settings above helps calculate the estimated calorie burn,
+                  with body weight and exercise intensity being the two biggest factors.
+                  When you log your workouts, including details like "hard effort",
+                  "8/10 intensity", or "12% incline" will help narrow the range. If your
+                  device reports calories burned (e.g. Apple Watch), mention it and we'll
+                  use that number directly.
                 </p>
               </div>
               </div>
