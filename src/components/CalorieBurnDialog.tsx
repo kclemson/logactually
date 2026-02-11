@@ -67,7 +67,7 @@ function exerciseLabel(ex: ExerciseInput, weightUnit: WeightUnit): string {
     details.push(s);
   }
 
-  return details.length ? `${name} — ${details.join(', ')}` : name;
+  return details.length ? `${name} (${details.join(', ')})` : name;
 }
 
 export function CalorieBurnDialog({
