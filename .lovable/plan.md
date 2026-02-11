@@ -1,15 +1,18 @@
 
-## Remove Duplicate Cardio Summary from Expanded Section
+
+## Change Calorie Burn Button Label When Enabled
 
 ### What changes
 
-The cardio stats line (e.g., "0.40 mi in 5:20 (13:20/mi, 4.5 mph)") is already displayed in italics beneath the sets/reps/lbs columns in the row summary. Repeating it in the expanded detail section is redundant. This change removes that block.
+When "Show estimated calorie burn" is enabled, the button currently displays a summary of your settings (e.g., "150 lbs"). Replace that with "Configure" so it reads as an action label rather than echoing back your weight.
 
 ### Technical Details
 
-**`src/components/WeightItemsTable.tsx`** -- delete the cardio metadata block (lines 755-789):
+**`src/pages/Settings.tsx`** -- line 265-266:
 
-Remove the entire `{/* Cardio metadata */}` section that maps over `cardioItems` and renders the distance/duration/pace paragraph elements. The `cardioItems` variable (lines 748-750) and `entryExercises` (line 745) should be kept since `entryExercises` is used by the calorie burn estimate block below.
+Change the enabled-state label from `formatCalorieBurnSettingsSummary(settings) || 'Configured'` to simply `'Configure'`.
+
+The `formatCalorieBurnSettingsSummary` import can also be removed since it will no longer be used anywhere in this file.
 
 ### Files Changed
-- `src/components/WeightItemsTable.tsx` -- remove lines 755-789 (cardio metadata in expanded section)
+- `src/pages/Settings.tsx` -- change button label on line 266, remove unused import on line 7
