@@ -12,6 +12,7 @@ export interface WeightPoint {
   duration_minutes?: number;  // For cardio exercises
   distance_miles?: number;    // For distance-based cardio (walk_run, cycling)
   repsPerSet?: number;  // undefined if reps vary across sets, number if consistent
+  exercise_metadata?: Record<string, number> | null;  // For calorie overrides, incline, effort
 }
 
 export interface ExerciseTrend {
@@ -40,7 +41,7 @@ export function useWeightTrends(days: number) {
 
       const { data, error } = await supabase
         .from('weight_sets')
-        .select('exercise_key, exercise_subtype, description, sets, reps, weight_lbs, logged_date, duration_minutes, distance_miles')
+        .select('exercise_key, exercise_subtype, description, sets, reps, weight_lbs, logged_date, duration_minutes, distance_miles, exercise_metadata')
         .gte('logged_date', startDate)
         .order('logged_date', { ascending: true });
 
@@ -107,6 +108,7 @@ export function useWeightTrends(days: number) {
             duration_minutes: duration > 0 ? duration : undefined,
             distance_miles: distance > 0 ? distance : undefined,
             repsPerSet: rowRepsPerSet,
+            exercise_metadata: row.exercise_metadata as Record<string, number> | null,
           });
         }
       });

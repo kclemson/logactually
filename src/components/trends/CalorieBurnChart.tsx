@@ -1,0 +1,162 @@
+import { useState } from "react";
+import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { Card, CardContent, CardHeader, ChartTitle } from "@/components/ui/card";
+import { useHasHover } from "@/hooks/use-has-hover";
+
+interface CalorieBurnChartData {
+  rawDate: string;
+  date: string;
+  low: number;
+  high: number;
+  base: number;   // = low (transparent bar)
+  band: number;   // = high - low (visible bar)
+}
+
+interface CalorieBurnChartProps {
+  title: string;
+  chartData: CalorieBurnChartData[];
+  color: string;
+  onNavigate: (date: string) => void;
+}
+
+const BurnTooltip = ({
+  active,
+  payload,
+  label,
+  isTouchDevice,
+  onGoToDay,
+  rawDate,
+}: any) => {
+  if (!active || !payload?.length) return null;
+
+  const data = payload[0]?.payload;
+  if (!data) return null;
+
+  const low = data.low;
+  const high = data.high;
+  const rangeText = low === high ? `~${low} cal` : `~${low}-${high} cal`;
+
+  return (
+    <div className="rounded-md border border-border/50 bg-white dark:bg-slate-800 px-2 py-1 shadow-md">
+      <p className="text-[10px] font-medium text-slate-900 dark:text-slate-100 mb-0.5">{label}</p>
+      <p className="text-[10px] font-semibold" style={{ color: "#F59E0B" }}>
+        {rangeText}
+      </p>
+      {isTouchDevice && onGoToDay && rawDate && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onGoToDay(rawDate);
+          }}
+          className="mt-1.5 w-full text-left text-[10px] text-primary hover:underline"
+        >
+          Go to day →
+        </button>
+      )}
+    </div>
+  );
+};
+
+export const CalorieBurnChart = ({
+  title,
+  chartData,
+  color,
+  onNavigate,
+}: CalorieBurnChartProps) => {
+  const isTouchDevice = !useHasHover();
+  const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
+
+  const handleBarClick = (_data: any, index: number) => {
+    if (isTouchDevice) {
+      setActiveBarIndex((prev) => (prev === index ? null : index));
+    } else {
+      onNavigate(chartData[index]?.rawDate);
+    }
+  };
+
+  const handleGoToDay = (date: string) => {
+    setActiveBarIndex(null);
+    onNavigate(date);
+  };
+
+  return (
+    <Card className="border-0 shadow-none relative">
+      {isTouchDevice && activeBarIndex !== null && (
+        <div
+          className="fixed inset-0 z-10"
+          onClick={() => setActiveBarIndex(null)}
+        />
+      )}
+
+      <div className="relative z-20">
+        <CardHeader className="p-2 pb-1">
+          <ChartTitle>{title}</ChartTitle>
+        </CardHeader>
+        <CardContent className="p-2 pt-0">
+          <div className="h-24">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                margin={{ top: 4, right: 0, left: 0, bottom: 0 }}
+              >
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 8 }}
+                  stroke="hsl(var(--muted-foreground))"
+                  interval="preserveStartEnd"
+                  tickMargin={2}
+                  height={16}
+                />
+                <Tooltip
+                  wrapperStyle={{ pointerEvents: "auto", zIndex: 50 }}
+                  active={isTouchDevice ? activeBarIndex !== null : undefined}
+                  payload={
+                    isTouchDevice && activeBarIndex !== null
+                      ? [{ payload: chartData[activeBarIndex] }]
+                      : undefined
+                  }
+                  label={
+                    isTouchDevice && activeBarIndex !== null
+                      ? chartData[activeBarIndex]?.date
+                      : undefined
+                  }
+                  content={
+                    <BurnTooltip
+                      isTouchDevice={isTouchDevice}
+                      onGoToDay={handleGoToDay}
+                      rawDate={
+                        activeBarIndex !== null
+                          ? chartData[activeBarIndex]?.rawDate
+                          : undefined
+                      }
+                    />
+                  }
+                  offset={20}
+                  cursor={{ fill: "hsl(var(--muted)/0.3)" }}
+                />
+                {/* Transparent base bar (0 to low) */}
+                <Bar
+                  dataKey="base"
+                  stackId="burn"
+                  fill="transparent"
+                  radius={0}
+                  onClick={handleBarClick}
+                  className="cursor-pointer"
+                />
+                {/* Visible band bar (low to high) */}
+                <Bar
+                  dataKey="band"
+                  stackId="burn"
+                  fill={color}
+                  radius={[2, 2, 0, 0]}
+                  onClick={handleBarClick}
+                  className="cursor-pointer"
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </div>
+    </Card>
+  );
+};
