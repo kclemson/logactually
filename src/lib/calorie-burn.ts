@@ -345,23 +345,6 @@ export function formatCalorieBurnValue(result: CalorieBurnResult): string {
   return `~${result.low}-${result.high}`;
 }
 
-export function formatCalorieBurn(result: CalorieBurnResult): string {
-  if (result.type === 'exact') {
-    return `~${result.value} cal (reported)`;
-  }
-  if (result.low === 0 && result.high === 0) return '';
-  if (result.low === result.high) return `~${result.low} cal`;
-  return `~${result.low}-${result.high} cal`;
-}
-
-export function formatCalorieBurnTotal(result: CalorieBurnResult): string {
-  if (result.type === 'exact') {
-    return `Est. burn: ~${result.value} cal (reported)`;
-  }
-  if (result.low === 0 && result.high === 0) return '';
-  if (result.low === result.high) return `Est. burn: ~${result.low} cal`;
-  return `Est. burn: ~${result.low}-${result.high} cal`;
-}
 
 /**
  * Build a short summary string for the settings entry point.

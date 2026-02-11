@@ -9,8 +9,7 @@ import {
   getCompositionMultiplier,
   cmToInches,
   inchesToCm,
-  formatCalorieBurn,
-  formatCalorieBurnTotal,
+  formatCalorieBurnValue,
   type CalorieBurnSettings,
   type ExerciseInput,
 } from './calorie-burn';
@@ -480,26 +479,20 @@ describe('estimateTotalCalorieBurn', () => {
 // Display formatting
 // ---------------------------------------------------------------------------
 
-describe('formatCalorieBurn', () => {
-  it('formats range', () => {
-    expect(formatCalorieBurn({ type: 'range', low: 120, high: 180 })).toBe('~120-180 cal est.');
+describe('formatCalorieBurnValue', () => {
+  it('formats range (numeric only)', () => {
+    expect(formatCalorieBurnValue({ type: 'range', low: 120, high: 180 })).toBe('~120-180');
   });
 
-  it('formats exact (reported)', () => {
-    expect(formatCalorieBurn({ type: 'exact', value: 320 })).toBe('~320 cal (reported)');
+  it('formats exact', () => {
+    expect(formatCalorieBurnValue({ type: 'exact', value: 320 })).toBe('~320');
   });
 
   it('formats zero range as empty', () => {
-    expect(formatCalorieBurn({ type: 'range', low: 0, high: 0 })).toBe('');
+    expect(formatCalorieBurnValue({ type: 'range', low: 0, high: 0 })).toBe('');
   });
 
-  it('formats equal range', () => {
-    expect(formatCalorieBurn({ type: 'range', low: 100, high: 100 })).toBe('~100 cal est.');
-  });
-});
-
-describe('formatCalorieBurnTotal', () => {
-  it('formats total range', () => {
-    expect(formatCalorieBurnTotal({ type: 'range', low: 450, high: 680 })).toBe('Est. burn: ~450-680 cal');
+  it('formats equal low/high', () => {
+    expect(formatCalorieBurnValue({ type: 'range', low: 100, high: 100 })).toBe('~100');
   });
 });
