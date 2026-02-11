@@ -10,6 +10,11 @@ const HELP_CONTENT = {
     title: "Tips",
     items: [
       {
+        text: "This app is under active development and new features are released regularly, sometimes multiple times a week — see the changelog for the latest.",
+        highlights: ["changelog"],
+        link: "/changelog",
+      },
+      {
         text: "Braindump your inputs however you want (via text, voice, or scan a barcode) — the AI figures out the formatting and does the math.",
         highlights: ["braindump"],
       },
@@ -28,11 +33,6 @@ const HELP_CONTENT = {
       {
         text: 'Pin this app to your phone\'s home screen for quick access — tap Share (or your browser menu), then "Add to Home Screen."',
         highlights: ["Pin this app"],
-      },
-      {
-        text: "Check out the changelog for the latest features and updates.",
-        highlights: ["changelog"],
-        link: "/changelog",
       },
     ],
   },
