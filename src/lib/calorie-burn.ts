@@ -244,12 +244,20 @@ const REFERENCE_AGE = 30;
  * Returns 1.0 when height or age is missing (no adjustment possible).
  */
 export function getBmrScalingFactor(settings: CalorieBurnSettings): number {
-  if (settings.heightInches == null || settings.age == null || settings.bodyWeightLbs == null) {
+  const heightInches = settings.heightInches;
+  const age = settings.age;
+
+  // If neither height nor age is provided, no adjustment is possible
+  // (weight cancels out in the ratio)
+  if (heightInches == null && age == null) {
     return 1.0;
   }
 
-  const weightKg = settings.bodyWeightLbs * 0.453592;
-  const heightCm = settings.heightInches * 2.54;
+  // Use actual weight or population midpoint (weight mostly cancels
+  // in the ratio, but is needed for the equation)
+  const weightKg = (settings.bodyWeightLbs ?? 160) * 0.453592;
+  const heightCm = heightInches != null ? heightInches * 2.54 : REFERENCE_HEIGHT_CM;
+  const userAge = age ?? REFERENCE_AGE;
 
   // Mifflin-St Jeor: male offset = -5, female offset = -161
   const maleBmr = (w: number, h: number, a: number) => 10 * w + 6.25 * h - 5 * a - 5;
@@ -259,14 +267,14 @@ export function getBmrScalingFactor(settings: CalorieBurnSettings): number {
   let refBmr: number;
 
   if (settings.bodyComposition === 'male') {
-    userBmr = maleBmr(weightKg, heightCm, settings.age);
+    userBmr = maleBmr(weightKg, heightCm, userAge);
     refBmr = maleBmr(weightKg, REFERENCE_HEIGHT_CM, REFERENCE_AGE);
   } else if (settings.bodyComposition === 'female') {
-    userBmr = femaleBmr(weightKg, heightCm, settings.age);
+    userBmr = femaleBmr(weightKg, heightCm, userAge);
     refBmr = femaleBmr(weightKg, REFERENCE_HEIGHT_CM, REFERENCE_AGE);
   } else {
     // Population average: midpoint of male and female
-    userBmr = (maleBmr(weightKg, heightCm, settings.age) + femaleBmr(weightKg, heightCm, settings.age)) / 2;
+    userBmr = (maleBmr(weightKg, heightCm, userAge) + femaleBmr(weightKg, heightCm, userAge)) / 2;
     refBmr = (maleBmr(weightKg, REFERENCE_HEIGHT_CM, REFERENCE_AGE) + femaleBmr(weightKg, REFERENCE_HEIGHT_CM, REFERENCE_AGE)) / 2;
   }
 
