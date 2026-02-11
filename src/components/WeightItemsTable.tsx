@@ -791,22 +791,9 @@ export function WeightItemsTable({
                         ? parts[0].display
                         : parts.map(p => `${p.display} (${p.name})`).join(', ');
                       return (
-                        <Tooltip
-                          open={hasHover ? undefined : activeTooltip === `detail-${currentEntryId}`}
-                          onOpenChange={hasHover ? undefined : (open) => setActiveTooltip(open ? `detail-${currentEntryId}` : null)}
-                        >
-                          <TooltipTrigger asChild>
-                            <p
-                              className="text-xs text-muted-foreground italic cursor-help"
-                              onClick={!hasHover ? () => setActiveTooltip(prev => prev === `detail-${currentEntryId}` ? null : `detail-${currentEntryId}`) : undefined}
-                              tabIndex={0}
-                              role="button"
-                            >
-                              Estimated calories burned: {detail}
-                            </p>
-                          </TooltipTrigger>
-                          <TooltipContent sideOffset={5} onPointerDownOutside={(e) => e.preventDefault()}>Refine this estimate with your weight, height, and age in Settings.</TooltipContent>
-                        </Tooltip>
+                        <p className="text-xs text-muted-foreground italic">
+                          Estimated calories burned: {detail}
+                        </p>
                       );
                     })()}
 
