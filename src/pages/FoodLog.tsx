@@ -309,11 +309,11 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
           uid: crypto.randomUUID(),
         }));
         setDemoPreviewItems(itemsWithUids);
-        setDemoPreviewRawInput("photo");
+        setDemoPreviewRawInput(result.summary || "photo");
         setDemoPreviewOpen(true);
         return;
       }
-      createEntryFromItems(result.food_items, "photo");
+      createEntryFromItems(result.food_items, result.summary || "photo");
     }
   }, [analyzePhoto, isReadOnly, createEntryFromItems]);
 

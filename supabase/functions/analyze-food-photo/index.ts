@@ -150,7 +150,7 @@ serve(async (req) => {
     console.log('AI response content:', content);
 
     // Parse JSON response
-    let parsed: { food_items: ParsedFoodItem[] };
+    let parsed: { food_items: ParsedFoodItem[]; summary?: string };
     try {
       let cleanContent = content.replace(/```json\n?|\n?```/g, '').trim();
       const jsonStart = cleanContent.indexOf('{');
@@ -214,6 +214,7 @@ serve(async (req) => {
 
     const result = {
       food_items: validItems,
+      summary: parsed.summary || null,
       total_calories: Math.round(totals.calories),
       total_protein: Math.round(totals.protein),
       total_carbs: Math.round(totals.carbs),
