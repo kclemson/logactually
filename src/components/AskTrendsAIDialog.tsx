@@ -146,7 +146,7 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
           )}
 
           {/* Profile stats checkbox */}
-          {!data?.answer && profileSummary && (
+          {!data?.answer && !isPending && profileSummary && (
             <label className="flex items-start gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -178,9 +178,14 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
           {/* Response */}
           {data?.answer && (
             <div className="space-y-3">
-              <div className="text-sm text-foreground whitespace-pre-wrap leading-relaxed p-3 rounded-md bg-muted/50 max-h-[50vh] overflow-y-auto">
-                {data.answer}
-              </div>
+              <div
+                className="text-sm text-foreground whitespace-pre-wrap leading-relaxed p-3 rounded-md bg-muted/50 max-h-[50vh] overflow-y-auto [&_strong]:font-semibold"
+                dangerouslySetInnerHTML={{
+                  __html: data.answer
+                    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                }}
+              />
               <Button variant="outline" size="sm" onClick={handleAskAnother} className="w-full">
                 Ask another question
               </Button>
