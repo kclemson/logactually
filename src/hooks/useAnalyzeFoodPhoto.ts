@@ -4,6 +4,7 @@ import { FoodItem } from '@/types/food';
 
 interface AnalyzeResult {
   food_items: FoodItem[];
+  summary?: string;
   total_calories: number;
   total_protein: number;
   total_carbs: number;
