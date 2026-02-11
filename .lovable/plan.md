@@ -1,33 +1,26 @@
 
 
-## Add AI-generated Summary for Photo Entries
+## Add Changelog Entry for Photo Food Logging
 
-### Problem
-When a photo-based entry is expanded, it shows "Logged as: photo" which isn't useful. The AI should provide a brief description of what it saw in the photo (e.g., "Strawberry pretzel salad with whipped topping") to use as the `raw_input` instead.
+### What's changing
+A new changelog entry will be added at the top of the list describing the photo-based food logging feature, using the uploaded screenshot as the accompanying image. The "last updated" date references in both the Changelog page and Settings page will be updated to Feb-11.
 
-### Changes
+### Steps
 
-**1. `supabase/functions/_shared/prompts.ts`** -- Update `buildPhotoAnalysisPrompt()`
-- Add a `summary` field to the expected JSON response schema, asking the AI to provide a short natural-language description of the meal/food it identified (e.g., "Grilled chicken salad with ranch dressing")
-- Example addition to the response format:
-  ```
-  "summary": "A brief description of the food seen in the photo (1 short sentence, max ~60 chars)"
-  ```
+1. **Copy the uploaded image** to `public/changelog/photo-food-logging.png`
 
-**2. `supabase/functions/analyze-food-photo/index.ts`** -- Pass summary through
-- Extract `parsed.summary` from the AI response
-- Include it in the returned result object as `summary: parsed.summary || null`
+2. **`src/pages/Changelog.tsx`** -- Add new entry + update date
+   - Add a new entry at the top of `CHANGELOG_ENTRIES`:
+     ```
+     { date: "Feb-11", text: "Added photo-based food logging — snap a photo or choose one from your gallery, and AI will identify the food items, estimate portions, and log the nutritional breakdown automatically.", image: "photo-food-logging.png" }
+     ```
+   - Update `LAST_UPDATED` from `"Feb-10-26"` to `"Feb-11-26"`
 
-**3. `src/hooks/useAnalyzeFoodPhoto.ts`** -- Add `summary` to the result type
-- Add `summary?: string` to the `AnalyzeResult` interface
-- Pass it through from the edge function response
-
-**4. `src/pages/FoodLog.tsx`** -- Use summary as `raw_input`
-- In `handlePhotoSubmit`, use `result.summary || "photo"` instead of the hardcoded `"photo"` string when calling `createEntryFromItems`
-- This means the expanded entry will show "Logged as: Strawberry pretzel salad with whipped topping" instead of "Logged as: photo"
+3. **`src/pages/Settings.tsx`** (line 417) -- Update link text
+   - Change `Changelog (last updated Feb-10)` to `Changelog (last updated Feb-11)`
 
 ### Files Changed
-1. `supabase/functions/_shared/prompts.ts` -- add `summary` field to photo prompt schema
-2. `supabase/functions/analyze-food-photo/index.ts` -- extract and return `summary`
-3. `src/hooks/useAnalyzeFoodPhoto.ts` -- add `summary` to result type
-4. `src/pages/FoodLog.tsx` -- use `result.summary` as `raw_input`
+1. `public/changelog/photo-food-logging.png` -- new (copied from upload)
+2. `src/pages/Changelog.tsx` -- new entry + updated `LAST_UPDATED`
+3. `src/pages/Settings.tsx` -- updated changelog link text
+
