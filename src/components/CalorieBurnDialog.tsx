@@ -78,6 +78,9 @@ export function CalorieBurnDialog({
 }: CalorieBurnDialogProps) {
   const { user } = useAuth();
 
+  // Local unit for body weight input (defaults to app-wide setting)
+  const [bodyWeightUnit, setBodyWeightUnit] = useState<WeightUnit>(settings.weightUnit);
+
   // Fetch user's top exercises via RPC (2 cardio + 2 strength by frequency)
   const { data: userExercises } = useQuery({
     queryKey: ['calorie-burn-preview-exercises', user?.id],
@@ -145,17 +148,22 @@ export function CalorieBurnDialog({
     }
     const num = parseFloat(val);
     if (!isNaN(num) && num > 0) {
-      const lbs = settings.weightUnit === 'kg' ? num * 2.20462 : num;
+      const lbs = bodyWeightUnit === 'kg' ? num * 2.20462 : num;
       updateSettings({ bodyWeightLbs: Math.round(lbs) });
     }
   };
 
   const displayWeight = () => {
     if (settings.bodyWeightLbs == null) return '';
-    if (settings.weightUnit === 'kg') {
+    if (bodyWeightUnit === 'kg') {
       return String(Math.round(settings.bodyWeightLbs * 0.453592));
     }
     return String(settings.bodyWeightLbs);
+  };
+
+  const handleBodyWeightUnitChange = (unit: WeightUnit) => {
+    if (bodyWeightUnit === unit) return;
+    setBodyWeightUnit(unit);
   };
 
   // ---------------------------------------------------------------------------
@@ -354,7 +362,22 @@ export function CalorieBurnDialog({
                       min={50}
                       max={999}
                     />
-                    <span className="text-xs text-muted-foreground w-8">{settings.weightUnit}</span>
+                    <div className="flex gap-0.5">
+                      {(['lbs', 'kg'] as const).map((unit) => (
+                        <button
+                          key={unit}
+                          onClick={() => handleBodyWeightUnitChange(unit)}
+                          className={cn(
+                            "text-xs px-1.5 py-0.5 rounded transition-colors",
+                            bodyWeightUnit === unit
+                              ? "bg-primary/10 text-foreground font-medium"
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          {unit}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
