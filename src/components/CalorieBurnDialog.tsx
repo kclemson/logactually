@@ -181,14 +181,15 @@ export function CalorieBurnDialog({
   };
 
   const handleHeightUnitChange = (unit: 'in' | 'cm') => {
-    updateSettings({ heightUnit: unit });
-    if (settings.heightInches != null) {
-      if (unit === 'cm') {
-        setHeightDisplay(String(Math.round(inchesToCm(settings.heightInches))));
-      } else {
-        setHeightDisplay(String(settings.heightInches));
+    const currentVal = parseFloat(heightDisplay);
+    if (!isNaN(currentVal) && currentVal > 0) {
+      if (settings.heightUnit === 'in' && unit === 'cm') {
+        setHeightDisplay(String(Math.round(currentVal * 2.54)));
+      } else if (settings.heightUnit === 'cm' && unit === 'in') {
+        setHeightDisplay(String(Math.round(cmToInches(currentVal) * 10) / 10));
       }
     }
+    updateSettings({ heightUnit: unit });
   };
 
   const handleAgeChange = (val: string) => {
