@@ -1,21 +1,28 @@
 
 
-## Standardize Input Widths and Left-Align
+## Move Calorie Burn Display: Into Total Row and Expanded Section
 
-### Problem
-The height input is narrower (`w-12`) than the others (`w-16`), causing misalignment. Also, the inputs are right-aligned within their column, but they should be left-aligned so the input boxes line up vertically.
+### What changes
 
-### Solution
-Two small fixes:
+1. **Total row gets calorie estimate inline** -- Instead of a separate line below the table saying "Est. burn: ~81-157 cal", the Total row will read: `Total` followed by `(~81-157 cal)` in smaller, italic, muted text.
 
-1. **Make height input use the shared `inputClass`** so all four inputs (weight, height, age, intensity) are the same `w-16` width.
-2. **Left-align the right column** by changing `rightColClass` from `justify-end` to `justify-start`, so the input boxes start at the same horizontal position.
+2. **Per-exercise calorie estimates move into expanded section** -- The calorie sub-row currently shown under every exercise row will be removed. Instead, per-exercise estimates will appear inside the expanded content (the `>` section), alongside cardio metadata and "Logged as" text.
 
-### Technical Details (`src/components/CalorieBurnDialog.tsx`)
+### Technical Details
 
-- **Line 221** (`inputClass`): No change needed, already `w-16`.
-- **Line 222** (`rightColClass`): Change `justify-end` to `justify-start`.
-- **Line ~298-301** (height input): Replace the inline class string `"w-12 h-8 text-center text-sm rounded-md border border-input bg-background px-1 ..."` with `{inputClass}` so it matches all the others.
+**`src/pages/WeightLog.tsx`** (lines 678-698):
+- Compute the total calorie burn result and format it as a short string (e.g., `"(~81-157 cal)"`).
+- Pass it as a new prop `totalCalorieBurnDisplay` to `WeightItemsTable`.
+- Remove the standalone `<p>` block that currently renders the calorie summary below the table.
+
+**`src/components/WeightItemsTable.tsx`**:
+
+- **Add prop** `totalCalorieBurnDisplay?: string` to the component interface.
+- **TotalsRow** (line 300): After the "Total" text, append: `{totalCalorieBurnDisplay && <span className="text-[11px] font-normal italic text-muted-foreground ml-1">{totalCalorieBurnDisplay}</span>}`
+- **Remove per-exercise calorie block** (lines 708-731): Delete the calorie burn estimate that renders below each exercise row.
+- **Add per-exercise estimates to expanded section** (after line 807, inside the expanded content): For each exercise in the entry, compute and display the calorie estimate in the same `text-sm text-muted-foreground` style used by other expanded content.
 
 ### Files Changed
-- `src/components/CalorieBurnDialog.tsx` only
+- `src/components/WeightItemsTable.tsx`
+- `src/pages/WeightLog.tsx`
+
