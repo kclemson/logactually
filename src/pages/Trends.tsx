@@ -792,6 +792,7 @@ const Trends = () => {
                 {volumeByDay.length > 0 && (
                   <VolumeChart
                     title={`Total Volume (${settings.weightUnit})`}
+                    subtitle="All exercises"
                     chartData={volumeByDay}
                     color={CHART_COLORS.trainingVolume}
                     unit={settings.weightUnit}
@@ -801,6 +802,7 @@ const Trends = () => {
                 {calorieBurnChartData.length > 0 && (
                   <CalorieBurnChart
                     title="Est. Calorie Burn"
+                    subtitle="Daily range"
                     chartData={calorieBurnChartData}
                     color={CHART_COLORS.calorieBurn}
                     onNavigate={(date) => navigate(`/weights?date=${date}`)}

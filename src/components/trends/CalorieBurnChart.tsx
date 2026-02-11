@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { Card, CardContent, CardHeader, ChartTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, ChartTitle, ChartSubtitle } from "@/components/ui/card";
 import { useHasHover } from "@/hooks/use-has-hover";
 
 interface CalorieBurnChartData {
@@ -14,6 +14,7 @@ interface CalorieBurnChartData {
 
 interface CalorieBurnChartProps {
   title: string;
+  subtitle?: string;
   chartData: CalorieBurnChartData[];
   color: string;
   onNavigate: (date: string) => void;
@@ -59,6 +60,7 @@ const BurnTooltip = ({
 
 export const CalorieBurnChart = ({
   title,
+  subtitle,
   chartData,
   color,
   onNavigate,
@@ -90,7 +92,10 @@ export const CalorieBurnChart = ({
 
       <div className="relative z-20">
         <CardHeader className="p-2 pb-1">
-          <ChartTitle>{title}</ChartTitle>
+          <div className="flex flex-col gap-0.5">
+            <ChartTitle>{title}</ChartTitle>
+            {subtitle && <ChartSubtitle>{subtitle}</ChartSubtitle>}
+          </div>
         </CardHeader>
         <CardContent className="p-2 pt-0">
           <div className="h-24">
