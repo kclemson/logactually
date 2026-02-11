@@ -14,12 +14,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { type WeightUnit, formatWeight, parseWeightToLbs, getWeightUnitLabel, formatDurationMmSs } from '@/lib/weight-units';
 import { isCardioExercise } from '@/lib/exercise-metadata';
 import { estimateCalorieBurn, formatCalorieBurnValue, type CalorieBurnSettings, type ExerciseInput } from '@/lib/calorie-burn';
+import { useHasHover } from '@/hooks/use-has-hover';
 
 type EditableFieldKey = 'description' | 'sets' | 'reps' | 'weight_lbs';
 
@@ -151,7 +153,8 @@ export function WeightItemsTable({
   totalCalorieBurnDisplay,
 }: WeightItemsTableProps) {
   const { isReadOnly, triggerOverlay } = useReadOnlyContext();
-  
+  const hasHover = useHasHover();
+  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const descriptionOriginalRef = useRef<string>('');
 
@@ -302,7 +305,17 @@ export function WeightItemsTable({
       {selectable && <span></span>}
       <span className={cn("px-1 font-semibold", showEntryDividers && "pl-4", compact && "text-sm")}>
         Total
-        {totalCalorieBurnDisplay && <span className="text-[11px] font-normal italic text-muted-foreground ml-1">{totalCalorieBurnDisplay}</span>}
+        {totalCalorieBurnDisplay && (
+          <Tooltip
+            open={hasHover ? undefined : activeTooltip === 'total'}
+            onOpenChange={hasHover ? undefined : (open) => setActiveTooltip(open ? 'total' : null)}
+          >
+            <TooltipTrigger asChild>
+              <span className="text-[11px] font-normal italic text-muted-foreground ml-1 cursor-help">{totalCalorieBurnDisplay}</span>
+            </TooltipTrigger>
+            <TooltipContent>Refine this estimate with your weight, height, and age in Settings.</TooltipContent>
+          </Tooltip>
+        )}
       </span>
       <span className="px-1 text-heading text-center">{totals.sets}</span>
       <span className="px-1 text-heading text-center">{totals.reps}</span>
@@ -358,6 +371,7 @@ export function WeightItemsTable({
   );
 
   return (
+    <TooltipProvider>
     <div className="space-y-1">
       {/* Totals at top */}
       {showTotals && items.length > 0 && totalsPosition === 'top' && <TotalsRow />}
@@ -772,9 +786,17 @@ export function WeightItemsTable({
                         ? parts[0].display
                         : parts.map(p => `${p.display} (${p.name})`).join(', ');
                       return (
-                        <p className="text-xs text-muted-foreground italic">
-                          Estimated calories burned: {detail}
-                        </p>
+                        <Tooltip
+                          open={hasHover ? undefined : activeTooltip === `detail-${currentEntryId}`}
+                          onOpenChange={hasHover ? undefined : (open) => setActiveTooltip(open ? `detail-${currentEntryId}` : null)}
+                        >
+                          <TooltipTrigger asChild>
+                            <p className="text-xs text-muted-foreground italic cursor-help">
+                              Estimated calories burned: {detail}
+                            </p>
+                          </TooltipTrigger>
+                          <TooltipContent>Refine this estimate with your weight, height, and age in Settings.</TooltipContent>
+                        </Tooltip>
                       );
                     })()}
 
@@ -822,5 +844,6 @@ export function WeightItemsTable({
       {/* Totals at bottom */}
       {showTotals && items.length > 0 && totalsPosition === 'bottom' && <TotalsRow />}
     </div>
+    </TooltipProvider>
   );
 }
