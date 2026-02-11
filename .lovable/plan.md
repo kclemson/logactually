@@ -1,46 +1,35 @@
 
 
-## Add lbs/kg Unit Toggle to Body Weight Row
+## Update "Your Info" Labels for Consistency
 
-### What changes
+### Text changes in `src/components/CalorieBurnDialog.tsx`
 
-Replace the static weight unit label (`lbs` or `kg`) next to the body weight input with an interactive toggle (matching the height row's `ft`/`cm` toggle). The default selection comes from the user's app-wide `weightUnit` setting, but they can switch locally within the dialog. The stored value remains `bodyWeightLbs` (in lbs) -- only the display/input conversion changes.
+**Section header:**
+- Replace `Your info (narrows the range)` with just `YOUR INFO` as the uppercase header
+- Add a new descriptive line below: *"These details help narrow the estimated calorie burn range."*
+
+**Subtitles -- consistent "X effect" pattern with parenthetical scale:**
+
+| Field | Current | New |
+|-------|---------|-----|
+| Body weight | `Biggest factor (~2-3x impact)` | `Largest effect (~30-50%)` |
+| Height | `Used for metabolic rate` | `Moderate effect (~10-15%)` |
+| Age | `~5% per decade` | `Small effect (~5% per decade)` |
+| Body composition | `~5-10% difference` | `Moderate effect (~5-10%)` |
+
+The ~30-50% for body weight comes from the actual formula: calories scale linearly with weight, and across a typical population range (130-200 lbs), that's roughly a 30-50% spread.
+
+**Field label rename:**
+- `Body composition` becomes `Metabolic profile`
 
 ### Technical details
 
-**`src/components/CalorieBurnDialog.tsx`**:
+All changes are text-only edits in `src/components/CalorieBurnDialog.tsx`:
 
-1. Add a local state `bodyWeightUnit` initialized from `settings.weightUnit` (either `'lbs'` or `'kg'`).
-
-2. Replace `displayWeight()` and `handleWeightChange` to use `bodyWeightUnit` instead of `settings.weightUnit`:
-   - Display: convert stored `bodyWeightLbs` to the local unit for display
-   - Input: convert user entry back to lbs for storage
-
-3. Add `handleBodyWeightUnitChange(unit)` that:
-   - Converts the current displayed value from old unit to new unit (using the display value, same pattern as height)
-   - Updates `bodyWeightUnit` state
-
-4. Replace the static `<span>{settings.weightUnit}</span>` with the same toggle button pattern used for height:
-   ```tsx
-   <div className="flex gap-0.5">
-     {(['lbs', 'kg'] as const).map((unit) => (
-       <button
-         key={unit}
-         onClick={() => handleBodyWeightUnitChange(unit)}
-         className={cn(
-           "text-xs px-1.5 py-0.5 rounded transition-colors",
-           bodyWeightUnit === unit
-             ? "bg-primary/10 text-foreground font-medium"
-             : "text-muted-foreground hover:text-foreground"
-         )}
-       >
-         {unit}
-       </button>
-     ))}
-   </div>
-   ```
-
-No changes to `useUserSettings.ts` or the database -- this is purely a local display concern within the dialog. The app-wide `weightUnit` setting remains unchanged.
+1. Update the section header and add a descriptive sub-line
+2. Update four subtitle strings in the gray text elements
+3. Rename "Body composition" label to "Metabolic profile"
 
 ### Files changed
-- `src/components/CalorieBurnDialog.tsx` -- add local `bodyWeightUnit` state, unit toggle buttons, and conversion logic
+- `src/components/CalorieBurnDialog.tsx` -- text-only label updates
+
