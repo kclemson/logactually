@@ -1,59 +1,65 @@
 
+## Add Daily Estimated Calorie Burn Chart to Trends Page
 
-## Fix Changelog Lightbox: Add Escape Key and Constrain Size
+### Overview
 
-### Problems
-1. The lightbox overlay cannot be closed with the Escape key -- it's a plain `div`, not a Radix Dialog, so there's no built-in keyboard handling.
-2. The black backdrop spans the full viewport making the X button hard to spot, and the image floats without a visible bounded container.
+Add a chart showing daily total estimated calorie burn as a **range bar** (not a midpoint) next to the existing Total Volume chart. Both become half-width in a 2-column grid. The range is visualized using a stacked bar technique: a transparent "base" bar from 0 to the low value, and a visible colored bar from low to high, so the user sees the actual spread of the estimate.
 
 ### Changes
 
-**File: `src/pages/Changelog.tsx`**
+**1. New file: `src/hooks/useDailyCalorieBurn.ts`**
 
-1. **Add Escape key handler**: Add a `useEffect` that listens for `keydown` when `lightboxSrc` is set, calling `setLightboxSrc(null)` on Escape. Cleanup removes the listener. (This is an appropriate useEffect -- subscribing to a browser event.)
+A reusable hook that composes `useWeightTrends(days)` and `useUserSettings()`:
+- Iterates all exercises and their `weightData` points
+- Constructs `ExerciseInput` for each and calls `estimateCalorieBurn()`
+- Aggregates `{ low, high }` per day
+- Returns `{ data: Array<{ date, low, high }>, isLoading }`
+- Reusable for future features (e.g., adjusting daily calorie target by burn)
 
-2. **Constrain the lightbox container**: Wrap the image in a card-like container (e.g., `max-w-3xl` with `bg-background rounded-lg p-2`) so the image feels bounded and the close button is visually anchored to the container rather than floating at the viewport edge.
+**2. Update: `src/hooks/useWeightTrends.ts`**
 
-3. **Move the X button** onto the container (top-right corner of the card) instead of the viewport corner, so it's always visible near the image.
+- Add `exercise_metadata` to the `.select()` query and the `WeightPoint` interface
+- Pass it through when building data points (needed for user-reported calorie overrides and incline data)
 
-### Technical detail
+**3. New chart component in `src/components/trends/FoodChart.tsx`**
 
-```tsx
-// 1. Escape key (add near other hooks at top of component)
-useEffect(() => {
-  if (!lightboxSrc) return;
-  const handler = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') setLightboxSrc(null);
-  };
-  document.addEventListener('keydown', handler);
-  return () => document.removeEventListener('keydown', handler);
-}, [lightboxSrc]);
+A `CalorieBurnChart` component using the **stacked bar with transparent base** pattern:
+- Each data point has `{ date, base: low, band: high - low }`
+- Two stacked `Bar` components: one with `fill="transparent"` (the base), one with the actual color (the visible band)
+- Tooltip shows the range as `~low-high cal`
+- Labels show the range in compact form
+- Same touch/click interaction patterns as `VolumeChart`
+- Uses a warm/orange color to distinguish from the purple volume chart
 
-// 2-3. Replace the lightbox markup with a bounded container:
-{lightboxSrc && (
-  <div
-    className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center"
-    onClick={() => setLightboxSrc(null)}
-  >
-    <div
-      className="relative max-w-3xl w-auto mx-4 bg-background rounded-lg p-2"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <button
-        className="absolute -top-3 -right-3 bg-background rounded-full p-1 text-muted-foreground hover:text-foreground transition-colors shadow-md"
-        onClick={() => setLightboxSrc(null)}
-        aria-label="Close image"
-      >
-        <X className="h-5 w-5" />
-      </button>
-      <img
-        src={lightboxSrc}
-        alt="Enlarged screenshot"
-        className="max-h-[85vh] w-auto object-contain rounded"
-      />
-    </div>
-  </div>
-)}
+This approach honestly represents the range -- wide bars when the estimate is uncertain, narrow bars when the user has configured their settings well -- which naturally encourages users to fill in their calorie burn settings for tighter estimates.
+
+**4. Update: `src/pages/Trends.tsx`**
+
+- Import `useDailyCalorieBurn` and `CalorieBurnChart`
+- Call the hook with `selectedPeriod`
+- Replace the full-width Volume chart with a 2-column grid:
+  - Total Volume chart (half-width)
+  - Estimated Calorie Burn chart (half-width)
+- Calorie burn chart hidden when `calorieBurnEnabled` is false or no data exists
+- If only one chart has data, it still renders at half-width for layout consistency (or we can let it go full-width -- your call during review)
+
+### Visual concept
+
+```text
+|  Total Volume (lbs)        |  Est. Calorie Burn          |
+|  ____                      |                             |
+| |    |       ____          |  ====        ====           |
+| |    | ____ |    |         | |    |  ==  |    |          |
+| |____|_|____|____|___      | |____|__|__|_|____|___      |
+|  Mon  Tue  Wed  Thu        |  Mon  Tue  Wed  Thu        |
+
+(==== = colored band from low to high, base is transparent)
 ```
 
-This gives a visible card boundary around the image, a discoverable close button, and Escape key support. Mobile remains unaffected since the container simply scales down.
+### Edge cases
+
+- `calorieBurnEnabled` is false: chart hidden
+- No weight data: neither chart shows
+- All exercises produce 0 estimates: chart hidden
+- Days with exact user-reported calories: low === high, band === 0, renders as a thin line (acceptable)
+- `exercise_metadata` query addition is backward-compatible (nullable column)
