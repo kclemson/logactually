@@ -25,6 +25,7 @@ export function useRecentWeightEntries(daysBack = 90) {
         .from('weight_sets')
         .select('entry_id, logged_date, exercise_key, source_routine_id, created_at')
         .gte('created_at', cutoffDate)
+        .neq('raw_input', 'apple-health-import')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
