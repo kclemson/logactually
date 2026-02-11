@@ -21,6 +21,7 @@ type ChangelogEntry = {
 
 // prettier-ignore
 const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+{ date: "Feb-11", text: "Added estimated calorie burn for exercises. Enable it in Settings to see per-exercise and daily burn estimates on your Weight Log, calculated using MET values from the 2024 Compendium of Physical Activities. Optionally provide your body weight, height, age, and metabolic profile to narrow the estimated range.", image: "calorie-burn-config.png" },
 { date: "Feb-11", text: "Added photo-based food logging — snap a photo or choose one from your gallery, and AI will identify the food items, estimate portions, and log the nutritional breakdown automatically.", image: "photo-food-logging.png" },
 { date: "Feb-10", text: "Added support for importing workouts from Apple Health. If you use an Apple Watch, export your exercise data on your phone and then import that XML file in Settings. Also improved general UX for cardio.", image: "apple-health-import.png" },
 { date: "Feb-09", text: "Set a daily calorie target in Settings and see color-coded indicators on the Calendar view — green when you're on track, amber when slightly over, and red when well above your goal.", image: "calorie-target-indicators.png" },
