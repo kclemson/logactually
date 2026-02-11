@@ -27,7 +27,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   suggestMealSaves: true,
   suggestRoutineSaves: true,
   dailyCalorieTarget: null,
-  calorieBurnEnabled: false,
+  calorieBurnEnabled: true,
   bodyWeightLbs: null,
   heightInches: null,
   heightUnit: 'ft',
