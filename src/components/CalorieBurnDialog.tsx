@@ -125,7 +125,7 @@ export function CalorieBurnDialog({
               Estimate how many calories each workout burns, shown as a range.
             </p>
             <div className="flex items-center justify-between">
-              <p className="text-sm">Show calorie burn estimates</p>
+              <p className="text-sm">Show estimated calorie burn</p>
               <button
                 onClick={handleToggle}
                 className={cn(
