@@ -1,16 +1,34 @@
 
 
-## Make Exercise Charts Flow Naturally
+## Add Sub-headers to Volume and Calorie Burn Charts
 
-When calorie burn estimates are disabled (or have no data), the Total Volume chart currently sits alone in a 2-column grid with an empty gap. Instead, we should remove the separate wrapper div for volume/calorie burn and let all charts (volume, calorie burn, and individual exercises) flow together in a single 2-column grid.
+The exercise charts (Walking, Running, etc.) each have a subtitle line beneath the title (e.g., "Cardio · time"), which makes them taller than the Volume and Calorie Burn charts. Adding a subtitle to both will align their heights.
+
+### Suggested sub-headers
+
+- **Total Volume (lbs)** -- subtitle: "All exercises" (describes what's aggregated)
+- **Est. Calorie Burn** -- subtitle: "Daily range" (describes what the band represents)
+
+These are short, descriptive, and match the style of the existing subtitles like "Cardio · time" or "Back · weight".
 
 ### Changes
 
+**`src/components/trends/FoodChart.tsx`** (VolumeChart)
+
+- Add a `subtitle` prop (optional string) to `VolumeChartProps`
+- Render `<ChartSubtitle>{subtitle}</ChartSubtitle>` below `<ChartTitle>` inside the `CardHeader`, wrapped in a `flex-col gap-0.5` div to match the exercise chart layout
+
+**`src/components/trends/CalorieBurnChart.tsx`**
+
+- Add a `subtitle` prop (optional string) to `CalorieBurnChartProps`
+- Render `<ChartSubtitle>{subtitle}</ChartSubtitle>` below `<ChartTitle>` inside the `CardHeader`, same layout
+
 **`src/pages/Trends.tsx`**
 
-Merge the volume chart, calorie burn chart, and individual exercise charts into a single `grid grid-cols-2 gap-3` container. Currently there are two separate grid containers:
+- Pass `subtitle="All exercises"` to the `VolumeChart`
+- Pass `subtitle="Daily range"` to the `CalorieBurnChart`
 
-1. Volume + Calorie Burn (lines ~781-800)
-2. Exercise charts (lines ~814+)
+### Alternative sub-header ideas (if you prefer different wording)
 
-Combine them into one grid so all charts flow naturally into the 2-column layout. When calorie burn is disabled/empty, the exercise charts simply fill in next to the volume chart. This also means the volume chart is always half-width, which matches the screenshot and the user's preference.
+- Volume: "Strength training" / "Weekly total" / "Excludes cardio"
+- Calorie Burn: "Estimated range" / "All activities" / "Low-high estimate"
