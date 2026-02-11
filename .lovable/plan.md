@@ -1,30 +1,25 @@
 
+## Align Right-Side Input Controls
 
-## Update Preview Label Format
+### Problem
+The input boxes and their trailing context (unit labels, toggles) aren't consistently aligned across rows. Each row has a different right-column width, making the layout look uneven.
 
-### Change 1: Parentheses instead of em dash
-Update `exerciseLabel` to wrap details in parentheses after the name instead of using an em dash separator.
+### Solution
+Use a consistent fixed-width right column (`rightColClass`) across all rows that have inputs, ensuring the input box + any trailing context (lbs/kg, in/cm, /10) always occupies the same horizontal space. Rows without a trailing suffix (like Age) will still reserve that space to keep alignment.
 
-Before: `Treadmill Run — 17.48 min, 1.5 mi`
-After: `Treadmill Run (17.48 min, 1.5 mi)`
+### Technical Details (`src/components/CalorieBurnDialog.tsx`)
 
-### Change 2: Remove "est." from calorie format
-Update `formatCalorieBurn` (or wherever the estimate string is built) to drop the "est." suffix since the tilde already conveys approximation.
+1. **Widen `rightColClass`** from `w-[7.5rem]` to `w-[8.5rem]` to comfortably fit the input + unit suffix/buttons for all rows.
 
-Before: `~137-301 cal est.`
-After: `~137-301 cal`
+2. **Standardize trailing suffix width**: Give all trailing elements (the `lbs`/`kg` span, the `in`/`cm` button group, and the `/10` span) a consistent fixed width (e.g., `w-8` or `w-10`) so inputs always end at the same position. For Age, add an empty spacer `<span className="w-8" />` to maintain alignment even though there's no suffix.
 
-### Technical Details
+3. **Make all input widths consistent**: Currently body weight uses `w-20`, height uses `w-16`, intensity uses `w-14`. Standardize them all to `w-16` so the boxes themselves are the same size, with the trailing context taking up the remaining space.
 
-**`src/components/CalorieBurnDialog.tsx`** (~line 67):
-Change the return from `exerciseLabel` to use parentheses:
-```
-return details.length ? `${name} (${details.join(', ')})` : name;
-```
-
-**`src/lib/calorie-burn.ts`**: Find the `formatCalorieBurn` function and remove the "est." or " est." portion from the output string.
+Specifically:
+- **Body weight row** (line ~275-286): Input `w-16`, trailing `<span className="text-xs text-muted-foreground w-8">{settings.weightUnit}</span>`
+- **Height row** (line ~295-321): Input `w-16`, trailing in/cm buttons wrapped in `<div className="w-8 flex justify-end gap-0.5">`
+- **Age row** (line ~330-341): Input `w-16`, trailing `<span className="w-8" />` (empty spacer)
+- **Default intensity row** (line ~377-389): Input `w-16`, trailing `<span className="text-xs text-muted-foreground w-8">/10</span>`
 
 ### Files Changed
-- `src/components/CalorieBurnDialog.tsx`
-- `src/lib/calorie-burn.ts`
-
+- `src/components/CalorieBurnDialog.tsx` only
