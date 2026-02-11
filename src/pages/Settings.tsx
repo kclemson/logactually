@@ -1,5 +1,5 @@
 import { useTheme } from "next-themes";
-import { Moon, Sun, Monitor, Star, ArrowDownUp, Plus, Dumbbell, User, Settings2, Info, Flame } from "lucide-react";
+import { Moon, Sun, Monitor, Star, ArrowDownUp, Plus, Dumbbell, User, Settings2, Info } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { WeightUnit } from "@/lib/weight-units";
 import { cn } from "@/lib/utils";
@@ -252,12 +252,14 @@ export default function Settings() {
           {/* Calorie Burn Estimates - shown when weights enabled */}
           {showWeights && (
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Flame className="h-3.5 w-3.5 text-muted-foreground" />
-                <p className="text-xs text-muted-foreground">Calorie Burn Estimates</p>
-              </div>
+              <p className="text-xs text-muted-foreground">Calorie Burn Estimates</p>
               <button
-                onClick={() => setCalorieBurnDialogOpen(true)}
+                onClick={() => {
+                  if (!settings.calorieBurnEnabled) {
+                    updateSettings({ calorieBurnEnabled: true });
+                  }
+                  setCalorieBurnDialogOpen(true);
+                }}
                 className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors"
               >
                 {settings.calorieBurnEnabled
