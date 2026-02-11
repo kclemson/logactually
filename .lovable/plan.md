@@ -1,35 +1,39 @@
 
 
-## Update "Your Info" Labels for Consistency
+## Update Default Intensity & "What Affects" Blurb
 
-### Text changes in `src/components/CalorieBurnDialog.tsx`
+### Answering your question first (#3)
 
-**Section header:**
-- Replace `Your info (narrows the range)` with just `YOUR INFO` as the uppercase header
-- Add a new descriptive line below: *"These details help narrow the estimated calorie burn range."*
+Yes, both incline and calories burned **do** impact the estimates:
+- **Incline**: The code adds a MET bonus of ~0.75 MET per 5% incline grade, which directly increases the calorie estimate.
+- **Calories burned**: If the user mentions a device-reported number (e.g. "Apple Watch said 320 cal"), the code uses that exact number instead of estimating. So the current blurb is accurate.
 
-**Subtitles -- consistent "X effect" pattern with parenthetical scale:**
+### Changes to `src/components/CalorieBurnDialog.tsx`
 
-| Field | Current | New |
-|-------|---------|-----|
-| Body weight | `Biggest factor (~2-3x impact)` | `Largest effect (~30-50%)` |
-| Height | `Used for metabolic rate` | `Moderate effect (~10-15%)` |
-| Age | `~5% per decade` | `Small effect (~5% per decade)` |
-| Body composition | `~5-10% difference` | `Moderate effect (~5-10%)` |
+**1. Default intensity subtitle (line 471)**
 
-The ~30-50% for body weight comes from the actual formula: calories scale linearly with weight, and across a typical population range (130-200 lbs), that's roughly a 30-50% spread.
+Current: `Used when you don't log effort. Blank = full range.`
 
-**Field label rename:**
-- `Body composition` becomes `Metabolic profile`
+The core idea you want: "the effort level assumed when not specified in the workout." Shorter phrasing proposal:
+
+`Assumed when effort isn't specified. Blank = full range.`
+
+This keeps the same two-sentence structure, stays compact, and reads naturally.
+
+**2. "What affects your estimates" blurb (lines 490-497)**
+
+Replace with your proposed text, lightly edited for flow:
+
+> Each of the settings above helps calculate the estimated calorie burn, with body weight and exercise intensity being the two biggest factors. When you log your workouts, including details like "hard effort", "8/10 intensity", or "12% incline" will help narrow the range. If your device reports calories burned (e.g. Apple Watch), mention it and we'll use that number directly.
+
+This keeps the Apple Watch line since it **is** accurate -- the code uses device-reported calories directly.
 
 ### Technical details
 
-All changes are text-only edits in `src/components/CalorieBurnDialog.tsx`:
-
-1. Update the section header and add a descriptive sub-line
-2. Update four subtitle strings in the gray text elements
-3. Rename "Body composition" label to "Metabolic profile"
+Text-only edits in `src/components/CalorieBurnDialog.tsx`:
+- Line 471: update subtitle string
+- Lines 491-496: replace paragraph text
 
 ### Files changed
-- `src/components/CalorieBurnDialog.tsx` -- text-only label updates
+- `src/components/CalorieBurnDialog.tsx`
 
