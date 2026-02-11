@@ -14,7 +14,7 @@ export interface UserSettings {
   calorieBurnEnabled: boolean;
   bodyWeightLbs: number | null;
   heightInches: number | null;
-  heightUnit: 'in' | 'cm';
+  heightUnit: 'ft' | 'cm';
   age: number | null;
   bodyComposition: 'female' | 'male' | null;
   defaultIntensity: number | null;
@@ -30,7 +30,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   calorieBurnEnabled: false,
   bodyWeightLbs: null,
   heightInches: null,
-  heightUnit: 'in',
+  heightUnit: 'ft',
   age: null,
   bodyComposition: null,
   defaultIntensity: null,
