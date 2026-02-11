@@ -30,6 +30,8 @@ function formatWalkingDuration(minutes: number): string {
 }
 import { useHasHover } from "@/hooks/use-has-hover";
 import { FoodChart, StackedMacroChart, VolumeChart } from "@/components/trends/FoodChart";
+import { CalorieBurnChart } from "@/components/trends/CalorieBurnChart";
+import { useDailyCalorieBurn } from "@/hooks/useDailyCalorieBurn";
 
 // Chart color palette (hex RGB format for easy editing)
 const CHART_COLORS = {
@@ -37,7 +39,8 @@ const CHART_COLORS = {
   protein: "#115E83",
   carbs: "#00B4D8",
   fat: "#90E0EF",
-  trainingVolume: "hsl(262 83% 58%)", // Bright purple matching exercise charts (kept separate const for future adjustment)
+  trainingVolume: "hsl(262 83% 58%)",
+  calorieBurn: "#F59E0B", // Warm amber for calorie burn estimates
 } as const;
 
 const CompactTooltip = ({ 
@@ -457,6 +460,7 @@ const Trends = () => {
 
   // Weight trends query
   const { data: weightExercises = [], isLoading: weightLoading } = useWeightTrends(selectedPeriod);
+  const { data: dailyCalorieBurn } = useDailyCalorieBurn(selectedPeriod);
 
   // Detect duplicate exercises (same description, different keys)
   // Filter out already-dismissed groups
@@ -553,6 +557,20 @@ const Trends = () => {
       };
     });
   }, [weightExercises, settings.weightUnit]);
+
+  // Calorie burn chart data (range bars)
+  const calorieBurnChartData = useMemo(() => {
+    if (dailyCalorieBurn.length === 0) return [];
+
+    return dailyCalorieBurn.map((d) => ({
+      rawDate: d.date,
+      date: format(new Date(`${d.date}T12:00:00`), "MMM d"),
+      low: d.low,
+      high: d.high,
+      base: d.low,
+      band: d.high - d.low,
+    }));
+  }, [dailyCalorieBurn]);
 
   // Visible exercises (load more pattern)
   const visibleExercises = weightExercises.slice(0, visibleExerciseCount);
@@ -759,15 +777,27 @@ const Trends = () => {
             <div className="py-8 text-center text-muted-foreground">No weight training data for this period</div>
           ) : (
             <div className="space-y-3">
-              {/* Total Volume Chart */}
-              {volumeByDay.length > 0 && (
-                <VolumeChart
-                  title={`Total Volume (${settings.weightUnit})`}
-                  chartData={volumeByDay}
-                  color={CHART_COLORS.trainingVolume}
-                  unit={settings.weightUnit}
-                  onNavigate={(date) => navigate(`/weights?date=${date}`)}
-                />
+              {/* Volume + Calorie Burn charts */}
+              {(volumeByDay.length > 0 || calorieBurnChartData.length > 0) && (
+                <div className="grid grid-cols-2 gap-3">
+                  {volumeByDay.length > 0 && (
+                    <VolumeChart
+                      title={`Total Volume (${settings.weightUnit})`}
+                      chartData={volumeByDay}
+                      color={CHART_COLORS.trainingVolume}
+                      unit={settings.weightUnit}
+                      onNavigate={(date) => navigate(`/weights?date=${date}`)}
+                    />
+                  )}
+                  {calorieBurnChartData.length > 0 && (
+                    <CalorieBurnChart
+                      title="Est. Calorie Burn"
+                      chartData={calorieBurnChartData}
+                      color={CHART_COLORS.calorieBurn}
+                      onNavigate={(date) => navigate(`/weights?date=${date}`)}
+                    />
+                  )}
+                </div>
               )}
 
               {/* Duplicate exercise prompt */}
