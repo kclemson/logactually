@@ -503,12 +503,22 @@ describe('formatCalorieBurnValue', () => {
 // ---------------------------------------------------------------------------
 
 describe('getBmrScalingFactor', () => {
-  it('returns 1.0 when age is missing', () => {
-    expect(getBmrScalingFactor(settingsWith({ bodyWeightLbs: 160, heightInches: 70, age: null }))).toBe(1.0);
+  it('returns 1.0 when both height and age are missing', () => {
+    expect(getBmrScalingFactor(settingsWith({ bodyWeightLbs: 160, heightInches: null, age: null }))).toBe(1.0);
   });
 
-  it('returns 1.0 when height is missing', () => {
-    expect(getBmrScalingFactor(settingsWith({ bodyWeightLbs: 160, heightInches: null, age: 30 }))).toBe(1.0);
+  it('height alone (no age) still adjusts factor', () => {
+    const short = getBmrScalingFactor(settingsWith({ bodyWeightLbs: null, heightInches: 60, age: null }));
+    const tall = getBmrScalingFactor(settingsWith({ bodyWeightLbs: null, heightInches: 76, age: null }));
+    expect(tall).toBeGreaterThan(short);
+    // Both should differ from 1.0
+    expect(short).not.toBeCloseTo(1.0, 1);
+  });
+
+  it('age alone (no height) still adjusts factor', () => {
+    const young = getBmrScalingFactor(settingsWith({ bodyWeightLbs: null, heightInches: null, age: 20 }));
+    const old = getBmrScalingFactor(settingsWith({ bodyWeightLbs: null, heightInches: null, age: 60 }));
+    expect(young).toBeGreaterThan(old);
   });
 
   it('returns ~1.0 for reference person (170cm, 30yo)', () => {
@@ -568,14 +578,15 @@ describe('age affects calorie estimates', () => {
     }
   });
 
-  it('age has no effect without height', () => {
+  it('age alone (without height) still affects estimates', () => {
     const base = { bodyWeightLbs: 160, heightInches: null as number | null };
     const age20 = estimateCalorieBurn(exercise, settingsWith({ ...base, age: 20 }));
     const age60 = estimateCalorieBurn(exercise, settingsWith({ ...base, age: 60 }));
 
+    expect(age20.type).toBe('range');
+    expect(age60.type).toBe('range');
     if (age20.type === 'range' && age60.type === 'range') {
-      expect(age20.low).toBe(age60.low);
-      expect(age20.high).toBe(age60.high);
+      expect(age20.low).toBeGreaterThan(age60.low);
     }
   });
 });
