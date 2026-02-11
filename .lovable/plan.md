@@ -1,28 +1,43 @@
 
 
-## Move Calorie Burn Display: Into Total Row and Expanded Section
+## Clean Up Calorie Formatting at the Source
 
 ### What changes
 
-1. **Total row gets calorie estimate inline** -- Instead of a separate line below the table saying "Est. burn: ~81-157 cal", the Total row will read: `Total` followed by `(~81-157 cal)` in smaller, italic, muted text.
-
-2. **Per-exercise calorie estimates move into expanded section** -- The calorie sub-row currently shown under every exercise row will be removed. Instead, per-exercise estimates will appear inside the expanded content (the `>` section), alongside cardio metadata and "Logged as" text.
+Instead of calling `formatCalorieBurn()` and then stripping " cal" / " (reported)" suffixes, add a new lean formatter function that returns only the numeric range string.
 
 ### Technical Details
 
-**`src/pages/WeightLog.tsx`** (lines 678-698):
-- Compute the total calorie burn result and format it as a short string (e.g., `"(~81-157 cal)"`).
-- Pass it as a new prop `totalCalorieBurnDisplay` to `WeightItemsTable`.
-- Remove the standalone `<p>` block that currently renders the calorie summary below the table.
+**`src/lib/calorie-burn.ts`:**
 
-**`src/components/WeightItemsTable.tsx`**:
+Add a new function `formatCalorieBurnValue` that returns just the numeric portion:
 
-- **Add prop** `totalCalorieBurnDisplay?: string` to the component interface.
-- **TotalsRow** (line 300): After the "Total" text, append: `{totalCalorieBurnDisplay && <span className="text-[11px] font-normal italic text-muted-foreground ml-1">{totalCalorieBurnDisplay}</span>}`
-- **Remove per-exercise calorie block** (lines 708-731): Delete the calorie burn estimate that renders below each exercise row.
-- **Add per-exercise estimates to expanded section** (after line 807, inside the expanded content): For each exercise in the entry, compute and display the calorie estimate in the same `text-sm text-muted-foreground` style used by other expanded content.
+```ts
+export function formatCalorieBurnValue(result: CalorieBurnResult): string {
+  if (result.type === 'exact') {
+    return `~${result.value}`;
+  }
+  if (result.low === 0 && result.high === 0) return '';
+  if (result.low === result.high) return `~${result.low}`;
+  return `~${result.low}-${result.high}`;
+}
+```
+
+The existing `formatCalorieBurn` stays unchanged for any other call sites that still want the " cal" suffix.
+
+**`src/components/WeightItemsTable.tsx`:**
+
+- Import `formatCalorieBurnValue` instead of (or in addition to) `formatCalorieBurn`.
+- Use `formatCalorieBurnValue` when building the expanded section calorie display, so no suffix stripping is needed.
+- Single exercise: `Estimated calories burned: ~159-238`
+- Multi-exercise: `Estimated calories burned: ~12-18 (Leg Extension), ~159-238 (Squat)`
+
+**`src/pages/WeightLog.tsx`:**
+
+- The total calorie display passed as a prop also currently uses `formatCalorieBurnTotal` which includes "Est. burn:" prefix. Check if this should also use the new lean formatter to build the `(~81-157 cal)` string more cleanly. Currently lines 678-698 already format it as `(${display})` -- switching to `formatCalorieBurnValue` + wrapping with `(${value} cal)` would be cleaner than stripping from `formatCalorieBurnTotal`.
 
 ### Files Changed
-- `src/components/WeightItemsTable.tsx`
-- `src/pages/WeightLog.tsx`
+- `src/lib/calorie-burn.ts` -- add `formatCalorieBurnValue`
+- `src/components/WeightItemsTable.tsx` -- use new formatter, no suffix stripping
+- `src/pages/WeightLog.tsx` -- use new formatter for total display prop
 
