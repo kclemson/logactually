@@ -1,60 +1,19 @@
 
 
-## Add Exercise Details to Preview Labels
+## Make Preview Labels Fully Gray + Fix Toggle Overlap
 
-### Problem
-The preview currently shows only exercise names (e.g., "Treadmill Walk", "Leg Curl") with no context about the specific workout parameters being used for the estimate.
+### Change 1: Move toggle below header
+The close X button overlaps the toggle. Move the toggle to its own row beneath the header area so they don't conflict.
 
-### Solution
-Update the `exerciseLabel` function and preview rendering to show contextual details:
-- **Cardio**: duration and/or distance (e.g., "Treadmill Walk -- 25 min" or "Treadmill Run -- 30 min, 3.1 mi")
-- **Strength**: sets x reps x weight in user's preferred unit (e.g., "Leg Curl -- 3x10 @ 60 lbs" or "Leg Curl -- 3x10 @ 27 kg")
+### Change 2: Preview text all in muted/gray
+Since the preview section is purely informational (nothing is editable), render the entire exercise line -- both name and details -- in smaller muted gray text (`text-xs text-muted-foreground`). This keeps the visual hierarchy clear: white text = interactive settings fields, gray text = read-only context.
 
-### Changes (`CalorieBurnDialog.tsx`)
+### Technical Details (`src/components/CalorieBurnDialog.tsx`)
 
-1. **Update `exerciseLabel` to accept `weightUnit`** and build a detail suffix:
-   - For cardio (duration > 0): show duration, plus distance if available
-   - For strength (sets > 0): show sets x reps, plus weight converted to user's unit if > 0
-   - Use an em dash separator between name and details
+1. **Toggle layout** (~lines 163-176): Add a `DialogTitle` or simple heading for accessibility, then put the toggle row separately below it so the X button doesn't overlap.
 
-2. **Update the `previews` useMemo** to pass `settings.weightUnit` into the label builder and add it to the dependency array.
-
-3. **Update `SAMPLE_LABELS`** to remove the hardcoded labels map entirely -- the dynamic `exerciseLabel` function will handle all cases including samples, so duplicating labels is unnecessary.
-
-### Technical Details
-
-The label function will look like:
-
-```
-function exerciseLabel(ex: ExerciseInput, weightUnit: WeightUnit): string {
-  const name = 'description' in ex && (ex as any).description
-    ? (ex as any).description
-    : ex.exercise_key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-
-  const details: string[] = [];
-
-  if (ex.duration_minutes && ex.duration_minutes > 0) {
-    details.push(`${ex.duration_minutes} min`);
-  }
-  if (ex.distance_miles && ex.distance_miles > 0) {
-    details.push(`${ex.distance_miles.toFixed(1)} mi`);
-  }
-  if (ex.sets > 0) {
-    let s = `${ex.sets}x${ex.reps}`;
-    if (ex.weight_lbs > 0) {
-      const w = weightUnit === 'kg'
-        ? Math.round(ex.weight_lbs * 0.453592)
-        : ex.weight_lbs;
-      s += ` @ ${w} ${weightUnit}`;
-    }
-    details.push(s);
-  }
-
-  return details.length ? `${name} — ${details.join(', ')}` : name;
-}
-```
-
-The `previews` useMemo will merge the description logic into the label call and depend on `settings.weightUnit`.
+2. **Preview list** (~lines 185-190): Change the exercise name `span` from `text-foreground` to `text-muted-foreground text-xs`, matching the calorie estimate styling on the right. Both sides of each row will be small gray text.
 
 ### Files Changed
 - `src/components/CalorieBurnDialog.tsx` only
+
