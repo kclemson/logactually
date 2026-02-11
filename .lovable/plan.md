@@ -1,25 +1,21 @@
 
-## Align Right-Side Input Controls
+
+## Standardize Input Widths and Left-Align
 
 ### Problem
-The input boxes and their trailing context (unit labels, toggles) aren't consistently aligned across rows. Each row has a different right-column width, making the layout look uneven.
+The height input is narrower (`w-12`) than the others (`w-16`), causing misalignment. Also, the inputs are right-aligned within their column, but they should be left-aligned so the input boxes line up vertically.
 
 ### Solution
-Use a consistent fixed-width right column (`rightColClass`) across all rows that have inputs, ensuring the input box + any trailing context (lbs/kg, in/cm, /10) always occupies the same horizontal space. Rows without a trailing suffix (like Age) will still reserve that space to keep alignment.
+Two small fixes:
+
+1. **Make height input use the shared `inputClass`** so all four inputs (weight, height, age, intensity) are the same `w-16` width.
+2. **Left-align the right column** by changing `rightColClass` from `justify-end` to `justify-start`, so the input boxes start at the same horizontal position.
 
 ### Technical Details (`src/components/CalorieBurnDialog.tsx`)
 
-1. **Widen `rightColClass`** from `w-[7.5rem]` to `w-[8.5rem]` to comfortably fit the input + unit suffix/buttons for all rows.
-
-2. **Standardize trailing suffix width**: Give all trailing elements (the `lbs`/`kg` span, the `in`/`cm` button group, and the `/10` span) a consistent fixed width (e.g., `w-8` or `w-10`) so inputs always end at the same position. For Age, add an empty spacer `<span className="w-8" />` to maintain alignment even though there's no suffix.
-
-3. **Make all input widths consistent**: Currently body weight uses `w-20`, height uses `w-16`, intensity uses `w-14`. Standardize them all to `w-16` so the boxes themselves are the same size, with the trailing context taking up the remaining space.
-
-Specifically:
-- **Body weight row** (line ~275-286): Input `w-16`, trailing `<span className="text-xs text-muted-foreground w-8">{settings.weightUnit}</span>`
-- **Height row** (line ~295-321): Input `w-16`, trailing in/cm buttons wrapped in `<div className="w-8 flex justify-end gap-0.5">`
-- **Age row** (line ~330-341): Input `w-16`, trailing `<span className="w-8" />` (empty spacer)
-- **Default intensity row** (line ~377-389): Input `w-16`, trailing `<span className="text-xs text-muted-foreground w-8">/10</span>`
+- **Line 221** (`inputClass`): No change needed, already `w-16`.
+- **Line 222** (`rightColClass`): Change `justify-end` to `justify-start`.
+- **Line ~298-301** (height input): Replace the inline class string `"w-12 h-8 text-center text-sm rounded-md border border-input bg-background px-1 ..."` with `{inputClass}` so it matches all the others.
 
 ### Files Changed
 - `src/components/CalorieBurnDialog.tsx` only
