@@ -1,37 +1,26 @@
 
 
-## Backfill exercise_subtype for Existing walk_run Entries
+## Exclude Apple Health Imports from Pattern Detection Query
 
 ### Problem
-Apple Health imports set `exercise_subtype` correctly ('running', 'walking'), but older manually logged entries have `null`. This causes separate charts on the Trends page. New manual entries are now mostly getting the right subtype from the AI, but ~40 older entries need fixing.
+The "save as routine" suggestion shows "252 similar exercises" because the query in `useRecentWeightEntries` includes Apple Health imported entries. These bulk imports shouldn't count toward the repeated-entry detection that drives routine save suggestions.
 
-### Solution: One-Time Data Migration
-Run a SQL migration to backfill `exercise_subtype` based on the `description` field. No code changes needed.
+### Change (1 file)
 
-### Technical Details
+**`src/hooks/useRecentWeightEntries.ts`**
 
-A single SQL migration with two UPDATE statements:
+Add a filter to exclude rows where `raw_input` equals `"apple-health-import"`:
 
-**Set subtype to 'running'** for entries where description contains "run" or "running":
-```sql
-UPDATE weight_sets
-SET exercise_subtype = 'running'
-WHERE exercise_key = 'walk_run'
-  AND exercise_subtype IS NULL
-  AND LOWER(description) ~ '(run|running)';
+```typescript
+const { data, error } = await supabase
+  .from('weight_sets')
+  .select('entry_id, logged_date, exercise_key, source_routine_id, created_at')
+  .gte('created_at', cutoffDate)
+  .neq('raw_input', 'apple-health-import')   // <-- add this line
+  .order('created_at', { ascending: false });
 ```
 
-**Set subtype to 'walking'** for entries where description contains "walk", "treadmill" (without "run"), or "ball court":
-```sql
-UPDATE weight_sets
-SET exercise_subtype = 'walking'
-WHERE exercise_key = 'walk_run'
-  AND exercise_subtype IS NULL
-  AND (LOWER(description) ~ '(walk|treadmill|ball court)');
-```
+Also add `raw_input` to the select so the filter works correctly (it already does since `neq` is a WHERE clause filter, not a column projection requirement -- so just the `.neq()` line is sufficient).
 
-This covers all current null-subtype descriptions:
-- "Running", "Run", "run", "1 mile run", "1.18 mile run", "Treadmill Run" -> **running**
-- "Treadmill Walk", "Treadmill Incline Walk", "Treadmill", "walk", "Incline Treadmill", "ball court" -> **walking**
+No other files need changes.
 
-After this, all walk_run entries will have a subtype and the Trends charts will merge correctly.
