@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -45,6 +46,7 @@ const LAST_UPDATED = "Feb-11-26";
 export default function Changelog() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
   const handleClose = () => {
     navigate(user ? "/" : "/auth");
@@ -79,7 +81,8 @@ export default function Changelog() {
                       <img
                         src={`/changelog/${entry.image}`}
                         alt={`Screenshot for ${entry.date} update`}
-                        className="mt-2 rounded-lg max-h-[200px] w-auto object-contain"
+                        className="mt-2 rounded-lg max-h-[200px] w-auto object-contain cursor-pointer"
+                        onClick={() => setLightboxSrc(`/changelog/${entry.image}`)}
                       />
                     )}
                     {entry.images && (
@@ -89,7 +92,8 @@ export default function Changelog() {
                             key={i}
                             src={`/changelog/${img}`}
                             alt={`Screenshot ${i + 1} for ${entry.date} update`}
-                            className="rounded-lg max-h-[200px] w-auto object-contain"
+                            className="rounded-lg max-h-[200px] w-auto object-contain cursor-pointer"
+                            onClick={() => setLightboxSrc(`/changelog/${img}`)}
                           />
                         ))}
                       </div>
@@ -108,6 +112,28 @@ export default function Changelog() {
           )}
         </div>
       </div>
+
+      {/* Lightbox */}
+      {lightboxSrc && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+          onClick={() => setLightboxSrc(null)}
+        >
+          <button
+            className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors"
+            onClick={() => setLightboxSrc(null)}
+            aria-label="Close image"
+          >
+            <X className="h-6 w-6" />
+          </button>
+          <img
+            src={lightboxSrc}
+            alt="Enlarged screenshot"
+            className="max-w-[90vw] max-h-[90vh] object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
