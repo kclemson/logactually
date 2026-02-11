@@ -752,42 +752,6 @@ export function WeightItemsTable({
               return (
                 <div className={cn('grid gap-0.5', gridCols)}>
                   <div className="col-span-full pl-6 py-1 space-y-1">
-                    {/* Cardio metadata - show for each cardio item */}
-                    {cardioItems.map((ex, idx) => {
-                      const duration = ex.duration_minutes ?? 0;
-                      const distance = ex.distance_miles ?? 0;
-                      
-                      // Calculate pace (min/mi) and speed (mph)
-                      const hasBothMetrics = duration > 0 && distance > 0;
-                      const paceDecimal = hasBothMetrics ? duration / distance : null;
-                      const mph = hasBothMetrics 
-                        ? (distance / (duration / 60)).toFixed(1) 
-                        : null;
-                      
-                      // Build display string
-                      let displayParts: string;
-                      if (hasBothMetrics) {
-                        const paceFormatted = formatDurationMmSs(paceDecimal!);
-                        const durationFormatted = formatDurationMmSs(duration);
-                        displayParts = `${distance.toFixed(2)} mi in ${durationFormatted} (${paceFormatted}/mi, ${mph} mph)`;
-                      } else if (duration > 0) {
-                        displayParts = formatDurationMmSs(duration);
-                      } else if (distance > 0) {
-                        displayParts = `${distance.toFixed(2)} mi`;
-                      } else {
-                        displayParts = '';
-                      }
-                      
-                      return (
-                        <p key={ex.uid || idx} className="text-xs text-muted-foreground">
-                          {cardioItems.length > 1 && (
-                            <><span className="font-medium">{ex.description}:</span>{' '}</>
-                          )}
-                          {displayParts}
-                        </p>
-                      );
-                    })}
-                    
                     {/* Per-exercise calorie burn estimates */}
                     {calorieBurnSettings?.calorieBurnEnabled && (() => {
                       const parts = entryExercises.map(ex => {
