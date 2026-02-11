@@ -1,10 +1,20 @@
 
 
-## Make Calorie Burn Enabled by Default (Opt-Out)
+## Update Help Page Changelog Tip
 
 ### Changes
 
-1. **`src/hooks/useUserSettings.ts`** -- Change `calorieBurnEnabled` default from `false` to `true` in `DEFAULT_SETTINGS`.
+**`src/pages/Help.tsx`** -- Reorder and rewrite the changelog bullet point.
 
-That's it. Since settings are merged as `{ ...DEFAULT_SETTINGS, ...storedSettings }`, any user who hasn't explicitly set `calorieBurnEnabled` will now get `true`. Users who have already toggled it off will keep their stored `false` value. No database migration needed.
+Move the last item in `HELP_CONTENT.tips.items` (index 5, the changelog tip) to index 0, and change its text and highlights:
+
+```ts
+{
+  text: "This app is under active development and new features are released regularly, sometimes multiple times a week — see the changelog for the latest.",
+  highlights: ["changelog"],
+  link: "/changelog",
+},
+```
+
+All other tips remain in their current order, shifted down by one position.
 
