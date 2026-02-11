@@ -252,7 +252,7 @@ export default function Settings() {
           {/* Calorie Burn Estimates - shown when weights enabled */}
           {showWeights && (
             <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">Calorie Burn Estimates</p>
+              <p className="text-xs text-muted-foreground">Show estimated calorie burn</p>
               <button
                 onClick={() => {
                   if (!settings.calorieBurnEnabled) {
