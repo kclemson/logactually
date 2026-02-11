@@ -671,13 +671,13 @@ export function FoodItemsTable({
                   <div className="col-span-full pl-6 py-1 space-y-2">
                     {/* Only show raw input if NOT from a saved meal */}
                     {!isFromSavedMeal && currentRawInput && (
-                      <p className="text-sm text-muted-foreground italic">
+                      <p className="text-xs text-muted-foreground italic">
                         Logged as: {currentRawInput}
                       </p>
                     )}
                     {/* Show meal info if from saved meal, otherwise show "Save as meal" link */}
                     {isFromSavedMeal ? (
-                      <p className="text-sm text-muted-foreground italic">
+                      <p className="text-xs text-muted-foreground italic">
                         From saved meal:{' '}
                         {mealName ? (
                           <Link 
@@ -696,7 +696,7 @@ export function FoodItemsTable({
                           const entryItems = items.filter(i => i.entryId === currentEntryId);
                           onSaveAsMeal(currentEntryId!, currentRawInput ?? null, entryItems);
                         }}
-                        className="text-sm text-blue-600 dark:text-blue-400 underline"
+                        className="text-xs text-blue-600 dark:text-blue-400 underline"
                       >
                         Save as meal
                       </button>
