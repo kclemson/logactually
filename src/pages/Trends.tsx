@@ -652,9 +652,9 @@ const Trends = () => {
 
   const charts = [
     { key: "calories", label: "Calories", color: CHART_COLORS.calories },
-    { key: "protein", label: "Protein (g)", color: CHART_COLORS.protein },
-    { key: "carbs", label: "Carbs (g)", color: CHART_COLORS.carbs },
-    { key: "fat", label: "Fat (g)", color: CHART_COLORS.fat },
+    { key: "protein", label: "Protein", color: CHART_COLORS.protein },
+    { key: "carbs", label: "Carbs", color: CHART_COLORS.carbs },
+    { key: "fat", label: "Fat", color: CHART_COLORS.fat },
   ];
 
   return (
@@ -677,17 +677,6 @@ const Trends = () => {
 
       {/* Food Trends Section */}
       <CollapsibleSection title="Food Trends" icon={UtensilsCrossed} defaultOpen={true} storageKey="trends-food">
-        <div className="grid grid-cols-4 gap-2">
-          {charts.map(({ key, label }) => (
-            <Card key={key} className="text-center border-0 shadow-none">
-              <CardContent className="p-2">
-                <p className="text-base font-semibold">{averages[key as keyof typeof averages]}</p>
-                <p className="text-[10px] text-muted-foreground">Avg {label.split(" ")[0]}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
         {isLoading ? (
           <div className="flex justify-center py-8">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -700,7 +689,7 @@ const Trends = () => {
             <div className="grid grid-cols-2 gap-3">
               {/* Calories Chart */}
               <FoodChart
-                title="Calories"
+                title={`Calories (avg: ${averages.calories})`}
                 chartData={chartData}
                 dataKey="calories"
                 color={CHART_COLORS.calories}
@@ -747,7 +736,7 @@ const Trends = () => {
               {charts.slice(1).map(({ key, label, color }) => (
                 <FoodChart
                   key={key}
-                  title={label}
+                  title={`${label} (avg: ${averages[key as keyof typeof averages]})`}
                   chartData={chartData}
                   dataKey={key}
                   color={color}
