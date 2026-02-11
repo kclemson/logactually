@@ -21,6 +21,7 @@ type ChangelogEntry = {
 
 // prettier-ignore
 const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+{ date: "Feb-11", text: "Added photo-based food logging — snap a photo or choose one from your gallery, and AI will identify the food items, estimate portions, and log the nutritional breakdown automatically.", image: "photo-food-logging.png" },
 { date: "Feb-10", text: "Added support for importing workouts from Apple Health. If you use an Apple Watch, export your exercise data on your phone and then import that XML file in Settings. Also improved general UX for cardio.", image: "apple-health-import.png" },
 { date: "Feb-09", text: "Set a daily calorie target in Settings and see color-coded indicators on the Calendar view — green when you're on track, amber when slightly over, and red when well above your goal.", image: "calorie-target-indicators.png" },
 { date: "Feb-05", text: "The 'Save as Meal' and 'Save as Routine' shortcuts now let you include other items logged on the same day. Also added color-coded 'Add' buttons—blue for food, purple for exercise—to make it easier to tell which page you're on.", image: "save-meal-select-items.png" },
@@ -37,7 +38,7 @@ const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   { date: "Jan-23", text: "It's alive! v1 of app published with support for food logging & AI integration, editing logged items (and editing calories auto-scales protein/carbs/fat), charts for trends over time, mobile & desktop layouts, PWA support for pinning to home screen." },
 ];
 
-const LAST_UPDATED = "Feb-10-26";
+const LAST_UPDATED = "Feb-11-26";
 // ============================================
 
 export default function Changelog() {
