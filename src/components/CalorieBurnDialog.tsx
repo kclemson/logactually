@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { type UserSettings } from '@/hooks/useUserSettings';
@@ -224,8 +225,9 @@ export function CalorieBurnDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="left-2 right-2 translate-x-0 w-auto max-w-[calc(100vw-16px)] p-4 sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md">
         <div className="space-y-5">
-          {/* Toggle as header */}
-          <div className="flex items-center justify-between">
+          <DialogTitle className="text-sm font-medium sr-only">Calorie Burn Settings</DialogTitle>
+          {/* Toggle on its own row below header */}
+          <div className="flex items-center justify-between pt-2">
             <p className="text-sm font-medium">Show estimated calorie burn</p>
             <button
               onClick={handleToggle}
@@ -254,7 +256,7 @@ export function CalorieBurnDialog({
                 </p>
                 {previews.map((p, i) => (
                   <div key={i} className="flex items-center justify-between text-sm">
-                    <span className="text-foreground truncate mr-3">{p.label}</span>
+                    <span className="text-muted-foreground text-xs truncate mr-3">{p.label}</span>
                     <span className="text-muted-foreground whitespace-nowrap text-xs">{p.estimate || '—'}</span>
                   </div>
                 ))}
