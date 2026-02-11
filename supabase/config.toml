@@ -27,3 +27,6 @@ verify_jwt = false
 
 [functions.populate-demo-data]
 verify_jwt = false
+
+[functions.analyze-food-photo]
+verify_jwt = false
