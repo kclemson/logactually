@@ -40,7 +40,7 @@ const CHART_COLORS = {
   carbs: "#00B4D8",
   fat: "#90E0EF",
   trainingVolume: "hsl(262 83% 58%)",
-  calorieBurn: "#F59E0B", // Warm amber for calorie burn estimates
+  calorieBurn: "#2563EB", // Same blue as calories chart
 } as const;
 
 const CompactTooltip = ({ 
@@ -792,7 +792,7 @@ const Trends = () => {
                 {volumeByDay.length > 0 && (
                   <VolumeChart
                     title={`Total Volume (${settings.weightUnit})`}
-                    subtitle="All exercises"
+                    subtitle="Across weight exercises"
                     chartData={volumeByDay}
                     color={CHART_COLORS.trainingVolume}
                     unit={settings.weightUnit}
@@ -801,7 +801,7 @@ const Trends = () => {
                 )}
                 {calorieBurnChartData.length > 0 && (
                   <CalorieBurnChart
-                    title="Est. Calorie Burn"
+                    title="Estimated Calorie Burn"
                     subtitle="Daily range"
                     chartData={calorieBurnChartData}
                     color={CHART_COLORS.calorieBurn}

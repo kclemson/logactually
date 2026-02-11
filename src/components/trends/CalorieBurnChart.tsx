@@ -27,6 +27,7 @@ const BurnTooltip = ({
   isTouchDevice,
   onGoToDay,
   rawDate,
+  color,
 }: any) => {
   if (!active || !payload?.length) return null;
 
@@ -40,7 +41,7 @@ const BurnTooltip = ({
   return (
     <div className="rounded-md border border-border/50 bg-white dark:bg-slate-800 px-2 py-1 shadow-md">
       <p className="text-[10px] font-medium text-slate-900 dark:text-slate-100 mb-0.5">{label}</p>
-      <p className="text-[10px] font-semibold" style={{ color: "#F59E0B" }}>
+      <p className="text-[10px] font-semibold" style={{ color }}>
         {rangeText}
       </p>
       {isTouchDevice && onGoToDay && rawDate && (
@@ -129,6 +130,7 @@ export const CalorieBurnChart = ({
                     <BurnTooltip
                       isTouchDevice={isTouchDevice}
                       onGoToDay={handleGoToDay}
+                      color={color}
                       rawDate={
                         activeBarIndex !== null
                           ? chartData[activeBarIndex]?.rawDate
