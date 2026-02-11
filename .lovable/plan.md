@@ -1,36 +1,60 @@
 
 
-## Fix: Group exercises by subtype in `get_top_exercises` RPC
+## Add Exercise Details to Preview Labels
 
 ### Problem
-The RPC groups cardio exercises by `exercise_key` only. This means `walk_run/walking` (210 entries) and `walk_run/running` (43 entries) get merged into a single "walk_run" bucket. The LATERAL join then picks the most recent row, which happened to be a walking entry. Running (your 2nd most common cardio) never gets its own preview slot.
+The preview currently shows only exercise names (e.g., "Treadmill Walk", "Leg Curl") with no context about the specific workout parameters being used for the estimate.
 
 ### Solution
-Update the `get_top_exercises` SQL function to group by `(exercise_key, COALESCE(exercise_subtype, ''))` in both the cardio and strength subqueries. The LATERAL join filter also needs to match on subtype.
+Update the `exerciseLabel` function and preview rendering to show contextual details:
+- **Cardio**: duration and/or distance (e.g., "Treadmill Walk -- 25 min" or "Treadmill Run -- 30 min, 3.1 mi")
+- **Strength**: sets x reps x weight in user's preferred unit (e.g., "Leg Curl -- 3x10 @ 60 lbs" or "Leg Curl -- 3x10 @ 27 kg")
 
-### Database Migration
+### Changes (`CalorieBurnDialog.tsx`)
 
-Replace the two inner subqueries and LATERAL joins to group and filter by both `exercise_key` and `exercise_subtype`:
+1. **Update `exerciseLabel` to accept `weightUnit`** and build a detail suffix:
+   - For cardio (duration > 0): show duration, plus distance if available
+   - For strength (sets > 0): show sets x reps, plus weight converted to user's unit if > 0
+   - Use an em dash separator between name and details
 
-```sql
--- Cardio half (strength half mirrors this change)
-SELECT exercise_key, exercise_subtype, COUNT(*) as cnt
-FROM weight_sets WHERE user_id = p_user_id
-  AND exercise_key = ANY(p_cardio_keys)
-GROUP BY exercise_key, exercise_subtype  -- was just exercise_key
-ORDER BY cnt DESC
-LIMIT p_limit_per_group
+2. **Update the `previews` useMemo** to pass `settings.weightUnit` into the label builder and add it to the dependency array.
 
--- LATERAL join also matches subtype
-WHERE user_id = p_user_id
-  AND exercise_key = sub.exercise_key
-  AND (exercise_subtype IS NOT DISTINCT FROM sub.exercise_subtype)  -- added
-ORDER BY created_at DESC LIMIT 1
+3. **Update `SAMPLE_LABELS`** to remove the hardcoded labels map entirely -- the dynamic `exerciseLabel` function will handle all cases including samples, so duplicating labels is unnecessary.
+
+### Technical Details
+
+The label function will look like:
+
+```
+function exerciseLabel(ex: ExerciseInput, weightUnit: WeightUnit): string {
+  const name = 'description' in ex && (ex as any).description
+    ? (ex as any).description
+    : ex.exercise_key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+  const details: string[] = [];
+
+  if (ex.duration_minutes && ex.duration_minutes > 0) {
+    details.push(`${ex.duration_minutes} min`);
+  }
+  if (ex.distance_miles && ex.distance_miles > 0) {
+    details.push(`${ex.distance_miles.toFixed(1)} mi`);
+  }
+  if (ex.sets > 0) {
+    let s = `${ex.sets}x${ex.reps}`;
+    if (ex.weight_lbs > 0) {
+      const w = weightUnit === 'kg'
+        ? Math.round(ex.weight_lbs * 0.453592)
+        : ex.weight_lbs;
+      s += ` @ ${w} ${weightUnit}`;
+    }
+    details.push(s);
+  }
+
+  return details.length ? `${name} — ${details.join(', ')}` : name;
+}
 ```
 
-This way `walk_run/walking` and `walk_run/running` compete independently, and your top 2 cardio would correctly be "Treadmill Walk" and "Running".
+The `previews` useMemo will merge the description logic into the label call and depend on `settings.weightUnit`.
 
 ### Files Changed
-- One new SQL migration (replaces the `get_top_exercises` function)
-- No frontend changes needed -- the RPC return shape is unchanged
-
+- `src/components/CalorieBurnDialog.tsx` only
