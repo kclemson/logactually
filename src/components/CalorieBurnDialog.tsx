@@ -13,6 +13,7 @@ import {
   type ExerciseInput,
   type CalorieBurnSettings,
 } from '@/lib/calorie-burn';
+import type { WeightUnit } from '@/lib/weight-units';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -41,26 +42,31 @@ const SAMPLE_STRENGTH: ExerciseInput[] = [
   { exercise_key: 'leg_press', sets: 3, reps: 10, weight_lbs: 150 },
 ];
 
-const SAMPLE_LABELS: Record<string, string> = {
-  'walk_run/walking': 'Walking 25 min',
-  'walk_run/running': 'Running 30 min',
-  'lat_pulldown/': 'Lat Pulldown 3×10 @60',
-  'leg_press/': 'Leg Press 3×10 @150',
-};
+function exerciseLabel(ex: ExerciseInput, weightUnit: WeightUnit): string {
+  const name = 'description' in ex && (ex as any).description
+    ? (ex as any).description
+    : ex.exercise_key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
-function exerciseLabel(ex: ExerciseInput): string {
-  const key = `${ex.exercise_key}/${ex.exercise_subtype || ''}`;
-  if (SAMPLE_LABELS[key]) return SAMPLE_LABELS[key];
-  const desc = ex.exercise_key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  const details: string[] = [];
+
   if (ex.duration_minutes && ex.duration_minutes > 0) {
-    return `${desc} ${ex.duration_minutes} min`;
+    details.push(`${ex.duration_minutes} min`);
+  }
+  if (ex.distance_miles && ex.distance_miles > 0) {
+    details.push(`${ex.distance_miles.toFixed(1)} mi`);
   }
   if (ex.sets > 0) {
-    const parts = [desc, `${ex.sets}×${ex.reps}`];
-    if (ex.weight_lbs > 0) parts.push(`@${ex.weight_lbs}`);
-    return parts.join(' ');
+    let s = `${ex.sets}x${ex.reps}`;
+    if (ex.weight_lbs > 0) {
+      const w = weightUnit === 'kg'
+        ? Math.round(ex.weight_lbs * 0.453592)
+        : ex.weight_lbs;
+      s += ` @ ${w} ${weightUnit}`;
+    }
+    details.push(s);
   }
-  return desc;
+
+  return details.length ? `${name} — ${details.join(', ')}` : name;
 }
 
 export function CalorieBurnDialog({
@@ -121,12 +127,10 @@ export function CalorieBurnDialog({
   const previews = useMemo(() => {
     return previewExercises.map((ex) => {
       const result = estimateCalorieBurn(ex, burnSettings);
-      const label = 'description' in ex && (ex as any).description
-        ? (ex as any).description
-        : exerciseLabel(ex);
+      const label = exerciseLabel(ex, settings.weightUnit);
       return { label, estimate: formatCalorieBurn(result) };
     });
-  }, [previewExercises, burnSettings]);
+  }, [previewExercises, burnSettings, settings.weightUnit]);
 
   // Local display value for height in the user's preferred unit
   const [heightDisplay, setHeightDisplay] = useState<string>(() => {
