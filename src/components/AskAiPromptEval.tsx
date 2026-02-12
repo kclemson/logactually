@@ -28,8 +28,10 @@ export function AskAiPromptEval() {
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const stripSmartQuotes = (s: string) => s.replace(/[\u201C\u201D]/g, '"').replace(/[\u2018\u2019]/g, "'");
+
   const parsePrompts = (text: string): string[] =>
-    text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    text.split('\n').map(l => stripSmartQuotes(l.trim())).filter(l => l.length > 0);
 
   const runAll = async () => {
     localStorage.setItem('askai-food-prompts', foodText);
