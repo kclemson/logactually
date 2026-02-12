@@ -1,28 +1,13 @@
 
 
-## Two Small Tweaks to Ask AI Dialog
+## Reduce Chips to 4
 
 **File: `src/components/AskTrendsAIDialog.tsx`**
 
-### 1. Increase chips container height (line 130)
+Two lines to change -- revert the chip count from 8 back to 4:
 
-Bump from `h-[9rem]` to `h-[10.5rem]` so chips aren't clipped by the textarea below:
+1. **Line 99**: `const [chips, setChips] = useState(() => pickRandom(pool, 4));`
+2. **Line 100**: `const refreshChips = () => setChips(pickRandom(pool, 4));`
 
-```tsx
-<div className="flex flex-wrap gap-1.5 items-start h-[10.5rem] overflow-hidden">
-```
-
-### 2. Break checkbox label after "answer" (around line 158)
-
-Split the label text so the parenthesized stats appear on their own line:
-
-```tsx
-<span className="text-xs text-muted-foreground leading-tight">
-  Include my personal stats for a more personalized answer
-  <br />
-  ({profileSummary})
-</span>
-```
-
-Two small edits, same file.
+The fixed container height (`h-[10.5rem]`) stays as-is to prevent layout shifts.
 
