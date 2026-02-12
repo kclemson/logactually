@@ -163,7 +163,7 @@ serve(async (req) => {
     }
 
     const modeLabel = mode === "food" ? "nutrition" : "fitness/exercise";
-    const systemPrompt = `You are a concise ${modeLabel} analyst. The user will ask a question about their ${mode} data. Answer based on the data provided. Reference specific data points, dates, and numbers. Keep answers concise (2-4 paragraphs max). Do not give medical advice — suggest consulting a professional for medical questions. If the data is insufficient to answer, say so.`;
+    const systemPrompt = `You are a concise ${modeLabel} analyst. The user will ask a question about their ${mode} data. Answer based on the data provided. Summarize trends and patterns at a high level — avoid listing individual dates or day-by-day examples. Use ranges and generalizations (e.g. "over the past month", "consistently around X") instead of citing specific dates. Use bullet points when making multiple observations. Keep answers to 2-3 short paragraphs max. Do not give medical advice — suggest consulting a professional for medical questions. If the data is insufficient to answer, say so.`;
 
     const userPrompt = `${dataContext}${profileContext}\n\nQuestion: ${question}`;
 
