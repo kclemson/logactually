@@ -113,6 +113,15 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
         <DialogTitle className="text-sm font-medium flex items-center gap-1.5">
           <Sparkles className="h-4 w-4" />
           {title}
+          {!data?.answer && !isPending && (
+            <button
+              onClick={refreshChips}
+              className="ml-auto p-1 rounded-full border border-border bg-muted/50 hover:bg-muted transition-colors"
+              aria-label="Refresh suggestions"
+            >
+              <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />
+            </button>
+          )}
         </DialogTitle>
 
         <div className="space-y-3 mt-2">
@@ -131,13 +140,6 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
                   {chip}
                 </button>
               ))}
-              <button
-                onClick={refreshChips}
-                className="p-1 rounded-full border border-border bg-muted/50 hover:bg-muted transition-colors"
-                aria-label="Refresh suggestions"
-              >
-                <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />
-              </button>
             </div>
           )}
 
