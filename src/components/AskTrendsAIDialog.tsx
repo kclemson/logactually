@@ -88,8 +88,8 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
   const profileSummary = useMemo(() => formatProfileStatsSummary(settings), [settings]);
 
   const pool = useMemo(() => [...SHARED_PROMPTS, ...(mode === "food" ? FOOD_PROMPTS : EXERCISE_PROMPTS)], [mode]);
-  const [chips, setChips] = useState(() => pickRandom(pool, 8));
-  const refreshChips = () => setChips(pickRandom(pool, 8));
+  const [chips, setChips] = useState(() => pickRandom(pool, 4));
+  const refreshChips = () => setChips(pickRandom(pool, 4));
 
   const handleSubmit = (question: string) => {
     if (!question.trim() || isPending) return;
