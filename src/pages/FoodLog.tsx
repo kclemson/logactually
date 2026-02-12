@@ -797,6 +797,14 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
             entrySourceMealIds={entrySourceMealIds}
             dailyCalorieTarget={settings.dailyCalorieTarget ?? undefined}
             showCalorieTargetDot={!isTodaySelected}
+            onDeleteEntry={(entryId) => {
+              deleteEntry.mutate(entryId);
+              setExpandedEntryIds(prev => {
+                const next = new Set(prev);
+                next.delete(entryId);
+                return next;
+              });
+            }}
           />
         )}
 
