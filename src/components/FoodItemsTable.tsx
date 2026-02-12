@@ -142,7 +142,7 @@ export function FoodItemsTable({
       }
       
       // Save the edit
-      if (editingCell && editingCell.value !== editingCell.originalValue) {
+      if (editingCell && editingCell.value !== editingCell.originalValue && editingCell.value !== '') {
         // If editing calories, batch all 4 fields with scaled values in one atomic call
         if (field === 'calories') {
           const item = items[index];
@@ -559,14 +559,14 @@ export function FoodItemsTable({
                   })}
                 onChange={(e) => {
                   if (editingCell) {
-                    setEditingCell({ ...editingCell, value: parseInt(e.target.value, 10) || 0 });
+                    setEditingCell({ ...editingCell, value: e.target.value === '' ? '' : parseInt(e.target.value, 10) || 0 });
                   }
                 }}
                   onBlur={() => {
                     // Save on blur if value changed and valid (non-zero)
                     if (editingCell && editingCell.value !== editingCell.originalValue && !isReadOnly) {
                       const numValue = Number(editingCell.value);
-                      if (numValue > 0) {
+                      if (editingCell.value !== '' && editingCell.value !== undefined) {
                         const scaled = scaleMacrosByCalories(
                           item.calories,
                           item.protein,
