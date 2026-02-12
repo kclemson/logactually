@@ -75,6 +75,13 @@ export const CalorieBurnChart = ({
     return Math.max(0, Math.floor((minLow - 50) / 50) * 50);
   }, [chartData]);
 
+  const adjustedData = useMemo(() => {
+    return chartData.map(d => ({
+      ...d,
+      base: d.base - yMin,
+    }));
+  }, [chartData, yMin]);
+
   const handleBarClick = (_data: any, index: number) => {
     if (isTouchDevice) {
       setActiveBarIndex((prev) => (prev === index ? null : index));
@@ -108,7 +115,7 @@ export const CalorieBurnChart = ({
           <div className="h-24">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
-                data={chartData}
+                data={adjustedData}
                 margin={{ top: 4, right: 0, left: 0, bottom: 0 }}
               >
                 <XAxis
@@ -119,7 +126,7 @@ export const CalorieBurnChart = ({
                   tickMargin={2}
                   height={16}
                 />
-                <YAxis domain={[yMin, 'dataMax + 20']} hide />
+                <YAxis domain={[0, 'dataMax + 20']} hide />
                 <Tooltip
                   wrapperStyle={{ pointerEvents: "auto", zIndex: 50 }}
                   active={isTouchDevice ? activeBarIndex !== null : undefined}
