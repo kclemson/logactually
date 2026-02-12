@@ -1,15 +1,18 @@
 
 
-## Always Show "Resolved" Next to the Date
+## Left-Align Prompt Suggestion Pill Text
 
-### File: `src/components/FeedbackForm.tsx`
+### File: `src/components/AskTrendsAIDialog.tsx`
 
-1. **Line ~125**: Remove the `!item.response` condition so the resolved badge always appears next to the date:
-   ```tsx
-   {item.resolved_at && (
-     <span className="ml-2 text-xs text-green-600 dark:text-green-400">✓ Resolved</span>
-   )}
-   ```
+Add `text-left` to the chip button className (line ~107) so multi-line pill text aligns left instead of center.
 
-2. **Line ~192** (inside the response block): Remove the duplicate resolved badge that currently shows below the response timestamp. This eliminates the redundancy since it will always be shown next to the date now.
+Current:
+```tsx
+className="text-xs px-2.5 py-1 rounded-full border border-border bg-muted/50 text-foreground hover:bg-muted transition-colors"
+```
+
+Updated:
+```tsx
+className="text-xs px-2.5 py-1 rounded-full border border-border bg-muted/50 text-foreground hover:bg-muted transition-colors text-left"
+```
 
