@@ -24,7 +24,7 @@ const FOOD_PROMPTS = [
   "Are there any surprising patterns in my eating?",
   "What patterns do you notice in how I eat on high-calorie vs low-calorie days?",
   "Can you give me ideas for some new snack foods that fit my existing eating patterns?",
-  "Based on my logs, when am I most likely to overeat?"
+  "Based on my logs, when am I most likely to overeat?",
   "Do you have suggestions for simple swaps or improvements I could make?",
   "How stable does my daily intake look week to week?",
   "What's the weakest area of my diet?",
@@ -38,7 +38,7 @@ const EXERCISE_PROMPTS = [
   "Am I overtraining any body part?",
   "How could I make my program more balanced?",
   "Are there any patterns in my training I should consider changing?",
-  "Can you give me suggestions of other exercises I might like that are similar to the ones I do regularly?"
+  "Can you give me suggestions of other exercises I might like that are similar to the ones I do regularly?",
   "What would a trainer suggest I adjust?",
   "Am I neglecting any movement patterns?",
   "If my goal is muscle gain, what in my current routine would you modify first?",
