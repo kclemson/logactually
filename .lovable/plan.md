@@ -1,25 +1,20 @@
 
+## Fix Ask AI Dialog Mobile Overflow
 
-## Remove Admin Gate from Ask AI Feature
+**File: `src/components/AskTrendsAIDialog.tsx`**
 
-**File: `src/pages/Trends.tsx`**
+Add `max-h-[85vh] overflow-y-auto` to the `DialogContent` className (matching the pattern already used in `CalorieBurnDialog`). This caps the dialog height at 85% of the viewport and makes its content scrollable.
 
-Two lines to change -- remove the `isAdmin ?` conditional wrapping the "Ask AI" buttons so they show for all users:
+### Change (line 110)
 
-### Line 711 (Food Trends header action)
-
-Replace:
+Current:
 ```tsx
-headerAction={isAdmin ? <button onClick={() => setFoodAIOpen(true)} className="text-xs text-primary hover:underline flex items-center gap-1">Ask AI</button> : undefined}
-```
-With:
-```tsx
-headerAction={<button onClick={() => setFoodAIOpen(true)} className="text-xs text-primary hover:underline flex items-center gap-1">Ask AI</button>}
+className="left-2 right-2 translate-x-0 w-auto max-w-[calc(100vw-16px)] p-3 sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md"
 ```
 
-### Line 787 (Exercise Trends header action)
+Updated:
+```tsx
+className="left-2 right-2 translate-x-0 w-auto max-w-[calc(100vw-16px)] max-h-[85vh] overflow-y-auto p-3 sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md"
+```
 
-Same change -- remove the `isAdmin ?` ternary so the button always renders.
-
-Two edits, same file. No backend changes needed since the edge function already authenticates any logged-in user.
-
+Single line edit. The dialog will now stay within the viewport and scroll when content is tall.
