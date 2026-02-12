@@ -28,21 +28,18 @@ const SHARED_PROMPTS = [
 ];
 
 const FOOD_PROMPTS = [
-  "How has my diet changed over time?",
-  "What could I improve about my diet?",
-  "Do I have any nutritional gaps?",
-  "How much variety is in my diet?",
-  "What nutrients am I consistently lacking?",
+  "How have my eating patterns changed over time?",
+  "Do you see any nutritional gaps in my eating patterns?",
+  "Are there any nutrients I'm consistently lacking?",
   "Are there any surprising patterns in my eating?",
-  "What patterns do you notice in how I eat on high-calorie vs low-calorie days?",
+  "What patterns do you notice in how I eat on higher-calorie vs lower-calorie days?",
   "Can you give me ideas for some new snack foods that fit my existing eating patterns?",
   "Based on my logs, when am I most likely to overeat?",
   "How stable does my daily intake look week to week?",
-  "What's the weakest area of my diet?",
   "If I continue eating like this, what trajectory would you predict over the next 3 months?",
   "Do I seem to operate in cycles? What triggers shifts between them?",
   "Are there repeating weekly or monthly rhythms in my behavior?",
-  "What tends to precede my best or least consistent weeks?",
+  "What tends to precede my most or least consistent weeks?",
   "What is quietly improving even if nothing's changing on the scale?",
   "What do my habits suggest about my stress levels?",
 ];
