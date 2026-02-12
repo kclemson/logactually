@@ -671,6 +671,17 @@ const Trends = () => {
     };
   }, [chartData]);
 
+  const todayValues = useMemo(() => {
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const todayEntry = chartData.find(d => d.rawDate === todayStr);
+    return {
+      protein: Math.round(todayEntry?.protein || 0),
+      carbs: Math.round(todayEntry?.carbs || 0),
+      fat: Math.round(todayEntry?.fat || 0),
+      calories: Math.round(todayEntry?.calories || 0),
+    };
+  }, [chartData]);
+
   const charts = [
     { key: "calories", label: "Calories", color: CHART_COLORS.calories },
     { key: "protein", label: "Protein", color: CHART_COLORS.protein },
@@ -710,7 +721,8 @@ const Trends = () => {
             <div className="grid grid-cols-2 gap-3">
               {/* Calories Chart */}
               <FoodChart
-                title={`Calories (avg: ${averages.calories})`}
+                title="Calories"
+                subtitle={`avg: ${averages.calories} · today: ${todayValues.calories}`}
                 chartData={chartData}
                 dataKey="calories"
                 color={CHART_COLORS.calories}
@@ -757,7 +769,8 @@ const Trends = () => {
               {charts.slice(1).map(({ key, label, color }) => (
                 <FoodChart
                   key={key}
-                  title={`${label} (avg: ${averages[key as keyof typeof averages]})`}
+                  title={label}
+                  subtitle={`avg: ${averages[key as keyof typeof averages]} · today: ${todayValues[key as keyof typeof todayValues]}`}
                   chartData={chartData}
                   dataKey={key}
                   color={color}
