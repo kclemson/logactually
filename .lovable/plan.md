@@ -1,14 +1,28 @@
 
 
-## Add Press Animation to Refresh Icon
+## Show 4 Rows of Chips by Default
 
-**File: `src/components/AskTrendsAIDialog.tsx`** (line 119)
+**File: `src/components/AskTrendsAIDialog.tsx`** (line 130)
 
-Add `active:scale-75` and a brief transition to the refresh button's className so it visually shrinks on press, giving a satisfying "click" feel:
+Increase the fixed height from `h-[4.5rem]` to `h-[9rem]` to accommodate 4 rows of chips, and increase the number of random chips picked from 4 to 8 so there's enough content to fill the space.
 
+### Changes
+
+1. **Line 130** -- Update container height:
 ```tsx
-className="absolute right-12 top-4 p-1 rounded-full border border-border bg-muted/50 hover:bg-muted active:scale-75 transition-all duration-150"
+<div className="flex flex-wrap gap-1.5 items-start h-[9rem] overflow-hidden">
+```
+Also switch `items-center` to `items-start` so chips align to the top.
+
+2. **Line 99** -- Pick 8 chips instead of 4:
+```tsx
+const [chips, setChips] = useState(() => pickRandom(pool, 8));
 ```
 
-Single class change on one line -- adds `active:scale-75`, changes `transition-colors` to `transition-all`, and adds `duration-150` for a snappy bounce-back.
+3. **Line 100** -- Update refresh to also pick 8:
+```tsx
+const refreshChips = () => setChips(pickRandom(pool, 8));
+```
+
+Three small edits across the same file.
 
