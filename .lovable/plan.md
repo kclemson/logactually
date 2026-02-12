@@ -1,47 +1,21 @@
 
 
-## Show Original Prompt Above AI Response
+## Fix Dialog Border and Focus Ring on Ask AI Dialog
 
-**File: `src/components/AskTrendsAIDialog.tsx`**
+**Problem**: The entire Ask AI dialog has:
+- A border that's too dark/barely visible in dark mode
+- A thick white focus ring around the whole dialog that feels out of place
 
-Two small changes:
+**File: `src/components/AskTrendsAIDialog.tsx` (line 108)**
 
-1. **Track the submitted question in state**: Add a `submittedQuestion` state variable. Set it in `handleSubmit` and clear it in `handleAskAnother`.
-
-2. **Render it above the response**: When `data?.answer` is shown, display the original prompt in muted gray text above the AI answer.
+Add overrides to the `DialogContent` className:
 
 ```tsx
-// Add state
-const [submittedQuestion, setSubmittedQuestion] = useState("");
-
-// In handleSubmit, save the question
-const handleSubmit = (question: string) => {
-  if (!question.trim() || isPending) return;
-  reset();
-  setSubmittedQuestion(question.trim());
-  mutate({ ... });
-};
-
-// In handleAskAnother, clear it
-const handleAskAnother = () => {
-  reset();
-  setInput("");
-  setSubmittedQuestion("");
-};
-
-// In the response section, above the answer div:
-{data?.answer && (
-  <div className="space-y-3">
-    {submittedQuestion && (
-      <p className="text-xs text-muted-foreground italic">"{submittedQuestion}"</p>
-    )}
-    <div className="text-xs text-foreground whitespace-pre-wrap ...">
-      ...
-    </div>
-    ...
-  </div>
-)}
+className="left-2 right-2 top-[5%] ... sm:max-w-md border-border/50 focus-visible:ring-0 focus-visible:ring-offset-0"
 ```
 
-One file, three small edits. The submitted question appears in gray italic text at the top of the response area.
+- `border-border/50` -- softer, more visible border in dark mode (replacing the default `border` which uses `--border` at full opacity)
+- `focus-visible:ring-0 focus-visible:ring-offset-0` -- removes the thick white focus ring around the dialog (dialogs don't need keyboard focus rings on the container)
+
+One line change in one file.
 
