@@ -1,17 +1,17 @@
 
 
-## Fix: Wire up `onDeleteEntry` in FoodLog
+## Right-justify "Delete this group" link
 
-The "Delete this group" link doesn't appear because `FoodLog.tsx` never passes an `onDeleteEntry` prop to `FoodItemsTable`. The code we added correctly guards on `onDeleteEntry` existing, but since it's not provided, the link never renders.
-
-By contrast, `WeightLog.tsx` already passes `onDeleteEntry={handleDeleteEntry}` (line 682), so the exercise log version should work.
+Currently the "Save as meal/routine" and "Delete this group" elements are stacked vertically as siblings inside a `space-y-2` div. We'll wrap them in a flex row so "Save as meal" stays left and "Delete this group" pushes to the right.
 
 ### Changes
 
-**`src/pages/FoodLog.tsx`**
+**Both `src/components/FoodItemsTable.tsx` and `src/components/WeightItemsTable.tsx`**
 
-1. Add a `handleDeleteEntry` callback that calls `deleteEntry.mutate(entryId)` and collapses the expanded entry.
-2. Pass `onDeleteEntry={handleDeleteEntry}` to the `FoodItemsTable` component (around line 791).
+Wrap the "Save as meal/routine" block and the "Delete this group" AlertDialog block in a single `<div className="flex items-center justify-between">` container. This keeps "Save as meal/routine" (or "From saved meal/routine") on the left and pushes "Delete this group (N items)" to the far right.
 
-This is a small wiring fix -- the delete group UI in `FoodItemsTable.tsx` is already correct, it just needs the callback to be provided.
+Specifically:
+- **FoodItemsTable.tsx** (around lines 678-734): Wrap the meal info / save-as-meal conditional and the delete-group IIFE in a flex `justify-between` div.
+- **WeightItemsTable.tsx** (around lines 813-869): Same pattern for the routine info / save-as-routine conditional and delete-group IIFE.
 
+This is a layout-only change -- no logic modifications needed.
