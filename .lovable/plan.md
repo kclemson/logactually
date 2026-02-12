@@ -1,23 +1,23 @@
 
 
-## Make AI Responses More Concise and Pattern-Focused
+## Add Bullet Point Parsing for `*` in AI Responses
+
+### Problem
+
+The AI returns `*` as bullet markers (e.g., `* **Weight Load Increases:** ...`), but the current regex-based rendering only handles `**bold**`. The `*` bullets render as raw text instead of proper list formatting.
 
 ### Change
 
-Update the system prompt in the edge function to stop the AI from listing individual dates and exercises verbatim, producing shorter, more scannable answers.
+**File:** `src/components/AskTrendsAIDialog.tsx` (around line 157)
 
-### Technical Details
+Update the `dangerouslySetInnerHTML` processing chain to also convert lines starting with `*` (or `- `) into HTML list items. The approach:
 
-**File:** `supabase/functions/ask-trends-ai/index.ts` -- line 166 only
+1. After the existing HTML-escaping and bold parsing, add a step that detects lines beginning with `* ` or `- `
+2. Wrap consecutive bullet lines in `<ul>` tags and each line in `<li>` tags
+3. Add minimal styling for the list (e.g., `list-disc ml-4`) via the parent container's class
 
-Replace the `systemPrompt` string. The key differences:
-
-| Removed | Added |
-|---------|-------|
-| "Reference specific data points, dates, and numbers." | "Summarize trends and patterns at a high level -- avoid listing individual dates or day-by-day examples." |
-| "2-4 paragraphs max" | "2-3 short paragraphs max" |
-| (nothing) | "Use ranges and generalizations (e.g. 'over the past month', 'consistently around X') instead of citing specific dates." |
-| (nothing) | "Use bullet points when making multiple observations." |
-
-No other files change. The edge function will be redeployed automatically.
+The updated processing pipeline:
+- Escape `&`, `<`, `>` (existing)
+- Convert `**text**` to `<strong>` (existing)
+- **New:** Convert lines starting with `* ` or `- ` into `<ul><li>...</li></ul>` blocks
 
