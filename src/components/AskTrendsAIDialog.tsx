@@ -15,6 +15,13 @@ interface AskTrendsAIDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+const SHARED_PROMPTS = [
+  "What assumptions might I be making that my logs challenge?",
+  "Do you have suggestions for simple swaps or improvements I could make?",
+  "If I stopped improving for 6 months, what would likely be the reason based on this data",
+  "What behavioral patterns might I not be noticing?",
+];
+
 const FOOD_PROMPTS = [
   "How has my diet changed over time?",
   "What could I improve about my diet?",
@@ -25,11 +32,8 @@ const FOOD_PROMPTS = [
   "What patterns do you notice in how I eat on high-calorie vs low-calorie days?",
   "Can you give me ideas for some new snack foods that fit my existing eating patterns?",
   "Based on my logs, when am I most likely to overeat?",
-  "What assumptions might I be making that my logs challenge?",
-  "Do you have suggestions for simple swaps or improvements I could make?",
   "How stable does my daily intake look week to week?",
   "What's the weakest area of my diet?",
-  "If I stopped improving for 6 months, what would likely be the reason based on this data",
   "If I continue eating like this, what trajectory would you predict over the next 3 months?",
 ];
 
@@ -38,9 +42,6 @@ const EXERCISE_PROMPTS = [
   "How would you restructure my week for better recovery without reducing total activity?",
   "Are there asymmetries or neglected muscle groups in my training?",
   "Am I overtraining any body part?",
-  "What behavioral patterns might I not be noticing?",
-  "What assumptions might I be making that my logs challenge?",
-  "If I stopped improving for 6 months, what would likely be the reason based on this data",
   "How could I make my program more balanced?",
   "Are there any patterns in my training I should consider changing?",
   "Can you give me suggestions of other exercises I might like that are similar to the ones I do regularly?",
@@ -48,7 +49,7 @@ const EXERCISE_PROMPTS = [
   "Am I neglecting any movement patterns?",
   "If my goal is muscle gain, what in my current routine would you modify first?",
   "If my goal is overall health and flexibility, what do you think I should change?",
-  "Do you see any hidden tradeoffs in how I’m currently exercising?",
+  "Do you see any hidden tradeoffs in how I'm currently exercising?",
   "How could I improve my exercise variety?",
 ];
 
@@ -74,7 +75,7 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
   const profileSummary = useMemo(() => formatProfileStatsSummary(settings), [settings]);
 
   const chips = useMemo(() => {
-    const pool = mode === "food" ? FOOD_PROMPTS : EXERCISE_PROMPTS;
+    const pool = [...SHARED_PROMPTS, ...(mode === "food" ? FOOD_PROMPTS : EXERCISE_PROMPTS)];
     return pickRandom(pool, 4);
   }, [mode]);
 
