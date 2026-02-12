@@ -1,16 +1,26 @@
 
 
-## Remove Default Intensity from AI Profile Context
+## Add Shared Prompt Chips Across Food and Exercise
 
-### Change
+### What Changes
 
-**File:** `supabase/functions/ask-trends-ai/index.ts` (around line 148)
+In `src/components/AskTrendsAIDialog.tsx`, introduce a new `SHARED_PROMPTS` array containing the four cross-cutting prompts, and remove those same prompts from `FOOD_PROMPTS` and `EXERCISE_PROMPTS` where they currently appear.
 
-Remove the line that appends `defaultIntensity` to the profile context parts array:
+### Details
 
-```
-if (s.defaultIntensity) parts.push(`Default workout intensity: ${s.defaultIntensity}/10`);
-```
+1. Add a new constant `SHARED_PROMPTS` with these four items:
+   - "What assumptions might I be making that my logs challenge?"
+   - "Do you have suggestions for simple swaps or improvements I could make?"
+   - "If I stopped improving for 6 months, what would likely be the reason based on this data"
+   - "What behavioral patterns might I not be noticing?"
 
-The remaining profile fields sent will be: body weight, height, age, and body composition. No other files change.
+2. Remove those four strings from `FOOD_PROMPTS` and `EXERCISE_PROMPTS` (currently duplicated across both).
+
+3. Update the `chips` memo to combine the shared and mode-specific pools before picking 4 random chips:
+   ```
+   const pool = [...SHARED_PROMPTS, ...(mode === "food" ? FOOD_PROMPTS : EXERCISE_PROMPTS)];
+   return pickRandom(pool, 4);
+   ```
+
+This keeps the same UX (4 random chips per open) but ensures the cross-cutting prompts can appear in either mode without duplication.
 
