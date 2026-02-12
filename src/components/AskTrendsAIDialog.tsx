@@ -176,7 +176,7 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
           {data?.answer && (
             <div className="space-y-3">
               <div
-                className="text-sm text-foreground whitespace-pre-wrap leading-relaxed p-3 rounded-md bg-muted/50 max-h-[50vh] overflow-y-auto [&_strong]:font-semibold"
+                className="text-xs text-foreground whitespace-pre-wrap leading-snug p-3 rounded-md bg-muted/50 max-h-[50vh] overflow-y-auto [&_strong]:font-semibold"
                 dangerouslySetInnerHTML={{
                   __html: (() => {
                     const escaped = data.answer
