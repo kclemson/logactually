@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { useState, useMemo } from "react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardHeader, ChartTitle, ChartSubtitle } from "@/components/ui/card";
 import { useHasHover } from "@/hooks/use-has-hover";
 
@@ -69,6 +69,12 @@ export const CalorieBurnChart = ({
   const isTouchDevice = !useHasHover();
   const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
 
+  const yMin = useMemo(() => {
+    if (chartData.length === 0) return 0;
+    const minLow = Math.min(...chartData.map(d => d.low));
+    return Math.max(0, Math.floor((minLow - 50) / 50) * 50);
+  }, [chartData]);
+
   const handleBarClick = (_data: any, index: number) => {
     if (isTouchDevice) {
       setActiveBarIndex((prev) => (prev === index ? null : index));
@@ -113,6 +119,7 @@ export const CalorieBurnChart = ({
                   tickMargin={2}
                   height={16}
                 />
+                <YAxis domain={[yMin, 'dataMax + 20']} hide />
                 <Tooltip
                   wrapperStyle={{ pointerEvents: "auto", zIndex: 50 }}
                   active={isTouchDevice ? activeBarIndex !== null : undefined}
