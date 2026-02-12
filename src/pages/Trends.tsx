@@ -708,7 +708,7 @@ const Trends = () => {
       </div>
 
       {/* Food Trends Section */}
-      <CollapsibleSection title="Food Trends" icon={UtensilsCrossed} defaultOpen={true} storageKey="trends-food" headerAction={isAdmin ? <button onClick={() => setFoodAIOpen(true)} className="text-xs text-primary hover:underline flex items-center gap-1">Ask AI</button> : undefined}>
+      <CollapsibleSection title="Food Trends" icon={UtensilsCrossed} defaultOpen={true} storageKey="trends-food" headerAction={<button onClick={() => setFoodAIOpen(true)} className="text-xs text-primary hover:underline flex items-center gap-1">Ask AI</button>}>
         {isLoading ? (
           <div className="flex justify-center py-8">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -784,7 +784,7 @@ const Trends = () => {
 
       {/* Weight Trends Section */}
       {showWeights && (
-        <CollapsibleSection title="Exercise Trends" icon={Dumbbell} iconClassName="text-[hsl(262_83%_58%)]" defaultOpen={true} storageKey="trends-weights" headerAction={isAdmin ? <button onClick={() => setExerciseAIOpen(true)} className="text-xs text-primary hover:underline flex items-center gap-1">Ask AI</button> : undefined}>
+        <CollapsibleSection title="Exercise Trends" icon={Dumbbell} iconClassName="text-[hsl(262_83%_58%)]" defaultOpen={true} storageKey="trends-weights" headerAction={<button onClick={() => setExerciseAIOpen(true)} className="text-xs text-primary hover:underline flex items-center gap-1">Ask AI</button>}>
           {weightLoading ? (
             <div className="flex justify-center py-8">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
