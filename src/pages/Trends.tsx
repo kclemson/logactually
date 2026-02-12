@@ -690,7 +690,7 @@ const Trends = () => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 -mx-1">
       <div className="flex items-center justify-center gap-2">
         {periods.map(({ label, days }) => (
           <Button
