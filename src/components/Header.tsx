@@ -1,10 +1,13 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { HelpCircle } from 'lucide-react';
 import { APP_NAME } from '@/lib/constants';
 import { useHasUnreadResponses } from '@/hooks/feedback';
+import { useChangelogNew } from '@/hooks/useChangelogNew';
 
 export function Header() {
   const { data: hasUnread } = useHasUnreadResponses();
+  const { isNew, markSeen } = useChangelogNew();
+  const navigate = useNavigate();
 
   return (
     <header className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -12,6 +15,15 @@ export function Header() {
         <div className="flex items-center gap-2">
           <img src="/favicon.png" alt="" className="w-6 h-6" />
           <h1 className="text-title text-foreground">{APP_NAME}</h1>
+          {isNew && (
+            <button
+              onClick={() => { markSeen(); navigate('/changelog'); }}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-1"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
+              New
+            </button>
+          )}
         </div>
         <Link
           to="/help"
