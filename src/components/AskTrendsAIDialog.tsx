@@ -88,8 +88,8 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
   const profileSummary = useMemo(() => formatProfileStatsSummary(settings), [settings]);
 
   const pool = useMemo(() => [...SHARED_PROMPTS, ...(mode === "food" ? FOOD_PROMPTS : EXERCISE_PROMPTS)], [mode]);
-  const [chips, setChips] = useState(() => pickRandom(pool, 4));
-  const refreshChips = () => setChips(pickRandom(pool, 4));
+  const [chips, setChips] = useState(() => pickRandom(pool, 8));
+  const refreshChips = () => setChips(pickRandom(pool, 8));
 
   const handleSubmit = (question: string) => {
     if (!question.trim() || isPending) return;
@@ -127,7 +127,7 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
         <div className="space-y-3 mt-2">
           {/* Prompt chips (only show before a response) */}
           {!data?.answer && !isPending && (
-            <div className="flex flex-wrap gap-1.5 items-center">
+            <div className="flex flex-wrap gap-1.5 items-start h-[9rem] overflow-hidden">
               {chips.map((chip) => (
                 <button
                   key={chip}
