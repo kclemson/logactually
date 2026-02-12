@@ -55,7 +55,7 @@ const EXERCISE_PROMPTS = [
   "How could I improve my exercise variety?",
   "What trends am I likely underestimating because they change slowly?",
   "What signals am I ignoring that could matter long-term?",
-  "Where do my efforts seem misaligned with outcomes?,
+  "Where do my efforts seem misaligned with outcomes?",
 ];
 
 function pickRandom<T>(arr: T[], count: number): T[] {
