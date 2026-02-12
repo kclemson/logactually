@@ -1,23 +1,32 @@
 
 
-## Add Bullet Point Parsing for `*` in AI Responses
+## Prevent Dialogs from Closing on Viewport Resize
 
 ### Problem
 
-The AI returns `*` as bullet markers (e.g., `* **Weight Load Increases:** ...`), but the current regex-based rendering only handles `**bold**`. The `*` bullets render as raw text instead of proper list formatting.
+When switching viewport sizes in dev mode (or on orientation change on real devices), Radix UI dialogs close because the resize event triggers an "interact outside" dismissal. This affects multiple dialogs across the app.
 
-### Change
+### Solution
 
-**File:** `src/components/AskTrendsAIDialog.tsx` (around line 157)
+Add `onInteractOutside={(e) => e.preventDefault()}` to `DialogContent` in the affected dialogs. This prevents pointer/focus events outside the dialog from dismissing it, while still allowing the X button and Escape key to close normally.
 
-Update the `dangerouslySetInnerHTML` processing chain to also convert lines starting with `*` (or `- `) into HTML list items. The approach:
+### Technical Details
 
-1. After the existing HTML-escaping and bold parsing, add a step that detects lines beginning with `* ` or `- `
-2. Wrap consecutive bullet lines in `<ul>` tags and each line in `<li>` tags
-3. Add minimal styling for the list (e.g., `list-disc ml-4`) via the parent container's class
+Add `onInteractOutside={(e) => e.preventDefault()}` to `DialogContent` in these files:
 
-The updated processing pipeline:
-- Escape `&`, `<`, `>` (existing)
-- Convert `**text**` to `<strong>` (existing)
-- **New:** Convert lines starting with `* ` or `- ` into `<ul><li>...</li></ul>` blocks
+| File | Component |
+|------|-----------|
+| `src/components/AskTrendsAIDialog.tsx` | Ask AI dialog |
+| `src/components/CreateSavedDialog.tsx` | Create meal/routine dialog |
+| `src/components/CalorieBurnDialog.tsx` | Calorie burn config |
+| `src/components/AppleHealthImport.tsx` | Apple Health import (already has this) |
+| `src/components/ChangePasswordDialog.tsx` | Change password |
+| `src/components/FeedbackForm.tsx` | Feedback form |
+| `src/components/DemoPreviewDialog.tsx` | Demo preview |
+| `src/components/PopulateDemoDataDialog.tsx` | Populate demo data |
+| `src/components/DeleteAccountDialog.tsx` | Delete account |
+
+Each change is a single prop addition to the existing `DialogContent` element. No layout or logic changes needed.
+
+Dialogs will still close via the X button and Escape key -- only unintentional outside-click/resize dismissals are prevented.
 
