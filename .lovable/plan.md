@@ -1,39 +1,31 @@
 
 
-## Add "Go to Today" Link in Date Navigation Row
+## Gate "Ask AI" Buttons to Admin Users Only
 
 ### Change
 
-After the `>` chevron button in both `FoodLog.tsx` and `WeightLog.tsx`, add a conditional "Go to today" text link that only appears when viewing a past date.
-
-### Layout
-
-```text
-  < [calendar] Tue, Feb 10 >  Go to today
-```
+Wrap the two "Ask AI" `headerAction` buttons in the Trends page so they only render for admin users. The `isAdmin` flag is already available in the component (from `useIsAdmin()`), so no new imports or hooks are needed.
 
 ### Technical Details
 
-**`src/pages/FoodLog.tsx`** (after line 764, before the closing `</div>`):
+**File: `src/pages/Trends.tsx`**
 
+1. **Line 700** -- Food Trends `headerAction`: Change from always rendering the "Ask AI" button to conditionally rendering it only when `isAdmin` is true.
+
+2. **Line 774** -- Exercise Trends `headerAction`: Same conditional wrapping.
+
+Both changes follow this pattern:
 ```tsx
-{!isTodaySelected && (
-  <button
-    className="text-sm text-blue-600 dark:text-blue-400 hover:underline ml-1"
-    onClick={() => {
-      setStoredDate(format(new Date(), 'yyyy-MM-dd'));
-      setSearchParams({}, { replace: true });
-    }}
-  >
-    Go to today
-  </button>
-)}
+// Before
+headerAction={<button onClick={...}>Ask AI</button>}
+
+// After
+headerAction={isAdmin ? <button onClick={...}>Ask AI</button> : undefined}
 ```
 
-**`src/pages/WeightLog.tsx`** (after line 658, before the closing `</div>`): Same snippet.
+The dialogs themselves (`AskTrendsAIDialog`) can remain as-is since they won't open without the button. The edge function already requires auth, so this is just a UI visibility gate consistent with the existing admin-gating pattern used elsewhere.
 
 | File | Change |
 |------|--------|
-| `src/pages/FoodLog.tsx` | Add "Go to today" link after `>` chevron |
-| `src/pages/WeightLog.tsx` | Add "Go to today" link after `>` chevron |
+| `src/pages/Trends.tsx` | Gate both "Ask AI" headerAction buttons behind `isAdmin` |
 
