@@ -1,20 +1,37 @@
 
 
-## Strip Double Quotes from Copy Approved Output
+## Add Refresh Icon to Suggestion Chips
 
-When copying approved prompts, remove any literal double-quote characters from the prompt text itself so the output doesn't break the JS string syntax.
+**File: `src/components/AskTrendsAIDialog.tsx`**
 
-### Change
+1. Add `RefreshCw` to the `lucide-react` import.
+2. Replace `chips` from `useMemo` to `useState` (initialized via `pickRandom`), and memoize the `pool` separately.
+3. Add a `refreshChips` handler that re-rolls with `setChips(pickRandom(pool, 4))`.
+4. Append a small `RefreshCw` icon button at the end of the chips flex container.
 
-**File: `src/components/AskAiPromptEval.tsx`** -- in the `copyApproved` function, add `.replace(/"/g, '')` to the cleaning chain:
+### Technical detail
 
 ```tsx
-// Current (line ~88)
-const clean = r.prompt.replace(/[\u201C\u201D]/g, '"');
+// 1. Import
+import { Loader2, Sparkles, RefreshCw } from "lucide-react";
 
-// Updated
-const clean = r.prompt.replace(/[\u201C\u201D"/g, '');
+// 2. Replace useMemo chips with useState + memoized pool
+const pool = useMemo(() => [...SHARED_PROMPTS, ...(mode === "food" ? FOOD_PROMPTS : EXERCISE_PROMPTS)], [mode]);
+const [chips, setChips] = useState(() => pickRandom(pool, 4));
+const refreshChips = () => setChips(pickRandom(pool, 4));
+
+// 3. Add refresh button after the chip buttons
+<div className="flex flex-wrap gap-1.5 items-center">
+  {chips.map(...)}
+  <button
+    onClick={refreshChips}
+    className="p-1 rounded-full border border-border bg-muted/50 hover:bg-muted transition-colors"
+    aria-label="Refresh suggestions"
+  >
+    <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />
+  </button>
+</div>
 ```
 
-This strips smart quotes AND standard double quotes from the prompt text before wrapping it in the output quotes. Single change, one line.
+Single file change.
 
