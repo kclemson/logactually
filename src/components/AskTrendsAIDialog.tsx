@@ -56,7 +56,7 @@ const EXERCISE_PROMPTS = [
   "Can you give me suggestions of other exercises I might like that are similar to the ones I do regularly?",
   "Am I neglecting any movement patterns?",
   "If my goal is muscle gain, what in my current routine would you modify first?",
-  "If my goal is overall health and flexibility, what do you think I should change?",
+  "If my goal is overall health, what do you think I should change?",
   "Do you see any hidden tradeoffs in how I'm currently exercising?",
   "How could I improve my exercise variety?",
   "What tradeoffs am I making between performance, recovery, and body composition?",
