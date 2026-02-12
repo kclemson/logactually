@@ -675,63 +675,67 @@ export function FoodItemsTable({
                         Logged as: {currentRawInput}
                       </p>
                     )}
-                    {/* Show meal info if from saved meal, otherwise show "Save as meal" link */}
-                    {isFromSavedMeal ? (
-                      <p className="text-xs text-muted-foreground italic">
-                        From saved meal:{' '}
-                        {mealName ? (
-                          <Link 
-                            to="/settings" 
-                            className="text-blue-600 dark:text-blue-400 hover:underline"
-                          >
-                            {mealName}
-                          </Link>
-                        ) : (
-                          <span>(deleted)</span>
-                        )}
-                      </p>
-                    ) : onSaveAsMeal && currentEntryId && (
-                      <button
-                        onClick={() => {
-                          const entryItems = items.filter(i => i.entryId === currentEntryId);
-                          onSaveAsMeal(currentEntryId!, currentRawInput ?? null, entryItems);
-                        }}
-                        className="text-xs text-blue-600 dark:text-blue-400 underline"
-                      >
-                        Save as meal
-                      </button>
-                    )}
-                    {(() => {
-                      const entryItems = items.filter(i => i.entryId === currentEntryId);
-                      const count = entryItems.length;
-                      if (!onDeleteEntry || count < 2) return null;
-                      return (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <button className="text-xs text-destructive underline">
-                              Delete this group ({count} items)
-                            </button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-lg">
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete this group?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This will permanently remove {count} items: {entryItems[0].description} to {entryItems[count - 1].description}.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => onDeleteEntry!(currentEntryId!)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    <div className="flex items-center justify-between">
+                      <div>
+                        {/* Show meal info if from saved meal, otherwise show "Save as meal" link */}
+                        {isFromSavedMeal ? (
+                          <p className="text-xs text-muted-foreground italic">
+                            From saved meal:{' '}
+                            {mealName ? (
+                              <Link 
+                                to="/settings" 
+                                className="text-blue-600 dark:text-blue-400 hover:underline"
                               >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      );
-                    })()}
+                                {mealName}
+                              </Link>
+                            ) : (
+                              <span>(deleted)</span>
+                            )}
+                          </p>
+                        ) : onSaveAsMeal && currentEntryId && (
+                          <button
+                            onClick={() => {
+                              const entryItems = items.filter(i => i.entryId === currentEntryId);
+                              onSaveAsMeal(currentEntryId!, currentRawInput ?? null, entryItems);
+                            }}
+                            className="text-xs text-blue-600 dark:text-blue-400 underline"
+                          >
+                            Save as meal
+                          </button>
+                        )}
+                      </div>
+                      {(() => {
+                        const entryItems = items.filter(i => i.entryId === currentEntryId);
+                        const count = entryItems.length;
+                        if (!onDeleteEntry || count < 2) return null;
+                        return (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <button className="text-xs text-destructive underline">
+                                Delete this group ({count} items)
+                              </button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-lg">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete this group?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently remove {count} items: {entryItems[0].description} to {entryItems[count - 1].description}.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => onDeleteEntry!(currentEntryId!)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        );
+                      })()}
+                    </div>
                   </div>
                 </div>
               );
