@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Sparkles } from 'lucide-react';
 import { useAskTrendsAI } from '@/hooks/useAskTrendsAI';
 import { useUserSettings } from '@/hooks/useUserSettings';
@@ -112,28 +113,32 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
 
           {/* Input row */}
           {!data?.answer && (
-            <div className="flex gap-2">
-              <input
-                type="text"
+            <div className="space-y-2">
+              <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSubmit(input);
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmit(input);
+                  }
                 }}
                 placeholder="Ask a question..."
                 disabled={isPending}
-                className="flex-1 h-9 text-sm rounded-md border border-input bg-background px-3 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                className="min-h-[60px] max-h-[120px] resize-none text-sm"
                 maxLength={500}
                 autoFocus
               />
-              <Button
-                size="sm"
-                onClick={() => handleSubmit(input)}
-                disabled={!input.trim() || isPending}
-                className="h-9"
-              >
-                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Ask'}
-              </Button>
+              <div className="flex justify-end">
+                <Button
+                  size="sm"
+                  onClick={() => handleSubmit(input)}
+                  disabled={!input.trim() || isPending}
+                  className="h-9"
+                >
+                  {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Ask'}
+                </Button>
+              </div>
             </div>
           )}
 
