@@ -39,6 +39,8 @@ const FOOD_PROMPTS = [
 
 const EXERCISE_PROMPTS = [
   "What exercises should I do more often?",
+  "What trends am I likely underestimating because they change slowly?",
+  "What do my logs suggest I prioritize without realizing it?",
   "How would you restructure my week for better recovery without reducing total activity?",
   "Are there asymmetries or neglected muscle groups in my training?",
   "Am I overtraining any body part?",
