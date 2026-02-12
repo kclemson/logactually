@@ -16,30 +16,34 @@ interface AskTrendsAIDialogProps {
 }
 
 const FOOD_PROMPTS = [
-  "How consistent is my eating pattern?",
   "How has my diet changed over time?",
-  "Any patterns in my carb intake?",
   "What could I improve about my diet?",
   "Do I have any nutritional gaps?",
   "How much variety is in my diet?",
   "What nutrients am I consistently lacking?",
   "Are there any surprising patterns in my eating?",
-  "How balanced are my meals throughout the day?",
-  "What healthy swaps could I make?",
+  "What patterns do you notice in how I eat on high-calorie vs low-calorie days?",
+  "Can you give me ideas for some new snack foods that fit my existing eating patterns?",
+  "Based on my logs, when am I most likely to overeat?"
+  "Do you have suggestions for simple swaps or improvements I could make?",
+  "How stable does my daily intake look week to week?",
   "What's the weakest area of my diet?",
-  "Am I relying too heavily on any one food?",
+  "If I continue eating like this, what trajectory would you predict over the next 3 months?",
 ];
 
 const EXERCISE_PROMPTS = [
-  "What exercises should I do more?",
-  "Do I have any muscle imbalances?",
+  "What exercises should I do more often?",
+  "How would you restructure my week for better recovery without reducing total activity?",
+  "Are there asymmetries or neglected muscle groups in my training?",
   "Am I overtraining any body part?",
-  "Any gaps in my training program?",
   "How could I make my program more balanced?",
-  "What weak points should I prioritize?",
-  "Are there any patterns in my training I should change?",
+  "Are there any patterns in my training I should consider changing?",
+  "Can you give me suggestions of other exercises I might like that are similar to the ones I do regularly?"
   "What would a trainer suggest I adjust?",
   "Am I neglecting any movement patterns?",
+  "If my goal is muscle gain, what in my current routine would you modify first?",
+  "If my goal is overall health and flexibility, what do you think I should change?",
+  "Do you see any hidden tradeoffs in how I’m currently exercising?",
   "How could I improve my exercise variety?",
 ];
 
