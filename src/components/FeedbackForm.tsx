@@ -130,9 +130,9 @@ export function FeedbackForm() {
                       {reopeningId !== item.id ? (
                         <button
                           onClick={() => setReopeningId(item.id)}
-                          className="ml-2 text-xs text-primary hover:underline"
+                          className="ml-2 text-xs text-orange-500 hover:text-orange-600 hover:underline"
                         >
-                          Reopen
+                          Re-open
                         </button>
                       ) : (
                         <div className="mt-1 space-y-1">
@@ -145,7 +145,7 @@ export function FeedbackForm() {
                           />
                           <div className="flex gap-2">
                             <Button size="sm" onClick={handleReopen(item)} disabled={!followUp.trim()}>
-                              Send & Reopen
+                              Send & Re-open
                             </Button>
                             <Button size="sm" variant="ghost" onClick={() => { setReopeningId(null); setFollowUp(""); }}>
                               Cancel
