@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useReadOnlyContext } from "@/contexts/ReadOnlyContext";
 import { MessageSquare, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useSubmitFeedback, useUserFeedback, useDeleteFeedback, useMarkFeedbackRead } from "@/hooks/feedback";
+import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
 import {
   AlertDialog,
@@ -35,6 +37,9 @@ const FEEDBACK_CONTENT = {
 export function FeedbackForm() {
   const [message, setMessage] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
+  const [reopeningId, setReopeningId] = useState<string | null>(null);
+  const [followUp, setFollowUp] = useState("");
+  const queryClient = useQueryClient();
   const submitFeedback = useSubmitFeedback();
   const { data: feedbackHistory } = useUserFeedback();
   const deleteFeedback = useDeleteFeedback();
@@ -64,6 +69,18 @@ export function FeedbackForm() {
     } catch (error) {
       console.error("Failed to submit feedback:", error);
     }
+  };
+
+  const handleReopen = (item: { id: string; message: string }) => async () => {
+    const updatedMessage = `${item.message}\n\n---\nFollow-up:\n${followUp.trim()}`;
+    await supabase
+      .from('feedback')
+      .update({ message: updatedMessage, resolved_at: null } as any)
+      .eq('id', item.id);
+    queryClient.invalidateQueries({ queryKey: ['userFeedback'] });
+    queryClient.invalidateQueries({ queryKey: ['adminFeedback'] });
+    setReopeningId(null);
+    setFollowUp("");
   };
 
   return (
@@ -106,7 +123,37 @@ export function FeedbackForm() {
                     {format(parseISO(item.created_at), "MMM d, yyyy")}
                   </span>
                   {item.resolved_at && !item.response && (
-                    <span className="text-xs text-green-600 dark:text-green-400">✓ Resolved</span>
+                    <span className="ml-2 text-xs text-green-600 dark:text-green-400">✓ Resolved</span>
+                  )}
+                  {item.resolved_at && (
+                    <>
+                      {reopeningId !== item.id ? (
+                        <button
+                          onClick={() => setReopeningId(item.id)}
+                          className="ml-2 text-xs text-primary hover:underline"
+                        >
+                          Reopen
+                        </button>
+                      ) : (
+                        <div className="mt-1 space-y-1">
+                          <Textarea
+                            placeholder="Add a follow-up message..."
+                            value={followUp}
+                            onChange={(e) => setFollowUp(e.target.value)}
+                            className="min-h-[60px] text-sm resize-none"
+                            maxLength={1000}
+                          />
+                          <div className="flex gap-2">
+                            <Button size="sm" onClick={handleReopen(item)} disabled={!followUp.trim()}>
+                              Send & Reopen
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => { setReopeningId(null); setFollowUp(""); }}>
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                   <p className="whitespace-pre-wrap">{item.message}</p>
                 </div>
