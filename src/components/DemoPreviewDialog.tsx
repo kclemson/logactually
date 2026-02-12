@@ -76,7 +76,7 @@ export function DemoPreviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto p-3 sm:p-6">
+      <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto p-3 sm:p-6" onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader className="text-left">
           {rawInput && (
             <div className="text-sm mb-3">
