@@ -1,35 +1,45 @@
 
 
-## Fix: Number inputs auto-filling "0" when cleared on mobile
+## Fix: Enter on empty number field should revert, not save
 
-**Problem**: When editing Sets, Reps, or Weight fields on mobile, backspacing to clear the field immediately inserts a `0`. This forces the user to type their new number (getting e.g. "08"), then delete the leading zero -- a frustrating two-step process.
+**Problem**: The `onBlur` handlers correctly guard with `numValue > 0` before saving, but the `handleKeyDown` (Enter) handler at line 177 and the weight-specific Enter handler at line 663 do not. So pressing Enter on an empty/zero field saves the empty value instead of reverting.
 
-**Root cause**: In `WeightItemsTable.tsx`, the `onChange` handlers use `parseInt(e.target.value, 10) || 0` (and `parseFloat(...) || 0`). When the user clears the field, `parseInt("")` returns `NaN`, and `|| 0` coerces it to `0`, which immediately appears in the input.
+**Fix**: Add the same `numValue > 0` guard to the Enter key handlers.
 
-**Fix**: Allow empty string as a valid intermediate editing state. Only coerce to a number on blur/Enter (when the edit is committed).
+### Changes in `src/components/WeightItemsTable.tsx`
 
-### Changes
-
-**File: `src/components/WeightItemsTable.tsx`**
-
-1. **Sets onChange (line 569)**: Change `parseInt(e.target.value, 10) || 0` to store the raw string value when empty:
+1. **Generic `handleKeyDown` (line 177)** -- used by Sets and Reps Enter:
    ```ts
-   value: e.target.value === '' ? '' : parseInt(e.target.value, 10) || 0
+   // Before
+   if (editingCell && editingCell.value !== editingCell.originalValue) {
+     onUpdateItem?.(index, field, editingCell.value);
+   }
+
+   // After
+   if (editingCell && editingCell.value !== editingCell.originalValue) {
+     const numValue = Number(editingCell.value);
+     if (numValue > 0) {
+       onUpdateItem?.(index, field, editingCell.value);
+     }
+   }
    ```
 
-2. **Reps onChange (line 607)**: Same fix:
+2. **Weight-specific Enter handler (line 663)**:
    ```ts
-   value: e.target.value === '' ? '' : parseInt(e.target.value, 10) || 0
+   // Before
+   if (editingCell && editingCell.value !== editingCell.originalValue) {
+     const lbsValue = parseWeightToLbs(editingCell.value as number, weightUnit);
+     onUpdateItem?.(index, 'weight_lbs', lbsValue);
+   }
+
+   // After
+   if (editingCell && editingCell.value !== editingCell.originalValue) {
+     const numValue = Number(editingCell.value);
+     if (numValue > 0) {
+       const lbsValue = parseWeightToLbs(numValue, weightUnit);
+       onUpdateItem?.(index, 'weight_lbs', lbsValue);
+     }
+   }
    ```
 
-3. **Weight onChange (line 651)**: Same fix for `parseFloat`:
-   ```ts
-   value: e.target.value === '' ? '' : parseFloat(e.target.value) || 0
-   ```
-
-4. **Sets/Reps/Weight onBlur handlers**: Already guard with `numValue > 0` before saving, so an empty/zero value just gets discarded (field reverts to original). No change needed.
-
-5. **Value display**: The `String(editingCell.value)` already handles empty string correctly -- it will show an empty input.
-
-This is a 3-line change in one file. The behavior becomes: user taps field, backspaces to clear it, sees an empty field (not "0"), types new number, and it saves on blur/Enter.
-
+Two small additions in one file. Empty or zero values on Enter will now be discarded (field reverts to original), matching the existing onBlur behavior.
