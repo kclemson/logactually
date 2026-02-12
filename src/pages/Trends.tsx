@@ -765,7 +765,7 @@ const Trends = () => {
             />
 
             {/* Row 2: Protein + Carbs + Fat */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-1">
               {charts.slice(1).map(({ key, label, color }) => (
                 <FoodChart
                   key={key}
