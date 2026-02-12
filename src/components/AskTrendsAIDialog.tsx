@@ -86,7 +86,7 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
 
   return (
     <Dialog open onOpenChange={onOpenChange}>
-      <DialogContent className="left-2 right-2 translate-x-0 w-auto max-w-[calc(100vw-16px)] p-4 sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+      <DialogContent className="left-2 right-2 translate-x-0 w-auto max-w-[calc(100vw-16px)] p-3 sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>
         <DialogTitle className="text-sm font-medium flex items-center gap-1.5">
           <Sparkles className="h-4 w-4" />
           {title}
@@ -176,7 +176,7 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
           {data?.answer && (
             <div className="space-y-3">
               <div
-                className="text-xs text-foreground whitespace-pre-wrap leading-snug p-3 rounded-md bg-muted/50 max-h-[50vh] overflow-y-auto [&_strong]:font-semibold"
+                className="text-xs text-foreground whitespace-pre-wrap leading-snug p-2 rounded-md bg-muted/50 max-h-[50vh] overflow-y-auto [&_strong]:font-semibold"
                 dangerouslySetInnerHTML={{
                   __html: (() => {
                     const escaped = data.answer
