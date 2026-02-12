@@ -566,7 +566,7 @@ export function WeightItemsTable({
                         })}
                         onChange={(e) => {
                           if (editingCell) {
-                            setEditingCell({ ...editingCell, value: parseInt(e.target.value, 10) || 0 });
+                            setEditingCell({ ...editingCell, value: e.target.value === '' ? '' : parseInt(e.target.value, 10) || 0 });
                           }
                         }}
                         onKeyDown={(e) => handleKeyDown(e, index, 'sets')}
@@ -604,7 +604,7 @@ export function WeightItemsTable({
                         })}
                         onChange={(e) => {
                           if (editingCell) {
-                            setEditingCell({ ...editingCell, value: parseInt(e.target.value, 10) || 0 });
+                            setEditingCell({ ...editingCell, value: e.target.value === '' ? '' : parseInt(e.target.value, 10) || 0 });
                           }
                         }}
                         onKeyDown={(e) => handleKeyDown(e, index, 'reps')}
@@ -648,7 +648,7 @@ export function WeightItemsTable({
                         }}
                         onChange={(e) => {
                           if (editingCell) {
-                            setEditingCell({ ...editingCell, value: parseFloat(e.target.value) || 0 });
+                            setEditingCell({ ...editingCell, value: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 });
                           }
                         }}
                         onKeyDown={(e) => {
