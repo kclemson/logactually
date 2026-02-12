@@ -15,39 +15,31 @@ interface AskTrendsAIDialogProps {
 }
 
 const FOOD_PROMPTS = [
-  "What's my average daily calorie intake?",
-  "Am I getting enough protein?",
-  "What are my most common foods?",
   "How consistent is my eating pattern?",
-  "Do I eat more on weekends?",
-  "What's my macro split look like?",
-  "Am I eating enough fiber?",
   "How has my diet changed over time?",
-  "What days do I eat the most?",
   "Any patterns in my carb intake?",
   "What could I improve about my diet?",
   "Do I have any nutritional gaps?",
   "How much variety is in my diet?",
-  "What's my highest calorie day?",
-  "Am I hitting a good protein-to-calorie ratio?",
+  "What nutrients am I consistently lacking?",
+  "Are there any surprising patterns in my eating?",
+  "How balanced are my meals throughout the day?",
+  "What healthy swaps could I make?",
+  "What's the weakest area of my diet?",
+  "Am I relying too heavily on any one food?",
 ];
 
 const EXERCISE_PROMPTS = [
-  "What's my most trained muscle group?",
-  "Am I making strength progress?",
-  "How consistent is my workout schedule?",
   "What exercises should I do more?",
-  "How has my training volume changed?",
-  "Am I training enough each week?",
-  "What's my strongest lift?",
   "Do I have any muscle imbalances?",
-  "How much cardio am I doing?",
-  "What does my workout frequency look like?",
   "Am I overtraining any body part?",
-  "What's my average workout intensity?",
-  "How many calories am I burning?",
-  "What exercises have I improved the most?",
   "Any gaps in my training program?",
+  "How could I make my program more balanced?",
+  "What weak points should I prioritize?",
+  "Are there any patterns in my training I should change?",
+  "What would a trainer suggest I adjust?",
+  "Am I neglecting any movement patterns?",
+  "How could I improve my exercise variety?",
 ];
 
 function pickRandom<T>(arr: T[], count: number): T[] {
