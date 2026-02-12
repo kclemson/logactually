@@ -1,28 +1,28 @@
 
 
-## Show 4 Rows of Chips by Default
+## Two Small Tweaks to Ask AI Dialog
 
-**File: `src/components/AskTrendsAIDialog.tsx`** (line 130)
+**File: `src/components/AskTrendsAIDialog.tsx`**
 
-Increase the fixed height from `h-[4.5rem]` to `h-[9rem]` to accommodate 4 rows of chips, and increase the number of random chips picked from 4 to 8 so there's enough content to fill the space.
+### 1. Increase chips container height (line 130)
 
-### Changes
+Bump from `h-[9rem]` to `h-[10.5rem]` so chips aren't clipped by the textarea below:
 
-1. **Line 130** -- Update container height:
 ```tsx
-<div className="flex flex-wrap gap-1.5 items-start h-[9rem] overflow-hidden">
-```
-Also switch `items-center` to `items-start` so chips align to the top.
-
-2. **Line 99** -- Pick 8 chips instead of 4:
-```tsx
-const [chips, setChips] = useState(() => pickRandom(pool, 8));
+<div className="flex flex-wrap gap-1.5 items-start h-[10.5rem] overflow-hidden">
 ```
 
-3. **Line 100** -- Update refresh to also pick 8:
+### 2. Break checkbox label after "answer" (around line 158)
+
+Split the label text so the parenthesized stats appear on their own line:
+
 ```tsx
-const refreshChips = () => setChips(pickRandom(pool, 8));
+<span className="text-xs text-muted-foreground leading-tight">
+  Include my personal stats for a more personalized answer
+  <br />
+  ({profileSummary})
+</span>
 ```
 
-Three small edits across the same file.
+Two small edits, same file.
 
