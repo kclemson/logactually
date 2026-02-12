@@ -722,7 +722,7 @@ const Trends = () => {
               {/* Calories Chart */}
               <FoodChart
                 title="Calories"
-                subtitle={`avg: ${averages.calories} · today: ${todayValues.calories}`}
+                subtitle={`avg: ${averages.calories}, today: ${todayValues.calories}`}
                 chartData={chartData}
                 dataKey="calories"
                 color={CHART_COLORS.calories}
@@ -770,7 +770,7 @@ const Trends = () => {
                 <FoodChart
                   key={key}
                   title={label}
-                  subtitle={`avg: ${averages[key as keyof typeof averages]} · today: ${todayValues[key as keyof typeof todayValues]}`}
+                  subtitle={`avg: ${averages[key as keyof typeof averages]}, today: ${todayValues[key as keyof typeof todayValues]}`}
                   chartData={chartData}
                   dataKey={key}
                   color={color}
