@@ -762,6 +762,17 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
         >
           <ChevronRight className="h-5 w-5" />
         </Button>
+        {!isTodaySelected && (
+          <button
+            className="text-sm text-primary hover:underline ml-1"
+            onClick={() => {
+              setStoredDate(format(new Date(), 'yyyy-MM-dd'));
+              setSearchParams({}, { replace: true });
+            }}
+          >
+            Go to today
+          </button>
+        )}
       </div>
 
       <section>
