@@ -1,25 +1,41 @@
 
 
-## Fix Ask AI Dialog Keyboard Overlap on Mobile
+## Add Subtitle to Macro Split (%) Chart
 
-**Problem**: The dialog is vertically centered (`top-[50%] translate-y-[-50%]`) in the viewport. When the mobile keyboard opens, the layout viewport doesn't shrink but the visual viewport does, causing the dialog to spill off the top of the screen. The `max-h-[85vh]` fix helps with content height but doesn't address the centering problem with the keyboard present.
-
-**Solution**: Position the dialog near the top of the screen on mobile instead of vertically centered. This ensures the dialog stays visible above the keyboard. On desktop (sm+), keep the centered positioning.
+**Goal**: Add an "avg: P/C/F, today: P/C/F" subtitle to the Macro Split chart so it visually aligns with the Calories chart beside it.
 
 ### Changes
 
-**File: `src/components/AskTrendsAIDialog.tsx` (line 110)**
+**1. `src/components/trends/FoodChart.tsx` -- Add `subtitle` prop to `StackedMacroChart`**
 
-Update the `DialogContent` className to:
-- Override `top-[50%] translate-y-[-50%]` with `top-[5%] translate-y-0` on mobile
-- Keep centered positioning on desktop via `sm:top-[50%] sm:translate-y-[-50%]`
-- Remove `autoFocus` from the Textarea (line 162) to avoid the keyboard opening immediately
+The `StackedMacroChart` component currently lacks subtitle support (unlike `FoodChart` and `VolumeChart` which already have it). Update the component to:
+- Add `subtitle?: string` to `StackedMacroChartProps`
+- Wrap the `ChartTitle` in the same `flex flex-col gap-0.5` div pattern used by `FoodChart`
+- Render `ChartSubtitle` when subtitle is provided
 
-```tsx
-// DialogContent className becomes:
-className="left-2 right-2 top-[5%] translate-y-0 translate-x-0 w-auto max-w-[calc(100vw-16px)] max-h-[85vh] overflow-y-auto p-3 sm:left-[50%] sm:right-auto sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:w-full sm:max-w-md"
+**2. `src/pages/Trends.tsx` -- Pass subtitle to the Macro Split chart**
+
+Compute the P/C/F subtitle using the existing `averages` and `todayValues` objects, and pass it to the `StackedMacroChart`:
+
+```
+subtitle={`avg: ${averages.protein}/${averages.carbs}/${averages.fat}, today: ${todayValues.protein}/${todayValues.carbs}/${todayValues.fat}`}
 ```
 
-And remove `autoFocus` from the Textarea (line 162) since the suggestion chips are the primary interaction on mobile, and tapping the textarea will focus it when the user is ready.
+This produces something like: `avg: 112/180/65, today: 45/60/20`
 
-Two line edits in one file. The dialog will anchor near the top on mobile, leaving room for the keyboard below, while remaining centered on desktop.
+### Technical Details
+
+**FoodChart.tsx (StackedMacroChart, around lines 247-317)**:
+- Add `subtitle?: string` to the interface
+- Change `<ChartTitle>{title}</ChartTitle>` to:
+```tsx
+<div className="flex flex-col gap-0.5">
+  <ChartTitle>{title}</ChartTitle>
+  {subtitle && <ChartSubtitle>{subtitle}</ChartSubtitle>}
+</div>
+```
+
+**Trends.tsx (around line 734)**:
+- Add the `subtitle` prop to the Macro Split `StackedMacroChart` call
+
+Two small edits across two files. The subtitle values (grams) are already computed -- just need to format and pass them through.
