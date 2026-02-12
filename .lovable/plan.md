@@ -1,15 +1,13 @@
 
-
-## Reduce Font Size in AI Response Area
+## Reduce Dialog Padding in Ask AI Dialog
 
 ### Change
 
-**File:** `src/components/AskTrendsAIDialog.tsx` (around line 155)
+**File:** `src/components/AskTrendsAIDialog.tsx`
 
-Change the response container's text class from `text-sm` to `text-xs` and tighten the leading from `leading-relaxed` to `leading-snug`. This matches the compact styling used elsewhere in the app for read-only content.
+Two tweaks:
 
-Single line change on the response `div`:
-- `text-sm ... leading-relaxed` becomes `text-xs ... leading-snug`
+1. **Line 89** - Reduce `DialogContent` padding from `p-4` (16px) to `p-3` (12px)
+2. **Line 179** - Reduce the response area's inner padding from `p-3` (12px) to `p-2` (8px)
 
-This will noticeably reduce the text size and line spacing, making more content visible without scrolling while remaining legible for read-only output.
-
+This reclaims roughly 16px of horizontal space total, giving the response text more room and reducing the chance of needing a scrollbar.
