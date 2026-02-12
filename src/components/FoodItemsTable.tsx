@@ -719,7 +719,10 @@ export function FoodItemsTable({
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Delete this group?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  This will permanently remove {count} items: {entryItems[0].description} to {entryItems[count - 1].description}.
+                                  This will permanently remove {count} items:
+                                  <ul className="list-disc list-inside mt-2 text-xs">
+                                    {entryItems.map(item => <li key={item.uid}>{item.description}</li>)}
+                                  </ul>
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
