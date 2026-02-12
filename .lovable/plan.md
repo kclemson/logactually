@@ -1,28 +1,23 @@
 
 
-## Replace Input with Textarea in Ask AI Dialog
+## Make AI Responses More Concise and Pattern-Focused
 
 ### Change
 
-Replace the single-line `<input>` element with a `<Textarea>` component in `src/components/AskTrendsAIDialog.tsx` so users can see their full prompt without clipping, both while typing and while waiting for a response.
+Update the system prompt in the edge function to stop the AI from listing individual dates and exercises verbatim, producing shorter, more scannable answers.
 
 ### Technical Details
 
-**File: `src/components/AskTrendsAIDialog.tsx`**
+**File:** `supabase/functions/ask-trends-ai/index.ts` -- line 166 only
 
-1. Import the existing `Textarea` component from `@/components/ui/textarea`.
+Replace the `systemPrompt` string. The key differences:
 
-2. Replace the `<input>` element (around lines 106-115) with a `<Textarea>`:
-   - Remove `h-9` fixed height constraint
-   - Use `min-h-[60px] max-h-[120px] resize-none` for a compact but multi-line area
-   - Submit on Enter (without Shift) to preserve current UX; Shift+Enter for newlines
-   - Keep all existing props (value, onChange, placeholder, disabled, maxLength, autoFocus)
+| Removed | Added |
+|---------|-------|
+| "Reference specific data points, dates, and numbers." | "Summarize trends and patterns at a high level -- avoid listing individual dates or day-by-day examples." |
+| "2-4 paragraphs max" | "2-3 short paragraphs max" |
+| (nothing) | "Use ranges and generalizations (e.g. 'over the past month', 'consistently around X') instead of citing specific dates." |
+| (nothing) | "Use bullet points when making multiple observations." |
 
-3. Adjust the flex layout: change the container from `flex gap-2` (side-by-side) to a stacked layout with the button below or aligned to the bottom-right, since a textarea next to a button looks awkward.
-
-4. During the `isPending` state, the textarea remains visible (disabled) showing the full question text without clipping, since the textarea naturally wraps long text.
-
-| File | Change |
-|------|--------|
-| `src/components/AskTrendsAIDialog.tsx` | Replace `<input>` with `<Textarea>`, adjust layout for multi-line input |
+No other files change. The edge function will be redeployed automatically.
 
