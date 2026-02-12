@@ -20,6 +20,8 @@ const SHARED_PROMPTS = [
   "Do you have suggestions for simple swaps or improvements I could make?",
   "If I stopped improving for 6 months, what would likely be the reason based on this data",
   "What behavioral patterns might I not be noticing?",
+  "What do my logs suggest I prioritize without realizing it?",
+
 ];
 
 const FOOD_PROMPTS = [
@@ -32,10 +34,9 @@ const FOOD_PROMPTS = [
   "Can you give me ideas for some new foods that fit my existing eating patterns?",
   "Based on my logs, when am I most likely to overeat?",
   "How stable does my daily intake look week to week?",
-  "What's the weakest area of my diet?",
+  "What's the weakest area of my ea?",
   "If I continue eating like this, what trajectory would you predict over the next 3 months?",
   "What story would a neutral observer tell about my habits?",
-  "What do my logs suggest I prioritize without realizing it?",
 ];
 
 const EXERCISE_PROMPTS = [
@@ -52,6 +53,9 @@ const EXERCISE_PROMPTS = [
   "If my goal is overall health and flexibility, what do you think I should change?",
   "Do you see any hidden tradeoffs in how I'm currently exercising?",
   "How could I improve my exercise variety?",
+  "What trends am I likely underestimating because they change slowly?",
+  "What signals am I ignoring that could matter long-term?",
+  "Where do my efforts seem misaligned with outcomes?,
 ];
 
 function pickRandom<T>(arr: T[], count: number): T[] {
