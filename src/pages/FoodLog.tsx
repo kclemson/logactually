@@ -27,12 +27,13 @@ import { findSimilarEntry, SimilarEntryMatch } from '@/lib/text-similarity';
 import { detectHistoryReference, MIN_SIMILARITY_REQUIRED } from '@/lib/history-patterns';
 import { detectRepeatedFoodEntry, isDismissed, dismissSuggestion, shouldShowOptOutLink, FoodSaveSuggestion } from '@/lib/repeated-entry-detection';
 import { FoodItem, SavedMeal, calculateTotals } from '@/types/food';
+import { getStoredDate, setStoredDate } from '@/lib/selected-date';
 
 // Wrapper component: extracts date from URL, forces remount via key
 const FoodLog = () => {
   const [searchParams] = useSearchParams();
   const dateParam = searchParams.get('date');
-  const dateKey = dateParam || format(new Date(), 'yyyy-MM-dd');
+  const dateKey = dateParam || getStoredDate() || format(new Date(), 'yyyy-MM-dd');
   
   return <FoodLogContent key={dateKey} initialDate={dateKey} />;
 };
@@ -100,14 +101,16 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   // Navigation updates URL directly - triggers remount via wrapper's key
   const goToPreviousDay = () => {
     const prevDate = format(subDays(selectedDate, 1), 'yyyy-MM-dd');
+    setStoredDate(prevDate);
     setSearchParams({ date: prevDate }, { replace: true });
   };
 
   const goToNextDay = () => {
     const nextDate = format(addDays(selectedDate, 1), 'yyyy-MM-dd');
     const todayStr = format(new Date(), 'yyyy-MM-dd');
+    setStoredDate(nextDate);
     if (nextDate === todayStr) {
-      setSearchParams({}, { replace: true }); // Remove param for today
+      setSearchParams({}, { replace: true });
     } else {
       setSearchParams({ date: nextDate }, { replace: true });
     }
@@ -117,6 +120,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     if (!date) return;
     const dateStr = format(date, 'yyyy-MM-dd');
     const todayStr = format(new Date(), 'yyyy-MM-dd');
+    setStoredDate(dateStr);
     if (dateStr === todayStr) {
       setSearchParams({}, { replace: true });
     } else {
@@ -711,7 +715,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
             <button
               className={cn(
                 "flex items-center gap-1.5 px-2 py-1 text-heading",
-                "text-white underline decoration-2 underline-offset-4"
+                "text-foreground underline decoration-2 underline-offset-4 decoration-foreground"
               )}
             >
               <CalendarIcon className="h-4 w-4" />
@@ -725,6 +729,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
                 size="sm"
                 className="w-full justify-center text-blue-600 dark:text-blue-400"
                 onClick={() => {
+                  setStoredDate(format(new Date(), 'yyyy-MM-dd'));
                   setSearchParams({}, { replace: true });
                   setCalendarOpen(false);
                 }}

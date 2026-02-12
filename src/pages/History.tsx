@@ -22,6 +22,7 @@ import { isCardioExercise } from '@/lib/exercise-metadata';
 import { getTargetDotColor } from '@/lib/calorie-target';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useUserSettings } from '@/hooks/useUserSettings';
+import { setStoredDate } from '@/lib/selected-date';
 
 interface DaySummary {
   date: string;
@@ -145,6 +146,7 @@ const History = () => {
   const handleDayClick = (date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
     const todayStr = format(new Date(), 'yyyy-MM-dd');
+    setStoredDate(dateStr);
     
     if (dateStr === todayStr) {
       navigate('/');
