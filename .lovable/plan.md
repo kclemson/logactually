@@ -1,13 +1,12 @@
 
-## Reduce Dialog Padding in Ask AI Dialog
+
+## Simplify AI Response Language
 
 ### Change
 
-**File:** `src/components/AskTrendsAIDialog.tsx`
+**File:** `supabase/functions/ask-trends-ai/index.ts` (line 166)
 
-Two tweaks:
+Add one sentence to the system prompt: `"Use plain, everyday language — avoid gym jargon and technical fitness terminology."`
 
-1. **Line 89** - Reduce `DialogContent` padding from `p-4` (16px) to `p-3` (12px)
-2. **Line 179** - Reduce the response area's inner padding from `p-3` (12px) to `p-2` (8px)
+No examples needed — the model understands what plain language means. No other files change.
 
-This reclaims roughly 16px of horizontal space total, giving the response text more room and reducing the chance of needing a scrollbar.
