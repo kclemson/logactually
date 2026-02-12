@@ -175,7 +175,10 @@ export function WeightItemsTable({
       }
       
       if (editingCell && editingCell.value !== editingCell.originalValue) {
-        onUpdateItem?.(index, field, editingCell.value);
+        const numValue = Number(editingCell.value);
+        if (numValue > 0) {
+          onUpdateItem?.(index, field, editingCell.value);
+        }
       }
       setEditingCell(null);
       (e.target as HTMLElement).blur();
@@ -661,8 +664,11 @@ export function WeightItemsTable({
                               return;
                             }
                             if (editingCell && editingCell.value !== editingCell.originalValue) {
-                              const lbsValue = parseWeightToLbs(editingCell.value as number, weightUnit);
-                              onUpdateItem?.(index, 'weight_lbs', lbsValue);
+                              const numValue = Number(editingCell.value);
+                              if (numValue > 0) {
+                                const lbsValue = parseWeightToLbs(numValue, weightUnit);
+                                onUpdateItem?.(index, 'weight_lbs', lbsValue);
+                              }
                             }
                             setEditingCell(null);
                             (e.target as HTMLElement).blur();
