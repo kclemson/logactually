@@ -23,7 +23,7 @@ const SHARED_PROMPTS = [
   "If I continue like this, what will likely improve — and what might suffer?",
   "What's the smallest change that could meaningfully alter my trajectory?",
   "What version of me is my current routine building toward?",
-  "What am I doing well that I'm not giving myself credit for?",
+  "What am I doing well that I may not be giving myself credit for?",
   "If a coach reviewed this, what would they focus on first?",
 ];
 
