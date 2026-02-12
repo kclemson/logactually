@@ -155,7 +155,6 @@ serve(async (req) => {
         }
         if (s.age) parts.push(`Age: ${s.age}`);
         if (s.bodyComposition) parts.push(`Body composition: ${s.bodyComposition}`);
-        if (s.defaultIntensity) parts.push(`Default workout intensity: ${s.defaultIntensity}/10`);
         if (parts.length > 0) {
           profileContext = `\n\nUser profile: ${parts.join(", ")}`;
         }
