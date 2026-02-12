@@ -1,32 +1,39 @@
 
 
-## Fix: Calorie Burn Dialog Not Dismissable on Small Screens
+## Add "Go to Today" Link in Date Navigation Row
 
-### Problem
+### Change
 
-The CalorieBurnDialog contains a lot of content (toggle, preview, biometric inputs, workout defaults, explanatory text). On smaller Android phones, the dialog overflows the viewport vertically. Since `DialogContent` uses `fixed` positioning with `top-[50%] translate-y-[-50%]`, the content extends past the screen edges with no scroll, making the close button (or parts of the dialog) unreachable.
+After the `>` chevron button in both `FoodLog.tsx` and `WeightLog.tsx`, add a conditional "Go to today" text link that only appears when viewing a past date.
 
-### Solution
+### Layout
 
-Add `max-h-[85vh] overflow-y-auto` to the dialog content so it becomes scrollable when it exceeds the viewport height. This keeps the dialog centered but constrains it to 85% of the viewport, with internal scrolling for overflow.
+```text
+  < [calendar] Tue, Feb 10 >  Go to today
+```
 
 ### Technical Details
 
-**File**: `src/components/CalorieBurnDialog.tsx` (line 310)
+**`src/pages/FoodLog.tsx`** (after line 764, before the closing `</div>`):
 
-Update the `DialogContent` className to add max-height and overflow:
-
+```tsx
+{!isTodaySelected && (
+  <button
+    className="text-sm text-blue-600 dark:text-blue-400 hover:underline ml-1"
+    onClick={() => {
+      setStoredDate(format(new Date(), 'yyyy-MM-dd'));
+      setSearchParams({}, { replace: true });
+    }}
+  >
+    Go to today
+  </button>
+)}
 ```
-Before:
-className="left-2 right-2 translate-x-0 w-auto max-w-[calc(100vw-16px)] p-4 sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md"
 
-After:
-className="left-2 right-2 translate-x-0 w-auto max-w-[calc(100vw-16px)] max-h-[85vh] overflow-y-auto p-4 sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md"
-```
-
-This is a single-line change. The `85vh` cap leaves room for the system chrome (status bar, navigation bar) on Android devices, and `overflow-y-auto` enables scrolling only when needed.
+**`src/pages/WeightLog.tsx`** (after line 658, before the closing `</div>`): Same snippet.
 
 | File | Change |
 |------|--------|
-| `src/components/CalorieBurnDialog.tsx` | Add `max-h-[85vh] overflow-y-auto` to DialogContent |
+| `src/pages/FoodLog.tsx` | Add "Go to today" link after `>` chevron |
+| `src/pages/WeightLog.tsx` | Add "Go to today" link after `>` chevron |
 
