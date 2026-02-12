@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ChevronDown, ChevronUp, Play, Loader2 } from 'lucide-react';
 import { extractUpcFromText } from '@/lib/upc-utils';
 import { useScanBarcode } from '@/hooks/useScanBarcode';
+import { AskAiPromptEval } from '@/components/AskAiPromptEval';
 
 interface FoodItemOutput {
   description: string;
@@ -848,6 +849,9 @@ export function DevToolsPanel() {
                 </div>
               </div>
             )}
+
+            {/* Ask AI Prompt Eval */}
+            <AskAiPromptEval />
           </div>
         )}
       </div>
