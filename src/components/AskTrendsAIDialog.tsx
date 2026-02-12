@@ -127,7 +127,7 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
         <div className="space-y-3 mt-2">
           {/* Prompt chips (only show before a response) */}
           {!data?.answer && !isPending && (
-            <div className="flex flex-wrap gap-1.5 items-start h-[9rem] overflow-hidden">
+            <div className="flex flex-wrap gap-1.5 items-start h-[10.5rem] overflow-hidden">
               {chips.map((chip) => (
                 <button
                   key={chip}
@@ -184,7 +184,9 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
                 className="mt-0.5 rounded border-border"
               />
               <span className="text-xs text-muted-foreground leading-tight">
-                Include my personal stats for a more personalized answer ({profileSummary})
+                Include my personal stats for a more personalized answer
+                <br />
+                ({profileSummary})
               </span>
             </label>
           )}
