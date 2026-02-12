@@ -67,7 +67,7 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Populate Demo Data</DialogTitle>
           <DialogDescription>Generate realistic demo entries for the demo account.</DialogDescription>
