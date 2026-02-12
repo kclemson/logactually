@@ -853,7 +853,10 @@ export function WeightItemsTable({
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Delete this group?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  This will permanently remove {count} items: {entryExercises[0].description} to {entryExercises[count - 1].description}.
+                                  This will permanently remove {count} items:
+                                  <ul className="list-disc list-inside mt-2 text-xs">
+                                    {entryExercises.map(item => <li key={item.uid}>{item.description}</li>)}
+                                  </ul>
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
