@@ -733,6 +733,7 @@ const Trends = () => {
               {/* Macro Split Chart (100% stacked by calorie %) */}
               <StackedMacroChart
                 title="Macro Split (%)"
+                subtitle={`avg: ${averages.protein}/${averages.carbs}/${averages.fat}, today: ${todayValues.protein}/${todayValues.carbs}/${todayValues.fat}`}
                 chartData={chartData}
                 bars={[
                   { dataKey: "fatPct", name: "Fat", color: CHART_COLORS.fat },

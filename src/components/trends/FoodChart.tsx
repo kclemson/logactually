@@ -266,6 +266,7 @@ interface StackedMacroChartProps {
   labelColor?: string;
   height?: string;
   referenceLine?: { value: number; color?: string };
+  subtitle?: string;
 }
 
 export const StackedMacroChart = ({
@@ -281,6 +282,7 @@ export const StackedMacroChart = ({
   labelColor,
   height = "h-24",
   referenceLine,
+  subtitle,
 }: StackedMacroChartProps) => {
   const isTouchDevice = !useHasHover();
   const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
@@ -313,7 +315,10 @@ export const StackedMacroChart = ({
       
       <div className="relative z-20">
         <CardHeader className="p-2 pb-1">
-          <ChartTitle>{title}</ChartTitle>
+          <div className="flex flex-col gap-0.5">
+            <ChartTitle>{title}</ChartTitle>
+            {subtitle && <ChartSubtitle>{subtitle}</ChartSubtitle>}
+          </div>
         </CardHeader>
         <CardContent className="p-2 pt-0">
           <div className={height}>
