@@ -1,45 +1,59 @@
 
 
-## Fix: Enter on empty number field should revert, not save
+## Fix: Food calorie field -- allow 0, revert on empty, fix mobile clearing
 
-**Problem**: The `onBlur` handlers correctly guard with `numValue > 0` before saving, but the `handleKeyDown` (Enter) handler at line 177 and the weight-specific Enter handler at line 663 do not. So pressing Enter on an empty/zero field saves the empty value instead of reverting.
+**Current behavior** (confirmed by you):
+- Typing "0" and pressing Enter saves correctly
+- Backspacing to empty and pressing Enter saves an empty/invalid value (bug)
+- The onChange coerces empty to 0 immediately, making it hard to clear on mobile (same bug as weight fields)
 
-**Fix**: Add the same `numValue > 0` guard to the Enter key handlers.
+**Note**: The onBlur handler currently has `numValue > 0` which silently discards 0 on blur -- this is actually a bug since 0-calorie foods are valid. The Enter handler has no guard, which is why 0 works today (via Enter only).
 
-### Changes in `src/components/WeightItemsTable.tsx`
+### Changes in `src/components/FoodItemsTable.tsx`
 
-1. **Generic `handleKeyDown` (line 177)** -- used by Sets and Reps Enter:
-   ```ts
-   // Before
-   if (editingCell && editingCell.value !== editingCell.originalValue) {
-     onUpdateItem?.(index, field, editingCell.value);
-   }
+**1. onChange (line 562)** -- Allow empty string while typing:
+```ts
+// Before
+value: parseInt(e.target.value, 10) || 0
 
-   // After
-   if (editingCell && editingCell.value !== editingCell.originalValue) {
-     const numValue = Number(editingCell.value);
-     if (numValue > 0) {
-       onUpdateItem?.(index, field, editingCell.value);
-     }
-   }
-   ```
+// After
+value: e.target.value === '' ? '' : parseInt(e.target.value, 10) || 0
+```
 
-2. **Weight-specific Enter handler (line 663)**:
-   ```ts
-   // Before
-   if (editingCell && editingCell.value !== editingCell.originalValue) {
-     const lbsValue = parseWeightToLbs(editingCell.value as number, weightUnit);
-     onUpdateItem?.(index, 'weight_lbs', lbsValue);
-   }
+**2. Enter handler (lines 145-164)** -- Skip save if empty, allow 0:
+```ts
+// Before
+if (editingCell && editingCell.value !== editingCell.originalValue) {
+  if (field === 'calories') { ... }
+  else { onUpdateItem?.(index, field, editingCell.value); }
+}
 
-   // After
-   if (editingCell && editingCell.value !== editingCell.originalValue) {
-     const numValue = Number(editingCell.value);
-     if (numValue > 0) {
-       const lbsValue = parseWeightToLbs(numValue, weightUnit);
-       onUpdateItem?.(index, 'weight_lbs', lbsValue);
-     }
-   }
-   ```
+// After
+if (editingCell && editingCell.value !== editingCell.originalValue && editingCell.value !== '') {
+  if (field === 'calories') { ... }
+  else { onUpdateItem?.(index, field, editingCell.value); }
+}
+```
+Adding `&& editingCell.value !== ''` means empty reverts, but 0 passes through.
 
-Two small additions in one file. Empty or zero values on Enter will now be discarded (field reverts to original), matching the existing onBlur behavior.
+**3. onBlur (line 569)** -- Change guard from `numValue > 0` to `editingCell.value !== ''`:
+```ts
+// Before
+if (numValue > 0) {
+
+// After
+if (editingCell.value !== '' && editingCell.value !== undefined) {
+```
+This fixes the inconsistency where 0 could be saved via Enter but not via blur.
+
+### Result
+
+| Action | Result |
+|---|---|
+| Clear field, press Enter | Reverts to original |
+| Clear field, tap away (blur) | Reverts to original |
+| Clear field, type "0", Enter/blur | Saves 0 |
+| Clear field, type "150", Enter/blur | Saves 150 |
+| Backspace on mobile | Field stays empty (no auto-"0") |
+
+Three small changes in one file.
