@@ -51,7 +51,6 @@ const EXERCISE_PROMPTS = [
   "What exercises should I do more often?",
   "How would you restructure my week for better recovery without reducing total activity?",
   "Are there asymmetries or neglected muscle groups in my training?",
-  "Am I overtraining any body part?",
   "How could I make my program more balanced?",
   "Are there any patterns in my training I should consider changing?",
   "Can you give me suggestions of other exercises I might like that are similar to the ones I do regularly?",
@@ -159,7 +158,6 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
                 disabled={isPending}
                 className="min-h-[60px] max-h-[120px] resize-none text-sm"
                 maxLength={500}
-                
               />
               <div className="flex justify-end">
                 <Button
@@ -185,8 +183,7 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
               />
               <span className="text-xs text-muted-foreground leading-tight">
                 Include my personal stats for a more personalized answer
-                <br />
-                ({profileSummary})
+                <br />({profileSummary})
               </span>
             </label>
           )}
