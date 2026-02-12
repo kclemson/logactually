@@ -836,6 +836,37 @@ export function WeightItemsTable({
                         Save as routine
                       </button>
                     )}
+                    {(() => {
+                      const entryExercises = items.filter(i => i.entryId === currentEntryId);
+                      const count = entryExercises.length;
+                      if (!onDeleteEntry || count < 2) return null;
+                      return (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <button className="text-xs text-destructive underline">
+                              Delete this group ({count} items)
+                            </button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-lg">
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete this group?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will permanently remove {count} items: {entryExercises[0].description} to {entryExercises[count - 1].description}.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => onDeleteEntry!(currentEntryId!)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      );
+                    })()}
                   </div>
                 </div>
               );
