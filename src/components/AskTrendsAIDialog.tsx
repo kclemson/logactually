@@ -20,23 +20,31 @@ const SHARED_PROMPTS = [
   "Do you have suggestions for simple swaps or improvements I could make?",
   "If I stopped improving for 6 months, what would likely be the reason based on this data",
   "What behavioral patterns might I not be noticing?",
-  "What do my logs suggest I prioritize without realizing it?",
-
+  "If I continue like this, what will likely improve — and what might suffer?",
+  "What's the smallest change that could meaningfully alter my trajectory?",
+  "What version of me is my current routine building toward?",
+  "What am I doing well that I'm not giving myself credit for?",
+  "If a coach reviewed this, what would they focus on first?",
 ];
 
 const FOOD_PROMPTS = [
   "How has my diet changed over time?",
   "What could I improve about my diet?",
   "Do I have any nutritional gaps?",
+  "How much variety is in my diet?",
   "What nutrients am I consistently lacking?",
   "Are there any surprising patterns in my eating?",
   "What patterns do you notice in how I eat on high-calorie vs low-calorie days?",
-  "Can you give me ideas for some new foods that fit my existing eating patterns?",
+  "Can you give me ideas for some new snack foods that fit my existing eating patterns?",
   "Based on my logs, when am I most likely to overeat?",
   "How stable does my daily intake look week to week?",
-  "What's the weakest area of my ea?",
+  "What's the weakest area of my diet?",
   "If I continue eating like this, what trajectory would you predict over the next 3 months?",
-  "What story would a neutral observer tell about my habits?",
+  "Do I seem to operate in cycles? What triggers shifts between them?",
+  "Are there repeating weekly or monthly rhythms in my behavior?",
+  "What tends to precede my best or least consistent weeks?",
+  "What is quietly improving even if nothing's changing on the scale?",
+  "What do my habits suggest about my stress levels?",
 ];
 
 const EXERCISE_PROMPTS = [
@@ -53,9 +61,10 @@ const EXERCISE_PROMPTS = [
   "If my goal is overall health and flexibility, what do you think I should change?",
   "Do you see any hidden tradeoffs in how I'm currently exercising?",
   "How could I improve my exercise variety?",
-  "What trends am I likely underestimating because they change slowly?",
-  "What signals am I ignoring that could matter long-term?",
-  "Where do my efforts seem misaligned with outcomes?",
+  "What tradeoffs am I making between performance, recovery, and body composition?",
+  "What invisible cost might I be paying for my current approach?",
+  "Where am I pushing hard without seeing proportional return?",
+  "What would I need to give up to improve faster?",
 ];
 
 function pickRandom<T>(arr: T[], count: number): T[] {
