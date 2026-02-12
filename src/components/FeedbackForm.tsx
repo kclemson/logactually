@@ -139,6 +139,9 @@ export function FeedbackForm() {
                   <span className="text-xs text-muted-foreground">
                     Response ({format(parseISO(item.responded_at!), "MMM d")})
                   </span>
+                  {item.resolved_at && (
+                    <span className="ml-2 text-xs text-green-600 dark:text-green-400">✓ Resolved</span>
+                  )}
                   <p className="whitespace-pre-wrap text-muted-foreground">{item.response}</p>
                 </div>
               )}
