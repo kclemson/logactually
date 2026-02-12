@@ -1,76 +1,28 @@
 
 
-## Curate "Ask AI" Prompt Chips for Nuanced Questions Only
+## Replace Input with Textarea in Ask AI Dialog
 
-### Principle
+### Change
 
-Remove questions that have a single correct/mathematical answer (or could be answered by the app's existing UI). Keep only questions where an LLM adds real value through reasoning, pattern recognition, and contextual advice.
-
-### Food Prompts
-
-**Remove (math/simple answers):**
-- "What's my average daily calorie intake?"
-- "Am I getting enough protein?"
-- "Do I eat more on weekends?"
-- "What's my macro split look like?"
-- "Am I eating enough fiber?"
-- "What's my highest calorie day?"
-- "Am I hitting a good protein-to-calorie ratio?"
-- "What are my most common foods?"
-
-**Keep:**
-- "How consistent is my eating pattern?"
-- "How has my diet changed over time?"
-- "Any patterns in my carb intake?"
-- "What could I improve about my diet?"
-- "Do I have any nutritional gaps?"
-- "How much variety is in my diet?"
-- "What days do I eat the most?" -- borderline, remove if you prefer
-
-**Add (nuanced replacements):**
-- "What nutrients am I consistently lacking?"
-- "Are there any surprising patterns in my eating?"
-- "How balanced are my meals throughout the day?"
-- "What healthy swaps could I make?"
-- "What's the weakest area of my diet?"
-- "Am I relying too heavily on any one food?"
-
-### Exercise Prompts
-
-**Remove (simple/answerable in app):**
-- "What's my most trained muscle group?"
-- "Am I making strength progress?"
-- "How consistent is my workout schedule?"
-- "How has my training volume changed?"
-- "Am I training enough each week?"
-- "What's my strongest lift?"
-- "How much cardio am I doing?"
-- "What does my workout frequency look like?"
-- "What's my average workout intensity?"
-- "How many calories am I burning?"
-- "What exercises have I improved the most?"
-
-**Keep:**
-- "What exercises should I do more?"
-- "Do I have any muscle imbalances?"
-- "Am I overtraining any body part?"
-- "Any gaps in my training program?"
-
-**Add (nuanced replacements):**
-- "How could I make my program more balanced?"
-- "What weak points should I prioritize?"
-- "Are there any patterns in my training I should change?"
-- "What would a trainer suggest I adjust?"
-- "Am I neglecting any movement patterns?"
-- "How could I improve my exercise variety?"
-
-### Result
-
-Each pool will have roughly 10-12 nuanced prompts (from which 4 are randomly shown). All questions will be ones where an LLM genuinely adds value through reasoning over the data.
+Replace the single-line `<input>` element with a `<Textarea>` component in `src/components/AskTrendsAIDialog.tsx` so users can see their full prompt without clipping, both while typing and while waiting for a response.
 
 ### Technical Details
 
-**File:** `src/components/AskTrendsAIDialog.tsx`
+**File: `src/components/AskTrendsAIDialog.tsx`**
 
-Replace the `FOOD_PROMPTS` array (lines 20-36) and `EXERCISE_PROMPTS` array (lines 38-54) with the curated lists above. No other changes needed.
+1. Import the existing `Textarea` component from `@/components/ui/textarea`.
+
+2. Replace the `<input>` element (around lines 106-115) with a `<Textarea>`:
+   - Remove `h-9` fixed height constraint
+   - Use `min-h-[60px] max-h-[120px] resize-none` for a compact but multi-line area
+   - Submit on Enter (without Shift) to preserve current UX; Shift+Enter for newlines
+   - Keep all existing props (value, onChange, placeholder, disabled, maxLength, autoFocus)
+
+3. Adjust the flex layout: change the container from `flex gap-2` (side-by-side) to a stacked layout with the button below or aligned to the bottom-right, since a textarea next to a button looks awkward.
+
+4. During the `isPending` state, the textarea remains visible (disabled) showing the full question text without clipping, since the textarea naturally wraps long text.
+
+| File | Change |
+|------|--------|
+| `src/components/AskTrendsAIDialog.tsx` | Replace `<input>` with `<Textarea>`, adjust layout for multi-line input |
 
