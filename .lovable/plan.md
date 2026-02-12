@@ -1,57 +1,26 @@
 
 
-## Add "Resolved" Status to Feedback
+## Fix: Show Resolved Indicator Even Without a Response
 
-### Overview
+### Problem
 
-Add a `resolved_at` timestamp column to the feedback table. Admins can mark feedback as resolved via a link in the admin UI. Resolved items move to a separate collapsed section. On the user side, resolved feedback shows a subtle "Resolved" badge so the user knows their issue was addressed.
+The "Resolved" badge is nested inside `{item.response && (...)}` (line 137 of FeedbackForm.tsx), so it only appears when admin has written a response. The resolved item in prod has no response text, so the badge never renders.
 
-### Database
+### Solution
 
-Add a `resolved_at` column to the `feedback` table (nullable timestamp, default null). No new RLS policies needed -- existing admin UPDATE and user SELECT policies cover it.
+Move the resolved indicator outside the response conditional block. Show it as a standalone element when `resolved_at` is set, regardless of whether a response exists.
 
-### Admin UI (Admin.tsx)
+### File: `src/components/FeedbackForm.tsx`
 
-- Split feedback into two lists: `open` (where `resolved_at` is null) and `resolved` (where it's set)
-- Show open feedback in the existing "Feedback" collapsible section (count updates to open only)
-- Add a "Resolve" link next to "Edit Reply" / "Reply" for each item
-- When clicked, sets `resolved_at` to now -- no confirmation dialog needed (simple toggle)
-- Show resolved items in a second collapsible section "Resolved (N)", collapsed by default
-- Resolved items show an "Unresolve" link to undo
+After the closing `</div>` of the message row (line 136), add a standalone resolved indicator before the response block:
 
-### User UI (FeedbackForm.tsx)
-
-- For feedback that has both a `response` and a `resolved_at`, show a small green "Resolved" label next to the response date
-- This gives the user a clear signal their issue was handled without being intrusive
-- No behavior change otherwise -- they can still delete their own feedback
-
-### Hook Changes
-
-- **FeedbackTypes.ts**: Add `resolved_at: string | null` to both `FeedbackWithUser` and `UserFeedback`
-- **FeedbackAdminList.ts**: Include `resolved_at` in the select query and map it through
-- **FeedbackUserHistory.ts**: Include `resolved_at` in the select query
-- **New hook `FeedbackResolve.ts`**: Simple mutation that updates `resolved_at` on a feedback row (set or clear). Invalidates `adminFeedback` query key.
-- **Export from `index.ts`**
-
-### Technical Details
-
-Migration SQL:
-```sql
-ALTER TABLE feedback ADD COLUMN resolved_at timestamptz DEFAULT NULL;
+```tsx
+{item.resolved_at && !item.response && (
+  <div className="ml-3 pl-3 border-l-2 border-green-500/30">
+    <span className="text-xs text-green-600 dark:text-green-400">✓ Resolved</span>
+  </div>
+)}
 ```
 
-Admin feedback splitting logic:
-```typescript
-const openFeedback = feedback?.filter(f => !f.resolved_at) ?? [];
-const resolvedFeedback = feedback?.filter(f => !!f.resolved_at) ?? [];
-```
-
-Resolve hook mutation:
-```typescript
-mutationFn: async ({ feedbackId, resolve }: { feedbackId: string; resolve: boolean }) => {
-  await supabase.from('feedback')
-    .update({ resolved_at: resolve ? new Date().toISOString() : null })
-    .eq('id', feedbackId);
-}
-```
+The existing resolved badge inside the response block (lines 142-144) stays as-is for items that have both a response and a resolved status.
 
