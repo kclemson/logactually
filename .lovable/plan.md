@@ -1,40 +1,32 @@
 
 
-## Two Fixes: Date Button Contrast + Shared Persistent Date
+## Fix: Calorie Burn Dialog Not Dismissable on Small Screens
 
-### Fix 1: Date text invisible in light theme
+### Problem
 
-Both `FoodLog.tsx` and `WeightLog.tsx` hardcode `text-white` on the date picker button. This is invisible against a light background.
+The CalorieBurnDialog contains a lot of content (toggle, preview, biometric inputs, workout defaults, explanatory text). On smaller Android phones, the dialog overflows the viewport vertically. Since `DialogContent` uses `fixed` positioning with `top-[50%] translate-y-[-50%]`, the content extends past the screen edges with no scroll, making the close button (or parts of the dialog) unreachable.
 
-**Fix**: Replace `text-white` with `text-foreground` so it adapts to the current theme. Keep the underline styling. Also update the `decoration-white` to `decoration-foreground` so the underline matches.
+### Solution
 
-**Files**: `src/pages/FoodLog.tsx` (line 714), `src/pages/WeightLog.tsx` (line 608)
+Add `max-h-[85vh] overflow-y-auto` to the dialog content so it becomes scrollable when it exceeds the viewport height. This keeps the dialog centered but constrains it to 85% of the viewport, with internal scrolling for overflow.
 
-### Fix 2: Persist selected date across page navigations
+### Technical Details
 
-Currently, each page reads `?date=` from the URL. When the user navigates to another tab (e.g., Food to Exercise), the URL resets and the date goes back to today.
+**File**: `src/components/CalorieBurnDialog.tsx` (line 310)
 
-**Approach**: Store the selected date in `localStorage` under a key like `selectedDate`. When either page loads without a `?date=` param, check localStorage for a stored date. When the user changes the date (via arrows or calendar), write it to localStorage. When returning to "today", clear the stored value.
+Update the `DialogContent` className to add max-height and overflow:
 
-This is simpler and more reliable than a React context (which would lose state on refresh) and avoids URL coupling between routes.
+```
+Before:
+className="left-2 right-2 translate-x-0 w-auto max-w-[calc(100vw-16px)] p-4 sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md"
 
-**Implementation**:
+After:
+className="left-2 right-2 translate-x-0 w-auto max-w-[calc(100vw-16px)] max-h-[85vh] overflow-y-auto p-4 sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md"
+```
 
-1. Create a small shared utility `src/lib/selected-date.ts` with:
-   - `getStoredDate(): string | null` -- reads from localStorage, returns null if it's in the future or invalid
-   - `setStoredDate(dateStr: string): void` -- writes to localStorage (clears if it's today)
-
-2. Update the wrapper components in both `FoodLog.tsx` and `WeightLog.tsx`:
-   - When determining `dateKey`: check URL param first, then localStorage, then today
-   - When navigating dates (arrows, calendar, "Go to Today"): call `setStoredDate` in addition to `setSearchParams`
-
-3. Update `History.tsx` `handleDayClick`: also call `setStoredDate` so clicking a calendar day persists when landing on Food/Exercise
-
-### Files Changed
+This is a single-line change. The `85vh` cap leaves room for the system chrome (status bar, navigation bar) on Android devices, and `overflow-y-auto` enables scrolling only when needed.
 
 | File | Change |
 |------|--------|
-| `src/pages/FoodLog.tsx` | Fix `text-white` to `text-foreground`; read/write stored date |
-| `src/pages/WeightLog.tsx` | Fix `text-white` to `text-foreground`; read/write stored date |
-| `src/lib/selected-date.ts` | Create -- `getStoredDate` / `setStoredDate` helpers |
-| `src/pages/History.tsx` | Call `setStoredDate` on day click |
+| `src/components/CalorieBurnDialog.tsx` | Add `max-h-[85vh] overflow-y-auto` to DialogContent |
+
