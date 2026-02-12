@@ -107,7 +107,7 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
   return (
     <Dialog open onOpenChange={onOpenChange}>
       <DialogContent
-        className="left-2 right-2 translate-x-0 w-auto max-w-[calc(100vw-16px)] p-3 sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md"
+        className="left-2 right-2 translate-x-0 w-auto max-w-[calc(100vw-16px)] max-h-[85vh] overflow-y-auto p-3 sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md"
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogTitle className="text-sm font-medium flex items-center gap-1.5">
