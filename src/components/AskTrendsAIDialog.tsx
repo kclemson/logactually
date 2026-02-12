@@ -50,7 +50,6 @@ const FOOD_PROMPTS = [
 const EXERCISE_PROMPTS = [
   "What exercises should I do more often?",
   "How would you restructure my week for better recovery without reducing total activity?",
-  "Are there asymmetries or neglected muscle groups in my training?",
   "How could I make my program more balanced?",
   "Are there any patterns in my training I should consider changing?",
   "Can you give me suggestions of other exercises I might like that are similar to the ones I do regularly?",
@@ -62,7 +61,7 @@ const EXERCISE_PROMPTS = [
   "What tradeoffs am I making between performance, recovery, and body composition?",
   "What invisible cost might I be paying for my current approach?",
   "Where am I pushing hard without seeing proportional return?",
-  "What would I need to give up to improve faster?",
+  "What would I need to change to improve faster?",
 ];
 
 function pickRandom<T>(arr: T[], count: number): T[] {
@@ -209,9 +208,7 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
           {/* Response */}
           {data?.answer && (
             <div className="space-y-3">
-              {submittedQuestion && (
-                <p className="text-xs text-muted-foreground italic">"{submittedQuestion}"</p>
-              )}
+              {submittedQuestion && <p className="text-xs text-muted-foreground italic">"{submittedQuestion}"</p>}
               <div
                 className="text-xs text-foreground whitespace-pre-wrap leading-snug p-2 rounded-md bg-muted/50 max-h-[50vh] overflow-y-auto [&_strong]:font-semibold"
                 dangerouslySetInnerHTML={{
