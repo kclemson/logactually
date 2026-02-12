@@ -1,26 +1,57 @@
 
 
-## Add Shared Prompt Chips Across Food and Exercise
+## Add "Resolved" Status to Feedback
 
-### What Changes
+### Overview
 
-In `src/components/AskTrendsAIDialog.tsx`, introduce a new `SHARED_PROMPTS` array containing the four cross-cutting prompts, and remove those same prompts from `FOOD_PROMPTS` and `EXERCISE_PROMPTS` where they currently appear.
+Add a `resolved_at` timestamp column to the feedback table. Admins can mark feedback as resolved via a link in the admin UI. Resolved items move to a separate collapsed section. On the user side, resolved feedback shows a subtle "Resolved" badge so the user knows their issue was addressed.
 
-### Details
+### Database
 
-1. Add a new constant `SHARED_PROMPTS` with these four items:
-   - "What assumptions might I be making that my logs challenge?"
-   - "Do you have suggestions for simple swaps or improvements I could make?"
-   - "If I stopped improving for 6 months, what would likely be the reason based on this data"
-   - "What behavioral patterns might I not be noticing?"
+Add a `resolved_at` column to the `feedback` table (nullable timestamp, default null). No new RLS policies needed -- existing admin UPDATE and user SELECT policies cover it.
 
-2. Remove those four strings from `FOOD_PROMPTS` and `EXERCISE_PROMPTS` (currently duplicated across both).
+### Admin UI (Admin.tsx)
 
-3. Update the `chips` memo to combine the shared and mode-specific pools before picking 4 random chips:
-   ```
-   const pool = [...SHARED_PROMPTS, ...(mode === "food" ? FOOD_PROMPTS : EXERCISE_PROMPTS)];
-   return pickRandom(pool, 4);
-   ```
+- Split feedback into two lists: `open` (where `resolved_at` is null) and `resolved` (where it's set)
+- Show open feedback in the existing "Feedback" collapsible section (count updates to open only)
+- Add a "Resolve" link next to "Edit Reply" / "Reply" for each item
+- When clicked, sets `resolved_at` to now -- no confirmation dialog needed (simple toggle)
+- Show resolved items in a second collapsible section "Resolved (N)", collapsed by default
+- Resolved items show an "Unresolve" link to undo
 
-This keeps the same UX (4 random chips per open) but ensures the cross-cutting prompts can appear in either mode without duplication.
+### User UI (FeedbackForm.tsx)
+
+- For feedback that has both a `response` and a `resolved_at`, show a small green "Resolved" label next to the response date
+- This gives the user a clear signal their issue was handled without being intrusive
+- No behavior change otherwise -- they can still delete their own feedback
+
+### Hook Changes
+
+- **FeedbackTypes.ts**: Add `resolved_at: string | null` to both `FeedbackWithUser` and `UserFeedback`
+- **FeedbackAdminList.ts**: Include `resolved_at` in the select query and map it through
+- **FeedbackUserHistory.ts**: Include `resolved_at` in the select query
+- **New hook `FeedbackResolve.ts`**: Simple mutation that updates `resolved_at` on a feedback row (set or clear). Invalidates `adminFeedback` query key.
+- **Export from `index.ts`**
+
+### Technical Details
+
+Migration SQL:
+```sql
+ALTER TABLE feedback ADD COLUMN resolved_at timestamptz DEFAULT NULL;
+```
+
+Admin feedback splitting logic:
+```typescript
+const openFeedback = feedback?.filter(f => !f.resolved_at) ?? [];
+const resolvedFeedback = feedback?.filter(f => !!f.resolved_at) ?? [];
+```
+
+Resolve hook mutation:
+```typescript
+mutationFn: async ({ feedbackId, resolve }: { feedbackId: string; resolve: boolean }) => {
+  await supabase.from('feedback')
+    .update({ resolved_at: resolve ? new Date().toISOString() : null })
+    .eq('id', feedbackId);
+}
+```
 
