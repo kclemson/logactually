@@ -55,7 +55,6 @@ const EXERCISE_PROMPTS = [
   "How could I make my program more balanced?",
   "Are there any patterns in my training I should consider changing?",
   "Can you give me suggestions of other exercises I might like that are similar to the ones I do regularly?",
-  "What would a trainer suggest I adjust?",
   "Am I neglecting any movement patterns?",
   "If my goal is muscle gain, what in my current routine would you modify first?",
   "If my goal is overall health and flexibility, what do you think I should change?",
