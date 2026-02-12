@@ -1,13 +1,13 @@
-import { useState, useMemo } from 'react';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Sparkles } from 'lucide-react';
-import { useAskTrendsAI } from '@/hooks/useAskTrendsAI';
-import { useUserSettings } from '@/hooks/useUserSettings';
-import { formatProfileStatsSummary } from '@/lib/calorie-burn';
+import { useState, useMemo } from "react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, Sparkles } from "lucide-react";
+import { useAskTrendsAI } from "@/hooks/useAskTrendsAI";
+import { useUserSettings } from "@/hooks/useUserSettings";
+import { formatProfileStatsSummary } from "@/lib/calorie-burn";
 
-type Mode = 'food' | 'exercise';
+type Mode = "food" | "exercise";
 
 interface AskTrendsAIDialogProps {
   mode: Mode;
@@ -25,9 +25,11 @@ const FOOD_PROMPTS = [
   "What patterns do you notice in how I eat on high-calorie vs low-calorie days?",
   "Can you give me ideas for some new snack foods that fit my existing eating patterns?",
   "Based on my logs, when am I most likely to overeat?",
+  "What assumptions might I be making that my logs challenge?",
   "Do you have suggestions for simple swaps or improvements I could make?",
   "How stable does my daily intake look week to week?",
   "What's the weakest area of my diet?",
+  "If I stopped improving for 6 months, what would likely be the reason based on this data",
   "If I continue eating like this, what trajectory would you predict over the next 3 months?",
 ];
 
@@ -36,6 +38,9 @@ const EXERCISE_PROMPTS = [
   "How would you restructure my week for better recovery without reducing total activity?",
   "Are there asymmetries or neglected muscle groups in my training?",
   "Am I overtraining any body part?",
+  "What behavioral patterns might I not be noticing?",
+  "What assumptions might I be making that my logs challenge?",
+  "If I stopped improving for 6 months, what would likely be the reason based on this data",
   "How could I make my program more balanced?",
   "Are there any patterns in my training I should consider changing?",
   "Can you give me suggestions of other exercises I might like that are similar to the ones I do regularly?",
@@ -63,13 +68,13 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
   const { settings } = useUserSettings();
   const { mutate, isPending, data, error, reset } = useAskTrendsAI();
 
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [includeProfile, setIncludeProfile] = useState(true);
 
   const profileSummary = useMemo(() => formatProfileStatsSummary(settings), [settings]);
 
   const chips = useMemo(() => {
-    const pool = mode === 'food' ? FOOD_PROMPTS : EXERCISE_PROMPTS;
+    const pool = mode === "food" ? FOOD_PROMPTS : EXERCISE_PROMPTS;
     return pickRandom(pool, 4);
   }, [mode]);
 
@@ -81,16 +86,17 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
 
   const handleAskAnother = () => {
     reset();
-    setInput('');
+    setInput("");
   };
 
-  const title = mode === 'food'
-    ? 'Ask AI about your food trends'
-    : 'Ask AI about your exercise trends';
+  const title = mode === "food" ? "Ask AI about your food trends" : "Ask AI about your exercise trends";
 
   return (
     <Dialog open onOpenChange={onOpenChange}>
-      <DialogContent className="left-2 right-2 translate-x-0 w-auto max-w-[calc(100vw-16px)] p-3 sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+      <DialogContent
+        className="left-2 right-2 translate-x-0 w-auto max-w-[calc(100vw-16px)] p-3 sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md"
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogTitle className="text-sm font-medium flex items-center gap-1.5">
           <Sparkles className="h-4 w-4" />
           {title}
@@ -122,7 +128,7 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
+                  if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
                     handleSubmit(input);
                   }
@@ -140,7 +146,7 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
                   disabled={!input.trim() || isPending}
                   className="h-9"
                 >
-                  {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Ask'}
+                  {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Ask"}
                 </Button>
               </div>
             </div>
@@ -172,7 +178,7 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
           {/* Error */}
           {error && (
             <div className="text-sm text-destructive p-3 rounded-md bg-destructive/10">
-              {error.message || 'Something went wrong. Please try again.'}
+              {error.message || "Something went wrong. Please try again."}
             </div>
           )}
 
@@ -184,18 +190,22 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
                 dangerouslySetInnerHTML={{
                   __html: (() => {
                     const escaped = data.answer
-                      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-                      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+                      .replace(/&/g, "&amp;")
+                      .replace(/</g, "&lt;")
+                      .replace(/>/g, "&gt;")
+                      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
                     // Convert lines starting with * or - into <ul><li> blocks
                     return escaped.replace(/((?:^|\n)(?:[*\-] .+(?:\n|$))+)/g, (block) => {
-                      const items = block.trim().split('\n')
-                        .map(line => line.replace(/^[*\-] /, '').trim())
+                      const items = block
+                        .trim()
+                        .split("\n")
+                        .map((line) => line.replace(/^[*\-] /, "").trim())
                         .filter(Boolean)
-                        .map(item => `<li>${item}</li>`)
-                        .join('');
+                        .map((item) => `<li>${item}</li>`)
+                        .join("");
                       return `\n<ul class="list-disc ml-4 my-1">${items}</ul>\n`;
                     });
-                  })()
+                  })(),
                 }}
               />
               <Button variant="outline" size="sm" onClick={handleAskAnother} className="w-full">
