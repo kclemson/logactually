@@ -1,12 +1,16 @@
 
 
-## Simplify AI Response Language
+## Remove Default Intensity from AI Profile Context
 
 ### Change
 
-**File:** `supabase/functions/ask-trends-ai/index.ts` (line 166)
+**File:** `supabase/functions/ask-trends-ai/index.ts` (around line 148)
 
-Add one sentence to the system prompt: `"Use plain, everyday language — avoid gym jargon and technical fitness terminology."`
+Remove the line that appends `defaultIntensity` to the profile context parts array:
 
-No examples needed — the model understands what plain language means. No other files change.
+```
+if (s.defaultIntensity) parts.push(`Default workout intensity: ${s.defaultIntensity}/10`);
+```
+
+The remaining profile fields sent will be: body weight, height, age, and body composition. No other files change.
 
