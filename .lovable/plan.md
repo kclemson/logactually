@@ -1,19 +1,21 @@
 
 
-## Reduce PCF Chart Grid Gap
+## Reduce Side Padding on the Trends Page Only
 
-A single-line change to see if tighter spacing prevents the subtitle from wrapping.
+Rather than making the PCF charts compact (which would misalign them with other charts), we reduce the effective side padding for the entire Trends page. This keeps all charts aligned while giving more horizontal room for subtitles.
+
+### Approach
+
+Add a small negative horizontal margin to the Trends page root container. The Layout provides `px-3` (12px) globally. We add `-mx-1` (-4px) on the Trends page, bringing the effective padding down to 8px per side -- recovering 8px total width without touching other pages.
 
 ### Change
 
-**File: `src/pages/Trends.tsx`** (line 768)
-
-Change the PCF row grid gap from `gap-3` (12px) to `gap-1` (4px):
+**File: `src/pages/Trends.tsx`** (line 693)
 
 ```
-- <div className="grid grid-cols-3 gap-3">
-+ <div className="grid grid-cols-3 gap-1">
+- <div className="space-y-6">
++ <div className="space-y-6 -mx-1">
 ```
 
-This frees up 16px total across the two gutters, which should give enough room for the subtitle text to stay on one line. If it still wraps, we can also shorten the label format.
+This uniformly reduces padding for all Trends content (period buttons, Food Trends, Exercise Trends), keeping everything aligned. Combined with the existing `gap-1` on the PCF row, the subtitles should comfortably fit on one line.
 
