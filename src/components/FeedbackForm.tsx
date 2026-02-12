@@ -105,6 +105,9 @@ export function FeedbackForm() {
                   <span className="text-xs text-muted-foreground">
                     {format(parseISO(item.created_at), "MMM d, yyyy")}
                   </span>
+                  {item.resolved_at && !item.response && (
+                    <span className="text-xs text-green-600 dark:text-green-400">✓ Resolved</span>
+                  )}
                   <p className="whitespace-pre-wrap">{item.message}</p>
                 </div>
                 <AlertDialog>
@@ -134,11 +137,6 @@ export function FeedbackForm() {
                   </AlertDialogContent>
               </AlertDialog>
               </div>
-              {item.resolved_at && !item.response && (
-                <div className="ml-3 pl-3 border-l-2 border-green-500/30">
-                  <span className="text-xs text-green-600 dark:text-green-400">✓ Resolved</span>
-                </div>
-              )}
               {item.response && (
                 <div className="ml-3 pl-3 border-l-2 border-primary/30">
                   <span className="text-xs text-muted-foreground">
