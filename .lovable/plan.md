@@ -1,10 +1,15 @@
 
 
-## Update "Reopen" Button Text and Color
+## Always Show "Resolved" Next to the Date
 
 ### File: `src/components/FeedbackForm.tsx`
 
-1. Change the button text from "Reopen" to "Re-open"
-2. Change the color from `text-primary` (blue) to something more subtle/distinct -- use `text-orange-500 hover:text-orange-600` to convey "action needed" without clashing with the green resolved badge
-3. Update the "Send & Reopen" button label to "Send & Re-open" for consistency
+1. **Line ~125**: Remove the `!item.response` condition so the resolved badge always appears next to the date:
+   ```tsx
+   {item.resolved_at && (
+     <span className="ml-2 text-xs text-green-600 dark:text-green-400">✓ Resolved</span>
+   )}
+   ```
+
+2. **Line ~192** (inside the response block): Remove the duplicate resolved badge that currently shows below the response timestamp. This eliminates the redundancy since it will always be shown next to the date now.
 
