@@ -809,64 +809,67 @@ export function WeightItemsTable({
                         Logged as: {currentRawInput}
                       </p>
                     )}
-                    {/* Show routine info if from saved routine, otherwise show "Save as routine" */}
-                    {isFromSavedRoutine ? (
-                      <p className="text-xs text-muted-foreground italic">
-                        From saved routine:{' '}
-                        {routineName ? (
-                          <Link 
-                            to="/settings" 
-                            className="text-blue-600 dark:text-blue-400 hover:underline"
-                          >
-                            {routineName}
-                          </Link>
-                        ) : (
-                          <span>(deleted)</span>
-                        )}
-                      </p>
-                    ) : onSaveAsRoutine && currentEntryId && (
-                      <button
-                        onClick={() => {
-                          // Gather all exercises in this entry
-                          const entryExercises = items.filter(i => i.entryId === currentEntryId);
-                          onSaveAsRoutine(currentEntryId, currentRawInput ?? null, entryExercises);
-                        }}
-                        className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-                      >
-                        Save as routine
-                      </button>
-                    )}
-                    {(() => {
-                      const entryExercises = items.filter(i => i.entryId === currentEntryId);
-                      const count = entryExercises.length;
-                      if (!onDeleteEntry || count < 2) return null;
-                      return (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <button className="text-xs text-destructive underline">
-                              Delete this group ({count} items)
-                            </button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-lg">
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete this group?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This will permanently remove {count} items: {entryExercises[0].description} to {entryExercises[count - 1].description}.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => onDeleteEntry!(currentEntryId!)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    <div className="flex items-center justify-between">
+                      <div>
+                        {/* Show routine info if from saved routine, otherwise show "Save as routine" */}
+                        {isFromSavedRoutine ? (
+                          <p className="text-xs text-muted-foreground italic">
+                            From saved routine:{' '}
+                            {routineName ? (
+                              <Link 
+                                to="/settings" 
+                                className="text-blue-600 dark:text-blue-400 hover:underline"
                               >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      );
-                    })()}
+                                {routineName}
+                              </Link>
+                            ) : (
+                              <span>(deleted)</span>
+                            )}
+                          </p>
+                        ) : onSaveAsRoutine && currentEntryId && (
+                          <button
+                            onClick={() => {
+                              const entryExercises = items.filter(i => i.entryId === currentEntryId);
+                              onSaveAsRoutine(currentEntryId, currentRawInput ?? null, entryExercises);
+                            }}
+                            className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                          >
+                            Save as routine
+                          </button>
+                        )}
+                      </div>
+                      {(() => {
+                        const entryExercises = items.filter(i => i.entryId === currentEntryId);
+                        const count = entryExercises.length;
+                        if (!onDeleteEntry || count < 2) return null;
+                        return (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <button className="text-xs text-destructive underline">
+                                Delete this group ({count} items)
+                              </button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-lg">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete this group?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently remove {count} items: {entryExercises[0].description} to {entryExercises[count - 1].description}.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => onDeleteEntry!(currentEntryId!)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        );
+                      })()}
+                    </div>
                   </div>
                 </div>
               );
