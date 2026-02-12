@@ -1,59 +1,38 @@
 
 
-## Fix: Food calorie field -- allow 0, revert on empty, fix mobile clearing
+## Add "Delete this group" for multi-item entries in both Food and Exercise logs
 
-**Current behavior** (confirmed by you):
-- Typing "0" and pressing Enter saves correctly
-- Backspacing to empty and pressing Enter saves an empty/invalid value (bug)
-- The onChange coerces empty to 0 immediately, making it hard to clear on mobile (same bug as weight fields)
+This adds a "Delete this group (N items)" link with a confirmation dialog to the expanded section of multi-item entries in both the Food log and Exercise log.
 
-**Note**: The onBlur handler currently has `numValue > 0` which silently discards 0 on blur -- this is actually a bug since 0-calorie foods are valid. The Enter handler has no guard, which is why 0 works today (via Enter only).
+### Changes
 
-### Changes in `src/components/FoodItemsTable.tsx`
+**1. `src/components/FoodItemsTable.tsx` -- expanded section (around lines 693-703)**
 
-**1. onChange (line 562)** -- Allow empty string while typing:
-```ts
-// Before
-value: parseInt(e.target.value, 10) || 0
+After the "Save as meal" / saved meal info block, add a "Delete this group (N items)" link that:
+- Only renders when `onDeleteEntry` is provided AND the entry has 2+ items
+- Shows in red/destructive color
+- Opens an AlertDialog confirmation with:
+  - Title: "Delete this group?"
+  - Description: "This will permanently remove N items: [first description] to [last description]."
+  - Cancel and Delete buttons
+- On confirm, calls `onDeleteEntry!(entryId)`
 
-// After
-value: e.target.value === '' ? '' : parseInt(e.target.value, 10) || 0
-```
+Layout becomes a flex row with gap between "Save as meal" and "Delete this group (N items)".
 
-**2. Enter handler (lines 145-164)** -- Skip save if empty, allow 0:
-```ts
-// Before
-if (editingCell && editingCell.value !== editingCell.originalValue) {
-  if (field === 'calories') { ... }
-  else { onUpdateItem?.(index, field, editingCell.value); }
-}
+**2. `src/components/WeightItemsTable.tsx` -- expanded section (around lines 827-838)**
 
-// After
-if (editingCell && editingCell.value !== editingCell.originalValue && editingCell.value !== '') {
-  if (field === 'calories') { ... }
-  else { onUpdateItem?.(index, field, editingCell.value); }
-}
-```
-Adding `&& editingCell.value !== ''` means empty reverts, but 0 passes through.
+Same pattern: after the "Save as routine" / routine info block, add a "Delete this group (N items)" link that:
+- Only renders when `onDeleteEntry` is provided AND `entryExercises.length > 1`
+- Same destructive styling and AlertDialog confirmation
+- Description: "This will permanently remove N items: [first description] to [last description]."
+- On confirm, calls `onDeleteEntry!(currentEntryId!)`
 
-**3. onBlur (line 569)** -- Change guard from `numValue > 0` to `editingCell.value !== ''`:
-```ts
-// Before
-if (numValue > 0) {
+### What stays the same
 
-// After
-if (editingCell.value !== '' && editingCell.value !== undefined) {
-```
-This fixes the inconsistency where 0 could be saved via Enter but not via blur.
+- Single-item entries: no "Delete this group" link shown (users use the per-row trash icon)
+- Existing per-row and per-entry trash icon behavior unchanged
+- No new props, callbacks, or files needed
+- AlertDialog components already imported in both files
 
-### Result
+### Two files changed, same pattern in each.
 
-| Action | Result |
-|---|---|
-| Clear field, press Enter | Reverts to original |
-| Clear field, tap away (blur) | Reverts to original |
-| Clear field, type "0", Enter/blur | Saves 0 |
-| Clear field, type "150", Enter/blur | Saves 150 |
-| Backspace on mobile | Field stays empty (no auto-"0") |
-
-Three small changes in one file.
