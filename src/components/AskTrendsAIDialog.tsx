@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Sparkles, RefreshCw } from "lucide-react";
 import { useAskTrendsAI } from "@/hooks/useAskTrendsAI";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { formatProfileStatsSummary } from "@/lib/calorie-burn";
@@ -87,10 +87,9 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
 
   const profileSummary = useMemo(() => formatProfileStatsSummary(settings), [settings]);
 
-  const chips = useMemo(() => {
-    const pool = [...SHARED_PROMPTS, ...(mode === "food" ? FOOD_PROMPTS : EXERCISE_PROMPTS)];
-    return pickRandom(pool, 4);
-  }, [mode]);
+  const pool = useMemo(() => [...SHARED_PROMPTS, ...(mode === "food" ? FOOD_PROMPTS : EXERCISE_PROMPTS)], [mode]);
+  const [chips, setChips] = useState(() => pickRandom(pool, 4));
+  const refreshChips = () => setChips(pickRandom(pool, 4));
 
   const handleSubmit = (question: string) => {
     if (!question.trim() || isPending) return;
@@ -119,7 +118,7 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
         <div className="space-y-3 mt-2">
           {/* Prompt chips (only show before a response) */}
           {!data?.answer && !isPending && (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1.5 items-center">
               {chips.map((chip) => (
                 <button
                   key={chip}
@@ -132,6 +131,13 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
                   {chip}
                 </button>
               ))}
+              <button
+                onClick={refreshChips}
+                className="p-1 rounded-full border border-border bg-muted/50 hover:bg-muted transition-colors"
+                aria-label="Refresh suggestions"
+              >
+                <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
             </div>
           )}
 
