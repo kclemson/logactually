@@ -91,7 +91,10 @@ export function AskAiPromptEval() {
   const copyApproved = (mode: 'food' | 'exercise') => {
     const approved = results
       .filter(r => r.mode === mode && r.approved)
-      .map(r => `  "${r.prompt}",`);
+      .map(r => {
+        const clean = r.prompt.replace(/[\u201C\u201D]/g, '"');
+        return `  "${clean}",`;
+      });
     if (approved.length === 0) return;
     navigator.clipboard.writeText(approved.join('\n'));
   };
