@@ -116,7 +116,7 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
           {!data?.answer && !isPending && (
             <button
               onClick={refreshChips}
-              className="absolute right-12 top-4 p-1 rounded-full border border-border bg-muted/50 hover:bg-muted transition-colors"
+              className="absolute right-12 top-4 p-1 rounded-full border border-border bg-muted/50 hover:bg-muted active:scale-75 transition-all duration-150"
               aria-label="Refresh suggestions"
             >
               <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />
