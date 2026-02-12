@@ -596,7 +596,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
       </section>
 
       {/* Date Navigation */}
-      <div className="flex items-center justify-center gap-1">
+      <div className="flex items-center justify-center gap-1 relative">
         <Button variant="ghost" size="icon" onClick={goToPreviousDay} className="h-11 w-11" aria-label="Previous day">
           <ChevronLeft className="h-5 w-5" />
         </Button>
@@ -658,7 +658,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
         </Button>
         {!isTodaySelected && (
           <button
-            className="text-sm text-primary hover:underline ml-1"
+            className="text-sm text-primary hover:underline absolute right-0 top-1/2 -translate-y-1/2"
             onClick={() => {
               setStoredDate(format(new Date(), 'yyyy-MM-dd'));
               setSearchParams({}, { replace: true });
