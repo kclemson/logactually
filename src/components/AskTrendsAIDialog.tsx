@@ -82,6 +82,7 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
   const { mutate, isPending, data, error, reset } = useAskTrendsAI();
 
   const [input, setInput] = useState("");
+  const [submittedQuestion, setSubmittedQuestion] = useState("");
   const [includeProfile, setIncludeProfile] = useState(true);
 
   const profileSummary = useMemo(() => formatProfileStatsSummary(settings), [settings]);
@@ -93,12 +94,14 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
   const handleSubmit = (question: string) => {
     if (!question.trim() || isPending) return;
     reset();
+    setSubmittedQuestion(question.trim());
     mutate({ question: question.trim(), mode, includeProfile: profileSummary ? includeProfile : false });
   };
 
   const handleAskAnother = () => {
     reset();
     setInput("");
+    setSubmittedQuestion("");
   };
 
   const title = mode === "food" ? "Ask AI about your food trends" : "Ask AI about your exercise trends";
@@ -206,6 +209,9 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
           {/* Response */}
           {data?.answer && (
             <div className="space-y-3">
+              {submittedQuestion && (
+                <p className="text-xs text-muted-foreground italic">"{submittedQuestion}"</p>
+              )}
               <div
                 className="text-xs text-foreground whitespace-pre-wrap leading-snug p-2 rounded-md bg-muted/50 max-h-[50vh] overflow-y-auto [&_strong]:font-semibold"
                 dangerouslySetInnerHTML={{
