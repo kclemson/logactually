@@ -1,37 +1,28 @@
 
 
-## Improve Calorie Burn Chart Y-Axis to Better Show Bar Heights
+## Fix Calorie Burn Chart Bar Visibility
 
-Currently the Y-axis starts at 0, which makes the floating calorie-burn bands look like thin slivers (as seen in the screenshot). By setting the Y-axis minimum to roughly `min(low) - 50`, the bars will have visible height differences while still accurately representing the range.
+The YAxis domain change alone doesn't work because Recharts stacked bars always accumulate from 0. The transparent `base` bar still goes from 0 to `low` (e.g., 130), consuming most of the chart height and leaving the visible `band` as a sliver.
+
+### Solution
+
+Subtract the computed `yMin` from each data point's `base` value so the transparent portion is shorter. The visible `band` stays the same, but it now sits much closer to the bottom of the chart, making height differences clearly visible.
 
 ### Changes
 
 **File: `src/components/trends/CalorieBurnChart.tsx`**
 
-1. Compute the Y-axis floor from the chart data:
-   - Find the minimum `low` value across all data points
-   - Subtract 50 and floor to nearest 50 (e.g., min low of 180 becomes 100; min low of 310 becomes 250)
-   - Use this as the Y-axis domain minimum
-
-2. Add a hidden `<YAxis>` component with `domain={[yMin, 'auto']}` and `hide` to control the scale without showing axis labels (keeping the compact layout)
-
-3. Update the `base` values: Since the Y-axis no longer starts at 0, the transparent base bar values stay as-is -- Recharts will handle the domain shift. However, since stacked bars always render from 0, the cleaner approach is to adjust the `base` values by subtracting `yMin` from each, and set the YAxis domain to `[0, 'auto']` offset. Actually, the simplest correct approach: just set a YAxis with `domain={[yMin, 'dataMax']}` and Recharts will clip the bars at the floor.
-
-### Technical Detail
+Transform the incoming `chartData` to adjust `base` values relative to `yMin`:
 
 ```tsx
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-
-// Inside the component:
-const yMin = useMemo(() => {
-  if (chartData.length === 0) return 0;
-  const minLow = Math.min(...chartData.map(d => d.low));
-  return Math.max(0, Math.floor((minLow - 50) / 50) * 50);
-}, [chartData]);
-
-// In the BarChart:
-<YAxis domain={[yMin, 'dataMax + 20']} hide />
+const adjustedData = useMemo(() => {
+  return chartData.map(d => ({
+    ...d,
+    base: d.base - yMin,
+  }));
+}, [chartData, yMin]);
 ```
 
-This adds a `YAxis` (hidden, so no visual clutter) that shifts the bottom of the scale up, making the calorie burn bands visually prominent. The `dataMax + 20` gives a small top padding. The floor is clamped to 0 minimum and rounded to nearest 50 for clean scaling.
+Then use `adjustedData` instead of `chartData` as the `data` prop on `<BarChart>`. The tooltip and click handlers still reference the original `chartData` array (via index) so the displayed values remain correct.
 
+Update the YAxis domain to `[0, 'dataMax + 20']` since the data is now pre-adjusted (or simply remove the custom domain).
