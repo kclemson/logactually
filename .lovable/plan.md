@@ -1,28 +1,40 @@
 
 
-## Fixes and Prompt Chip Refinement
+## Two Fixes: Date Button Contrast + Shared Persistent Date
 
-### Fix 1: Hide checkbox while request is pending
+### Fix 1: Date text invisible in light theme
 
-Change the checkbox visibility condition from `!data?.answer` to `!data?.answer && !isPending` so it disappears as soon as the user submits.
+Both `FoodLog.tsx` and `WeightLog.tsx` hardcode `text-white` on the date picker button. This is invisible against a light background.
 
-**File**: `src/components/AskTrendsAIDialog.tsx` (line 149)
+**Fix**: Replace `text-white` with `text-foreground` so it adapts to the current theme. Keep the underline styling. Also update the `decoration-white` to `decoration-foreground` so the underline matches.
 
-### Fix 2: Parse markdown in AI response
+**Files**: `src/pages/FoodLog.tsx` (line 714), `src/pages/WeightLog.tsx` (line 608)
 
-Replace the raw `{data.answer}` text rendering with a simple function that converts `**bold**` markdown to `<strong>` tags. This avoids adding a new dependency -- a lightweight regex replacement is sufficient since the AI responses only use bold formatting.
+### Fix 2: Persist selected date across page navigations
 
-**File**: `src/components/AskTrendsAIDialog.tsx` (line 181)
+Currently, each page reads `?date=` from the URL. When the user navigates to another tab (e.g., Food to Exercise), the URL resets and the date goes back to today.
 
-### Fix 3: Refine prompt chip libraries
+**Approach**: Store the selected date in `localStorage` under a key like `selectedDate`. When either page loads without a `?date=` param, check localStorage for a stored date. When the user changes the date (via arrows or calendar), write it to localStorage. When returning to "today", clear the stored value.
 
-Replace the current prompt lists with curated ones focused on insights that are NOT already visible in the app's charts. The guiding principle: prompts should help users discover things only AI cross-referencing can surface.
+This is simpler and more reliable than a React context (which would lose state on refresh) and avoids URL coupling between routes.
 
-Awaiting user input on which prompts to keep/cut/add before finalizing the exact lists. The current candidates marked for removal are those answering questions already visible in the app UI (average calorie intake, macro split, highest calorie day, strongest lift, workout frequency, calories burned).
+**Implementation**:
 
-### Files changed
+1. Create a small shared utility `src/lib/selected-date.ts` with:
+   - `getStoredDate(): string | null` -- reads from localStorage, returns null if it's in the future or invalid
+   - `setStoredDate(dateStr: string): void` -- writes to localStorage (clears if it's today)
+
+2. Update the wrapper components in both `FoodLog.tsx` and `WeightLog.tsx`:
+   - When determining `dateKey`: check URL param first, then localStorage, then today
+   - When navigating dates (arrows, calendar, "Go to Today"): call `setStoredDate` in addition to `setSearchParams`
+
+3. Update `History.tsx` `handleDayClick`: also call `setStoredDate` so clicking a calendar day persists when landing on Food/Exercise
+
+### Files Changed
 
 | File | Change |
 |------|--------|
-| `src/components/AskTrendsAIDialog.tsx` | Hide checkbox during pending; parse bold markdown in response; update prompt lists |
-
+| `src/pages/FoodLog.tsx` | Fix `text-white` to `text-foreground`; read/write stored date |
+| `src/pages/WeightLog.tsx` | Fix `text-white` to `text-foreground`; read/write stored date |
+| `src/lib/selected-date.ts` | Create -- `getStoredDate` / `setStoredDate` helpers |
+| `src/pages/History.tsx` | Call `setStoredDate` on day click |
