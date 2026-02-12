@@ -178,9 +178,20 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
               <div
                 className="text-sm text-foreground whitespace-pre-wrap leading-relaxed p-3 rounded-md bg-muted/50 max-h-[50vh] overflow-y-auto [&_strong]:font-semibold"
                 dangerouslySetInnerHTML={{
-                  __html: data.answer
-                    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-                    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                  __html: (() => {
+                    const escaped = data.answer
+                      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+                    // Convert lines starting with * or - into <ul><li> blocks
+                    return escaped.replace(/((?:^|\n)(?:[*\-] .+(?:\n|$))+)/g, (block) => {
+                      const items = block.trim().split('\n')
+                        .map(line => line.replace(/^[*\-] /, '').trim())
+                        .filter(Boolean)
+                        .map(item => `<li>${item}</li>`)
+                        .join('');
+                      return `\n<ul class="list-disc ml-4 my-1">${items}</ul>\n`;
+                    });
+                  })()
                 }}
               />
               <Button variant="outline" size="sm" onClick={handleAskAnother} className="w-full">
