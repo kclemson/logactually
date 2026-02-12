@@ -132,8 +132,13 @@ export function FeedbackForm() {
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
-                </AlertDialog>
+              </AlertDialog>
               </div>
+              {item.resolved_at && !item.response && (
+                <div className="ml-3 pl-3 border-l-2 border-green-500/30">
+                  <span className="text-xs text-green-600 dark:text-green-400">✓ Resolved</span>
+                </div>
+              )}
               {item.response && (
                 <div className="ml-3 pl-3 border-l-2 border-primary/30">
                   <span className="text-xs text-muted-foreground">
