@@ -1,13 +1,25 @@
 
 
-## Reduce Chips to 4
+## Remove Admin Gate from Ask AI Feature
 
-**File: `src/components/AskTrendsAIDialog.tsx`**
+**File: `src/pages/Trends.tsx`**
 
-Two lines to change -- revert the chip count from 8 back to 4:
+Two lines to change -- remove the `isAdmin ?` conditional wrapping the "Ask AI" buttons so they show for all users:
 
-1. **Line 99**: `const [chips, setChips] = useState(() => pickRandom(pool, 4));`
-2. **Line 100**: `const refreshChips = () => setChips(pickRandom(pool, 4));`
+### Line 711 (Food Trends header action)
 
-The fixed container height (`h-[10.5rem]`) stays as-is to prevent layout shifts.
+Replace:
+```tsx
+headerAction={isAdmin ? <button onClick={() => setFoodAIOpen(true)} className="text-xs text-primary hover:underline flex items-center gap-1">Ask AI</button> : undefined}
+```
+With:
+```tsx
+headerAction={<button onClick={() => setFoodAIOpen(true)} className="text-xs text-primary hover:underline flex items-center gap-1">Ask AI</button>}
+```
+
+### Line 787 (Exercise Trends header action)
+
+Same change -- remove the `isAdmin ?` ternary so the button always renders.
+
+Two edits, same file. No backend changes needed since the edge function already authenticates any logged-in user.
 
