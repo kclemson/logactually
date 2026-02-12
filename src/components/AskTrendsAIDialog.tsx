@@ -16,7 +16,7 @@ interface AskTrendsAIDialogProps {
 }
 
 const SHARED_PROMPTS = [
-  "What assumptions might I be making that my logs challenge?",
+  "What assumptions might I be making, based on what's in my logs?",
   "Do you have suggestions for simple swaps or improvements I could make?",
   "If I stopped improving for 6 months, what would likely be the reason based on this data",
   "What behavioral patterns might I not be noticing?",
