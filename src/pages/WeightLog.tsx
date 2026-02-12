@@ -29,6 +29,7 @@ import { detectRepeatedWeightEntry, isDismissed, dismissSuggestion, shouldShowOp
 import { estimateTotalCalorieBurn, formatCalorieBurnValue, type CalorieBurnSettings, type ExerciseInput } from '@/lib/calorie-burn';
 import { WeightSet, WeightEditableField, SavedExerciseSet, AnalyzedExercise } from '@/types/weight';
 import { generateRoutineName } from '@/lib/routine-naming';
+import { getStoredDate, setStoredDate } from '@/lib/selected-date';
 
 const WEIGHT_EDITABLE_FIELDS: WeightEditableField[] = ['description', 'sets', 'reps', 'weight_lbs'];
 
@@ -48,7 +49,7 @@ const WeightLog = () => {
   }
   
   const dateParam = searchParams.get('date');
-  const dateKey = dateParam || format(new Date(), 'yyyy-MM-dd');
+  const dateKey = dateParam || getStoredDate() || format(new Date(), 'yyyy-MM-dd');
   
   return <WeightLogContent key={dateKey} initialDate={dateKey} />;
 };
@@ -105,12 +106,14 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   // Navigation updates URL directly - triggers remount via wrapper's key
   const goToPreviousDay = () => {
     const prevDate = format(subDays(selectedDate, 1), 'yyyy-MM-dd');
+    setStoredDate(prevDate);
     setSearchParams({ date: prevDate }, { replace: true });
   };
 
   const goToNextDay = () => {
     const nextDate = format(addDays(selectedDate, 1), 'yyyy-MM-dd');
     const todayStr = format(new Date(), 'yyyy-MM-dd');
+    setStoredDate(nextDate);
     if (nextDate === todayStr) {
       setSearchParams({}, { replace: true });
     } else {
@@ -122,6 +125,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
     if (!date) return;
     const dateStr = format(date, 'yyyy-MM-dd');
     const todayStr = format(new Date(), 'yyyy-MM-dd');
+    setStoredDate(dateStr);
     if (dateStr === todayStr) {
       setSearchParams({}, { replace: true });
     } else {
@@ -605,7 +609,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
             <button
               className={cn(
                 "flex items-center gap-1.5 px-2 py-1 text-heading",
-                "text-white underline decoration-2 underline-offset-4"
+                "text-foreground underline decoration-2 underline-offset-4 decoration-foreground"
               )}
             >
               <CalendarIcon className="h-4 w-4" />
@@ -619,6 +623,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
                 size="sm"
                 className="w-full justify-center text-blue-600 dark:text-blue-400"
                 onClick={() => {
+                  setStoredDate(format(new Date(), 'yyyy-MM-dd'));
                   setSearchParams({}, { replace: true });
                   setCalendarOpen(false);
                 }}
