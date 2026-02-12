@@ -20,6 +20,7 @@ export type Database = {
           id: string
           message: string
           read_at: string | null
+          resolved_at: string | null
           responded_at: string | null
           response: string | null
           user_id: string
@@ -29,6 +30,7 @@ export type Database = {
           id?: string
           message: string
           read_at?: string | null
+          resolved_at?: string | null
           responded_at?: string | null
           response?: string | null
           user_id: string
@@ -38,6 +40,7 @@ export type Database = {
           id?: string
           message?: string
           read_at?: string | null
+          resolved_at?: string | null
           responded_at?: string | null
           response?: string | null
           user_id?: string

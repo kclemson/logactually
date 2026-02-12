@@ -1,6 +1,7 @@
 export { useSubmitFeedback } from './FeedbackSubmit';
 export { useAdminFeedback } from './FeedbackAdminList';
 export { useRespondToFeedback } from './FeedbackAdminRespond';
+export { useResolveFeedback } from './FeedbackResolve';
 export { useUserFeedback } from './FeedbackUserHistory';
 export { useDeleteFeedback } from './FeedbackDelete';
 export { useHasUnreadResponses } from './FeedbackUnreadStatus';

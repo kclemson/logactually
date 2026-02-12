@@ -5,6 +5,7 @@ export interface FeedbackWithUser {
   user_number: number;
   response: string | null;
   responded_at: string | null;
+  resolved_at: string | null;
 }
 
 export interface UserFeedback {
@@ -14,4 +15,5 @@ export interface UserFeedback {
   response: string | null;
   responded_at: string | null;
   read_at: string | null;
+  resolved_at: string | null;
 }

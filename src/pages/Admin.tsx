@@ -3,7 +3,7 @@ import { Navigate } from "react-router-dom";
 import { useAdminStats, useAdminUserStats } from "@/hooks/useAdminStats";
 import { useLoginCount } from "@/hooks/useLoginCount";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
-import { useAdminFeedback, useRespondToFeedback } from "@/hooks/feedback";
+import { useAdminFeedback, useRespondToFeedback, useResolveFeedback } from "@/hooks/feedback";
 import { useHasHover } from "@/hooks/use-has-hover";
 import { format, parseISO, isToday } from "date-fns";
 import { MessageSquare, FileSearch } from "lucide-react";
@@ -38,7 +38,11 @@ export default function Admin() {
   const { data: userStats, isLoading: isUserStatsLoading } = useAdminUserStats();
   const { data: feedback } = useAdminFeedback();
   const respondToFeedback = useRespondToFeedback();
+  const resolveFeedback = useResolveFeedback();
   const hasHover = useHasHover();
+
+  const openFeedback = feedback?.filter(f => !f.resolved_at) ?? [];
+  const resolvedFeedback = feedback?.filter(f => !!f.resolved_at) ?? [];
 
   const { data: demoLoginsTotal } = useLoginCount("demo", null);
   const { data: demoLogins24h } = useLoginCount("demo", 24);
@@ -353,29 +357,37 @@ export default function Admin() {
         <p className="text-muted-foreground text-xs">No data in the last 14 days.</p>
       )}
 
-      {/* Feedback section */}
-      {feedback && feedback.length > 0 && (
+      {/* Feedback section - open items */}
+      {openFeedback.length > 0 && (
         <CollapsibleSection
-          title={`Feedback (${feedback.length})`}
+          title={`Feedback (${openFeedback.length})`}
           icon={MessageSquare}
           defaultOpen={false}
           storageKey="admin-feedback"
           iconClassName="text-muted-foreground"
         >
           <div className="space-y-1">
-            {feedback.map((f) => (
+            {openFeedback.map((f) => (
               <div key={f.id} className="text-xs border-b border-border/50 py-1 space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground">
                     {USER_NAMES[f.user_number] ?? `User #${f.user_number}`} • {format(parseISO(f.created_at), "MMM d")}
                   </span>
                   {replyingToId !== f.id && (
-                    <button
-                      className="text-[hsl(217_91%_60%)] underline hover:text-[hsl(217_91%_70%)]"
-                      onClick={() => handleStartReply(f.id, f.response)}
-                    >
-                      {f.response ? "Edit Reply" : "Reply"}
-                    </button>
+                    <>
+                      <button
+                        className="text-[hsl(217_91%_60%)] underline hover:text-[hsl(217_91%_70%)]"
+                        onClick={() => handleStartReply(f.id, f.response)}
+                      >
+                        {f.response ? "Edit Reply" : "Reply"}
+                      </button>
+                      <button
+                        className="text-muted-foreground underline hover:text-foreground"
+                        onClick={() => resolveFeedback.mutate({ feedbackId: f.id, resolve: true })}
+                      >
+                        Resolve
+                      </button>
+                    </>
                   )}
                 </div>
                 <p className="whitespace-pre-wrap">{f.message}</p>
@@ -413,6 +425,42 @@ export default function Admin() {
                     </div>
                   </div>
                 ) : null}
+              </div>
+            ))}
+          </div>
+        </CollapsibleSection>
+      )}
+
+      {/* Resolved feedback section */}
+      {resolvedFeedback.length > 0 && (
+        <CollapsibleSection
+          title={`Resolved (${resolvedFeedback.length})`}
+          icon={MessageSquare}
+          defaultOpen={false}
+          storageKey="admin-feedback-resolved"
+          iconClassName="text-muted-foreground"
+        >
+          <div className="space-y-1">
+            {resolvedFeedback.map((f) => (
+              <div key={f.id} className="text-xs border-b border-border/50 py-1 space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">
+                    {USER_NAMES[f.user_number] ?? `User #${f.user_number}`} • {format(parseISO(f.created_at), "MMM d")}
+                  </span>
+                  <button
+                    className="text-muted-foreground underline hover:text-foreground"
+                    onClick={() => resolveFeedback.mutate({ feedbackId: f.id, resolve: false })}
+                  >
+                    Unresolve
+                  </button>
+                </div>
+                <p className="whitespace-pre-wrap">{f.message}</p>
+                {f.response && (
+                  <div className="ml-2 pl-2 border-l-2 border-primary/30 text-muted-foreground">
+                    <span className="text-[10px]">Response ({format(parseISO(f.responded_at!), "MMM d")})</span>
+                    <p className="whitespace-pre-wrap">{f.response}</p>
+                  </div>
+                )}
               </div>
             ))}
           </div>
