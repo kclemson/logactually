@@ -319,6 +319,7 @@ export default function Settings() {
                   key={lt.id}
                   type={lt}
                   onRename={(id, name) => updateType.mutate({ id, name })}
+                  onUpdateUnit={(id, unit) => updateType.mutate({ id, unit })}
                   onDelete={(id) => deleteType.mutate(id)}
                   openDeletePopoverId={openLogTypePopoverId}
                   setOpenDeletePopoverId={setOpenLogTypePopoverId}

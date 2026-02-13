@@ -39,8 +39,8 @@ export function CreateLogTypeDialog({ open, onOpenChange, onSubmit, isLoading }:
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>New Tracking Type</DialogTitle>
-          <DialogDescription>Create a new category to track.</DialogDescription>
+          <DialogTitle>New Custom Log Type</DialogTitle>
+          <DialogDescription>Weight, measurements, mood, and more</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="flex items-center gap-3">

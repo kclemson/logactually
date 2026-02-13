@@ -99,7 +99,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   return (
     <div className="space-y-4">
       {/* Top section: matches LogInput height on Food/Exercise pages */}
-      <section className="min-h-[144px] flex flex-col justify-center">
+      <section className="min-h-[144px] flex flex-col justify-center space-y-3">
         {!isReadOnly && (
           <div className="flex items-center justify-center gap-2">
           {sortedLogTypes.length > 0 && (
@@ -126,7 +126,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
             onClick={() => setCreateTypeOpen(true)}
           >
             <Plus className="h-3 w-3" />
-            Add Tracking Type
+            Add Log Type
           </Button>
         </div>
       )}
@@ -237,7 +237,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
             );
           })
         ) : (
-          <p className="text-xs text-muted-foreground py-1">No entries for this date.</p>
+          <div className="text-center text-muted-foreground py-8">No custom log items for this day</div>
         )}
       </div>
 
