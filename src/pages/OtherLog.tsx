@@ -99,7 +99,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   return (
     <div className="space-y-4">
       {/* Top section: matches LogInput height on Food/Exercise pages */}
-      <section className="min-h-[144px] flex flex-col justify-center space-y-3">
+      <section className="min-h-[148px] flex flex-col justify-center space-y-3">
         {!isReadOnly && (
           <div className="flex items-center justify-center gap-2">
           {sortedLogTypes.length > 0 && (
@@ -212,7 +212,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
               setStoredDate(format(new Date(), 'yyyy-MM-dd'));
               setSearchParams({}, { replace: true });
             }}
-            className="absolute right-0 text-xs text-teal-600 dark:text-teal-400 hover:underline"
+            className="text-sm text-primary hover:underline absolute right-0 top-1/2 -translate-y-1/2"
           >
             Go to today
           </button>
