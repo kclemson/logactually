@@ -27,7 +27,7 @@ const SHARED_PROMPTS = [
   "What would a 10% improvement version of this routine look like?",
   "What questions am I not asking that this data suggests I should?",
   "What patterns emerge if you separate weekdays from weekends?",
-
+  "If I were coaching myself based on this data, what mindset would I adopt?",
   "If a coach reviewed this, what would they focus on first?",
 ];
 
