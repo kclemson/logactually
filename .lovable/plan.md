@@ -1,44 +1,51 @@
 
 
-## Other Log Page UX Improvements
+## Rename "Other" to "Custom", Add Type Management, Use "Enable" Wording
 
-Four changes to make the entry flow more intuitive and visually polished.
+### Part 1: Rename "Other" to "Custom" everywhere
 
-### 1. Dropdown shows "Log Weight", "Log Mood", etc.
+| File | Current | New |
+|------|---------|-----|
+| `src/components/BottomNav.tsx` (line 21) | `label: 'Other'`, `to: '/other'` | `label: 'Custom'`, `to: '/custom'` |
+| `src/App.tsx` (line 44) | `path="/other"` | `path="/custom"` |
+| `src/pages/Trends.tsx` (line 930) | `title="Other Trends"` | `title="Custom Trends"` |
 
-Change the Select dropdown items and the trigger display to prefix each type name with "Log". The placeholder becomes "Log..." and each item reads "Log Weight", "Log Mood", etc. This makes the selected action immediately visible without opening the dropdown.
+### Part 2: Settings label wording -- "Enable" instead of "Show"
 
-### 2. Remove the standalone + submit button from LogEntryInput
+| File | Current | New |
+|------|---------|-----|
+| `src/pages/Settings.tsx` (line 211) | `"Show other logging types"` | `"Enable custom logging"` |
+| `src/pages/Settings.tsx` (line 212) | subtitle `"Weight, measurements, mood, and more"` | Keep as-is (still accurate) |
+| `src/pages/Settings.tsx` (line 235) | `"Show Exercise"` | `"Enable Exercise"` |
 
-The `+` (Plus) icon button currently acts as the submit button, which is confusing. Replace it with a text "Save" button so the purpose is clear. The form also submits on Enter, so the button is secondary but should still be understandable.
+### Part 3: Custom Tracking Types management section in Settings
 
-### 3. Visually distinguish the bottom control row
+Add a new **"Custom Tracking Types"** CollapsibleSection in Settings, visible when `showCustomLogs` is enabled. Positioned after the custom logging toggle (inside or right after Preferences). Follows the SavedMealRow/SavedRoutineRow pattern:
 
-- Wrap the "+ Add Tracking Type" button in a matching bordered style (same `border border-input rounded-md` as the Select trigger) so both controls look like peers.
-- Center the row horizontally with `justify-center`.
+**New component: `src/components/CustomLogTypeRow.tsx`**
+- Mirrors `SavedMealRow` pattern: chevron expand, inline contentEditable name, value type badge, delete popover
+- Props: `type`, `isExpanded`, `onToggleExpand`, `onRename`, `onDelete`, `openDeletePopoverId`, `setOpenDeletePopoverId`
+- Collapsed row: type name (click-to-edit) + value type label (e.g. "numeric") + trash icon with confirmation popover
+- No expand/collapse needed since types don't have sub-items -- just flat rows with rename + delete
 
-### 4. After creating a new tracking type, pre-select it in the dropdown
+**Hook updates: `src/hooks/useCustomLogTypes.ts`**
+- Add `updateType` mutation: `UPDATE custom_log_types SET name = ? WHERE id = ?`, invalidates `['custom-log-types']`
+- Add `deleteType` mutation: `DELETE FROM custom_log_types WHERE id = ?`, invalidates `['custom-log-types']`
 
-In the `handleCreateType` callback, use the `onSuccess` result to set `selectedTypeId` to the newly created type's ID, so the user immediately sees "Log [NewType]" selected and can start logging.
+**Settings page: `src/pages/Settings.tsx`**
+- Add a `CollapsibleSection` titled "Custom Tracking Types" with `ClipboardList` icon, gated by `settings.showCustomLogs`
+- Contains list of `CustomLogTypeRow` components + "+ Add Tracking Type" button at top
+- Uses same state patterns as saved meals (openDeletePopoverId, etc.)
+- Positioned after Preferences, before Saved Meals
 
----
-
-### Technical details
-
-**File: `src/pages/OtherLog.tsx`**
-
-- Dropdown items: change `{lt.name}` to `Log {lt.name}` in SelectItem children.
-- Placeholder: change `"Add entry..."` to `"Log..."`.
-- Bottom row styling: add `justify-center` to the flex container. Wrap the "Add Tracking Type" button in a bordered container matching SelectTrigger styling (`h-8 px-3 rounded-md border border-input text-sm`).
-- `handleCreateType` onSuccess: after closing dialog, call `setSelectedTypeId(data.id)` using the returned type from the mutation. Update the callback to receive the mutation result.
-
-**File: `src/components/LogEntryInput.tsx`**
-
-- Replace the Plus icon submit button with a text "Save" button (`<Button type="submit" variant="ghost" size="sm">Save</Button>`).
-
-**Files changed: 2**
+### Files changed: 7
 
 | File | Change |
 |------|--------|
-| `src/pages/OtherLog.tsx` | Dropdown labels to "Log X", center bottom row, style Add Tracking Type button, pre-select new type after creation |
-| `src/components/LogEntryInput.tsx` | Replace + icon with "Save" text button |
+| `src/components/BottomNav.tsx` | Route `/other` to `/custom`, label "Other" to "Custom" |
+| `src/App.tsx` | Route path `/other` to `/custom` |
+| `src/pages/Trends.tsx` | "Other Trends" to "Custom Trends" |
+| `src/pages/Settings.tsx` | "Show" to "Enable" for both toggles; add Custom Tracking Types section |
+| `src/hooks/useCustomLogTypes.ts` | Add `updateType` and `deleteType` mutations |
+| `src/components/CustomLogTypeRow.tsx` | New -- row component with inline rename and delete confirmation |
+
