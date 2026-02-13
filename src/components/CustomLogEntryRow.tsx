@@ -38,7 +38,7 @@ function MultilineTextArea({ value, isReadOnly, onSave }: { value: string; isRea
       onFocus={handleFocus}
       onBlur={handleBlur}
       className={cn(
-        "w-[280px] min-h-[60px] rounded-md border border-input bg-background px-2 py-1 text-sm resize-y focus:outline-none cursor-text hover:bg-muted/50",
+        "w-full min-w-0 min-h-[60px] rounded-md border border-input bg-background px-2 py-1 text-sm resize-y focus:outline-none cursor-text hover:bg-muted/50",
         !isReadOnly && "focus:ring-2 focus:ring-focus-ring focus:bg-focus-bg"
       )}
     />
@@ -142,7 +142,7 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
       isMultiline ? "items-start gap-3" : (valueType === 'text') ? "items-start justify-between" : "items-center justify-between"
     )}>
       <span className="text-sm text-muted-foreground">{typeName}</span>
-      <div className={cn("flex gap-2", isMultiline ? "items-start" : "items-center")}>
+      <div className={cn("flex gap-2", isMultiline ? "items-start flex-1 min-w-0" : "items-center")}>
         {/* Text value (for text and text_numeric) - single line */}
         {hasText && !isMultiline && (
           <div className={cn(
@@ -212,7 +212,7 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
             onClick={() => onDelete(entry.id)}
           >
             <Trash2 className="h-3 w-3 text-muted-foreground" />
