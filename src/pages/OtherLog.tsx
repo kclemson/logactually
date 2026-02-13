@@ -32,6 +32,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(parseISO(initialDate)));
   const [createTypeOpen, setCreateTypeOpen] = useState(false);
   const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
+  const [showInput, setShowInput] = useState(false);
 
   const dateStr = initialDate;
   const selectedDate = parseISO(initialDate);
@@ -54,7 +55,8 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
     });
   }, [logTypes, recentUsage]);
 
-  const selectedType = logTypes.find((t) => t.id === selectedTypeId);
+  const effectiveTypeId = selectedTypeId ?? sortedLogTypes[0]?.id ?? null;
+  const selectedType = logTypes.find((t) => t.id === effectiveTypeId);
 
   // Navigation
   const goToPreviousDay = () => {
@@ -92,6 +94,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
       onSuccess: (newType) => {
         setCreateTypeOpen(false);
         setSelectedTypeId(newType.id);
+        setShowInput(true);
       },
     });
   };
@@ -114,12 +117,13 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
             </Button>
           ) : (
             <Select
-              value={selectedTypeId || ''}
+              value={effectiveTypeId || ''}
               onValueChange={(val) => {
                 if (val === '__create_new__') {
                   setCreateTypeOpen(true);
                 } else {
                   setSelectedTypeId(val);
+                  setShowInput(true);
                 }
               }}
             >
@@ -128,11 +132,11 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
               </SelectTrigger>
               <SelectContent>
                 {sortedLogTypes.map((lt) => (
-                  <SelectItem key={lt.id} value={lt.id}>
+                  <SelectItem key={lt.id} value={lt.id} className="pl-3 [&>span:first-child]:hidden">
                     Log {lt.name}
                   </SelectItem>
                 ))}
-                <SelectItem value="__create_new__" className="text-primary">
+                <SelectItem value="__create_new__" className="pl-3 [&>span:first-child]:hidden text-primary">
                   <span className="flex items-center gap-1.5">
                     <Plus className="h-3 w-3" />
                     Add Custom Log Type
@@ -145,7 +149,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
       )}
 
       {/* Inline input form -- visible when a type is selected */}
-      {selectedTypeId && selectedType && !isReadOnly && (
+      {showInput && effectiveTypeId && selectedType && !isReadOnly && (
         <LogEntryInput
           valueType={selectedType.value_type}
           label={selectedType.name}
@@ -156,9 +160,11 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
               logged_date: dateStr,
               unit: selectedType.unit || null,
               ...params,
+            }, {
+              onSuccess: () => setShowInput(false),
             })
           }
-          onCancel={() => setSelectedTypeId(null)}
+          onCancel={() => setShowInput(false)}
           isLoading={createEntry.isPending}
         />
       )}
