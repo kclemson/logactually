@@ -1,57 +1,72 @@
 
-## Polish Custom Log Entry Inline Editing
+## Custom Log Type Dialog and Multi-line Text Support
 
-### Changes (all in two files)
+### 1. Rename "Add Tracking Type" to "Add Custom Log Type" in Settings
+
+**File: `src/pages/Settings.tsx`** (line ~308)
+- Change the button text from "Add Tracking Type" to "Add Custom Log Type"
+
+### 2. Add multi-line text support via new `text_multiline` value type
+
+**No database migration needed** -- the `value_type` column is a plain `string` with no check constraint, so storing `'text_multiline'` works immediately.
+
+**File: `src/hooks/useCustomLogTypes.ts`**
+- Add `'text_multiline'` to the `ValueType` union type
+
+**File: `src/components/CreateLogTypeDialog.tsx`**
+- Add a new state `textMultiline` (boolean, defaults to false)
+- Remove the standalone "Unit" row at the bottom
+- Restructure the radio button layout:
+  - Vertically center radio buttons with their label+description using `items-center` instead of `items-start`
+  - Under "Numeric" and "Text + Numeric" radio options (when selected): show an indented "Unit" input inline, left-aligned with the label text
+  - Under "Text only" radio option (when selected): show a secondary radio group for "Single line (e.g. mood)" vs "Multi line (e.g. journal notes)", also indented and left-aligned
+  - Default to single line when "Text only" is selected
+- On submit: if text type and multiline is true, pass `'text_multiline'` as the value type; otherwise pass `'text'`
+
+**File: `src/components/LogEntryInput.tsx`**
+- Treat `text_multiline` like `text` but render a `<textarea>` instead of `<Input>` for the text field
 
 **File: `src/components/CustomLogEntryRow.tsx`**
+- `hasText` check: add `|| valueType === 'text_multiline'`
+- For `text_multiline`, the contentEditable span should allow Enter to create newlines (not save). Use Shift+Enter or blur to save. Or simpler: use a `<textarea>` element instead of contentEditable for multiline entries.
 
-1. **Text field width**: Add `min-w-[120px]` to the contentEditable span's wrapper so the focus ring has breathing room instead of cramping around short text.
+**File: `src/hooks/useCustomLogTrends.ts`**
+- Add `text_multiline` to the "skip for charts" check alongside `text`
 
-2. **Numeric input -- centered text and narrower width**: Change the Input className from `w-20 text-right` to `w-[60px] text-center` to match the exercise page's lbs column (60px, centered). Keep the same focus-ring styling.
+### 3. Radio button vertical alignment fix
 
-3. **No other visual changes** -- the row layout, unit label, delete button all stay as-is.
+**File: `src/components/CreateLogTypeDialog.tsx`**
+- Change radio label container from `items-start` to `items-center`
+- Remove `mt-0.5` from the radio input element
+- This vertically centers the radio button between the label and description text
 
-**File: `src/hooks/useCustomLogEntries.ts`**
+### 4. Inline unit input under type options
 
-4. **Optimistic updates for `updateEntry`**: Add an `onMutate` callback that:
-   - Snapshots the current query data
-   - Immediately patches the matching entry in the cache with the new `numeric_value` or `text_value`
-   - Returns the snapshot for rollback
-   - Add `onError` to roll back to the snapshot if the server call fails
-   - Keep `onSuccess` invalidation so the cache re-syncs after the server confirms
+**File: `src/components/CreateLogTypeDialog.tsx`**
+- Remove the separate "Unit" section that appears below the type radio buttons
+- Instead, when "Numeric" is selected, show the unit input indented below the "A single number" description, left-aligned with the text
+- Same for "Text + Numeric" -- show unit input indented below when selected
+- Use the same left-margin as the label text (offset by the radio button gap)
 
-This eliminates the visible lag between pressing Enter and seeing the updated value.
+### Visual layout of the dialog after changes
 
-### Technical detail
+```text
+Name  [_______________]
 
-**Numeric input class change** (CustomLogEntryRow.tsx):
+Type
+ (o) Numeric
+     A single number (e.g. body weight)
+     Unit: [_______________]
+
+ ( ) Text + Numeric
+     A label and number (e.g. measurements)
+
+ ( ) Text only
+     Free-form text
+     ( ) Single line (e.g. mood)
+     ( ) Multi line (e.g. journal notes)
+
+[          Create          ]
 ```
-Before: "h-7 w-20 text-sm text-right px-1 border-0 bg-transparent"
-After:  "h-7 w-[60px] text-sm text-center px-1 border-0 bg-transparent"
-```
 
-**Text field min-width** (CustomLogEntryRow.tsx):
-Add `min-w-[120px]` to the wrapping div around the contentEditable span.
-
-**Optimistic update pattern** (useCustomLogEntries.ts):
-```ts
-updateEntry = useMutation({
-  mutationFn: async (params) => { /* existing */ },
-  onMutate: async (params) => {
-    await queryClient.cancelQueries({ queryKey: ['custom-log-entries', dateStr] });
-    const previous = queryClient.getQueryData(['custom-log-entries', dateStr]);
-    queryClient.setQueryData(['custom-log-entries', dateStr], (old) =>
-      old?.map(e => e.id === params.id ? { ...e, ...params } : e)
-    );
-    return { previous };
-  },
-  onError: (_err, _params, context) => {
-    if (context?.previous) {
-      queryClient.setQueryData(['custom-log-entries', dateStr], context.previous);
-    }
-  },
-  onSettled: () => {
-    queryClient.invalidateQueries({ queryKey: ['custom-log-entries', dateStr] });
-  },
-});
-```
+When "Text + Numeric" is selected, the unit input moves under that option instead. When "Numeric" is selected (default), the unit input appears under Numeric.
