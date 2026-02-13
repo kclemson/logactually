@@ -59,6 +59,7 @@ const EXERCISE_PROMPTS = [
   "What invisible cost might I be paying for my current approach?",
   "Where am I pushing hard without seeing proportional return?",
   "What would I need to change to improve faster?",
+  "If I wanted to maintain my results with less effort, what would you keep and what would you cut?",
 ];
 
 function pickRandom<T>(arr: T[], count: number): T[] {
