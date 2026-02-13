@@ -30,9 +30,11 @@ const SHARED_PROMPTS = [
   "If I were coaching myself based on this data, what mindset would I adopt?",
   "If a coach reviewed this, what would they focus on first?",
   "If I continue like this, what will likely improve — and what might suffer?",
-  "What would I need to give up to improve faster?",
+  "What would I need to change to improve faster?",
   "What's the smallest change that could meaningfully alter my trajectory?",
   "Are there any interesting patterns between my eating & exercise habits?",
+  "If I wanted to maintain my results with less effort, what would you keep and what would you cut?",
+  "What invisible cost might I be paying for my current approach?",
 ];
 
 const FOOD_PROMPTS = [
@@ -66,10 +68,7 @@ const EXERCISE_PROMPTS = [
   "Do you see any hidden tradeoffs in how I'm currently exercising?",
   "How could I improve my exercise variety?",
   "What tradeoffs am I making between performance, recovery, and body composition?",
-  "What invisible cost might I be paying for my current approach?",
   "Where am I pushing hard without seeing proportional return?",
-  "What would I need to change to improve faster?",
-  "If I wanted to maintain my results with less effort, what would you keep and what would you cut?",
 ];
 
 function pickRandom<T>(arr: T[], count: number): T[] {
