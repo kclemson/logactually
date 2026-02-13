@@ -106,12 +106,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
       )}
 
       {/* Entries grouped by type */}
-      {logTypes.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-8">
-          No tracking types yet. Tap "+ Add Tracking Type" to get started.
-        </p>
-      ) : (
-        logTypes.map((logType) => {
+      {logTypes.map((logType) => {
           const typeEntries = entriesByType.get(logType.id) || [];
           return (
             <CollapsibleSection
@@ -152,8 +147,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
               )}
             </CollapsibleSection>
           );
-        })
-      )}
+        })}
 
       {/* Date Navigation */}
       <div className="flex items-center justify-center gap-1 relative">

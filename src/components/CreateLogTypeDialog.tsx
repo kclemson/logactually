@@ -39,34 +39,36 @@ export function CreateLogTypeDialog({ open, onOpenChange, onSubmit, isLoading }:
           <DialogDescription>Create a new category to track.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="log-type-name">Name</Label>
+          <div className="flex items-center gap-3">
+            <Label htmlFor="log-type-name" className="shrink-0">Name</Label>
             <Input
               id="log-type-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Body Weight, Measurements"
+              placeholder="e.g. Body Weight"
               autoFocus
             />
           </div>
           <div className="space-y-2">
-            <Label>Value type</Label>
-            <div className="space-y-2">
+            <Label>Type</Label>
+            <div className="space-y-1">
               {VALUE_TYPE_OPTIONS.map((opt) => (
-                <button
+                <label
                   key={opt.value}
-                  type="button"
-                  onClick={() => setValueType(opt.value)}
-                  className={cn(
-                    'w-full text-left rounded-lg border p-3 transition-colors',
-                    valueType === opt.value
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border hover:bg-muted/50'
-                  )}
+                  className="flex items-start gap-2 py-1 cursor-pointer"
                 >
-                  <p className="text-sm font-medium">{opt.label}</p>
-                  <p className="text-xs text-muted-foreground">{opt.description}</p>
-                </button>
+                  <input
+                    type="radio"
+                    name="value-type"
+                    checked={valueType === opt.value}
+                    onChange={() => setValueType(opt.value)}
+                    className="mt-0.5 accent-primary"
+                  />
+                  <div>
+                    <span className="text-sm font-medium">{opt.label}</span>
+                    <p className="text-xs text-muted-foreground">{opt.description}</p>
+                  </div>
+                </label>
               ))}
             </div>
           </div>
