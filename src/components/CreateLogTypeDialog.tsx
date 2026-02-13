@@ -9,7 +9,7 @@ import type { ValueType } from '@/hooks/useCustomLogTypes';
 interface CreateLogTypeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (name: string, valueType: ValueType) => void;
+  onSubmit: (name: string, valueType: ValueType, unit?: string) => void;
   isLoading?: boolean;
 }
 
@@ -22,13 +22,17 @@ const VALUE_TYPE_OPTIONS: { value: ValueType; label: string; description: string
 export function CreateLogTypeDialog({ open, onOpenChange, onSubmit, isLoading }: CreateLogTypeDialogProps) {
   const [name, setName] = useState('');
   const [valueType, setValueType] = useState<ValueType>('numeric');
+  const [unit, setUnit] = useState('');
+
+  const showUnit = valueType === 'numeric' || valueType === 'text_numeric';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    onSubmit(name.trim(), valueType);
+    onSubmit(name.trim(), valueType, showUnit && unit.trim() ? unit.trim() : undefined);
     setName('');
     setValueType('numeric');
+    setUnit('');
   };
 
   return (
@@ -72,6 +76,17 @@ export function CreateLogTypeDialog({ open, onOpenChange, onSubmit, isLoading }:
               ))}
             </div>
           </div>
+          {showUnit && (
+            <div className="flex items-center gap-3">
+              <Label htmlFor="log-type-unit" className="shrink-0">Unit</Label>
+              <Input
+                id="log-type-unit"
+                value={unit}
+                onChange={(e) => setUnit(e.target.value)}
+                placeholder="optional (e.g. lbs, in, mmHg)"
+              />
+            </div>
+          )}
           <Button type="submit" disabled={!name.trim() || isLoading} className="w-full">
             {isLoading ? 'Creating...' : 'Create'}
           </Button>

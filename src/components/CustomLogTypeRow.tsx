@@ -73,7 +73,7 @@ export function CustomLogTypeRow({
 
         {/* Value type badge */}
         <span className="text-xs text-muted-foreground shrink-0">
-          {VALUE_TYPE_LABELS[type.value_type] || type.value_type}
+          {VALUE_TYPE_LABELS[type.value_type] || type.value_type}{type.unit ? ` · ${type.unit}` : ''}
         </span>
 
         {/* Delete button with popover confirmation */}

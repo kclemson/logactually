@@ -64,6 +64,7 @@ export type Database = {
           id: string
           name: string
           sort_order: number
+          unit: string | null
           updated_at: string
           user_id: string
           value_type: string
@@ -73,6 +74,7 @@ export type Database = {
           id?: string
           name: string
           sort_order?: number
+          unit?: string | null
           updated_at?: string
           user_id: string
           value_type: string
@@ -82,6 +84,7 @@ export type Database = {
           id?: string
           name?: string
           sort_order?: number
+          unit?: string | null
           updated_at?: string
           user_id?: string
           value_type?: string

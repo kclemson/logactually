@@ -9,6 +9,7 @@ export interface CustomLogType {
   user_id: string;
   name: string;
   value_type: ValueType;
+  unit: string | null;
   sort_order: number;
   created_at: string;
   updated_at: string;
@@ -56,11 +57,11 @@ export function useCustomLogTypes() {
   });
 
   const createType = useMutation({
-    mutationFn: async (params: { name: string; value_type: ValueType }) => {
+    mutationFn: async (params: { name: string; value_type: ValueType; unit?: string | null }) => {
       if (!user) throw new Error('No user');
       const { data, error } = await supabase
         .from('custom_log_types')
-        .insert({ user_id: user.id, name: params.name, value_type: params.value_type })
+        .insert({ user_id: user.id, name: params.name, value_type: params.value_type, unit: params.unit ?? null })
         .select()
         .single();
       if (error) throw error;

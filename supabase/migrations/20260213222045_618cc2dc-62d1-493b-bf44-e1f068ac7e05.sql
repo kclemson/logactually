@@ -1,0 +1,1 @@
+ALTER TABLE custom_log_types ADD COLUMN unit text;
