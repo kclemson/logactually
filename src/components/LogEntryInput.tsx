@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { ValueType } from '@/hooks/useCustomLogTypes';
@@ -7,23 +7,15 @@ import type { ValueType } from '@/hooks/useCustomLogTypes';
 interface LogEntryInputProps {
   valueType: ValueType;
   onSubmit: (params: { numeric_value?: number | null; text_value?: string | null; unit?: string | null }) => void;
+  onCancel?: () => void;
   isLoading?: boolean;
   label?: string;
 }
 
-export function LogEntryInput({ valueType, onSubmit, isLoading, label }: LogEntryInputProps) {
-  const [isAdding, setIsAdding] = useState(false);
+export function LogEntryInput({ valueType, onSubmit, onCancel, isLoading, label }: LogEntryInputProps) {
   const [numericValue, setNumericValue] = useState('');
   const [textValue, setTextValue] = useState('');
   const [unit, setUnit] = useState('');
-
-  if (!isAdding) {
-    return (
-      <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setIsAdding(true)}>
-        <Plus className="h-3 w-3 mr-1" /> Add{label ? ` ${label}` : ''}
-      </Button>
-    );
-  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,11 +34,13 @@ export function LogEntryInput({ valueType, onSubmit, isLoading, label }: LogEntr
     setNumericValue('');
     setTextValue('');
     setUnit('');
-    setIsAdding(false);
   };
 
   return (
     <form onSubmit={handleSubmit} className="flex items-center gap-2">
+      {label && (
+        <span className="text-xs font-medium text-muted-foreground shrink-0">{label}</span>
+      )}
       {(valueType === 'text_numeric' || valueType === 'text') && (
         <Input
           value={textValue}
@@ -78,6 +72,11 @@ export function LogEntryInput({ valueType, onSubmit, isLoading, label }: LogEntr
       <Button type="submit" size="icon" variant="ghost" className="h-8 w-8 shrink-0" disabled={isLoading}>
         <Plus className="h-4 w-4" />
       </Button>
+      {onCancel && (
+        <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={onCancel}>
+          <X className="h-4 w-4" />
+        </Button>
+      )}
     </form>
   );
 }
