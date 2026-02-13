@@ -94,7 +94,6 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
       onSuccess: (newType) => {
         setCreateTypeOpen(false);
         setSelectedTypeId(newType.id);
-        setShowInput(true);
       },
     });
   };
