@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import type { ValueType } from '@/hooks/useCustomLogTypes';
 
 interface CreateLogTypeDialogProps {
@@ -45,19 +44,14 @@ export function CreateLogTypeDialog({ open, onOpenChange, onSubmit, isLoading }:
           <DialogDescription>Weight, measurements, mood, and more</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="flex items-center gap-3">
-            <Label htmlFor="log-type-name" className="shrink-0 text-sm">Name</Label>
-            <Input
-              id="log-type-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Body Weight"
-              autoFocus
-            />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-sm">Type</Label>
-            <div className="space-y-1">
+          <Input
+            id="log-type-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Body Weight"
+            autoFocus
+          />
+          <div className="space-y-1">
               {VALUE_TYPE_OPTIONS.map((opt) => (
                 <div key={opt.value}>
                   <label className="flex items-center gap-2 py-1 cursor-pointer">
@@ -113,7 +107,6 @@ export function CreateLogTypeDialog({ open, onOpenChange, onSubmit, isLoading }:
                 </div>
               ))}
             </div>
-          </div>
           <Button type="submit" disabled={!name.trim() || isLoading} className="w-full">
             {isLoading ? 'Creating...' : 'Create'}
           </Button>
