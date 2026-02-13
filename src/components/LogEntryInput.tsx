@@ -55,7 +55,7 @@ export function LogEntryInput({ valueType, onSubmit, onCancel, isLoading, label,
           value={textValue}
           onChange={(e) => setTextValue(e.target.value)}
           placeholder="Enter text..."
-          className="w-[280px] min-h-[60px] rounded-md border border-input bg-background px-2 py-1 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y"
+          className="w-full min-w-0 min-h-[60px] rounded-md border border-input bg-background px-2 py-1 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y"
           autoFocus
         />
       )}
