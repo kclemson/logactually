@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -91,8 +91,25 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
   const profileSummary = useMemo(() => formatProfileStatsSummary(settings), [settings]);
 
   const pool = useMemo(() => [...SHARED_PROMPTS, ...(mode === "food" ? FOOD_PROMPTS : EXERCISE_PROMPTS)], [mode]);
-  const [chips, setChips] = useState(() => pickRandom(pool, 4));
-  const refreshChips = () => setChips(pickRandom(pool, 4));
+  const seen = useRef<Set<string>>(new Set());
+
+  const pickFresh = useCallback(() => {
+    let available = pool.filter(p => !seen.current.has(p));
+    if (available.length < 4) {
+      seen.current.clear();
+      available = pool;
+    }
+    const picked = pickRandom(available, 4);
+    picked.forEach(p => seen.current.add(p));
+    return picked;
+  }, [pool]);
+
+  const [chips, setChips] = useState(() => {
+    const picked = pickRandom(pool, 4);
+    picked.forEach(p => seen.current.add(p));
+    return picked;
+  });
+  const refreshChips = () => setChips(pickFresh());
 
   const handleSubmit = (question: string) => {
     if (!question.trim() || isPending) return;
