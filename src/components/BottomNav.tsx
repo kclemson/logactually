@@ -18,7 +18,7 @@ export function BottomNav() {
   const navItems = [
     { to: '/', icon: Utensils, label: 'Food' },
     ...(showWeights ? [{ to: '/weights', icon: Dumbbell, label: 'Exercise' }] : []),
-    ...(showCustomLogs ? [{ to: '/other', icon: ClipboardList, label: 'Other' }] : []),
+    ...(showCustomLogs ? [{ to: '/custom', icon: ClipboardList, label: 'Custom' }] : []),
     { to: '/history', icon: CalendarDays, label: 'Calendar' },
     { to: '/trends', icon: TrendingUp, label: 'Trends' },
     { to: '/settings', icon: Settings, label: 'Settings' },

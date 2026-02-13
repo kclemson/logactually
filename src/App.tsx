@@ -41,7 +41,7 @@ const App = () => (
                 >
                   <Route path="/" element={<FoodLog />} />
                   <Route path="/weights" element={<WeightLog />} />
-                  <Route path="/other" element={<OtherLog />} />
+                  <Route path="/custom" element={<OtherLog />} />
                   <Route path="/trends" element={<Trends />} />
                   <Route path="/history" element={<History />} />
                   <Route path="/settings" element={<Settings />} />

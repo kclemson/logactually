@@ -1,5 +1,5 @@
 import { useTheme } from "next-themes";
-import { Moon, Sun, Monitor, Star, ArrowDownUp, Plus, Dumbbell, User, Settings2, Info } from "lucide-react";
+import { Moon, Sun, Monitor, Star, ArrowDownUp, Plus, Dumbbell, User, Settings2, Info, ClipboardList } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { WeightUnit } from "@/lib/weight-units";
 import { cn } from "@/lib/utils";
@@ -25,6 +25,9 @@ import { DeleteAccountDialog } from "@/components/DeleteAccountDialog";
 import { useReadOnlyContext } from "@/contexts/ReadOnlyContext";
 import { DEMO_EMAIL } from "@/lib/demo-mode";
 import { AppleHealthImport } from "@/components/AppleHealthImport";
+import { useCustomLogTypes } from "@/hooks/useCustomLogTypes";
+import { CustomLogTypeRow } from "@/components/CustomLogTypeRow";
+import { CreateLogTypeDialog } from "@/components/CreateLogTypeDialog";
 export default function Settings() {
   const { user, signOut } = useAuth();
   const queryClient = useQueryClient();
@@ -58,6 +61,11 @@ export default function Settings() {
   const [openRoutinePopoverId, setOpenRoutinePopoverId] = useState<string | null>(null);
   const [createRoutineDialogOpen, setCreateRoutineDialogOpen] = useState(false);
   const [expandedRoutineIds, setExpandedRoutineIds] = useState<Set<string>>(new Set());
+
+  // Custom log types
+  const { logTypes, isLoading: logTypesLoading, createType, updateType, deleteType } = useCustomLogTypes();
+  const [openLogTypePopoverId, setOpenLogTypePopoverId] = useState<string | null>(null);
+  const [createLogTypeDialogOpen, setCreateLogTypeDialogOpen] = useState(false);
 
   // Export data
   const { isExporting, exportFoodLog, exportWeightLog } = useExportData();
@@ -208,7 +216,7 @@ export default function Settings() {
           {/* Show other logging types toggle */}
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-muted-foreground">Show other logging types</p>
+              <p className="text-xs text-muted-foreground">Enable custom logging</p>
               <p className="text-[10px] text-muted-foreground/70">Weight, measurements, mood, and more</p>
             </div>
             <button
@@ -232,7 +240,7 @@ export default function Settings() {
           {/* Show Exercise toggle */}
           {showWeightsFeature && (
             <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">Show Exercise</p>
+              <p className="text-xs text-muted-foreground">Enable Exercise</p>
               <button
                 onClick={() => updateSettings({ showWeights: !settings.showWeights })}
                 className={cn(
@@ -287,6 +295,39 @@ export default function Settings() {
           )}
         </div>
       </CollapsibleSection>
+
+      {/* Custom Tracking Types */}
+      {settings.showCustomLogs && (
+        <CollapsibleSection title="Custom Tracking Types" icon={ClipboardList} storageKey="settings-custom-types" iconClassName="text-teal-500 dark:text-teal-400">
+          {!isReadOnly && (
+            <button
+              onClick={() => setCreateLogTypeDialogOpen(true)}
+              className="w-full text-left py-2 hover:bg-accent/50 transition-colors flex items-center gap-2 text-sm text-foreground"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Add Tracking Type</span>
+            </button>
+          )}
+          {logTypesLoading ? (
+            <p className="text-sm text-muted-foreground">Loading...</p>
+          ) : !logTypes.length ? (
+            !isReadOnly ? null : <p className="text-sm text-muted-foreground">No custom types yet</p>
+          ) : (
+            <ul className="space-y-0">
+              {logTypes.map((lt) => (
+                <CustomLogTypeRow
+                  key={lt.id}
+                  type={lt}
+                  onRename={(id, name) => updateType.mutate({ id, name })}
+                  onDelete={(id) => deleteType.mutate(id)}
+                  openDeletePopoverId={openLogTypePopoverId}
+                  setOpenDeletePopoverId={setOpenLogTypePopoverId}
+                />
+              ))}
+            </ul>
+          )}
+        </CollapsibleSection>
+      )}
 
       {/* Saved Meals - frequently accessed */}
       <CollapsibleSection title="Saved Meals" icon={Star} storageKey="settings-meals">
@@ -498,6 +539,20 @@ export default function Settings() {
           onOpenChange={setCalorieBurnDialogOpen}
           settings={settings}
           updateSettings={updateSettings}
+        />
+      )}
+
+      {/* Create Log Type Dialog */}
+      {createLogTypeDialogOpen && (
+        <CreateLogTypeDialog
+          open={createLogTypeDialogOpen}
+          onOpenChange={setCreateLogTypeDialogOpen}
+          onSubmit={(name, valueType) => {
+            createType.mutate({ name, value_type: valueType }, {
+              onSuccess: () => setCreateLogTypeDialogOpen(false),
+            });
+          }}
+          isLoading={createType.isPending}
         />
       )}
     </div>
