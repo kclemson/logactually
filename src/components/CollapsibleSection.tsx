@@ -81,8 +81,8 @@ export function CollapsibleSection({
       {/* Content with smooth collapse */}
       <div
         className={cn(
-          'overflow-hidden transition-all duration-200 ease-in-out',
-          isOpen ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
+          'transition-all duration-200 ease-in-out',
+          isOpen ? 'max-h-[2000px] opacity-100 overflow-visible' : 'max-h-0 opacity-0 overflow-hidden'
         )}
       >
         <div>{children}</div>
