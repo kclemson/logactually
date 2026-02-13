@@ -71,5 +71,31 @@ export function useCustomLogTypes() {
     },
   });
 
-  return { logTypes, isLoading, createType, recentUsage };
+  const updateType = useMutation({
+    mutationFn: async (params: { id: string; name: string }) => {
+      const { error } = await supabase
+        .from('custom_log_types')
+        .update({ name: params.name })
+        .eq('id', params.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['custom-log-types'] });
+    },
+  });
+
+  const deleteType = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('custom_log_types')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['custom-log-types'] });
+    },
+  });
+
+  return { logTypes, isLoading, createType, updateType, deleteType, recentUsage };
 }

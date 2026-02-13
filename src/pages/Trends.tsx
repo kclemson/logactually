@@ -927,7 +927,7 @@ const Trends = () => {
 
       {/* Other Trends Section */}
       {showCustomLogs && customLogTrends.length > 0 && (
-        <CollapsibleSection title="Other Trends" icon={ClipboardList} iconClassName="text-teal-500 dark:text-teal-400" defaultOpen={true} storageKey="trends-other">
+        <CollapsibleSection title="Custom Trends" icon={ClipboardList} iconClassName="text-teal-500 dark:text-teal-400" defaultOpen={true} storageKey="trends-other">
           <div className="space-y-3">
             {customLogTrends.map((trend) => (
               <CustomLogTrendChart key={trend.logTypeId} trend={trend} />
