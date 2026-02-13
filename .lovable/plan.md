@@ -1,23 +1,25 @@
 
 
-## Reorder Settings toggles and update label
+## Split toggle label into main + subtitle
 
-**File**: `src/pages/Settings.tsx`
+**File**: `src/pages/Settings.tsx` (~line 208)
 
-Two changes in the Preferences section:
+Change the single `<p>` label from:
 
-1. **Update label** (current ~line 232): Change `"Log Other Things"` to `"Show other logging types (weight, measurements, mood, and more)"`
+```
+Show other logging types (weight, measurements, mood, and more)
+```
 
-2. **Move the "Log Other Things" toggle block above "Show Exercise"**: Currently the order is Show Exercise, then Log Other Things, then Weight Units, then Calorie Burn. The problem is Log Other Things sits between Show Exercise and the weight-specific rows. Move it so the order becomes:
+To a stacked layout matching Daily Calorie Target's pattern:
 
-   - Theme
-   - Daily Calorie Target
-   - **Show other logging types** (moved up)
-   - Show Exercise
-   - Weight Units (conditional)
-   - Calorie Burn (conditional)
+```html
+<div>
+  <p class="text-xs text-muted-foreground">Show other logging types</p>
+  <p class="text-[10px] text-muted-foreground/70">Weight, measurements, mood, and more</p>
+</div>
+```
 
-This keeps the exercise-specific settings grouped together below the Show Exercise toggle.
+The subtitle uses `text-muted-foreground/70` (the darker gray at reduced opacity) -- the same class used for the "Show color indicators on calendar view" subtitle above it.
 
-One file changed, ~15 lines moved/edited.
+One file, ~3 lines changed.
 
