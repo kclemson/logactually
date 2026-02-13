@@ -1,38 +1,32 @@
 
 
-## Three Changes to the Other Log Page
+## Move Date Picker to Top and Add-Entry UX Cleanup
 
-### 1. Remove empty-state message
+### 1. Move Date Navigation to the top
 **File:** `src/pages/OtherLog.tsx`
 
-Remove the "No tracking types yet..." paragraph (the `logTypes.length === 0` block). When there are no types, the page will just show the "+ Add Tracking Type" button and the date nav -- clear enough on its own.
+Move the entire date navigation block (lines 152-218) to the top of the return, before the "Add Tracking Type" button. New order:
 
-### 2. Redesign "Add Tracking Type" dialog
-**File:** `src/components/CreateLogTypeDialog.tsx`
+1. Date Navigation (moved from bottom)
+2. Add Tracking Type button
+3. Log type sections
 
-- **Name field**: Put "Name" label and input side-by-side on one row using a flex layout, instead of stacked label-then-input.
-- **"Value type" label**: Change to just "Type".
-- **Radio buttons**: Replace the large card-style buttons with standard radio inputs (`<input type="radio">`) next to each label. Each option becomes a compact row: radio circle, label text, and description in muted text -- no big bordered card.
+### 2. Replace always-visible input fields with a "+ Add" button
+**File:** `src/components/LogEntryInput.tsx`
 
-### 3. Fix input cropping in collapsible sections
-**File:** `src/components/CollapsibleSection.tsx`
+Add an `expanded` state (default `false`). When collapsed, show just a small "+ Add" button. When the user clicks it, expand to reveal the input fields. After a successful submit, collapse back.
 
-The `overflow-hidden` on the collapsible content container clips input focus rings (the ring extends outside the element bounds). Fix by changing `overflow-hidden` to `overflow-visible` when the section is open, keeping `overflow-hidden` only during the collapsed state to hide content.
+**File:** `src/pages/OtherLog.tsx`
 
-Change line 84 from:
-```
-'overflow-hidden transition-all duration-200 ease-in-out',
-```
-to:
-```
-'transition-all duration-200 ease-in-out',
-isOpen ? 'max-h-[2000px] opacity-100 overflow-visible' : 'max-h-0 opacity-0 overflow-hidden'
-```
+No extra changes needed here beyond the date nav move -- the LogEntryInput component handles its own expand/collapse.
 
 ### Technical details
 
-**Files changed:** 3
-- `src/pages/OtherLog.tsx` -- remove ~3 lines (empty state block)
-- `src/components/CreateLogTypeDialog.tsx` -- restructure form layout (~20 lines changed)
-- `src/components/CollapsibleSection.tsx` -- adjust overflow class (~2 lines changed)
+**Files changed:** 2
 
+- `src/pages/OtherLog.tsx` -- move the date nav block (lines 152-218) above the "Add Tracking Type" section (line 95). ~25 lines moved, no logic changes.
+- `src/components/LogEntryInput.tsx` -- wrap existing form in a collapsed/expanded toggle:
+  - Add `const [expanded, setExpanded] = useState(false)`
+  - When `!expanded`: render a `<button>` with `<Plus>` icon and "Add" text
+  - When `expanded`: render existing form as-is
+  - On successful submit (after clearing fields), call `setExpanded(false)`
