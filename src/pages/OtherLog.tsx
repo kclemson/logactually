@@ -87,8 +87,8 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
     setCalendarOpen(false);
   };
 
-  const handleCreateType = (name: string, valueType: 'numeric' | 'text_numeric' | 'text') => {
-    createType.mutate({ name, value_type: valueType }, {
+  const handleCreateType = (name: string, valueType: 'numeric' | 'text_numeric' | 'text', unit?: string) => {
+    createType.mutate({ name, value_type: valueType, unit: unit || null }, {
       onSuccess: (newType) => {
         setCreateTypeOpen(false);
         setSelectedTypeId(newType.id);
@@ -177,6 +177,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                 entry={entry}
                 typeName={logType?.name || ''}
                 valueType={logType?.value_type || 'text'}
+                typeUnit={logType?.unit}
                 onDelete={(id) => deleteEntry.mutate(id)}
                 isReadOnly={isReadOnly}
               />
@@ -189,13 +190,15 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
 
       {/* Inline input form -- visible when a type is selected */}
       {selectedTypeId && selectedType && !isReadOnly && (
-        <LogEntryInput
+      <LogEntryInput
           valueType={selectedType.value_type}
           label={selectedType.name}
+          unit={selectedType.unit}
           onSubmit={(params) =>
             createEntry.mutate({
               log_type_id: selectedType.id,
               logged_date: dateStr,
+              unit: selectedType.unit || null,
               ...params,
             })
           }

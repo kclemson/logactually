@@ -6,17 +6,19 @@ interface CustomLogEntryRowProps {
   entry: CustomLogEntry;
   typeName: string;
   valueType: string;
+  typeUnit?: string | null;
   onDelete: (id: string) => void;
   isReadOnly?: boolean;
 }
 
-export function CustomLogEntryRow({ entry, typeName, valueType, onDelete, isReadOnly }: CustomLogEntryRowProps) {
+export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDelete, isReadOnly }: CustomLogEntryRowProps) {
   const formatValue = () => {
+    const unitLabel = entry.unit || typeUnit;
     if (valueType === 'numeric') {
-      return `${entry.numeric_value}${entry.unit ? ` ${entry.unit}` : ''}`;
+      return `${entry.numeric_value}${unitLabel ? ` ${unitLabel}` : ''}`;
     }
     if (valueType === 'text_numeric') {
-      return `${entry.text_value}: ${entry.numeric_value}${entry.unit ? ` ${entry.unit}` : ''}`;
+      return `${entry.text_value}: ${entry.numeric_value}${unitLabel ? ` ${unitLabel}` : ''}`;
     }
     return entry.text_value || '';
   };
