@@ -296,9 +296,9 @@ export default function Settings() {
         </div>
       </CollapsibleSection>
 
-      {/* Custom Tracking Types */}
+      {/* Custom Log Types */}
       {settings.showCustomLogs && (
-        <CollapsibleSection title="Custom Tracking Types" icon={ClipboardList} storageKey="settings-custom-types" iconClassName="text-teal-500 dark:text-teal-400">
+        <CollapsibleSection title="Custom Log Types" icon={ClipboardList} storageKey="settings-custom-types" iconClassName="text-teal-500 dark:text-teal-400">
           {!isReadOnly && (
             <button
               onClick={() => setCreateLogTypeDialogOpen(true)}
