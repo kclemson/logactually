@@ -1,33 +1,24 @@
 
 
-## Fix font size hierarchy in the Create Log Type dialog
+## Make font weights consistent across the Custom page controls
 
 ### Problem
-There are 5 font sizes creating a muddy hierarchy. The field labels ("Name", "Type", "Unit") render at 16px -- the same as the dialog description -- making them feel too prominent and flattening the visual distinction between the header area and the form content.
+The Select trigger ("Log Weight") renders at `font-weight: normal` (400) while the Button components ("Add Custom Log Type", "Save") render at `font-medium` (500). This creates a subtle but noticeable inconsistency.
 
-### Current sizes (mobile)
-- Title: 18px
-- Description: 16px
-- Field labels (Name/Type/Unit): 16px (same as description -- problem)
-- Radio labels (Numeric, etc.): 14px
-- Radio descriptions: 12px
+### Fix
+Add `font-medium` to the SelectTrigger in `src/pages/OtherLog.tsx` so it matches the buttons.
 
-### Proposed fix: clean 3-tier hierarchy
-- Title: 18px (unchanged)
-- Description: 16px (unchanged)
-- Field labels: 14px (add `text-sm` to each Label)
-- Radio labels: 14px (unchanged, now matches field labels)
-- Radio descriptions: 12px (unchanged)
+### Technical detail
 
-This reduces the sizes from 5 to 4, and more importantly creates a clear step-down from header to form content.
+**File: `src/pages/OtherLog.tsx`**
 
-### Technical details
+On the SelectTrigger (currently around line 115), change:
+```
+className="h-8 text-sm w-auto min-w-[140px]"
+```
+to:
+```
+className="h-8 text-sm font-medium w-auto min-w-[140px]"
+```
 
-**File: `src/components/CreateLogTypeDialog.tsx`**
-
-Add `text-sm` class to the three Label components:
-- Line 47: `<Label htmlFor="log-type-name" className="shrink-0">` becomes `className="shrink-0 text-sm"`
-- Line 57: `<Label>Type</Label>` becomes `<Label className="text-sm">Type</Label>`
-- Line 81: `<Label htmlFor="log-type-unit" className="shrink-0">` becomes `className="shrink-0 text-sm"`
-
-No other files need changes.
+One line, one file. No other changes needed.
