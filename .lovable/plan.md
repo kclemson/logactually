@@ -1,20 +1,28 @@
 
 
-## Move "Log..." dropdown and "Add Tracking Type" to the top of the Custom page
+## Align Date Picker Height on Custom Page
 
-Currently the Custom page has: date picker → entries → input form → dropdown/add button (at bottom). Food and Exercise pages have: textarea + buttons → date picker → entries. The date picker ends up at a different vertical position.
+The Food and Exercise pages render a `LogInput` component (a 100px-tall textarea + a row of buttons) above the date picker. The Custom page only has a short dropdown row (~32px tall), so the date picker sits much higher.
+
+### Approach
+
+Wrap the Custom page's top controls (dropdown + Add Tracking Type button, plus the optional LogEntryInput form) in a container with a fixed minimum height that matches the vertical space the `LogInput` component occupies on Food/Exercise pages.
+
+The `LogInput` renders:
+- Textarea: `min-h-[100px]`
+- Gap: `space-y-3` (12px)
+- Button row: ~32px
+- Total: ~144px
+
+The outer `space-y-4` gap (16px) before the date picker is the same on all pages, so we only need the inner section height to match.
 
 ### Change
 
-In `src/pages/OtherLog.tsx`, move the bottom controls section (the "Log..." `Select` dropdown + "+ Add Tracking Type" button) from below the entries list to above the date navigation. This puts them in the same vertical position as the textarea/buttons on Food and Exercise, so the date picker aligns consistently across all tabs.
+**File: `src/pages/OtherLog.tsx`**
 
-Additionally, when a log type is selected from the dropdown and the `LogEntryInput` form appears, it should render inline right below the dropdown row (still above the date nav), mirroring how Food/Exercise show their input area above the date picker.
-
-Remove the `pt-4 border-t` styling since these controls will no longer be a footer -- they'll be the top-level input area.
-
-### File changed: 1
+Wrap the two top blocks (the dropdown row and the conditional `LogEntryInput`) in a single `<section>` with `min-h-[144px]` and use `flex flex-col justify-center` to vertically center the controls within that space. This ensures the date picker below starts at the exact same vertical position as on Food and Exercise pages, regardless of whether a log type is selected.
 
 | File | Change |
 |------|--------|
-| `src/pages/OtherLog.tsx` | Reorder JSX: move the dropdown + add button block and the `LogEntryInput` block to render before the date navigation section. Remove bottom-border styling. |
+| `src/pages/OtherLog.tsx` | Wrap the dropdown + LogEntryInput blocks in `<section className="min-h-[144px] flex flex-col justify-center">` so the date picker aligns with Food/Exercise pages |
 
