@@ -1,38 +1,33 @@
 
 
-## Fix "Go to today" styling and date row height on Custom page
+## Fix font size hierarchy in the Create Log Type dialog
 
-### 1. Fix "Go to today" link styling
+### Problem
+There are 5 font sizes creating a muddy hierarchy. The field labels ("Name", "Type", "Unit") render at 16px -- the same as the dialog description -- making them feel too prominent and flattening the visual distinction between the header area and the form content.
 
-The Custom page uses `text-xs text-teal-600 dark:text-teal-400` while Food/Exercise pages use `text-sm text-primary`. Also missing the vertical centering class.
+### Current sizes (mobile)
+- Title: 18px
+- Description: 16px
+- Field labels (Name/Type/Unit): 16px (same as description -- problem)
+- Radio labels (Numeric, etc.): 14px
+- Radio descriptions: 12px
 
-**File: `src/pages/OtherLog.tsx` (line 215)**
+### Proposed fix: clean 3-tier hierarchy
+- Title: 18px (unchanged)
+- Description: 16px (unchanged)
+- Field labels: 14px (add `text-sm` to each Label)
+- Radio labels: 14px (unchanged, now matches field labels)
+- Radio descriptions: 12px (unchanged)
 
-Change:
-```
-className="absolute right-0 text-xs text-teal-600 dark:text-teal-400 hover:underline"
-```
-To:
-```
-className="text-sm text-primary hover:underline absolute right-0 top-1/2 -translate-y-1/2"
-```
+This reduces the sizes from 5 to 4, and more importantly creates a clear step-down from header to form content.
 
-This matches the Food/Exercise pages exactly: `text-sm` (not `text-xs`), `text-primary` (not teal), and includes `top-1/2 -translate-y-1/2` for proper vertical centering.
+### Technical details
 
-### 2. Fix date row vertical position
+**File: `src/components/CreateLogTypeDialog.tsx`**
 
-The Custom page's outer wrapper uses `space-y-4` which adds 16px gap between the top section and the date row. The Food/Exercise pages also use `space-y-4` but don't have `space-y-3` inside the section. The extra `space-y-3` inside the section may be pushing things slightly. However, the more likely culprit is the section itself -- `min-h-[144px]` may not perfectly match. Let me check the FoodLog section height to confirm the right value and adjust if needed.
+Add `text-sm` class to the three Label components:
+- Line 47: `<Label htmlFor="log-type-name" className="shrink-0">` becomes `className="shrink-0 text-sm"`
+- Line 57: `<Label>Type</Label>` becomes `<Label className="text-sm">Type</Label>`
+- Line 81: `<Label htmlFor="log-type-unit" className="shrink-0">` becomes `className="shrink-0 text-sm"`
 
-The FoodLog wraps its LogInput in a `<section>` without an explicit min-height -- the LogInput component itself provides the natural height. To ensure perfect alignment, bump the min-height to `min-h-[148px]` to account for the `space-y-3` (12px) gap added inside the section, or remove the inner `space-y-3` and use a different spacing approach.
-
-The cleanest fix: keep `space-y-3` inside the section but verify the total height matches by checking FoodLog's actual rendered section height. Since the LogInput has `min-h-[100px]` textarea + ~12px gap + ~32px buttons = ~144px, and the Custom page section already has `min-h-[144px]`, the slight difference is likely from the `space-y-3` adding internal spacing that pushes beyond 144px when both dropdown and input are visible. When neither is visible (read-only or no type selected), the 144px should be correct.
-
-The real fix: the `space-y-3` class is on the section itself, meaning it applies between the section's direct children. When only the dropdown row is showing (~32px), the section correctly pads to 144px. This should be fine. Let me re-examine -- the FoodLog's outer div likely doesn't use `space-y-4` the same way.
-
-I'll check the FoodLog outer container to confirm:
-
-| File | Change |
-|------|--------|
-| `src/pages/OtherLog.tsx` line 215 | Change "Go to today" className from `"absolute right-0 text-xs text-teal-600 dark:text-teal-400 hover:underline"` to `"text-sm text-primary hover:underline absolute right-0 top-1/2 -translate-y-1/2"` |
-| `src/pages/OtherLog.tsx` line 102 | Change `min-h-[144px]` to `min-h-[148px]` to account for the extra internal spacing, nudging the date row down to match Food/Exercise pages exactly |
-
+No other files need changes.
