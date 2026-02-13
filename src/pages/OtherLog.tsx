@@ -133,7 +133,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                 createNewClickedRef.current = false;
               }}
             >
-              <SelectTrigger className="h-8 text-sm font-medium w-auto min-w-[140px]">
+              <SelectTrigger className="h-8 text-sm font-medium w-auto min-w-[140px] bg-teal-500 text-white border-teal-500 hover:bg-teal-600">
                 <SelectValue placeholder="Log..." />
               </SelectTrigger>
               <SelectContent>
