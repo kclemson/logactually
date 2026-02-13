@@ -38,7 +38,7 @@ function MultilineTextArea({ value, isReadOnly, onSave }: { value: string; isRea
       onFocus={handleFocus}
       onBlur={handleBlur}
       className={cn(
-        "min-w-[180px] max-w-[240px] min-h-[40px] rounded-md border border-input bg-background px-2 py-1 text-sm resize-y focus:outline-none cursor-text hover:bg-muted/50",
+        "w-[280px] min-h-[60px] rounded-md border border-input bg-background px-2 py-1 text-sm resize-y focus:outline-none cursor-text hover:bg-muted/50",
         !isReadOnly && "focus:ring-2 focus:ring-focus-ring focus:bg-focus-bg"
       )}
     />
