@@ -23,7 +23,16 @@ export function AskAiPromptEval() {
   const [exerciseText, setExerciseText] = useState(
     () => localStorage.getItem('askai-exercise-prompts') ?? ''
   );
-  const [results, setResults] = useState<AskAiResult[]>([]);
+  const [results, setResults] = useState<AskAiResult[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('askai-eval-results') || '[]');
+    } catch { return []; }
+  });
+
+  const updateResults = (next: AskAiResult[]) => {
+    setResults(next);
+    localStorage.setItem('askai-eval-results', JSON.stringify(next));
+  };
   const [running, setRunning] = useState(false);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -77,7 +86,7 @@ export function AskAiPromptEval() {
         });
       }
       // Update results progressively
-      setResults([...allResults]);
+      updateResults([...allResults]);
     };
 
     for (const q of foodPrompts) await runOne(q, 'food');
@@ -87,7 +96,8 @@ export function AskAiPromptEval() {
   };
 
   const toggleApproved = (idx: number) => {
-    setResults(prev => prev.map((r, i) => i === idx ? { ...r, approved: !r.approved } : r));
+    const next = results.map((r, i) => i === idx ? { ...r, approved: !r.approved } : r);
+    updateResults(next);
   };
 
   const copyApproved = (mode: 'food' | 'exercise') => {
