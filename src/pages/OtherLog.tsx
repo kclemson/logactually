@@ -126,7 +126,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
             onClick={() => setCreateTypeOpen(true)}
           >
             <Plus className="h-3 w-3" />
-            Add Log Type
+            Add Custom Log Type
           </Button>
         </div>
       )}
