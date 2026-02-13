@@ -1,39 +1,41 @@
 
 
-## Two Small Refinements
+## Fix Text Entry Row Alignment and Multiline Textarea Styling
 
-### 1. Remove "Name" and "Type" labels from Create dialog
+### File: `src/components/CustomLogEntryRow.tsx`
 
-**File: `src/components/CreateLogTypeDialog.tsx`**
+**Three changes in this file:**
 
-- Remove the `<Label>` for "Name" (line 49) and change the layout from `flex items-center gap-3` to just the Input on its own with placeholder text "e.g. Body Weight" (already there) serving as the label
-- Remove the `<Label>` for "Type" (line 59)
-- Remove the wrapping `div` with `space-y-2` around the Type section so the radio buttons sit directly below the name input, left-aligned with it
+1. **Top-align rows for single-line text entries (e.g. "Mood")**
+   - Update the outer row div's alignment condition from `isMultiline ? "items-start" : "items-center"` to `(isMultiline || valueType === 'text') ? "items-start" : "items-center"`
+   - This ensures the "Mood" label sits at the top of its editable text span, not vertically centered
 
-### 2. Top-align multiline text entry input
+2. **Top-align rows for multiline text entries (already working, no change needed)**
+   - The `isMultiline` check already handles this
 
-**File: `src/components/LogEntryInput.tsx`**
+3. **Add visible border and proper padding to the MultilineTextArea component**
+   - Change `border-0` to `border border-input`
+   - Change `bg-transparent` to `bg-background`
+   - Change `rounded` to `rounded-md`
+   - Change `px-1` to `px-2 py-1`
+   - This gives the textarea a proper bordered box appearance matching other inputs, instead of being an invisible borderless area crammed into the corner
 
-- Change the form's `items-center` to `items-start` when `valueType === 'text_multiline'` so the label ("Journal"), Save button, and X button align to the top of the textarea rather than being vertically centered against it
+### Technical detail
 
-### Technical details
-
-**CreateLogTypeDialog.tsx** -- the name row becomes:
-```tsx
-<Input
-  id="log-type-name"
-  value={name}
-  onChange={(e) => setName(e.target.value)}
-  placeholder="e.g. Body Weight"
-  autoFocus
-/>
+In the `MultilineTextArea` component's className (around line 40), change:
+```
+"min-w-[180px] max-w-[240px] min-h-[40px] rounded px-1 text-sm bg-transparent border-0 resize-y ..."
+```
+to:
+```
+"min-w-[180px] max-w-[240px] min-h-[40px] rounded-md border border-input bg-background px-2 py-1 text-sm resize-y ..."
 ```
 
-The type section loses its Label and wrapping div, leaving just the radio button list directly in the form's `space-y-4` flow.
-
-**LogEntryInput.tsx** -- the form tag changes to:
-```tsx
-<form onSubmit={handleSubmit} className={cn("flex gap-2", valueType === 'text_multiline' ? "items-start" : "items-center")}>
+In the outer row div (around line 141), change the alignment condition:
 ```
-
-This requires importing `cn` from `@/lib/utils`.
+isMultiline ? "items-start" : "items-center"
+```
+to:
+```
+(isMultiline || valueType === 'text') ? "items-start" : "items-center"
+```
