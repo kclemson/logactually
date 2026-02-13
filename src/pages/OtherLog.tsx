@@ -98,9 +98,10 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
 
   return (
     <div className="space-y-4">
-      {/* Top row: dropdown + add tracking type */}
-      {!isReadOnly && (
-        <div className="flex items-center justify-center gap-2">
+      {/* Top section: matches LogInput height on Food/Exercise pages */}
+      <section className="min-h-[144px] flex flex-col justify-center">
+        {!isReadOnly && (
+          <div className="flex items-center justify-center gap-2">
           {sortedLogTypes.length > 0 && (
             <Select
               value={selectedTypeId || ''}
@@ -148,6 +149,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
           isLoading={createEntry.isPending}
         />
       )}
+      </section>
 
       {/* Date Navigation */}
       <div className="flex items-center justify-center gap-1 relative">
