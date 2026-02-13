@@ -107,7 +107,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
               value={selectedTypeId || ''}
               onValueChange={(val) => setSelectedTypeId(val)}
             >
-              <SelectTrigger className="h-8 text-sm w-auto min-w-[140px]">
+              <SelectTrigger className="h-8 text-sm font-medium w-auto min-w-[140px]">
                 <SelectValue placeholder="Log..." />
               </SelectTrigger>
               <SelectContent>
