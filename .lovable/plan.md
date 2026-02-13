@@ -1,99 +1,51 @@
 
 
-## Restructure Other Log Page Layout
+## Dropdown + Inline Input Redesign
 
-Reorganize the page into three clear zones: date picker at top, all logged entries in the middle, and all entry creation controls at the bottom.
+### Layout (top to bottom)
 
-### Current layout
-1. Date picker
-2. Add Tracking Type button
-3. Per-type collapsible sections (each containing its entries AND its "+ Add" button)
-
-### New layout
-1. Date picker (unchanged)
-2. Flat list of ALL logged entries across all types (no collapsible sections)
-3. Bottom section: per-type "+ Add" buttons + "Add Tracking Type" button
-
----
-
-### File: `src/pages/OtherLog.tsx`
-
-**Entries section (middle):** Replace the collapsible sections with a simple flat list of all entries. Each entry row already shows the type name on the left and the value on the right via `CustomLogEntryRow`, so grouping by type headers is unnecessary -- the type name is already visible on each row.
-
-```
-{/* All logged entries, flat list */}
-{entries.length > 0 ? (
-  entries.map(entry => {
-    const logType = logTypes.find(t => t.id === entry.log_type_id);
-    return (
-      <CustomLogEntryRow
-        key={entry.id}
-        entry={entry}
-        typeName={logType?.name || ''}
-        valueType={logType?.value_type || 'text'}
-        onDelete={id => deleteEntry.mutate(id)}
-        isReadOnly={isReadOnly}
-      />
-    );
-  })
-) : (
-  <p className="text-xs text-muted-foreground py-1">No entries for this date.</p>
-)}
+```text
+[date picker]
+[logged entries list]
+[inline input form -- only visible after selecting a type from the dropdown]
+[  Add [dropdown v]    + Add Tracking Type  ]   <-- single row at bottom
 ```
 
-**Bottom section:** Show a "+ Add" `LogEntryInput` for each existing tracking type (labeled with the type name), followed by the "+ Add Tracking Type" button at the very end.
+### Changes
 
-```
-{/* Entry creation controls */}
-{!isReadOnly && (
-  <div className="space-y-2 pt-4 border-t border-border/50">
-    {logTypes.map(logType => (
-      <LogEntryInput
-        key={logType.id}
-        valueType={logType.value_type}
-        label={logType.name}        // NEW prop
-        onSubmit={params => createEntry.mutate({
-          log_type_id: logType.id,
-          logged_date: dateStr,
-          ...params,
-        })}
-        isLoading={createEntry.isPending}
-      />
-    ))}
-    <button onClick={() => setCreateTypeOpen(true)} ...>
-      + Add Tracking Type
-    </button>
-  </div>
-)}
-```
+**File: `src/pages/OtherLog.tsx`**
 
-### File: `src/components/LogEntryInput.tsx`
+1. **State**: Add `selectedTypeId: string | null` (default null). When the user picks a type from the dropdown, set it. When they submit or cancel, clear it.
 
-Add an optional `label` prop so the collapsed "+ Add" button reads "+ Add weight" or "+ Add mood" instead of just "+ Add".
+2. **Bottom row**: Replace the vertical list of per-type `LogEntryInput` buttons with a single horizontal row containing:
+   - A Radix `Select` dropdown (labeled "Add [type v]") listing all log types, sorted by most recent usage. The dropdown defaults to no selection (placeholder "Select type...").
+   - A "+ Add Tracking Type" text button beside it on the same row.
+   - Use `flex items-center gap-2` to keep them on one line.
 
-```tsx
-interface LogEntryInputProps {
-  // ...existing
-  label?: string;  // NEW
-}
+3. **Inline input placement**: When `selectedTypeId` is set, render the `LogEntryInput` form *between* the entries list and the bottom row (i.e., in the middle zone, right below the logged items). This keeps the input fields contextually near the entries. Include an X/cancel button to dismiss.
 
-// In the collapsed state:
-<Button ...>
-  <Plus /> Add {label || ''}
-</Button>
-```
+4. **On submit**: Clear inputs but keep `selectedTypeId` set so the user can quickly add another of the same type. Provide cancel (X) to fully dismiss.
 
-### File: `src/components/CollapsibleSection.tsx`
+5. **Recency sorting**: Derive sort order from the existing `entries` data across all dates. We need a lightweight query for this -- add it to `useCustomLogTypes` (see below).
 
-No changes -- it simply won't be used on this page anymore. The import can be removed from `OtherLog.tsx`.
+**File: `src/components/LogEntryInput.tsx`**
 
----
+- Remove the `isAdding` toggle entirely -- the component always renders as a form (parent controls visibility).
+- Add `onCancel?: () => void` prop. Render a small X button that calls it.
+- On submit, clear fields but do NOT hide (parent decides visibility).
 
-### Summary of changes
+**File: `src/hooks/useCustomLogTypes.ts`**
+
+- Add a second query fetching most-recent `created_at` per `log_type_id` from `custom_log_entries` (using RPC or a simple select + client-side grouping).
+- Return `recentUsage: Record<string, string>` so the page can sort the dropdown.
+
+### Technical details
+
+**Files changed: 3**
 
 | File | Change |
 |------|--------|
-| `src/pages/OtherLog.tsx` | Remove collapsible sections; flat entry list in middle, add-controls at bottom with separator |
-| `src/components/LogEntryInput.tsx` | Add optional `label` prop to show type name on the button |
+| `src/pages/OtherLog.tsx` | Replace per-type button list with single-row: Select dropdown + "Add Tracking Type" link. Add `selectedTypeId` state. Render `LogEntryInput` inline between entries and bottom row when a type is selected. |
+| `src/components/LogEntryInput.tsx` | Remove `isAdding` toggle. Always show form. Add `onCancel` prop with X button. Keep form visible after submit. |
+| `src/hooks/useCustomLogTypes.ts` | Add query for most-recent entry per type. Return `recentUsage` map for dropdown sorting. |
 
-2 files changed.
