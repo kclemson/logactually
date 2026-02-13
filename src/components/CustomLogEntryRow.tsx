@@ -38,7 +38,7 @@ function MultilineTextArea({ value, isReadOnly, onSave }: { value: string; isRea
       onFocus={handleFocus}
       onBlur={handleBlur}
       className={cn(
-        "min-w-[180px] max-w-[240px] min-h-[40px] rounded px-1 text-sm bg-transparent border-0 resize-y focus:outline-none cursor-text hover:bg-muted/50",
+        "min-w-[180px] max-w-[240px] min-h-[40px] rounded-md border border-input bg-background px-2 py-1 text-sm resize-y focus:outline-none cursor-text hover:bg-muted/50",
         !isReadOnly && "focus:ring-2 focus:ring-focus-ring focus:bg-focus-bg"
       )}
     />
@@ -138,7 +138,7 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
   };
 
   return (
-    <div className={cn("flex justify-between py-2 group", isMultiline ? "items-start" : "items-center")}>
+    <div className={cn("flex justify-between py-2 group", (isMultiline || valueType === 'text') ? "items-start" : "items-center")}>
       <span className="text-sm text-muted-foreground">{typeName}</span>
       <div className={cn("flex gap-2", isMultiline ? "items-start" : "items-center")}>
         {/* Text value (for text and text_numeric) - single line */}
