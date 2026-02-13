@@ -89,7 +89,10 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
 
   const handleCreateType = (name: string, valueType: 'numeric' | 'text_numeric' | 'text') => {
     createType.mutate({ name, value_type: valueType }, {
-      onSuccess: () => setCreateTypeOpen(false),
+      onSuccess: (newType) => {
+        setCreateTypeOpen(false);
+        setSelectedTypeId(newType.id);
+      },
     });
   };
 
@@ -203,31 +206,33 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
 
       {/* Bottom row: dropdown + add tracking type */}
       {!isReadOnly && (
-        <div className="flex items-center gap-2 pt-4 border-t border-border/50">
+        <div className="flex items-center justify-center gap-2 pt-4 border-t border-border/50">
           {sortedLogTypes.length > 0 && (
             <Select
               value={selectedTypeId || ''}
               onValueChange={(val) => setSelectedTypeId(val)}
             >
               <SelectTrigger className="h-8 text-sm w-auto min-w-[140px]">
-                <SelectValue placeholder="Add entry..." />
+                <SelectValue placeholder="Log..." />
               </SelectTrigger>
               <SelectContent>
                 {sortedLogTypes.map((lt) => (
                   <SelectItem key={lt.id} value={lt.id}>
-                    {lt.name}
+                    Log {lt.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           )}
-          <button
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 text-sm"
             onClick={() => setCreateTypeOpen(true)}
-            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <Plus className="h-3 w-3" />
-            <span>Add Tracking Type</span>
-          </button>
+            Add Tracking Type
+          </Button>
         </div>
       )}
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { ValueType } from '@/hooks/useCustomLogTypes';
@@ -69,8 +69,8 @@ export function LogEntryInput({ valueType, onSubmit, onCancel, isLoading, label 
           className="h-8 text-sm w-14"
         />
       )}
-      <Button type="submit" size="icon" variant="ghost" className="h-8 w-8 shrink-0" disabled={isLoading}>
-        <Plus className="h-4 w-4" />
+      <Button type="submit" variant="ghost" size="sm" className="h-8 shrink-0 text-sm" disabled={isLoading}>
+        Save
       </Button>
       {onCancel && (
         <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={onCancel}>
