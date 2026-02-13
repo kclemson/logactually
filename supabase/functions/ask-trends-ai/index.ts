@@ -61,79 +61,77 @@ serve(async (req) => {
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
     const startDate = ninetyDaysAgo.toISOString().split("T")[0];
 
-    let dataContext = "";
-
-    if (mode === "food") {
-      const { data: entries, error: fetchErr } = await supabase
+    // Always fetch both food and exercise data
+    const [foodResult, exerciseResult] = await Promise.all([
+      supabase
         .from("food_entries")
         .select("eaten_date, food_items, total_calories, total_protein, total_carbs, total_fat")
         .gte("eaten_date", startDate)
-        .order("eaten_date", { ascending: true });
-
-      if (fetchErr) throw fetchErr;
-
-      if (!entries || entries.length === 0) {
-        dataContext = "No food data available for the last 90 days.";
-      } else {
-        // Aggregate by day for a compact representation
-        const byDate: Record<string, { cal: number; prot: number; carbs: number; fat: number; items: string[] }> = {};
-        for (const e of entries) {
-          const d = e.eaten_date;
-          if (!byDate[d]) byDate[d] = { cal: 0, prot: 0, carbs: 0, fat: 0, items: [] };
-          byDate[d].cal += e.total_calories;
-          byDate[d].prot += Number(e.total_protein);
-          byDate[d].carbs += Number(e.total_carbs);
-          byDate[d].fat += Number(e.total_fat);
-
-          // Extract food descriptions
-          const items = e.food_items as any[];
-          if (Array.isArray(items)) {
-            for (const item of items) {
-              if (item.description) {
-                const desc = item.portion
-                  ? `${item.description} (${item.portion})`
-                  : item.description;
-                byDate[d].items.push(desc);
-              }
-            }
-          }
-        }
-
-        const lines = Object.entries(byDate).map(([date, v]) => {
-          const itemsSummary = v.items.length > 0 ? ` | Foods: ${v.items.join(", ")}` : "";
-          return `${date}: ${Math.round(v.cal)} cal, ${Math.round(v.prot)}g protein, ${Math.round(v.carbs)}g carbs, ${Math.round(v.fat)}g fat${itemsSummary}`;
-        });
-        dataContext = `Food log (last 90 days, ${Object.keys(byDate).length} days with data):\n${lines.join("\n")}`;
-      }
-    } else {
-      // Exercise mode
-      const { data: sets, error: fetchErr } = await supabase
+        .order("eaten_date", { ascending: true }),
+      supabase
         .from("weight_sets")
         .select("logged_date, exercise_key, exercise_subtype, description, sets, reps, weight_lbs, duration_minutes, distance_miles, exercise_metadata")
         .gte("logged_date", startDate)
-        .order("logged_date", { ascending: true });
+        .order("logged_date", { ascending: true }),
+    ]);
 
-      if (fetchErr) throw fetchErr;
+    if (foodResult.error) throw foodResult.error;
+    if (exerciseResult.error) throw exerciseResult.error;
 
-      if (!sets || sets.length === 0) {
-        dataContext = "No exercise data available for the last 90 days.";
-      } else {
-        const lines = sets.map((s: any) => {
-          const parts = [`${s.logged_date}: ${s.description}`];
-          if (s.sets > 0 && s.reps > 0) parts.push(`${s.sets}x${s.reps}`);
-          if (s.weight_lbs > 0) parts.push(`${s.weight_lbs} lbs`);
-          if (s.duration_minutes) parts.push(`${s.duration_minutes} min`);
-          if (s.distance_miles) parts.push(`${s.distance_miles} mi`);
-          const meta = s.exercise_metadata as Record<string, any> | null;
-          if (meta) {
-            if (meta.effort) parts.push(`effort: ${meta.effort}/10`);
-            if (meta.calories_burned) parts.push(`reported: ${meta.calories_burned} cal`);
+    // Build food context
+    let foodContext = "";
+    const entries = foodResult.data;
+    if (!entries || entries.length === 0) {
+      foodContext = "No food data available for the last 90 days.";
+    } else {
+      const byDate: Record<string, { cal: number; prot: number; carbs: number; fat: number; items: string[] }> = {};
+      for (const e of entries) {
+        const d = e.eaten_date;
+        if (!byDate[d]) byDate[d] = { cal: 0, prot: 0, carbs: 0, fat: 0, items: [] };
+        byDate[d].cal += e.total_calories;
+        byDate[d].prot += Number(e.total_protein);
+        byDate[d].carbs += Number(e.total_carbs);
+        byDate[d].fat += Number(e.total_fat);
+        const items = e.food_items as any[];
+        if (Array.isArray(items)) {
+          for (const item of items) {
+            if (item.description) {
+              const desc = item.portion ? `${item.description} (${item.portion})` : item.description;
+              byDate[d].items.push(desc);
+            }
           }
-          return parts.join(", ");
-        });
-        dataContext = `Exercise log (last 90 days, ${sets.length} entries):\n${lines.join("\n")}`;
+        }
       }
+      const lines = Object.entries(byDate).map(([date, v]) => {
+        const itemsSummary = v.items.length > 0 ? ` | Foods: ${v.items.join(", ")}` : "";
+        return `${date}: ${Math.round(v.cal)} cal, ${Math.round(v.prot)}g protein, ${Math.round(v.carbs)}g carbs, ${Math.round(v.fat)}g fat${itemsSummary}`;
+      });
+      foodContext = `Food log (last 90 days, ${Object.keys(byDate).length} days with data):\n${lines.join("\n")}`;
     }
+
+    // Build exercise context
+    let exerciseContext = "";
+    const sets = exerciseResult.data;
+    if (!sets || sets.length === 0) {
+      exerciseContext = "No exercise data available for the last 90 days.";
+    } else {
+      const lines = sets.map((s: any) => {
+        const parts = [`${s.logged_date}: ${s.description}`];
+        if (s.sets > 0 && s.reps > 0) parts.push(`${s.sets}x${s.reps}`);
+        if (s.weight_lbs > 0) parts.push(`${s.weight_lbs} lbs`);
+        if (s.duration_minutes) parts.push(`${s.duration_minutes} min`);
+        if (s.distance_miles) parts.push(`${s.distance_miles} mi`);
+        const meta = s.exercise_metadata as Record<string, any> | null;
+        if (meta) {
+          if (meta.effort) parts.push(`effort: ${meta.effort}/10`);
+          if (meta.calories_burned) parts.push(`reported: ${meta.calories_burned} cal`);
+        }
+        return parts.join(", ");
+      });
+      exerciseContext = `Exercise log (last 90 days, ${sets.length} entries):\n${lines.join("\n")}`;
+    }
+
+    const dataContext = [foodContext, exerciseContext].filter(Boolean).join("\n\n");
 
     // Fetch profile if requested
     let profileContext = "";
@@ -162,7 +160,7 @@ serve(async (req) => {
     }
 
     const modeLabel = mode === "food" ? "nutrition" : "fitness/exercise";
-    const systemPrompt = `You are a concise ${modeLabel} analyst. The user will ask a question about their ${mode} data. Answer based on the data provided. Use plain, everyday language — avoid gym jargon and technical fitness terminology. Summarize trends and patterns at a high level — avoid listing individual dates or day-by-day examples. Use ranges and generalizations (e.g. "over the past month", "consistently around X") instead of citing specific dates. Use bullet points when making multiple observations. Keep answers to 2-3 short paragraphs max. Do not give medical advice — suggest consulting a professional for medical questions. If the data is insufficient to answer, say so.`;
+    const systemPrompt = `You are a concise health and fitness analyst. The user opened this from the ${mode} tab, so weight your answer toward ${modeLabel} — but you have access to both their food and exercise logs. Answer cross-domain questions when asked. Use plain, everyday language — avoid gym jargon and technical fitness terminology. Summarize trends and patterns at a high level — avoid listing individual dates or day-by-day examples. Use ranges and generalizations (e.g. "over the past month", "consistently around X") instead of citing specific dates. Use bullet points when making multiple observations. Keep answers to 2-3 short paragraphs max. Do not give medical advice — suggest consulting a professional for medical questions. If the data is insufficient to answer, say so.`;
 
     const userPrompt = `${dataContext}${profileContext}\n\nQuestion: ${question}`;
 
