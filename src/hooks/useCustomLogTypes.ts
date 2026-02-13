@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
-export type ValueType = 'numeric' | 'text_numeric' | 'text';
+export type ValueType = 'numeric' | 'text_numeric' | 'text' | 'text_multiline';
 
 export interface CustomLogType {
   id: string;

@@ -26,7 +26,7 @@ export function LogEntryInput({ valueType, onSubmit, onCancel, isLoading, label,
     } else if (valueType === 'text_numeric') {
       if (!textValue || !numericValue) return;
       onSubmit({ text_value: textValue, numeric_value: parseFloat(numericValue) });
-    } else {
+    } else if (valueType === 'text' || valueType === 'text_multiline') {
       if (!textValue) return;
       onSubmit({ text_value: textValue });
     }
@@ -40,12 +40,21 @@ export function LogEntryInput({ valueType, onSubmit, onCancel, isLoading, label,
       {label && (
         <span className="text-xs font-medium text-muted-foreground shrink-0">{label}</span>
       )}
-      {(valueType === 'text_numeric' || valueType === 'text') && (
+  {(valueType === 'text_numeric' || valueType === 'text') && (
         <Input
           value={textValue}
           onChange={(e) => setTextValue(e.target.value)}
           placeholder={valueType === 'text_numeric' ? 'Label (e.g. Waist)' : 'Enter text...'}
           className="h-8 text-sm flex-1"
+          autoFocus
+        />
+      )}
+      {valueType === 'text_multiline' && (
+        <textarea
+          value={textValue}
+          onChange={(e) => setTextValue(e.target.value)}
+          placeholder="Enter text..."
+          className="flex-1 min-h-[60px] rounded-md border border-input bg-background px-2 py-1 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y"
           autoFocus
         />
       )}
