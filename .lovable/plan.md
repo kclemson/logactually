@@ -1,46 +1,57 @@
 
-## Add Inline Editing to Custom Log Entries
+## Polish Custom Log Entry Inline Editing
 
-### What changes
+### Changes (all in two files)
 
-Currently, custom log entries are read-only text. After this change, you can tap on any value (text or numeric) to edit it inline -- just like food calories or exercise sets/reps/weight.
+**File: `src/components/CustomLogEntryRow.tsx`**
 
-### Behavior
+1. **Text field width**: Add `min-w-[120px]` to the contentEditable span's wrapper so the focus ring has breathing room instead of cramping around short text.
 
-**Numeric fields** (for `numeric` and `text_numeric` types):
-- Tap to focus -- the field gets a ring highlight
-- Delete all content -- the field stays empty (no coercion to 0)
-- Press Enter or blur (tap away) -- saves the new value if it's valid and changed; reverts to original if empty
-- Press Escape -- reverts without saving
+2. **Numeric input -- centered text and narrower width**: Change the Input className from `w-20 text-right` to `w-[60px] text-center` to match the exercise page's lbs column (60px, centered). Keep the same focus-ring styling.
 
-**Text fields** (for `text` and `text_numeric` types):
-- Tap to focus with a `contentEditable` span (same pattern as food/exercise descriptions)
-- Press Enter or blur -- saves if changed and non-empty; reverts if empty
-- Press Escape -- reverts
-- No asterisk indicator on text fields (as requested)
+3. **No other visual changes** -- the row layout, unit label, delete button all stay as-is.
 
-**Read-only mode**: All edits blocked; tapping reverts immediately.
+**File: `src/hooks/useCustomLogEntries.ts`**
+
+4. **Optimistic updates for `updateEntry`**: Add an `onMutate` callback that:
+   - Snapshots the current query data
+   - Immediately patches the matching entry in the cache with the new `numeric_value` or `text_value`
+   - Returns the snapshot for rollback
+   - Add `onError` to roll back to the snapshot if the server call fails
+   - Keep `onSuccess` invalidation so the cache re-syncs after the server confirms
+
+This eliminates the visible lag between pressing Enter and seeing the updated value.
 
 ### Technical detail
 
-**1. Add `updateEntry` mutation to `src/hooks/useCustomLogEntries.ts`**
+**Numeric input class change** (CustomLogEntryRow.tsx):
+```
+Before: "h-7 w-20 text-sm text-right px-1 border-0 bg-transparent"
+After:  "h-7 w-[60px] text-sm text-center px-1 border-0 bg-transparent"
+```
 
-Add a new mutation that calls `supabase.from('custom_log_entries').update(...)`:
-- Accepts `{ id, numeric_value?, text_value? }`
-- Invalidates the `custom-log-entries` query on success
+**Text field min-width** (CustomLogEntryRow.tsx):
+Add `min-w-[120px]` to the wrapping div around the contentEditable span.
 
-**2. Rewrite `src/components/CustomLogEntryRow.tsx` with inline editing**
-
-Add local editing state following the same `editingCell` pattern from `FoodItemsTable`/`WeightItemsTable`:
-
-- For the **numeric value**: render an `<Input type="number">` with `onFocus` (captures original value), `onChange` (allows empty string), `onKeyDown` (Enter saves, Escape reverts), `onBlur` (saves if valid and changed, reverts if empty). Same ring styling as food/exercise inputs.
-
-- For the **text value**: render a `contentEditable` span with `onFocus` (captures original), `onKeyDown` (Enter/Escape), `onBlur` (save or revert). Same pattern as description editing in food/exercise tables.
-
-- No `*` asterisk indicator on text fields.
-
-- The row layout stays as a flex row: `typeName` on the left, editable value(s) + unit label + delete button on the right.
-
-**3. Pass `onUpdate` callback from `src/pages/OtherLog.tsx`**
-
-Wire the new `updateEntry` mutation through to `CustomLogEntryRow` as an `onUpdate` prop, called with `{ id, numeric_value?, text_value? }`.
+**Optimistic update pattern** (useCustomLogEntries.ts):
+```ts
+updateEntry = useMutation({
+  mutationFn: async (params) => { /* existing */ },
+  onMutate: async (params) => {
+    await queryClient.cancelQueries({ queryKey: ['custom-log-entries', dateStr] });
+    const previous = queryClient.getQueryData(['custom-log-entries', dateStr]);
+    queryClient.setQueryData(['custom-log-entries', dateStr], (old) =>
+      old?.map(e => e.id === params.id ? { ...e, ...params } : e)
+    );
+    return { previous };
+  },
+  onError: (_err, _params, context) => {
+    if (context?.previous) {
+      queryClient.setQueryData(['custom-log-entries', dateStr], context.previous);
+    }
+  },
+  onSettled: () => {
+    queryClient.invalidateQueries({ queryKey: ['custom-log-entries', dateStr] });
+  },
+});
+```
