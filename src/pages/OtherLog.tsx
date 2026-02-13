@@ -98,6 +98,57 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
 
   return (
     <div className="space-y-4">
+      {/* Top row: dropdown + add tracking type */}
+      {!isReadOnly && (
+        <div className="flex items-center justify-center gap-2">
+          {sortedLogTypes.length > 0 && (
+            <Select
+              value={selectedTypeId || ''}
+              onValueChange={(val) => setSelectedTypeId(val)}
+            >
+              <SelectTrigger className="h-8 text-sm w-auto min-w-[140px]">
+                <SelectValue placeholder="Log..." />
+              </SelectTrigger>
+              <SelectContent>
+                {sortedLogTypes.map((lt) => (
+                  <SelectItem key={lt.id} value={lt.id}>
+                    Log {lt.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 text-sm"
+            onClick={() => setCreateTypeOpen(true)}
+          >
+            <Plus className="h-3 w-3" />
+            Add Tracking Type
+          </Button>
+        </div>
+      )}
+
+      {/* Inline input form -- visible when a type is selected */}
+      {selectedTypeId && selectedType && !isReadOnly && (
+        <LogEntryInput
+          valueType={selectedType.value_type}
+          label={selectedType.name}
+          unit={selectedType.unit}
+          onSubmit={(params) =>
+            createEntry.mutate({
+              log_type_id: selectedType.id,
+              logged_date: dateStr,
+              unit: selectedType.unit || null,
+              ...params,
+            })
+          }
+          onCancel={() => setSelectedTypeId(null)}
+          isLoading={createEntry.isPending}
+        />
+      )}
+
       {/* Date Navigation */}
       <div className="flex items-center justify-center gap-1 relative">
         <Button variant="ghost" size="icon" onClick={goToPreviousDay} className="h-11 w-11" aria-label="Previous day">
@@ -187,57 +238,6 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
           <p className="text-xs text-muted-foreground py-1">No entries for this date.</p>
         )}
       </div>
-
-      {/* Inline input form -- visible when a type is selected */}
-      {selectedTypeId && selectedType && !isReadOnly && (
-      <LogEntryInput
-          valueType={selectedType.value_type}
-          label={selectedType.name}
-          unit={selectedType.unit}
-          onSubmit={(params) =>
-            createEntry.mutate({
-              log_type_id: selectedType.id,
-              logged_date: dateStr,
-              unit: selectedType.unit || null,
-              ...params,
-            })
-          }
-          onCancel={() => setSelectedTypeId(null)}
-          isLoading={createEntry.isPending}
-        />
-      )}
-
-      {/* Bottom row: dropdown + add tracking type */}
-      {!isReadOnly && (
-        <div className="flex items-center justify-center gap-2 pt-4 border-t border-border/50">
-          {sortedLogTypes.length > 0 && (
-            <Select
-              value={selectedTypeId || ''}
-              onValueChange={(val) => setSelectedTypeId(val)}
-            >
-              <SelectTrigger className="h-8 text-sm w-auto min-w-[140px]">
-                <SelectValue placeholder="Log..." />
-              </SelectTrigger>
-              <SelectContent>
-                {sortedLogTypes.map((lt) => (
-                  <SelectItem key={lt.id} value={lt.id}>
-                    Log {lt.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 text-sm"
-            onClick={() => setCreateTypeOpen(true)}
-          >
-            <Plus className="h-3 w-3" />
-            Add Tracking Type
-          </Button>
-        </div>
-      )}
 
       <CreateLogTypeDialog
         open={createTypeOpen}
