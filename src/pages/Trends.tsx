@@ -34,7 +34,7 @@ import { FoodChart, StackedMacroChart, VolumeChart } from "@/components/trends/F
 import { CalorieBurnChart } from "@/components/trends/CalorieBurnChart";
 import { useDailyCalorieBurn } from "@/hooks/useDailyCalorieBurn";
 import { useCustomLogTrends, type CustomLogTrendSeries } from "@/hooks/useCustomLogTrends";
-import { LineChart, Line, CartesianGrid, YAxis } from "recharts";
+
 
 // Chart color palette (hex RGB format for easy editing)
 const CHART_COLORS = {
@@ -423,71 +423,67 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
 
 const TEAL_PALETTE = ['#14b8a6', '#0d9488', '#0f766e', '#115e59', '#2dd4bf'];
 
-const CustomLogTrendChart = ({ trend }: { trend: CustomLogTrendSeries }) => {
+const CustomLogTrendChart = ({ trend, onNavigate }: { trend: CustomLogTrendSeries; onNavigate: (date: string) => void }) => {
   const chartData = useMemo(() => {
     // Build unified date list across all series
     const dateSet = new Set<string>();
     trend.series.forEach(s => s.data.forEach(d => dateSet.add(d.date)));
     const dates = Array.from(dateSet).sort();
 
-    return dates.map(date => {
-      const point: Record<string, any> = {
+    const dataLength = dates.length;
+    const labelInterval = 
+      dataLength <= 7 ? 1 :
+      dataLength <= 14 ? 2 :
+      dataLength <= 21 ? 3 :
+      dataLength <= 35 ? 4 : 
+      dataLength <= 50 ? 5 : 
+      dataLength <= 70 ? 7 : 10;
+
+    return dates.map((date, index) => {
+      const distanceFromEnd = dataLength - 1 - index;
+      const point: { rawDate: string; date: string; showLabel: boolean; showLabelFullWidth: boolean; [key: string]: any } = {
+        rawDate: date,
         date: format(new Date(`${date}T12:00:00`), "MMM d"),
+        showLabel: distanceFromEnd % labelInterval === 0,
+        showLabelFullWidth: distanceFromEnd % labelInterval === 0,
       };
       trend.series.forEach(s => {
         const match = s.data.find(d => d.date === date);
-        point[s.label] = match ? match.value : null;
+        point[s.label] = match ? match.value : 0;
       });
       return point;
     });
   }, [trend]);
 
+  if (trend.series.length === 1) {
+    return (
+      <FoodChart
+        title={trend.logTypeName}
+        chartData={chartData}
+        dataKey={trend.series[0].label}
+        color={TEAL_PALETTE[0]}
+        onNavigate={onNavigate}
+        useFullWidthLabels
+      />
+    );
+  }
+
+  // Multi-series: stacked bar chart
+  const bars = trend.series.map((s, i) => ({
+    dataKey: s.label,
+    name: s.label,
+    color: TEAL_PALETTE[i % TEAL_PALETTE.length],
+    isTop: i === trend.series.length - 1,
+  }));
+
   return (
-    <Card className="border-0 shadow-none">
-      <CardHeader className="p-2 pb-1">
-        <ChartTitle className="truncate">{trend.logTypeName}</ChartTitle>
-        <ChartSubtitle>
-          {trend.series.length === 1
-            ? `${chartData.length} data points`
-            : `${trend.series.length} metrics`}
-        </ChartSubtitle>
-      </CardHeader>
-      <CardContent className="p-2 pt-0">
-        <div className="h-24">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
-              <XAxis
-                dataKey="date"
-                tick={{ fontSize: 8 }}
-                stroke="hsl(var(--muted-foreground))"
-                interval="preserveStartEnd"
-                tickMargin={2}
-                height={16}
-              />
-              <YAxis hide domain={['auto', 'auto']} />
-              <Tooltip
-                content={
-                  <CompactTooltip
-                    formatter={(value: number, name: string) => `${name}: ${value}`}
-                  />
-                }
-              />
-              {trend.series.map((s, i) => (
-                <Line
-                  key={s.label}
-                  type="monotone"
-                  dataKey={s.label}
-                  stroke={TEAL_PALETTE[i % TEAL_PALETTE.length]}
-                  dot={chartData.length <= 30}
-                  strokeWidth={2}
-                  connectNulls
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
+    <StackedMacroChart
+      title={trend.logTypeName}
+      chartData={chartData}
+      bars={bars}
+      onNavigate={onNavigate}
+      formatter={(value, name) => `${name}: ${value}`}
+    />
   );
 };
 
@@ -928,9 +924,9 @@ const Trends = () => {
       {/* Other Trends Section */}
       {showCustomLogs && customLogTrends.length > 0 && (
         <CollapsibleSection title="Custom Trends" icon={ClipboardList} iconClassName="text-teal-500 dark:text-teal-400" defaultOpen={true} storageKey="trends-other">
-          <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
             {customLogTrends.map((trend) => (
-              <CustomLogTrendChart key={trend.logTypeId} trend={trend} />
+              <CustomLogTrendChart key={trend.logTypeId} trend={trend} onNavigate={(date) => navigate(`/custom?date=${date}`)} />
             ))}
           </div>
         </CollapsibleSection>
