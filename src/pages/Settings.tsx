@@ -305,7 +305,7 @@ export default function Settings() {
               className="w-full text-left py-2 hover:bg-accent/50 transition-colors flex items-center gap-2 text-sm text-foreground"
             >
               <Plus className="h-4 w-4" />
-              <span>Add Tracking Type</span>
+              <span>Add Custom Log Type</span>
             </button>
           )}
           {logTypesLoading ? (

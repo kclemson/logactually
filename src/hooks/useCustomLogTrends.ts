@@ -43,7 +43,7 @@ export function useCustomLogTrends(days: number) {
       const result: CustomLogTrendSeries[] = [];
 
       for (const type of types || []) {
-        if (type.value_type === 'text') continue; // No charts for text-only
+        if (type.value_type === 'text' || type.value_type === 'text_multiline') continue; // No charts for text-only
 
         const typeEntries = (entries || []).filter((e: any) => e.log_type_id === type.id);
         if (typeEntries.length === 0) continue;

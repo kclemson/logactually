@@ -1,9 +1,49 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { CustomLogEntry } from '@/hooks/useCustomLogEntries';
+
+function MultilineTextArea({ value, isReadOnly, onSave }: { value: string; isReadOnly: boolean; onSave: (val: string) => void }) {
+  const [text, setText] = useState(value);
+  const originalRef = useRef(value);
+
+  const handleFocus = () => {
+    originalRef.current = text;
+  };
+
+  const handleBlur = () => {
+    const trimmed = text.trim();
+    if (isReadOnly || trimmed === originalRef.current) return;
+    if (trimmed === '') {
+      setText(originalRef.current);
+      return;
+    }
+    onSave(trimmed);
+  };
+
+  // Sync from prop when not focused
+  const ref = useRef<HTMLTextAreaElement>(null);
+  if (ref.current && document.activeElement !== ref.current && value !== text) {
+    // Will update on next render via state
+  }
+
+  return (
+    <textarea
+      ref={ref}
+      value={text}
+      readOnly={isReadOnly}
+      onChange={(e) => setText(e.target.value)}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      className={cn(
+        "min-w-[180px] max-w-[240px] min-h-[40px] rounded px-1 text-sm bg-transparent border-0 resize-y focus:outline-none cursor-text hover:bg-muted/50",
+        !isReadOnly && "focus:ring-2 focus:ring-focus-ring focus:bg-focus-bg"
+      )}
+    />
+  );
+}
 
 interface CustomLogEntryRowProps {
   entry: CustomLogEntry;
@@ -27,7 +67,8 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
   const textOriginalRef = useRef<string>('');
 
   const hasNumeric = valueType === 'numeric' || valueType === 'text_numeric';
-  const hasText = valueType === 'text' || valueType === 'text_numeric';
+  const hasText = valueType === 'text' || valueType === 'text_numeric' || valueType === 'text_multiline';
+  const isMultiline = valueType === 'text_multiline';
 
   // --- Numeric handlers ---
   const handleNumericFocus = () => {
@@ -97,11 +138,11 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
   };
 
   return (
-    <div className="flex items-center justify-between py-2 group">
+    <div className={cn("flex justify-between py-2 group", isMultiline ? "items-start" : "items-center")}>
       <span className="text-sm text-muted-foreground">{typeName}</span>
-      <div className="flex items-center gap-2">
-        {/* Text value (for text and text_numeric) */}
-        {hasText && (
+      <div className={cn("flex gap-2", isMultiline ? "items-start" : "items-center")}>
+        {/* Text value (for text and text_numeric) - single line */}
+        {hasText && !isMultiline && (
           <div className={cn(
             "rounded px-1 min-w-[120px]",
             !isReadOnly && "focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg"
@@ -121,6 +162,14 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
               className="text-sm border-0 bg-transparent focus:outline-none cursor-text hover:bg-muted/50"
             />
           </div>
+        )}
+        {/* Multiline text */}
+        {isMultiline && (
+          <MultilineTextArea
+            value={entry.text_value || ''}
+            isReadOnly={!!isReadOnly}
+            onSave={(val) => onUpdate({ id: entry.id, text_value: val })}
+          />
         )}
 
         {/* Separator for text_numeric */}
