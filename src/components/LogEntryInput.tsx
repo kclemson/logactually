@@ -11,9 +11,18 @@ interface LogEntryInputProps {
 }
 
 export function LogEntryInput({ valueType, onSubmit, isLoading }: LogEntryInputProps) {
+  const [isAdding, setIsAdding] = useState(false);
   const [numericValue, setNumericValue] = useState('');
   const [textValue, setTextValue] = useState('');
   const [unit, setUnit] = useState('');
+
+  if (!isAdding) {
+    return (
+      <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setIsAdding(true)}>
+        <Plus className="h-3 w-3 mr-1" /> Add
+      </Button>
+    );
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,6 +41,7 @@ export function LogEntryInput({ valueType, onSubmit, isLoading }: LogEntryInputP
     setNumericValue('');
     setTextValue('');
     setUnit('');
+    setIsAdding(false);
   };
 
   return (
@@ -42,6 +52,7 @@ export function LogEntryInput({ valueType, onSubmit, isLoading }: LogEntryInputP
           onChange={(e) => setTextValue(e.target.value)}
           placeholder={valueType === 'text_numeric' ? 'Label (e.g. Waist)' : 'Enter text...'}
           className="h-8 text-sm flex-1"
+          autoFocus
         />
       )}
       {(valueType === 'numeric' || valueType === 'text_numeric') && (
@@ -52,6 +63,7 @@ export function LogEntryInput({ valueType, onSubmit, isLoading }: LogEntryInputP
           onChange={(e) => setNumericValue(e.target.value)}
           placeholder="Value"
           className="h-8 text-sm w-20"
+          autoFocus={valueType === 'numeric'}
         />
       )}
       {(valueType === 'numeric' || valueType === 'text_numeric') && (
