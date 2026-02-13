@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 import type { ValueType } from '@/hooks/useCustomLogTypes';
 
 interface LogEntryInputProps {
@@ -36,7 +37,7 @@ export function LogEntryInput({ valueType, onSubmit, onCancel, isLoading, label,
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex items-center gap-2">
+    <form onSubmit={handleSubmit} className={cn("flex gap-2", valueType === 'text_multiline' ? "items-start" : "items-center")}>
       {label && (
         <span className="text-xs font-medium text-muted-foreground shrink-0">{label}</span>
       )}
