@@ -24,6 +24,10 @@ const SHARED_PROMPTS = [
   "What's the smallest change that could meaningfully alter my trajectory?",
   "What version of me is my current routine building toward?",
   "What am I doing well that I may not be giving myself credit for?",
+  "What would a 10% improvement version of this routine look like?",
+  "What questions am I not asking that this data suggests I should?",
+  "What patterns emerge if you separate weekdays from weekends?",
+
   "If a coach reviewed this, what would they focus on first?",
 ];
 
@@ -42,6 +46,8 @@ const FOOD_PROMPTS = [
   "What tends to precede my most or least consistent weeks?",
   "What is quietly improving even if nothing's changing on the scale?",
   "What do my habits suggest about my stress levels?",
+  "What subtle behaviors tend to cascade into higher-calorie days?",
+  "What small friction points in my routine might be creating outsized effects?",
 ];
 
 const EXERCISE_PROMPTS = [
