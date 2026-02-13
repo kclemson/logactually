@@ -1,41 +1,24 @@
 
 
-## Fix Text Entry Row Alignment and Multiline Textarea Styling
+## Fix Multiline Textarea Position
 
 ### File: `src/components/CustomLogEntryRow.tsx`
 
-**Three changes in this file:**
+**Problem**: The row uses `flex justify-between`, which pushes the textarea to the far-right corner, away from the "Journal" label. The textarea should appear right next to the label.
 
-1. **Top-align rows for single-line text entries (e.g. "Mood")**
-   - Update the outer row div's alignment condition from `isMultiline ? "items-start" : "items-center"` to `(isMultiline || valueType === 'text') ? "items-start" : "items-center"`
-   - This ensures the "Mood" label sits at the top of its editable text span, not vertically centered
-
-2. **Top-align rows for multiline text entries (already working, no change needed)**
-   - The `isMultiline` check already handles this
-
-3. **Add visible border and proper padding to the MultilineTextArea component**
-   - Change `border-0` to `border border-input`
-   - Change `bg-transparent` to `bg-background`
-   - Change `rounded` to `rounded-md`
-   - Change `px-1` to `px-2 py-1`
-   - This gives the textarea a proper bordered box appearance matching other inputs, instead of being an invisible borderless area crammed into the corner
+**Fix**: For multiline rows, change from `justify-between` to `gap-3` so the label and textarea sit side-by-side. Keep `justify-between` for all other row types (numeric, text, text_numeric) since that layout works well for them.
 
 ### Technical detail
 
-In the `MultilineTextArea` component's className (around line 40), change:
-```
-"min-w-[180px] max-w-[240px] min-h-[40px] rounded px-1 text-sm bg-transparent border-0 resize-y ..."
+Update line 141 from:
+```tsx
+<div className={cn("flex justify-between py-2 group", (isMultiline || valueType === 'text') ? "items-start" : "items-center")}>
 ```
 to:
-```
-"min-w-[180px] max-w-[240px] min-h-[40px] rounded-md border border-input bg-background px-2 py-1 text-sm resize-y ..."
+```tsx
+<div className={cn("flex py-2 group", 
+  isMultiline ? "items-start gap-3" : (valueType === 'text') ? "items-start justify-between" : "items-center justify-between"
+)}>
 ```
 
-In the outer row div (around line 141), change the alignment condition:
-```
-isMultiline ? "items-start" : "items-center"
-```
-to:
-```
-(isMultiline || valueType === 'text') ? "items-start" : "items-center"
-```
+This keeps `justify-between` for numeric/text/text_numeric rows but uses `gap-3` (no justify-between) for multiline rows, placing the textarea directly next to the "Journal" label.
