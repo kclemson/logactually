@@ -1,35 +1,38 @@
 
+## Switch Custom Trends to Column Charts in 2-Column Grid
 
-## Fix: Clicking the already-selected log type doesn't show input
+### Changes
 
-### Problem
-Radix Select does not fire `onValueChange` when the user selects the value that is already active. Since "Log Weight" is the default (`effectiveTypeId` falls back to `sortedLogTypes[0]`), clicking it in the dropdown is a no-op and `showInput` never becomes `true`. Selecting a *different* type first works because the value actually changes.
+**File: `src/pages/Trends.tsx`**
 
-### Fix
-Add `onOpenChange` to the `Select` component. When the dropdown closes (transitions from open to closed), set `showInput = true` -- as long as the effective type is set and the user didn't click "Add Custom Log Type".
+#### 1. Replace `CustomLogTrendChart` implementation (lines ~426-492)
 
-This works because:
-- If the user picks a different type, `onValueChange` fires first (updating `selectedTypeId`), then `onOpenChange(false)` fires and sets `showInput = true`.
-- If the user picks the same type, `onValueChange` doesn't fire, but `onOpenChange(false)` still fires and sets `showInput = true`.
-- The existing `onValueChange` handler for `__create_new__` opens the dialog; we just need to avoid also setting `showInput` in that case.
+Replace the `LineChart`-based component with one that uses the existing `FoodChart` component (for single-series numeric types) or `StackedMacroChart` (for multi-series text_numeric types). This gives click-to-navigate behavior for free.
 
-We can use a ref to track whether the "create new" action was triggered, so `onOpenChange` skips showing input in that scenario.
+- Reshape the `chartData` to include `rawDate`, `showLabel`, and `showLabelFullWidth` fields as required by `FoodChart`
+- For **numeric** types (single series): render a `FoodChart` with `dataKey` set to the series label, `color` from the teal palette, and `onNavigate` pointing to `/custom?date=${date}`
+- For **text_numeric** types (multiple series): render a `StackedMacroChart` with one bar per label, stacked, using the teal palette for colors, and the same navigate behavior
+- Remove the `LineChart`, `Line`, `CartesianGrid`, `YAxis` imports (if no longer used elsewhere)
+
+#### 2. Update the section layout (lines ~931)
+
+Change the container from `space-y-3` to `grid grid-cols-2 gap-3` so charts appear two-across, matching the exercise trends layout.
 
 ### Technical detail
 
-**File: `src/pages/OtherLog.tsx`**
+The reshaped chart data for a numeric type will look like:
+```ts
+{
+  rawDate: "2025-02-10",
+  date: "Feb 10",
+  showLabel: true,
+  showLabelFullWidth: true,
+  [seriesLabel]: 185  // e.g. "Weight": 185
+}
+```
 
-1. Add a ref: `const createNewClickedRef = useRef(false);`
-2. In `onValueChange`, when `val === '__create_new__'`, set `createNewClickedRef.current = true` before opening the dialog.
-3. Add `onOpenChange` to the `Select`:
-   ```tsx
-   onOpenChange={(open) => {
-     if (!open && effectiveTypeId && !createNewClickedRef.current) {
-       setShowInput(true);
-     }
-     createNewClickedRef.current = false;
-   }}
-   ```
-4. Remove `setShowInput(true)` from the `onValueChange` handler (the `else` branch) since `onOpenChange` now handles it for all cases.
+For text_numeric (multiple labels like "Bench Press: 200, Squat: 300"), each label becomes a separate bar dataKey in a stacked chart, with `isTop` on the last bar in the array.
 
-This is a minimal change -- one ref, one prop added to `Select`, one line removed.
+Navigation: `onNavigate={(date) => navigate(`/custom?date=${date}`)}`
+
+No new files or dependencies needed -- this reuses `FoodChart` and `StackedMacroChart` already imported in Trends.tsx.
