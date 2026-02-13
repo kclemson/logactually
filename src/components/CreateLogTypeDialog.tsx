@@ -44,7 +44,7 @@ export function CreateLogTypeDialog({ open, onOpenChange, onSubmit, isLoading }:
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="flex items-center gap-3">
-            <Label htmlFor="log-type-name" className="shrink-0">Name</Label>
+            <Label htmlFor="log-type-name" className="shrink-0 text-sm">Name</Label>
             <Input
               id="log-type-name"
               value={name}
@@ -54,7 +54,7 @@ export function CreateLogTypeDialog({ open, onOpenChange, onSubmit, isLoading }:
             />
           </div>
           <div className="space-y-2">
-            <Label>Type</Label>
+            <Label className="text-sm">Type</Label>
             <div className="space-y-1">
               {VALUE_TYPE_OPTIONS.map((opt) => (
                 <label
@@ -78,7 +78,7 @@ export function CreateLogTypeDialog({ open, onOpenChange, onSubmit, isLoading }:
           </div>
           {showUnit && (
             <div className="flex items-center gap-3">
-              <Label htmlFor="log-type-unit" className="shrink-0">Unit</Label>
+              <Label htmlFor="log-type-unit" className="shrink-0 text-sm">Unit</Label>
               <Input
                 id="log-type-unit"
                 value={unit}
