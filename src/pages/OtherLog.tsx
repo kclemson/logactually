@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { format, addDays, subDays, isToday, parseISO, isFuture, startOfMonth } from 'date-fns';
 import { useCustomLogDatesWithData } from '@/hooks/useDatesWithData';
@@ -33,6 +33,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   const [createTypeOpen, setCreateTypeOpen] = useState(false);
   const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
   const [showInput, setShowInput] = useState(false);
+  const createNewClickedRef = useRef(false);
 
   const dateStr = initialDate;
   const selectedDate = parseISO(initialDate);
@@ -119,11 +120,17 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
               value={effectiveTypeId || ''}
               onValueChange={(val) => {
                 if (val === '__create_new__') {
+                  createNewClickedRef.current = true;
                   setCreateTypeOpen(true);
                 } else {
                   setSelectedTypeId(val);
+                }
+              }}
+              onOpenChange={(open) => {
+                if (!open && effectiveTypeId && !createNewClickedRef.current) {
                   setShowInput(true);
                 }
+                createNewClickedRef.current = false;
               }}
             >
               <SelectTrigger className="h-8 text-sm font-medium w-auto min-w-[140px]">
