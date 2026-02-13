@@ -1,51 +1,59 @@
 
 
-## Rename "Other" to "Custom", Add Type Management, Use "Enable" Wording
+## Move Unit from Per-Entry to Per-Type
 
-### Part 1: Rename "Other" to "Custom" everywhere
+The unit field belongs on the tracking type definition, not on every individual entry. When a user creates "Body Weight", they set "lbs" once, and it applies everywhere.
 
-| File | Current | New |
-|------|---------|-----|
-| `src/components/BottomNav.tsx` (line 21) | `label: 'Other'`, `to: '/other'` | `label: 'Custom'`, `to: '/custom'` |
-| `src/App.tsx` (line 44) | `path="/other"` | `path="/custom"` |
-| `src/pages/Trends.tsx` (line 930) | `title="Other Trends"` | `title="Custom Trends"` |
+### 1. Database migration
 
-### Part 2: Settings label wording -- "Enable" instead of "Show"
+Add an optional `unit` column to `custom_log_types`:
 
-| File | Current | New |
-|------|---------|-----|
-| `src/pages/Settings.tsx` (line 211) | `"Show other logging types"` | `"Enable custom logging"` |
-| `src/pages/Settings.tsx` (line 212) | subtitle `"Weight, measurements, mood, and more"` | Keep as-is (still accurate) |
-| `src/pages/Settings.tsx` (line 235) | `"Show Exercise"` | `"Enable Exercise"` |
+```sql
+ALTER TABLE custom_log_types ADD COLUMN unit text;
+```
 
-### Part 3: Custom Tracking Types management section in Settings
+No changes to `custom_log_entries` -- existing `unit` column stays for backward compatibility but will no longer be written to from the UI.
 
-Add a new **"Custom Tracking Types"** CollapsibleSection in Settings, visible when `showCustomLogs` is enabled. Positioned after the custom logging toggle (inside or right after Preferences). Follows the SavedMealRow/SavedRoutineRow pattern:
+### 2. CreateLogTypeDialog -- add optional Unit input
 
-**New component: `src/components/CustomLogTypeRow.tsx`**
-- Mirrors `SavedMealRow` pattern: chevron expand, inline contentEditable name, value type badge, delete popover
-- Props: `type`, `isExpanded`, `onToggleExpand`, `onRename`, `onDelete`, `openDeletePopoverId`, `setOpenDeletePopoverId`
-- Collapsed row: type name (click-to-edit) + value type label (e.g. "numeric") + trash icon with confirmation popover
-- No expand/collapse needed since types don't have sub-items -- just flat rows with rename + delete
+When the user selects "Numeric" or "Text + Numeric", show an optional "Unit" text input (e.g. "lbs", "in", "mmHg"). Hidden for "Text only" types.
 
-**Hook updates: `src/hooks/useCustomLogTypes.ts`**
-- Add `updateType` mutation: `UPDATE custom_log_types SET name = ? WHERE id = ?`, invalidates `['custom-log-types']`
-- Add `deleteType` mutation: `DELETE FROM custom_log_types WHERE id = ?`, invalidates `['custom-log-types']`
+Update the `onSubmit` callback signature to include `unit`:
+`onSubmit(name, valueType, unit?)`
 
-**Settings page: `src/pages/Settings.tsx`**
-- Add a `CollapsibleSection` titled "Custom Tracking Types" with `ClipboardList` icon, gated by `settings.showCustomLogs`
-- Contains list of `CustomLogTypeRow` components + "+ Add Tracking Type" button at top
-- Uses same state patterns as saved meals (openDeletePopoverId, etc.)
-- Positioned after Preferences, before Saved Meals
+### 3. LogEntryInput -- remove the per-entry unit field
 
-### Files changed: 7
+- Remove the `unit` state variable and the unit `<Input>` field entirely.
+- Add a new `unit` prop (read-only display) so entries show the unit label next to the value input as a static suffix (e.g. the input reads `[___] lbs`).
+- Stop passing `unit` in the `onSubmit` params -- the unit is now stored at the type level.
+
+### 4. OtherLog.tsx -- pass the type's unit to LogEntryInput
+
+When rendering `LogEntryInput`, pass `unit={selectedType.unit}` so the suffix displays.
+
+When calling `createEntry.mutate`, pass `unit: selectedType.unit || null` so existing entries still store their unit for display.
+
+### 5. CustomLogEntryRow -- fall back to type unit
+
+Update `formatValue` to accept the type-level unit as a fallback: show `entry.unit` if present (backward compat), otherwise use the type's unit.
+
+### 6. Hook + type updates
+
+- Update `CustomLogType` interface to include `unit?: string | null`.
+- Update `createType` mutation to accept and pass `unit`.
+- Update Settings `CustomLogTypeRow` to show the unit badge if set.
+
+---
+
+### Technical details
 
 | File | Change |
 |------|--------|
-| `src/components/BottomNav.tsx` | Route `/other` to `/custom`, label "Other" to "Custom" |
-| `src/App.tsx` | Route path `/other` to `/custom` |
-| `src/pages/Trends.tsx` | "Other Trends" to "Custom Trends" |
-| `src/pages/Settings.tsx` | "Show" to "Enable" for both toggles; add Custom Tracking Types section |
-| `src/hooks/useCustomLogTypes.ts` | Add `updateType` and `deleteType` mutations |
-| `src/components/CustomLogTypeRow.tsx` | New -- row component with inline rename and delete confirmation |
+| **Database migration** | `ALTER TABLE custom_log_types ADD COLUMN unit text;` |
+| `src/hooks/useCustomLogTypes.ts` | Add `unit` to `CustomLogType` interface; include `unit` in `createType` mutation params |
+| `src/components/CreateLogTypeDialog.tsx` | Add optional Unit input (visible for numeric/text_numeric); update `onSubmit` signature to `(name, valueType, unit?)` |
+| `src/components/LogEntryInput.tsx` | Remove unit state + unit input field; add `unit?: string` prop; show unit as static text suffix next to numeric input |
+| `src/pages/OtherLog.tsx` | Pass `unit={selectedType.unit}` to `LogEntryInput`; pass `unit: selectedType.unit` in `createEntry.mutate` |
+| `src/components/CustomLogEntryRow.tsx` | Accept `typeUnit` prop; fall back to it when `entry.unit` is empty |
+| `src/components/CustomLogTypeRow.tsx` | Show unit in the row if defined (e.g. "numeric -- lbs") |
 
