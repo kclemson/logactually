@@ -69,7 +69,20 @@ export function useCustomLogEntries(dateStr: string) {
         .eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onMutate: async (params) => {
+      await queryClient.cancelQueries({ queryKey: ['custom-log-entries', dateStr] });
+      const previous = queryClient.getQueryData<CustomLogEntry[]>(['custom-log-entries', dateStr]);
+      queryClient.setQueryData<CustomLogEntry[]>(['custom-log-entries', dateStr], (old) =>
+        old?.map(e => e.id === params.id ? { ...e, ...params } : e)
+      );
+      return { previous };
+    },
+    onError: (_err, _params, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['custom-log-entries', dateStr], context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['custom-log-entries', dateStr] });
     },
   });

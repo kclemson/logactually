@@ -103,7 +103,7 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
         {/* Text value (for text and text_numeric) */}
         {hasText && (
           <div className={cn(
-            "rounded px-1",
+            "rounded px-1 min-w-[120px]",
             !isReadOnly && "focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg"
           )}>
             <span
@@ -141,7 +141,7 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
             onBlur={saveNumeric}
             onKeyDown={handleNumericKeyDown}
             className={cn(
-              "h-7 w-20 text-sm text-right px-1 border-0 bg-transparent",
+              "h-7 w-[60px] text-sm text-center px-1 border-0 bg-transparent",
               "focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:bg-focus-bg"
             )}
           />
