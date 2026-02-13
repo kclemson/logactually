@@ -29,6 +29,12 @@ const SHARED_PROMPTS = [
   "What patterns emerge if you separate weekdays from weekends?",
   "If I were coaching myself based on this data, what mindset would I adopt?",
   "If a coach reviewed this, what would they focus on first?",
+  "What invisible cost might I be paying for my current approach?",
+  "Where am I pushing hard without seeing proportional return?",
+  "If I continue like this, what will likely improve — and what might suffer?",
+  "What would I need to give up to improve faster?",
+  "What's the smallest change that could meaningfully alter my trajectory?",
+  "Are there any interesting patterns between my eating & exercise habits?",
 ];
 
 const FOOD_PROMPTS = [
