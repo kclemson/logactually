@@ -102,10 +102,26 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
       <section className="min-h-[148px] flex flex-col justify-center space-y-3">
         {!isReadOnly && (
           <div className="flex items-center justify-center gap-2">
-          {sortedLogTypes.length > 0 && (
+          {sortedLogTypes.length === 0 ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-sm"
+              onClick={() => setCreateTypeOpen(true)}
+            >
+              <Plus className="h-3 w-3" />
+              Add Custom Log Type
+            </Button>
+          ) : (
             <Select
               value={selectedTypeId || ''}
-              onValueChange={(val) => setSelectedTypeId(val)}
+              onValueChange={(val) => {
+                if (val === '__create_new__') {
+                  setCreateTypeOpen(true);
+                } else {
+                  setSelectedTypeId(val);
+                }
+              }}
             >
               <SelectTrigger className="h-8 text-sm font-medium w-auto min-w-[140px]">
                 <SelectValue placeholder="Log..." />
@@ -116,18 +132,15 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                     Log {lt.name}
                   </SelectItem>
                 ))}
+                <SelectItem value="__create_new__" className="text-primary">
+                  <span className="flex items-center gap-1.5">
+                    <Plus className="h-3 w-3" />
+                    Add Custom Log Type
+                  </span>
+                </SelectItem>
               </SelectContent>
             </Select>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 text-sm"
-            onClick={() => setCreateTypeOpen(true)}
-          >
-            <Plus className="h-3 w-3" />
-            Add Custom Log Type
-          </Button>
         </div>
       )}
 
