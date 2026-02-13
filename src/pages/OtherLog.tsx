@@ -40,7 +40,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   const isTodaySelected = isToday(selectedDate);
 
   const { logTypes, createType, recentUsage } = useCustomLogTypes();
-  const { entries, createEntry, deleteEntry } = useCustomLogEntries(dateStr);
+  const { entries, createEntry, updateEntry, deleteEntry } = useCustomLogEntries(dateStr);
   const { data: datesWithData = [] } = useCustomLogDatesWithData(calendarMonth);
   const { isReadOnly } = useReadOnlyContext();
 
@@ -257,6 +257,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                 valueType={logType?.value_type || 'text'}
                 typeUnit={logType?.unit}
                 onDelete={(id) => deleteEntry.mutate(id)}
+                onUpdate={(params) => updateEntry.mutate(params)}
                 isReadOnly={isReadOnly}
               />
             );

@@ -56,6 +56,24 @@ export function useCustomLogEntries(dateStr: string) {
     },
   });
 
+  const updateEntry = useMutation({
+    mutationFn: async (params: {
+      id: string;
+      numeric_value?: number | null;
+      text_value?: string | null;
+    }) => {
+      const { id, ...updates } = params;
+      const { error } = await supabase
+        .from('custom_log_entries')
+        .update(updates)
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['custom-log-entries', dateStr] });
+    },
+  });
+
   const deleteEntry = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -70,5 +88,5 @@ export function useCustomLogEntries(dateStr: string) {
     },
   });
 
-  return { entries, isLoading, createEntry, deleteEntry };
+  return { entries, isLoading, createEntry, updateEntry, deleteEntry };
 }
