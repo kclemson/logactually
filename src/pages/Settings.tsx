@@ -207,7 +207,10 @@ export default function Settings() {
 
           {/* Show other logging types toggle */}
           <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">Show other logging types (weight, measurements, mood, and more)</p>
+            <div>
+              <p className="text-xs text-muted-foreground">Show other logging types</p>
+              <p className="text-[10px] text-muted-foreground/70">Weight, measurements, mood, and more</p>
+            </div>
             <button
               onClick={() => updateSettings({ showCustomLogs: !settings.showCustomLogs })}
               className={cn(
