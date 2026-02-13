@@ -7,6 +7,7 @@ export interface UserSettings {
   theme: 'light' | 'dark' | 'system';
   weightUnit: WeightUnit;
   showWeights: boolean;
+  showCustomLogs: boolean;
   suggestMealSaves: boolean;
   suggestRoutineSaves: boolean;
   dailyCalorieTarget: number | null;
@@ -24,6 +25,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   theme: 'system',
   weightUnit: 'lbs',
   showWeights: true,
+  showCustomLogs: false,
   suggestMealSaves: true,
   suggestRoutineSaves: true,
   dailyCalorieTarget: null,
