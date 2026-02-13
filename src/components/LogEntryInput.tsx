@@ -8,9 +8,10 @@ interface LogEntryInputProps {
   valueType: ValueType;
   onSubmit: (params: { numeric_value?: number | null; text_value?: string | null; unit?: string | null }) => void;
   isLoading?: boolean;
+  label?: string;
 }
 
-export function LogEntryInput({ valueType, onSubmit, isLoading }: LogEntryInputProps) {
+export function LogEntryInput({ valueType, onSubmit, isLoading, label }: LogEntryInputProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [numericValue, setNumericValue] = useState('');
   const [textValue, setTextValue] = useState('');
@@ -19,7 +20,7 @@ export function LogEntryInput({ valueType, onSubmit, isLoading }: LogEntryInputP
   if (!isAdding) {
     return (
       <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setIsAdding(true)}>
-        <Plus className="h-3 w-3 mr-1" /> Add
+        <Plus className="h-3 w-3 mr-1" /> Add{label ? ` ${label}` : ''}
       </Button>
     );
   }

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { format, addDays, subDays, isToday, parseISO, isFuture, startOfMonth } from 'date-fns';
 import { useCustomLogDatesWithData } from '@/hooks/useDatesWithData';
@@ -14,8 +14,6 @@ import { LogEntryInput } from '@/components/LogEntryInput';
 import { CustomLogEntryRow } from '@/components/CustomLogEntryRow';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { getStoredDate, setStoredDate } from '@/lib/selected-date';
-import { ClipboardList } from 'lucide-react';
-import { CollapsibleSection } from '@/components/CollapsibleSection';
 
 // Wrapper: extracts date from URL, forces remount via key
 const OtherLog = () => {
@@ -41,17 +39,6 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   const { entries, createEntry, deleteEntry } = useCustomLogEntries(dateStr);
   const { data: datesWithData = [] } = useCustomLogDatesWithData(calendarMonth);
   const { isReadOnly } = useReadOnlyContext();
-
-  // Group entries by log_type_id
-  const entriesByType = useMemo(() => {
-    const map = new Map<string, typeof entries>();
-    entries.forEach((e) => {
-      const existing = map.get(e.log_type_id) || [];
-      existing.push(e);
-      map.set(e.log_type_id, existing);
-    });
-    return map;
-  }, [entries]);
 
   // Navigation
   const goToPreviousDay = () => {
@@ -160,62 +147,54 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
         )}
       </div>
 
-      {/* Add Tracking Type */}
+      {/* All logged entries, flat list */}
+      <div className="space-y-1">
+        {entries.length > 0 ? (
+          entries.map((entry) => {
+            const logType = logTypes.find((t) => t.id === entry.log_type_id);
+            return (
+              <CustomLogEntryRow
+                key={entry.id}
+                entry={entry}
+                typeName={logType?.name || ''}
+                valueType={logType?.value_type || 'text'}
+                onDelete={(id) => deleteEntry.mutate(id)}
+                isReadOnly={isReadOnly}
+              />
+            );
+          })
+        ) : (
+          <p className="text-xs text-muted-foreground py-1">No entries for this date.</p>
+        )}
+      </div>
+
+      {/* Entry creation controls */}
       {!isReadOnly && (
-        <section>
+        <div className="space-y-2 pt-4 border-t border-border/50">
+          {logTypes.map((logType) => (
+            <LogEntryInput
+              key={logType.id}
+              valueType={logType.value_type}
+              label={logType.name}
+              onSubmit={(params) =>
+                createEntry.mutate({
+                  log_type_id: logType.id,
+                  logged_date: dateStr,
+                  ...params,
+                })
+              }
+              isLoading={createEntry.isPending}
+            />
+          ))}
           <button
             onClick={() => setCreateTypeOpen(true)}
-            className="w-full text-left py-2 hover:bg-accent/50 transition-colors flex items-center gap-2 text-sm text-foreground"
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-3 w-3" />
             <span>Add Tracking Type</span>
           </button>
-        </section>
+        </div>
       )}
-
-      {/* Entries grouped by type */}
-      {logTypes.map((logType) => {
-          const typeEntries = entriesByType.get(logType.id) || [];
-          return (
-            <CollapsibleSection
-              key={logType.id}
-              title={logType.name}
-              icon={ClipboardList}
-              storageKey={`other-log-${logType.id}`}
-              defaultOpen={true}
-              iconClassName="text-teal-500 dark:text-teal-400"
-            >
-              {typeEntries.map((entry) => (
-                <CustomLogEntryRow
-                  key={entry.id}
-                  entry={entry}
-                  typeName={logType.name}
-                  valueType={logType.value_type}
-                  onDelete={(id) => deleteEntry.mutate(id)}
-                  isReadOnly={isReadOnly}
-                />
-              ))}
-              {typeEntries.length === 0 && (
-                <p className="text-xs text-muted-foreground py-1">No entries for this date.</p>
-              )}
-              {!isReadOnly && (
-                <div className="pt-2">
-                  <LogEntryInput
-                    valueType={logType.value_type}
-                    onSubmit={(params) =>
-                      createEntry.mutate({
-                        log_type_id: logType.id,
-                        logged_date: dateStr,
-                        ...params,
-                      })
-                    }
-                    isLoading={createEntry.isPending}
-                  />
-                </div>
-              )}
-            </CollapsibleSection>
-          );
-        })}
 
       <CreateLogTypeDialog
         open={createTypeOpen}
