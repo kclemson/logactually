@@ -12,7 +12,7 @@ import {
   startOfWeek,
   endOfWeek,
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Dumbbell, Footprints, Bike, Activity } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Dumbbell, Footprints, Bike, Activity, ClipboardList } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -44,6 +44,7 @@ const History = () => {
   const { data: isAdmin } = useIsAdmin();
   const { settings } = useUserSettings();
   const showWeights = (FEATURES.WEIGHT_TRACKING || isAdmin) && settings.showWeights;
+  const showCustomLogs = settings.showCustomLogs;
 
   // Fetch entries for the visible month range
   const monthStart = startOfMonth(currentMonth);
@@ -120,6 +121,22 @@ const History = () => {
       return Array.from(map.values());
     },
     enabled: showWeights,
+  });
+
+  // Custom log entries query (gated by showCustomLogs)
+  const { data: customLogDates = new Set<string>() } = useQuery({
+    queryKey: ['custom-log-dates-summary', format(monthStart, 'yyyy-MM')],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('custom_log_entries')
+        .select('logged_date')
+        .gte('logged_date', format(monthStart, 'yyyy-MM-dd'))
+        .lte('logged_date', format(monthEnd, 'yyyy-MM-dd'));
+
+      if (error) throw error;
+      return new Set((data || []).map((e: any) => e.logged_date));
+    },
+    enabled: showCustomLogs,
   });
 
   // Build calendar grid
@@ -204,6 +221,7 @@ const History = () => {
           const hasEntries = !!summary;
           const weightData = weightByDate.get(dateStr);
           const hasWeights = showWeights && !!weightData;
+          const hasCustomLogs = showCustomLogs && customLogDates.has(dateStr);
 
           return (
             <button
@@ -251,15 +269,16 @@ const History = () => {
                 {format(day, 'd')}
               </span>
 
-              {/* Row 3: Exercise type indicators (always takes space) */}
+              {/* Row 3: Exercise/custom log indicators (always takes space) */}
               <span className={cn(
                 "h-3 flex items-center justify-center gap-0.5",
-                !(hasWeights && isCurrentMonth) && "invisible"
+                !((hasWeights || hasCustomLogs) && isCurrentMonth) && "invisible"
               )}>
                 {weightData?.hasLifting && <Dumbbell className="h-3 w-3 text-purple-500 dark:text-purple-400" />}
                 {weightData?.hasRunWalk && <Footprints className="h-3 w-3 text-purple-500 dark:text-purple-400" />}
                 {weightData?.hasCycling && <Bike className="h-3 w-3 text-purple-500 dark:text-purple-400" />}
                 {weightData?.hasOtherCardio && <Activity className="h-3 w-3 text-purple-500 dark:text-purple-400" />}
+                {hasCustomLogs && <ClipboardList className="h-3 w-3 text-teal-500 dark:text-teal-400" />}
               </span>
             </button>
           );

@@ -9,6 +9,7 @@ import { Layout } from "@/components/Layout";
 import Auth from "./pages/Auth";
 import FoodLog from "./pages/FoodLog";
 import WeightLog from "./pages/WeightLog";
+import OtherLog from "./pages/OtherLog";
 import Trends from "./pages/Trends";
 import History from "./pages/History";
 import Admin from "./pages/Admin";
@@ -40,6 +41,7 @@ const App = () => (
                 >
                   <Route path="/" element={<FoodLog />} />
                   <Route path="/weights" element={<WeightLog />} />
+                  <Route path="/other" element={<OtherLog />} />
                   <Route path="/trends" element={<Trends />} />
                   <Route path="/history" element={<History />} />
                   <Route path="/settings" element={<Settings />} />

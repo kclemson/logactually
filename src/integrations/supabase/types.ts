@@ -14,6 +14,80 @@ export type Database = {
   }
   public: {
     Tables: {
+      custom_log_entries: {
+        Row: {
+          created_at: string
+          id: string
+          log_type_id: string
+          logged_date: string
+          numeric_value: number | null
+          text_value: string | null
+          unit: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          log_type_id: string
+          logged_date?: string
+          numeric_value?: number | null
+          text_value?: string | null
+          unit?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          log_type_id?: string
+          logged_date?: string
+          numeric_value?: number | null
+          text_value?: string | null
+          unit?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_log_entries_log_type_id_fkey"
+            columns: ["log_type_id"]
+            isOneToOne: false
+            referencedRelation: "custom_log_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custom_log_types: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+          user_id: string
+          value_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+          user_id: string
+          value_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string
+          value_type?: string
+        }
+        Relationships: []
+      }
       feedback: {
         Row: {
           created_at: string

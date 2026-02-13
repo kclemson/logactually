@@ -228,6 +228,27 @@ export default function Settings() {
             </div>
           )}
 
+          {/* Log Other Things toggle */}
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">Log Other Things</p>
+            <button
+              onClick={() => updateSettings({ showCustomLogs: !settings.showCustomLogs })}
+              className={cn(
+                "w-12 h-6 rounded-full transition-colors relative border",
+                settings.showCustomLogs ? "bg-primary border-primary" : "bg-muted border-border"
+              )}
+            >
+              <span
+                className={cn(
+                  "absolute left-0 top-0.5 w-5 h-5 rounded-full shadow transition-transform",
+                  settings.showCustomLogs 
+                    ? "translate-x-6 bg-primary-foreground" 
+                    : "translate-x-0.5 bg-white"
+                )}
+              />
+            </button>
+          </div>
+
           {/* Weight Units - shown when weights enabled */}
           {showWeights && (
             <div className="flex items-center justify-between">
