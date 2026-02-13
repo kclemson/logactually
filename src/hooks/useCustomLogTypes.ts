@@ -73,10 +73,13 @@ export function useCustomLogTypes() {
   });
 
   const updateType = useMutation({
-    mutationFn: async (params: { id: string; name: string }) => {
+    mutationFn: async (params: { id: string; name?: string; unit?: string | null }) => {
+      const updates: Record<string, unknown> = {};
+      if (params.name !== undefined) updates.name = params.name;
+      if (params.unit !== undefined) updates.unit = params.unit;
       const { error } = await supabase
         .from('custom_log_types')
-        .update({ name: params.name })
+        .update(updates)
         .eq('id', params.id);
       if (error) throw error;
     },
