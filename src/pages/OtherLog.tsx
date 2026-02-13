@@ -244,24 +244,50 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
         )}
       </div>
 
-      {/* All logged entries, flat list */}
-      <div className="space-y-1">
+      {/* Entries grouped by log type */}
+      <div className="space-y-3">
         {entries.length > 0 ? (
-          entries.map((entry) => {
-            const logType = logTypes.find((t) => t.id === entry.log_type_id);
-            return (
-              <CustomLogEntryRow
-                key={entry.id}
-                entry={entry}
-                typeName={logType?.name || ''}
-                valueType={logType?.value_type || 'text'}
-                typeUnit={logType?.unit}
-                onDelete={(id) => deleteEntry.mutate(id)}
-                onUpdate={(params) => updateEntry.mutate(params)}
-                isReadOnly={isReadOnly}
-              />
-            );
-          })
+          (() => {
+            const groups: { typeId: string; items: typeof entries }[] = [];
+            const seen = new Map<string, number>();
+            for (const entry of entries) {
+              const idx = seen.get(entry.log_type_id);
+              if (idx !== undefined) {
+                groups[idx].items.push(entry);
+              } else {
+                seen.set(entry.log_type_id, groups.length);
+                groups.push({ typeId: entry.log_type_id, items: [entry] });
+              }
+            }
+            return groups.map((group) => {
+              const logType = logTypes.find((t) => t.id === group.typeId);
+              return (
+                <div key={group.typeId} className="space-y-0">
+                  {/* Centered divider header */}
+                  <div className="flex items-center gap-3 py-1">
+                    <div className="flex-1 h-px bg-border" />
+                    <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+                      {logType?.name || 'Unknown'}
+                    </span>
+                    <div className="flex-1 h-px bg-border" />
+                  </div>
+                  {/* Entries */}
+                  {group.items.map((entry) => (
+                    <CustomLogEntryRow
+                      key={entry.id}
+                      entry={entry}
+                      typeName={logType?.name || ''}
+                      valueType={logType?.value_type || 'text'}
+                      typeUnit={logType?.unit}
+                      onDelete={(id) => deleteEntry.mutate(id)}
+                      onUpdate={(params) => updateEntry.mutate(params)}
+                      isReadOnly={isReadOnly}
+                    />
+                  ))}
+                </div>
+              );
+            });
+          })()
         ) : (
           <div className="text-center text-muted-foreground py-8">No custom log items for this day</div>
         )}
