@@ -1,51 +1,44 @@
 
 
-## Dropdown + Inline Input Redesign
+## Other Log Page UX Improvements
 
-### Layout (top to bottom)
+Four changes to make the entry flow more intuitive and visually polished.
 
-```text
-[date picker]
-[logged entries list]
-[inline input form -- only visible after selecting a type from the dropdown]
-[  Add [dropdown v]    + Add Tracking Type  ]   <-- single row at bottom
-```
+### 1. Dropdown shows "Log Weight", "Log Mood", etc.
 
-### Changes
+Change the Select dropdown items and the trigger display to prefix each type name with "Log". The placeholder becomes "Log..." and each item reads "Log Weight", "Log Mood", etc. This makes the selected action immediately visible without opening the dropdown.
 
-**File: `src/pages/OtherLog.tsx`**
+### 2. Remove the standalone + submit button from LogEntryInput
 
-1. **State**: Add `selectedTypeId: string | null` (default null). When the user picks a type from the dropdown, set it. When they submit or cancel, clear it.
+The `+` (Plus) icon button currently acts as the submit button, which is confusing. Replace it with a text "Save" button so the purpose is clear. The form also submits on Enter, so the button is secondary but should still be understandable.
 
-2. **Bottom row**: Replace the vertical list of per-type `LogEntryInput` buttons with a single horizontal row containing:
-   - A Radix `Select` dropdown (labeled "Add [type v]") listing all log types, sorted by most recent usage. The dropdown defaults to no selection (placeholder "Select type...").
-   - A "+ Add Tracking Type" text button beside it on the same row.
-   - Use `flex items-center gap-2` to keep them on one line.
+### 3. Visually distinguish the bottom control row
 
-3. **Inline input placement**: When `selectedTypeId` is set, render the `LogEntryInput` form *between* the entries list and the bottom row (i.e., in the middle zone, right below the logged items). This keeps the input fields contextually near the entries. Include an X/cancel button to dismiss.
+- Wrap the "+ Add Tracking Type" button in a matching bordered style (same `border border-input rounded-md` as the Select trigger) so both controls look like peers.
+- Center the row horizontally with `justify-center`.
 
-4. **On submit**: Clear inputs but keep `selectedTypeId` set so the user can quickly add another of the same type. Provide cancel (X) to fully dismiss.
+### 4. After creating a new tracking type, pre-select it in the dropdown
 
-5. **Recency sorting**: Derive sort order from the existing `entries` data across all dates. We need a lightweight query for this -- add it to `useCustomLogTypes` (see below).
+In the `handleCreateType` callback, use the `onSuccess` result to set `selectedTypeId` to the newly created type's ID, so the user immediately sees "Log [NewType]" selected and can start logging.
 
-**File: `src/components/LogEntryInput.tsx`**
-
-- Remove the `isAdding` toggle entirely -- the component always renders as a form (parent controls visibility).
-- Add `onCancel?: () => void` prop. Render a small X button that calls it.
-- On submit, clear fields but do NOT hide (parent decides visibility).
-
-**File: `src/hooks/useCustomLogTypes.ts`**
-
-- Add a second query fetching most-recent `created_at` per `log_type_id` from `custom_log_entries` (using RPC or a simple select + client-side grouping).
-- Return `recentUsage: Record<string, string>` so the page can sort the dropdown.
+---
 
 ### Technical details
 
-**Files changed: 3**
+**File: `src/pages/OtherLog.tsx`**
+
+- Dropdown items: change `{lt.name}` to `Log {lt.name}` in SelectItem children.
+- Placeholder: change `"Add entry..."` to `"Log..."`.
+- Bottom row styling: add `justify-center` to the flex container. Wrap the "Add Tracking Type" button in a bordered container matching SelectTrigger styling (`h-8 px-3 rounded-md border border-input text-sm`).
+- `handleCreateType` onSuccess: after closing dialog, call `setSelectedTypeId(data.id)` using the returned type from the mutation. Update the callback to receive the mutation result.
+
+**File: `src/components/LogEntryInput.tsx`**
+
+- Replace the Plus icon submit button with a text "Save" button (`<Button type="submit" variant="ghost" size="sm">Save</Button>`).
+
+**Files changed: 2**
 
 | File | Change |
 |------|--------|
-| `src/pages/OtherLog.tsx` | Replace per-type button list with single-row: Select dropdown + "Add Tracking Type" link. Add `selectedTypeId` state. Render `LogEntryInput` inline between entries and bottom row when a type is selected. |
-| `src/components/LogEntryInput.tsx` | Remove `isAdding` toggle. Always show form. Add `onCancel` prop with X button. Keep form visible after submit. |
-| `src/hooks/useCustomLogTypes.ts` | Add query for most-recent entry per type. Return `recentUsage` map for dropdown sorting. |
-
+| `src/pages/OtherLog.tsx` | Dropdown labels to "Log X", center bottom row, style Add Tracking Type button, pre-select new type after creation |
+| `src/components/LogEntryInput.tsx` | Replace + icon with "Save" text button |
