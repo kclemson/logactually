@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { format, addDays, subDays, isToday, parseISO, isFuture, startOfMonth } from 'date-fns';
 import { useCustomLogDatesWithData } from '@/hooks/useDatesWithData';
@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCustomLogTypes } from '@/hooks/useCustomLogTypes';
 import { useCustomLogEntries } from '@/hooks/useCustomLogEntries';
 import { CreateLogTypeDialog } from '@/components/CreateLogTypeDialog';
@@ -30,15 +31,30 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(parseISO(initialDate)));
   const [createTypeOpen, setCreateTypeOpen] = useState(false);
+  const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
 
   const dateStr = initialDate;
   const selectedDate = parseISO(initialDate);
   const isTodaySelected = isToday(selectedDate);
 
-  const { logTypes, createType } = useCustomLogTypes();
+  const { logTypes, createType, recentUsage } = useCustomLogTypes();
   const { entries, createEntry, deleteEntry } = useCustomLogEntries(dateStr);
   const { data: datesWithData = [] } = useCustomLogDatesWithData(calendarMonth);
   const { isReadOnly } = useReadOnlyContext();
+
+  // Sort log types by most recent usage (most recent first), then by creation order
+  const sortedLogTypes = useMemo(() => {
+    return [...logTypes].sort((a, b) => {
+      const aRecent = recentUsage[a.id];
+      const bRecent = recentUsage[b.id];
+      if (aRecent && bRecent) return bRecent.localeCompare(aRecent);
+      if (aRecent) return -1;
+      if (bRecent) return 1;
+      return a.created_at.localeCompare(b.created_at);
+    });
+  }, [logTypes, recentUsage]);
+
+  const selectedType = logTypes.find((t) => t.id === selectedTypeId);
 
   // Navigation
   const goToPreviousDay = () => {
@@ -168,27 +184,46 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
         )}
       </div>
 
-      {/* Entry creation controls */}
+      {/* Inline input form -- visible when a type is selected */}
+      {selectedTypeId && selectedType && !isReadOnly && (
+        <LogEntryInput
+          valueType={selectedType.value_type}
+          label={selectedType.name}
+          onSubmit={(params) =>
+            createEntry.mutate({
+              log_type_id: selectedType.id,
+              logged_date: dateStr,
+              ...params,
+            })
+          }
+          onCancel={() => setSelectedTypeId(null)}
+          isLoading={createEntry.isPending}
+        />
+      )}
+
+      {/* Bottom row: dropdown + add tracking type */}
       {!isReadOnly && (
-        <div className="space-y-2 pt-4 border-t border-border/50">
-          {logTypes.map((logType) => (
-            <LogEntryInput
-              key={logType.id}
-              valueType={logType.value_type}
-              label={logType.name}
-              onSubmit={(params) =>
-                createEntry.mutate({
-                  log_type_id: logType.id,
-                  logged_date: dateStr,
-                  ...params,
-                })
-              }
-              isLoading={createEntry.isPending}
-            />
-          ))}
+        <div className="flex items-center gap-2 pt-4 border-t border-border/50">
+          {sortedLogTypes.length > 0 && (
+            <Select
+              value={selectedTypeId || ''}
+              onValueChange={(val) => setSelectedTypeId(val)}
+            >
+              <SelectTrigger className="h-8 text-sm w-auto min-w-[140px]">
+                <SelectValue placeholder="Add entry..." />
+              </SelectTrigger>
+              <SelectContent>
+                {sortedLogTypes.map((lt) => (
+                  <SelectItem key={lt.id} value={lt.id}>
+                    {lt.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <button
             onClick={() => setCreateTypeOpen(true)}
-            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
+            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <Plus className="h-3 w-3" />
             <span>Add Tracking Type</span>

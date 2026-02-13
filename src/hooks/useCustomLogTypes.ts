@@ -33,6 +33,28 @@ export function useCustomLogTypes() {
     enabled: !!user,
   });
 
+  // Fetch most recent entry per log type for recency sorting
+  const { data: recentUsage = {} } = useQuery({
+    queryKey: ['custom-log-type-recency', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('custom_log_entries')
+        .select('log_type_id, created_at')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const usage: Record<string, string> = {};
+      for (const row of data || []) {
+        if (!usage[row.log_type_id]) {
+          usage[row.log_type_id] = row.created_at;
+        }
+      }
+      return usage;
+    },
+    enabled: !!user,
+  });
+
   const createType = useMutation({
     mutationFn: async (params: { name: string; value_type: ValueType }) => {
       if (!user) throw new Error('No user');
@@ -49,5 +71,5 @@ export function useCustomLogTypes() {
     },
   });
 
-  return { logTypes, isLoading, createType };
+  return { logTypes, isLoading, createType, recentUsage };
 }
