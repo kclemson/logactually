@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,15 +23,8 @@ function MultilineTextArea({ value, isReadOnly, onSave }: { value: string; isRea
     onSave(trimmed);
   };
 
-  // Sync from prop when not focused
-  const ref = useRef<HTMLTextAreaElement>(null);
-  if (ref.current && document.activeElement !== ref.current && value !== text) {
-    // Will update on next render via state
-  }
-
   return (
     <textarea
-      ref={ref}
       value={text}
       readOnly={isReadOnly}
       onChange={(e) => setText(e.target.value)}
@@ -85,7 +78,6 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
       return;
     }
     if (numericValue === '' || isNaN(Number(numericValue))) {
-      // Revert
       setEditingNumeric(false);
       return;
     }
@@ -119,7 +111,6 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
   const handleTextBlur = (e: React.FocusEvent<HTMLSpanElement>) => {
     const newVal = e.currentTarget.textContent?.trim() || '';
     if (isReadOnly || newVal === '' || newVal === textOriginalRef.current) {
-      // Revert
       e.currentTarget.textContent = textOriginalRef.current;
       return;
     }
@@ -137,88 +128,107 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
     }
   };
 
-  return (
-    <div className={cn("flex py-2 group", 
-      isMultiline ? "items-start gap-3" : (valueType === 'text') ? "items-start justify-between" : "items-center justify-between"
-    )}>
-      <span className="text-sm text-muted-foreground">{typeName}</span>
-      <div className={cn("flex gap-2", isMultiline ? "items-start flex-1 min-w-0" : "items-center")}>
-        {/* Text value (for text and text_numeric) - single line */}
-        {hasText && !isMultiline && (
-          <div className={cn(
-            "rounded px-1 min-w-[120px]",
-            !isReadOnly && "focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg"
-          )}>
-            <span
-              contentEditable={!isReadOnly}
-              suppressContentEditableWarning
-              spellCheck={false}
-              ref={(el) => {
-                if (el && el.textContent !== (entry.text_value || '') && document.activeElement !== el) {
-                  el.textContent = entry.text_value || '';
-                }
-              }}
-              onFocus={handleTextFocus}
-              onBlur={handleTextBlur}
-              onKeyDown={handleTextKeyDown}
-              className="text-sm border-0 bg-transparent focus:outline-none cursor-text hover:bg-muted/50"
-            />
-          </div>
-        )}
-        {/* Multiline text */}
-        {isMultiline && (
-          <MultilineTextArea
-            value={entry.text_value || ''}
-            isReadOnly={!!isReadOnly}
-            onSave={(val) => onUpdate({ id: entry.id, text_value: val })}
-          />
-        )}
-
-        {/* Separator for text_numeric */}
-        {valueType === 'text_numeric' && <span className="text-sm text-muted-foreground">:</span>}
-
-        {/* Numeric value (for numeric and text_numeric) */}
-        {hasNumeric && (
-          <Input
-            type="number"
-            inputMode="decimal"
-            value={editingNumeric ? numericValue : (entry.numeric_value ?? '')}
-            onFocus={handleNumericFocus}
-            onChange={(e) => {
-              if (editingNumeric) {
-                setNumericValue(e.target.value);
-              }
-            }}
-            onBlur={saveNumeric}
-            onKeyDown={handleNumericKeyDown}
-            className={cn(
-              "h-7 w-[60px] text-sm text-center px-1 border-0 bg-transparent",
-              "focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:bg-focus-bg"
-            )}
-          />
-        )}
-
-        {/* Unit label */}
-        {hasNumeric && unitLabel && (
-          <span className="text-sm text-muted-foreground">{unitLabel}</span>
-        )}
-
-        {/* Plain text display for text-only types without numeric */}
-        {!hasNumeric && !hasText && (
-          <span className="text-sm">{entry.text_value || ''}</span>
-        )}
-
+  // Multiline layout: textarea + delete
+  if (isMultiline) {
+    return (
+      <div className="grid grid-cols-[1fr_24px] items-start gap-x-2 py-2 group">
+        <MultilineTextArea
+          value={entry.text_value || ''}
+          isReadOnly={!!isReadOnly}
+          onSave={(val) => onUpdate({ id: entry.id, text_value: val })}
+        />
         {!isReadOnly && (
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+            className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity mt-1"
             onClick={() => onDelete(entry.id)}
+            aria-label="Delete entry"
           >
-            <Trash2 className="h-3 w-3 text-muted-foreground" />
+            <Trash2 className="h-3 w-3" />
           </Button>
         )}
       </div>
+    );
+  }
+
+  // Standard layout: [text] [colon] [number] [unit] [delete]
+  return (
+    <div className="grid grid-cols-[1fr_auto_60px_50px_24px] items-center gap-x-1 py-2 group">
+      {/* Col 1: text label */}
+      {hasText ? (
+        <div className={cn(
+          "rounded px-1 min-w-0",
+          !isReadOnly && "focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg"
+        )}>
+          <span
+            contentEditable={!isReadOnly}
+            suppressContentEditableWarning
+            spellCheck={false}
+            ref={(el) => {
+              if (el && el.textContent !== (entry.text_value || '') && document.activeElement !== el) {
+                el.textContent = entry.text_value || '';
+              }
+            }}
+            onFocus={handleTextFocus}
+            onBlur={handleTextBlur}
+            onKeyDown={handleTextKeyDown}
+            className="text-sm border-0 bg-transparent focus:outline-none cursor-text hover:bg-muted/50 block"
+          />
+        </div>
+      ) : (
+        <span />
+      )}
+
+      {/* Col 2: colon separator */}
+      {valueType === 'text_numeric' ? (
+        <span className="text-sm text-muted-foreground">:</span>
+      ) : (
+        <span />
+      )}
+
+      {/* Col 3: numeric input */}
+      {hasNumeric ? (
+        <Input
+          type="number"
+          inputMode="decimal"
+          value={editingNumeric ? numericValue : (entry.numeric_value ?? '')}
+          onFocus={handleNumericFocus}
+          onChange={(e) => {
+            if (editingNumeric) setNumericValue(e.target.value);
+          }}
+          onBlur={saveNumeric}
+          onKeyDown={handleNumericKeyDown}
+          className={cn(
+            "h-7 w-full text-sm text-center px-1 border-0 bg-transparent",
+            "focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:bg-focus-bg"
+          )}
+        />
+      ) : (
+        <span />
+      )}
+
+      {/* Col 4: unit label */}
+      {hasNumeric && unitLabel ? (
+        <span className="text-xs text-muted-foreground">{unitLabel}</span>
+      ) : (
+        <span />
+      )}
+
+      {/* Col 5: delete button */}
+      {!isReadOnly ? (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+          onClick={() => onDelete(entry.id)}
+          aria-label="Delete entry"
+        >
+          <Trash2 className="h-3 w-3" />
+        </Button>
+      ) : (
+        <span />
+      )}
     </div>
   );
 }
