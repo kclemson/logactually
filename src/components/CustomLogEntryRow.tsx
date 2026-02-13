@@ -138,7 +138,9 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
   };
 
   return (
-    <div className={cn("flex justify-between py-2 group", (isMultiline || valueType === 'text') ? "items-start" : "items-center")}>
+    <div className={cn("flex py-2 group", 
+      isMultiline ? "items-start gap-3" : (valueType === 'text') ? "items-start justify-between" : "items-center justify-between"
+    )}>
       <span className="text-sm text-muted-foreground">{typeName}</span>
       <div className={cn("flex gap-2", isMultiline ? "items-start" : "items-center")}>
         {/* Text value (for text and text_numeric) - single line */}
