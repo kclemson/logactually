@@ -1,28 +1,47 @@
 
 
-## Update "How AI Processing Works" in Privacy Page
+## Settings Refactor: Skip Heavy Tests, Write a Smoke Test
 
-The current paragraph only describes the input-parsing use case (logging food/exercise). The "Ask AI" feature on the Trends page sends significantly more data to the AI model, and users should know about it.
+### Rationale
 
-### What changes
+The Settings page is 584 lines of conditional JSX rendering with ~15 `useState` calls and 8+ hook dependencies. Writing a full test suite requires mocking all of those hooks, and those mocks become tightly coupled to implementation details -- they'd need updating during the refactor itself, defeating the purpose.
 
-**File:** `src/pages/Privacy.tsx` -- update the `aiProcessing.text` string in the `PRIVACY_CONTENT` constant.
+The refactor is a **mechanical extraction** (moving JSX blocks into separate files with the same props). The real risk isn't logic breakage -- it's accidentally dropping a section or misrouting a prop. A lightweight smoke test catches that without the mock maintenance burden.
 
-**Current text:**
-> When you log food or exercise, your input is sent to an AI model that parses your freeform text and returns structured data -- calories, macros, sets, reps -- so you don't have to do the formatting or math yourself. Only the text you enter is sent -- no user identifiers, account info, or other context. The AI knows the request came from this app, but nothing more specific than that.
+### What we'll create
 
-**Proposed replacement:**
+**One file: `src/pages/Settings.test.tsx`**
 
-> This app uses AI in two ways:
->
-> **Logging:** When you log food or exercise, your freeform text is sent to an AI model that parses it into structured data -- calories, macros, sets, reps -- so you don't have to do the formatting yourself. Only the text you type is sent.
->
-> **Ask AI:** The Trends page has an optional "Ask AI" feature that answers questions about your habits. When you use it, your question plus up to 90 days of your logged food and exercise data is sent to the AI so it can give you a relevant answer. If you opt in, basic profile info (height, weight, age) is also included. This data is not stored by the AI provider.
->
-> In both cases, no user identifiers or account info are sent. The AI knows the request came from this app, but nothing more specific than that.
+A single smoke test that renders Settings with minimal mocks and checks that all 7 section headers are present in the DOM:
 
-This breaks the single paragraph into a clearer two-part explanation that accurately reflects both use cases, while keeping the reassuring privacy message at the end.
+- Account
+- Preferences
+- Custom Log Types (when `showCustomLogs=true`)
+- Saved Meals
+- Saved Routines (when `showWeights=true`)
+- Import and Export
+- About
 
-### Technical detail
+Plus one additional case: verify that "Saved Routines" and "Custom Log Types" are **absent** when their respective feature flags are off.
 
-This is a single string change in the `PRIVACY_CONTENT.aiProcessing.text` field (around line 57 of `Privacy.tsx`). The rendering will need a small tweak since the current code renders it as a single `<p>` tag -- we'll split it into multiple paragraphs or use a small array of content blocks to preserve the formatting.
+**Total: 2 test cases** -- enough to catch section-level breakage during refactor, without the fragility of deep mock trees.
+
+### Mocking approach
+
+We'll mock the hooks to return safe defaults (empty arrays, no-op functions) so the component renders without crashing. We won't assert on specific button text or toggle states -- just section presence.
+
+Hooks to mock with minimal stubs:
+- `useAuth` -- `{ user: { id: '1', email: 'test@test.com' }, signOut: vi.fn() }`
+- `useUserSettings` -- returns settings object (toggling `showWeights` and `showCustomLogs` between tests)
+- `useReadOnlyContext` -- `{ isReadOnly: false }`
+- `useSavedMeals` / `useSavedRoutines` -- `{ data: [], isLoading: false }`
+- `useCustomLogTypes` -- `{ logTypes: [], isLoading: false, createType/updateType/deleteType: mock mutations }`
+- `useExportData` -- `{ isExporting: false, exportFoodLog: vi.fn(), exportWeightLog: vi.fn() }`
+- `useIsAdmin` -- `{ data: false }`
+- `useTheme` (next-themes) -- `{ theme: 'system', setTheme: vi.fn() }`
+- Wrap in `MemoryRouter` for Link components
+
+### After this
+
+Once this smoke test passes, we proceed directly to the section extraction refactor. The same test file runs unchanged after the refactor to confirm all sections still render.
+
