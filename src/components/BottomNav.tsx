@@ -16,7 +16,7 @@ export function BottomNav() {
   const showCustomLogs = settings.showCustomLogs;
 
   const navItems = [
-    { to: '/', icon: Utensils, label: 'Food', activeColor: 'text-orange-500 dark:text-orange-400' },
+    { to: '/', icon: Utensils, label: 'Food', activeColor: 'text-primary' },
     ...(showWeights ? [{ to: '/weights', icon: Dumbbell, label: 'Exercise', activeColor: 'text-purple-500 dark:text-purple-400' }] : []),
     ...(showCustomLogs ? [{ to: '/custom', icon: ClipboardList, label: 'Custom', activeColor: 'text-teal-500 dark:text-teal-400' }] : []),
     { to: '/history', icon: CalendarDays, label: 'Calendar', activeColor: 'text-primary' },
