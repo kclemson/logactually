@@ -1,6 +1,8 @@
 import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { FoodItem, DailyTotals, calculateTotals, scaleMacrosByCalories, ScaledMacros } from '@/types/food';
+import { stepMultiplier, scaleItemByMultiplier } from '@/lib/portion-scaling';
+import { Minus, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -109,6 +111,10 @@ export function FoodItemsTable({
   // Local editing state - only saved on Enter
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const descriptionOriginalRef = useRef<string>('');
+
+  // Portion scaling stepper state
+  const [portionScalingIndex, setPortionScalingIndex] = useState<number | null>(null);
+  const [portionMultiplier, setPortionMultiplier] = useState<number>(1.0);
 
 
   // Get preview macros when editing calories (uses same helper as save)
@@ -499,7 +505,15 @@ export function FoodItemsTable({
                     className="border-0 bg-transparent focus:outline-none cursor-text hover:bg-muted/50"
                   />
                   {item.portion && (
-                    <span className="text-xs text-muted-foreground whitespace-nowrap"> ({item.portion})</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPortionScalingIndex(portionScalingIndex === index ? null : index);
+                        setPortionMultiplier(1.0);
+                      }}
+                      className="text-xs text-muted-foreground whitespace-nowrap cursor-pointer underline decoration-dotted underline-offset-2 hover:text-foreground transition-colors"
+                    > ({item.portion})</button>
                   )}
                   {hasAnyEditedFields(item) && (
                     <span className="text-focus-ring font-bold whitespace-nowrap" title={formatEditedFields(item) || 'Edited'}> *</span>
@@ -531,7 +545,15 @@ export function FoodItemsTable({
                 >
                   {item.description}
                   {item.portion && (
-                    <span className="text-xs text-muted-foreground whitespace-nowrap"> ({item.portion})</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPortionScalingIndex(portionScalingIndex === index ? null : index);
+                        setPortionMultiplier(1.0);
+                      }}
+                      className="text-xs text-muted-foreground whitespace-nowrap cursor-pointer underline decoration-dotted underline-offset-2 hover:text-foreground transition-colors"
+                    > ({item.portion})</button>
                   )}
                   {hasAnyEditedFields(item) && (
                     <span className="text-focus-ring font-bold" title={formatEditedFields(item) || 'Edited'}> *</span>
@@ -659,6 +681,61 @@ export function FoodItemsTable({
               )
             )}
             </div>
+
+            {/* Portion scaling stepper - inline below the item */}
+            {portionScalingIndex === index && (
+              <div className={cn('grid gap-0.5', gridCols)}>
+                <div className="col-span-full pl-6 pr-2 py-1.5 flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={portionMultiplier <= 0.25}
+                    onClick={() => setPortionMultiplier(stepMultiplier(portionMultiplier, 'down'))}
+                    className="h-7 w-7 rounded-full border border-input bg-background flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+                    aria-label="Decrease portion"
+                  >
+                    <Minus className="h-3.5 w-3.5" />
+                  </button>
+                  <span className={cn(
+                    "text-sm font-medium min-w-[3rem] text-center tabular-nums",
+                    portionMultiplier !== 1.0 && "text-primary"
+                  )}>
+                    {portionMultiplier}x
+                  </span>
+                  <button
+                    type="button"
+                    disabled={portionMultiplier >= 5.0}
+                    onClick={() => setPortionMultiplier(stepMultiplier(portionMultiplier, 'up'))}
+                    className="h-7 w-7 rounded-full border border-input bg-background flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+                    aria-label="Increase portion"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                  </button>
+                  <div className="flex-1" />
+                  {portionMultiplier !== 1.0 && (
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                      {Math.round(item.calories * portionMultiplier)} cal
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (portionMultiplier !== 1.0) {
+                        if (isReadOnly) {
+                          triggerOverlay();
+                        } else {
+                          onUpdateItemBatch?.(index, scaleItemByMultiplier(item, portionMultiplier));
+                        }
+                      }
+                      setPortionScalingIndex(null);
+                      setPortionMultiplier(1.0);
+                    }}
+                    className="text-xs font-medium text-primary hover:underline"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            )}
             
             {/* Expanded raw input - shows after last item in entry */}
             {showEntryDividers && isLastInEntry && isCurrentExpanded && (() => {
@@ -668,7 +745,7 @@ export function FoodItemsTable({
               
               return (
                 <div className={cn('grid gap-0.5', gridCols)}>
-                  <div className="col-span-full pl-6 py-1 space-y-2">
+                  <div className="col-span-full pl-6 pt-2 pb-1 space-y-1.5">
                     {/* Only show raw input if NOT from a saved meal */}
                     {!isFromSavedMeal && currentRawInput && (
                       <p className="text-xs text-muted-foreground italic">
