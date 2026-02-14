@@ -1,22 +1,23 @@
 
-## Reduce Default Visible Exercise Charts to 4
 
-A one-line change in `src/pages/Trends.tsx`.
+## Fix Nav Colors and Settings Icon Colors
 
-### Change
+### 1. Fix Food nav icon back to blue (`src/components/BottomNav.tsx`)
 
-**`src/pages/Trends.tsx`, line 533**
-
-Change the initial state of `visibleExerciseCount` from `10` to `4`:
-
-```typescript
-// Before
-const [visibleExerciseCount, setVisibleExerciseCount] = useState(10);
-
-// After
-const [visibleExerciseCount, setVisibleExerciseCount] = useState(4);
+Change line 19 from orange to primary (blue):
+```
+{ to: '/', icon: Utensils, label: 'Food', activeColor: 'text-primary' }
 ```
 
-This only affects the individual exercise charts. The Total Volume and Estimated Calorie Burn charts are rendered independently above the exercise list, so they will always be visible regardless of this count.
+### 2. Add a neutral gray color to general Settings section icons (`src/pages/Settings.tsx`)
 
-The "Show more" button (which increments by 10) already exists and will appear whenever there are more than 4 exercises.
+For Account, Preferences, Import and Export, and About -- these are utility/system sections, not content-type sections. A muted gray works well as a subtle contrast to blue, keeping the colored icons (orange meals, purple routines, teal custom) as the standout items. This way the "content" sections pop while the "system" sections stay understated.
+
+Color: `text-zinc-500 dark:text-zinc-400` (a neutral gray that works in both themes)
+
+Lines to update:
+- Line 125 (Account): add `iconClassName="text-zinc-500 dark:text-zinc-400"`
+- Line 174 (Preferences): add `iconClassName="text-zinc-500 dark:text-zinc-400"`
+- Line 448 (Import and Export): add `iconClassName="text-zinc-500 dark:text-zinc-400"`
+- Line 487 (About): add `iconClassName="text-zinc-500 dark:text-zinc-400"`
+
