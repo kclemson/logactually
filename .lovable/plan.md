@@ -1,17 +1,15 @@
 
 
-## Add Changelog Entry for Portion Scaling
+## Replace Ask AI Screenshots with Single Image
 
-### 1. Copy screenshot
-Copy `user-uploads://image-825.png` to `public/changelog/portion-scaling.png`
+### Steps
 
-### 2. Add changelog entry
-In `src/pages/Changelog.tsx`, add a new entry at the top of the `CHANGELOG_ENTRIES` array:
+1. **Copy new screenshot** -- Save `user-uploads://askai.png` to `public/changelog/ask-ai.png`.
 
-```
-{ date: "Feb-14", text: "Added portion scaling — tap any portion label to adjust it with +/- controls. Scales the quantity, unit, and all nutritional values proportionally. Great for when you had a bigger or smaller serving than what was originally logged.", image: "portion-scaling.png" }
-```
+2. **Update the Feb-12 changelog entry** in `src/pages/Changelog.tsx` -- Change the Feb-12 entry from `images: ["ask-ai-trends.png", "ask-ai-food.png", "ask-ai-exercise.png"]` to `image: "ask-ai.png"`.
 
-### 3. Update LAST_UPDATED
-`LAST_UPDATED` is already `"Feb-14-26"` so no change needed there. The existing Feb-14 custom logging entry stays as-is; this new entry goes above it as the first item in the array.
+3. **Delete old screenshots** -- Remove the three files that are no longer referenced:
+   - `public/changelog/ask-ai-trends.png`
+   - `public/changelog/ask-ai-food.png`
+   - `public/changelog/ask-ai-exercise.png`
 
