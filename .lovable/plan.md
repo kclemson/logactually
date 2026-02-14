@@ -1,22 +1,17 @@
 
-## Add Escape Key Support to Portion Scaling
 
-The portion scaling stepper container (line 688) handles blur to close but has no `onKeyDown` listener, so pressing Escape does nothing.
+## Add Changelog Entry for Portion Scaling
 
-### Change
+### 1. Copy screenshot
+Copy `user-uploads://image-825.png` to `public/changelog/portion-scaling.png`
 
-**File: `src/components/FoodItemsTable.tsx`**, line ~691 (the container div):
+### 2. Add changelog entry
+In `src/pages/Changelog.tsx`, add a new entry at the top of the `CHANGELOG_ENTRIES` array:
 
-Add an `onKeyDown` handler that closes portion scaling on Escape, discarding any unsaved multiplier change:
-
-```tsx
-onKeyDown={(e) => {
-  if (e.key === 'Escape') {
-    e.stopPropagation();
-    setPortionScalingIndex(null);
-    setPortionMultiplier(1.0);
-  }
-}}
+```
+{ date: "Feb-14", text: "Added portion scaling — tap any portion label to adjust it with +/- controls. Scales the quantity, unit, and all nutritional values proportionally. Great for when you had a bigger or smaller serving than what was originally logged.", image: "portion-scaling.png" }
 ```
 
-This goes on the same `<div>` that already has `tabIndex={-1}`, `ref` for auto-focus, and `onBlur`. The Escape behavior matches other inline edits: revert and close without applying changes.
+### 3. Update LAST_UPDATED
+`LAST_UPDATED` is already `"Feb-14-26"` so no change needed there. The existing Feb-14 custom logging entry stays as-is; this new entry goes above it as the first item in the array.
+
