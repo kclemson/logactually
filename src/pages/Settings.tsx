@@ -243,7 +243,7 @@ export default function Settings() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground">Enable Exercise logging</p>
-              <p className="text-[10px] text-muted-foreground/70">Track exercises with sets, reps, and weight</p>
+              <p className="text-[10px] text-muted-foreground/70">Use the Exercise tab to log weight training, cardio and more</p>
             </div>
             <button
               onClick={() => updateSettings({ showWeights: !settings.showWeights })}
