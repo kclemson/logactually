@@ -512,8 +512,8 @@ export function FoodItemsTable({
                         setPortionScalingIndex(portionScalingIndex === index ? null : index);
                         setPortionMultiplier(1.0);
                       }}
-                      className="text-xs text-muted-foreground whitespace-nowrap cursor-pointer hover:text-foreground transition-colors"
-                    > ({item.portion})</button>
+                      className="ml-1 text-xs text-muted-foreground whitespace-nowrap cursor-pointer hover:text-foreground transition-colors"
+                    >({item.portion})</button>
                   )}
                   {hasAnyEditedFields(item) && (
                     <span className="text-focus-ring font-bold whitespace-nowrap" title={formatEditedFields(item) || 'Edited'}> *</span>
@@ -552,8 +552,8 @@ export function FoodItemsTable({
                         setPortionScalingIndex(portionScalingIndex === index ? null : index);
                         setPortionMultiplier(1.0);
                       }}
-                      className="text-xs text-muted-foreground whitespace-nowrap cursor-pointer hover:text-foreground transition-colors"
-                    > ({item.portion})</button>
+                      className="ml-1 text-xs text-muted-foreground whitespace-nowrap cursor-pointer hover:text-foreground transition-colors"
+                    >({item.portion})</button>
                   )}
                   {hasAnyEditedFields(item) && (
                     <span className="text-focus-ring font-bold" title={formatEditedFields(item) || 'Edited'}> *</span>
