@@ -237,7 +237,7 @@ export default function Privacy() {
               <p>{PRIVACY_CONTENT.aiProcessing.intro}</p>
               {PRIVACY_CONTENT.aiProcessing.blocks.map((block) => (
                 <p key={block.label}>
-                  <strong className="text-foreground">{block.label}:</strong> {block.text}
+                  {block.label}: {block.text}
                 </p>
               ))}
               <p>{PRIVACY_CONTENT.aiProcessing.footer}</p>
