@@ -331,7 +331,7 @@ export default function Settings() {
       )}
 
       {/* Saved Meals - frequently accessed */}
-      <CollapsibleSection title="Saved Meals" icon={Utensils} storageKey="settings-meals" iconClassName="text-orange-500 dark:text-orange-400">
+      <CollapsibleSection title="Saved Meals" icon={Utensils} storageKey="settings-meals" iconClassName="text-primary">
         {/* Add button as first row */}
         {!isReadOnly && (
           <button
