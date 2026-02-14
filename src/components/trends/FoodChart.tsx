@@ -10,25 +10,28 @@ const getFoodLabelOffsetPx = (dataLength: number): number =>
 const getFoodChartMarginTop = (dataLength: number): number =>
   dataLength > 35 ? 22 : dataLength > 21 ? 18 : 12;
 
-// Helper to create grouped bar label renderer (numeric value + rotated text name)
+// Helper to create grouped bar label renderer (numeric value above, text name inside bar)
 const createGroupedBarLabelRenderer = (
   barName: string,
   color: string,
 ) => (props: any) => {
-  const { x, y, width, value } = props;
+  const { x, y, width, height, value } = props;
   if (!value || typeof x !== 'number' || typeof width !== 'number') return null;
   const cx = x + width / 2;
+  const barHeight = typeof height === 'number' ? height : 0;
   return (
     <g>
       {/* Numeric value just above bar */}
       <text x={cx} y={y - 4} fill={color} textAnchor="middle" fontSize={7} fontWeight={500}>
         {Math.round(value)}
       </text>
-      {/* Rotated text label above the numeric value */}
-      <text x={cx} y={y - 14} fill={color} textAnchor="start" fontSize={7} fontWeight={500}
-        transform={`rotate(-90, ${cx}, ${y - 14})`}>
-        {barName}
-      </text>
+      {/* Rotated text label inside the bar, white */}
+      {barHeight > 14 && (
+        <text x={cx} y={y + barHeight - 4} fill="white" textAnchor="end" fontSize={7} fontWeight={500}
+          transform={`rotate(-90, ${cx}, ${y + barHeight - 4})`}>
+          {barName}
+        </text>
+      )}
     </g>
   );
 };
