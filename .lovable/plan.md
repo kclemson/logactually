@@ -1,22 +1,21 @@
 
 
-## Two Changes: Saved Meals Icon Color + Food Nav Icon Color
+## Unify Blue Color Across Food-Related Icons
 
-### 1. Saved Meals icon color (`src/pages/Settings.tsx`, line 334)
+The "Add Food" button blue matches Tailwind's `blue-500` which is essentially `hsl(217 91% 60%)`. Three spots need to use this same blue consistently:
 
-Change `iconClassName="text-orange-500 dark:text-orange-400"` to `iconClassName="text-primary"` on the Saved Meals section.
+### 1. Food bottom nav active icon -- already correct
+Currently `text-blue-500 dark:text-blue-400` -- no change needed.
 
-### 2. Fix Food bottom nav active color (`src/components/BottomNav.tsx`, line 19)
+### 2. Saved Meals icon in Settings (`src/pages/Settings.tsx`)
+Currently uses `iconClassName="text-primary"` which renders near-white in dark mode. Change to `iconClassName="text-blue-500 dark:text-blue-400"`.
 
-The `text-primary` color maps to near-white in dark mode, making the icon invisible. Change it to an explicit blue:
+### 3. Food Trends icon on Trends page (`src/pages/Trends.tsx`, line 818)
+Currently uses the default CollapsibleSection icon color (`text-[hsl(217_91%_60%)]`). While visually very close, for explicit consistency add `iconClassName="text-blue-500 dark:text-blue-400"` to this CollapsibleSection.
 
-```
-// Before
-{ to: '/', icon: Utensils, label: 'Food', activeColor: 'text-primary' }
+### Technical Details
 
-// After
-{ to: '/', icon: Utensils, label: 'Food', activeColor: 'text-blue-500 dark:text-blue-400' }
-```
+**`src/pages/Settings.tsx`** -- Saved Meals CollapsibleSection: change `iconClassName="text-primary"` to `iconClassName="text-blue-500 dark:text-blue-400"`.
 
-Also update the other nav items that use `text-primary` (Calendar, Trends, Settings, Admin) to the same explicit blue so they all remain visible in dark mode.
+**`src/pages/Trends.tsx`** (line 818) -- Food Trends CollapsibleSection: add `iconClassName="text-blue-500 dark:text-blue-400"` prop.
 
