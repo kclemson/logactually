@@ -5,6 +5,7 @@ import { useLoginCount } from "@/hooks/useLoginCount";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useAdminFeedback, useRespondToFeedback, useResolveFeedback } from "@/hooks/feedback";
 import { useHasHover } from "@/hooks/use-has-hover";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { format, parseISO, isToday } from "date-fns";
 import { MessageSquare, FileSearch } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ export default function Admin() {
   const respondToFeedback = useRespondToFeedback();
   const resolveFeedback = useResolveFeedback();
   const hasHover = useHasHover();
+  const isMobile = useIsMobile();
 
   const openFeedback = feedback?.filter(f => !f.resolved_at) ?? [];
   const resolvedFeedback = feedback?.filter(f => !!f.resolved_at) ?? [];
@@ -140,8 +142,10 @@ export default function Admin() {
                 <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">SF</th>
                 <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">W</th>
                 <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">SW</th>
-                <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Logins</th>
-                <th className="text-center py-0.5 font-medium text-muted-foreground">L2day</th>
+                <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">C</th>
+                <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Cs</th>
+                {!isMobile && <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Logins</th>}
+                {!isMobile && <th className="text-center py-0.5 font-medium text-muted-foreground">L2day</th>}
               </tr>
             </thead>
             <tbody>
@@ -297,15 +301,29 @@ export default function Admin() {
                     )}
                   </Tooltip>
                   <td
-                    className={`text-center py-0.5 pr-2 ${(user.login_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
+                    className={`text-center py-0.5 pr-2 ${user.custom_logs_enabled ? "text-teal-500" : "text-muted-foreground/50"}`}
                   >
-                    {user.login_count ?? 0}
+                    {user.custom_logs_enabled ? "✓" : "—"}
                   </td>
                   <td
-                    className={`text-center py-0.5 ${(user.logins_today ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
+                    className={`text-center py-0.5 pr-2 ${(user.custom_log_entries_count ?? 0) === 0 ? "text-teal-400/50" : "text-teal-500"}`}
                   >
-                    {user.logins_today ?? 0}
+                    {user.custom_log_entries_count ?? 0}
                   </td>
+                  {!isMobile && (
+                    <td
+                      className={`text-center py-0.5 pr-2 ${(user.login_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
+                    >
+                      {user.login_count ?? 0}
+                    </td>
+                  )}
+                  {!isMobile && (
+                    <td
+                      className={`text-center py-0.5 ${(user.logins_today ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
+                    >
+                      {user.logins_today ?? 0}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
