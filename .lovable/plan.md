@@ -1,35 +1,30 @@
 
+## Move "Done" Button Next to Controls
 
-## Show Scaled Preview Next to + Button
+### Problem
+"Done" is far right, separated from the stepper controls by a `flex-1` spacer. When the preview text appears/disappears, the gap changes, making "Done" feel disconnected.
 
-### Change
+### Solution
+Place "Done" immediately after the `+` button (before the preview), and move the preview to the end. This way "Done" never moves -- it's always right next to the controls regardless of whether a preview is showing.
 
-Move the preview from right-aligned to immediately after the `+` button, in parentheses with both portion and calories. Remove the `flex-1` spacer that was pushing the preview to the right.
+Layout at 1x (no preview):
+`[-] 1x [+] Done`
 
-### What the user sees
-
-Before: `[-] 1.25x [+] .................. 3 cal  Done`
-
-After: `[-] 1.25x [+] (10 oz, 3 cal) ............ Done`
+Layout at 1.25x (with preview):
+`[-] 1.25x [+] Done  (25 baby carrots, 88 cal)`
 
 ### Technical Details
 
 **File: `src/components/FoodItemsTable.tsx`**
 
-1. **Add `scalePortion` to imports** (line 4): add it alongside `stepMultiplier` and `scaleItemByMultiplier`
+Reorder the elements inside the stepper div (lines 722-744):
 
-2. **Replace preview + spacer** (lines 722-727): Remove the `<div className="flex-1" />` spacer, and replace the preview span with a parenthesized format showing scaled portion + calories right after the `+` button:
+1. Move the "Done" button (lines 728-744) to right after the `+` button (after line 721)
+2. Keep the `flex-1` spacer after "Done"
+3. Move the preview span to the end (after the spacer), so it right-aligns as secondary info
 
-```tsx
-{portionMultiplier !== 1.0 && (
-  <span className="text-xs text-muted-foreground tabular-nums">
-    ({item.portion ? scalePortion(item.portion, portionMultiplier) + ', ' : ''}
-    {Math.round(item.calories * portionMultiplier)} cal)
-  </span>
-)}
-<div className="flex-1" />
+```
+[- button] [multiplier] [+ button] [Done button] [flex-1 spacer] [preview span]
 ```
 
-The `flex-1` spacer moves after the preview so "Done" stays right-aligned while the preview sits next to the `+` icon.
-
-Single file, 3 lines changed.
+"Done" stays fixed next to controls. The preview floats to the right as supplementary info -- it can appear/disappear without shifting anything the user needs to tap.
