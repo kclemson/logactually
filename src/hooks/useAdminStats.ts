@@ -57,6 +57,8 @@ interface UserStats {
   weight_today_details: TodayWeightDetail[] | null;
   saved_meal_names: string[] | null;
   saved_routine_names: string[] | null;
+  custom_logs_enabled: boolean;
+  custom_log_entries_count: number;
 }
 
 export function useAdminStats() {
