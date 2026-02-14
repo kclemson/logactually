@@ -1,5 +1,5 @@
 import { useTheme } from "next-themes";
-import { Moon, Sun, Monitor, Star, ArrowDownUp, Plus, Dumbbell, User, Settings2, Info, ClipboardList } from "lucide-react";
+import { Moon, Sun, Monitor, Utensils, ArrowDownUp, Plus, Dumbbell, User, Settings2, Info, ClipboardList } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { WeightUnit } from "@/lib/weight-units";
 import { cn } from "@/lib/utils";
@@ -331,7 +331,7 @@ export default function Settings() {
       )}
 
       {/* Saved Meals - frequently accessed */}
-      <CollapsibleSection title="Saved Meals" icon={Star} storageKey="settings-meals">
+      <CollapsibleSection title="Saved Meals" icon={Utensils} storageKey="settings-meals" iconClassName="text-orange-500 dark:text-orange-400">
         {/* Add button as first row */}
         {!isReadOnly && (
           <button
@@ -388,7 +388,7 @@ export default function Settings() {
 
       {/* Saved Routines - weight tracking (gated by feature flag or admin) */}
       {showWeights && (
-        <CollapsibleSection title="Saved Routines" icon={Dumbbell} storageKey="settings-routines">
+        <CollapsibleSection title="Saved Routines" icon={Dumbbell} storageKey="settings-routines" iconClassName="text-purple-500 dark:text-purple-400">
           {/* Add button as first row */}
           {!isReadOnly && (
             <button
