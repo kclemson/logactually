@@ -1,68 +1,35 @@
 
-# Enhance README with Storytelling and Updated Screenshot
 
-## What will change
+# Update README: Screenshot format, live URL, and third-party credits
 
-**Files modified:** `README.md` only, plus one new image asset.
+Three changes to `README.md`:
 
-**Image swap:** Replace the current `public/logactually-screen2.png` (tall trends screenshot) with the new wider charts screenshot (`logactually-screen3-charts.png`). The first hero screenshot stays as-is.
+## 1. Screenshot format (line 11)
+Replace the HTML `<img>` tag with standard Markdown and remove the width restriction:
+- Before: `<img src="public/logactually-screen3-charts.png" alt="Log Actually - Trends" width="500" />`
+- After: `![Log Actually - Trends](public/logactually-screen3-charts.png)`
 
-## New README structure
+## 2. Live site URL (after line 7)
+Add a line after the demo mode mention:
+```
+Try it out at [logactually.com](https://logactually.com).
+```
 
-### 1. Title + new tagline
-Update the opening line to reflect the app's evolution from food logging to general-purpose logging, matching the LinkedIn tone. Something like:
+## 3. Expand Tech Stack with third-party credits (lines 46-50)
+Update the Tech Stack section to include external APIs and notable libraries:
 
-> Every food tracking app I tried drove me nuts -- too many taps, too many screens, too much friction. So I built my own. The idea: just braindump what you ate in your usual stream-of-consciousness way, and wire it up to AI to turn your word salad into structured data with nutritional information.
->
-> Once food tracking was working the way I liked, I added exercise logging (my watch doesn't do a great job tracking weight-lifting workouts). And then custom logs for things like body weight, blood pressure, sleep -- classic "if you give a mouse a cookie..."
->
-> It has a demo mode if you want to poke around without creating an account.
+```
+## Tech Stack
 
-### 2. Screenshots (keep hero, swap second)
-- **Image 1**: `logactually-screen1.png` -- full width, unchanged
-- **Image 2**: Replace `logactually-screen2.png` reference with `logactually-screen3-charts.png` -- the wider trends screenshot, still scaled down via HTML `<img>` tag
+- **Frontend:** React, Vite, TypeScript, Tailwind CSS, shadcn/ui
+- **Backend:** Supabase -- auth, database, edge functions
+- **AI:** Google Gemini (via edge functions for food/exercise parsing, photo analysis, trend insights)
+- **Charts:** Recharts
+- **Barcode scanning:** ZXing
+- **Food database:** Open Food Facts (UPC lookups)
+- **Exercise data:** 2024 Compendium of Physical Activities (MET-based calorie estimates)
+```
 
-### 3. Features section (new)
-A scannable bullet list covering key capabilities:
+This surfaces the key external dependencies and data sources that make the app tick, which is exactly the kind of thing open-source browsers appreciate seeing.
 
-**Food Logging**
-- Natural language input -- describe what you ate however you want, AI parses it into items with full macro breakdowns
-- Photo-based logging -- snap a picture and AI identifies items
-- Barcode scanning via camera
-- Editable portions with proportional nutrient scaling
-- Saved meals for quick re-logging
-- Smart suggestions -- detects repeated patterns and offers to save them
-
-**Exercise Logging**
-- Natural language input for weight training and cardio
-- Estimated calorie burn using MET values from the 2024 Compendium of Physical Activities
-- Apple Health import for watch-based workouts
-- Saved routines for quick re-logging
-
-**Custom Logs**
-- Track anything: body weight, blood pressure, sleep, mood, journal entries, etc.
-- Numeric, dual-numeric, and text value types
-- Built-in templates for common metrics
-
-**Trends and Insights**
-- Charts for calories, macros, exercise volume, and custom metrics over 7/30/90-day windows
-- "Ask AI" -- query your own logged data in plain language
-- Daily calorie target tracking with color-coded indicators
-
-**Other**
-- Dark mode
-- PWA (installable on mobile)
-- CSV export
-- Demo mode -- try it without creating an account
-- Imperial and metric unit support
-
-### 4. Tech Stack, Getting Started, Project Structure, License
-Keep existing sections as-is.
-
-## Technical details
-
-1. Copy `user-uploads://logactually-screen3-charts.png` to `public/logactually-screen3-charts.png`
-2. Update `README.md`:
-   - Replace tagline (line 3) with the storytelling intro
-   - Replace the `logactually-screen2.png` reference (line 7) with `logactually-screen3-charts.png`
-   - Insert a "Features" section between the screenshots and "Tech Stack"
+No other files affected.
