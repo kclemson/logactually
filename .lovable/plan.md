@@ -1,23 +1,22 @@
 
 
-## Fix Nav Colors and Settings Icon Colors
+## Two Changes: Saved Meals Icon Color + Food Nav Icon Color
 
-### 1. Fix Food nav icon back to blue (`src/components/BottomNav.tsx`)
+### 1. Saved Meals icon color (`src/pages/Settings.tsx`, line 334)
 
-Change line 19 from orange to primary (blue):
+Change `iconClassName="text-orange-500 dark:text-orange-400"` to `iconClassName="text-primary"` on the Saved Meals section.
+
+### 2. Fix Food bottom nav active color (`src/components/BottomNav.tsx`, line 19)
+
+The `text-primary` color maps to near-white in dark mode, making the icon invisible. Change it to an explicit blue:
+
 ```
+// Before
 { to: '/', icon: Utensils, label: 'Food', activeColor: 'text-primary' }
+
+// After
+{ to: '/', icon: Utensils, label: 'Food', activeColor: 'text-blue-500 dark:text-blue-400' }
 ```
 
-### 2. Add a neutral gray color to general Settings section icons (`src/pages/Settings.tsx`)
-
-For Account, Preferences, Import and Export, and About -- these are utility/system sections, not content-type sections. A muted gray works well as a subtle contrast to blue, keeping the colored icons (orange meals, purple routines, teal custom) as the standout items. This way the "content" sections pop while the "system" sections stay understated.
-
-Color: `text-zinc-500 dark:text-zinc-400` (a neutral gray that works in both themes)
-
-Lines to update:
-- Line 125 (Account): add `iconClassName="text-zinc-500 dark:text-zinc-400"`
-- Line 174 (Preferences): add `iconClassName="text-zinc-500 dark:text-zinc-400"`
-- Line 448 (Import and Export): add `iconClassName="text-zinc-500 dark:text-zinc-400"`
-- Line 487 (About): add `iconClassName="text-zinc-500 dark:text-zinc-400"`
+Also update the other nav items that use `text-primary` (Calendar, Trends, Settings, Admin) to the same explicit blue so they all remain visible in dark mode.
 
