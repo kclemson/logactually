@@ -255,7 +255,7 @@ export default function Auth() {
         <CardHeader className="text-center">
           <img src="/logactually-logo-horiz.png" alt={APP_NAME} className="h-16 mx-auto mb-2" />
           <CardTitle className="text-2xl font-bold">{APP_NAME}</CardTitle>
-          <CardDescription>Braindump what you ate or lifted — AI handles the rest</CardDescription>
+          <CardDescription>Braindump what you ate or your workout, and AI handles the rest</CardDescription>
           <p className="text-sm text-muted-foreground pt-1">
             <button
               type="button"
