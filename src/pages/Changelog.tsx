@@ -87,9 +87,9 @@ export default function Changelog() {
               <li key={index} className="text-sm">
                 <div className="flex gap-2">
                   <span className="text-muted-foreground shrink-0">{entry.date}:</span>
-                  <div className="flex flex-col">
-                    <span className="text-foreground">{entry.text}</span>
-                    {entry.image && (
+                    <div className="flex flex-col items-center">
+                    <span className="text-foreground self-start">{entry.text}</span>
+                     {entry.image && (
                       <img
                         src={`/changelog/${entry.image}`}
                         alt={`Screenshot for ${entry.date} update`}
@@ -98,7 +98,7 @@ export default function Changelog() {
                       />
                     )}
                     {entry.images && (
-                      <div className="flex flex-wrap gap-2 mt-2">
+                      <div className="flex flex-wrap gap-2 mt-2 justify-center">
                         {entry.images.map((img, i) => (
                           <img
                             key={i}
