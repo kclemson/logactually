@@ -1,24 +1,10 @@
 
 
-## Add Custom Logs Changelog Entry
+## Fix Changelog Date to Feb-14
 
-### Changes
+Three small edits:
 
-**1. Copy screenshot to public/changelog/**
-
-Copy `user-uploads://custom_logs.png` to `public/changelog/custom-logs.png`
-
-**2. Update `src/pages/Changelog.tsx`**
-
-Add a new entry at the top of `CHANGELOG_ENTRIES`:
-
-```typescript
-{ date: "Feb-15", text: "Added custom logging — track anything beyond food and exercise. Enable it in Settings to create your own log types (body weight, measurements, mood, journal notes, and more). Supports numeric, text + numeric, and text entries with optional units. Custom logs get their own trends charts on the Trends page.", image: "custom-logs.png" },
-```
-
-Update `LAST_UPDATED` to `"Feb-15-26"`.
-
-**3. Update `src/pages/Settings.tsx`**
-
-Update the changelog link text to reflect the new last-updated date.
+1. **`src/pages/Changelog.tsx`** -- Change the new entry's date from `"Feb-15"` to `"Feb-14"`
+2. **`src/pages/Changelog.tsx`** -- Change `LAST_UPDATED` from `"Feb-15-26"` to `"Feb-14-26"`
+3. **`src/pages/Settings.tsx`** -- Change the link text from `"Changelog (last updated Feb-15)"` to `"Changelog (last updated Feb-14)"`
 
