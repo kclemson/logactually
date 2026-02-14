@@ -421,7 +421,7 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
   );
 };
 
-const TEAL_PALETTE = ['#14b8a6', '#0d9488', '#0f766e', '#115e59', '#2dd4bf'];
+const TEAL_PALETTE = ['#14b8a6', '#0d9488', '#2dd4bf', '#0f766e', '#5eead4'];
 
 const CustomLogTrendChart = ({ trend, onNavigate }: { trend: CustomLogTrendSeries; onNavigate: (date: string) => void }) => {
   const chartData = useMemo(() => {
@@ -483,6 +483,7 @@ const CustomLogTrendChart = ({ trend, onNavigate }: { trend: CustomLogTrendSerie
       bars={bars}
       onNavigate={onNavigate}
       formatter={(value, name) => `${name}: ${value}`}
+      grouped
     />
   );
 };
