@@ -1,45 +1,28 @@
 
 
-## 1. Remove hardcoded USER_NAMES from Admin.tsx
+## Update "How AI Processing Works" in Privacy Page
 
-The `USER_NAMES` map on lines 18-28 contains real names tied to user numbers. Every reference (lines 161, 376, 450) already has a fallback of `User #${user.user_number}`, so the fix is simple:
+The current paragraph only describes the input-parsing use case (logging food/exercise). The "Ask AI" feature on the Trends page sends significantly more data to the AI model, and users should know about it.
 
-- Delete the `USER_NAMES` constant entirely
-- Replace all 3 usages with just `User #${user.user_number}` (the existing fallback)
+### What changes
 
-Files changed: `src/pages/Admin.tsx`
+**File:** `src/pages/Privacy.tsx` -- update the `aiProcessing.text` string in the `PRIVACY_CONTENT` constant.
 
----
+**Current text:**
+> When you log food or exercise, your input is sent to an AI model that parses your freeform text and returns structured data -- calories, macros, sets, reps -- so you don't have to do the formatting or math yourself. Only the text you enter is sent -- no user identifiers, account info, or other context. The AI knows the request came from this app, but nothing more specific than that.
 
-## 2. Create a dev logger utility
+**Proposed replacement:**
 
-Create `src/lib/logger.ts` with a thin wrapper around `console` that only logs when `import.meta.env.DEV` is true. This replaces the scattered `if (import.meta.env.DEV) console.log(...)` pattern and ungated `console.error` calls throughout the frontend.
+> This app uses AI in two ways:
+>
+> **Logging:** When you log food or exercise, your freeform text is sent to an AI model that parses it into structured data -- calories, macros, sets, reps -- so you don't have to do the formatting yourself. Only the text you type is sent.
+>
+> **Ask AI:** The Trends page has an optional "Ask AI" feature that answers questions about your habits. When you use it, your question plus up to 90 days of your logged food and exercise data is sent to the AI so it can give you a relevant answer. If you opt in, basic profile info (height, weight, age) is also included. This data is not stored by the AI provider.
+>
+> In both cases, no user identifiers or account info are sent. The AI knows the request came from this app, but nothing more specific than that.
 
-```ts
-// src/lib/logger.ts
-const isDev = import.meta.env.DEV;
+This breaks the single paragraph into a clearer two-part explanation that accurately reflects both use cases, while keeping the reassuring privacy message at the end.
 
-export const logger = {
-  log: (...args: unknown[]) => { if (isDev) console.log(...args); },
-  warn: (...args: unknown[]) => { if (isDev) console.warn(...args); },
-  error: (...args: unknown[]) => { if (isDev) console.error(...args); },
-};
-```
+### Technical detail
 
-Then update all frontend files that use `console.log/warn/error` to import and use `logger` instead:
-
-- `src/pages/Admin.tsx` (1 call)
-- `src/pages/Auth.tsx` (2 calls)
-- `src/hooks/useAuth.tsx` (5 calls -- mix of gated and ungated)
-- `src/hooks/useUserSettings.ts` (2 calls)
-- `src/hooks/useFoodEntries.ts` (2 calls)
-- `src/hooks/useExportData.ts` (2 calls)
-- `src/hooks/useReadOnly.ts` (1 call)
-- `src/components/FoodInput.tsx` (2 gated + 2 ungated)
-- `src/components/BarcodeScanner.tsx` (2 calls)
-- `src/components/DeleteAccountDialog.tsx` (2 calls)
-- `src/components/ErrorBoundary.tsx` (1 call)
-
-**Edge functions are excluded** -- server-side logging in Deno is expected and useful for debugging deployed functions. The cleanup focuses only on client-side code in `src/`.
-
-Files changed: `src/lib/logger.ts` (new), plus ~11 files updated to use it.
+This is a single string change in the `PRIVACY_CONTENT.aiProcessing.text` field (around line 57 of `Privacy.tsx`). The rendering will need a small tweak since the current code renders it as a single `<p>` tag -- we'll split it into multiple paragraphs or use a small array of content blocks to preserve the formatting.
