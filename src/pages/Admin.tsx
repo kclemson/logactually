@@ -136,15 +136,15 @@ export default function Admin() {
               <tr className="border-b">
                 <th className="text-left py-0.5 pr-2 font-medium text-muted-foreground whitespace-nowrap">User</th>
                 <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Last</th>
-                <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">F2day</th>
-                <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">W2day</th>
-                <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">F</th>
-                <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">SF</th>
-                <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">W</th>
-                <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">SW</th>
-                <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">C</th>
-                <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Cs</th>
-                {!isMobile && <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Logins</th>}
+                <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">F2d</th>
+                <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">W2d</th>
+                <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">F</th>
+                <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">SF</th>
+                <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">W</th>
+                <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">SW</th>
+                <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">C</th>
+                <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">Cs</th>
+                {!isMobile && <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">Logins</th>}
                 {!isMobile && <th className="text-center py-0.5 font-medium text-muted-foreground">L2day</th>}
               </tr>
             </thead>
@@ -251,7 +251,7 @@ export default function Admin() {
                     )}
                   </Tooltip>
                   <td
-                    className={`text-center py-0.5 pr-2 ${user.total_entries === 0 ? "text-blue-400/50" : "text-blue-500"}`}
+                    className={`text-center py-0.5 pr-1 ${user.total_entries === 0 ? "text-blue-400/50" : "text-blue-500"}`}
                   >
                     {user.total_entries}
                   </td>
@@ -261,7 +261,7 @@ export default function Admin() {
                   >
                     <TooltipTrigger asChild>
                       <td
-                        className={`text-center py-0.5 pr-2 ${(user.saved_meals_count ?? 0) === 0 ? "text-blue-400/50" : "text-blue-500"} ${(user.saved_meals_count ?? 0) > 0 && user.saved_meal_names ? "cursor-default" : ""}`}
+                        className={`text-center py-0.5 pr-1 ${(user.saved_meals_count ?? 0) === 0 ? "text-blue-400/50" : "text-blue-500"} ${(user.saved_meals_count ?? 0) > 0 && user.saved_meal_names ? "cursor-default" : ""}`}
                         onClick={!hasHover && (user.saved_meals_count ?? 0) > 0 && user.saved_meal_names ? () => setActiveTooltip(activeTooltip === `${user.user_id}-meals` ? null : `${user.user_id}-meals`) : undefined}
                       >
                         {user.saved_meals_count ?? 0}
@@ -276,7 +276,7 @@ export default function Admin() {
                     )}
                   </Tooltip>
                   <td
-                    className={`text-center py-0.5 pr-2 ${(user.total_weight_entries ?? 0) === 0 ? "text-purple-400/50" : "text-purple-500"}`}
+                    className={`text-center py-0.5 pr-1 ${(user.total_weight_entries ?? 0) === 0 ? "text-purple-400/50" : "text-purple-500"}`}
                   >
                     {user.total_weight_entries ?? 0}
                   </td>
@@ -286,7 +286,7 @@ export default function Admin() {
                   >
                     <TooltipTrigger asChild>
                       <td
-                        className={`text-center py-0.5 pr-2 ${(user.saved_routines_count ?? 0) === 0 ? "text-purple-400/50" : "text-purple-500"}`}
+                        className={`text-center py-0.5 pr-1 ${(user.saved_routines_count ?? 0) === 0 ? "text-purple-400/50" : "text-purple-500"}`}
                         onClick={!hasHover && (user.saved_routines_count ?? 0) > 0 && user.saved_routine_names ? () => setActiveTooltip(activeTooltip === `${user.user_id}-routines` ? null : `${user.user_id}-routines`) : undefined}
                       >
                         {user.saved_routines_count ?? 0}
@@ -301,18 +301,18 @@ export default function Admin() {
                     )}
                   </Tooltip>
                   <td
-                    className={`text-center py-0.5 pr-2 ${user.custom_logs_enabled ? "text-teal-500" : "text-muted-foreground/50"}`}
+                    className={`text-center py-0.5 pr-1 ${user.custom_logs_enabled ? "text-teal-500" : "text-muted-foreground/50"}`}
                   >
                     {user.custom_logs_enabled ? "✓" : "—"}
                   </td>
                   <td
-                    className={`text-center py-0.5 pr-2 ${(user.custom_log_entries_count ?? 0) === 0 ? "text-teal-400/50" : "text-teal-500"}`}
+                    className={`text-center py-0.5 pr-1 ${(user.custom_log_entries_count ?? 0) === 0 ? "text-teal-400/50" : "text-teal-500"}`}
                   >
                     {user.custom_log_entries_count ?? 0}
                   </td>
                   {!isMobile && (
                     <td
-                      className={`text-center py-0.5 pr-2 ${(user.login_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
+                      className={`text-center py-0.5 pr-1 ${(user.login_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
                     >
                       {user.login_count ?? 0}
                     </td>
