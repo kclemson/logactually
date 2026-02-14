@@ -1,20 +1,21 @@
 
 
-## Position Unit Next to Name and Hide During Editing
+## Update Custom Logging Subtitle Text
 
 ### What changes
-Two adjustments in `src/components/CustomLogTypeRow.tsx`:
+A single text edit in `src/pages/Settings.tsx` to update the subtitle under "Enable custom logging" so it mentions the Custom tab in the navigation and includes a couple of examples.
 
-1. **Unit sits right after the name** -- Wrap the contentEditable name div and unit span in a shared inline container so the unit appears immediately after the name text (not right-justified).
+### Details
 
-2. **Unit hides while editing** -- Track focus state with a `isEditing` boolean (via `onFocus`/`onBlur`). When editing, hide the unit span so the editable field stretches cleanly across its full width.
+**Current subtitle (line 222):**
+`Weight, measurements, mood, and more`
 
-### Technical details
+**New subtitle:**
+`Use the Custom tab to log weight, blood pressure, and more`
 
-- Add `const [isEditing, setIsEditing] = useState(false)` state.
-- In the existing `onFocus` handler, also call `setIsEditing(true)`.
-- In the existing `onBlur` handler, also call `setIsEditing(false)`.
-- Wrap the contentEditable div and unit span in a `<div className="flex items-center gap-1 flex-1 min-w-0">`.
-- Move `flex-1` from the contentEditable div to this wrapper. The contentEditable div keeps its styling but without `flex-1` when not editing; add `flex-1` conditionally when `isEditing` so it expands to fill the space.
-- Conditionally render the unit: `{type.unit && !isEditing && <span ...>({type.unit})</span>}`.
+This gives users a clear hint about where to find the feature (the Custom tab in the bottom nav) while also providing concrete examples of what they can track.
+
+### Technical change
+
+In `src/pages/Settings.tsx`, line 222: replace the text content of the subtitle `<p>` tag from `"Weight, measurements, mood, and more"` to `"Use the Custom tab to log weight, blood pressure, and more"`.
 
