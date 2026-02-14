@@ -2,6 +2,10 @@
 
 AI-powered food, exercise, and custom metric logging. Braindump what you ate (or lifted), and AI handles the nutrition math and exercise tracking.
 
+![Log Actually - Food and Exercise logging](public/logactually-screen1.png)
+
+<img src="public/logactually-screen2.png" alt="Log Actually - Trends" width="300" />
+
 ## Tech Stack
 
 - **Frontend:** React, Vite, TypeScript, Tailwind CSS, shadcn/ui
