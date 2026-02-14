@@ -218,7 +218,7 @@ export default function Settings() {
           {/* Show other logging types toggle */}
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-muted-foreground">Enable custom logging</p>
+              <p className="text-xs text-muted-foreground">Enable Custom logging</p>
               <p className="text-[10px] text-muted-foreground/70">Use the Custom tab to log weight, blood pressure, and more</p>
             </div>
             <button
@@ -242,7 +242,10 @@ export default function Settings() {
           {/* Show Exercise toggle */}
           {showWeightsFeature && (
             <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">Enable Exercise</p>
+              <div>
+                <p className="text-xs text-muted-foreground">Enable Exercise logging</p>
+                <p className="text-[10px] text-muted-foreground/70">Use the Exercise tab to log lifting, cardio, and more</p>
+              </div>
               <button
                 onClick={() => updateSettings({ showWeights: !settings.showWeights })}
                 className={cn(
