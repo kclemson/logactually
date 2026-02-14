@@ -1,15 +1,22 @@
 
+## Add Escape Key Support to Portion Scaling
 
-## Fix Missing Space Between Description and Portion
+The portion scaling stepper container (line 688) handles blur to close but has no `onKeyDown` listener, so pressing Escape does nothing.
 
-The portion button already contains a leading space character (` ({item.portion})`), but it appears to be collapsed in rendering. The fix is to add a small left margin to the portion button in both editable and read-only code paths.
+### Change
 
-### Changes
+**File: `src/components/FoodItemsTable.tsx`**, line ~691 (the container div):
 
-**File: `src/components/FoodItemsTable.tsx`**
+Add an `onKeyDown` handler that closes portion scaling on Escape, discarding any unsaved multiplier change:
 
-- **Line 515** (editable mode): Add `ml-1` to the button className
-- **Line 555** (read-only mode): Add `ml-1` to the button className
+```tsx
+onKeyDown={(e) => {
+  if (e.key === 'Escape') {
+    e.stopPropagation();
+    setPortionScalingIndex(null);
+    setPortionMultiplier(1.0);
+  }
+}}
+```
 
-This adds a consistent 4px gap between the description text and the portion, matching the original spacing before the portion scaling feature was added.
-
+This goes on the same `<div>` that already has `tabIndex={-1}`, `ref` for auto-focus, and `onBlur`. The Escape behavior matches other inline edits: revert and close without applying changes.
