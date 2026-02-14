@@ -719,12 +719,6 @@ export function FoodItemsTable({
                   >
                     <Plus className="h-3.5 w-3.5" />
                   </button>
-                  {portionMultiplier !== 1.0 && (
-                    <span className="text-xs text-muted-foreground tabular-nums">
-                      ({item.portion ? scalePortion(item.portion, portionMultiplier) + ', ' : ''}{Math.round(item.calories * portionMultiplier)} cal)
-                    </span>
-                  )}
-                  <div className="flex-1" />
                   <button
                     type="button"
                     onClick={() => {
@@ -742,6 +736,12 @@ export function FoodItemsTable({
                   >
                     Done
                   </button>
+                  <div className="flex-1" />
+                  {portionMultiplier !== 1.0 && (
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                      ({item.portion ? scalePortion(item.portion, portionMultiplier) + ', ' : ''}{Math.round(item.calories * portionMultiplier)} cal)
+                    </span>
+                  )}
                 </div>
               </div>
             )}
