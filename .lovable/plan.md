@@ -1,10 +1,24 @@
 
 
-## Fix Changelog Date to Feb-14
+## Prevent "Last" column text wrapping on mobile
 
-Three small edits:
+**Problem**: The "Last" column in the admin user stats table wraps dates like "Feb 13" onto two lines on mobile.
 
-1. **`src/pages/Changelog.tsx`** -- Change the new entry's date from `"Feb-15"` to `"Feb-14"`
-2. **`src/pages/Changelog.tsx`** -- Change `LAST_UPDATED` from `"Feb-15-26"` to `"Feb-14-26"`
-3. **`src/pages/Settings.tsx`** -- Change the link text from `"Changelog (last updated Feb-15)"` to `"Changelog (last updated Feb-14)"`
+**Fix**: Add `whitespace-nowrap` to the "Last" `<td>` cell (line 166) so the date stays on one line.
+
+### Technical Details
+
+**File: `src/pages/Admin.tsx`** (line ~166)
+
+Change the "Last" `<td>` className to include `whitespace-nowrap`:
+
+```typescript
+// Before
+<td className={`text-center py-0.5 pr-2 ${...}`}>
+
+// After  
+<td className={`text-center py-0.5 pr-2 whitespace-nowrap ${...}`}>
+```
+
+This is a single-line change. The header already fits, and the date values ("Feb 13", "Jan 30", etc.) will stay on one line.
 
