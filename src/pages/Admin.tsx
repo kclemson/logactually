@@ -144,8 +144,6 @@ export default function Admin() {
                 <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">SW</th>
                 <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">C</th>
                 <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">Cs</th>
-                {!isMobile && <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">Logins</th>}
-                {!isMobile && <th className="text-center py-0.5 font-medium text-muted-foreground">L2day</th>}
               </tr>
             </thead>
             <tbody>
@@ -310,20 +308,6 @@ export default function Admin() {
                   >
                     {user.custom_log_entries_count ?? 0}
                   </td>
-                  {!isMobile && (
-                    <td
-                      className={`text-center py-0.5 pr-1 ${(user.login_count ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
-                    >
-                      {user.login_count ?? 0}
-                    </td>
-                  )}
-                  {!isMobile && (
-                    <td
-                      className={`text-center py-0.5 ${(user.logins_today ?? 0) === 0 ? "text-muted-foreground/50" : ""}`}
-                    >
-                      {user.logins_today ?? 0}
-                    </td>
-                  )}
                 </tr>
               ))}
             </tbody>
