@@ -1,20 +1,19 @@
 
 
-## Change Custom Log Dropdown Label
+## Style Unit in Custom Log Type Row
 
 ### What changes
-A single edit to `src/pages/OtherLog.tsx` -- the Select trigger will show a static label instead of the selected log type's name.
+A single edit to `src/components/CustomLogTypeRow.tsx` to separate the unit from the name text and render it in a smaller, gray font.
 
 ### Details
 
-**Current behavior**: The teal dropdown shows the name of the currently selected log type (e.g. "Log Body Weight"), making it look like a button rather than a dropdown.
+**Current**: The name and unit are rendered together as one string inside the contentEditable div: `Body Weight (lbs)`
 
-**New behavior**: The trigger will always display **"Add custom log"** as a static label, making it clear it's a selector. The dropdown items will keep showing the specific type names (e.g. "Log Body Weight", "Log Sleep") so the user knows what they're picking.
+**New**: The unit will be rendered as a separate `span` outside the contentEditable div, styled with `text-xs text-muted-foreground` so it appears smaller and gray. The contentEditable div will only contain the name itself, which also fixes a potential issue where editing the name could accidentally include the unit text.
 
 ### Technical change
 
-In `src/pages/OtherLog.tsx`, replace the `<SelectValue>` inside the trigger with a static string, and remove the `value` prop from `<Select>` (or keep it for internal state but override the display). Specifically:
+In `src/components/CustomLogTypeRow.tsx`:
+- Remove `{type.unit ? ` (${type.unit})` : ''}` from inside the contentEditable div (line 90)
+- Add a separate span right after the contentEditable div: `{type.unit && <span className="text-xs text-muted-foreground shrink-0">({type.unit})</span>}`
 
-- Change the `SelectTrigger` contents from `<SelectValue placeholder="Log..." />` to a static `"Add custom log"` span
-- This way the trigger always reads "Add custom log" regardless of which type is internally selected
-- The dropdown items remain unchanged so the user sees all their log types listed
