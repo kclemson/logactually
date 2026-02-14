@@ -450,10 +450,35 @@ const CustomLogTrendChart = ({ trend, onNavigate }: { trend: CustomLogTrendSerie
       trend.series.forEach(s => {
         const match = s.data.find(d => d.date === date);
         point[s.label] = match ? match.value : 0;
+        if (match?.textLabel) point.textPreview = match.textLabel;
       });
       return point;
     });
   }, [trend]);
+
+  if (trend.valueType === 'text' || trend.valueType === 'text_multiline') {
+    return (
+      <StackedMacroChart
+        title={trend.logTypeName}
+        subtitle="entries per day"
+        chartData={chartData}
+        bars={[{
+          dataKey: trend.series[0].label,
+          name: trend.series[0].label,
+          color: TEAL_PALETTE[0],
+          isTop: true,
+        }]}
+        onNavigate={onNavigate}
+        formatter={(value, name, entry) => {
+          const preview = entry?.payload?.textPreview;
+          const count = Math.round(value as number);
+          const lines = [`${count} ${count === 1 ? 'entry' : 'entries'}`];
+          if (preview) lines.push(preview.length > 60 ? preview.substring(0, 60) + '...' : preview);
+          return lines;
+        }}
+      />
+    );
+  }
 
   if (trend.series.length === 1) {
     return (

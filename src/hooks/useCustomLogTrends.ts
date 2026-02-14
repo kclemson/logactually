@@ -43,7 +43,34 @@ export function useCustomLogTrends(days: number) {
       const result: CustomLogTrendSeries[] = [];
 
       for (const type of types || []) {
-        if (type.value_type === 'text' || type.value_type === 'text_multiline') continue; // No charts for text-only
+        if (type.value_type === 'text' || type.value_type === 'text_multiline') {
+          const typeEntries = (entries || []).filter((e: any) => e.log_type_id === type.id);
+          if (typeEntries.length === 0) continue;
+
+          const byDate = new Map<string, { count: number; previews: string[] }>();
+          typeEntries.forEach((e: any) => {
+            const existing = byDate.get(e.logged_date) || { count: 0, previews: [] };
+            existing.count++;
+            const text = (e.text_value || '').substring(0, 50);
+            if (text) existing.previews.push(text);
+            byDate.set(e.logged_date, existing);
+          });
+
+          result.push({
+            logTypeId: type.id,
+            logTypeName: type.name,
+            valueType: type.value_type,
+            series: [{
+              label: type.name,
+              data: Array.from(byDate.entries()).map(([date, info]) => ({
+                date,
+                value: info.count,
+                textLabel: info.previews.join(' | '),
+              })),
+            }],
+          });
+          continue;
+        }
 
         const typeEntries = (entries || []).filter((e: any) => e.log_type_id === type.id);
         if (typeEntries.length === 0) continue;
