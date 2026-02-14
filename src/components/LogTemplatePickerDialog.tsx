@@ -30,7 +30,7 @@ export function LogTemplatePickerDialog({
           <DialogDescription>Pick a template to get started quickly.</DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="flex flex-col">
           {LOG_TEMPLATES.map((t) => {
             const Icon = ICON_MAP[t.icon];
             const unit = getTemplateUnit(t, settings.weightUnit);
@@ -40,27 +40,27 @@ export function LogTemplatePickerDialog({
                 key={t.name}
                 disabled={isLoading || alreadyAdded}
                 onClick={() => onSelectTemplate({ name: t.name, value_type: t.valueType, unit })}
-                className={`flex flex-col items-center gap-1 rounded-lg border border-border p-3 text-sm transition-colors ${alreadyAdded ? 'opacity-40 cursor-not-allowed' : 'hover:bg-accent'} disabled:opacity-40`}
+                className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-colors ${alreadyAdded ? 'opacity-40 cursor-not-allowed' : 'hover:bg-accent'} disabled:opacity-40`}
               >
-                {Icon && <Icon className="h-5 w-5 text-teal-500" />}
+                {Icon && <Icon className="h-4 w-4 text-teal-500" />}
                 <span className="font-medium">{t.name}</span>
                 {alreadyAdded ? (
-                  <span className="text-xs text-muted-foreground">Already added</span>
+                  <span className="text-xs text-muted-foreground ml-1">Already added</span>
                 ) : unit ? (
-                  <span className="text-xs text-muted-foreground">{unit}</span>
+                  <span className="text-xs text-muted-foreground ml-1">{unit}</span>
                 ) : null}
               </button>
             );
           })}
-        </div>
 
-        <button
-          onClick={onCreateCustom}
-          className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors pt-1"
-        >
-          <Wrench className="h-3.5 w-3.5" />
-          Create your own
-        </button>
+          <button
+            onClick={onCreateCustom}
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:bg-accent transition-colors"
+          >
+            <Wrench className="h-4 w-4" />
+            Create your own
+          </button>
+        </div>
       </DialogContent>
     </Dialog>
   );
