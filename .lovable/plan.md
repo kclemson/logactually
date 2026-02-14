@@ -1,47 +1,41 @@
 
 
-## Settings Refactor: Skip Heavy Tests, Write a Smoke Test
+## Surgical Extraction: `CompactChartTooltip`
 
-### Rationale
+### What
 
-The Settings page is 584 lines of conditional JSX rendering with ~15 `useState` calls and 8+ hook dependencies. Writing a full test suite requires mocking all of those hooks, and those mocks become tightly coupled to implementation details -- they'd need updating during the refactor itself, defeating the purpose.
+Extract the duplicated `CompactTooltip` component into a shared file named `CompactChartTooltip`, then write isolated unit tests.
 
-The refactor is a **mechanical extraction** (moving JSX blocks into separate files with the same props). The real risk isn't logic breakage -- it's accidentally dropping a section or misrouting a prop. A lightweight smoke test catches that without the mock maintenance burden.
+### Steps
 
-### What we'll create
+1. **Create `src/components/trends/CompactChartTooltip.tsx`**
+   - Move the component from `FoodChart.tsx` (lines 80-139)
+   - Rename to `CompactChartTooltip` (component and props interface)
+   - Export both the component and `CompactChartTooltipProps`
 
-**One file: `src/pages/Settings.test.tsx`**
+2. **Update `src/components/trends/FoodChart.tsx`**
+   - Remove the local `CompactTooltip` definition and its `CompactTooltipProps` interface (~60 lines)
+   - Import `CompactChartTooltip` from the new file
+   - Update all three usages (FoodChart, StackedMacroChart, VolumeChart) to reference the new name
 
-A single smoke test that renders Settings with minimal mocks and checks that all 7 section headers are present in the DOM:
+3. **Update `src/pages/Trends.tsx`**
+   - Remove the local `CompactTooltip` definition and its `CompactTooltipProps` interface (~60 lines)
+   - Import `CompactChartTooltip` from the new file
+   - Update usages in ExerciseChart and CustomLogTrendChart to reference the new name
 
-- Account
-- Preferences
-- Custom Log Types (when `showCustomLogs=true`)
-- Saved Meals
-- Saved Routines (when `showWeights=true`)
-- Import and Export
-- About
+4. **Create `src/components/trends/CompactChartTooltip.test.tsx`**
+   - Renders nothing when `active` is false or `payload` is empty
+   - Renders label and payload values when active
+   - Applies `formatter` to displayed values
+   - Shows total line when `totalKey` matches a key in payload data
+   - Shows "Go to day" button only when `isTouchDevice` is true
+   - Calls `onGoToDay` with correct date when button is clicked
 
-Plus one additional case: verify that "Saved Routines" and "Custom Log Types" are **absent** when their respective feature flags are off.
+5. **Run tests** to confirm nothing broke
 
-**Total: 2 test cases** -- enough to catch section-level breakage during refactor, without the fragility of deep mock trees.
+### Net effect
 
-### Mocking approach
-
-We'll mock the hooks to return safe defaults (empty arrays, no-op functions) so the component renders without crashing. We won't assert on specific button text or toggle states -- just section presence.
-
-Hooks to mock with minimal stubs:
-- `useAuth` -- `{ user: { id: '1', email: 'test@test.com' }, signOut: vi.fn() }`
-- `useUserSettings` -- returns settings object (toggling `showWeights` and `showCustomLogs` between tests)
-- `useReadOnlyContext` -- `{ isReadOnly: false }`
-- `useSavedMeals` / `useSavedRoutines` -- `{ data: [], isLoading: false }`
-- `useCustomLogTypes` -- `{ logTypes: [], isLoading: false, createType/updateType/deleteType: mock mutations }`
-- `useExportData` -- `{ isExporting: false, exportFoodLog: vi.fn(), exportWeightLog: vi.fn() }`
-- `useIsAdmin` -- `{ data: false }`
-- `useTheme` (next-themes) -- `{ theme: 'system', setTheme: vi.fn() }`
-- Wrap in `MemoryRouter` for Link components
-
-### After this
-
-Once this smoke test passes, we proceed directly to the section extraction refactor. The same test file runs unchanged after the refactor to confirm all sections still render.
+- ~120 lines removed across two files (60 from each)
+- One shared, tested component
+- Zero behavioral changes
 
