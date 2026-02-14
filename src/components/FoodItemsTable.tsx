@@ -512,7 +512,7 @@ export function FoodItemsTable({
                         setPortionScalingIndex(portionScalingIndex === index ? null : index);
                         setPortionMultiplier(1.0);
                       }}
-                      className="text-xs text-muted-foreground whitespace-nowrap cursor-pointer underline decoration-dotted underline-offset-2 hover:text-foreground transition-colors"
+                      className="text-xs text-muted-foreground whitespace-nowrap cursor-pointer hover:text-foreground transition-colors"
                     > ({item.portion})</button>
                   )}
                   {hasAnyEditedFields(item) && (
@@ -552,7 +552,7 @@ export function FoodItemsTable({
                         setPortionScalingIndex(portionScalingIndex === index ? null : index);
                         setPortionMultiplier(1.0);
                       }}
-                      className="text-xs text-muted-foreground whitespace-nowrap cursor-pointer underline decoration-dotted underline-offset-2 hover:text-foreground transition-colors"
+                      className="text-xs text-muted-foreground whitespace-nowrap cursor-pointer hover:text-foreground transition-colors"
                     > ({item.portion})</button>
                   )}
                   {hasAnyEditedFields(item) && (
@@ -736,7 +736,6 @@ export function FoodItemsTable({
                   >
                     Done
                   </button>
-                  <div className="flex-1" />
                   {portionMultiplier !== 1.0 && (
                     <span className="text-xs text-muted-foreground tabular-nums">
                       ({item.portion ? scalePortion(item.portion, portionMultiplier) + ', ' : ''}{Math.round(item.calories * portionMultiplier)} cal)
