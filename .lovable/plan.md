@@ -1,33 +1,35 @@
 
 
-## Fix: Dismiss Portion Stepper Consistently with Other Fields
+## Show Scaled Preview Next to + Button
 
-### How Other Fields Work
+### Change
 
-The existing editable fields (description, calories) use the browser's native **`onBlur`** event. When you tap outside a focused element, the browser fires `onBlur`, and the handler cleans up the editing state. No backdrop, no document listeners -- just standard focus/blur behavior.
+Move the preview from right-aligned to immediately after the `+` button, in parentheses with both portion and calories. Remove the `flex-1` spacer that was pushing the preview to the right.
 
-### Apply the Same Pattern to the Portion Stepper
+### What the user sees
 
-The stepper container (with its `-`, `+`, multiplier display, and "Done" button) will use `onBlur` on a wrapper `div` with `tabIndex={-1}` (making it focusable). The wrapper auto-focuses when the stepper opens. When focus leaves the wrapper (clicking anywhere else), `onBlur` fires and dismisses the stepper, discarding unapplied changes.
+Before: `[-] 1.25x [+] .................. 3 cal  Done`
 
-One subtlety: clicking child buttons inside the wrapper would normally trigger `onBlur` briefly. The fix is to check `relatedTarget` -- if focus is moving to another element inside the same wrapper, don't dismiss. This is done via `e.currentTarget.contains(e.relatedTarget as Node)`.
+After: `[-] 1.25x [+] (10 oz, 3 cal) ............ Done`
 
 ### Technical Details
 
-**File:** `src/components/FoodItemsTable.tsx`
+**File: `src/components/FoodItemsTable.tsx`**
 
-1. Add `tabIndex={-1}` and `ref` to the stepper wrapper div so it can receive focus
-2. Auto-focus the wrapper when the stepper opens (via a callback ref or `autoFocus`)
-3. Add `onBlur` handler:
-   ```tsx
-   onBlur={(e) => {
-     // If focus moved to a child element, don't dismiss
-     if (e.currentTarget.contains(e.relatedTarget as Node)) return;
-     setPortionScalingIndex(null);
-     setPortionMultiplier(1.0);
-   }}
-   ```
-4. Remove the previously discussed backdrop approach -- not needed
+1. **Add `scalePortion` to imports** (line 4): add it alongside `stepMultiplier` and `scaleItemByMultiplier`
 
-This matches the `onBlur` pattern used by the calorie input and description fields, keeping the codebase consistent.
+2. **Replace preview + spacer** (lines 722-727): Remove the `<div className="flex-1" />` spacer, and replace the preview span with a parenthesized format showing scaled portion + calories right after the `+` button:
 
+```tsx
+{portionMultiplier !== 1.0 && (
+  <span className="text-xs text-muted-foreground tabular-nums">
+    ({item.portion ? scalePortion(item.portion, portionMultiplier) + ', ' : ''}
+    {Math.round(item.calories * portionMultiplier)} cal)
+  </span>
+)}
+<div className="flex-1" />
+```
+
+The `flex-1` spacer moves after the preview so "Done" stays right-aligned while the preview sits next to the `+` icon.
+
+Single file, 3 lines changed.
