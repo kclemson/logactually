@@ -173,7 +173,7 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
             onFocus={handleTextFocus}
             onBlur={handleTextBlur}
             onKeyDown={handleTextKeyDown}
-            className="text-sm border-0 bg-transparent focus:outline-none cursor-text hover:bg-muted/50 block"
+            className="text-sm border-0 bg-transparent focus:outline-none cursor-text hover:bg-muted/50 block text-right"
           />
         </div>
       ) : (
