@@ -11,10 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useCustomLogTypes } from '@/hooks/useCustomLogTypes';
 import { useCustomLogEntries } from '@/hooks/useCustomLogEntries';
 import { CreateLogTypeDialog } from '@/components/CreateLogTypeDialog';
+import { LogTemplatePickerDialog } from '@/components/LogTemplatePickerDialog';
 import { LogEntryInput } from '@/components/LogEntryInput';
 import { CustomLogEntryRow } from '@/components/CustomLogEntryRow';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { getStoredDate, setStoredDate } from '@/lib/selected-date';
+import { LOG_TEMPLATES, getTemplateUnit } from '@/lib/log-templates';
+import { useUserSettings } from '@/hooks/useUserSettings';
 
 // Wrapper: extracts date from URL, forces remount via key
 const OtherLog = () => {
@@ -33,6 +36,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   const [createTypeOpen, setCreateTypeOpen] = useState(false);
   const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
   const [showInput, setShowInput] = useState(false);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
   const createNewClickedRef = useRef(false);
 
   const dateStr = initialDate;
@@ -43,6 +47,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   const { entries, createEntry, updateEntry, deleteEntry } = useCustomLogEntries(dateStr);
   const { data: datesWithData = [] } = useCustomLogDatesWithData(calendarMonth);
   const { isReadOnly } = useReadOnlyContext();
+  const { settings } = useUserSettings();
 
   // Sort log types by most recent usage (most recent first), then by creation order
   const sortedLogTypes = useMemo(() => {
@@ -106,22 +111,38 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
         {!isReadOnly && (
           <div className="flex items-center justify-center gap-2">
           {sortedLogTypes.length === 0 ? (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 text-sm"
-              onClick={() => setCreateTypeOpen(true)}
-            >
-              <Plus className="h-3 w-3" />
-              Add Custom Log Type
-            </Button>
+            <div className="flex flex-col items-center gap-3 w-full max-w-sm mx-auto">
+              <div className="grid grid-cols-2 gap-2 w-full">
+                {LOG_TEMPLATES.map((t) => (
+                  <button
+                    key={t.name}
+                    disabled={createType.isPending}
+                    onClick={() => {
+                      const unit = getTemplateUnit(t, settings.weightUnit);
+                      createType.mutate({ name: t.name, value_type: t.valueType, unit }, {
+                        onSuccess: (newType) => setSelectedTypeId(newType.id),
+                      });
+                    }}
+                    className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-accent transition-colors disabled:opacity-50 text-left"
+                  >
+                    <span className="font-medium">{t.name}</span>
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setCreateTypeOpen(true)}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Create your own
+              </button>
+            </div>
           ) : (
             <Select
               value={effectiveTypeId || ''}
               onValueChange={(val) => {
                 if (val === '__create_new__') {
                   createNewClickedRef.current = true;
-                  setCreateTypeOpen(true);
+                  setTemplatePickerOpen(true);
                 } else {
                   setSelectedTypeId(val);
                 }
@@ -295,6 +316,23 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
         open={createTypeOpen}
         onOpenChange={setCreateTypeOpen}
         onSubmit={handleCreateType}
+        isLoading={createType.isPending}
+      />
+      <LogTemplatePickerDialog
+        open={templatePickerOpen}
+        onOpenChange={setTemplatePickerOpen}
+        onSelectTemplate={(params) => {
+          createType.mutate({ name: params.name, value_type: params.value_type as any, unit: params.unit }, {
+            onSuccess: (newType) => {
+              setTemplatePickerOpen(false);
+              setSelectedTypeId(newType.id);
+            },
+          });
+        }}
+        onCreateCustom={() => {
+          setTemplatePickerOpen(false);
+          setCreateTypeOpen(true);
+        }}
         isLoading={createType.isPending}
       />
     </div>
