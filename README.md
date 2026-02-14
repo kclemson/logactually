@@ -1,10 +1,47 @@
 # Log Actually
 
-AI-powered food, exercise, and custom metric logging. Braindump what you ate (or lifted), and AI handles the nutrition math and exercise tracking.
+Every food tracking app I tried drove me nuts — too many taps, too many screens, too much friction. So I built my own. The idea: just braindump what you ate in your usual stream-of-consciousness way, and wire it up to AI to turn your word salad into structured data with nutritional information.
+
+Once food tracking was working the way I liked, I added exercise logging (my watch doesn't do a great job tracking weight-lifting workouts). And then custom logs for things like body weight, blood pressure, sleep — classic "if you give a mouse a cookie..."
+
+It has a demo mode if you want to poke around without creating an account.
 
 ![Log Actually - Food and Exercise logging](public/logactually-screen1.png)
 
-<img src="public/logactually-screen2.png" alt="Log Actually - Trends" width="300" />
+<img src="public/logactually-screen3-charts.png" alt="Log Actually - Trends" width="500" />
+
+## Features
+
+### Food Logging
+- **Natural language input** — describe what you ate however you want, AI parses it into items with full macro breakdowns (calories, protein, carbs, fat, fiber, sugar, sodium, cholesterol)
+- **Photo-based logging** — snap a picture and AI identifies items
+- **Barcode scanning** via camera
+- Editable portions with proportional nutrient scaling
+- Saved meals for quick re-logging
+- Smart suggestions — detects repeated patterns and offers to save them
+
+### Exercise Logging
+- **Natural language input** for weight training (e.g. "bench 135 3x8, squats 185 5x5") and cardio
+- Estimated calorie burn using MET values from the 2024 Compendium of Physical Activities
+- Apple Health import for watch-based workouts
+- Saved routines for quick re-logging
+
+### Custom Logs
+- Track anything: body weight, blood pressure, sleep, mood, journal entries, etc.
+- Numeric, dual-numeric, and text value types
+- Built-in templates for common metrics
+
+### Trends and Insights
+- Charts for calories, macros, exercise volume, and custom metrics over 7/30/90-day windows
+- **"Ask AI"** — query your own logged data in plain language
+- Daily calorie target tracking with color-coded indicators
+
+### Other
+- Dark mode
+- PWA (installable on mobile)
+- CSV export
+- Demo mode — try it without creating an account
+- Imperial and metric unit support
 
 ## Tech Stack
 
