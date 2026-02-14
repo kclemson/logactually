@@ -89,8 +89,9 @@ export function CustomLogTypeRow({
           }}
           className={`flex-1 text-sm truncate cursor-text hover:bg-muted/50 focus:bg-focus-bg focus:ring-2 focus:ring-focus-ring focus:outline-none rounded px-1 py-0.5 transition-colors ${flashError ? 'ring-2 ring-destructive bg-destructive/10' : ''}`}
         >
-          {type.name}{type.unit ? ` (${type.unit})` : ''}
+          {type.name}
         </div>
+        {type.unit && <span className="text-xs text-muted-foreground shrink-0">({type.unit})</span>}
 
         {/* Value type badge + editable unit */}
         <span className="text-xs text-muted-foreground shrink-0">
