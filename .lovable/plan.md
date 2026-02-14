@@ -1,87 +1,112 @@
 
 
-## Add Text Labels and Numeric Values on Grouped Bar Columns
+## Add Frequency Charts for Text-Based Custom Logs
 
-For `text_numeric` custom trends (like Measurement), each grouped bar will show two labels above the column:
-1. The **numeric value** (e.g., "17") in the bar's teal color, positioned just above the bar
-2. The **text label** (e.g., "arm") rotated -90 degrees above the numeric value, also in the bar's teal color
+Show bar charts for `text` and `text_multiline` log types that display how many entries exist per date. The tooltip previews the first ~50 characters of the logged text, and tapping a bar navigates to that date on the Custom log page.
 
-### Approach
+### Changes
 
-Since `StackedMacroChart` already supports per-bar `LabelList` rendering, we'll add custom label renderers specifically for grouped mode. Each bar in grouped mode will get its own `LabelList` with a custom SVG renderer that draws both the rotated text name and the numeric value.
+**1. Include text types in the trends hook (`src/hooks/useCustomLogTrends.ts`)**
 
-### Technical Details
+Remove the early `continue` that skips `text` and `text_multiline` types (line 46). Instead, handle them as a new case that aggregates entries by date:
 
-**File: `src/components/trends/FoodChart.tsx`**
+- For each date, count the number of entries and collect the text values (truncated to ~50 chars).
+- Store these as a single series with `value = count` and a new `textLabel` field containing the preview text (e.g., `"Feeling good today... | Another entry..."`).
+- Set `valueType` to `'text'` or `'text_multiline'` so the chart component can identify them.
 
-1. **Create a new custom label renderer** (`createGroupedBarLabelRenderer`) that renders two `<text>` elements per bar:
-   - A numeric value label (e.g., "17") positioned ~4px above the bar top, horizontal, in the bar's color
-   - A rotated text label (e.g., "arm") positioned above the numeric value, rotated -90 degrees, in the bar's color
+**2. Render text-type trends as frequency charts (`src/pages/Trends.tsx`)**
+
+In `CustomLogTrendChart`, add an early return for text-based value types (before the existing single/multi-series logic):
+
+- Use `FoodChart` with `dataKey` set to the series label.
+- Pass a custom tooltip formatter via a wrapper that shows the count and the text preview from the `textLabel` field stored in `chartData`.
+- Since `FoodChart` uses `CompactTooltip`, we'll instead use `StackedMacroChart` (which supports a custom `formatter`) with a single bar, allowing the tooltip to show "2 entries" plus the text preview.
+
+**3. Custom tooltip formatting for text previews**
+
+The `formatter` prop on `StackedMacroChart` will format each entry as:
+- Line 1: `"X entries"` (or `"1 entry"`)
+- Line 2: The truncated text preview
+
+This requires storing the text preview in the chart data points (already done via `textLabel` in the hook).
+
+### Technical Detail
+
+**File: `src/hooks/useCustomLogTrends.ts`**
+
+Replace line 46 (`if (type.value_type === 'text' || type.value_type === 'text_multiline') continue;`) with a new handler block:
+
+```typescript
+if (type.value_type === 'text' || type.value_type === 'text_multiline') {
+  const typeEntries = (entries || []).filter((e: any) => e.log_type_id === type.id);
+  if (typeEntries.length === 0) continue;
+
+  // Group by date, count entries, collect preview text
+  const byDate = new Map<string, { count: number; previews: string[] }>();
+  typeEntries.forEach((e: any) => {
+    const existing = byDate.get(e.logged_date) || { count: 0, previews: [] };
+    existing.count++;
+    const text = (e.text_value || '').substring(0, 50);
+    if (text) existing.previews.push(text);
+    byDate.set(e.logged_date, existing);
+  });
+
+  result.push({
+    logTypeId: type.id,
+    logTypeName: type.name,
+    valueType: type.value_type,
+    series: [{
+      label: type.name,
+      data: Array.from(byDate.entries()).map(([date, info]) => ({
+        date,
+        value: info.count,
+        textLabel: info.previews.join(' | '),
+      })),
+    }],
+  });
+  continue;
+}
+```
+
+Move the existing `typeEntries` filter (line 48) below this new block so it only runs for numeric/text_numeric types.
+
+**File: `src/pages/Trends.tsx`**
+
+In `CustomLogTrendChart`, add a check before the existing `trend.series.length === 1` block (around line 458):
 
 ```tsx
-const createGroupedBarLabelRenderer = (
-  barName: string,
-  color: string,
-) => (props: any) => {
-  const { x, y, width, value } = props;
-  if (!value || typeof x !== 'number' || typeof width !== 'number') return null;
-  const cx = x + width / 2;
+// Text-only types: frequency chart
+if (trend.valueType === 'text' || trend.valueType === 'text_multiline') {
   return (
-    <g>
-      {/* Numeric value just above bar */}
-      <text x={cx} y={y - 4} fill={color} textAnchor="middle" fontSize={7} fontWeight={500}>
-        {Math.round(value)}
-      </text>
-      {/* Rotated text label above the numeric value */}
-      <text x={cx} y={y - 14} fill={color} textAnchor="start" fontSize={7} fontWeight={500}
-        transform={`rotate(-90, ${cx}, ${y - 14})`}>
-        {barName}
-      </text>
-    </g>
+    <StackedMacroChart
+      title={trend.logTypeName}
+      subtitle="entries per day"
+      chartData={chartData}
+      bars={[{
+        dataKey: trend.series[0].label,
+        name: trend.series[0].label,
+        color: TEAL_PALETTE[0],
+        isTop: true,
+      }]}
+      onNavigate={onNavigate}
+      formatter={(value, name, entry) => {
+        const preview = entry?.payload?.textPreview;
+        const count = Math.round(value);
+        const lines = [`${count} ${count === 1 ? 'entry' : 'entries'}`];
+        if (preview) lines.push(preview.length > 60 ? preview.substring(0, 60) + '...' : preview);
+        return lines;
+      }}
+    />
   );
-};
+}
 ```
 
-2. **In the `StackedMacroChart` Bar rendering** (line ~383-405), when `grouped` is true, attach a `LabelList` to every bar (not just the top one) using the new renderer:
+Also update the `chartData` builder to include `textPreview` from the trend data. In the `dates.map` callback (line 442-455), when building each point, also pull the `textLabel` from matching data:
 
 ```tsx
-{bars.map((bar, idx) => (
-  <Bar key={bar.dataKey} ...>
-    {grouped && (
-      <LabelList
-        dataKey={bar.dataKey}
-        content={createGroupedBarLabelRenderer(bar.name, bar.color)}
-      />
-    )}
-    {/* existing isTop label logic unchanged */}
-  </Bar>
-))}
+trend.series.forEach(s => {
+  const match = s.data.find(d => d.date === date);
+  point[s.label] = match ? match.value : 0;
+  if (match?.textLabel) point.textPreview = match.textLabel;
+});
 ```
-
-3. **Increase top margin** when `grouped` is true to make room for the rotated text labels. Update the margin calculation (line ~330):
-
-```tsx
-margin={{
-  top: grouped ? 40 : (labelDataKey ? getFoodChartMarginTop(chartData.length) : 4),
-  ...
-}}
-```
-
-4. **Increase chart height** for grouped charts. In `CustomLogTrendChart` in `Trends.tsx`, pass `height="h-32"` to `StackedMacroChart` when rendering multi-series grouped charts, giving more vertical room for the labels.
-
-**File: `src/pages/Trends.tsx`** (line ~480)
-
-Add `height="h-32"` to the `StackedMacroChart` call for multi-series custom trends:
-
-```tsx
-<StackedMacroChart
-  title={trend.logTypeName}
-  chartData={chartData}
-  bars={bars}
-  onNavigate={onNavigate}
-  formatter={(value, name) => `${name}: ${value}`}
-  grouped
-  height="h-32"
-/>
-```
-
