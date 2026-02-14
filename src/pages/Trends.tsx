@@ -423,12 +423,22 @@ const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend
 
 const TEAL_PALETTE = ['#14b8a6', '#0d9488', '#2dd4bf', '#0f766e', '#5eead4'];
 
-const CustomLogTrendChart = ({ trend, onNavigate }: { trend: CustomLogTrendSeries; onNavigate: (date: string) => void }) => {
+const CustomLogTrendChart = ({ trend, onNavigate, days }: { trend: CustomLogTrendSeries; onNavigate: (date: string) => void; days?: number }) => {
   const chartData = useMemo(() => {
-    // Build unified date list across all series
-    const dateSet = new Set<string>();
-    trend.series.forEach(s => s.data.forEach(d => dateSet.add(d.date)));
-    const dates = Array.from(dateSet).sort();
+    const isTextType = trend.valueType === 'text' || trend.valueType === 'text_multiline';
+
+    let dates: string[];
+    if (isTextType && days) {
+      const today = startOfDay(new Date());
+      dates = [];
+      for (let i = days - 1; i >= 0; i--) {
+        dates.push(format(subDays(today, i), 'yyyy-MM-dd'));
+      }
+    } else {
+      const dateSet = new Set<string>();
+      trend.series.forEach(s => s.data.forEach(d => dateSet.add(d.date)));
+      dates = Array.from(dateSet).sort();
+    }
 
     const dataLength = dates.length;
     const labelInterval = 
@@ -454,7 +464,7 @@ const CustomLogTrendChart = ({ trend, onNavigate }: { trend: CustomLogTrendSerie
       });
       return point;
     });
-  }, [trend]);
+  }, [trend, days]);
 
   if (trend.valueType === 'text' || trend.valueType === 'text_multiline') {
     return (
@@ -953,7 +963,7 @@ const Trends = () => {
         <CollapsibleSection title="Custom Trends" icon={ClipboardList} iconClassName="text-teal-500 dark:text-teal-400" defaultOpen={true} storageKey="trends-other">
           <div className="grid grid-cols-2 gap-3">
             {customLogTrends.map((trend) => (
-              <CustomLogTrendChart key={trend.logTypeId} trend={trend} onNavigate={(date) => navigate(`/custom?date=${date}`)} />
+              <CustomLogTrendChart key={trend.logTypeId} trend={trend} days={selectedPeriod} onNavigate={(date) => navigate(`/custom?date=${date}`)} />
             ))}
           </div>
         </CollapsibleSection>
