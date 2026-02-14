@@ -1,7 +1,7 @@
-import { useState } from 'react';
+
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+
 import {
   Popover,
   PopoverContent,
@@ -21,7 +21,8 @@ interface CustomLogTypeRowProps {
 const VALUE_TYPE_LABELS: Record<string, string> = {
   numeric: 'numeric',
   text_numeric: 'text + numeric',
-  text: 'text',
+  text: 'text (single line)',
+  text_multiline: 'text (multi line)',
 };
 
 export function CustomLogTypeRow({
@@ -32,19 +33,6 @@ export function CustomLogTypeRow({
   openDeletePopoverId,
   setOpenDeletePopoverId,
 }: CustomLogTypeRowProps) {
-  const [editingUnit, setEditingUnit] = useState(false);
-  const [unitDraft, setUnitDraft] = useState(type.unit || '');
-
-  const showUnit = type.value_type === 'numeric' || type.value_type === 'text_numeric';
-
-  const commitUnit = () => {
-    const trimmed = unitDraft.trim();
-    const newUnit = trimmed || null;
-    if (newUnit !== (type.unit || null)) {
-      onUpdateUnit(type.id, newUnit);
-    }
-    setEditingUnit(false);
-  };
 
   return (
     <li className="py-0.5">
@@ -86,39 +74,12 @@ export function CustomLogTypeRow({
           }}
           className="flex-1 text-sm truncate cursor-text hover:bg-muted/50 focus:bg-focus-bg focus:ring-2 focus:ring-focus-ring focus:outline-none rounded px-1 py-0.5"
         >
-          {type.name}
+          {type.name}{type.unit ? ` (${type.unit})` : ''}
         </div>
 
         {/* Value type badge + editable unit */}
-        <span className="text-xs text-muted-foreground shrink-0 flex items-center gap-1">
+        <span className="text-xs text-muted-foreground shrink-0">
           {VALUE_TYPE_LABELS[type.value_type] || type.value_type}
-          {showUnit && (
-            <>
-              <span>·</span>
-              {editingUnit ? (
-                <Input
-                  value={unitDraft}
-                  onChange={(e) => setUnitDraft(e.target.value)}
-                  onBlur={commitUnit}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') { e.preventDefault(); commitUnit(); }
-                    if (e.key === 'Escape') { e.preventDefault(); setUnitDraft(type.unit || ''); setEditingUnit(false); }
-                  }}
-                  className="h-5 w-16 text-xs px-1 py-0 inline-block"
-                  placeholder="unit"
-                  autoFocus
-                />
-              ) : (
-                <button
-                  onClick={() => { setUnitDraft(type.unit || ''); setEditingUnit(true); }}
-                  className="hover:bg-muted/50 rounded px-0.5 cursor-text"
-                  title="Click to edit unit"
-                >
-                  {type.unit || <span className="italic opacity-50">unit</span>}
-                </button>
-              )}
-            </>
-          )}
         </span>
 
         {/* Delete button with popover confirmation */}
