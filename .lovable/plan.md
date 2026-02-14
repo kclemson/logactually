@@ -1,21 +1,15 @@
 
 
-## Portion Scaling UI Tweaks
+## Fix Missing Space Between Description and Portion
 
-Two changes in `src/components/FoodItemsTable.tsx`:
+The portion button already contains a leading space character (` ({item.portion})`), but it appears to be collapsed in rendering. The fix is to add a small left margin to the portion button in both editable and read-only code paths.
 
-### 1. Remove dotted underline from portion text
-
-Remove `underline decoration-dotted underline-offset-2` from the portion button classes in both the editable and read-only rendering paths (lines 515 and 555). The portion text will still be a clickable button with hover color change, just without the visual underline decoration.
-
-### 2. Move scaled preview next to Done button
-
-Currently the parenthesized preview (e.g. "(1.3 kid's sizes, 100 cal)") is right-aligned because of a `flex-1` spacer div on line 739. Remove that spacer so the preview sits immediately after the Done button in normal flex flow.
-
-### Technical Details
+### Changes
 
 **File: `src/components/FoodItemsTable.tsx`**
 
-- **Line 515**: Remove `underline decoration-dotted underline-offset-2` from className (editable mode portion button)
-- **Line 555**: Remove `underline decoration-dotted underline-offset-2` from className (read-only mode portion button)
-- **Line 739**: Remove `<div className="flex-1" />` spacer so the scaled preview flows directly after the Done button
+- **Line 515** (editable mode): Add `ml-1` to the button className
+- **Line 555** (read-only mode): Add `ml-1` to the button className
+
+This adds a consistent 4px gap between the description text and the portion, matching the original spacing before the portion scaling feature was added.
+
