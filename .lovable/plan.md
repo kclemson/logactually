@@ -1,23 +1,16 @@
 
 
-## Fix AI Prompt to Handle mm:ss Duration Format
+## Remove Logins and L2day Columns from Admin User Table
 
-Update `supabase/functions/_shared/prompts.ts` to teach the AI model how to parse common duration formats like "12:30" (12 min 30 sec = 12.5 minutes).
+Remove the "Logins" and "L2day" (logins today) columns from the admin users table since "Last activity" already covers that need.
 
 ### Technical Details
 
-Two lines need updating (one per prompt version):
+In `src/pages/Admin.tsx`:
 
-- **Line 148** (default prompt): Change `duration_minutes` description from:
-  ```
-  - duration_minutes: duration in minutes (number), if relevant
-  ```
-  to:
-  ```
-  - duration_minutes: duration in minutes (number), if relevant. Parse "mm:ss" as minutes:seconds (e.g., "12:30" = 12.5 minutes) and "h:mm:ss" as hours (e.g., "1:15:00" = 75 minutes).
-  ```
+1. Remove the two `<TableHead>` elements for "Logins" and "L2day"
+2. Remove the two corresponding `<TableCell>` elements that display `login_count` and `logins_today`
+3. Remove any mobile-specific hiding classes (`hidden sm:table-cell`) that were applied to these columns
 
-- **Line 214** (experimental prompt): Same change.
-
-One file changed: `supabase/functions/_shared/prompts.ts` (lines 148 and 214).
+No other files need changes. The `login_count` and `logins_today` fields in the RPC response can remain -- they're harmless and may be used elsewhere.
 
