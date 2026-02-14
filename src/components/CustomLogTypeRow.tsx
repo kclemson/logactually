@@ -1,4 +1,4 @@
-
+import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -16,6 +16,7 @@ interface CustomLogTypeRowProps {
   onDelete: (id: string) => void;
   openDeletePopoverId: string | null;
   setOpenDeletePopoverId: (id: string | null) => void;
+  existingNames?: string[];
 }
 
 const VALUE_TYPE_LABELS: Record<string, string> = {
@@ -32,7 +33,13 @@ export function CustomLogTypeRow({
   onDelete,
   openDeletePopoverId,
   setOpenDeletePopoverId,
+  existingNames = [],
 }: CustomLogTypeRowProps) {
+  const [flashError, setFlashError] = useState(false);
+
+  const isDuplicateName = (newName: string) => {
+    return existingNames.some(n => n.toLowerCase() === newName.toLowerCase() && n.toLowerCase() !== type.name.toLowerCase());
+  };
 
   return (
     <li className="py-0.5">
@@ -48,8 +55,12 @@ export function CustomLogTypeRow({
           onBlur={(e) => {
             const newName = (e.currentTarget.textContent || '').trim();
             const original = e.currentTarget.dataset.original || type.name;
-            if (!newName) {
+            if (!newName || isDuplicateName(newName)) {
               e.currentTarget.textContent = original;
+              if (newName && isDuplicateName(newName)) {
+                setFlashError(true);
+                setTimeout(() => setFlashError(false), 1500);
+              }
             } else if (newName !== original) {
               onRename(type.id, newName);
               e.currentTarget.dataset.original = newName;
@@ -60,9 +71,13 @@ export function CustomLogTypeRow({
               e.preventDefault();
               const newName = e.currentTarget.textContent?.trim();
               const original = e.currentTarget.dataset.original;
-              if (newName && newName !== original) {
+              if (newName && newName !== original && !isDuplicateName(newName)) {
                 onRename(type.id, newName);
                 e.currentTarget.dataset.original = newName;
+              } else if (newName && isDuplicateName(newName)) {
+                e.currentTarget.textContent = original || type.name;
+                setFlashError(true);
+                setTimeout(() => setFlashError(false), 1500);
               }
               e.currentTarget.blur();
             }
@@ -72,7 +87,7 @@ export function CustomLogTypeRow({
               e.currentTarget.blur();
             }
           }}
-          className="flex-1 text-sm truncate cursor-text hover:bg-muted/50 focus:bg-focus-bg focus:ring-2 focus:ring-focus-ring focus:outline-none rounded px-1 py-0.5"
+          className={`flex-1 text-sm truncate cursor-text hover:bg-muted/50 focus:bg-focus-bg focus:ring-2 focus:ring-focus-ring focus:outline-none rounded px-1 py-0.5 transition-colors ${flashError ? 'ring-2 ring-destructive bg-destructive/10' : ''}`}
         >
           {type.name}{type.unit ? ` (${type.unit})` : ''}
         </div>

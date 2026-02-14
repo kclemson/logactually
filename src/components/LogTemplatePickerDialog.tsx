@@ -13,12 +13,14 @@ interface LogTemplatePickerDialogProps {
   onSelectTemplate: (params: { name: string; value_type: string; unit: string | null }) => void;
   onCreateCustom: () => void;
   isLoading: boolean;
+  existingNames?: string[];
 }
 
 export function LogTemplatePickerDialog({
-  open, onOpenChange, onSelectTemplate, onCreateCustom, isLoading,
+  open, onOpenChange, onSelectTemplate, onCreateCustom, isLoading, existingNames = [],
 }: LogTemplatePickerDialogProps) {
   const { settings } = useUserSettings();
+  const lowerExisting = existingNames.map(n => n.toLowerCase());
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -32,16 +34,21 @@ export function LogTemplatePickerDialog({
           {LOG_TEMPLATES.map((t) => {
             const Icon = ICON_MAP[t.icon];
             const unit = getTemplateUnit(t, settings.weightUnit);
+            const alreadyAdded = lowerExisting.includes(t.name.toLowerCase());
             return (
               <button
                 key={t.name}
-                disabled={isLoading}
+                disabled={isLoading || alreadyAdded}
                 onClick={() => onSelectTemplate({ name: t.name, value_type: t.valueType, unit })}
-                className="flex flex-col items-center gap-1 rounded-lg border border-border p-3 text-sm hover:bg-accent transition-colors disabled:opacity-50"
+                className={`flex flex-col items-center gap-1 rounded-lg border border-border p-3 text-sm transition-colors ${alreadyAdded ? 'opacity-40 cursor-not-allowed' : 'hover:bg-accent'} disabled:opacity-40`}
               >
                 {Icon && <Icon className="h-5 w-5 text-teal-500" />}
                 <span className="font-medium">{t.name}</span>
-                {unit && <span className="text-xs text-muted-foreground">{unit}</span>}
+                {alreadyAdded ? (
+                  <span className="text-xs text-muted-foreground">Already added</span>
+                ) : unit ? (
+                  <span className="text-xs text-muted-foreground">{unit}</span>
+                ) : null}
               </button>
             );
           })}

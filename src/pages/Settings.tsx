@@ -325,6 +325,7 @@ export default function Settings() {
                   onDelete={(id) => deleteType.mutate(id)}
                   openDeletePopoverId={openLogTypePopoverId}
                   setOpenDeletePopoverId={setOpenLogTypePopoverId}
+                  existingNames={logTypes.map(t => t.name)}
                 />
               ))}
             </ul>
@@ -560,6 +561,7 @@ export default function Settings() {
             setCreateLogTypeDialogOpen(true);
           }}
           isLoading={createType.isPending}
+          existingNames={logTypes.map(t => t.name)}
         />
       )}
 
@@ -574,6 +576,7 @@ export default function Settings() {
             });
           }}
           isLoading={createType.isPending}
+          existingNames={logTypes.map(t => t.name)}
         />
       )}
     </div>
