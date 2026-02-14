@@ -1,16 +1,43 @@
 
 
-## Remove Logins and L2day Columns from Admin User Table
+## GitHub Cleanup: Prepare Codebase for Open Source
 
-Remove the "Logins" and "L2day" (logins today) columns from the admin users table since "Last activity" already covers that need.
+### 1. Fix hardcoded Supabase project ID in ProtectedRoute.tsx
 
-### Technical Details
+Replace the hardcoded storage key on line 11:
+```ts
+// Before
+const storageKey = 'sb-enricsnosdrhmfvbjaei-auth-token';
 
-In `src/pages/Admin.tsx`:
+// After
+const storageKey = `sb-${import.meta.env.VITE_SUPABASE_PROJECT_ID}-auth-token`;
+```
 
-1. Remove the two `<TableHead>` elements for "Logins" and "L2day"
-2. Remove the two corresponding `<TableCell>` elements that display `login_count` and `logins_today`
-3. Remove any mobile-specific hiding classes (`hidden sm:table-cell`) that were applied to these columns
+### 2. Add `.env` to `.gitignore` and create `.env.example`
 
-No other files need changes. The `login_count` and `logins_today` fields in the RPC response can remain -- they're harmless and may be used elsewhere.
+Add `.env` to the gitignore file so credentials aren't committed. Create a `.env.example` with placeholder values:
+
+```
+VITE_SUPABASE_PROJECT_ID="your-project-id"
+VITE_SUPABASE_PUBLISHABLE_KEY="your-anon-key"
+VITE_SUPABASE_URL="https://your-project-id.supabase.co"
+```
+
+### 3. Update README with setup instructions
+
+Expand the README to reference `.env.example` and include instructions for forking/self-hosting, including the Supabase schema setup.
+
+### Items to consciously decide on (no code changes unless you want them)
+
+- **Privacy page social links** (`Privacy.tsx`): Your Bluesky and Mastodon handles are embedded. Keep as-is if this is your public project.
+- **index.html author meta tag**: Currently `kcloadletter.com`. Keep or remove.
+- **OG image URL**: Hardcoded to `logactually.lovable.app`. This is fine since forks would replace it.
+- **Demo credentials** (`demo-mode.ts`): Intentionally public and read-only -- no change needed.
+
+### Files changed
+
+1. `src/components/ProtectedRoute.tsx` -- replace hardcoded project ID
+2. `.gitignore` -- add `.env`
+3. `.env.example` -- new file with placeholder values
+4. `README.md` -- update setup instructions to reference `.env.example`
 
