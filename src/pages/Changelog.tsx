@@ -22,7 +22,7 @@ type ChangelogEntry = {
 
 // prettier-ignore
 const CHANGELOG_ENTRIES: ChangelogEntry[] = [
-{ date: "Feb-15", text: "Added custom logging — track anything beyond food and exercise. Enable it in Settings to create your own log types (body weight, measurements, mood, journal notes, and more). Supports numeric, text + numeric, and text entries with optional units. Custom logs get their own trends charts on the Trends page.", image: "custom-logs.png" },
+{ date: "Feb-14", text: "Added custom logging — track anything beyond food and exercise. Enable it in Settings to create your own log types (body weight, measurements, mood, journal notes, and more). Supports numeric, text + numeric, and text entries with optional units. Custom logs get their own trends charts on the Trends page.", image: "custom-logs.png" },
 { date: "Feb-12", text: "Added \"Ask AI\" on the Trends page — tap it next to Food Trends or Exercise Trends to ask questions about your data. It pulls in up to 90 days of your log history and uses AI to spot patterns, suggest improvements, and answer questions in plain language. Optionally include your personal stats for more tailored answers. Comes with randomized starter questions to get you going.", images: ["ask-ai-trends.png", "ask-ai-food.png", "ask-ai-exercise.png"] },
 { date: "Feb-11", text: "Added estimated calorie burn for exercises. Enable it in Settings to see per-exercise and daily burn estimates on your Weight Log, calculated using MET values from the 2024 Compendium of Physical Activities. Optionally provide your body weight, height, age, and metabolic profile to narrow the estimated range.", image: "calorie-burn-config.png" },
 { date: "Feb-11", text: "Added photo-based food logging — snap a photo or choose one from your gallery, and AI will identify the food items, estimate portions, and log the nutritional breakdown automatically.", image: "photo-food-logging.png" },
@@ -42,7 +42,7 @@ const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   { date: "Jan-23", text: "It's alive! v1 of app published with support for food logging & AI integration, editing logged items (and editing calories auto-scales protein/carbs/fat), charts for trends over time, mobile & desktop layouts, PWA support for pinning to home screen." },
 ];
 
-export const LAST_UPDATED = "Feb-15-26";
+export const LAST_UPDATED = "Feb-14-26";
 // ============================================
 
 export default function Changelog() {
