@@ -93,7 +93,7 @@ export default function Changelog() {
                       <img
                         src={`/changelog/${entry.image}`}
                         alt={`Screenshot for ${entry.date} update`}
-                        className="mt-2 rounded-lg max-h-[200px] w-auto object-contain cursor-pointer"
+                        className="mt-2 rounded-lg max-h-[200px] max-w-[280px] w-auto object-contain cursor-pointer"
                         onClick={() => setLightboxSrc(`/changelog/${entry.image}`)}
                       />
                     )}
@@ -104,7 +104,7 @@ export default function Changelog() {
                             key={i}
                             src={`/changelog/${img}`}
                             alt={`Screenshot ${i + 1} for ${entry.date} update`}
-                            className="rounded-lg max-h-[200px] w-auto object-contain cursor-pointer"
+                            className="rounded-lg max-h-[200px] max-w-[280px] w-auto object-contain cursor-pointer"
                             onClick={() => setLightboxSrc(`/changelog/${img}`)}
                           />
                         ))}
