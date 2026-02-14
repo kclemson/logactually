@@ -685,7 +685,16 @@ export function FoodItemsTable({
             {/* Portion scaling stepper - inline below the item */}
             {portionScalingIndex === index && (
               <div className={cn('grid gap-0.5', gridCols)}>
-                <div className="col-span-full pl-6 pr-2 py-1.5 flex items-center gap-2">
+                <div
+                  className="col-span-full pl-6 pr-2 py-1.5 flex items-center gap-2"
+                  tabIndex={-1}
+                  ref={(el) => { if (el) el.focus(); }}
+                  onBlur={(e) => {
+                    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                    setPortionScalingIndex(null);
+                    setPortionMultiplier(1.0);
+                  }}
+                >
                   <button
                     type="button"
                     disabled={portionMultiplier <= 0.25}
