@@ -19,10 +19,10 @@ export function BottomNav() {
     { to: '/', icon: Utensils, label: 'Food', activeColor: 'text-blue-500 dark:text-blue-400' },
     ...(showWeights ? [{ to: '/weights', icon: Dumbbell, label: 'Exercise', activeColor: 'text-purple-500 dark:text-purple-400' }] : []),
     ...(showCustomLogs ? [{ to: '/custom', icon: ClipboardList, label: 'Custom', activeColor: 'text-teal-500 dark:text-teal-400' }] : []),
-    { to: '/history', icon: CalendarDays, label: 'Calendar', activeColor: 'text-blue-500 dark:text-blue-400' },
-    { to: '/trends', icon: TrendingUp, label: 'Trends', activeColor: 'text-blue-500 dark:text-blue-400' },
-    { to: '/settings', icon: Settings, label: 'Settings', activeColor: 'text-blue-500 dark:text-blue-400' },
-    ...(showAdmin ? [{ to: '/admin', icon: Shield, label: 'Admin', activeColor: 'text-blue-500 dark:text-blue-400' }] : []),
+    { to: '/history', icon: CalendarDays, label: 'Calendar', activeColor: 'text-white' },
+    { to: '/trends', icon: TrendingUp, label: 'Trends', activeColor: 'text-white' },
+    { to: '/settings', icon: Settings, label: 'Settings', activeColor: 'text-white' },
+    ...(showAdmin ? [{ to: '/admin', icon: Shield, label: 'Admin', activeColor: 'text-white' }] : []),
   ];
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background md:static md:z-auto">
