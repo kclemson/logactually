@@ -27,8 +27,8 @@ const createGroupedBarLabelRenderer = (
       </text>
       {/* Rotated text label inside the bar, white */}
       {barHeight > 14 && (
-        <text x={cx} y={y + barHeight - 4} fill="white" textAnchor="end" fontSize={7} fontWeight={500}
-          transform={`rotate(-90, ${cx}, ${y + barHeight - 4})`}>
+        <text x={cx} y={y + barHeight - 6} fill="white" textAnchor="start" fontSize={7} fontWeight={500}
+          transform={`rotate(-90, ${cx}, ${y + barHeight - 6})`}>
           {barName}
         </text>
       )}
