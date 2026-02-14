@@ -1,21 +1,33 @@
 
 
-## Update Custom Logging Subtitle Text
+## Update Exercise and Custom Logging Toggle Labels
 
 ### What changes
-A single text edit in `src/pages/Settings.tsx` to update the subtitle under "Enable custom logging" so it mentions the Custom tab in the navigation and includes a couple of examples.
 
-### Details
+Two small text edits in `src/pages/Settings.tsx`:
 
-**Current subtitle (line 222):**
-`Weight, measurements, mood, and more`
+1. **Line 221**: Capitalize "Custom" -- change `"Enable custom logging"` to `"Enable Custom logging"`
+2. **Lines 244-245**: Restructure the Exercise toggle to match the Custom logging toggle format:
+   - Change label from `"Enable Exercise"` to `"Enable Exercise logging"`
+   - Add a subtitle underneath: `"Use the Exercise tab to log lifting, cardio, and more"`
+   - Wrap in a `<div>` container (like the custom logging toggle already does)
 
-**New subtitle:**
-`Use the Custom tab to log weight, blood pressure, and more`
+### Technical details
 
-This gives users a clear hint about where to find the feature (the Custom tab in the bottom nav) while also providing concrete examples of what they can track.
+**Line 221** -- simple text change:
+```
+"Enable custom logging"  -->  "Enable Custom logging"
+```
 
-### Technical change
+**Lines 244-245** -- restructure from a bare `<p>` to a wrapper `<div>` with subtitle:
+```tsx
+// Before
+<p className="text-xs text-muted-foreground">Enable Exercise</p>
 
-In `src/pages/Settings.tsx`, line 222: replace the text content of the subtitle `<p>` tag from `"Weight, measurements, mood, and more"` to `"Use the Custom tab to log weight, blood pressure, and more"`.
+// After
+<div>
+  <p className="text-xs text-muted-foreground">Enable Exercise logging</p>
+  <p className="text-[10px] text-muted-foreground/70">Use the Exercise tab to log lifting, cardio, and more</p>
+</div>
+```
 
