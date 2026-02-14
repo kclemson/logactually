@@ -1,49 +1,26 @@
 
-## Show Full Date Range for Text-Type Custom Log Charts
+## Fix Text Label Position Inside Grouped Bars
 
-Currently, text-type charts (Mood, Journal) only show X-axis dates that have logged data. To show logging density properly, the X-axis should span all days in the selected time period (7, 14, 30, etc.), with bars only appearing on days that have entries.
+The rotated text labels ("waist", "arm") are appearing over the X-axis instead of inside the bars. The bug is in the anchor point and text-anchor combination in `createGroupedBarLabelRenderer`.
 
-### Changes
+### Root Cause
 
-**1. Pass `days` to `CustomLogTrendChart` (`src/pages/Trends.tsx`)**
+The current code places the text at `y + barHeight - 4` (near the bar's bottom edge, which is right at the X-axis) and uses `textAnchor="end"`, which makes the text extend further downward past the axis.
 
-- Add a `days` prop to the component (around line 426).
-- When rendering `CustomLogTrendChart` (around line 956), pass `selectedPeriod` as `days`.
+### Fix (`src/components/trends/FoodChart.tsx`, lines 29-33)
 
-**2. Use full date range for text types (`src/pages/Trends.tsx`, lines 427-457)**
+Change the text positioning so it starts from inside the bar and grows upward:
 
-- For `text` and `text_multiline` value types, instead of building `dates` from only the data points, generate the complete list of dates from `today - (days-1)` through `today`.
-- For all other value types, keep the existing behavior (only dates with data).
+- Move the anchor point up slightly: `y + barHeight - 6` 
+- Use `textAnchor="start"` so the rotated text extends upward (toward the top of the bar) rather than downward
 
-The updated `chartData` builder logic (inside `useMemo`) will look like:
-
-```typescript
-const chartData = useMemo(() => {
-  const isTextType = trend.valueType === 'text' || trend.valueType === 'text_multiline';
-  
-  let dates: string[];
-  if (isTextType && days) {
-    // Full date range for density view
-    const today = startOfDay(new Date());
-    dates = [];
-    for (let i = days - 1; i >= 0; i--) {
-      dates.push(format(subDays(today, i), 'yyyy-MM-dd'));
-    }
-  } else {
-    // Existing: only dates with data
-    const dateSet = new Set<string>();
-    trend.series.forEach(s => s.data.forEach(d => dateSet.add(d.date)));
-    dates = Array.from(dateSet).sort();
-  }
-
-  // ... rest of label interval + mapping logic unchanged
-}, [trend, days]);
+```tsx
+{barHeight > 14 && (
+  <text x={cx} y={y + barHeight - 6} fill="white" textAnchor="start" fontSize={7} fontWeight={500}
+    transform={`rotate(-90, ${cx}, ${y + barHeight - 6})`}>
+    {barName}
+  </text>
+)}
 ```
 
-This requires importing `startOfDay` and `subDays` from `date-fns` (both are already imported at the top of the file).
-
-### Summary of touched code
-
-| File | What changes |
-|------|-------------|
-| `src/pages/Trends.tsx` | Add `days` prop to `CustomLogTrendChart`, generate full date range for text types, pass `selectedPeriod` when rendering the component |
+With `-90` rotation and `textAnchor="start"`, the text origin is near the bottom of the bar and the characters flow upward visually, keeping the label fully inside the bar column.
