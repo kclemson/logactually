@@ -1,8 +1,8 @@
 # Log Actually
 
-I'm trying to focus on my health more lately, but every food tracking app I tried drove me nuts — too many taps, too many screens, too much friction... so I built my own. The idea is simple: braindump what you ate in your a stream-of-consciousness way (via text, voice, photo, or scan UPC), and wire it up to AI to turn word salad into structured data with nutritional information. 
+I'm trying to focus on my health more lately, but every food tracking app I tried drove me nuts — too many taps, too many screens, too much friction... so I built my own. The idea is simple: braindump what you ate in a stream-of-consciousness way (via text, voice, photo, or scan UPC), and wire it up to AI to turn word salad into structured data with nutritional information. 
 
-Once food tracking was working the way I liked, I added exercise logging (my watch doesn't do a great job tracking weight-lifting workouts). And then custom logs for things like body weight, blood pressure, sleep — classic "if you give a mouse (PM) a cookie (MVP)...".
+Once food tracking was working the way I liked, I then added exercise logging (my watch doesn't do a great job tracking weight-lifting workouts). And then after that, custom logs for things like body weight, blood pressure, sleep — classic "if you give a mouse (PM) a cookie (MVP)...".
 
 It has a demo mode if you want to poke around without creating an account - try it out at [logactually.com](https://logactually.com). Also see the changelog at [https://logactually.com/changelog](https://logactually.com/changelog).
 
