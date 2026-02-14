@@ -519,7 +519,7 @@ const CustomLogTrendChart = ({ trend, onNavigate, days }: { trend: CustomLogTren
       onNavigate={onNavigate}
       formatter={(value, name) => `${name}: ${value}`}
       grouped
-      height="h-32"
+      height="h-24"
     />
   );
 };
