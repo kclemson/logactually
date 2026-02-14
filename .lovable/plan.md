@@ -1,43 +1,24 @@
 
 
-## Add Custom Log Columns to Admin User Table
+## Add Custom Logs Changelog Entry
 
 ### Changes
 
-**1. Database function (`get_user_stats`)** -- SQL migration
+**1. Copy screenshot to public/changelog/**
 
-Add two new fields to the per-user query:
-- `custom_logs_enabled`: boolean -- checks if the user's profile `settings->'showCustomLogs'` is true
-- `custom_log_entries_count`: integer -- count of rows in `custom_log_entries` for that user
+Copy `user-uploads://custom_logs.png` to `public/changelog/custom-logs.png`
 
-These are two additional scalar subqueries in the existing `get_user_stats` function, matching the pattern already used for `login_count`, `saved_meals_count`, etc.
+**2. Update `src/pages/Changelog.tsx`**
 
-**2. Hook (`src/hooks/useAdminStats.ts`)**
+Add a new entry at the top of `CHANGELOG_ENTRIES`:
 
-Add to the `UserStats` interface:
-- `custom_logs_enabled: boolean`
-- `custom_log_entries_count: number`
-
-**3. Admin page (`src/pages/Admin.tsx`)**
-
-- Import `useIsMobile` from `@/hooks/use-mobile`
-- Call `const isMobile = useIsMobile()` inside the component (before conditional returns)
-- Hide "Logins" and "L2day" columns (header + body cells) when `isMobile` is true
-- Add two new columns after the existing SW column:
-  - **C** -- shows a checkmark or dash based on `custom_logs_enabled`, colored green if enabled
-  - **Cs** -- shows the count from `custom_log_entries_count`, using the existing muted-when-zero pattern
-
-### Column Layout on Mobile vs Desktop
-
-```text
-Desktop: User | Last | F2day | W2day | F | SF | W | SW | C | Cs | Logins | L2day
-Mobile:  User | Last | F2day | W2day | F | SF | W | SW | C | Cs
+```typescript
+{ date: "Feb-15", text: "Added custom logging — track anything beyond food and exercise. Enable it in Settings to create your own log types (body weight, measurements, mood, journal notes, and more). Supports numeric, text + numeric, and text entries with optional units. Custom logs get their own trends charts on the Trends page.", image: "custom-logs.png" },
 ```
 
-### SQL Migration Detail
+Update `LAST_UPDATED` to `"Feb-15-26"`.
 
-Adds to the `get_user_stats` function's SELECT list:
-```sql
-(SELECT COALESCE((p.settings->>'showCustomLogs')::boolean, false)) as custom_logs_enabled,
-(SELECT COUNT(*) FROM custom_log_entries cle WHERE cle.user_id = p.id) as custom_log_entries_count
-```
+**3. Update `src/pages/Settings.tsx`**
+
+Update the changelog link text to reflect the new last-updated date.
+
