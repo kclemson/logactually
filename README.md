@@ -4,7 +4,7 @@ I'm trying to focus on my health more lately, but every food tracking app I trie
 
 Once food tracking was working the way I liked, I added exercise logging (my watch doesn't do a great job tracking weight-lifting workouts). And then custom logs for things like body weight, blood pressure, sleep — classic "if you give a mouse (PM) a cookie (MVP)...".
 
-It has a demo mode if you want to poke around without creating an account. Try it out at [logactually.com](https://logactually.com).
+It has a demo mode if you want to poke around without creating an account - try it out at [logactually.com](https://logactually.com). Also see the changelog at [https://logactually.com/changelog](https://logactually.com/changelog).
 
 ![Log Actually - Food and Exercise logging](public/logactually-screen1.png)
 
