@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 // Check if there's a session in localStorage (synchronous check)
 function hasStoredSession(): boolean {
   try {
-    const storageKey = 'sb-enricsnosdrhmfvbjaei-auth-token';
+    const storageKey = `sb-${import.meta.env.VITE_SUPABASE_PROJECT_ID}-auth-token`;
     const stored = localStorage.getItem(storageKey);
     if (stored) {
       const parsed = JSON.parse(stored);
