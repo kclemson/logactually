@@ -1,10 +1,9 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { AskTrendsAIDialog } from "@/components/AskTrendsAIDialog";
 import { useNavigate } from "react-router-dom";
 import { format, subDays, startOfDay } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, LabelList } from "recharts";
 import { Card, CardContent, CardHeader, ChartTitle, ChartSubtitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { UtensilsCrossed, Dumbbell, ClipboardList } from "lucide-react";
@@ -12,27 +11,16 @@ import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { useWeightTrends, ExerciseTrend } from "@/hooks/useWeightTrends";
 
 import { useUserSettings } from "@/hooks/useUserSettings";
-import { type WeightUnit, formatDurationMmSs } from "@/lib/weight-units";
 import { useMergeExercises } from "@/hooks/useMergeExercises";
 import { DuplicateExercisePrompt, type DuplicateGroup } from "@/components/DuplicateExercisePrompt";
-import { getMuscleGroupDisplayWithTooltip, hasDistanceTracking } from "@/lib/exercise-metadata";
-import { cn } from "@/lib/utils";
 
-function formatWalkingDuration(minutes: number): string {
-  const rounded = Math.round(minutes);
-  if (rounded >= 60) {
-    const h = Math.floor(rounded / 60);
-    const m = rounded % 60;
-    return `${h}:${m.toString().padStart(2, '0')}`;
-  }
-  return `${rounded}`;
-}
-import { useHasHover } from "@/hooks/use-has-hover";
 import { FoodChart, StackedMacroChart, VolumeChart } from "@/components/trends/FoodChart";
 import { CalorieBurnChart } from "@/components/trends/CalorieBurnChart";
+import { ExerciseChart } from "@/components/trends/ExerciseChart";
+import { CustomLogTrendChart } from "@/components/trends/CustomLogTrendChart";
 import { useDailyCalorieBurn } from "@/hooks/useDailyCalorieBurn";
-import { useCustomLogTrends, type CustomLogTrendSeries } from "@/hooks/useCustomLogTrends";
-
+import { useCustomLogTrends } from "@/hooks/useCustomLogTrends";
+import { getLabelInterval, getFullWidthLabelInterval } from "@/lib/chart-label-interval";
 
 // Chart color palette (hex RGB format for easy editing)
 const CHART_COLORS = {
@@ -41,10 +29,8 @@ const CHART_COLORS = {
   carbs: "#00B4D8",
   fat: "#90E0EF",
   trainingVolume: "hsl(262 83% 58%)",
-  calorieBurn: "#2563EB", // Same blue as calories chart
+  calorieBurn: "#2563EB",
 } as const;
-
-import { CompactChartTooltip } from "@/components/trends/CompactChartTooltip";
 
 const periods = [
   { label: "7 days", days: 7 },
@@ -53,411 +39,6 @@ const periods = [
 ];
 
 const LBS_TO_KG = 0.453592;
-
-const ExerciseChart = ({ exercise, unit, onBarClick }: { exercise: ExerciseTrend; unit: WeightUnit; onBarClick: (date: string) => void }) => {
-  const isTouchDevice = !useHasHover();
-  const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
-  
-  // Detect cardio exercise: has duration or distance data and no meaningful weight
-  const isCardio = exercise.maxWeight === 0 && (exercise.maxDuration > 0 || exercise.maxDistance > 0);
-  
-  // Speed toggle for distance-based exercises (walk_run, cycling)
-  const supportsSpeedToggle = isCardio && hasDistanceTracking(exercise.exercise_key);
-  
-  type CardioViewMode = 'time' | 'mph' | 'distance';
-  const isWalking = exercise.exercise_subtype === 'walking';
-  
-  const [cardioMode, setCardioMode] = useState<CardioViewMode>(() => {
-    if (!supportsSpeedToggle) return 'time';
-    
-    // Check for new key first
-    const saved = localStorage.getItem(`trends-cardio-mode-${exercise.exercise_key}`);
-    // Walking doesn't support mph mode — fall back to 'time'
-    if (saved === 'mph' && isWalking) return 'time';
-    if (saved === 'mph' || saved === 'distance') return saved;
-    
-    // Migration: convert old boolean to new mode
-    const legacyMph = localStorage.getItem(`trends-mph-${exercise.exercise_key}`);
-    if (legacyMph === 'true') {
-      localStorage.removeItem(`trends-mph-${exercise.exercise_key}`);
-      if (!isWalking) {
-        localStorage.setItem(`trends-cardio-mode-${exercise.exercise_key}`, 'mph');
-        return 'mph';
-      }
-    }
-    
-    return 'time';
-  });
-
-  // Reset active bar when chart data changes (e.g., mode toggle)
-  useEffect(() => {
-    setActiveBarIndex(null);
-  }, [cardioMode]);
-
-  const handleBarClick = (data: any, index: number) => {
-    if (isTouchDevice) {
-      // Toggle: tap same bar to close, different bar to switch
-      setActiveBarIndex(prev => prev === index ? null : index);
-    } else {
-      onBarClick(data.rawDate);
-    }
-  };
-
-  const handleGoToDay = (date: string) => {
-    setActiveBarIndex(null);
-    onBarClick(date);
-  };
-  
-  const chartData = useMemo(() => {
-    // For mph/distance modes, filter to only entries with distance data
-    const sourceData = (cardioMode === 'mph' || cardioMode === 'distance')
-      ? exercise.weightData.filter(d => d.distance_miles && d.distance_miles > 0)
-      : exercise.weightData;
-    
-    const dataLength = sourceData.length;
-    // Calculate how often to show labels based on column count
-    // Extended thresholds for high-density views (35+ data points)
-    const labelInterval = 
-      dataLength <= 12 ? 1 : 
-      dataLength <= 20 ? 2 : 
-      dataLength <= 35 ? 4 :
-      dataLength <= 50 ? 6 : 
-      dataLength <= 70 ? 10 : 
-      dataLength <= 90 ? 15 : 20;
-
-    return sourceData.map((d, index) => {
-      const displayWeight = unit === "kg" ? Math.round(d.weight * LBS_TO_KG) : d.weight;
-      // Calculate mph: distance / (duration / 60), pace: duration / distance
-      const mph = d.distance_miles && d.duration_minutes 
-        ? Number((d.distance_miles / (d.duration_minutes / 60)).toFixed(1))
-        : null;
-      const pace = d.distance_miles && d.duration_minutes
-        ? Number((d.duration_minutes / d.distance_miles).toFixed(1))
-        : null;
-      
-      // Count from right (end) to prioritize recent data - rightmost column always labeled
-      const distanceFromEnd = dataLength - 1 - index;
-      
-      // Label based on cardio mode: time shows duration, mph shows speed, distance shows miles
-      const cardioLabel = cardioMode === 'mph' 
-        ? `${mph}` 
-        : cardioMode === 'distance'
-          ? `${Number(d.distance_miles || 0).toFixed(2)}`
-          : isWalking
-            ? formatWalkingDuration(Number(d.duration_minutes || 0))
-            : `${Number(d.duration_minutes || 0).toFixed(1)}`;
-      
-      return {
-        ...d,
-        rawDate: d.date, // Keep original date for navigation
-        weight: displayWeight,
-        dateLabel: format(new Date(`${d.date}T12:00:00`), "MMM d"),
-        mph,
-        pace,
-        // For weight exercises: "3×10×135" (uniform reps) or "1×22×135" (varying reps); for cardio: mode-dependent label
-        label: isCardio ? cardioLabel : 
-          d.repsPerSet !== undefined 
-            ? `${d.sets}×${d.repsPerSet}×${displayWeight}`  // Uniform: "3×10×135"
-            : `1×${d.reps}×${displayWeight}`,               // Varying: "1×22×135"
-        // Show label using right-to-left counting (distance 0 = rightmost column)
-        showLabel: distanceFromEnd % labelInterval === 0,
-      };
-    });
-  }, [exercise.weightData, unit, isCardio, cardioMode]);
-
-  const maxWeightDisplay = unit === "kg" ? Math.round(exercise.maxWeight * LBS_TO_KG) : exercise.maxWeight;
-
-  // Label renderer for WEIGHT exercises with closure access to chartData for showLabel lookup
-  const renderWeightLabel = (props: any) => {
-    const { x, y, width, height, value, index } = props;
-
-    // Access showLabel from chartData using index
-    const dataPoint = chartData[index];
-    if (!dataPoint?.showLabel) return null;
-
-    if (!value || typeof x !== "number" || typeof width !== "number") return null;
-
-    const centerX = x + width / 2;
-
-    // Parse the label "3×10×160" into parts
-    const parts = value.split("×");
-    if (parts.length !== 3) return null;
-
-    const [sets, reps, weight] = parts;
-
-    // Weight label appears ABOVE the bar in purple
-    const weightY = y - 4;
-
-    // Sets×reps inside the bar (stacked: "3", "×", "10")
-    const insideLines = [sets, "×", reps];
-    const lineHeight = 8;
-    const totalTextHeight = insideLines.length * lineHeight;
-    const startY = y + ((height || 0) - totalTextHeight) / 2 + lineHeight / 2;
-
-    return (
-      <g>
-        {/* Weight label above bar - purple color matching bar */}
-        <text x={centerX} y={weightY} fill="hsl(262 83% 58%)" textAnchor="middle" fontSize={7} fontWeight={500}>
-          {weight}
-        </text>
-
-        {/* Sets×reps inside bar - white color */}
-        <text x={centerX} fill="#FFFFFF" textAnchor="middle" fontSize={7} fontWeight={500}>
-          {insideLines.map((line, i) => (
-            <tspan key={i} x={centerX} y={startY + i * lineHeight}>
-              {line}
-            </tspan>
-          ))}
-        </text>
-      </g>
-    );
-  };
-
-  // Simple label renderer for CARDIO exercises (duration or mph)
-  const renderCardioLabel = (props: any) => {
-    const { x, y, width, value, index } = props;
-
-    const dataPoint = chartData[index];
-    if (!dataPoint?.showLabel) return null;
-
-    if (!value || typeof x !== "number" || typeof width !== "number") return null;
-
-    const centerX = x + width / 2;
-
-    return (
-      <text x={centerX} y={y - 4} fill="hsl(262 83% 58%)" textAnchor="middle" fontSize={7} fontWeight={500}>
-        {value}
-      </text>
-    );
-  };
-
-  const handleHeaderClick = supportsSpeedToggle 
-    ? () => {
-        const nextMode: CardioViewMode = 
-          isWalking
-            ? (cardioMode === 'time' ? 'distance' : 'time')
-            : (cardioMode === 'time' ? 'mph' : cardioMode === 'mph' ? 'distance' : 'time');
-        localStorage.setItem(`trends-cardio-mode-${exercise.exercise_key}`, nextMode);
-        setCardioMode(nextMode);
-      }
-    : undefined;
-
-  return (
-    <Card className="border-0 shadow-none relative">
-      {/* Click-away overlay to dismiss tooltip on touch devices */}
-      {isTouchDevice && activeBarIndex !== null && (
-        <div 
-          className="fixed inset-0 z-10" 
-          onClick={() => setActiveBarIndex(null)}
-        />
-      )}
-      
-      <div className="relative z-20">
-        <CardHeader 
-          className={cn("p-2 pb-1", supportsSpeedToggle && "cursor-pointer")}
-          onClick={handleHeaderClick}
-        >
-          <div className="flex flex-col gap-0.5">
-            <ChartTitle className="truncate">{exercise.description}</ChartTitle>
-            <ChartSubtitle>
-              {supportsSpeedToggle ? (
-                <>Cardio · {cardioMode} <span className="opacity-50">▾</span></>
-              ) : isCardio ? (
-                <>Cardio</>
-              ) : (
-                <>
-                  Max: {maxWeightDisplay} {unit}
-                  {(() => {
-                    const muscleInfo = getMuscleGroupDisplayWithTooltip(exercise.exercise_key);
-                    if (!muscleInfo) return null;
-                    return (
-                      <span title={muscleInfo.full}> · {muscleInfo.display}</span>
-                    );
-                  })()}
-                </>
-              )}
-            </ChartSubtitle>
-          </div>
-        </CardHeader>
-        <CardContent className="p-2 pt-0">
-          <div className="h-24">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 12, right: 0, left: 0, bottom: 0 }}>
-                <XAxis
-                  dataKey="dateLabel"
-                  tick={{ fontSize: 8 }}
-                  stroke="hsl(var(--muted-foreground))"
-                  interval="preserveStartEnd"
-                  tickMargin={2}
-                  height={16}
-                />
-                <Tooltip
-                  wrapperStyle={{ pointerEvents: 'auto', zIndex: 50 }}
-                  active={isTouchDevice ? activeBarIndex !== null : undefined}
-                  payload={isTouchDevice && activeBarIndex !== null 
-                    ? [{ payload: chartData[activeBarIndex] }] 
-                    : undefined}
-                  label={isTouchDevice && activeBarIndex !== null 
-                    ? chartData[activeBarIndex]?.dateLabel 
-                    : undefined}
-                  content={
-                    <CompactChartTooltip
-                      isTouchDevice={isTouchDevice}
-                      onGoToDay={handleGoToDay}
-                      rawDate={activeBarIndex !== null ? chartData[activeBarIndex]?.rawDate : undefined}
-                      formatter={(value: number, name: string, entry: any) => {
-                        if (isCardio) {
-                          const duration = formatDurationMmSs(Number(entry.payload.duration_minutes || 0));
-                          const distance = entry.payload.distance_miles;
-                          const mph = entry.payload.mph;
-                          const paceDecimal = entry.payload.pace;
-                          
-                          // Show 3-row format when we have distance data
-                          if (distance && mph && paceDecimal) {
-                            const paceFormatted = formatDurationMmSs(paceDecimal);
-                            return [
-                              `${paceFormatted} /mi`,           // Pace in mm:ss
-                              `${mph} mph`,                      // Speed
-                              `${Number(distance).toFixed(2)} mi in ${duration}`   // Distance + Time combined
-                            ];
-                          }
-                          
-                          // Fallback for cardio without distance (e.g., stationary bike with time only)
-                          if (distance) {
-                            return [duration, `${Number(distance).toFixed(2)} mi`];
-                          }
-                          return duration;
-                        }
-                        const { sets, reps, weight, repsPerSet } = entry.payload;
-                        return repsPerSet !== undefined
-                          ? `${sets} sets × ${repsPerSet} reps @ ${weight} ${unit}`
-                          : `${sets} sets, ${reps} total reps @ ${weight} ${unit}`;
-                      }}
-                    />
-                  }
-                  offset={20}
-                  cursor={{ fill: "hsl(var(--muted)/0.3)" }}
-                />
-                <Bar 
-                  dataKey={isCardio ? (cardioMode === 'mph' ? "mph" : cardioMode === 'distance' ? "distance_miles" : "duration_minutes") : "weight"}
-                  fill="hsl(262 83% 58%)" 
-                  radius={[2, 2, 0, 0]}
-                  onClick={(data, index) => handleBarClick(data, index)}
-                  className="cursor-pointer"
-                >
-                  <LabelList dataKey="label" content={isCardio ? renderCardioLabel : renderWeightLabel} />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </div>
-    </Card>
-  );
-};
-
-const TEAL_PALETTE = ['#14b8a6', '#0d9488', '#2dd4bf', '#0f766e', '#5eead4'];
-
-const CustomLogTrendChart = ({ trend, onNavigate, days }: { trend: CustomLogTrendSeries; onNavigate: (date: string) => void; days?: number }) => {
-  const chartData = useMemo(() => {
-    const isTextType = trend.valueType === 'text' || trend.valueType === 'text_multiline';
-
-    let dates: string[];
-    if (isTextType && days) {
-      const today = startOfDay(new Date());
-      dates = [];
-      for (let i = days - 1; i >= 0; i--) {
-        dates.push(format(subDays(today, i), 'yyyy-MM-dd'));
-      }
-    } else {
-      const dateSet = new Set<string>();
-      trend.series.forEach(s => s.data.forEach(d => dateSet.add(d.date)));
-      dates = Array.from(dateSet).sort();
-    }
-
-    const dataLength = dates.length;
-    const labelInterval = 
-      dataLength <= 7 ? 1 :
-      dataLength <= 14 ? 2 :
-      dataLength <= 21 ? 3 :
-      dataLength <= 35 ? 4 : 
-      dataLength <= 50 ? 5 : 
-      dataLength <= 70 ? 7 : 10;
-
-    return dates.map((date, index) => {
-      const distanceFromEnd = dataLength - 1 - index;
-      const point: { rawDate: string; date: string; showLabel: boolean; showLabelFullWidth: boolean; [key: string]: any } = {
-        rawDate: date,
-        date: format(new Date(`${date}T12:00:00`), "MMM d"),
-        showLabel: distanceFromEnd % labelInterval === 0,
-        showLabelFullWidth: distanceFromEnd % labelInterval === 0,
-      };
-      trend.series.forEach(s => {
-        const match = s.data.find(d => d.date === date);
-        point[s.label] = match ? match.value : 0;
-        if (match?.textLabel) point.textPreview = match.textLabel;
-      });
-      return point;
-    });
-  }, [trend, days]);
-
-  if (trend.valueType === 'text' || trend.valueType === 'text_multiline') {
-    return (
-      <StackedMacroChart
-        title={trend.logTypeName}
-        subtitle="entries per day"
-        chartData={chartData}
-        bars={[{
-          dataKey: trend.series[0].label,
-          name: trend.series[0].label,
-          color: TEAL_PALETTE[0],
-          isTop: true,
-        }]}
-        onNavigate={onNavigate}
-        formatter={(value, name, entry) => {
-          const preview = entry?.payload?.textPreview;
-          const count = Math.round(value as number);
-          const lines = [`${count} ${count === 1 ? 'entry' : 'entries'}`];
-          if (preview) lines.push(preview.length > 60 ? preview.substring(0, 60) + '...' : preview);
-          return lines;
-        }}
-      />
-    );
-  }
-
-  if (trend.series.length === 1) {
-    return (
-      <FoodChart
-        title={trend.logTypeName}
-        chartData={chartData}
-        dataKey={trend.series[0].label}
-        color={TEAL_PALETTE[0]}
-        onNavigate={onNavigate}
-        useFullWidthLabels
-      />
-    );
-  }
-
-  // Multi-series: stacked bar chart
-  const bars = trend.series.map((s, i) => ({
-    dataKey: s.label,
-    name: s.label,
-    color: TEAL_PALETTE[i % TEAL_PALETTE.length],
-    isTop: i === trend.series.length - 1,
-  }));
-
-  return (
-    <StackedMacroChart
-      title={trend.logTypeName}
-      chartData={chartData}
-      bars={bars}
-      onNavigate={onNavigate}
-      formatter={(value, name) => `${name}: ${value}`}
-      grouped
-      height="h-24"
-    />
-  );
-};
 
 const Trends = () => {
   const navigate = useNavigate();
@@ -507,7 +88,6 @@ const Trends = () => {
   const showCustomLogs = settings.showCustomLogs;
 
   // Detect duplicate exercises (same description, different keys)
-  // Filter out already-dismissed groups
   const duplicateGroups = useMemo((): DuplicateGroup[] => {
     const byDescription = new Map<string, ExerciseTrend[]>();
 
@@ -518,12 +98,10 @@ const Trends = () => {
       byDescription.set(normalized, group);
     });
 
-    // Filter to only groups with 2+ exercises, then structure for UI
     return [...byDescription.entries()]
       .filter(([_, exs]) => exs.length > 1)
       .filter(([description]) => !dismissedDuplicates.includes(description))
       .map(([description, exercises]) => {
-        // Winner = most sessions
         const sorted = [...exercises].sort((a, b) => b.sessionCount - a.sessionCount);
         return {
           description,
@@ -553,46 +131,30 @@ const Trends = () => {
 
     weightExercises.forEach((exercise) => {
       exercise.weightData.forEach((point) => {
-        // Skip cardio/bodyweight entries (0 lbs = 0 volume anyway)
         if (point.weight === 0) return;
         byDate[point.date] = (byDate[point.date] || 0) + point.volume;
       });
     });
 
-    const entries = Object.entries(byDate)
+    const data = Object.entries(byDate)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, volumeLbs]) => {
         const volume = settings.weightUnit === "kg" 
           ? Math.round(volumeLbs * LBS_TO_KG) 
           : Math.round(volumeLbs);
         return {
-          rawDate: date, // Keep original date for navigation
+          rawDate: date,
           date: format(new Date(`${date}T12:00:00`), "MMM d"),
           volume,
           label: `${Math.round(volume / 1000)}k`,
         };
       });
 
-    // Add showLabel based on interval
-    const dataLength = entries.length;
-    const labelInterval = 
-      dataLength <= 7 ? 1 :
-      dataLength <= 14 ? 2 :
-      dataLength <= 21 ? 3 :
-      dataLength <= 35 ? 4 : 
-      dataLength <= 50 ? 5 : 
-      dataLength <= 70 ? 7 : 10;
+    const dataLength = data.length;
+    const labelInterval = getLabelInterval(dataLength);
+    const labelIntervalFullWidth = getFullWidthLabelInterval(dataLength);
 
-    // Full-width charts have ~2x horizontal space
-    const labelIntervalFullWidth = 
-      dataLength <= 14 ? 1 :
-      dataLength <= 28 ? 2 :
-      dataLength <= 42 ? 3 :
-      dataLength <= 70 ? 4 : 
-      dataLength <= 90 ? 5 : 7;
-
-    return entries.map((d, index) => {
-      // Count from right (end) to prioritize recent data
+    return data.map((d, index) => {
       const distanceFromEnd = dataLength - 1 - index;
       return {
         ...d,
@@ -636,22 +198,19 @@ const Trends = () => {
     });
 
     const data = Object.entries(byDate).map(([date, totals]) => {
-      // Calculate calorie contribution from each macro
       const proteinCals = totals.protein * 4;
       const carbsCals = totals.carbs * 4;
       const fatCals = totals.fat * 9;
       const totalMacroCals = proteinCals + carbsCals + fatCals;
 
-      // Calculate percentages
       const proteinPct = totalMacroCals > 0 ? Math.round((proteinCals / totalMacroCals) * 100) : 0;
       const carbsPct = totalMacroCals > 0 ? Math.round((carbsCals / totalMacroCals) * 100) : 0;
       const fatPct = totalMacroCals > 0 ? Math.round((fatCals / totalMacroCals) * 100) : 0;
 
       return {
-        rawDate: date, // Keep original date for navigation
+        rawDate: date,
         date: format(new Date(`${date}T12:00:00`), "MMM d"),
         ...totals,
-        // Calorie values for each macro (for stacked chart)
         proteinCals,
         carbsCals,
         fatCals,
@@ -661,26 +220,11 @@ const Trends = () => {
       };
     });
 
-    // Add showLabel based on interval (same logic as weight charts)
     const dataLength = data.length;
-    const labelInterval = 
-      dataLength <= 7 ? 1 :
-      dataLength <= 14 ? 2 :
-      dataLength <= 21 ? 3 :
-      dataLength <= 35 ? 4 : 
-      dataLength <= 50 ? 5 : 
-      dataLength <= 70 ? 7 : 10;
-
-    // Full-width charts have ~2x horizontal space, so use more generous thresholds
-    const labelIntervalFullWidth = 
-      dataLength <= 14 ? 1 :
-      dataLength <= 28 ? 2 :
-      dataLength <= 42 ? 3 :
-      dataLength <= 70 ? 4 : 
-      dataLength <= 90 ? 5 : 7;
+    const labelInterval = getLabelInterval(dataLength);
+    const labelIntervalFullWidth = getFullWidthLabelInterval(dataLength);
 
     return data.map((d, index) => {
-      // Count from right (end) to prioritize recent data
       const distanceFromEnd = dataLength - 1 - index;
       return {
         ...d,
@@ -760,7 +304,6 @@ const Trends = () => {
           <div className="space-y-3">
             {/* Row 1: Calories + Macros Breakdown */}
             <div className="grid grid-cols-2 gap-3">
-              {/* Calories Chart */}
               <FoodChart
                 title="Calories"
                 subtitle={`avg: ${averages.calories}, today: ${todayValues.calories}`}
@@ -771,7 +314,6 @@ const Trends = () => {
                 referenceLine={settings.dailyCalorieTarget ? { value: settings.dailyCalorieTarget, color: "hsl(var(--muted-foreground))" } : undefined}
               />
 
-              {/* Macro Split Chart (100% stacked by calorie %) */}
               <StackedMacroChart
                 title="Macro Split (%)"
                 subtitle={`avg: ${averages.protein}/${averages.carbs}/${averages.fat}, today: ${todayValues.protein}/${todayValues.carbs}/${todayValues.fat}`}
@@ -835,7 +377,6 @@ const Trends = () => {
             <div className="py-8 text-center text-muted-foreground">No weight training data for this period</div>
           ) : (
             <div className="space-y-3">
-              {/* Duplicate exercise prompt */}
               {duplicateGroups.length > 0 && (
                 <DuplicateExercisePrompt
                   groups={duplicateGroups}
@@ -845,7 +386,6 @@ const Trends = () => {
                 />
               )}
 
-              {/* All exercise charts in a single 2-column grid */}
               <div className="grid grid-cols-2 gap-3">
                 {volumeByDay.length > 0 && (
                   <VolumeChart
@@ -876,7 +416,6 @@ const Trends = () => {
                 ))}
               </div>
 
-              {/* Show more button */}
               {hasMoreExercises && (
                 <Button
                   variant="outline"
