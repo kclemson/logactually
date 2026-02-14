@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { FoodItem, DailyTotals, calculateTotals, scaleMacrosByCalories, ScaledMacros } from '@/types/food';
-import { stepMultiplier, scaleItemByMultiplier } from '@/lib/portion-scaling';
+import { stepMultiplier, scaleItemByMultiplier, scalePortion } from '@/lib/portion-scaling';
 import { Minus, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -719,12 +719,12 @@ export function FoodItemsTable({
                   >
                     <Plus className="h-3.5 w-3.5" />
                   </button>
-                  <div className="flex-1" />
                   {portionMultiplier !== 1.0 && (
                     <span className="text-xs text-muted-foreground tabular-nums">
-                      {Math.round(item.calories * portionMultiplier)} cal
+                      ({item.portion ? scalePortion(item.portion, portionMultiplier) + ', ' : ''}{Math.round(item.calories * portionMultiplier)} cal)
                     </span>
                   )}
+                  <div className="flex-1" />
                   <button
                     type="button"
                     onClick={() => {
