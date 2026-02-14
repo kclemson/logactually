@@ -17,7 +17,6 @@ import { CreateRoutineDialog } from "@/components/CreateRoutineDialog";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { SavedMealRow } from "@/components/SavedMealRow";
 import { SavedRoutineRow } from "@/components/SavedRoutineRow";
-import { FEATURES } from "@/lib/feature-flags";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useAuth } from "@/hooks/useAuth";
 import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
@@ -37,8 +36,7 @@ export default function Settings() {
   const { settings, updateSettings, isLoading } = useUserSettings();
   const [mounted, setMounted] = useState(false);
   const { data: isAdmin } = useIsAdmin();
-  const showWeightsFeature = FEATURES.WEIGHT_TRACKING || isAdmin;
-  const showWeights = showWeightsFeature && settings.showWeights;
+  const showWeights = settings.showWeights;
   const { isReadOnly } = useReadOnlyContext();
   const isDemoUser = user?.email === DEMO_EMAIL;
 
@@ -72,7 +70,9 @@ export default function Settings() {
   // Export data
   const { isExporting, exportFoodLog, exportWeightLog } = useExportData();
 
-  // Avoid hydration mismatch
+  // next-themes can't determine the resolved theme on the server/first render,
+  // so `theme` is undefined until the client mounts. We delay rendering the
+  // theme toggle until mounted to avoid showing the wrong selected value.
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -240,31 +240,9 @@ export default function Settings() {
           </div>
 
           {/* Show Exercise toggle */}
-          {showWeightsFeature && (
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Enable Exercise logging</p>
-                <p className="text-[10px] text-muted-foreground/70">Use the Exercise tab to log lifting, cardio, and more</p>
-              </div>
-              <button
-                onClick={() => updateSettings({ showWeights: !settings.showWeights })}
-                className={cn(
-                  "w-12 h-6 rounded-full transition-colors relative border",
-                  settings.showWeights ? "bg-primary border-primary" : "bg-muted border-border"
-                )}
-              >
-                <span
-                  className={cn(
-                    "absolute left-0 top-0.5 w-5 h-5 rounded-full shadow transition-transform",
-                    settings.showWeights 
-                      ? "translate-x-6 bg-primary-foreground" 
-                      : "translate-x-0.5 bg-white"
-                  )}
-                />
-              </button>
-            </div>
-          )}
-
+          <div className="flex items-center justify-between">
+...
+          </div>
           {/* Weight Units - shown when weights enabled */}
           {showWeights && (
             <div className="flex items-center justify-between">

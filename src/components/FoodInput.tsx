@@ -133,7 +133,7 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(function FoodI
     const upc = extractUpcFromText(trimmed);
 
     if (upc && onScanResult) {
-      console.log("Detected UPC in text input, routing to lookup-upc:", upc);
+      if (import.meta.env.DEV) console.log("Detected UPC in text input, routing to lookup-upc:", upc);
       const result = await lookupUpc(upc);
 
       if (result.success) {
@@ -151,7 +151,7 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(function FoodI
 
   const handleBarcodeScan = async (code: string) => {
     setScannerOpen(false);
-    console.log("Barcode scanned:", code);
+    if (import.meta.env.DEV) console.log("Barcode scanned:", code);
 
     const result = await lookupUpc(code);
 

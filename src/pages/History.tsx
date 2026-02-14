@@ -17,10 +17,9 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { FEATURES } from '@/lib/feature-flags';
 import { isCardioExercise } from '@/lib/exercise-metadata';
 import { getTargetDotColor } from '@/lib/calorie-target';
-import { useIsAdmin } from '@/hooks/useIsAdmin';
+
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { setStoredDate } from '@/lib/selected-date';
 
@@ -41,9 +40,8 @@ interface WeightDaySummary {
 const History = () => {
   const navigate = useNavigate();
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const { data: isAdmin } = useIsAdmin();
   const { settings } = useUserSettings();
-  const showWeights = (FEATURES.WEIGHT_TRACKING || isAdmin) && settings.showWeights;
+  const showWeights = settings.showWeights;
   const showCustomLogs = settings.showCustomLogs;
 
   // Fetch entries for the visible month range

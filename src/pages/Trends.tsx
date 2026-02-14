@@ -9,9 +9,7 @@ import { Card, CardContent, CardHeader, ChartTitle, ChartSubtitle } from "@/comp
 import { Button } from "@/components/ui/button";
 import { UtensilsCrossed, Dumbbell, ClipboardList } from "lucide-react";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
-import { FEATURES } from "@/lib/feature-flags";
 import { useWeightTrends, ExerciseTrend } from "@/hooks/useWeightTrends";
-import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { type WeightUnit, formatDurationMmSs } from "@/lib/weight-units";
@@ -539,9 +537,8 @@ const Trends = () => {
       return [];
     }
   });
-  const { data: isAdmin } = useIsAdmin();
   const { settings } = useUserSettings();
-  const showWeights = (FEATURES.WEIGHT_TRACKING || isAdmin) && settings.showWeights;
+  const showWeights = settings.showWeights;
   const mergeMutation = useMergeExercises();
   const [foodAIOpen, setFoodAIOpen] = useState(false);
   const [exerciseAIOpen, setExerciseAIOpen] = useState(false);

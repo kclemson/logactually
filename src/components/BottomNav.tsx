@@ -2,7 +2,6 @@ import { NavLink, useSearchParams } from 'react-router-dom';
 import { Utensils, CalendarDays, TrendingUp, Settings, Shield, Dumbbell, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
-import { FEATURES } from '@/lib/feature-flags';
 import { useUserSettings } from '@/hooks/useUserSettings';
 
 export function BottomNav() {
@@ -12,7 +11,7 @@ export function BottomNav() {
   
   const hideAdmin = searchParams.get('hideAdmin') === 'true';
   const showAdmin = isAdmin && !hideAdmin;
-  const showWeights = (FEATURES.WEIGHT_TRACKING || isAdmin) && settings.showWeights;
+  const showWeights = settings.showWeights;
   const showCustomLogs = settings.showCustomLogs;
 
   const navItems = [

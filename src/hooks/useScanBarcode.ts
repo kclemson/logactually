@@ -25,7 +25,7 @@ export function useScanBarcode() {
     setError(null);
 
     try {
-      console.log('Looking up UPC:', upc);
+      if (import.meta.env.DEV) console.log('Looking up UPC:', upc);
       
       const { data, error: invokeError } = await supabase.functions.invoke(
         'lookup-upc',
