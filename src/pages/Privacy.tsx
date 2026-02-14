@@ -39,7 +39,18 @@ const PRIVACY_CONTENT = {
   },
   aiProcessing: {
     title: "How AI Processing Works",
-    text: "When you log food or exercise, your input is sent to an AI model that parses your freeform text and returns structured data — calories, macros, sets, reps — so you don't have to do the formatting or math yourself. Only the text you enter is sent — no user identifiers, account info, or other context. The AI knows the request came from this app, but nothing more specific than that.",
+    intro: "This app uses AI in two ways:",
+    blocks: [
+      {
+        label: "Logging",
+        text: "When you log food or exercise, your freeform text is sent to an AI model that parses it into structured data — calories, macros, sets, reps — so you don't have to do the formatting yourself. Only the text you type is sent.",
+      },
+      {
+        label: "Ask AI",
+        text: 'The Trends page has an optional "Ask AI" feature that answers questions about your habits. When you use it, your question plus up to 90 days of your logged food and exercise data is sent to the AI so it can give you a relevant answer. If you opt in, basic profile info (height, weight, age) is also included. This data is not stored by the AI provider.',
+      },
+    ],
+    footer: "In both cases, no user identifiers or account info are sent. The AI knows the request came from this app, but nothing more specific than that.",
   },
   technical: {
     title: "For the Technically Curious",
@@ -222,7 +233,15 @@ export default function Privacy() {
 
           {/* How AI Processing Works */}
           <CollapsibleSection title={PRIVACY_CONTENT.aiProcessing.title} icon={Bot} defaultOpen storageKey="privacy-ai">
-            <p className="text-sm text-muted-foreground">{PRIVACY_CONTENT.aiProcessing.text}</p>
+            <div className="text-sm text-muted-foreground space-y-3">
+              <p>{PRIVACY_CONTENT.aiProcessing.intro}</p>
+              {PRIVACY_CONTENT.aiProcessing.blocks.map((block) => (
+                <p key={block.label}>
+                  <strong className="text-foreground">{block.label}:</strong> {block.text}
+                </p>
+              ))}
+              <p>{PRIVACY_CONTENT.aiProcessing.footer}</p>
+            </div>
           </CollapsibleSection>
 
           {/* For the Technically Curious */}
