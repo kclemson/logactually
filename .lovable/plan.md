@@ -1,24 +1,43 @@
 
 
-## Update Ask AI System Prompt
+## Add Custom Log Columns to Admin User Table
 
-### Change
+### Changes
 
-**`supabase/functions/ask-trends-ai/index.ts`** -- line 163
+**1. Database function (`get_user_stats`)** -- SQL migration
 
-Replace the current `systemPrompt` with:
+Add two new fields to the per-user query:
+- `custom_logs_enabled`: boolean -- checks if the user's profile `settings->'showCustomLogs'` is true
+- `custom_log_entries_count`: integer -- count of rows in `custom_log_entries` for that user
 
+These are two additional scalar subqueries in the existing `get_user_stats` function, matching the pattern already used for `login_count`, `saved_meals_count`, etc.
+
+**2. Hook (`src/hooks/useAdminStats.ts`)**
+
+Add to the `UserStats` interface:
+- `custom_logs_enabled: boolean`
+- `custom_log_entries_count: number`
+
+**3. Admin page (`src/pages/Admin.tsx`)**
+
+- Import `useIsMobile` from `@/hooks/use-mobile`
+- Call `const isMobile = useIsMobile()` inside the component (before conditional returns)
+- Hide "Logins" and "L2day" columns (header + body cells) when `isMobile` is true
+- Add two new columns after the existing SW column:
+  - **C** -- shows a checkmark or dash based on `custom_logs_enabled`, colored green if enabled
+  - **Cs** -- shows the count from `custom_log_entries_count`, using the existing muted-when-zero pattern
+
+### Column Layout on Mobile vs Desktop
+
+```text
+Desktop: User | Last | F2day | W2day | F | SF | W | SW | C | Cs | Logins | L2day
+Mobile:  User | Last | F2day | W2day | F | SF | W | SW | C | Cs
 ```
-You are a concise health and fitness assistant. The user opened this from the ${mode} tab, so weight your answer toward ${modeLabel} — but you have access to both their food and exercise logs. Answer cross-domain questions when asked. Use plain, everyday language — avoid gym jargon and technical fitness terminology. Match your response style to the question:
-- If the user asks for suggestions, recommendations, or practical advice, give direct actionable answers grounded in their logged data.
-- If the user asks about trends, patterns, or analysis, summarize at a high level — avoid listing individual dates or day-by-day examples. Use ranges and generalizations instead of citing specific dates.
-Use bullet points when making multiple observations. Keep answers to 2-3 short paragraphs max. Do not give medical advice — suggest consulting a professional for medical questions. If the data is insufficient to answer, say so.
+
+### SQL Migration Detail
+
+Adds to the `get_user_stats` function's SELECT list:
+```sql
+(SELECT COALESCE((p.settings->>'showCustomLogs')::boolean, false)) as custom_logs_enabled,
+(SELECT COUNT(*) FROM custom_log_entries cle WHERE cle.user_id = p.id) as custom_log_entries_count
 ```
-
-Key differences from current prompt:
-- "assistant" instead of "analyst"
-- Added two bullet points for response style matching (suggestions vs. trends) without specific examples
-- Moved the "avoid listing dates" guidance under the trends bullet only, so it doesn't constrain practical answers
-
-This is a single-line change in the edge function. It will redeploy automatically.
-
