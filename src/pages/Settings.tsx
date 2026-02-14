@@ -122,7 +122,7 @@ export default function Settings() {
   return (
     <div className="space-y-4">
       {/* Account section */}
-      <CollapsibleSection title="Account" icon={User} storageKey="settings-account">
+      <CollapsibleSection title="Account" icon={User} storageKey="settings-account" iconClassName="text-zinc-500 dark:text-zinc-400">
         <div className="space-y-4">
           {/* Email row */}
           <div className="flex items-center justify-between">
@@ -171,7 +171,7 @@ export default function Settings() {
       </CollapsibleSection>
 
       {/* Preferences - theme and units */}
-      <CollapsibleSection title="Preferences" icon={Settings2} storageKey="settings-preferences">
+      <CollapsibleSection title="Preferences" icon={Settings2} storageKey="settings-preferences" iconClassName="text-zinc-500 dark:text-zinc-400">
         <div className="space-y-4">
           {/* Theme */}
           <div className="flex items-center justify-between">
@@ -445,7 +445,7 @@ export default function Settings() {
       )}
 
       {/* Import and Export */}
-      <CollapsibleSection title="Import and Export" icon={ArrowDownUp} storageKey="settings-export">
+      <CollapsibleSection title="Import and Export" icon={ArrowDownUp} storageKey="settings-export" iconClassName="text-zinc-500 dark:text-zinc-400">
         <div className="space-y-4">
           {/* Food export row */}
           <div className="flex items-center justify-between">
@@ -484,7 +484,7 @@ export default function Settings() {
       </CollapsibleSection>
 
       {/* About section */}
-      <CollapsibleSection title="About" icon={Info} defaultOpen={true} storageKey="settings-about">
+      <CollapsibleSection title="About" icon={Info} defaultOpen={true} storageKey="settings-about" iconClassName="text-zinc-500 dark:text-zinc-400">
         <div className="space-y-2">
           <Link
             to="/privacy"
