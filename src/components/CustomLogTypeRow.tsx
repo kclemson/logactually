@@ -36,6 +36,7 @@ export function CustomLogTypeRow({
   existingNames = [],
 }: CustomLogTypeRowProps) {
   const [flashError, setFlashError] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   const isDuplicateName = (newName: string) => {
     return existingNames.some(n => n.toLowerCase() === newName.toLowerCase() && n.toLowerCase() !== type.name.toLowerCase());
@@ -44,54 +45,58 @@ export function CustomLogTypeRow({
   return (
     <li className="py-0.5">
       <div className="flex items-center gap-2">
-        {/* Click-to-edit type name */}
-        <div
-          contentEditable
-          suppressContentEditableWarning
-          spellCheck={false}
-          onFocus={(e) => {
-            e.currentTarget.dataset.original = type.name;
-          }}
-          onBlur={(e) => {
-            const newName = (e.currentTarget.textContent || '').trim();
-            const original = e.currentTarget.dataset.original || type.name;
-            if (!newName || isDuplicateName(newName)) {
-              e.currentTarget.textContent = original;
-              if (newName && isDuplicateName(newName)) {
-                setFlashError(true);
-                setTimeout(() => setFlashError(false), 1500);
-              }
-            } else if (newName !== original) {
-              onRename(type.id, newName);
-              e.currentTarget.dataset.original = newName;
-            }
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              const newName = e.currentTarget.textContent?.trim();
-              const original = e.currentTarget.dataset.original;
-              if (newName && newName !== original && !isDuplicateName(newName)) {
+        {/* Click-to-edit type name + unit */}
+        <div className="flex items-center gap-1 flex-1 min-w-0">
+          <div
+            contentEditable
+            suppressContentEditableWarning
+            spellCheck={false}
+            onFocus={(e) => {
+              setIsEditing(true);
+              e.currentTarget.dataset.original = type.name;
+            }}
+            onBlur={(e) => {
+              setIsEditing(false);
+              const newName = (e.currentTarget.textContent || '').trim();
+              const original = e.currentTarget.dataset.original || type.name;
+              if (!newName || isDuplicateName(newName)) {
+                e.currentTarget.textContent = original;
+                if (newName && isDuplicateName(newName)) {
+                  setFlashError(true);
+                  setTimeout(() => setFlashError(false), 1500);
+                }
+              } else if (newName !== original) {
                 onRename(type.id, newName);
                 e.currentTarget.dataset.original = newName;
-              } else if (newName && isDuplicateName(newName)) {
-                e.currentTarget.textContent = original || type.name;
-                setFlashError(true);
-                setTimeout(() => setFlashError(false), 1500);
               }
-              e.currentTarget.blur();
-            }
-            if (e.key === 'Escape') {
-              e.preventDefault();
-              e.currentTarget.textContent = e.currentTarget.dataset.original || type.name;
-              e.currentTarget.blur();
-            }
-          }}
-          className={`flex-1 text-sm truncate cursor-text hover:bg-muted/50 focus:bg-focus-bg focus:ring-2 focus:ring-focus-ring focus:outline-none rounded px-1 py-0.5 transition-colors ${flashError ? 'ring-2 ring-destructive bg-destructive/10' : ''}`}
-        >
-          {type.name}
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                const newName = e.currentTarget.textContent?.trim();
+                const original = e.currentTarget.dataset.original;
+                if (newName && newName !== original && !isDuplicateName(newName)) {
+                  onRename(type.id, newName);
+                  e.currentTarget.dataset.original = newName;
+                } else if (newName && isDuplicateName(newName)) {
+                  e.currentTarget.textContent = original || type.name;
+                  setFlashError(true);
+                  setTimeout(() => setFlashError(false), 1500);
+                }
+                e.currentTarget.blur();
+              }
+              if (e.key === 'Escape') {
+                e.preventDefault();
+                e.currentTarget.textContent = e.currentTarget.dataset.original || type.name;
+                e.currentTarget.blur();
+              }
+            }}
+            className={`text-sm truncate cursor-text hover:bg-muted/50 focus:bg-focus-bg focus:ring-2 focus:ring-focus-ring focus:outline-none rounded px-1 py-0.5 transition-colors ${isEditing ? 'flex-1' : ''} ${flashError ? 'ring-2 ring-destructive bg-destructive/10' : ''}`}
+          >
+            {type.name}
+          </div>
+          {type.unit && !isEditing && <span className="text-xs text-muted-foreground shrink-0">({type.unit})</span>}
         </div>
-        {type.unit && <span className="text-xs text-muted-foreground shrink-0">({type.unit})</span>}
 
         {/* Value type badge + editable unit */}
         <span className="text-xs text-muted-foreground shrink-0">
