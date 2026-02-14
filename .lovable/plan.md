@@ -1,18 +1,50 @@
 
 
-## Show Template Picker from Settings "Add Custom Log Type"
+## Add `dual_numeric` Value Type with Dedicated Column
 
-**Problem**: The Settings page's "Add Custom Log Type" button opens the advanced `CreateLogTypeDialog` directly, bypassing the new template picker.
+### Database Changes
 
-**Fix**: Replace the direct `CreateLogTypeDialog` open with `LogTemplatePickerDialog`, and chain to `CreateLogTypeDialog` only when the user clicks "Create your own".
+**Migration: Add `numeric_value_2` column and update constraint**
 
-### Technical Details
+```sql
+ALTER TABLE custom_log_entries ADD COLUMN numeric_value_2 numeric;
 
-**File: `src/pages/Settings.tsx`**
+ALTER TABLE custom_log_types DROP CONSTRAINT IF EXISTS custom_log_types_value_type_check;
+ALTER TABLE custom_log_types ADD CONSTRAINT custom_log_types_value_type_check
+  CHECK (value_type IN ('numeric', 'text_numeric', 'text', 'text_multiline', 'dual_numeric'));
+```
 
-1. Add a new state `templatePickerOpen` and import `LogTemplatePickerDialog`
-2. Change the "Add Custom Log Type" button (line 304) to open `templatePickerOpen` instead of `createLogTypeDialogOpen`
-3. Add the `LogTemplatePickerDialog` component at the bottom with:
-   - `onSelectTemplate` calls `createType.mutate(...)` then closes
-   - `onCreateCustom` closes the picker and opens `createLogTypeDialogOpen`
-4. Keep the existing `CreateLogTypeDialog` as-is for the "Create your own" path
+This gives `dual_numeric` entries a clean, dedicated column:
+- `numeric_value` = first number (e.g. systolic, 120)
+- `numeric_value_2` = second number (e.g. diastolic, 80)
+
+### Code Changes
+
+**`src/hooks/useCustomLogTypes.ts`**
+- Add `'dual_numeric'` to the `ValueType` union
+
+**`src/lib/log-templates.ts`**
+- Change Blood Pressure template: `valueType: 'dual_numeric'`, `unitImperial: 'mmHg'`, `unitMetric: 'mmHg'`
+
+**`src/hooks/useCustomLogEntries.ts`**
+- Add `numeric_value_2: number | null` to the `CustomLogEntry` interface
+- Add `numeric_value_2` to `createEntry` and `updateEntry` param types
+
+**`src/components/LogEntryInput.tsx`**
+- Add a `dual_numeric` branch: two side-by-side number inputs with a `/` separator and unit suffix
+- On submit: `{ numeric_value: first, numeric_value_2: second }`
+
+**`src/components/CustomLogEntryRow.tsx`**
+- Add `dual_numeric` display: two inline-editable number fields shown as `120 / 80 mmHg`
+
+**`src/components/CreateLogTypeDialog.tsx`**
+- Add a "Dual Numeric" radio option with description "Two numbers with / (e.g. blood pressure)"
+
+**`src/hooks/useCustomLogTrends.ts`**
+- Add a `dual_numeric` branch: generate two series from `numeric_value` and `numeric_value_2`, labeled "High" and "Low" (generic) so both values chart as separate lines
+
+### Template Update
+
+| Template | Before | After |
+|---|---|---|
+| Blood Pressure | text, no unit | dual_numeric, mmHg |
