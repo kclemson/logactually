@@ -7,6 +7,7 @@ export interface PopulateDemoDataParams {
   clearExisting?: boolean;
   generateFood?: boolean;
   generateWeights?: boolean;
+  generateCustomLogs?: boolean;
   generateSavedMeals?: number;
   generateSavedRoutines?: number;
 }
@@ -16,6 +17,7 @@ interface PopulateSummary {
   weightSets?: number;
   savedMeals?: number;
   savedRoutines?: number;
+  customLogEntries?: number;
   deleted?: {
     foodEntries?: number;
     weightSets?: number;

@@ -31,6 +31,7 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
   const [clearExisting, setClearExisting] = useState(false);
   const [generateFood, setGenerateFood] = useState(true);
   const [generateWeights, setGenerateWeights] = useState(true);
+  const [generateCustomLogs, setGenerateCustomLogs] = useState(true);
   const [savedMealsCount, setSavedMealsCount] = useState(5);
   const [savedRoutinesCount, setSavedRoutinesCount] = useState(4);
 
@@ -41,6 +42,7 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
       clearExisting,
       generateFood,
       generateWeights,
+      generateCustomLogs,
       generateSavedMeals: savedMealsCount,
       generateSavedRoutines: savedRoutinesCount,
     };
@@ -54,8 +56,23 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
       clearExisting: true,
       generateFood: false,
       generateWeights: false,
+      generateCustomLogs: false,
       generateSavedMeals: savedMealsCount,
       generateSavedRoutines: savedRoutinesCount,
+    };
+    await populate(params);
+  };
+
+  const handleCustomLogsOnly = async () => {
+    const params: PopulateDemoDataParams = {
+      startDate: format(startDate, "yyyy-MM-dd"),
+      endDate: format(endDate, "yyyy-MM-dd"),
+      clearExisting: false,
+      generateFood: false,
+      generateWeights: false,
+      generateCustomLogs: true,
+      generateSavedMeals: 0,
+      generateSavedRoutines: 0,
     };
     await populate(params);
   };
@@ -154,6 +171,15 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
                 />
                 <span>Generate Weights</span>
               </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={generateCustomLogs}
+                  onChange={(e) => setGenerateCustomLogs(e.target.checked)}
+                  className="rounded border-input"
+                />
+                <span>Generate Custom Logs</span>
+              </label>
             </div>
           </div>
 
@@ -225,6 +251,9 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
                         {result.summary.savedRoutines != null && (
                           <li>Created {result.summary.savedRoutines} saved routines</li>
                         )}
+                        {result.summary.customLogEntries != null && (
+                          <li>Created {result.summary.customLogEntries} custom log entries</li>
+                        )}
                       </ul>
                     )}
                   </div>
@@ -248,6 +277,13 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
                 disabled={isLoading}
               >
                 {isLoading ? "Starting..." : "Saved Only"}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleCustomLogsOnly} 
+                disabled={isLoading}
+              >
+              {isLoading ? "Starting..." : "Custom Logs Only"}
               </Button>
               <Button onClick={handleSubmit} disabled={isLoading}>
                 {isLoading ? (
