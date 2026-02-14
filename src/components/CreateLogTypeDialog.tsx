@@ -9,6 +9,7 @@ interface CreateLogTypeDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (name: string, valueType: ValueType, unit?: string) => void;
   isLoading?: boolean;
+  existingNames?: string[];
 }
 
 const VALUE_TYPE_OPTIONS: { value: 'numeric' | 'text_numeric' | 'dual_numeric' | 'text'; label: string; description: string }[] = [
@@ -18,17 +19,18 @@ const VALUE_TYPE_OPTIONS: { value: 'numeric' | 'text_numeric' | 'dual_numeric' |
   { value: 'text', label: 'Text only', description: 'Free-form text' },
 ];
 
-export function CreateLogTypeDialog({ open, onOpenChange, onSubmit, isLoading }: CreateLogTypeDialogProps) {
+export function CreateLogTypeDialog({ open, onOpenChange, onSubmit, isLoading, existingNames = [] }: CreateLogTypeDialogProps) {
   const [name, setName] = useState('');
   const [valueType, setValueType] = useState<'numeric' | 'text_numeric' | 'dual_numeric' | 'text'>('numeric');
   const [unit, setUnit] = useState('');
   const [textMultiline, setTextMultiline] = useState(false);
 
   const showUnit = valueType === 'numeric' || valueType === 'text_numeric' || valueType === 'dual_numeric';
+  const isDuplicate = name.trim() !== '' && existingNames.some(n => n.toLowerCase() === name.trim().toLowerCase());
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || isDuplicate) return;
     const finalType: ValueType = valueType === 'text' && textMultiline ? 'text_multiline' : valueType;
     onSubmit(name.trim(), finalType, showUnit && unit.trim() ? unit.trim() : undefined);
     setName('');
@@ -45,13 +47,19 @@ export function CreateLogTypeDialog({ open, onOpenChange, onSubmit, isLoading }:
           <DialogDescription>Weight, measurements, mood, and more</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            id="log-type-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Body Weight"
-            autoFocus
-          />
+          <div>
+            <Input
+              id="log-type-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Body Weight"
+              autoFocus
+              className={isDuplicate ? 'border-destructive' : ''}
+            />
+            {isDuplicate && (
+              <p className="text-xs text-destructive mt-1">You already have a log type with this name</p>
+            )}
+          </div>
           <div className="space-y-1">
               {VALUE_TYPE_OPTIONS.map((opt) => (
                 <div key={opt.value}>
@@ -108,7 +116,7 @@ export function CreateLogTypeDialog({ open, onOpenChange, onSubmit, isLoading }:
                 </div>
               ))}
             </div>
-          <Button type="submit" disabled={!name.trim() || isLoading} className="w-full">
+          <Button type="submit" disabled={!name.trim() || isDuplicate || isLoading} className="w-full">
             {isLoading ? 'Creating...' : 'Create'}
           </Button>
         </form>

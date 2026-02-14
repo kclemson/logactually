@@ -317,6 +317,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
         onOpenChange={setCreateTypeOpen}
         onSubmit={handleCreateType}
         isLoading={createType.isPending}
+        existingNames={logTypes.map(t => t.name)}
       />
       <LogTemplatePickerDialog
         open={templatePickerOpen}
@@ -334,6 +335,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
           setCreateTypeOpen(true);
         }}
         isLoading={createType.isPending}
+        existingNames={logTypes.map(t => t.name)}
       />
     </div>
   );
