@@ -1,19 +1,16 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { format, addDays, subDays, isToday, parseISO, isFuture, startOfMonth } from 'date-fns';
+import { format, isToday, parseISO } from 'date-fns';
 import { useWeightDatesWithData } from '@/hooks/useDatesWithData';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { LogInput, LogInputRef } from '@/components/LogInput';
+import { DateNavigation } from '@/components/DateNavigation';
+import { useDateNavigation } from '@/hooks/useDateNavigation';
 import { WeightItemsTable } from '@/components/WeightItemsTable';
 import { CreateRoutineDialog } from '@/components/CreateRoutineDialog';
 import { SaveRoutineDialog } from '@/components/SaveRoutineDialog';
 import { SaveSuggestionPrompt } from '@/components/SaveSuggestionPrompt';
 import { DemoPreviewDialog } from '@/components/DemoPreviewDialog';
-import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAnalyzeWeights } from '@/hooks/useAnalyzeWeights';
 import { useWeightEntries } from '@/hooks/useWeightEntries';
 import { useRecentWeightEntries } from '@/hooks/useRecentWeightEntries';
@@ -48,8 +45,7 @@ interface WeightLogContentProps {
 
 const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   const [, setSearchParams] = useSearchParams();
-  const [calendarOpen, setCalendarOpen] = useState(false);
-  const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(parseISO(initialDate)));
+  const dateNav = useDateNavigation(initialDate, setSearchParams);
   const [expandedEntryIds, setExpandedEntryIds] = useState<Set<string>>(new Set());
   const [createRoutineDialogOpen, setCreateRoutineDialogOpen] = useState(false);
   
@@ -78,7 +74,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   
   const queryClient = useQueryClient();
   const { weightSets, isFetching, createEntry, updateSet, deleteSet, deleteEntry, deleteAllByDate } = useWeightEntries(dateStr);
-  const { data: datesWithWeights = [] } = useWeightDatesWithData(calendarMonth);
+  const { data: datesWithWeights = [] } = useWeightDatesWithData(dateNav.calendarMonth);
   const { analyzeWeights, isAnalyzing, error: analyzeError, warning: analyzeWarning } = useAnalyzeWeights();
   const saveRoutineMutation = useSaveRoutine();
   const updateSavedRoutine = useUpdateSavedRoutine();
@@ -88,37 +84,6 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   const { isReadOnly } = useReadOnlyContext();
   
   const weightInputRef = useRef<LogInputRef>(null);
-
-  // Navigation updates URL directly - triggers remount via wrapper's key
-  const goToPreviousDay = () => {
-    const prevDate = format(subDays(selectedDate, 1), 'yyyy-MM-dd');
-    setStoredDate(prevDate);
-    setSearchParams({ date: prevDate }, { replace: true });
-  };
-
-  const goToNextDay = () => {
-    const nextDate = format(addDays(selectedDate, 1), 'yyyy-MM-dd');
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
-    setStoredDate(nextDate);
-    if (nextDate === todayStr) {
-      setSearchParams({}, { replace: true });
-    } else {
-      setSearchParams({ date: nextDate }, { replace: true });
-    }
-  };
-
-  const handleDateSelect = (date: Date | undefined) => {
-    if (!date) return;
-    const dateStr = format(date, 'yyyy-MM-dd');
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
-    setStoredDate(dateStr);
-    if (dateStr === todayStr) {
-      setSearchParams({}, { replace: true });
-    } else {
-      setSearchParams({ date: dateStr }, { replace: true });
-    }
-    setCalendarOpen(false);
-  };
 
   // Compute entry boundaries from weight sets
   const { allItems, entryBoundaries } = useMemo(() => {
@@ -582,78 +547,20 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
       </section>
 
       {/* Date Navigation */}
-      <div className="flex items-center justify-center gap-1 relative">
-        <Button variant="ghost" size="icon" onClick={goToPreviousDay} className="h-11 w-11" aria-label="Previous day">
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
-        
-        <Popover open={calendarOpen} onOpenChange={(open) => {
-          if (open) setCalendarMonth(startOfMonth(selectedDate));
-          setCalendarOpen(open);
-        }}>
-          <PopoverTrigger asChild>
-            <button
-              className={cn(
-                "flex items-center gap-1.5 px-2 py-1 text-heading",
-                "text-foreground underline decoration-2 underline-offset-4 decoration-foreground"
-              )}
-            >
-              <CalendarIcon className="h-4 w-4" />
-              {format(selectedDate, isTodaySelected ? "'Today,' MMM d" : 'EEE, MMM d')}
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="center">
-            <div className="p-2 border-b">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full justify-center text-blue-600 dark:text-blue-400"
-                onClick={() => {
-                  setStoredDate(format(new Date(), 'yyyy-MM-dd'));
-                  setSearchParams({}, { replace: true });
-                  setCalendarOpen(false);
-                }}
-              >
-                Go to Today
-              </Button>
-            </div>
-            <Calendar
-              mode="single"
-              month={calendarMonth}
-              selected={selectedDate}
-              onSelect={handleDateSelect}
-              onMonthChange={setCalendarMonth}
-              disabled={(date) => isFuture(date)}
-              modifiers={{ hasData: datesWithWeights }}
-              modifiersClassNames={{ hasData: "text-purple-600 dark:text-purple-400 font-semibold" }}
-              initialFocus
-              className="pointer-events-auto"
-            />
-          </PopoverContent>
-        </Popover>
-        
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={goToNextDay}
-          disabled={isTodaySelected}
-          className="h-11 w-11"
-          aria-label="Next day"
-        >
-          <ChevronRight className="h-5 w-5" />
-        </Button>
-        {!isTodaySelected && (
-          <button
-            className="text-sm text-primary hover:underline absolute right-0 top-1/2 -translate-y-1/2"
-            onClick={() => {
-              setStoredDate(format(new Date(), 'yyyy-MM-dd'));
-              setSearchParams({}, { replace: true });
-            }}
-          >
-            Go to today
-          </button>
-        )}
-      </div>
+      <DateNavigation
+        selectedDate={selectedDate}
+        isTodaySelected={isTodaySelected}
+        calendarOpen={dateNav.calendarOpen}
+        onCalendarOpenChange={dateNav.setCalendarOpen}
+        calendarMonth={dateNav.calendarMonth}
+        onCalendarMonthChange={dateNav.setCalendarMonth}
+        onPreviousDay={dateNav.goToPreviousDay}
+        onNextDay={dateNav.goToNextDay}
+        onDateSelect={dateNav.handleDateSelect}
+        onGoToToday={dateNav.goToToday}
+        datesWithData={datesWithWeights}
+        highlightClassName="text-purple-600 dark:text-purple-400 font-semibold"
+      />
 
       {/* Weight Items Table */}
       {displayItems.length > 0 && (
