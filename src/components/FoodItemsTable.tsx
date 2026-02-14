@@ -694,6 +694,13 @@ export function FoodItemsTable({
                     setPortionScalingIndex(null);
                     setPortionMultiplier(1.0);
                   }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      e.stopPropagation();
+                      setPortionScalingIndex(null);
+                      setPortionMultiplier(1.0);
+                    }
+                  }}
                 >
                   <button
                     type="button"
