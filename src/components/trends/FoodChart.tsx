@@ -206,7 +206,7 @@ export const FoodChart = ({
         </CardHeader>
         <CardContent className="p-2 pt-0">
           <div className={height}>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
               <BarChart data={chartData} margin={{ top: getFoodChartMarginTop(chartData.length), right: 0, left: 0, bottom: 0 }}>
                 <XAxis
                   dataKey="date"
@@ -350,7 +350,7 @@ export const StackedMacroChart = ({
         </CardHeader>
         <CardContent className="p-2 pt-0">
           <div className={height}>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
               <BarChart 
                 data={chartData} 
                 margin={{ 
@@ -506,7 +506,7 @@ export const VolumeChart = ({
         </CardHeader>
         <CardContent className="p-2 pt-0">
           <div className="h-24">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" style={{ overflow: 'visible' }}>
               <BarChart data={chartData} margin={{ top: 12, right: 0, left: 0, bottom: 0 }}>
                 <XAxis
                   dataKey="date"
