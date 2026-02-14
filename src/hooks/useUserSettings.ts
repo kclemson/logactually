@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 import type { WeightUnit } from '@/lib/weight-units';
 
 export interface UserSettings {
@@ -54,7 +55,7 @@ export function useUserSettings() {
         .maybeSingle();
 
       if (error) {
-        console.error('Failed to fetch settings:', error);
+        logger.error('Failed to fetch settings:', error);
         return DEFAULT_SETTINGS;
       }
       
@@ -91,7 +92,7 @@ export function useUserSettings() {
     },
     onError: (err, updates, context) => {
       queryClient.setQueryData(['user-settings', user?.id], context?.previous);
-      console.error('Failed to save settings:', err);
+      logger.error('Failed to save settings:', err);
     },
   });
 

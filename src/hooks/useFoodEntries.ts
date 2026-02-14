@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 import { FoodEntry, FoodItem } from '@/types/food';
 import { Json } from '@/integrations/supabase/types';
 
@@ -94,7 +95,7 @@ export function useFoodEntries(date?: string) {
     },
     // Caller handles invalidation to enable awaiting
     onError: (error) => {
-      console.error('Failed to save entry:', error.message);
+      logger.error('Failed to save entry:', error.message);
     },
   });
 
@@ -121,7 +122,7 @@ export function useFoodEntries(date?: string) {
       queryClient.invalidateQueries({ queryKey: ['food-entries'] });
     },
     onError: (error) => {
-      console.error('Failed to update entry:', error.message);
+      logger.error('Failed to update entry:', error.message);
     },
   });
 
@@ -138,7 +139,7 @@ export function useFoodEntries(date?: string) {
       queryClient.invalidateQueries({ queryKey: ['food-entries'] });
     },
     onError: (error) => {
-      console.error('Failed to delete entry:', error.message);
+      logger.error('Failed to delete entry:', error.message);
     },
   });
 
@@ -161,7 +162,7 @@ export function useFoodEntries(date?: string) {
       if (context?.previousEntries) {
         queryClient.setQueryData(['food-entries', context.targetDate], context.previousEntries);
       }
-      console.error('Failed to delete all entries:', err);
+      logger.error('Failed to delete all entries:', err);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['food-entries'] });

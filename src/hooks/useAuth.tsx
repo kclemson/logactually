@@ -1,6 +1,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 
 interface SignOutOptions {
   clearQueryCache?: () => void;
@@ -50,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Absolute timeout - never stay loading forever (10 seconds max)
     const absoluteTimeout = setTimeout(() => {
       if (isMounted && !initialCheckComplete) {
-        console.error('Auth initialization timed out after 10 seconds');
+        logger.error('Auth initialization timed out after 10 seconds');
         setLoading(false);
       }
     }, 10000);
@@ -106,9 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // No session returned BUT we have a cached user
           // This happens when refresh token was rotated by another device
           // Keep the cached session - user stays logged in
-          if (import.meta.env.DEV) {
-            console.warn('getSession returned null but cached user exists - preserving session');
-          }
+          logger.warn('getSession returned null but cached user exists - preserving session');
           initialCheckComplete = true;
           setLoading(false);
         } else {
@@ -118,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       })
       .catch((error) => {
-        console.error('Failed to get session:', error);
+        logger.error('Failed to get session:', error);
         if (isMounted) {
           // Preserve existing cache on error - don't log user out due to network issues
           initialCheckComplete = true;
@@ -152,13 +151,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!error && data.user) {
       supabase.rpc('increment_login_count', { user_id: data.user.id })
         .then(({ error: rpcError }) => {
-          if (import.meta.env.DEV) {
-            if (rpcError) {
-              console.error('Failed to increment login count:', rpcError);
+          if (rpcError) {
+              logger.error('Failed to increment login count:', rpcError);
             } else {
-              console.log('Login count incremented for user:', data.user.id);
+              logger.log('Login count incremented for user:', data.user.id);
             }
-          }
         });
     }
     
@@ -187,9 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await supabase.auth.signOut();
     } catch (error) {
       // Log but don't throw - local state is already cleared
-      if (import.meta.env.DEV) {
-        console.warn('Sign out API call failed:', error);
-      }
+      logger.warn('Sign out API call failed:', error);
     }
   };
 

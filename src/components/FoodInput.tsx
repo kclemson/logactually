@@ -1,4 +1,5 @@
 import { useState, useImperativeHandle, forwardRef, useRef, useCallback } from "react";
+import { logger } from "@/lib/logger";
 import { Mic, Send, Loader2, ScanBarcode, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -102,7 +103,7 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(function FoodI
       recognitionRef.current = rec;
       return rec;
     } catch (error) {
-      console.error("Failed to initialize speech recognition:", error);
+      logger.error("Failed to initialize speech recognition:", error);
       return null;
     }
   }, []);
@@ -120,7 +121,7 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(function FoodI
       recognition.start();
       setIsListening(true);
     } catch (error) {
-      console.error("Failed to start speech recognition:", error);
+      logger.error("Failed to start speech recognition:", error);
       setIsListening(false);
     }
   }, [isListening, getOrCreateRecognition]);
@@ -133,7 +134,7 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(function FoodI
     const upc = extractUpcFromText(trimmed);
 
     if (upc && onScanResult) {
-      if (import.meta.env.DEV) console.log("Detected UPC in text input, routing to lookup-upc:", upc);
+      logger.log("Detected UPC in text input, routing to lookup-upc:", upc);
       const result = await lookupUpc(upc);
 
       if (result.success) {
@@ -151,7 +152,7 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(function FoodI
 
   const handleBarcodeScan = async (code: string) => {
     setScannerOpen(false);
-    if (import.meta.env.DEV) console.log("Barcode scanned:", code);
+    logger.log("Barcode scanned:", code);
 
     const result = await lookupUpc(code);
 

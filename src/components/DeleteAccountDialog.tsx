@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { logger } from '@/lib/logger';
 
 interface DeleteAccountDialogProps {
   open: boolean;
@@ -52,7 +53,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
       });
 
       if (fnError) {
-        console.error('Delete account error:', fnError);
+        logger.error('Delete account error:', fnError);
         setError('Failed to delete account. Please try again.');
         setIsDeleting(false);
         return;
@@ -68,7 +69,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
       await signOut({ clearQueryCache: () => queryClient.clear() });
       navigate('/auth');
     } catch (err) {
-      console.error('Unexpected error:', err);
+      logger.error('Unexpected error:', err);
       setError('An unexpected error occurred. Please try again.');
       setIsDeleting(false);
     }

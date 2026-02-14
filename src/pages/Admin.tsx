@@ -15,17 +15,7 @@ import { PopulateDemoDataDialog } from "@/components/PopulateDemoDataDialog";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { AppleHealthExplorer } from "@/components/AppleHealthExplorer";
 
-const USER_NAMES: Record<number, string> = {
-  1: "KC",
-  2: "Jared",
-  3: "Kristy",
-  4: "Elisabetta",
-  5: "Elisabetta2",
-  6: "test",
-  8: "test2",
-  9: "Malcolm",
-  10: "Jenny",
-};
+
 
 export default function Admin() {
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
@@ -158,7 +148,7 @@ export default function Admin() {
                         : ""
                     }`}
                   >
-                    {USER_NAMES[user.user_number] ?? `User #${user.user_number}`}
+                    {`User #${user.user_number}`}
                   </td>
                   <td
                     className={`text-center py-0.5 pr-2 whitespace-nowrap ${user.last_active && isToday(parseISO(user.last_active)) ? "text-green-500" : ""}`}
@@ -373,7 +363,7 @@ export default function Admin() {
               <div key={f.id} className="text-xs border-b border-border/50 py-1 space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground">
-                    {USER_NAMES[f.user_number] ?? `User #${f.user_number}`} • {format(parseISO(f.created_at), "MMM d")}
+                    {`User #${f.user_number}`} • {format(parseISO(f.created_at), "MMM d")}
                   </span>
                   {replyingToId !== f.id && (
                     <>
@@ -447,7 +437,7 @@ export default function Admin() {
               <div key={f.id} className="text-xs border-b border-border/50 py-1 space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground">
-                    {USER_NAMES[f.user_number] ?? `User #${f.user_number}`} • {format(parseISO(f.created_at), "MMM d")}
+                    {`User #${f.user_number}`} • {format(parseISO(f.created_at), "MMM d")}
                   </span>
                   <button
                     className="text-muted-foreground underline hover:text-foreground"

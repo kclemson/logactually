@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { logger } from "@/lib/logger";
 import { Navigate, useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,7 +55,7 @@ export default function Auth() {
 
     // Log error for debugging but don't expose to user
     if (error) {
-      console.error("Password reset error:", error.message);
+      logger.error("Password reset error:", error.message);
     }
 
     // Always show "success" to prevent account enumeration
@@ -130,7 +131,7 @@ export default function Auth() {
     }
 
     if (result.error) {
-      console.error("Google OAuth error:", result.error);
+      logger.error("Google OAuth error:", result.error);
       setErrorMessage("Google sign-in failed. Please try again.");
     }
     
