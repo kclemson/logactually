@@ -131,7 +131,7 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
   // Multiline layout: textarea + delete
   if (isMultiline) {
     return (
-      <div className="grid grid-cols-[1fr_24px] items-start gap-x-2 py-2 group">
+      <div className="grid grid-cols-[1fr_24px] items-start gap-x-2 py-0.5 group">
         <MultilineTextArea
           value={entry.text_value || ''}
           isReadOnly={!!isReadOnly}
@@ -154,7 +154,7 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
 
   // Standard layout: [text] [colon] [number] [unit] [delete]
   return (
-    <div className="grid grid-cols-[1fr_auto_60px_50px_24px] items-center gap-x-1 py-2 group">
+    <div className="grid grid-cols-[1fr_auto_60px_50px_24px] items-center gap-x-1 py-0.5 group">
       {/* Col 1: text label */}
       {hasText ? (
         <div className={cn(
