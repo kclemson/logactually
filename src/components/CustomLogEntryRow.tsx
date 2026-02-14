@@ -152,13 +152,19 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
     );
   }
 
-  // Standard layout: [text] [colon] [number] [unit] [delete]
+  const isTextOnly = valueType === 'text';
+
   return (
-    <div className="grid grid-cols-[1fr_auto_60px_50px_24px] items-center gap-x-1 py-0.5 group">
-      {/* Col 1: text label */}
+    <div className={cn(
+      "grid items-center gap-x-1 py-0.5 group",
+      isTextOnly
+        ? "grid-cols-[minmax(0,1fr)_24px] justify-items-center"
+        : "grid-cols-[1fr_auto_60px_50px_24px]"
+    )}>
       {hasText ? (
         <div className={cn(
           "rounded px-1 min-w-0",
+          isTextOnly && "w-[280px] max-w-full",
           !isReadOnly && "focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg"
         )}>
           <span
@@ -173,46 +179,53 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
             onFocus={handleTextFocus}
             onBlur={handleTextBlur}
             onKeyDown={handleTextKeyDown}
-            className="text-sm border-0 bg-transparent focus:outline-none cursor-text hover:bg-muted/50 block text-right"
+            className={cn(
+              "text-sm border-0 bg-transparent focus:outline-none cursor-text hover:bg-muted/50 block",
+              isTextOnly ? "text-left" : "text-right"
+            )}
           />
         </div>
       ) : (
         <span />
       )}
 
-      {/* Col 2: colon separator */}
-      {valueType === 'text_numeric' ? (
-        <span className="text-sm text-muted-foreground">:</span>
-      ) : (
-        <span />
-      )}
-
-      {/* Col 3: numeric input */}
-      {hasNumeric ? (
-        <Input
-          type="number"
-          inputMode="decimal"
-          value={editingNumeric ? numericValue : (entry.numeric_value ?? '')}
-          onFocus={handleNumericFocus}
-          onChange={(e) => {
-            if (editingNumeric) setNumericValue(e.target.value);
-          }}
-          onBlur={saveNumeric}
-          onKeyDown={handleNumericKeyDown}
-          className={cn(
-            "h-7 w-full text-sm text-center px-1 border-0 bg-transparent",
-            "focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:bg-focus-bg"
+      {!isTextOnly && (
+        <>
+          {/* Col 2: colon separator */}
+          {valueType === 'text_numeric' ? (
+            <span className="text-sm text-muted-foreground">:</span>
+          ) : (
+            <span />
           )}
-        />
-      ) : (
-        <span />
-      )}
 
-      {/* Col 4: unit label */}
-      {hasNumeric && unitLabel ? (
-        <span className="text-xs text-muted-foreground">{unitLabel}</span>
-      ) : (
-        <span />
+          {/* Col 3: numeric input */}
+          {hasNumeric ? (
+            <Input
+              type="number"
+              inputMode="decimal"
+              value={editingNumeric ? numericValue : (entry.numeric_value ?? '')}
+              onFocus={handleNumericFocus}
+              onChange={(e) => {
+                if (editingNumeric) setNumericValue(e.target.value);
+              }}
+              onBlur={saveNumeric}
+              onKeyDown={handleNumericKeyDown}
+              className={cn(
+                "h-7 w-full text-sm text-center px-1 border-0 bg-transparent",
+                "focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:bg-focus-bg"
+              )}
+            />
+          ) : (
+            <span />
+          )}
+
+          {/* Col 4: unit label */}
+          {hasNumeric && unitLabel ? (
+            <span className="text-xs text-muted-foreground">{unitLabel}</span>
+          ) : (
+            <span />
+          )}
+        </>
       )}
 
       {/* Col 5: delete button */}
