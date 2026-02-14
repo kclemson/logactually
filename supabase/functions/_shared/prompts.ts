@@ -12,7 +12,7 @@
  * Update this when adding/removing nutrient fields.
  */
 export const FOOD_ITEM_FIELDS = `- name: a SHORT, concise name (max 25 characters). Use common abbreviations. Do not include brand names unless essential for identification.
-- portion: the serving size mentioned or a reasonable default
+- portion: a simple "quantity unit" format (e.g., "1 slice", "2 cups", "100g", "1 medium banana"). Always use a single numeric quantity followed by a single unit. Never combine multiple units or add parenthetical context (avoid "15g (3 servings)" or "1 bar (65g)"). Put any clarifying details in source_note instead.
 - calories: estimated calories (whole number)
 - protein: grams of protein (whole number)
 - carbs: grams of carbohydrates (whole number)
