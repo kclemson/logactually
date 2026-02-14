@@ -267,6 +267,7 @@ interface StackedMacroChartProps {
   height?: string;
   referenceLine?: { value: number; color?: string };
   subtitle?: string;
+  grouped?: boolean;
 }
 
 export const StackedMacroChart = ({
@@ -283,6 +284,7 @@ export const StackedMacroChart = ({
   height = "h-24",
   referenceLine,
   subtitle,
+  grouped,
 }: StackedMacroChartProps) => {
   const isTouchDevice = !useHasHover();
   const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
@@ -383,9 +385,9 @@ export const StackedMacroChart = ({
                     key={bar.dataKey}
                     dataKey={bar.dataKey}
                     name={bar.name}
-                    stackId="stack"
+                    stackId={grouped ? undefined : "stack"}
                     fill={bar.color}
-                    radius={bar.isTop ? [2, 2, 0, 0] : undefined}
+                    radius={(grouped || bar.isTop) ? [2, 2, 0, 0] : undefined}
                     onClick={(data, index) => handleBarClick(data, index)}
                     className="cursor-pointer"
                   >
