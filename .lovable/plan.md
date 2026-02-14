@@ -1,38 +1,46 @@
 
 
-## Tighter Row Spacing and Remove Horizontal Lines from Group Headers
+## Grouped Columns for text_numeric Custom Trends
 
-### Changes
+### Problem
+Currently, `text_numeric` log types (like "Measurement") render as stacked bars via `StackedMacroChart`, which uses a hardcoded `stackId="stack"`. The user wants each text label (e.g., "waist", "arm") shown as a separate side-by-side column with slightly different teal shades.
 
-**1. Reduce vertical spacing between rows within a group (`CustomLogEntryRow.tsx`)**
+### Approach
 
-Change `py-2` to `py-0.5` on both the standard grid row (line 157) and the multiline grid row (line 134). This tightens the spacing between entries like "waist" and "arm" under the same type.
+**1. Add a `grouped` prop to `StackedMacroChart` (`src/components/trends/FoodChart.tsx`)**
 
-**2. Remove horizontal lines from group headers (`OtherLog.tsx`)**
+Add an optional `grouped?: boolean` prop. When true, omit the `stackId` from each `<Bar>`, and give all bars `radius={[2, 2, 0, 0]}`. This makes Recharts render them side-by-side instead of stacked.
 
-Replace the current divider header (lines 267-272) that has horizontal lines on both sides with just a centered label -- no lines. The label text stays as `text-xs font-medium text-muted-foreground`.
-
-Current:
+Line ~386 change:
+```tsx
+stackId={grouped ? undefined : "stack"}
 ```
-<div className="flex items-center gap-3 py-1">
-  <div className="flex-1 h-px bg-border" />
-  <span ...>{name}</span>
-  <div className="flex-1 h-px bg-border" />
-</div>
-```
-
-New:
-```
-<div className="text-center py-1">
-  <span className="text-xs font-medium text-muted-foreground">{name}</span>
-</div>
+And radius becomes:
+```tsx
+radius={(grouped || bar.isTop) ? [2, 2, 0, 0] : undefined}
 ```
 
-### Technical detail
+**2. Use `grouped` mode for `text_numeric` trends (`src/pages/Trends.tsx`)**
 
-**File: `src/components/CustomLogEntryRow.tsx`**
-- Line 134: change `py-2` to `py-0.5` (multiline grid)
-- Line 157: change `py-2` to `py-0.5` (standard grid)
+In the `CustomLogTrendChart` component (line ~479), pass `grouped` when rendering multi-series `text_numeric` types. Also use more distinct teal shades optimized for side-by-side display.
 
-**File: `src/pages/OtherLog.tsx`**
-- Lines 267-272: replace the flex divider with a simple centered text element (no horizontal lines)
+Change the multi-series block to:
+```tsx
+<StackedMacroChart
+  title={trend.logTypeName}
+  chartData={chartData}
+  bars={bars}
+  onNavigate={onNavigate}
+  formatter={(value, name) => `${name}: ${value}`}
+  grouped
+/>
+```
+
+**3. Adjust teal palette for better contrast between adjacent bars**
+
+Update `TEAL_PALETTE` to use shades that are more visually distinct when side-by-side:
+```tsx
+const TEAL_PALETTE = ['#14b8a6', '#0d9488', '#2dd4bf', '#0f766e', '#5eead4'];
+```
+
+This alternates between lighter and darker shades so adjacent bars are easier to distinguish.
