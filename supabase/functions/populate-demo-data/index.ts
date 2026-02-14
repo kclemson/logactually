@@ -972,10 +972,32 @@ async function doPopulationWork(
       }
     }
 
-    // Generate custom log entries (body weight tracking)
+    // Generate custom log entries (weight, blood pressure, body measurements)
     let customLogEntriesCreated = 0;
+
+    function generateWanderingSeries(
+      startVal: number, endVal: number, totalDays: number,
+      intervalMin: number, intervalMax: number, stepSize: number, decimals: number,
+    ): Array<{ day: number; value: number }> {
+      const results: Array<{ day: number; value: number }> = [];
+      let current = startVal;
+      let day = 0;
+      while (day < totalDays) {
+        const progress = day / totalDays;
+        const target = startVal + (endVal - startVal) * progress;
+        const drift = (target - current) * 0.3;
+        const noise = (Math.random() - 0.5) * stepSize;
+        current += drift + noise;
+        const factor = Math.pow(10, decimals);
+        const rounded = Math.round(current * factor) / factor;
+        results.push({ day, value: rounded });
+        day += randomInt(intervalMin, intervalMax);
+      }
+      return results;
+    }
+
     if (generateCustomLogs) {
-      console.log('Generating custom log entries (body weight)...');
+      console.log('Generating custom log entries (weight, blood pressure, body measurements)...');
 
       // Clear existing custom log data for demo user
       const { error: clearEntriesErr } = await serviceClient
@@ -990,81 +1012,101 @@ async function doPopulationWork(
         .eq('user_id', demoUserId);
       if (clearTypesErr) console.error('Error clearing custom log types:', clearTypesErr);
 
-      // Create "Weight" log type
-      const { data: logType, error: logTypeErr } = await serviceClient
+      const totalDaysRange = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+
+      // --- 1. Weight (numeric, lbs) ---
+      const { data: weightType, error: weightTypeErr } = await serviceClient
         .from('custom_log_types')
-        .insert({
-          user_id: demoUserId,
-          name: 'Weight',
-          value_type: 'numeric',
-          unit: 'lbs',
-        })
-        .select()
+        .insert({ user_id: demoUserId, name: 'Weight', value_type: 'numeric', unit: 'lbs', sort_order: 0 })
+        .select().single();
+
+      if (weightTypeErr || !weightType) {
+        console.error('Error creating Weight log type:', weightTypeErr);
+      } else {
+        const series = generateWanderingSeries(175, 165, totalDaysRange, 3, 4, 2.0, 1);
+        const entries = series.map(s => {
+          const d = new Date(startDate);
+          d.setDate(d.getDate() + s.day);
+          return { user_id: demoUserId, log_type_id: weightType.id, logged_date: formatDate(d), numeric_value: s.value, unit: 'lbs' };
+        });
+        const { error } = await serviceClient.from('custom_log_entries').insert(entries);
+        if (error) console.error('Error inserting weight entries:', error);
+        else customLogEntriesCreated += entries.length;
+      }
+
+      // --- 2. Blood Pressure (dual_numeric, mmHg) ---
+      const { data: bpType, error: bpTypeErr } = await serviceClient
+        .from('custom_log_types')
+        .insert({ user_id: demoUserId, name: 'Blood Pressure', value_type: 'dual_numeric', unit: 'mmHg', sort_order: 1 })
+        .select().single();
+
+      if (bpTypeErr || !bpType) {
+        console.error('Error creating Blood Pressure log type:', bpTypeErr);
+      } else {
+        const systolicSeries = generateWanderingSeries(135, 122, totalDaysRange, 4, 5, 4.0, 0);
+        const diastolicSeries = generateWanderingSeries(88, 78, totalDaysRange, 4, 5, 3.0, 0);
+        // Use systolic series for day offsets, generate matching diastolic values
+        const entries = systolicSeries.map((s, i) => {
+          const d = new Date(startDate);
+          d.setDate(d.getDate() + s.day);
+          const diastolic = i < diastolicSeries.length ? diastolicSeries[i].value : 78;
+          return { user_id: demoUserId, log_type_id: bpType.id, logged_date: formatDate(d), numeric_value: s.value, numeric_value_2: diastolic, unit: 'mmHg' };
+        });
+        const { error } = await serviceClient.from('custom_log_entries').insert(entries);
+        if (error) console.error('Error inserting blood pressure entries:', error);
+        else customLogEntriesCreated += entries.length;
+      }
+
+      // --- 3. Body Measurements (text_numeric, in) - Waist + Chest ---
+      const { data: bodyType, error: bodyTypeErr } = await serviceClient
+        .from('custom_log_types')
+        .insert({ user_id: demoUserId, name: 'Body Measurements', value_type: 'text_numeric', unit: 'in', sort_order: 2 })
+        .select().single();
+
+      if (bodyTypeErr || !bodyType) {
+        console.error('Error creating Body Measurements log type:', bodyTypeErr);
+      } else {
+        // Waist entries
+        const waistSeries = generateWanderingSeries(36.0, 33.5, totalDaysRange, 7, 10, 0.5, 1);
+        const waistEntries = waistSeries.map(s => {
+          const d = new Date(startDate);
+          d.setDate(d.getDate() + s.day);
+          return { user_id: demoUserId, log_type_id: bodyType.id, logged_date: formatDate(d), text_value: 'Waist', numeric_value: s.value, unit: 'in' };
+        });
+
+        // Chest entries
+        const chestSeries = generateWanderingSeries(42.0, 40.5, totalDaysRange, 7, 10, 0.4, 1);
+        const chestEntries = chestSeries.map(s => {
+          const d = new Date(startDate);
+          d.setDate(d.getDate() + s.day);
+          return { user_id: demoUserId, log_type_id: bodyType.id, logged_date: formatDate(d), text_value: 'Chest', numeric_value: s.value, unit: 'in' };
+        });
+
+        const allBodyEntries = [...waistEntries, ...chestEntries];
+        const { error } = await serviceClient.from('custom_log_entries').insert(allBodyEntries);
+        if (error) console.error('Error inserting body measurement entries:', error);
+        else customLogEntriesCreated += allBodyEntries.length;
+      }
+
+      // Enable showCustomLogs in demo user's profile settings
+      const { data: profile } = await serviceClient
+        .from('profiles')
+        .select('settings')
+        .eq('id', demoUserId)
         .single();
 
-      if (logTypeErr || !logType) {
-        console.error('Error creating Weight log type:', logTypeErr);
+      const currentSettings = (profile?.settings as Record<string, unknown>) || {};
+      const updatedSettings = { ...currentSettings, showCustomLogs: true };
+
+      const { error: settingsErr } = await serviceClient
+        .from('profiles')
+        .update({ settings: updatedSettings })
+        .eq('id', demoUserId);
+
+      if (settingsErr) {
+        console.error('Error updating profile settings:', settingsErr);
       } else {
-        // Generate weight entries every 3-4 days
-        const totalDaysRange = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-        let day = 0;
-        const entries: Array<{
-          user_id: string;
-          log_type_id: string;
-          logged_date: string;
-          numeric_value: number;
-          unit: string;
-        }> = [];
-
-        while (day < totalDaysRange) {
-          const progress = day / totalDaysRange;
-          const weight = 175 - (progress * 10) + (Math.random() - 0.5);
-          const rounded = Math.round(weight * 10) / 10;
-          const entryDate = new Date(startDate);
-          entryDate.setDate(entryDate.getDate() + day);
-
-          entries.push({
-            user_id: demoUserId,
-            log_type_id: logType.id,
-            logged_date: formatDate(entryDate),
-            numeric_value: rounded,
-            unit: 'lbs',
-          });
-
-          day += randomInt(3, 4);
-        }
-
-        // Batch insert
-        const { error: insertErr } = await serviceClient
-          .from('custom_log_entries')
-          .insert(entries);
-
-        if (insertErr) {
-          console.error('Error inserting custom log entries:', insertErr);
-        } else {
-          customLogEntriesCreated = entries.length;
-        }
-
-        // Enable showCustomLogs in demo user's profile settings
-        const { data: profile } = await serviceClient
-          .from('profiles')
-          .select('settings')
-          .eq('id', demoUserId)
-          .single();
-
-        const currentSettings = (profile?.settings as Record<string, unknown>) || {};
-        const updatedSettings = { ...currentSettings, showCustomLogs: true };
-
-        const { error: settingsErr } = await serviceClient
-          .from('profiles')
-          .update({ settings: updatedSettings })
-          .eq('id', demoUserId);
-
-        if (settingsErr) {
-          console.error('Error updating profile settings:', settingsErr);
-        } else {
-          console.log('Enabled showCustomLogs for demo user');
-        }
+        console.log('Enabled showCustomLogs for demo user');
       }
     }
 
