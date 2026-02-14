@@ -155,7 +155,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
               }}
             >
               <SelectTrigger className="h-8 text-sm font-medium w-auto min-w-[140px] bg-teal-500 text-white border-teal-500 hover:bg-teal-600">
-                <SelectValue placeholder="Log..." />
+                <span>Add custom log</span>
               </SelectTrigger>
               <SelectContent>
                 {sortedLogTypes.map((lt) => (
