@@ -281,7 +281,7 @@ interface StackedMacroChartProps {
     isTop?: boolean;
   }>;
   onNavigate: (date: string) => void;
-  formatter?: (value: any, name: string) => string;
+  formatter?: (value: any, name: string, entry?: any) => string | string[];
   totalKey?: string;
   totalLabel?: string;
   totalColor?: string;
