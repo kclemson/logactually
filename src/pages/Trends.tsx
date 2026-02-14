@@ -530,7 +530,7 @@ const Trends = () => {
     const saved = localStorage.getItem("trends-period");
     return saved && [7, 30, 90].includes(Number(saved)) ? Number(saved) : 30;
   });
-  const [visibleExerciseCount, setVisibleExerciseCount] = useState(10);
+  const [visibleExerciseCount, setVisibleExerciseCount] = useState(4);
   const [dismissedDuplicates, setDismissedDuplicates] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem("dismissed-duplicate-exercises");
