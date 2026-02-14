@@ -661,6 +661,7 @@ interface PopulationParams {
   daysToPopulate: number;
   generateFood: boolean;
   generateWeights: boolean;
+  generateCustomLogs: boolean;
   savedMealsCount: number;
   savedRoutinesCount: number;
   clearExisting: boolean;
@@ -679,6 +680,7 @@ async function doPopulationWork(
     daysToPopulate,
     generateFood,
     generateWeights,
+    generateCustomLogs,
     savedMealsCount,
     savedRoutinesCount,
     clearExisting,
@@ -970,12 +972,109 @@ async function doPopulationWork(
       }
     }
 
+    // Generate custom log entries (body weight tracking)
+    let customLogEntriesCreated = 0;
+    if (generateCustomLogs) {
+      console.log('Generating custom log entries (body weight)...');
+
+      // Clear existing custom log data for demo user
+      const { error: clearEntriesErr } = await serviceClient
+        .from('custom_log_entries')
+        .delete()
+        .eq('user_id', demoUserId);
+      if (clearEntriesErr) console.error('Error clearing custom log entries:', clearEntriesErr);
+
+      const { error: clearTypesErr } = await serviceClient
+        .from('custom_log_types')
+        .delete()
+        .eq('user_id', demoUserId);
+      if (clearTypesErr) console.error('Error clearing custom log types:', clearTypesErr);
+
+      // Create "Weight" log type
+      const { data: logType, error: logTypeErr } = await serviceClient
+        .from('custom_log_types')
+        .insert({
+          user_id: demoUserId,
+          name: 'Weight',
+          value_type: 'numeric',
+          unit: 'lbs',
+        })
+        .select()
+        .single();
+
+      if (logTypeErr || !logType) {
+        console.error('Error creating Weight log type:', logTypeErr);
+      } else {
+        // Generate weight entries every 3-4 days
+        const totalDaysRange = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+        let day = 0;
+        const entries: Array<{
+          user_id: string;
+          log_type_id: string;
+          logged_date: string;
+          numeric_value: number;
+          unit: string;
+        }> = [];
+
+        while (day < totalDaysRange) {
+          const progress = day / totalDaysRange;
+          const weight = 175 - (progress * 10) + (Math.random() - 0.5);
+          const rounded = Math.round(weight * 10) / 10;
+          const entryDate = new Date(startDate);
+          entryDate.setDate(entryDate.getDate() + day);
+
+          entries.push({
+            user_id: demoUserId,
+            log_type_id: logType.id,
+            logged_date: formatDate(entryDate),
+            numeric_value: rounded,
+            unit: 'lbs',
+          });
+
+          day += randomInt(3, 4);
+        }
+
+        // Batch insert
+        const { error: insertErr } = await serviceClient
+          .from('custom_log_entries')
+          .insert(entries);
+
+        if (insertErr) {
+          console.error('Error inserting custom log entries:', insertErr);
+        } else {
+          customLogEntriesCreated = entries.length;
+        }
+
+        // Enable showCustomLogs in demo user's profile settings
+        const { data: profile } = await serviceClient
+          .from('profiles')
+          .select('settings')
+          .eq('id', demoUserId)
+          .single();
+
+        const currentSettings = (profile?.settings as Record<string, unknown>) || {};
+        const updatedSettings = { ...currentSettings, showCustomLogs: true };
+
+        const { error: settingsErr } = await serviceClient
+          .from('profiles')
+          .update({ settings: updatedSettings })
+          .eq('id', demoUserId);
+
+        if (settingsErr) {
+          console.error('Error updating profile settings:', settingsErr);
+        } else {
+          console.log('Enabled showCustomLogs for demo user');
+        }
+      }
+    }
+
     const summary = {
       daysPopulated: selectedDays.length,
       foodEntries: foodEntriesCreated,
       weightSets: weightSetsCreated,
       savedMeals: savedMealsCreated,
       savedRoutines: savedRoutinesCreated,
+      customLogEntries: customLogEntriesCreated,
       parsedInputs: parsedCache.size,
       dateRange: {
         start: formatDate(startDate),
@@ -1005,6 +1104,7 @@ interface RequestParams {
   daysToPopulate?: number;
   generateFood?: boolean;
   generateWeights?: boolean;
+  generateCustomLogs?: boolean;
   generateSavedMeals?: number;
   generateSavedRoutines?: number;
   clearExisting?: boolean;
@@ -1101,6 +1201,7 @@ Deno.serve(async (req) => {
     const daysToPopulate = params.daysToPopulate ?? totalDays;
     const generateFood = params.generateFood ?? true;
     const generateWeights = params.generateWeights ?? true;
+    const generateCustomLogs = params.generateCustomLogs ?? false;
     const savedMealsCount = params.generateSavedMeals ?? 5;
     const savedRoutinesCount = params.generateSavedRoutines ?? 4;
     const clearExisting = params.clearExisting ?? false;
@@ -1113,6 +1214,7 @@ Deno.serve(async (req) => {
       daysToPopulate,
       generateFood,
       generateWeights,
+      generateCustomLogs,
       savedMealsCount,
       savedRoutinesCount,
       clearExisting,
@@ -1125,6 +1227,7 @@ Deno.serve(async (req) => {
       daysToPopulate,
       generateFood,
       generateWeights,
+      generateCustomLogs,
       savedMealsCount,
       savedRoutinesCount,
       clearExisting,
