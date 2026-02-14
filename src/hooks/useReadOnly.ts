@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 
 interface UseReadOnlyResult {
   isReadOnly: boolean;
@@ -28,7 +29,7 @@ export function useReadOnly(): UseReadOnlyResult {
       .single()
       .then(({ data, error }) => {
         if (error) {
-          console.error('Failed to fetch read-only status:', error);
+          logger.error('Failed to fetch read-only status:', error);
           setIsReadOnly(false);
         } else {
           setIsReadOnly(data?.is_read_only ?? false);

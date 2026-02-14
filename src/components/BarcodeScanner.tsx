@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 
 interface BarcodeScannerProps {
   open: boolean;
@@ -206,7 +207,7 @@ async function logDebugEvents(
       }
     });
   } catch (err) {
-    console.error('Debug logging failed:', err);
+    logger.error('Debug logging failed:', err);
   }
 }
 

@@ -21,7 +21,11 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    console.error('React Error Boundary caught:', error, errorInfo);
+    // ErrorBoundary is a class component — use import.meta.env.DEV directly
+    // since logger can't be imported into a class component's method easily
+    if (import.meta.env.DEV) {
+      console.error('React Error Boundary caught:', error, errorInfo);
+    }
   }
 
   handleReload = (): void => {

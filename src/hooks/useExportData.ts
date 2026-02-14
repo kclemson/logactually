@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 import { FoodEntry, FoodItem } from '@/types/food';
 import { exportFoodLog, exportWeightLog as exportWeightLogCSV, WeightSetExport } from '@/lib/csv-export';
 
@@ -71,7 +72,7 @@ export function useExportData() {
       const entries = await fetchAllEntries();
       exportFoodLog(entries);
     } catch (error) {
-      console.error('Export failed:', error);
+      logger.error('Export failed:', error);
     } finally {
       setIsExporting(false);
     }
@@ -83,7 +84,7 @@ export function useExportData() {
       const sets = await fetchAllWeightSets();
       exportWeightLogCSV(sets);
     } catch (error) {
-      console.error('Export failed:', error);
+      logger.error('Export failed:', error);
     } finally {
       setIsExporting(false);
     }
