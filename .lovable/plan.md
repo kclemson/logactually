@@ -1,30 +1,78 @@
 
 
-## Grouped Columns for text_numeric Custom Trends
+## Add Text Labels and Numeric Values on Grouped Bar Columns
 
-### Problem
-Currently, `text_numeric` log types (like "Measurement") render as stacked bars via `StackedMacroChart`, which uses a hardcoded `stackId="stack"`. The user wants each text label (e.g., "waist", "arm") shown as a separate side-by-side column with slightly different teal shades.
+For `text_numeric` custom trends (like Measurement), each grouped bar will show two labels above the column:
+1. The **numeric value** (e.g., "17") in the bar's teal color, positioned just above the bar
+2. The **text label** (e.g., "arm") rotated -90 degrees above the numeric value, also in the bar's teal color
 
 ### Approach
 
-**1. Add a `grouped` prop to `StackedMacroChart` (`src/components/trends/FoodChart.tsx`)**
+Since `StackedMacroChart` already supports per-bar `LabelList` rendering, we'll add custom label renderers specifically for grouped mode. Each bar in grouped mode will get its own `LabelList` with a custom SVG renderer that draws both the rotated text name and the numeric value.
 
-Add an optional `grouped?: boolean` prop. When true, omit the `stackId` from each `<Bar>`, and give all bars `radius={[2, 2, 0, 0]}`. This makes Recharts render them side-by-side instead of stacked.
+### Technical Details
 
-Line ~386 change:
+**File: `src/components/trends/FoodChart.tsx`**
+
+1. **Create a new custom label renderer** (`createGroupedBarLabelRenderer`) that renders two `<text>` elements per bar:
+   - A numeric value label (e.g., "17") positioned ~4px above the bar top, horizontal, in the bar's color
+   - A rotated text label (e.g., "arm") positioned above the numeric value, rotated -90 degrees, in the bar's color
+
 ```tsx
-stackId={grouped ? undefined : "stack"}
+const createGroupedBarLabelRenderer = (
+  barName: string,
+  color: string,
+) => (props: any) => {
+  const { x, y, width, value } = props;
+  if (!value || typeof x !== 'number' || typeof width !== 'number') return null;
+  const cx = x + width / 2;
+  return (
+    <g>
+      {/* Numeric value just above bar */}
+      <text x={cx} y={y - 4} fill={color} textAnchor="middle" fontSize={7} fontWeight={500}>
+        {Math.round(value)}
+      </text>
+      {/* Rotated text label above the numeric value */}
+      <text x={cx} y={y - 14} fill={color} textAnchor="start" fontSize={7} fontWeight={500}
+        transform={`rotate(-90, ${cx}, ${y - 14})`}>
+        {barName}
+      </text>
+    </g>
+  );
+};
 ```
-And radius becomes:
+
+2. **In the `StackedMacroChart` Bar rendering** (line ~383-405), when `grouped` is true, attach a `LabelList` to every bar (not just the top one) using the new renderer:
+
 ```tsx
-radius={(grouped || bar.isTop) ? [2, 2, 0, 0] : undefined}
+{bars.map((bar, idx) => (
+  <Bar key={bar.dataKey} ...>
+    {grouped && (
+      <LabelList
+        dataKey={bar.dataKey}
+        content={createGroupedBarLabelRenderer(bar.name, bar.color)}
+      />
+    )}
+    {/* existing isTop label logic unchanged */}
+  </Bar>
+))}
 ```
 
-**2. Use `grouped` mode for `text_numeric` trends (`src/pages/Trends.tsx`)**
+3. **Increase top margin** when `grouped` is true to make room for the rotated text labels. Update the margin calculation (line ~330):
 
-In the `CustomLogTrendChart` component (line ~479), pass `grouped` when rendering multi-series `text_numeric` types. Also use more distinct teal shades optimized for side-by-side display.
+```tsx
+margin={{
+  top: grouped ? 40 : (labelDataKey ? getFoodChartMarginTop(chartData.length) : 4),
+  ...
+}}
+```
 
-Change the multi-series block to:
+4. **Increase chart height** for grouped charts. In `CustomLogTrendChart` in `Trends.tsx`, pass `height="h-32"` to `StackedMacroChart` when rendering multi-series grouped charts, giving more vertical room for the labels.
+
+**File: `src/pages/Trends.tsx`** (line ~480)
+
+Add `height="h-32"` to the `StackedMacroChart` call for multi-series custom trends:
+
 ```tsx
 <StackedMacroChart
   title={trend.logTypeName}
@@ -33,14 +81,7 @@ Change the multi-series block to:
   onNavigate={onNavigate}
   formatter={(value, name) => `${name}: ${value}`}
   grouped
+  height="h-32"
 />
 ```
 
-**3. Adjust teal palette for better contrast between adjacent bars**
-
-Update `TEAL_PALETTE` to use shades that are more visually distinct when side-by-side:
-```tsx
-const TEAL_PALETTE = ['#14b8a6', '#0d9488', '#2dd4bf', '#0f766e', '#5eead4'];
-```
-
-This alternates between lighter and darker shades so adjacent bars are easier to distinguish.
