@@ -219,7 +219,7 @@ export default function Settings() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground">Enable custom logging</p>
-              <p className="text-[10px] text-muted-foreground/70">Weight, measurements, mood, and more</p>
+              <p className="text-[10px] text-muted-foreground/70">Use the Custom tab to log weight, blood pressure, and more</p>
             </div>
             <button
               onClick={() => updateSettings({ showCustomLogs: !settings.showCustomLogs })}
