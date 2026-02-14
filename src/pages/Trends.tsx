@@ -484,6 +484,7 @@ const CustomLogTrendChart = ({ trend, onNavigate }: { trend: CustomLogTrendSerie
       onNavigate={onNavigate}
       formatter={(value, name) => `${name}: ${value}`}
       grouped
+      height="h-32"
     />
   );
 };
