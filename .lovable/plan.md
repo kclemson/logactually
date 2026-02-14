@@ -1,43 +1,45 @@
 
 
-## GitHub Cleanup: Prepare Codebase for Open Source
+## 1. Remove hardcoded USER_NAMES from Admin.tsx
 
-### 1. Fix hardcoded Supabase project ID in ProtectedRoute.tsx
+The `USER_NAMES` map on lines 18-28 contains real names tied to user numbers. Every reference (lines 161, 376, 450) already has a fallback of `User #${user.user_number}`, so the fix is simple:
 
-Replace the hardcoded storage key on line 11:
+- Delete the `USER_NAMES` constant entirely
+- Replace all 3 usages with just `User #${user.user_number}` (the existing fallback)
+
+Files changed: `src/pages/Admin.tsx`
+
+---
+
+## 2. Create a dev logger utility
+
+Create `src/lib/logger.ts` with a thin wrapper around `console` that only logs when `import.meta.env.DEV` is true. This replaces the scattered `if (import.meta.env.DEV) console.log(...)` pattern and ungated `console.error` calls throughout the frontend.
+
 ```ts
-// Before
-const storageKey = 'sb-enricsnosdrhmfvbjaei-auth-token';
+// src/lib/logger.ts
+const isDev = import.meta.env.DEV;
 
-// After
-const storageKey = `sb-${import.meta.env.VITE_SUPABASE_PROJECT_ID}-auth-token`;
+export const logger = {
+  log: (...args: unknown[]) => { if (isDev) console.log(...args); },
+  warn: (...args: unknown[]) => { if (isDev) console.warn(...args); },
+  error: (...args: unknown[]) => { if (isDev) console.error(...args); },
+};
 ```
 
-### 2. Add `.env` to `.gitignore` and create `.env.example`
+Then update all frontend files that use `console.log/warn/error` to import and use `logger` instead:
 
-Add `.env` to the gitignore file so credentials aren't committed. Create a `.env.example` with placeholder values:
+- `src/pages/Admin.tsx` (1 call)
+- `src/pages/Auth.tsx` (2 calls)
+- `src/hooks/useAuth.tsx` (5 calls -- mix of gated and ungated)
+- `src/hooks/useUserSettings.ts` (2 calls)
+- `src/hooks/useFoodEntries.ts` (2 calls)
+- `src/hooks/useExportData.ts` (2 calls)
+- `src/hooks/useReadOnly.ts` (1 call)
+- `src/components/FoodInput.tsx` (2 gated + 2 ungated)
+- `src/components/BarcodeScanner.tsx` (2 calls)
+- `src/components/DeleteAccountDialog.tsx` (2 calls)
+- `src/components/ErrorBoundary.tsx` (1 call)
 
-```
-VITE_SUPABASE_PROJECT_ID="your-project-id"
-VITE_SUPABASE_PUBLISHABLE_KEY="your-anon-key"
-VITE_SUPABASE_URL="https://your-project-id.supabase.co"
-```
+**Edge functions are excluded** -- server-side logging in Deno is expected and useful for debugging deployed functions. The cleanup focuses only on client-side code in `src/`.
 
-### 3. Update README with setup instructions
-
-Expand the README to reference `.env.example` and include instructions for forking/self-hosting, including the Supabase schema setup.
-
-### Items to consciously decide on (no code changes unless you want them)
-
-- **Privacy page social links** (`Privacy.tsx`): Your Bluesky and Mastodon handles are embedded. Keep as-is if this is your public project.
-- **index.html author meta tag**: Currently `kcloadletter.com`. Keep or remove.
-- **OG image URL**: Hardcoded to `logactually.lovable.app`. This is fine since forks would replace it.
-- **Demo credentials** (`demo-mode.ts`): Intentionally public and read-only -- no change needed.
-
-### Files changed
-
-1. `src/components/ProtectedRoute.tsx` -- replace hardcoded project ID
-2. `.gitignore` -- add `.env`
-3. `.env.example` -- new file with placeholder values
-4. `README.md` -- update setup instructions to reference `.env.example`
-
+Files changed: `src/lib/logger.ts` (new), plus ~11 files updated to use it.
