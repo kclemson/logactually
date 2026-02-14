@@ -1,31 +1,28 @@
 
+## Fix Clipped Labels at Chart Edges
 
-## Fix Misaligned Labels on Grouped Bar Charts (Body Measurements)
-
-The rotated text labels inside grouped bars (e.g., "Chest", "Waist") appear shifted horizontally relative to their bars. This happens because the text baseline sits at the bar center (`cx`) rather than the text's visual center.
-
-### Root Cause
-
-In `createGroupedBarLabelRenderer` (FoodChart.tsx, line 30), the rotated label uses default `dominantBaseline` which aligns the text baseline (bottom of letters) to `cx`. After the -90 degree rotation, this baseline offset shifts the text sideways.
+The rightmost (and sometimes leftmost) numeric labels above bars get clipped because the SVG element defaults to `overflow: hidden`. The "161" in the screenshot is cut off at the right boundary.
 
 ### Fix
 
-Add `dominantBaseline="central"` to the rotated text element on line 30. This centers the text glyph on the rotation pivot point (`cx`) so labels sit squarely within their bars.
+Add `overflow="visible"` to the `<BarChart>` component in all three chart renderers in `src/components/trends/FoodChart.tsx`:
+
+1. **`FoodChart`** — the `<BarChart>` around line 159
+2. **`StackedMacroChart`** — the `<BarChart>` around line 231
+3. **`VolumeChart`** — the `<BarChart>` around line 310
+
+Each change is just adding one prop:
+
+```tsx
+// Before
+<BarChart data={chartData} margin={{ ... }}>
+
+// After
+<BarChart data={chartData} margin={{ ... }} overflow="visible">
+```
 
 ### Technical Details
 
 **File:** `src/components/trends/FoodChart.tsx`
 
-**Change (line 30):**
-```tsx
-// Before
-<text x={cx} y={y + barHeight - 6} fill="white" textAnchor="start" fontSize={7} fontWeight={500}
-  transform={`rotate(-90, ${cx}, ${y + barHeight - 6})`}>
-
-// After
-<text x={cx} y={y + barHeight - 6} fill="white" textAnchor="start" dominantBaseline="central" fontSize={7} fontWeight={500}
-  transform={`rotate(-90, ${cx}, ${y + barHeight - 6})`}>
-```
-
-Single line change, no functional impact beyond visual alignment.
-
+Three `<BarChart>` instances get the `overflow="visible"` prop added. This lets the SVG labels render outside the chart's bounding box without affecting layout or spacing. No other files touched.
