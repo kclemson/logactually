@@ -55,10 +55,10 @@ export function LogTemplatePickerDialog({
 
           <button
             onClick={onCreateCustom}
-            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:bg-accent transition-colors"
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm hover:bg-accent transition-colors"
           >
-            <Wrench className="h-4 w-4" />
-            Create your own
+            <Wrench className="h-4 w-4 text-teal-500" />
+            <span className="font-medium">Create your own</span>
           </button>
         </div>
       </DialogContent>
