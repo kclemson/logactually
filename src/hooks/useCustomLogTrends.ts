@@ -88,6 +88,28 @@ export function useCustomLogTrends(days: number) {
               })),
             }],
           });
+        } else if (type.value_type === 'dual_numeric') {
+          result.push({
+            logTypeId: type.id,
+            logTypeName: type.name,
+            valueType: type.value_type,
+            series: [
+              {
+                label: 'High',
+                data: typeEntries.map((e: any) => ({
+                  date: e.logged_date,
+                  value: Number(e.numeric_value),
+                })),
+              },
+              {
+                label: 'Low',
+                data: typeEntries.map((e: any) => ({
+                  date: e.logged_date,
+                  value: Number(e.numeric_value_2),
+                })),
+              },
+            ],
+          });
         } else if (type.value_type === 'text_numeric') {
           // Group by text_value (label)
           const byLabel = new Map<string, CustomLogTrendPoint[]>();

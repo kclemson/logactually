@@ -11,19 +11,20 @@ interface CreateLogTypeDialogProps {
   isLoading?: boolean;
 }
 
-const VALUE_TYPE_OPTIONS: { value: 'numeric' | 'text_numeric' | 'text'; label: string; description: string }[] = [
+const VALUE_TYPE_OPTIONS: { value: 'numeric' | 'text_numeric' | 'dual_numeric' | 'text'; label: string; description: string }[] = [
   { value: 'numeric', label: 'Numeric', description: 'A single number (e.g. body weight)' },
+  { value: 'dual_numeric', label: 'Dual Numeric', description: 'Two numbers with / (e.g. blood pressure)' },
   { value: 'text_numeric', label: 'Text + Numeric', description: 'A label and number (e.g. measurements)' },
   { value: 'text', label: 'Text only', description: 'Free-form text' },
 ];
 
 export function CreateLogTypeDialog({ open, onOpenChange, onSubmit, isLoading }: CreateLogTypeDialogProps) {
   const [name, setName] = useState('');
-  const [valueType, setValueType] = useState<'numeric' | 'text_numeric' | 'text'>('numeric');
+  const [valueType, setValueType] = useState<'numeric' | 'text_numeric' | 'dual_numeric' | 'text'>('numeric');
   const [unit, setUnit] = useState('');
   const [textMultiline, setTextMultiline] = useState(false);
 
-  const showUnit = valueType === 'numeric' || valueType === 'text_numeric';
+  const showUnit = valueType === 'numeric' || valueType === 'text_numeric' || valueType === 'dual_numeric';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,8 +68,8 @@ export function CreateLogTypeDialog({ open, onOpenChange, onSubmit, isLoading }:
                       <p className="text-xs text-muted-foreground">{opt.description}</p>
                     </div>
                   </label>
-                  {/* Inline unit input for numeric/text_numeric when selected */}
-                  {(opt.value === 'numeric' || opt.value === 'text_numeric') && valueType === opt.value && (
+                  {/* Inline unit input for numeric types when selected */}
+                  {(opt.value === 'numeric' || opt.value === 'text_numeric' || opt.value === 'dual_numeric') && valueType === opt.value && (
                     <div className="ml-6 mt-1 mb-1 flex items-center gap-2">
                       <span className="text-xs text-muted-foreground shrink-0">Unit</span>
                       <Input
