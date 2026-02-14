@@ -14,7 +14,7 @@ interface CreateLogTypeDialogProps {
 
 const VALUE_TYPE_OPTIONS: { value: 'numeric' | 'text_numeric' | 'dual_numeric' | 'text'; label: string; description: string }[] = [
   { value: 'numeric', label: 'Numeric', description: 'A single number (e.g. body weight)' },
-  { value: 'dual_numeric', label: 'Dual Numeric', description: 'Two numbers with / (e.g. blood pressure)' },
+  { value: 'dual_numeric', label: 'Dual Numeric', description: 'Two numbers with / between them (e.g. for blood pressure)' },
   { value: 'text_numeric', label: 'Text + Numeric', description: 'A label and number (e.g. measurements)' },
   { value: 'text', label: 'Text only', description: 'Free-form text' },
 ];
@@ -83,7 +83,7 @@ export function CreateLogTypeDialog({ open, onOpenChange, onSubmit, isLoading, e
                       <Input
                         value={unit}
                         onChange={(e) => setUnit(e.target.value)}
-                        placeholder="optional (e.g. lbs, in)"
+                        placeholder={valueType === 'dual_numeric' ? "e.g. mmHg" : "e.g. lbs, inches, etc"}
                         className="h-7 text-xs"
                       />
                     </div>
