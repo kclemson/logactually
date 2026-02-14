@@ -8,6 +8,7 @@ export interface CustomLogEntry {
   log_type_id: string;
   logged_date: string;
   numeric_value: number | null;
+  numeric_value_2: number | null;
   text_value: string | null;
   unit: string | null;
   created_at: string;
@@ -38,6 +39,7 @@ export function useCustomLogEntries(dateStr: string) {
       log_type_id: string;
       logged_date: string;
       numeric_value?: number | null;
+      numeric_value_2?: number | null;
       text_value?: string | null;
       unit?: string | null;
     }) => {
@@ -60,6 +62,7 @@ export function useCustomLogEntries(dateStr: string) {
     mutationFn: async (params: {
       id: string;
       numeric_value?: number | null;
+      numeric_value_2?: number | null;
       text_value?: string | null;
     }) => {
       const { id, ...updates } = params;

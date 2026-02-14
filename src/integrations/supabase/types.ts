@@ -21,6 +21,7 @@ export type Database = {
           log_type_id: string
           logged_date: string
           numeric_value: number | null
+          numeric_value_2: number | null
           text_value: string | null
           unit: string | null
           updated_at: string
@@ -32,6 +33,7 @@ export type Database = {
           log_type_id: string
           logged_date?: string
           numeric_value?: number | null
+          numeric_value_2?: number | null
           text_value?: string | null
           unit?: string | null
           updated_at?: string
@@ -43,6 +45,7 @@ export type Database = {
           log_type_id?: string
           logged_date?: string
           numeric_value?: number | null
+          numeric_value_2?: number | null
           text_value?: string | null
           unit?: string | null
           updated_at?: string

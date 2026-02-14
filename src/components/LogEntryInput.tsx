@@ -7,7 +7,7 @@ import type { ValueType } from '@/hooks/useCustomLogTypes';
 
 interface LogEntryInputProps {
   valueType: ValueType;
-  onSubmit: (params: { numeric_value?: number | null; text_value?: string | null }) => void;
+  onSubmit: (params: { numeric_value?: number | null; numeric_value_2?: number | null; text_value?: string | null }) => void;
   onCancel?: () => void;
   isLoading?: boolean;
   label?: string;
@@ -16,6 +16,7 @@ interface LogEntryInputProps {
 
 export function LogEntryInput({ valueType, onSubmit, onCancel, isLoading, label, unit }: LogEntryInputProps) {
   const [numericValue, setNumericValue] = useState('');
+  const [numericValue2, setNumericValue2] = useState('');
   const [textValue, setTextValue] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -24,6 +25,9 @@ export function LogEntryInput({ valueType, onSubmit, onCancel, isLoading, label,
     if (valueType === 'numeric') {
       if (!numericValue) return;
       onSubmit({ numeric_value: parseFloat(numericValue) });
+    } else if (valueType === 'dual_numeric') {
+      if (!numericValue || !numericValue2) return;
+      onSubmit({ numeric_value: parseFloat(numericValue), numeric_value_2: parseFloat(numericValue2) });
     } else if (valueType === 'text_numeric') {
       if (!textValue || !numericValue) return;
       onSubmit({ text_value: textValue, numeric_value: parseFloat(numericValue) });
@@ -33,6 +37,7 @@ export function LogEntryInput({ valueType, onSubmit, onCancel, isLoading, label,
     }
 
     setNumericValue('');
+    setNumericValue2('');
     setTextValue('');
   };
 
@@ -58,6 +63,31 @@ export function LogEntryInput({ valueType, onSubmit, onCancel, isLoading, label,
           className="w-full min-w-0 min-h-[60px] rounded-md border border-input bg-background px-2 py-1 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y"
           autoFocus
         />
+      )}
+      {valueType === 'dual_numeric' && (
+        <div className="flex items-center gap-1">
+          <Input
+            type="number"
+            step="any"
+            value={numericValue}
+            onChange={(e) => setNumericValue(e.target.value)}
+            placeholder="120"
+            className="h-8 text-sm w-16"
+            autoFocus
+          />
+          <span className="text-sm text-muted-foreground">/</span>
+          <Input
+            type="number"
+            step="any"
+            value={numericValue2}
+            onChange={(e) => setNumericValue2(e.target.value)}
+            placeholder="80"
+            className="h-8 text-sm w-16"
+          />
+          {unit && (
+            <span className="text-xs text-muted-foreground shrink-0">{unit}</span>
+          )}
+        </div>
       )}
       {(valueType === 'numeric' || valueType === 'text_numeric') && (
         <div className="flex items-center gap-1">
