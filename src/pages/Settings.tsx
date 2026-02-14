@@ -28,6 +28,7 @@ import { AppleHealthImport } from "@/components/AppleHealthImport";
 import { useCustomLogTypes } from "@/hooks/useCustomLogTypes";
 import { CustomLogTypeRow } from "@/components/CustomLogTypeRow";
 import { CreateLogTypeDialog } from "@/components/CreateLogTypeDialog";
+import { LogTemplatePickerDialog } from "@/components/LogTemplatePickerDialog";
 export default function Settings() {
   const { user, signOut } = useAuth();
   const queryClient = useQueryClient();
@@ -66,6 +67,7 @@ export default function Settings() {
   const { logTypes, isLoading: logTypesLoading, createType, updateType, deleteType } = useCustomLogTypes();
   const [openLogTypePopoverId, setOpenLogTypePopoverId] = useState<string | null>(null);
   const [createLogTypeDialogOpen, setCreateLogTypeDialogOpen] = useState(false);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
 
   // Export data
   const { isExporting, exportFoodLog, exportWeightLog } = useExportData();
@@ -301,7 +303,7 @@ export default function Settings() {
         <CollapsibleSection title="Custom Log Types" icon={ClipboardList} storageKey="settings-custom-types" iconClassName="text-teal-500 dark:text-teal-400">
           {!isReadOnly && (
             <button
-              onClick={() => setCreateLogTypeDialogOpen(true)}
+              onClick={() => setTemplatePickerOpen(true)}
               className="w-full text-left py-2 hover:bg-accent/50 transition-colors flex items-center gap-2 text-sm text-foreground"
             >
               <Plus className="h-4 w-4" />
@@ -540,6 +542,24 @@ export default function Settings() {
           onOpenChange={setCalorieBurnDialogOpen}
           settings={settings}
           updateSettings={updateSettings}
+        />
+      )}
+
+      {/* Template Picker Dialog */}
+      {templatePickerOpen && (
+        <LogTemplatePickerDialog
+          open={templatePickerOpen}
+          onOpenChange={setTemplatePickerOpen}
+          onSelectTemplate={(template) => {
+            createType.mutate({ name: template.name, value_type: template.value_type as "numeric" | "text" | "text_numeric" | "text_multiline", unit: template.unit ?? undefined }, {
+              onSuccess: () => setTemplatePickerOpen(false),
+            });
+          }}
+          onCreateCustom={() => {
+            setTemplatePickerOpen(false);
+            setCreateLogTypeDialogOpen(true);
+          }}
+          isLoading={createType.isPending}
         />
       )}
 
