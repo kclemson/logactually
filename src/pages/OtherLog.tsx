@@ -264,13 +264,11 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
               return (
                 <div key={group.typeId} className="space-y-0">
                   {/* Centered divider header */}
-                  <div className="flex items-center gap-3 py-1">
-                    <div className="flex-1 h-px bg-border" />
-                    <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
-                      {logType?.name || 'Unknown'}
-                    </span>
-                    <div className="flex-1 h-px bg-border" />
-                  </div>
+                  <div className="text-center py-1">
+                     <span className="text-xs font-medium text-muted-foreground">
+                       {logType?.name || 'Unknown'}
+                     </span>
+                   </div>
                   {/* Entries */}
                   {group.items.map((entry) => (
                     <CustomLogEntryRow
