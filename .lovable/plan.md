@@ -1,53 +1,50 @@
 
 
-# Calorie Burn Chart: Midpoint Bars + Range Context
+# Calorie Burn Chart: Bar Labels + Exercise Breakdown Tooltip
 
-## The Problem
+## Changes
 
-Most users have no biometric data configured, producing wide calorie ranges (e.g., 41-155 cal) that render as confusing floating bars. Even configured users see floating bands that lack a clear trend line.
+### 1. Enrich hook with exercise counts (`src/hooks/useDailyCalorieBurn.ts`)
 
-## Approach
+Track unique exercise keys per date, splitting into cardio vs strength using `isCardioExercise` from `exercise-metadata.ts`.
 
-Switch the chart from floating range bars to **solid midpoint bars** (like the other charts), and show the range as context in tooltips. Add a subtitle nudge for users without biometrics.
+New fields on `DailyCalorieBurn`:
+- `exerciseCount` -- total distinct exercises
+- `cardioCount` -- distinct cardio exercises  
+- `strengthCount` -- distinct non-cardio exercises
 
-### Visual Change
+Implementation: add a `Set<string>` per date to collect unique exercise keys, then count cardio/strength at the end.
 
-- **Bar**: Solid bar from 0 to midpoint `(low + high) / 2`, like any normal bar chart
-- **Tooltip**: Shows "~148 cal" for narrow ranges (low === high or configured user), or "~98 cal (range: 41-155)" for wide ranges
-- **Subtitle**: 
-  - If user has biometrics configured: "Daily range" (current)
-  - If not: "Configure in Settings for precision"
+### 2. Add bar labels (`src/components/trends/CalorieBurnChart.tsx`)
 
-### How to Detect "Has Biometrics"
+Follow the same pattern as `ExerciseChart.renderCardioLabel`:
+- Import `LabelList` from recharts and `getFullWidthLabelInterval` from `chart-label-interval`
+- Add `showLabel` field to `CalorieBurnChartData`
+- Add a `renderLabel` function: renders midpoint value above bar at font size 7 in chart color, only when `showLabel` is true
+- Add `<LabelList dataKey="midpoint" content={renderLabel} />` inside the `<Bar>`
+- Increase top margin from 4 to 12 for label room
 
-A user is considered configured if `bodyWeightLbs` is set (the single highest-impact field, ~30-50% of the range). This is already available via `useUserSettings()` in `Trends.tsx`.
+### 3. Enhanced tooltip (`src/components/trends/CalorieBurnChart.tsx`)
 
-## Technical Details
+Update `BurnTooltip` to always show range + exercise breakdown:
 
-### File: `src/pages/Trends.tsx`
+- Line 1 (in chart color, bold): `~112 cal (range: 104-129)`
+  - If low === high: `~112 cal`
+- Line 2 (muted): `3 exercises (1 cardio, 2 strength)`
+  - Omits categories with 0: `2 exercises (2 strength)` or `1 exercise (1 cardio)`
+- "Go to day" button on touch devices (already present, stays as-is)
 
-1. Pass a `hasBiometrics` boolean (derived from `settings.bodyWeightLbs != null`) into the chart subtitle:
-   ```
-   subtitle={settings.bodyWeightLbs ? "Daily estimate" : "Configure in Settings for precision"}
-   ```
+### 4. Wire up in `src/pages/Trends.tsx`
 
-2. Change `calorieBurnChartData` to compute a `midpoint` field instead of `base`/`band`:
-   ```ts
-   midpoint: Math.round((d.low + d.high) / 2),
-   ```
+- Import `getFullWidthLabelInterval`
+- Compute `showLabel` using right-to-left interval pattern
+- Pass through `exerciseCount`, `cardioCount`, `strengthCount` from hook data
 
-### File: `src/components/trends/CalorieBurnChart.tsx`
+## Files changed
 
-1. Update the interface to use `midpoint` instead of `base`/`band`
-2. Replace the two stacked bars (transparent base + colored band) with a single bar on `midpoint`
-3. Remove the `yMin` / `adjustedData` logic (no longer needed -- bars start from 0)
-4. Update tooltip to show midpoint with optional range: 
-   - Narrow range (high/low ratio less than 1.5): "~148 cal"
-   - Wide range: "~98 cal (range: 41-155)"
+| File | What |
+|------|------|
+| `src/hooks/useDailyCalorieBurn.ts` | Track per-day exercise counts (cardio vs strength) |
+| `src/components/trends/CalorieBurnChart.tsx` | Add LabelList + enrich tooltip with range and exercise breakdown |
+| `src/pages/Trends.tsx` | Pass new fields + compute `showLabel` |
 
-### What gets simpler
-
-- No more transparent stacked bar hack
-- No more `yMin` floor calculation
-- No more `adjustedData` memo
-- Standard bar chart, consistent with every other chart on the page
