@@ -36,7 +36,7 @@ export function FeedbackForm() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [replyingId, setReplyingId] = useState<string | null>(null);
   const [followUp, setFollowUp] = useState("");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
   const submitFeedback = useSubmitFeedback();
   const { data: feedbackHistory } = useUserFeedback();
@@ -81,7 +81,9 @@ export function FeedbackForm() {
   };
 
   const toggleExpand = (id: string) => {
-    setExpandedId(expandedId === id ? null : id);
+    const next = new Set(expandedIds);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setExpandedIds(next);
     if (replyingId && replyingId !== id) {
       setReplyingId(null);
       setFollowUp("");
@@ -130,7 +132,7 @@ export function FeedbackForm() {
         <div className="pt-4 border-t space-y-1">
           <h3 className="text-xs font-medium text-muted-foreground mb-2">{FEEDBACK_CONTENT.historyTitle}</h3>
           {feedbackHistory.map((item) => {
-            const isExpanded = expandedId === item.id;
+            const isExpanded = expandedIds.has(item.id);
             const isResolved = !!item.resolved_at;
             const isReplying = replyingId === item.id;
 
@@ -175,14 +177,14 @@ export function FeedbackForm() {
                 {/* Expanded view */}
                 {isExpanded && (
                   <div className="pb-3 space-y-2">
-                    <p className="text-sm whitespace-pre-wrap">{item.message}</p>
+                    <p className="text-xs whitespace-pre-wrap">{item.message}</p>
 
                     {item.response && (
                       <div className="ml-3 pl-3 border-l-2 border-primary/30">
                         <span className="text-xs text-muted-foreground">
                           Response ({format(parseISO(item.responded_at!), "MMM d")})
                         </span>
-                        <p className="text-sm whitespace-pre-wrap text-muted-foreground">{item.response}</p>
+                        <p className="text-xs whitespace-pre-wrap text-muted-foreground">{item.response}</p>
                       </div>
                     )}
 
