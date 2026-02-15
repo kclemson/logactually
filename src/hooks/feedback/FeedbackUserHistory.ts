@@ -13,7 +13,7 @@ export function useUserFeedback() {
       
       const { data, error } = await supabase
         .from('feedback')
-        .select('id, message, created_at, response, responded_at, read_at, resolved_at')
+        .select('id, feedback_id, message, created_at, response, responded_at, read_at, resolved_at, resolved_reason')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       

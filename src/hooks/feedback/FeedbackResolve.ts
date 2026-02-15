@@ -5,15 +5,19 @@ export function useResolveFeedback() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ feedbackId, resolve }: { feedbackId: string; resolve: boolean }) => {
+    mutationFn: async ({ feedbackId, resolve, reason }: { feedbackId: string; resolve: boolean; reason?: string }) => {
       const { error } = await supabase
         .from('feedback')
-        .update({ resolved_at: resolve ? new Date().toISOString() : null } as any)
+        .update(resolve
+          ? { resolved_at: new Date().toISOString(), resolved_reason: reason ?? null } as any
+          : { resolved_at: null, resolved_reason: null } as any
+        )
         .eq('id', feedbackId);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminFeedback'] });
+      queryClient.invalidateQueries({ queryKey: ['userFeedback'] });
     },
   });
 }

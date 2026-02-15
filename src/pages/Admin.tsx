@@ -371,7 +371,7 @@ export default function Admin() {
               <div key={f.id} className="text-xs border-b border-border/50 py-1 space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground">
-                    {`User #${f.user_number}`} • {format(parseISO(f.created_at), "MMM d")}
+                    {`#${f.feedback_id} · User #${f.user_number}`} • {format(parseISO(f.created_at), "MMM d")}
                   </span>
                   {replyingToId !== f.id && (
                     <>
@@ -386,6 +386,12 @@ export default function Admin() {
                         onClick={() => resolveFeedback.mutate({ feedbackId: f.id, resolve: true })}
                       >
                         Resolve
+                      </button>
+                      <button
+                        className="text-green-600 dark:text-green-400 underline hover:text-green-700 dark:hover:text-green-300"
+                        onClick={() => resolveFeedback.mutate({ feedbackId: f.id, resolve: true, reason: 'fixed' })}
+                      >
+                        Resolve Fixed
                       </button>
                     </>
                   )}
@@ -445,8 +451,11 @@ export default function Admin() {
               <div key={f.id} className="text-xs border-b border-border/50 py-1 space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground">
-                    {`User #${f.user_number}`} • {format(parseISO(f.created_at), "MMM d")}
+                    {`#${f.feedback_id} · User #${f.user_number}`} • {format(parseISO(f.created_at), "MMM d")}
                   </span>
+                  {f.resolved_reason === 'fixed' && (
+                    <span className="text-green-600 dark:text-green-400">Fixed</span>
+                  )}
                   <button
                     className="text-muted-foreground underline hover:text-foreground"
                     onClick={() => resolveFeedback.mutate({ feedbackId: f.id, resolve: false })}
