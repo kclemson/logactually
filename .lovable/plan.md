@@ -1,37 +1,72 @@
 
 
-# Fix portion format in barcode lookup
+# Feedback System Enhancements
 
-## Problem
-The `lookup-upc` function returns portions like "36 pretzels (56 g)" -- the dual-unit format that breaks the portion scaling parser. This happens in two places:
+## 1. Header rename
+Change "Help" to "Help & Feedback" in `src/components/Header.tsx`.
 
-1. **Open Food Facts** returns `serving_size` as-is (e.g., "36 pretzels (56 g)")
-2. **AI fallback** prompt doesn't enforce the simple "quantity unit" format
+## 2. Database migration
+Add two columns to the `feedback` table:
+- `feedback_id` (integer, auto-increment from 1000) -- the user-visible ID
+- `resolved_reason` (text, nullable) -- e.g. "fixed", with more values possible later
 
-## Solution
+Backfill existing 19 rows with sequential feedback_id starting at 1000. Create a sequence starting at 1019 for future rows.
 
-### 1. Sanitize Open Food Facts `serving_size` (server-side)
-Strip parenthetical context from the `serving_size` string before returning it. For example, "36 pretzels (56 g)" becomes "36 pretzels".
+```sql
+ALTER TABLE feedback ADD COLUMN feedback_id integer;
+ALTER TABLE feedback ADD COLUMN resolved_reason text;
 
-### 2. Update AI fallback prompt
-Add the same portion format rule used in `analyze-food`: a simple "quantity unit" format -- never combine multiple units or add parenthetical context.
+WITH numbered AS (
+  SELECT id, ROW_NUMBER() OVER (ORDER BY created_at ASC) + 999 AS num
+  FROM feedback
+)
+UPDATE feedback SET feedback_id = numbered.num FROM numbered WHERE feedback.id = numbered.id;
 
-## Technical Details
+CREATE SEQUENCE feedback_id_seq START WITH 1019;
+ALTER TABLE feedback ALTER COLUMN feedback_id SET DEFAULT nextval('feedback_id_seq');
+ALTER TABLE feedback ALTER COLUMN feedback_id SET NOT NULL;
+```
 
-**File: `supabase/functions/lookup-upc/index.ts`**
+## 3. Type updates
 
-1. After extracting `servingSize` from Open Food Facts (around line 100), strip any parenthetical suffixes:
-   ```typescript
-   const servingSize = (product.serving_size || '1 serving')
-     .replace(/\s*\([^)]*\)\s*/g, '')
-     .trim() || '1 serving';
-   ```
+**`src/hooks/feedback/FeedbackTypes.ts`** -- add `feedback_id: number` and `resolved_reason: string | null` to both interfaces.
 
-2. Update the AI prompt (around line 133) to enforce the portion format:
-   ```
-   "serving": "simple quantity-unit format like '1 bag' or '36 pretzels' -- 
-    never combine multiple units or add parenthetical context"
-   ```
+## 4. Query updates
 
-No client-side changes needed.
+**`src/hooks/feedback/FeedbackAdminList.ts`** -- add `feedback_id, resolved_reason` to select and mapping.
+
+**`src/hooks/feedback/FeedbackUserHistory.ts`** -- add `feedback_id, resolved_reason` to select.
+
+## 5. Resolve mutation update
+
+**`src/hooks/feedback/FeedbackResolve.ts`** -- extend to accept optional `reason: string` param. When resolving, set `resolved_reason` to the provided value (or null). When unresolving, clear both `resolved_at` and `resolved_reason`.
+
+## 6. Admin feedback UI (`src/pages/Admin.tsx`)
+
+- Show `#NNNN` (feedback_id) next to user number in each feedback item
+- Add green "Resolve Fixed" link next to existing "Resolve" link, which calls resolve with `reason: 'fixed'`
+- In resolved section, show green "Fixed" badge for items with `resolved_reason === 'fixed'`
+
+## 7. User feedback UI (`src/components/FeedbackForm.tsx`)
+
+Redesign each feedback item as a collapsible row:
+
+- **Collapsed row**: `#1001  Feb 15, 2026  [Resolved / Resolved (Fixed)]  [Re-open]` on the first line, then a truncated preview of the message (first ~80 chars + "...") on the second line. Clicking the row expands it.
+- **Expanded view**: Full message text, admin response (if any), Reply button, delete button.
+- **Reply on open items**: Add a "Reply" link (same as current re-open but without changing resolved_at) that opens a textarea to append a follow-up message.
+- Resolved items with `resolved_reason === 'fixed'` show status in green ("Resolved (Fixed)").
+- Show `#feedback_id` next to the date.
+
+## Technical details
+
+| File | Change |
+|------|--------|
+| Database | Add `feedback_id` (int, seq from 1000) and `resolved_reason` (text) columns |
+| `src/components/Header.tsx` | "Help" -> "Help & Feedback" |
+| `src/hooks/feedback/FeedbackTypes.ts` | Add `feedback_id` and `resolved_reason` to interfaces |
+| `src/hooks/feedback/FeedbackAdminList.ts` | Select and map new fields |
+| `src/hooks/feedback/FeedbackUserHistory.ts` | Select new fields |
+| `src/hooks/feedback/FeedbackResolve.ts` | Accept optional `reason` param, set/clear `resolved_reason` |
+| `src/pages/Admin.tsx` | Show `#ID`, add "Resolve Fixed" green link, show "Fixed" badge |
+| `src/components/FeedbackForm.tsx` | Collapsible rows with truncated preview, reply on open items, differentiated resolved status |
 
