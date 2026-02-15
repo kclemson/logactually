@@ -411,7 +411,7 @@ export default function Admin() {
                             {f.response ? "Edit Reply" : "Reply"}
                           </button>
                           <button
-                            className="text-muted-foreground underline"
+                            className="text-green-600 dark:text-green-400 underline"
                             onClick={(e) => { e.stopPropagation(); handleResolve(f.id, true); }}
                           >
                             Resolve
