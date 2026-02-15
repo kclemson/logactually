@@ -1,39 +1,33 @@
 
-# Admin Feedback: Responsive Action Layout
+
+# Fix: Remove Unnecessary Button Font-Size Override in Mobile CSS
 
 ## Problem
-On mobile, the action links (Reply, Resolve, Resolve Fixed) render at the same font size as regular text and overflow across two lines awkwardly. They should be smaller and placed on a dedicated second row on mobile for a cleaner layout.
+The global mobile CSS rule explicitly sets `font-size: 0.875rem` on `button` and `[role="button"]` elements. This prevents Tailwind size classes (like `text-xs`) from applying to buttons on mobile. The rule exists alongside the iOS zoom-prevention rules for inputs, but buttons don't trigger iOS auto-zoom -- only `input`, `textarea`, and `select` do. So the button rule is unnecessary and actively causes problems.
 
 ## Changes
 
+### File: `src/index.css` (lines 156-161)
+
+Remove the `button` / `[role="button"]` block from the mobile media query:
+
+```css
+/* REMOVE this block: */
+button,
+[role="button"] {
+  font-size: 0.875rem; /* 14px */
+}
+```
+
+The `input`, `textarea`, `select` rule above it stays -- that's the one actually preventing iOS zoom.
+
 ### File: `src/pages/Admin.tsx`
 
-**Open feedback section (lines 395-431):**
-- Split the metadata row into two parts:
-  1. **Info row**: feedback ID, date, user number, status badge, chevron -- stays on one line
-  2. **Actions row**: Reply, Resolve, Resolve Fixed -- rendered as a separate `div` below, only when `replyingToId !== f.id`
-- The actions row uses `text-[10px]` to keep them compact, matching the smaller sizing used elsewhere in the app
+Keep the current two-row layout with action links on a second row, but change `text-[10px]` to `text-xs` (12px) on both the open and resolved feedback action rows. With the CSS override removed, `text-xs` will now apply correctly on all viewports.
 
-**Resolved feedback section (lines 502-523):**
-- Same pattern: move the "Unresolve" action link out of the inline metadata and into its own row below with `text-[10px]`
+## Why this is the right fix
+- Buttons don't trigger iOS auto-zoom (only focusable text inputs do)
+- Removing the rule lets Tailwind classes work naturally on buttons everywhere
+- No `!important` hacks, no element swaps, no `role="button"` workarounds
+- Other buttons throughout the app inherit from `body` font-size anyway, so behavior is unchanged for them
 
-## Technical Details
-
-For both sections, the current structure is a single `div` with `flex-wrap` containing both metadata spans and action buttons. The change splits this into:
-
-```
-<div> <!-- outer wrapper -->
-  <div className="flex items-center gap-2 text-xs">
-    <!-- #id, date, user, status badge, chevron -->
-  </div>
-  {replyingToId !== f.id && (
-    <div className="flex items-center gap-2 text-[10px] mt-0.5">
-      <!-- Reply, Resolve, Resolve Fixed -->
-    </div>
-  )}
-</div>
-```
-
-The action buttons keep their existing color classes but get the smaller `text-[10px]` size. This applies universally (not just mobile) since admin is a compact view and the smaller action links work well at all sizes.
-
-No new files or dependencies.
