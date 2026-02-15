@@ -35,7 +35,7 @@ export function Header() {
               <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-[hsl(217_91%_60%)] ring-2 ring-background" />
             )}
           </div>
-          <span className="text-sm">Help</span>
+          <span className="text-sm">Help & Feedback</span>
         </Link>
       </div>
     </header>
