@@ -173,8 +173,7 @@ const Trends = () => {
       date: format(new Date(`${d.date}T12:00:00`), "MMM d"),
       low: d.low,
       high: d.high,
-      base: d.low,
-      band: d.high - d.low,
+      midpoint: Math.round((d.low + d.high) / 2),
     }));
   }, [dailyCalorieBurn]);
 
@@ -400,7 +399,7 @@ const Trends = () => {
                 {calorieBurnChartData.length > 0 && (
                   <CalorieBurnChart
                     title="Estimated Calorie Burn"
-                    subtitle="Daily range"
+                    subtitle={settings.bodyWeightLbs ? "Daily estimate" : "Set bio in Settings for precision"}
                     chartData={calorieBurnChartData}
                     color={CHART_COLORS.calorieBurn}
                     onNavigate={(date) => navigate(`/weights?date=${date}`)}
