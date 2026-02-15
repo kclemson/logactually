@@ -1,41 +1,24 @@
 
 
-# Reorder Settings sections
+# Hide inactive users in Admin users table
 
-Move Account to the bottom (above About) and move Custom Log Types below Saved Routines.
-
-## New order
-1. Preferences
-2. Saved Meals
-3. Saved Routines (conditional)
-4. Custom Log Types (conditional)
-5. Import/Export
-6. Account
-7. About
+Filter out users whose last active date is more than 2 weeks ago from the admin users table.
 
 ## Technical change
 
-**File:** `src/pages/Settings.tsx` -- reorder the JSX children in the return block. No logic changes needed, just rearrange the lines.
+**File:** `src/pages/Admin.tsx`
 
-Current (lines 22-31):
-```tsx
-<AccountSection ... />
-<PreferencesSection ... />
-{settings.showCustomLogs && <CustomLogTypesSection ... />}
-<SavedMealsSection ... />
-{settings.showWeights && <SavedRoutinesSection ... />}
-<ImportExportSection ... />
-<AboutSection />
+Add a filter on the `userStats` array before rendering, using `date-fns` (already imported) to check if `last_active` is within the last 14 days. Users with no `last_active` value will also be hidden.
+
+```typescript
+const activeUserStats = userStats?.filter(user => {
+  if (!user.last_active) return false;
+  const lastActive = parseISO(user.last_active);
+  const twoWeeksAgo = new Date();
+  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+  return lastActive >= twoWeeksAgo;
+});
 ```
 
-New order:
-```tsx
-<PreferencesSection ... />
-<SavedMealsSection ... />
-{settings.showWeights && <SavedRoutinesSection ... />}
-{settings.showCustomLogs && <CustomLogTypesSection ... />}
-<ImportExportSection ... />
-<AccountSection ... />
-<AboutSection />
-```
+Then replace references to `userStats` in the table rendering section with `activeUserStats`.
 
