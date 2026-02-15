@@ -105,7 +105,15 @@ export function CalorieTargetDialog({
 
             {/* Enable toggle */}
             <div className="flex items-center justify-between pt-2">
-              <p className="text-sm font-medium">Daily calorie target</p>
+              <div>
+                <p className="text-sm font-medium">Daily calorie target</p>
+                <p className="text-[10px] text-muted-foreground/70">
+                  Show <span className="text-green-500 dark:text-green-400">●</span>{' '}
+                  <span className="text-amber-500 dark:text-amber-400">●</span>{' '}
+                  <span className="text-rose-500 dark:text-rose-400">●</span>{' '}
+                  color indicators on calendar view
+                </p>
+              </div>
               <button
                 onClick={handleToggle}
                 className={cn(
