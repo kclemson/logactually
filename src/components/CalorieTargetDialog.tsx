@@ -51,9 +51,10 @@ export function CalorieTargetDialog({
   const activityHint = useMemo(() => {
     if (dailyBurnData.length === 0) return null;
     const totalMidpoints = dailyBurnData.reduce((sum, d) => sum + (d.low + d.high) / 2, 0);
-    const avgDailyBurn = Math.round(totalMidpoints / 30);
+    const activeDays = dailyBurnData.length;
+    const avgDailyBurn = Math.round(totalMidpoints / activeDays);
     const suggested = suggestActivityLevel(avgDailyBurn);
-    return { avgDailyBurn, suggested, label: ACTIVITY_LABELS[suggested].label };
+    return { avgDailyBurn, suggested, label: ACTIVITY_LABELS[suggested].label, activeDays };
   }, [dailyBurnData]);
 
   const tdeeSummary = useMemo(() => {
@@ -214,7 +215,7 @@ export function CalorieTargetDialog({
                           {/* Activity hint */}
                           {activityHint && (
                             <p className="text-[10px] text-muted-foreground/70 italic">
-                              Based on your last 30 days: avg ~{activityHint.avgDailyBurn} cal/day burned — closest to "{activityHint.label}"
+                              Based on your last 30 days: avg ~{activityHint.avgDailyBurn} cal/day burned ({activityHint.activeDays} active days) — closest to "{activityHint.label}"
                             </p>
                           )}
 
