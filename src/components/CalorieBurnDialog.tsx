@@ -225,7 +225,7 @@ export function CalorieBurnDialog({
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm">Default intensity</p>
+                    <p className="text-xs text-muted-foreground">Default intensity</p>
                     <p className="text-[10px] text-muted-foreground/70">Assumed when effort isn't specified. Blank = full range.</p>
                   </div>
                   <div className={rightColClass}>
