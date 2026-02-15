@@ -52,9 +52,7 @@ export function FeedbackForm() {
     }
   }, [isReadOnly]);
 
-  if (isReadOnly) {
-    return null;
-  }
+  // Read-only users see the full UI but with disabled controls
 
   const handleSubmit = async () => {
     if (!message.trim()) return;
@@ -112,9 +110,10 @@ export function FeedbackForm() {
           onChange={(e) => setMessage(e.target.value)}
           className="min-h-[80px] text-sm resize-none"
           maxLength={1000}
+          disabled={isReadOnly}
         />
         <div className="flex items-center gap-3">
-          <Button size="sm" onClick={handleSubmit} disabled={!message.trim() || submitFeedback.isPending}>
+          <Button size="sm" onClick={handleSubmit} disabled={isReadOnly || !message.trim() || submitFeedback.isPending}>
             {submitFeedback.isPending ? FEEDBACK_CONTENT.submittingButton : FEEDBACK_CONTENT.submitButton}
           </Button>
           {showSuccess && (
@@ -191,15 +190,19 @@ export function FeedbackForm() {
                         <>
                           {isResolved ? (
                             <button
+                              disabled={isReadOnly}
                               onClick={(e) => { e.stopPropagation(); setReplyingId(item.id); }}
-                              className="text-orange-500 hover:text-orange-600 hover:underline"
+                              className={cn("text-orange-500 hover:text-orange-600 hover:underline",
+                                isReadOnly && "opacity-50 pointer-events-none")}
                             >
                               Re-open
                             </button>
                           ) : (
                             <button
+                              disabled={isReadOnly}
                               onClick={(e) => { e.stopPropagation(); setReplyingId(item.id); }}
-                              className="text-[hsl(217_91%_60%)] hover:underline"
+                              className={cn("text-[hsl(217_91%_60%)] hover:underline",
+                                isReadOnly && "opacity-50 pointer-events-none")}
                             >
                               Reply
                             </button>
@@ -210,7 +213,11 @@ export function FeedbackForm() {
                       {/* Delete */}
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <button className="text-destructive flex items-center gap-1">
+                          <button
+                            disabled={isReadOnly}
+                            className={cn("text-destructive flex items-center gap-1",
+                              isReadOnly && "opacity-50 pointer-events-none")}
+                          >
                             <Trash2 className="h-3 w-3" /> Delete
                           </button>
                         </AlertDialogTrigger>
