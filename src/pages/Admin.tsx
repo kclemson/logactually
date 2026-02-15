@@ -79,6 +79,7 @@ export default function Admin() {
   const handleStartReply = (feedbackId: string, existingResponse: string | null) => {
     setReplyingToId(feedbackId);
     setReplyText(existingResponse ?? "");
+    setExpandedFeedbackIds(prev => new Set(prev).add(feedbackId));
   };
 
   const handleCancelReply = () => {
