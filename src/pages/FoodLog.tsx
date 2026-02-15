@@ -25,6 +25,7 @@ import { detectHistoryReference, MIN_SIMILARITY_REQUIRED } from '@/lib/history-p
 import { detectRepeatedFoodEntry, isDismissed, dismissSuggestion, shouldShowOptOutLink, FoodSaveSuggestion } from '@/lib/repeated-entry-detection';
 import { FoodItem, SavedMeal, calculateTotals } from '@/types/food';
 import { getStoredDate, setStoredDate } from '@/lib/selected-date';
+import { getEffectiveDailyTarget } from '@/lib/calorie-target';
 
 // Wrapper component: extracts date from URL, forces remount via key
 const FoodLog = () => {
@@ -703,7 +704,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
             onSaveAsMeal={handleSaveAsMeal}
             entryMealNames={entryMealNames}
             entrySourceMealIds={entrySourceMealIds}
-            dailyCalorieTarget={settings.dailyCalorieTarget ?? undefined}
+            dailyCalorieTarget={getEffectiveDailyTarget(settings) ?? undefined}
             showCalorieTargetDot={!isTodaySelected}
             onDeleteEntry={(entryId) => {
               deleteEntry.mutate(entryId);

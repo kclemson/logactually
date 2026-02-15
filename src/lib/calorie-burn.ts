@@ -236,6 +236,33 @@ export function inchesToCm(inches: number): number {
 const REFERENCE_HEIGHT_CM = 170;
 const REFERENCE_AGE = 30;
 
+// Mifflin-St Jeor helpers (shared between scaling factor and absolute BMR)
+const maleBMR = (w: number, h: number, a: number) => 10 * w + 6.25 * h - 5 * a - 5;
+const femaleBMR = (w: number, h: number, a: number) => 10 * w + 6.25 * h - 5 * a - 161;
+
+/**
+ * Compute the absolute BMR (kcal/day) using the Mifflin-St Jeor equation.
+ * Returns null if body weight is missing (minimum required field).
+ * When height or age are missing, population-average defaults are used.
+ */
+export function computeAbsoluteBMR(settings: {
+  bodyWeightLbs: number | null;
+  heightInches: number | null;
+  age: number | null;
+  bodyComposition: 'female' | 'male' | null;
+}): number | null {
+  if (settings.bodyWeightLbs == null || settings.bodyWeightLbs <= 0) return null;
+
+  const weightKg = settings.bodyWeightLbs * 0.453592;
+  const heightCm = settings.heightInches != null ? settings.heightInches * 2.54 : REFERENCE_HEIGHT_CM;
+  const age = settings.age ?? REFERENCE_AGE;
+
+  if (settings.bodyComposition === 'male') return maleBMR(weightKg, heightCm, age);
+  if (settings.bodyComposition === 'female') return femaleBMR(weightKg, heightCm, age);
+  // Population average: midpoint of male and female
+  return (maleBMR(weightKg, heightCm, age) + femaleBMR(weightKg, heightCm, age)) / 2;
+}
+
 /**
  * Compute a BMR scaling factor using the Mifflin-St Jeor equation.
  * Returns `userBMR / referenceBMR` so calories scale up/down based on
@@ -259,23 +286,19 @@ export function getBmrScalingFactor(settings: CalorieBurnSettings): number {
   const heightCm = heightInches != null ? heightInches * 2.54 : REFERENCE_HEIGHT_CM;
   const userAge = age ?? REFERENCE_AGE;
 
-  // Mifflin-St Jeor: male offset = -5, female offset = -161
-  const maleBmr = (w: number, h: number, a: number) => 10 * w + 6.25 * h - 5 * a - 5;
-  const femaleBmr = (w: number, h: number, a: number) => 10 * w + 6.25 * h - 5 * a - 161;
-
   let userBmr: number;
   let refBmr: number;
 
   if (settings.bodyComposition === 'male') {
-    userBmr = maleBmr(weightKg, heightCm, userAge);
-    refBmr = maleBmr(weightKg, REFERENCE_HEIGHT_CM, REFERENCE_AGE);
+    userBmr = maleBMR(weightKg, heightCm, userAge);
+    refBmr = maleBMR(weightKg, REFERENCE_HEIGHT_CM, REFERENCE_AGE);
   } else if (settings.bodyComposition === 'female') {
-    userBmr = femaleBmr(weightKg, heightCm, userAge);
-    refBmr = femaleBmr(weightKg, REFERENCE_HEIGHT_CM, REFERENCE_AGE);
+    userBmr = femaleBMR(weightKg, heightCm, userAge);
+    refBmr = femaleBMR(weightKg, REFERENCE_HEIGHT_CM, REFERENCE_AGE);
   } else {
     // Population average: midpoint of male and female
-    userBmr = (maleBmr(weightKg, heightCm, userAge) + femaleBmr(weightKg, heightCm, userAge)) / 2;
-    refBmr = (maleBmr(weightKg, REFERENCE_HEIGHT_CM, REFERENCE_AGE) + femaleBmr(weightKg, REFERENCE_HEIGHT_CM, REFERENCE_AGE)) / 2;
+    userBmr = (maleBMR(weightKg, heightCm, userAge) + femaleBMR(weightKg, heightCm, userAge)) / 2;
+    refBmr = (maleBMR(weightKg, REFERENCE_HEIGHT_CM, REFERENCE_AGE) + femaleBMR(weightKg, REFERENCE_HEIGHT_CM, REFERENCE_AGE)) / 2;
   }
 
   // Guard against division by zero or negative BMR

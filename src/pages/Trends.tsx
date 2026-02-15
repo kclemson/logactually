@@ -11,6 +11,7 @@ import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { useWeightTrends, ExerciseTrend } from "@/hooks/useWeightTrends";
 
 import { useUserSettings } from "@/hooks/useUserSettings";
+import { getEffectiveDailyTarget } from "@/lib/calorie-target";
 import { useMergeExercises } from "@/hooks/useMergeExercises";
 import { DuplicateExercisePrompt, type DuplicateGroup } from "@/components/DuplicateExercisePrompt";
 
@@ -320,7 +321,7 @@ const Trends = () => {
                 dataKey="calories"
                 color={CHART_COLORS.calories}
                 onNavigate={(date) => navigate(`/?date=${date}`)}
-                referenceLine={settings.dailyCalorieTarget ? { value: settings.dailyCalorieTarget, color: "hsl(var(--muted-foreground))" } : undefined}
+                referenceLine={(() => { const t = getEffectiveDailyTarget(settings); return t ? { value: t, color: "hsl(var(--muted-foreground))" } : undefined; })()}
               />
 
               <StackedMacroChart
@@ -354,7 +355,7 @@ const Trends = () => {
               labelDataKey="calories"
               labelColor={CHART_COLORS.calories}
               height="h-28"
-              referenceLine={settings.dailyCalorieTarget ? { value: settings.dailyCalorieTarget, color: "hsl(var(--muted-foreground))" } : undefined}
+              referenceLine={(() => { const t = getEffectiveDailyTarget(settings); return t ? { value: t, color: "hsl(var(--muted-foreground))" } : undefined; })()}
             />
 
             {/* Row 2: Protein + Carbs + Fat */}

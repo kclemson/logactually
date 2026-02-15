@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Settings from './Settings';
 
 // ── Mocks ──────────────────────────────────────────────────
@@ -13,6 +14,9 @@ let mockSettings = {
   suggestMealSaves: true,
   suggestRoutineSaves: true,
   dailyCalorieTarget: null,
+  calorieTargetMode: 'static' as const,
+  activityLevel: null,
+  dailyDeficit: null,
   calorieBurnEnabled: false,
   bodyWeightLbs: null,
   heightInches: null,
@@ -96,13 +100,22 @@ vi.mock('@tanstack/react-query', async () => {
   return { ...actual, useQueryClient: () => ({ clear: vi.fn() }) };
 });
 
+vi.mock('@/hooks/useDailyCalorieBurn', () => ({
+  useDailyCalorieBurn: () => ({ data: [], isLoading: false }),
+}));
+
 // ── Tests ──────────────────────────────────────────────────
 
 function renderSettings() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   return render(
-    <MemoryRouter>
-      <Settings />
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <Settings />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
@@ -117,6 +130,9 @@ describe('Settings smoke test', () => {
       suggestMealSaves: true,
       suggestRoutineSaves: true,
       dailyCalorieTarget: null,
+      calorieTargetMode: 'static',
+      activityLevel: null,
+      dailyDeficit: null,
       calorieBurnEnabled: false,
       bodyWeightLbs: null,
       heightInches: null,
