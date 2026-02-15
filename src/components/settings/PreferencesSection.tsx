@@ -6,6 +6,7 @@ import type { WeightUnit } from '@/lib/weight-units';
 import { CollapsibleSection } from '@/components/CollapsibleSection';
 import { CalorieBurnDialog } from '@/components/CalorieBurnDialog';
 import { CalorieTargetDialog } from '@/components/CalorieTargetDialog';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import type { UserSettings } from '@/hooks/useUserSettings';
 
 
@@ -28,7 +29,6 @@ const weightUnitOptions: { value: WeightUnit; label: string }[] = [
 
 export function PreferencesSection({ settings, updateSettings }: PreferencesSectionProps) {
   const { theme, setTheme } = useTheme();
-  const [mounted] = useState(true);
   const [calorieBurnDialogOpen, setCalorieBurnDialogOpen] = useState(false);
   const [calorieTargetDialogOpen, setCalorieTargetDialogOpen] = useState(false);
 
@@ -50,21 +50,21 @@ export function PreferencesSection({ settings, updateSettings }: PreferencesSect
           {/* Theme */}
           <div className="flex items-center justify-between">
             <p className="text-xs text-muted-foreground">Theme</p>
-            <div className="flex gap-2">
-              {themeOptions.map(({ value, label, icon: Icon }) => (
-                <button
-                  key={value}
-                  onClick={() => handleThemeChange(value)}
-                  className={cn(
-                    "flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 transition-colors",
-                    mounted && theme === value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50",
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  <span className="text-sm">{label}</span>
-                </button>
-              ))}
-            </div>
+            <Select value={theme} onValueChange={(v) => handleThemeChange(v as 'light' | 'dark' | 'system')}>
+              <SelectTrigger className="w-[130px] h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {themeOptions.map(({ value, label, icon: Icon }) => (
+                  <SelectItem key={value} value={value}>
+                    <span className="flex items-center gap-2">
+                      <Icon className="h-4 w-4" />
+                      {label}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Daily Calorie Target */}
