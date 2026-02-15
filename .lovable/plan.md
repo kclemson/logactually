@@ -1,23 +1,31 @@
 
-
-# Replace "Configure" with "Edit" on Active Feature Buttons
+# Add Color Indicator Hint to CalorieTargetDialog
 
 ## Change
 
-In `src/components/settings/PreferencesSection.tsx`, update the two button labels that currently show "Configure" when a feature is enabled to instead show "Edit".
+In `src/components/CalorieTargetDialog.tsx`, add the same RYG dot hint text that appears on the Settings page underneath the "Daily calorie target" label inside the dialog. This hint should always be visible regardless of the toggle state, so users understand what the feature does before enabling it.
 
 ## Technical Details
 
-### File: `src/components/settings/PreferencesSection.tsx`
+### File: `src/components/CalorieTargetDialog.tsx`
 
-Two changes:
+Update the toggle row (around line 107-108) to wrap the label in a `div` and add the hint text below it:
 
-1. **Daily Calorie Target button** (~line 87): `'Configure'` -> `'Edit'`
-2. **Calorie Burn Estimates button** (~line 140): `'Configure'` -> `'Edit'`
-
-Both use the same ternary pattern:
+```tsx
+{/* Enable toggle */}
+<div className="flex items-center justify-between pt-2">
+  <div>
+    <p className="text-sm font-medium">Daily calorie target</p>
+    <p className="text-[10px] text-muted-foreground/70">
+      Show <span className="text-green-500 dark:text-green-400">●</span>{' '}
+      <span className="text-amber-500 dark:text-amber-400">●</span>{' '}
+      <span className="text-rose-500 dark:text-rose-400">●</span>{' '}
+      color indicators on calendar view
+    </p>
+  </div>
+  <button ...>
 ```
-{settings.someFlag ? 'Edit' : 'Set up'}
-```
 
-Two lines changed, one file.
+This mirrors the exact same hint markup already used in `PreferencesSection.tsx` (around line 77), keeping the UI consistent between the settings row and the dialog.
+
+One file, one spot changed.
