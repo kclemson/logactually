@@ -1,35 +1,40 @@
 
 
-# Fix Admin Feedback UX: Scroll Jump and Action Link Styles
+# Three Feedback UX Tweaks
 
-## Changes
+## 1. Color the plain "Resolved" badge
 
-**File: `src/pages/Admin.tsx`**
+Currently, items resolved without reason show `✓ Resolved` in `text-muted-foreground` (gray), making it look unaddressed. Change it to blue (`text-[hsl(217_91%_60%)]`) to match the app's action/link color. The green "Resolved (Fixed)" stays green.
 
-### 1. Prevent jarring scroll when resolving
+**Files:** `src/components/FeedbackForm.tsx` (user-facing) and `src/pages/Admin.tsx` (admin resolved section)
 
-When "Resolve" or "Resolve Fixed" is clicked, the item disappears from the open list and appears in the resolved list, causing a layout shift that can jump the viewport. Fix by saving the scroll position before the mutation and restoring it after the query invalidation settles.
+## 2. Remove blank line before `---` in follow-up messages
 
-Create a wrapper function that captures `window.scrollY`, calls the mutation, and uses `onSettled` (or a rAF after mutate) to restore scroll position. Alternatively, use a simpler approach: wrap the resolve calls to save and restore scroll position via `mutateAsync` + `requestAnimationFrame`.
+When `handleReply` builds the updated message, it currently uses `\n\n---\n` which produces a blank line before the separator. Change to `\n---\n` so the separator sits directly below the previous text.
 
-```typescript
-const handleResolve = async (feedbackId: string, resolve: boolean, reason?: string) => {
-  const scrollY = window.scrollY;
-  await resolveFeedback.mutateAsync({ feedbackId, resolve, reason });
-  requestAnimationFrame(() => window.scrollTo(0, scrollY));
-};
+**File:** `src/components/FeedbackForm.tsx` line 71
+
+| Current | New |
+|---------|-----|
+| `` `${item.message}\n\n---\nFollow-up:\n${followUp}` `` | `` `${item.message}\n---\nFollow-up:\n${followUp}` `` |
+
+## 3. Add timestamp to "Follow-up" label
+
+Replace the static `Follow-up:` prefix with `Follow-up on MMM DD HH:MM:` using the client's local time at the moment of submission. The browser's `Date` object and `date-fns` `format()` already use local timezone by default, so no extra configuration is needed.
+
+**File:** `src/components/FeedbackForm.tsx` line 71
+
+The final template becomes:
+```
+`${item.message}\n---\nFollow-up on ${format(new Date(), "MMM d HH:mm")}:\n${followUp}`
 ```
 
-Update all resolve/unresolve button `onClick` handlers to call `handleResolve` instead of `resolveFeedback.mutate` directly.
+## Technical details
 
-### 2. Always show underline on action links
+| File | Change |
+|------|--------|
+| `src/components/FeedbackForm.tsx` line 71 | Change `\n\n---\nFollow-up:\n` to `\n---\nFollow-up on ${format(new Date(), "MMM d HH:mm")}:\n` |
+| `src/components/FeedbackForm.tsx` lines 149-153 | Change the plain-resolved color from `text-muted-foreground` to `text-[hsl(217_91%_60%)]` |
+| `src/pages/Admin.tsx` resolved section | Add a `✓ Resolved` badge (blue) for items without `resolved_reason`, matching the user-facing style |
 
-Change all feedback action buttons (Reply, Edit Reply, Resolve, Resolve Fixed, Unresolve) from `hover:underline` to `underline` so they always appear as hyperlinks.
-
-| Line(s) | Current | New |
-|----------|---------|-----|
-| 398 | `hover:underline` | `underline` |
-| 404 | `hover:underline` | `underline` |
-| 410 | `hover:underline` | `underline` |
-| 503 | `hover:underline` | `underline` |
-
+No new files or dependencies needed. `format` from `date-fns` is already imported.
