@@ -54,7 +54,8 @@ export function useWeightTrends(days: number) {
         const exerciseKey = row.exercise_key;
         const subtype = row.exercise_subtype || null;
         // Use subtype as part of the map key when present
-        const mapKey = subtype ? `${exerciseKey}::${subtype}` : exerciseKey;
+        const shouldSplitBySubtype = exerciseKey === 'walk_run';
+        const mapKey = shouldSplitBySubtype && subtype ? `${exerciseKey}::${subtype}` : exerciseKey;
         const weight = Number(row.weight_lbs);
         const duration = Number(row.duration_minutes) || 0;
         const distance = Number(row.distance_miles) || 0;
