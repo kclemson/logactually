@@ -23,7 +23,7 @@ export function FeedbackMessageBody({ message, createdAt, response, respondedAt 
             Response ({format(parseISO(respondedAt), "MMM d HH:mm")}):
           </span>
           <div className="ml-3 pl-3 border-l-2 border-primary/30">
-            <p className="text-xs whitespace-pre-wrap text-muted-foreground mt-0.5">{response}</p>
+            <p className="text-xs whitespace-pre-wrap mt-0.5">{response}</p>
           </div>
         </>
       )}

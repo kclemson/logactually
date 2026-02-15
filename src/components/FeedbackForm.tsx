@@ -210,7 +210,7 @@ export function FeedbackForm() {
                       {/* Delete */}
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <button className="text-muted-foreground hover:text-destructive flex items-center gap-1">
+                          <button className="text-destructive flex items-center gap-1">
                             <Trash2 className="h-3 w-3" /> Delete
                           </button>
                         </AlertDialogTrigger>
