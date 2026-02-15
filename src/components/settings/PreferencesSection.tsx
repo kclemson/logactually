@@ -138,20 +138,18 @@ export function PreferencesSection({ settings, updateSettings }: PreferencesSect
           {showWeights && (
             <div className="flex items-center justify-between">
               <p className="text-xs text-muted-foreground">Weight Units</p>
-              <div className="flex gap-2">
-                {weightUnitOptions.map(({ value, label }) => (
-                  <button
-                    key={value}
-                    onClick={() => handleWeightUnitChange(value)}
-                    className={cn(
-                      "flex items-center justify-center rounded-lg border px-3 py-2 transition-colors",
-                      settings.weightUnit === value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50",
-                    )}
-                  >
-                    <span className="text-sm">{label}</span>
-                  </button>
-                ))}
-              </div>
+              <Select value={settings.weightUnit} onValueChange={(v) => handleWeightUnitChange(v as WeightUnit)}>
+                <SelectTrigger className="w-[100px] h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {weightUnitOptions.map(({ value, label }) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
 
