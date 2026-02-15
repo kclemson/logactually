@@ -1,33 +1,55 @@
 
 
-# Fix: Remove Unnecessary Button Font-Size Override in Mobile CSS
+# Responsive Admin Actions: Inline on Desktop, Second Row on Mobile
 
-## Problem
-The global mobile CSS rule explicitly sets `font-size: 0.875rem` on `button` and `[role="button"]` elements. This prevents Tailwind size classes (like `text-xs`) from applying to buttons on mobile. The rule exists alongside the iOS zoom-prevention rules for inputs, but buttons don't trigger iOS auto-zoom -- only `input`, `textarea`, and `select` do. So the button rule is unnecessary and actively causes problems.
+## Approach
+
+Merge the metadata row and actions row back into a single `flex flex-wrap` container. Use standard flex utilities to control wrapping behavior:
+
+- **Chevron**: Add `md:order-last` so it renders last on desktop (after actions) but stays in its natural position on mobile
+- **Actions wrapper**: Use `w-full md:w-auto md:ml-auto` -- `w-full` forces a line break on mobile; `md:w-auto md:ml-auto` keeps it inline and right-aligned on desktop
+
+### Desktop layout (single row)
+```text
+[#id] [date] [user] [status] --------ml-auto-------- [Reply] [Resolve] [Resolve Fixed] [v]
+```
+
+### Mobile layout (two rows)
+```text
+[#id] [date] [user] [status]                                                          [v]
+[Reply] [Resolve] [Resolve Fixed]
+```
 
 ## Changes
 
-### File: `src/index.css` (lines 156-161)
-
-Remove the `button` / `[role="button"]` block from the mobile media query:
-
-```css
-/* REMOVE this block: */
-button,
-[role="button"] {
-  font-size: 0.875rem; /* 14px */
-}
-```
-
-The `input`, `textarea`, `select` rule above it stays -- that's the one actually preventing iOS zoom.
-
 ### File: `src/pages/Admin.tsx`
 
-Keep the current two-row layout with action links on a second row, but change `text-[10px]` to `text-xs` (12px) on both the open and resolved feedback action rows. With the CSS override removed, `text-xs` will now apply correctly on all viewports.
+**Open feedback section (lines 395-433):**
+Remove the outer wrapper `<div>` and merge into one `flex flex-wrap` container:
 
-## Why this is the right fix
-- Buttons don't trigger iOS auto-zoom (only focusable text inputs do)
-- Removing the rule lets Tailwind classes work naturally on buttons everywhere
-- No `!important` hacks, no element swaps, no `role="button"` workarounds
-- Other buttons throughout the app inherit from `body` font-size anyway, so behavior is unchanged for them
+```tsx
+<div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+  <span className="text-muted-foreground font-mono">#{f.feedback_id}</span>
+  <span className="text-muted-foreground">{format(...)}</span>
+  <span className="text-muted-foreground">User #{f.user_number}</span>
+  {/* status badges (Active / Response) -- unchanged */}
+  <ChevronDown className="h-3 w-3 text-muted-foreground transition-transform ml-auto md:ml-0 md:order-last ..." />
+  {replyingToId !== f.id && (
+    <div className="flex items-center gap-2 w-full md:w-auto md:ml-auto">
+      <button ...>Reply</button>
+      <button ...>Resolve</button>
+      <button ...>Resolve Fixed</button>
+    </div>
+  )}
+</div>
+```
 
+Key class changes:
+- Outer div: `flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs` (replaces two nested divs)
+- ChevronDown: add `md:ml-0 md:order-last` (keeps `ml-auto` for mobile, loses it on desktop where actions take that role, renders last on desktop)
+- Actions wrapper: `w-full md:w-auto md:ml-auto` (replaces `mt-0.5` second-row div)
+
+**Resolved feedback section (lines 505-529):**
+Same pattern -- merge into single flex-wrap container, same classes on chevron and actions wrapper (just one "Unresolve" button).
+
+No new files, no new dependencies, no CSS changes.
