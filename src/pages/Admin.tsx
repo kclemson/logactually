@@ -396,6 +396,9 @@ export default function Admin() {
                       <span className="text-muted-foreground font-mono">#{f.feedback_id}</span>
                       <span className="text-muted-foreground">{format(parseISO(f.created_at), "MMM d, yyyy")}</span>
                       <span className="text-muted-foreground">User #{f.user_number}</span>
+                      {!f.response && (
+                        <span className="text-foreground">Active</span>
+                      )}
                       {f.response && (
                         <span className="text-[hsl(217_91%_60%)]">• Response</span>
                       )}

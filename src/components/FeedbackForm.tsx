@@ -155,6 +155,9 @@ export function FeedbackForm() {
                         ✓ {resolvedLabel(item.resolved_reason)}
                       </span>
                     )}
+                    {!isResolved && !item.response && (
+                      <span className="text-xs text-foreground">Active</span>
+                    )}
                     {item.response && !isResolved && (
                       <span className="text-xs text-[hsl(217_91%_60%)]">• Response</span>
                     )}
