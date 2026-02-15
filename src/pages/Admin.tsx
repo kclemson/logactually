@@ -392,24 +392,22 @@ export default function Admin() {
                     onClick={() => toggleFeedbackExpand(f.id)}
                     className="w-full text-left py-2 flex flex-col gap-0.5"
                   >
-                    <div>
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="text-muted-foreground font-mono">#{f.feedback_id}</span>
-                        <span className="text-muted-foreground">{format(parseISO(f.created_at), "MMM d, yyyy")}</span>
-                        <span className="text-muted-foreground">User #{f.user_number}</span>
-                        {!f.response && (
-                          <span className="text-foreground">Active</span>
-                        )}
-                        {f.response && (
-                          <span className="text-[hsl(217_91%_60%)]">• Response</span>
-                        )}
-                        <ChevronDown className={cn(
-                          "h-3 w-3 ml-auto text-muted-foreground transition-transform",
-                          isExpanded && "rotate-180"
-                        )} />
-                      </div>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+                      <span className="text-muted-foreground font-mono">#{f.feedback_id}</span>
+                      <span className="text-muted-foreground">{format(parseISO(f.created_at), "MMM d, yyyy")}</span>
+                      <span className="text-muted-foreground">User #{f.user_number}</span>
+                      {!f.response && (
+                        <span className="text-foreground">Active</span>
+                      )}
+                      {f.response && (
+                        <span className="text-[hsl(217_91%_60%)]">• Response</span>
+                      )}
+                      <ChevronDown className={cn(
+                        "h-3 w-3 ml-auto md:ml-0 md:order-last text-muted-foreground transition-transform",
+                        isExpanded && "rotate-180"
+                      )} />
                       {replyingToId !== f.id && (
-                        <div className="flex items-center gap-2 text-xs mt-0.5">
+                        <div className="flex items-center gap-2 w-full md:w-auto md:ml-auto">
                           <button
                             className="text-[hsl(217_91%_60%)] underline"
                             onClick={(e) => { e.stopPropagation(); handleStartReply(f.id, f.response); }}
@@ -501,25 +499,23 @@ export default function Admin() {
                     onClick={() => toggleFeedbackExpand(f.id)}
                     className="w-full text-left py-2 flex flex-col gap-0.5"
                   >
-                    <div>
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="text-muted-foreground font-mono">#{f.feedback_id}</span>
-                        <span className="text-muted-foreground">{format(parseISO(f.created_at), "MMM d, yyyy")}</span>
-                        <span className="text-muted-foreground">User #{f.user_number}</span>
-                        {f.resolved_reason === 'fixed' ? (
-                          <span className="text-green-600 dark:text-green-400">✓ Fixed</span>
-                        ) : (
-                          <span className="text-[hsl(217_91%_60%)]">✓ Resolved</span>
-                        )}
-                        {f.response && (
-                          <span className="text-[hsl(217_91%_60%)]">• Response</span>
-                        )}
-                        <ChevronDown className={cn(
-                          "h-3 w-3 ml-auto text-muted-foreground transition-transform",
-                          isExpanded && "rotate-180"
-                        )} />
-                      </div>
-                      <div className="flex items-center gap-2 text-xs mt-0.5">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+                      <span className="text-muted-foreground font-mono">#{f.feedback_id}</span>
+                      <span className="text-muted-foreground">{format(parseISO(f.created_at), "MMM d, yyyy")}</span>
+                      <span className="text-muted-foreground">User #{f.user_number}</span>
+                      {f.resolved_reason === 'fixed' ? (
+                        <span className="text-green-600 dark:text-green-400">✓ Fixed</span>
+                      ) : (
+                        <span className="text-[hsl(217_91%_60%)]">✓ Resolved</span>
+                      )}
+                      {f.response && (
+                        <span className="text-[hsl(217_91%_60%)]">• Response</span>
+                      )}
+                      <ChevronDown className={cn(
+                        "h-3 w-3 ml-auto md:ml-0 md:order-last text-muted-foreground transition-transform",
+                        isExpanded && "rotate-180"
+                      )} />
+                      <div className="flex items-center gap-2 w-full md:w-auto md:ml-auto">
                         <button
                           className="text-orange-500 underline"
                           onClick={(e) => { e.stopPropagation(); handleResolve(f.id, false); }}
