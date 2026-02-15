@@ -22,7 +22,7 @@ type ChangelogEntry = {
 
 // prettier-ignore
 const CHANGELOG_ENTRIES: ChangelogEntry[] = [
-{ date: "Feb-15", text: "Updated the feedback system — submit bug reports, feature requests, or questions directly from the Help page. See responses and status updates inline, and can reply or re-open resolved items.", image: "feedback.png" },
+{ date: "Feb-15", text: "Updated the feedback system — submit bug reports, feature requests, or questions directly from the Help page. See responses and status updates inline, and reply or re-open resolved items.", image: "feedback.png" },
 { date: "Feb-14", text: "Added portion scaling — tap any portion label to adjust it with +/- controls. Scales the quantity, unit, and all nutritional values proportionally.", image: "portion-scaling.png" },
 { date: "Feb-14", text: "Added custom logging — track anything beyond food and exercise. Enable it in Settings to create your own log types (body weight, measurements, mood, journal notes, and more). Supports numeric, text + numeric, and text entries with optional units. Custom logs get their own trends charts on the Trends page.", image: "custom-logs.png" },
 { date: "Feb-12", text: "Added \"Ask AI\" on the Trends page — tap it next to Food Trends or Exercise Trends to ask questions about your data. It pulls in up to 90 days of your log history and uses AI to spot patterns, suggest improvements, and answer questions in plain language. Optionally include your personal stats for more tailored answers. Comes with randomized starter questions to get you going.", image: "ask-ai.png" },
