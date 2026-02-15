@@ -1,32 +1,65 @@
 
 
-# Update Response Text Color and Delete Button Style
+# Show Action Buttons as Disabled (Not Hidden) for Read-Only Users
 
-## Changes
+## Updated approach
 
-### 1. `src/components/FeedbackMessageBody.tsx`
-- Change the response text from `text-muted-foreground` to no color class (inherits `text-foreground` / white in dark mode) so it matches the user message styling.
+Instead of hiding Reply/Re-open and Delete buttons when read-only, render them in a disabled state so demo users can see the full feature set.
 
-### 2. `src/components/FeedbackForm.tsx`
-- Change the Delete button from `text-muted-foreground hover:text-destructive` to `text-destructive` so it appears red by default instead of looking disabled.
+## Changes to `src/components/FeedbackForm.tsx`
 
-## Technical details
+1. Remove the early `if (isReadOnly) return null` check
+2. Add `disabled={isReadOnly}` to the Textarea and Submit button
+3. For the Reply/Re-open and Delete buttons: render them always, but when `isReadOnly`, disable click handlers and apply disabled styling (`opacity-50 pointer-events-none`)
+4. The AlertDialog for Delete should not open when read-only -- wrap the trigger so it doesn't activate
 
-**FeedbackMessageBody.tsx** -- remove `text-muted-foreground` from the response `<p>` tag (line 25):
+Specifically for the action buttons, since they are plain `<button>` elements and AlertDialog triggers, the simplest approach is to add `disabled` attributes and matching styling:
+
 ```tsx
-// Before
-<p className="text-xs whitespace-pre-wrap text-muted-foreground mt-0.5">{response}</p>
-// After
-<p className="text-xs whitespace-pre-wrap mt-0.5">{response}</p>
+{/* Reply / Re-open */}
+{!isReplying && (
+  <>
+    {isResolved ? (
+      <button
+        disabled={isReadOnly}
+        onClick={(e) => { e.stopPropagation(); setReplyingId(item.id); }}
+        className={cn("text-orange-500 hover:text-orange-600 hover:underline",
+          isReadOnly && "opacity-50 pointer-events-none")}
+      >
+        Re-open
+      </button>
+    ) : (
+      <button
+        disabled={isReadOnly}
+        onClick={(e) => { e.stopPropagation(); setReplyingId(item.id); }}
+        className={cn("text-[hsl(217_91%_60%)] hover:underline",
+          isReadOnly && "opacity-50 pointer-events-none")}
+      >
+        Reply
+      </button>
+    )}
+  </>
+)}
+
+{/* Delete */}
+<AlertDialog>
+  <AlertDialogTrigger asChild>
+    <button
+      disabled={isReadOnly}
+      className={cn("text-destructive flex items-center gap-1",
+        isReadOnly && "opacity-50 pointer-events-none")}
+    >
+      <Trash2 className="h-3 w-3" /> Delete
+    </button>
+  </AlertDialogTrigger>
+  {/* ... dialog content unchanged */}
+</AlertDialog>
 ```
 
-**FeedbackForm.tsx** -- update Delete button class (around line 167):
-```tsx
-// Before
-<button className="text-muted-foreground hover:text-destructive flex items-center gap-1">
-// After
-<button className="text-destructive flex items-center gap-1">
-```
+## SQL insert (unchanged from previous plan)
 
-Two files, two one-line changes each.
+Three feedback items for user `f65d7de9-91bf-4140-b16e-5e4a951eeca5`.
 
+## Summary
+
+One component file edit (`FeedbackForm.tsx`) + one direct SQL insert. Everything visible, nothing hidden -- just disabled for read-only accounts.
