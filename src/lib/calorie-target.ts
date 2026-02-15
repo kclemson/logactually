@@ -40,7 +40,7 @@ export type CalorieTargetMode = 'static' | 'body_stats' | 'exercise_adjusted';
 
 export const TARGET_MODE_OPTIONS: { value: CalorieTargetMode; label: string; description: string }[] = [
   { value: 'static', label: 'Fixed number', description: 'You set a specific calorie number' },
-  { value: 'body_stats', label: 'Estimated from body stats', description: 'Calculated from your weight, height, and activity level' },
+  { value: 'body_stats', label: 'Estimated from body stats', description: 'Calculated from your activity level, weight, and height' },
   { value: 'exercise_adjusted', label: 'Exercise adjusted', description: 'Your base goal plus actual calories burned each day' },
 ];
 
