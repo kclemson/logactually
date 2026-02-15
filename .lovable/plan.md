@@ -1,29 +1,41 @@
 
 
-# Fix: Add missing SELECT policy for user feedback
+# Reorder Settings sections
 
-## Problem
+Move Account to the bottom (above About) and move Custom Log Types below Saved Routines.
 
-The `feedback` table has no SELECT policy for regular users. The only SELECT policy is admin-only:
+## New order
+1. Preferences
+2. Saved Meals
+3. Saved Routines (conditional)
+4. Custom Log Types (conditional)
+5. Import/Export
+6. Account
+7. About
 
-- "Admins can view all feedback" (SELECT) -- admin only
+## Technical change
 
-So when a user submits feedback and the app queries their history, the query returns zero rows.
+**File:** `src/pages/Settings.tsx` -- reorder the JSX children in the return block. No logic changes needed, just rearrange the lines.
 
-## Solution
-
-Add one RLS policy via a database migration:
-
-```sql
-CREATE POLICY "Users can view own feedback"
-  ON public.feedback
-  FOR SELECT
-  USING (auth.uid() = user_id);
+Current (lines 22-31):
+```tsx
+<AccountSection ... />
+<PreferencesSection ... />
+{settings.showCustomLogs && <CustomLogTypesSection ... />}
+<SavedMealsSection ... />
+{settings.showWeights && <SavedRoutinesSection ... />}
+<ImportExportSection ... />
+<AboutSection />
 ```
 
-This mirrors the pattern used on every other user-facing table in the project (food_entries, weight_sets, saved_meals, etc.).
-
-## Files changed
-
-None -- this is a database-only migration. No code changes needed since `useUserFeedback` already queries with `.eq('user_id', user.id)` and will start returning results once the policy is in place.
+New order:
+```tsx
+<PreferencesSection ... />
+<SavedMealsSection ... />
+{settings.showWeights && <SavedRoutinesSection ... />}
+{settings.showCustomLogs && <CustomLogTypesSection ... />}
+<ImportExportSection ... />
+<AccountSection ... />
+<AboutSection />
+```
 
