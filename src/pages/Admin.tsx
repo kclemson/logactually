@@ -33,6 +33,14 @@ export default function Admin() {
   const hasHover = useHasHover();
   const isMobile = useIsMobile();
 
+  const activeUserStats = userStats?.filter(user => {
+    if (!user.last_active) return false;
+    const lastActive = parseISO(user.last_active);
+    const twoWeeksAgo = new Date();
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+    return lastActive >= twoWeeksAgo;
+  });
+
   const openFeedback = feedback?.filter(f => !f.resolved_at) ?? [];
   const resolvedFeedback = feedback?.filter(f => !!f.resolved_at) ?? [];
 
@@ -115,7 +123,7 @@ export default function Admin() {
         <div className="flex justify-center py-4">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         </div>
-      ) : userStats && userStats.length > 0 ? (
+      ) : activeUserStats && activeUserStats.length > 0 ? (
         <TooltipProvider delayDuration={200}>
           {/* Dismiss backdrop for touch tooltips */}
           {!hasHover && activeTooltip && (
@@ -137,7 +145,7 @@ export default function Admin() {
               </tr>
             </thead>
             <tbody>
-              {userStats.map((user) => (
+              {activeUserStats.map((user) => (
                 <tr key={user.user_id} className="border-b border-border/50">
                   <td
                     className={`py-0.5 pr-2 whitespace-nowrap ${
