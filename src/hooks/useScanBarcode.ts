@@ -4,6 +4,7 @@ import { FoodItem } from '@/types/food';
 
 interface LookupResult {
   description: string;
+  portion?: string;
   calories: number;
   protein: number;
   carbs: number;
@@ -48,6 +49,7 @@ export function useScanBarcode() {
         success: true,
         data: {
           description: data.description,
+          portion: data.portion,
           calories: data.calories,
           protein: data.protein,
           carbs: data.carbs,
@@ -69,6 +71,7 @@ export function useScanBarcode() {
   const createFoodItemFromScan = (result: LookupResult): Omit<FoodItem, 'uid' | 'entryId'> => {
     return {
       description: result.description,
+      portion: result.portion,
       calories: result.calories,
       protein: result.protein,
       carbs: result.carbs,
