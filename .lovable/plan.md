@@ -1,36 +1,23 @@
 
 
-# Simplify Backward Compatibility: Change Default Instead of Migration
+# Replace "Configure" with "Edit" on Active Feature Buttons
 
-## Problem
+## Change
 
-The previously proposed migration in `useUserSettings.ts` added a fire-and-forget database write to backfill `calorieTargetEnabled: true` for existing users. This is fragile and unnecessary since the deficit feature hasn't shipped yet.
-
-## Solution
-
-Change `calorieTargetEnabled` default from `false` to `true` in `DEFAULT_SETTINGS`. This single-line change makes the system backward-compatible without any migration logic.
-
-## Why It Works
-
-| Scenario | Stored settings | Default fills in | `getEffectiveDailyTarget()` returns |
-|---|---|---|---|
-| Existing user, target = 2000 | `{ dailyCalorieTarget: 2000 }` | `calorieTargetEnabled: true` | `2000` (correct) |
-| New user, no target set | `{}` | `calorieTargetEnabled: true, dailyCalorieTarget: null` | `null` (correct) |
-| User explicitly disables | `{ calorieTargetEnabled: false }` | n/a (stored value wins) | `null` (correct) |
+In `src/components/settings/PreferencesSection.tsx`, update the two button labels that currently show "Configure" when a feature is enabled to instead show "Edit".
 
 ## Technical Details
 
-### File: `src/hooks/useUserSettings.ts`
+### File: `src/components/settings/PreferencesSection.tsx`
 
-Change one line in `DEFAULT_SETTINGS`:
+Two changes:
 
+1. **Daily Calorie Target button** (~line 87): `'Configure'` -> `'Edit'`
+2. **Calorie Burn Estimates button** (~line 140): `'Configure'` -> `'Edit'`
+
+Both use the same ternary pattern:
 ```
-calorieTargetEnabled: false
-```
-to:
-```
-calorieTargetEnabled: true
+{settings.someFlag ? 'Edit' : 'Set up'}
 ```
 
-One file, one line.
-
+Two lines changed, one file.
