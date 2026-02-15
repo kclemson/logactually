@@ -148,7 +148,7 @@ export function BiometricsInputs({ settings, updateSettings, showEffectHints = t
       {/* Body weight */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm">Body weight</p>
+          <p className="text-xs text-muted-foreground">Body weight</p>
           {showEffectHints && <p className="text-[10px] text-muted-foreground/70">Largest effect (~30-50%)</p>}
         </div>
         <div className={rightColClass}>
@@ -183,7 +183,7 @@ export function BiometricsInputs({ settings, updateSettings, showEffectHints = t
       {/* Height */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm">Height</p>
+          <p className="text-xs text-muted-foreground">Height</p>
           {showEffectHints && <p className="text-[10px] text-muted-foreground/70">Moderate effect (~10-15%)</p>}
         </div>
         <div className={rightColClass}>
@@ -217,7 +217,7 @@ export function BiometricsInputs({ settings, updateSettings, showEffectHints = t
       {/* Age */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm">Age</p>
+          <p className="text-xs text-muted-foreground">Age</p>
           {showEffectHints && <p className="text-[10px] text-muted-foreground/70">Small effect (~5% per decade)</p>}
         </div>
         <div className={rightColClass}>
@@ -237,7 +237,7 @@ export function BiometricsInputs({ settings, updateSettings, showEffectHints = t
       {/* Metabolic profile */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm">Metabolic profile</p>
+          <p className="text-xs text-muted-foreground">Metabolic profile</p>
           {showEffectHints && <p className="text-[10px] text-muted-foreground/70">Moderate effect (~5-10%)</p>}
         </div>
         <div className="flex gap-1">
