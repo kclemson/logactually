@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { truncate } from "@/lib/feedback-utils";
+import { FeedbackMessageBody } from "@/components/FeedbackMessageBody";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -176,16 +177,12 @@ export function FeedbackForm() {
                 {/* Expanded view */}
                 {isExpanded && (
                   <div className="pb-3 space-y-2">
-                    <p className="text-xs whitespace-pre-wrap">{item.message}</p>
-
-                    {item.response && (
-                      <div className="ml-3 pl-3 border-l-2 border-primary/30">
-                        <span className="text-xs text-muted-foreground">
-                          Response ({format(parseISO(item.responded_at!), "MMM d")})
-                        </span>
-                        <p className="text-xs whitespace-pre-wrap text-muted-foreground">{item.response}</p>
-                      </div>
-                    )}
+                    <FeedbackMessageBody
+                      message={item.message}
+                      createdAt={item.created_at}
+                      response={item.response}
+                      respondedAt={item.responded_at}
+                    />
 
                     {/* Actions row */}
                     <div className="flex items-center gap-3 text-xs">
