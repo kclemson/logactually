@@ -133,7 +133,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                 <SelectItem value="__create_new__" className="pl-3 [&>span:first-child]:hidden text-primary">
                   <span className="flex items-center gap-1.5">
                     <Plus className="h-3 w-3" />
-                    Add Custom Log Type
+                    New Custom Log Type
                   </span>
                 </SelectItem>
               </SelectContent>
