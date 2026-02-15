@@ -1,35 +1,29 @@
 
 
-# Update README: Screenshot format, live URL, and third-party credits
+# Fix: Add missing SELECT policy for user feedback
 
-Three changes to `README.md`:
+## Problem
 
-## 1. Screenshot format (line 11)
-Replace the HTML `<img>` tag with standard Markdown and remove the width restriction:
-- Before: `<img src="public/logactually-screen3-charts.png" alt="Log Actually - Trends" width="500" />`
-- After: `![Log Actually - Trends](public/logactually-screen3-charts.png)`
+The `feedback` table has no SELECT policy for regular users. The only SELECT policy is admin-only:
 
-## 2. Live site URL (after line 7)
-Add a line after the demo mode mention:
-```
-Try it out at [logactually.com](https://logactually.com).
-```
+- "Admins can view all feedback" (SELECT) -- admin only
 
-## 3. Expand Tech Stack with third-party credits (lines 46-50)
-Update the Tech Stack section to include external APIs and notable libraries:
+So when a user submits feedback and the app queries their history, the query returns zero rows.
 
-```
-## Tech Stack
+## Solution
 
-- **Frontend:** React, Vite, TypeScript, Tailwind CSS, shadcn/ui
-- **Backend:** Supabase -- auth, database, edge functions
-- **AI:** Google Gemini (via edge functions for food/exercise parsing, photo analysis, trend insights)
-- **Charts:** Recharts
-- **Barcode scanning:** ZXing
-- **Food database:** Open Food Facts (UPC lookups)
-- **Exercise data:** 2024 Compendium of Physical Activities (MET-based calorie estimates)
+Add one RLS policy via a database migration:
+
+```sql
+CREATE POLICY "Users can view own feedback"
+  ON public.feedback
+  FOR SELECT
+  USING (auth.uid() = user_id);
 ```
 
-This surfaces the key external dependencies and data sources that make the app tick, which is exactly the kind of thing open-source browsers appreciate seeing.
+This mirrors the pattern used on every other user-facing table in the project (food_entries, weight_sets, saved_meals, etc.).
 
-No other files affected.
+## Files changed
+
+None -- this is a database-only migration. No code changes needed since `useUserFeedback` already queries with `.eq('user_id', user.id)` and will start returning results once the policy is in place.
+
