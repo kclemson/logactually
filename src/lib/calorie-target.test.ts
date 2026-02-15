@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getTargetDotColor, getEffectiveDailyTarget, computeTDEE, suggestActivityLevel, ACTIVITY_MULTIPLIERS } from './calorie-target';
+import { getTargetDotColor, getEffectiveDailyTarget, computeTDEE, suggestActivityLevel, getExerciseAdjustedTarget, ACTIVITY_MULTIPLIERS } from './calorie-target';
 import type { UserSettings } from '@/hooks/useUserSettings';
 
 // ---------------------------------------------------------------------------
@@ -69,6 +69,22 @@ describe('suggestActivityLevel', () => {
 });
 
 // ---------------------------------------------------------------------------
+// getExerciseAdjustedTarget
+// ---------------------------------------------------------------------------
+
+describe('getExerciseAdjustedTarget', () => {
+  it('adds base and daily burn', () => {
+    expect(getExerciseAdjustedTarget(1800, 300)).toBe(2100);
+  });
+  it('rounds the result', () => {
+    expect(getExerciseAdjustedTarget(1800, 299.7)).toBe(2100);
+  });
+  it('returns base when no burn', () => {
+    expect(getExerciseAdjustedTarget(2000, 0)).toBe(2000);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // getEffectiveDailyTarget
 // ---------------------------------------------------------------------------
 
@@ -84,6 +100,7 @@ const baseSettings: UserSettings = {
   calorieTargetMode: 'static',
   activityLevel: null,
   dailyDeficit: null,
+  exerciseAdjustedBase: null,
   calorieBurnEnabled: true,
   bodyWeightLbs: 170,
   heightInches: 70,
@@ -106,22 +123,31 @@ describe('getEffectiveDailyTarget', () => {
     expect(getEffectiveDailyTarget({ ...baseSettings, dailyCalorieTarget: null })).toBeNull();
   });
 
-  it('computes TDEE-based target in deficit mode', () => {
-    const s = { ...baseSettings, calorieTargetMode: 'deficit' as const, activityLevel: 'light' as const, dailyDeficit: 500 };
+  it('computes TDEE-based target in body_stats mode', () => {
+    const s = { ...baseSettings, calorieTargetMode: 'body_stats' as const, activityLevel: 'light' as const, dailyDeficit: 500 };
     const result = getEffectiveDailyTarget(s);
     expect(result).not.toBeNull();
-    // Should be BMR * 1.375 - 500
     expect(result!).toBeGreaterThan(1000);
     expect(result!).toBeLessThan(3000);
   });
 
-  it('returns null in deficit mode without activity level', () => {
-    const s = { ...baseSettings, calorieTargetMode: 'deficit' as const, activityLevel: null, dailyDeficit: 500 };
+  it('returns null in body_stats mode without activity level', () => {
+    const s = { ...baseSettings, calorieTargetMode: 'body_stats' as const, activityLevel: null, dailyDeficit: 500 };
     expect(getEffectiveDailyTarget(s)).toBeNull();
   });
 
-  it('returns null in deficit mode without body weight', () => {
-    const s = { ...baseSettings, calorieTargetMode: 'deficit' as const, activityLevel: 'light' as const, dailyDeficit: 500, bodyWeightLbs: null };
+  it('returns null in body_stats mode without body weight', () => {
+    const s = { ...baseSettings, calorieTargetMode: 'body_stats' as const, activityLevel: 'light' as const, dailyDeficit: 500, bodyWeightLbs: null };
+    expect(getEffectiveDailyTarget(s)).toBeNull();
+  });
+
+  it('returns exerciseAdjustedBase in exercise_adjusted mode', () => {
+    const s = { ...baseSettings, calorieTargetMode: 'exercise_adjusted' as const, exerciseAdjustedBase: 1800 };
+    expect(getEffectiveDailyTarget(s)).toBe(1800);
+  });
+
+  it('returns null in exercise_adjusted mode without base', () => {
+    const s = { ...baseSettings, calorieTargetMode: 'exercise_adjusted' as const, exerciseAdjustedBase: null };
     expect(getEffectiveDailyTarget(s)).toBeNull();
   });
 });

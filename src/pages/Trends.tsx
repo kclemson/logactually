@@ -321,7 +321,12 @@ const Trends = () => {
                 dataKey="calories"
                 color={CHART_COLORS.calories}
                 onNavigate={(date) => navigate(`/?date=${date}`)}
-                referenceLine={(() => { const t = getEffectiveDailyTarget(settings); return t ? { value: t, color: "hsl(var(--muted-foreground))" } : undefined; })()}
+                referenceLine={(() => {
+                  const t = settings.calorieTargetMode === 'exercise_adjusted'
+                    ? settings.exerciseAdjustedBase
+                    : getEffectiveDailyTarget(settings);
+                  return t ? { value: t, color: "hsl(var(--muted-foreground))" } : undefined;
+                })()}
               />
 
               <StackedMacroChart
@@ -355,7 +360,12 @@ const Trends = () => {
               labelDataKey="calories"
               labelColor={CHART_COLORS.calories}
               height="h-28"
-              referenceLine={(() => { const t = getEffectiveDailyTarget(settings); return t ? { value: t, color: "hsl(var(--muted-foreground))" } : undefined; })()}
+              referenceLine={(() => {
+                const t = settings.calorieTargetMode === 'exercise_adjusted'
+                  ? settings.exerciseAdjustedBase
+                  : getEffectiveDailyTarget(settings);
+                return t ? { value: t, color: "hsl(var(--muted-foreground))" } : undefined;
+              })()}
             />
 
             {/* Row 2: Protein + Carbs + Fat */}

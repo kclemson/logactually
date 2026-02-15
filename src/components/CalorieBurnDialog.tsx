@@ -7,11 +7,8 @@ import {
 import { cn } from '@/lib/utils';
 import { type UserSettings } from '@/hooks/useUserSettings';
 import {
-  cmToInches,
-  inchesToCm,
   estimateCalorieBurn,
   formatCalorieBurnValue,
-  formatInchesAsFeetInches,
   type ExerciseInput,
   type CalorieBurnSettings,
 } from '@/lib/calorie-burn';
@@ -20,6 +17,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { EXERCISE_MUSCLE_GROUPS, getSubtypeDisplayName } from '@/lib/exercise-metadata';
+import { BiometricsInputs } from '@/components/BiometricsInputs';
 
 interface CalorieBurnDialogProps {
   open: boolean;
@@ -80,9 +78,6 @@ export function CalorieBurnDialog({
   updateSettings,
 }: CalorieBurnDialogProps) {
   const { user } = useAuth();
-
-  // Local unit for body weight input (defaults to app-wide setting)
-  const [bodyWeightUnit, setBodyWeightUnit] = useState<WeightUnit>(settings.weightUnit);
 
   // Fetch user's top exercises via RPC (2 cardio + 2 strength by frequency)
   const { data: userExercises } = useQuery({
@@ -150,138 +145,8 @@ export function CalorieBurnDialog({
         bodyComposition: null,
         defaultIntensity: null,
       });
-      setHeightDisplay('');
     } else {
       updateSettings({ calorieBurnEnabled: true });
-    }
-  };
-
-  const handleWeightChange = (val: string) => {
-    if (val === '') {
-      updateSettings({ bodyWeightLbs: null });
-      return;
-    }
-    const num = parseFloat(val);
-    if (!isNaN(num) && num > 0) {
-      const lbs = bodyWeightUnit === 'kg' ? num * 2.20462 : num;
-      updateSettings({ bodyWeightLbs: Math.round(lbs) });
-    }
-  };
-
-  const displayWeight = () => {
-    if (settings.bodyWeightLbs == null) return '';
-    if (bodyWeightUnit === 'kg') {
-      return String(Math.round(settings.bodyWeightLbs * 0.453592));
-    }
-    return String(settings.bodyWeightLbs);
-  };
-
-  const handleBodyWeightUnitChange = (unit: WeightUnit) => {
-    if (bodyWeightUnit === unit) return;
-    setBodyWeightUnit(unit);
-  };
-
-  // ---------------------------------------------------------------------------
-  // Feet+inches parsing & formatting helpers
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Parse user input like `5'1`, `5'1"`, `5' 1"`, `5 1`, or plain `61`
-   * into total inches. Returns null if unparseable.
-   */
-  function parseFeetInchesInput(input: string): number | null {
-    const trimmed = input.trim();
-    if (!trimmed) return null;
-
-    // Try feet'inches pattern: 5'1, 5'1", 5' 1", 5'
-    const feetInchesMatch = trimmed.match(/^(\d+)\s*['′]\s*(\d*)\s*["″]?\s*$/);
-    if (feetInchesMatch) {
-      const feet = parseInt(feetInchesMatch[1], 10);
-      const inches = feetInchesMatch[2] ? parseInt(feetInchesMatch[2], 10) : 0;
-      if (inches >= 0 && inches < 12) {
-        return feet * 12 + inches;
-      }
-      return null;
-    }
-
-    // Try "5 11" pattern (space-separated feet inches)
-    const spaceSepMatch = trimmed.match(/^(\d+)\s+(\d+)$/);
-    if (spaceSepMatch) {
-      const feet = parseInt(spaceSepMatch[1], 10);
-      const inches = parseInt(spaceSepMatch[2], 10);
-      if (inches >= 0 && inches < 12) {
-        return feet * 12 + inches;
-      }
-      return null;
-    }
-
-    // Plain number — treat as total inches
-    const num = parseFloat(trimmed);
-    if (!isNaN(num) && num > 0) return num;
-
-    return null;
-  }
-
-  // formatInchesAsFeetInches is now imported from @/lib/calorie-burn
-
-  // Determine effective unit — treat legacy 'in' as 'ft'
-  const effectiveHeightUnit = (settings.heightUnit === 'cm' ? 'cm' : 'ft') as 'ft' | 'cm';
-
-  // Local display value for height in the user's preferred unit
-  const [heightDisplay, setHeightDisplay] = useState<string>(() => {
-    if (settings.heightInches == null) return '';
-    if (effectiveHeightUnit === 'cm') {
-      return String(Math.round(inchesToCm(settings.heightInches)));
-    }
-    return formatInchesAsFeetInches(settings.heightInches);
-  });
-
-  const handleHeightChange = (val: string) => {
-    setHeightDisplay(val);
-    if (val === '') {
-      updateSettings({ heightInches: null });
-      return;
-    }
-    if (effectiveHeightUnit === 'ft') {
-      const inches = parseFeetInchesInput(val);
-      if (inches != null) {
-        updateSettings({ heightInches: Math.round(inches * 10) / 10 });
-      }
-    } else {
-      const num = parseFloat(val);
-      if (!isNaN(num) && num > 0) {
-        const inches = cmToInches(num);
-        updateSettings({ heightInches: Math.round(inches * 10) / 10 });
-      }
-    }
-  };
-
-  const handleHeightUnitChange = (unit: 'ft' | 'cm') => {
-    if (effectiveHeightUnit === unit) return;
-
-    if (effectiveHeightUnit === 'ft' && unit === 'cm') {
-      const inches = parseFeetInchesInput(heightDisplay);
-      if (inches != null && inches > 0) {
-        setHeightDisplay(String(Math.round(inches * 2.54)));
-      }
-    } else if (effectiveHeightUnit === 'cm' && unit === 'ft') {
-      const cm = parseFloat(heightDisplay);
-      if (!isNaN(cm) && cm > 0) {
-        const inches = cmToInches(cm);
-        setHeightDisplay(formatInchesAsFeetInches(inches));
-      }
-    }
-    updateSettings({ heightUnit: unit });
-  };
-
-  const handleAgeChange = (val: string) => {
-    if (val === '') {
-      updateSettings({ age: null });
-      return;
-    }
-    const num = parseInt(val, 10);
-    if (!isNaN(num) && num > 0 && num < 150) {
-      updateSettings({ age: num });
     }
   };
 
@@ -295,12 +160,6 @@ export function CalorieBurnDialog({
       updateSettings({ defaultIntensity: num });
     }
   };
-
-  const compositionOptions: { value: 'female' | 'male' | null; label: string }[] = [
-    { value: null, label: 'Average' },
-    { value: 'female', label: 'Female' },
-    { value: 'male', label: 'Male' },
-  ];
 
   const inputClass = "w-16 h-8 text-center text-sm rounded-md border border-input bg-background px-2 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
   const rightColClass = "flex items-center gap-1 justify-start w-[8.5rem]";
@@ -357,118 +216,7 @@ export function CalorieBurnDialog({
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Your info</p>
                 <p className="text-[11px] text-muted-foreground/70 -mt-1">These details help narrow the estimated calorie burn range.</p>
 
-                {/* Body weight */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm">Body weight</p>
-                    <p className="text-[10px] text-muted-foreground/70">Largest effect (~30-50%)</p>
-                  </div>
-                  <div className={rightColClass}>
-                    <input
-                      type="number"
-                      placeholder="—"
-                      value={displayWeight()}
-                      onChange={(e) => handleWeightChange(e.target.value)}
-                      className={inputClass}
-                      min={50}
-                      max={999}
-                    />
-                    <div className="flex gap-0.5">
-                      {(['lbs', 'kg'] as const).map((unit) => (
-                        <button
-                          key={unit}
-                          onClick={() => handleBodyWeightUnitChange(unit)}
-                          className={cn(
-                            "text-xs px-1.5 py-0.5 rounded transition-colors",
-                            bodyWeightUnit === unit
-                              ? "bg-primary/10 text-foreground font-medium"
-                              : "text-muted-foreground hover:text-foreground"
-                          )}
-                        >
-                          {unit}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Height */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm">Height</p>
-                    <p className="text-[10px] text-muted-foreground/70">Moderate effect (~10-15%)</p>
-                  </div>
-                  <div className={rightColClass}>
-                    <input
-                      type={effectiveHeightUnit === 'ft' ? 'text' : 'number'}
-                      placeholder={effectiveHeightUnit === 'ft' ? `5'7"` : '170'}
-                      value={heightDisplay}
-                      onChange={(e) => handleHeightChange(e.target.value)}
-                      className={inputClass}
-                      inputMode={effectiveHeightUnit === 'ft' ? undefined : 'numeric'}
-                    />
-                    <div className="flex gap-0.5">
-                      {(['ft', 'cm'] as const).map((unit) => (
-                        <button
-                          key={unit}
-                          onClick={() => handleHeightUnitChange(unit)}
-                          className={cn(
-                            "text-xs px-1.5 py-0.5 rounded transition-colors",
-                            effectiveHeightUnit === unit
-                              ? "bg-primary/10 text-foreground font-medium"
-                              : "text-muted-foreground hover:text-foreground"
-                          )}
-                        >
-                          {unit}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Age */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm">Age</p>
-                    <p className="text-[10px] text-muted-foreground/70">Small effect (~5% per decade)</p>
-                  </div>
-                  <div className={rightColClass}>
-                    <input
-                      type="number"
-                      placeholder="—"
-                      value={settings.age ?? ''}
-                      onChange={(e) => handleAgeChange(e.target.value)}
-                      className={inputClass}
-                      min={10}
-                      max={120}
-                    />
-                    <span className="w-8" />
-                  </div>
-                </div>
-
-                {/* Body composition */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm">Metabolic profile</p>
-                    <p className="text-[10px] text-muted-foreground/70">Moderate effect (~5-10%)</p>
-                  </div>
-                  <div className="flex gap-1">
-                    {compositionOptions.map(({ value, label }) => (
-                      <button
-                        key={label}
-                        onClick={() => updateSettings({ bodyComposition: value })}
-                        className={cn(
-                          "text-xs px-2 py-1.5 rounded-md border transition-colors",
-                          settings.bodyComposition === value
-                            ? "border-primary bg-primary/5"
-                            : "border-border hover:bg-muted/50"
-                        )}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                <BiometricsInputs settings={settings} updateSettings={updateSettings} />
               </div>
 
               {/* Workout defaults */}

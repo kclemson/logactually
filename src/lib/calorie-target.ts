@@ -33,6 +33,18 @@ export const ACTIVITY_LABELS: Record<ActivityLevel, { label: string; description
 };
 
 // ---------------------------------------------------------------------------
+// Target mode options (used by CalorieTargetDialog dropdown)
+// ---------------------------------------------------------------------------
+
+export type CalorieTargetMode = 'static' | 'body_stats' | 'exercise_adjusted';
+
+export const TARGET_MODE_OPTIONS: { value: CalorieTargetMode; label: string; description: string }[] = [
+  { value: 'static', label: 'Fixed number', description: 'You set a specific calorie number' },
+  { value: 'body_stats', label: 'Estimated from body stats', description: 'Calculated from your weight, height, and activity level' },
+  { value: 'exercise_adjusted', label: 'Exercise adjusted', description: 'Your base goal plus actual calories burned each day' },
+];
+
+// ---------------------------------------------------------------------------
 // TDEE computation
 // ---------------------------------------------------------------------------
 
@@ -47,19 +59,22 @@ export function computeTDEE(bmr: number, activityLevel: ActivityLevel): number {
 /**
  * Resolves the effective daily calorie target based on user settings.
  * - Static mode: returns the raw `dailyCalorieTarget` value.
- * - Deficit mode: computes BMR × activity multiplier - deficit.
+ * - Body stats mode: computes BMR × activity multiplier - deficit.
+ * - Exercise adjusted mode: returns `exerciseAdjustedBase` (per-day adjustment at consumption sites).
  *   Returns null if biometrics are insufficient or activity level not set.
- *
- * Return type is `number | null` — same shape as the raw field — so all
- * existing consumers (dot-color, reference-line) work unchanged.
  */
 export function getEffectiveDailyTarget(settings: UserSettings): number | null {
   if (!settings.calorieTargetEnabled) return null;
 
-  if (settings.calorieTargetMode !== 'deficit') {
+  if (settings.calorieTargetMode === 'static') {
     return settings.dailyCalorieTarget;
   }
 
+  if (settings.calorieTargetMode === 'exercise_adjusted') {
+    return settings.exerciseAdjustedBase;
+  }
+
+  // body_stats mode
   if (!settings.activityLevel) return null;
 
   const bmr = computeAbsoluteBMR(settings);
@@ -72,18 +87,24 @@ export function getEffectiveDailyTarget(settings: UserSettings): number | null {
 }
 
 // ---------------------------------------------------------------------------
+// Exercise-adjusted target helper
+// ---------------------------------------------------------------------------
+
+/**
+ * Computes the exercise-adjusted target for a specific day.
+ * @param base The user's base goal (exerciseAdjustedBase)
+ * @param dailyBurn Midpoint of estimated calorie burn for that day
+ */
+export function getExerciseAdjustedTarget(base: number, dailyBurn: number): number {
+  return Math.round(base + dailyBurn);
+}
+
+// ---------------------------------------------------------------------------
 // Activity level suggestion from logged exercise burn
 // ---------------------------------------------------------------------------
 
 /**
  * Maps an average daily exercise calorie burn to the closest activity tier.
- * Returns the activity level key and a human-readable label.
- *
- * Thresholds are rough midpoints between sedentary and active lifestyles:
- *   <100 cal/day  → sedentary
- *   100-250       → light
- *   250-450       → moderate
- *   450+          → active
  */
 export function suggestActivityLevel(avgDailyBurn: number): ActivityLevel {
   if (avgDailyBurn < 100) return 'sedentary';

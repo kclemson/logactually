@@ -25,7 +25,8 @@ import { detectHistoryReference, MIN_SIMILARITY_REQUIRED } from '@/lib/history-p
 import { detectRepeatedFoodEntry, isDismissed, dismissSuggestion, shouldShowOptOutLink, FoodSaveSuggestion } from '@/lib/repeated-entry-detection';
 import { FoodItem, SavedMeal, calculateTotals } from '@/types/food';
 import { getStoredDate, setStoredDate } from '@/lib/selected-date';
-import { getEffectiveDailyTarget } from '@/lib/calorie-target';
+import { getEffectiveDailyTarget, getExerciseAdjustedTarget } from '@/lib/calorie-target';
+import { useDailyCalorieBurn } from '@/hooks/useDailyCalorieBurn';
 
 // Wrapper component: extracts date from URL, forces remount via key
 const FoodLog = () => {
@@ -91,7 +92,18 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   const logSavedMeal = useLogSavedMeal();
   const { settings, updateSettings } = useUserSettings();
   const { isReadOnly } = useReadOnlyContext();
-  
+
+  // For exercise-adjusted mode, fetch burn data for the selected day
+  const { data: dailyBurnData } = useDailyCalorieBurn(
+    settings.calorieTargetMode === 'exercise_adjusted' ? 90 : 0
+  );
+  const dailyBurnForSelectedDay = useMemo(() => {
+    if (settings.calorieTargetMode !== 'exercise_adjusted') return 0;
+    const entry = dailyBurnData.find(d => d.date === dateStr);
+    if (!entry) return 0;
+    return Math.round((entry.low + entry.high) / 2);
+  }, [dailyBurnData, dateStr, settings.calorieTargetMode]);
+
   
   const foodInputRef = useRef<LogInputRef>(null);
 
@@ -704,7 +716,15 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
             onSaveAsMeal={handleSaveAsMeal}
             entryMealNames={entryMealNames}
             entrySourceMealIds={entrySourceMealIds}
-            dailyCalorieTarget={getEffectiveDailyTarget(settings) ?? undefined}
+            dailyCalorieTarget={(() => {
+              const base = getEffectiveDailyTarget(settings);
+              if (base == null) return undefined;
+              if (settings.calorieTargetMode === 'exercise_adjusted') {
+                const burn = dailyBurnForSelectedDay;
+                return getExerciseAdjustedTarget(base, burn);
+              }
+              return base;
+            })()}
             showCalorieTargetDot={!isTodaySelected}
             onDeleteEntry={(entryId) => {
               deleteEntry.mutate(entryId);
