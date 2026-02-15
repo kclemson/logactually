@@ -9,6 +9,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { format, parseISO, isToday } from "date-fns";
 import { MessageSquare, FileSearch, ChevronDown } from "lucide-react";
 import { truncate } from "@/lib/feedback-utils";
+import { FeedbackMessageBody } from "@/components/FeedbackMessageBody";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -436,16 +437,12 @@ export default function Admin() {
 
                   {isExpanded && (
                     <div className="pb-3 space-y-2">
-                      <p className="text-xs whitespace-pre-wrap">{f.message}</p>
-
-                      {f.response && replyingToId !== f.id && (
-                        <div className="ml-3 pl-3 border-l-2 border-primary/30">
-                          <span className="text-xs text-muted-foreground">
-                            Response ({format(parseISO(f.responded_at!), "MMM d")})
-                          </span>
-                          <p className="text-xs whitespace-pre-wrap text-muted-foreground">{f.response}</p>
-                        </div>
-                      )}
+                      <FeedbackMessageBody
+                        message={f.message}
+                        createdAt={f.created_at}
+                        response={replyingToId !== f.id ? f.response : null}
+                        respondedAt={f.responded_at}
+                      />
 
                       {replyingToId === f.id && (
                         <div className="space-y-1 pt-1">
@@ -531,15 +528,12 @@ export default function Admin() {
 
                   {isExpanded && (
                     <div className="pb-3 space-y-2">
-                      <p className="text-xs whitespace-pre-wrap">{f.message}</p>
-                      {f.response && (
-                        <div className="ml-3 pl-3 border-l-2 border-primary/30">
-                          <span className="text-xs text-muted-foreground">
-                            Response ({format(parseISO(f.responded_at!), "MMM d")})
-                          </span>
-                          <p className="text-xs whitespace-pre-wrap text-muted-foreground">{f.response}</p>
-                        </div>
-                      )}
+                      <FeedbackMessageBody
+                        message={f.message}
+                        createdAt={f.created_at}
+                        response={f.response}
+                        respondedAt={f.responded_at}
+                      />
                     </div>
                   )}
                 </div>
