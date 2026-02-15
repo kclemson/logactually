@@ -1,44 +1,32 @@
 
 
-# Simplify Feedback Message Labels and Fix Hierarchy
+# Update Response Text Color and Delete Button Style
 
-## Changes to `src/components/FeedbackMessageBody.tsx`
+## Changes
 
-Two updates:
+### 1. `src/components/FeedbackMessageBody.tsx`
+- Change the response text from `text-muted-foreground` to no color class (inherits `text-foreground` / white in dark mode) so it matches the user message styling.
 
-1. **Change label** from "You wrote" to "Feedback created" -- works for both user and admin views
-2. **Move labels outside the indented blocks** so the hierarchy is:
+### 2. `src/components/FeedbackForm.tsx`
+- Change the Delete button from `text-muted-foreground hover:text-destructive` to `text-destructive` so it appears red by default instead of looking disabled.
 
-```
-Feedback created (MMM d, HH:mm):
-  |  message text (indented with border-l)
+## Technical details
 
-Response (MMM d HH:mm):
-  |  response text (indented with border-l)
-```
-
-Updated component structure:
-
+**FeedbackMessageBody.tsx** -- remove `text-muted-foreground` from the response `<p>` tag (line 25):
 ```tsx
-<>
-  <span className="text-xs text-muted-foreground">
-    Feedback created ({format(parseISO(createdAt), "MMM d, HH:mm")}):
-  </span>
-  <div className="ml-3 pl-3 border-l-2 border-border">
-    <p className="text-xs whitespace-pre-wrap mt-0.5">{message}</p>
-  </div>
-
-  {response && respondedAt && (
-    <>
-      <span className="text-xs text-muted-foreground mt-2 block">
-        Response ({format(parseISO(respondedAt), "MMM d HH:mm")}):
-      </span>
-      <div className="ml-3 pl-3 border-l-2 border-primary/30">
-        <p className="text-xs whitespace-pre-wrap text-muted-foreground mt-0.5">{response}</p>
-      </div>
-    </>
-  )}
-</>
+// Before
+<p className="text-xs whitespace-pre-wrap text-muted-foreground mt-0.5">{response}</p>
+// After
+<p className="text-xs whitespace-pre-wrap mt-0.5">{response}</p>
 ```
 
-Only one file changes. No variant prop, no changes to FeedbackForm or Admin.
+**FeedbackForm.tsx** -- update Delete button class (around line 167):
+```tsx
+// Before
+<button className="text-muted-foreground hover:text-destructive flex items-center gap-1">
+// After
+<button className="text-destructive flex items-center gap-1">
+```
+
+Two files, two one-line changes each.
+
