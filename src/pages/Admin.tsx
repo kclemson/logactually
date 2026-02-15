@@ -92,6 +92,12 @@ export default function Admin() {
     setExpandedFeedbackIds(next);
   };
 
+  const handleResolve = async (feedbackId: string, resolve: boolean, reason?: string) => {
+    const scrollY = window.scrollY;
+    await resolveFeedback.mutateAsync({ feedbackId, resolve, reason });
+    requestAnimationFrame(() => window.scrollTo(0, scrollY));
+  };
+
   const handleSendReply = async (feedbackId: string) => {
     if (!replyText.trim()) return;
 
@@ -395,20 +401,20 @@ export default function Admin() {
                       {replyingToId !== f.id && (
                         <>
                           <button
-                            className="text-[hsl(217_91%_60%)] hover:underline"
+                            className="text-[hsl(217_91%_60%)] underline"
                             onClick={(e) => { e.stopPropagation(); handleStartReply(f.id, f.response); }}
                           >
                             {f.response ? "Edit Reply" : "Reply"}
                           </button>
                           <button
-                            className="text-muted-foreground hover:underline"
-                            onClick={(e) => { e.stopPropagation(); resolveFeedback.mutate({ feedbackId: f.id, resolve: true }); }}
+                            className="text-muted-foreground underline"
+                            onClick={(e) => { e.stopPropagation(); handleResolve(f.id, true); }}
                           >
                             Resolve
                           </button>
                           <button
-                            className="text-green-600 dark:text-green-400 hover:underline"
-                            onClick={(e) => { e.stopPropagation(); resolveFeedback.mutate({ feedbackId: f.id, resolve: true, reason: 'fixed' }); }}
+                            className="text-green-600 dark:text-green-400 underline"
+                            onClick={(e) => { e.stopPropagation(); handleResolve(f.id, true, 'fixed'); }}
                           >
                             Resolve Fixed
                           </button>
@@ -500,8 +506,8 @@ export default function Admin() {
                         <span className="text-[hsl(217_91%_60%)]">• Response</span>
                       )}
                       <button
-                        className="text-orange-500 hover:underline"
-                        onClick={(e) => { e.stopPropagation(); resolveFeedback.mutate({ feedbackId: f.id, resolve: false }); }}
+                        className="text-orange-500 underline"
+                        onClick={(e) => { e.stopPropagation(); handleResolve(f.id, false); }}
                       >
                         Unresolve
                       </button>
