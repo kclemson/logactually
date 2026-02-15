@@ -6,11 +6,15 @@ import {
   type CalorieBurnSettings,
   type ExerciseInput,
 } from '@/lib/calorie-burn';
+import { isCardioExercise } from '@/lib/exercise-metadata';
 
 export interface DailyCalorieBurn {
   date: string;
   low: number;
   high: number;
+  exerciseCount: number;
+  cardioCount: number;
+  strengthCount: number;
 }
 
 export function useDailyCalorieBurn(days: number) {
@@ -31,6 +35,7 @@ export function useDailyCalorieBurn(days: number) {
 
     // Aggregate low/high per day across all exercises
     const byDate: Record<string, { low: number; high: number }> = {};
+    const exercisesByDate: Record<string, Set<string>> = {};
 
     for (const exercise of exercises) {
       for (const point of exercise.weightData) {
@@ -49,7 +54,10 @@ export function useDailyCalorieBurn(days: number) {
 
         if (!byDate[point.date]) {
           byDate[point.date] = { low: 0, high: 0 };
+          exercisesByDate[point.date] = new Set();
         }
+
+        exercisesByDate[point.date].add(exercise.exercise_key);
 
         if (result.type === 'exact') {
           byDate[point.date].low += result.value;
@@ -65,11 +73,23 @@ export function useDailyCalorieBurn(days: number) {
     return Object.entries(byDate)
       .filter(([_, v]) => v.low > 0 || v.high > 0)
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, totals]) => ({
-        date,
-        low: totals.low,
-        high: totals.high,
-      }));
+      .map(([date, totals]) => {
+        const keys = exercisesByDate[date] || new Set();
+        let cardioCount = 0;
+        let strengthCount = 0;
+        keys.forEach(k => {
+          if (isCardioExercise(k)) cardioCount++;
+          else strengthCount++;
+        });
+        return {
+          date,
+          low: totals.low,
+          high: totals.high,
+          exerciseCount: keys.size,
+          cardioCount,
+          strengthCount,
+        };
+      });
   }, [exercises, settings]);
 
   return {

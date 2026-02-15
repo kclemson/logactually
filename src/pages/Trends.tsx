@@ -168,13 +168,23 @@ const Trends = () => {
   const calorieBurnChartData = useMemo(() => {
     if (dailyCalorieBurn.length === 0) return [];
 
-    return dailyCalorieBurn.map((d) => ({
-      rawDate: d.date,
-      date: format(new Date(`${d.date}T12:00:00`), "MMM d"),
-      low: d.low,
-      high: d.high,
-      midpoint: Math.round((d.low + d.high) / 2),
-    }));
+    const dataLength = dailyCalorieBurn.length;
+    const labelInterval = getLabelInterval(dataLength);
+
+    return dailyCalorieBurn.map((d, index) => {
+      const distanceFromEnd = dataLength - 1 - index;
+      return {
+        rawDate: d.date,
+        date: format(new Date(`${d.date}T12:00:00`), "MMM d"),
+        low: d.low,
+        high: d.high,
+        midpoint: Math.round((d.low + d.high) / 2),
+        showLabel: distanceFromEnd % labelInterval === 0,
+        exerciseCount: d.exerciseCount,
+        cardioCount: d.cardioCount,
+        strengthCount: d.strengthCount,
+      };
+    });
   }, [dailyCalorieBurn]);
 
   // Visible exercises (load more pattern)

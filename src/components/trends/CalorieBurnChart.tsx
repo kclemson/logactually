@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LabelList } from "recharts";
 import { Card, CardContent, CardHeader, ChartTitle, ChartSubtitle } from "@/components/ui/card";
 import { useHasHover } from "@/hooks/use-has-hover";
 
@@ -9,6 +9,10 @@ export interface CalorieBurnChartData {
   low: number;
   high: number;
   midpoint: number;
+  showLabel: boolean;
+  exerciseCount: number;
+  cardioCount: number;
+  strengthCount: number;
 }
 
 interface CalorieBurnChartProps {
@@ -33,9 +37,16 @@ const BurnTooltip = ({
   const data = payload[0]?.payload;
   if (!data) return null;
 
-  const { low, high, midpoint } = data;
-  const isWide = high > low * 1.5;
-  const rangeText = isWide ? `~${midpoint} cal (range: ${low}-${high})` : `~${midpoint} cal`;
+  const { low, high, midpoint, exerciseCount, cardioCount, strengthCount } = data;
+  const rangeText = low === high ? `~${midpoint} cal` : `~${midpoint} cal (range: ${low}-${high})`;
+
+  // Build exercise breakdown
+  const parts: string[] = [];
+  if (cardioCount > 0) parts.push(`${cardioCount} cardio`);
+  if (strengthCount > 0) parts.push(`${strengthCount} strength`);
+  const exerciseText = exerciseCount > 0
+    ? `${exerciseCount} exercise${exerciseCount !== 1 ? 's' : ''} (${parts.join(', ')})`
+    : null;
 
   return (
     <div className="rounded-md border border-border/50 bg-white dark:bg-slate-800 px-2 py-1 shadow-md">
@@ -43,6 +54,9 @@ const BurnTooltip = ({
       <p className="text-[10px] font-semibold" style={{ color }}>
         {rangeText}
       </p>
+      {exerciseText && (
+        <p className="text-[10px] text-muted-foreground">{exerciseText}</p>
+      )}
       {isTouchDevice && onGoToDay && rawDate && (
         <button
           onClick={(e) => {
@@ -81,6 +95,19 @@ export const CalorieBurnChart = ({
     onNavigate(date);
   };
 
+  const renderLabel = (props: any) => {
+    const { x, y, width, value, index } = props;
+    const dataPoint = chartData[index];
+    if (!dataPoint?.showLabel) return null;
+    if (!value || typeof x !== "number" || typeof width !== "number") return null;
+
+    return (
+      <text x={x + width / 2} y={y - 4} fill={color} textAnchor="middle" fontSize={7} fontWeight={500}>
+        {value}
+      </text>
+    );
+  };
+
   return (
     <Card className="border-0 shadow-none relative">
       {isTouchDevice && activeBarIndex !== null && (
@@ -102,7 +129,7 @@ export const CalorieBurnChart = ({
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}
-                margin={{ top: 4, right: 0, left: 0, bottom: 0 }}
+                margin={{ top: 12, right: 0, left: 0, bottom: 0 }}
               >
                 <XAxis
                   dataKey="date"
@@ -147,7 +174,9 @@ export const CalorieBurnChart = ({
                   radius={[2, 2, 0, 0]}
                   onClick={handleBarClick}
                   className="cursor-pointer"
-                />
+                >
+                  <LabelList dataKey="midpoint" content={renderLabel} />
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
