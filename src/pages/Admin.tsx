@@ -451,7 +451,7 @@ export default function Admin() {
                             onChange={(e) => setReplyText(e.target.value)}
                             placeholder="Write a response..."
                             className="min-h-[60px] text-xs"
-                            maxLength={1000}
+                            maxLength={5000}
                           />
                           <div className="flex gap-1">
                             <Button
