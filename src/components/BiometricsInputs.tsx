@@ -11,6 +11,7 @@ import {
 interface BiometricsInputsProps {
   settings: UserSettings;
   updateSettings: (updates: Partial<UserSettings>) => void;
+  showEffectHints?: boolean;
 }
 
 /**
@@ -53,7 +54,7 @@ const compositionOptions: { value: 'female' | 'male' | null; label: string }[] =
   { value: 'male', label: 'Male' },
 ];
 
-export function BiometricsInputs({ settings, updateSettings }: BiometricsInputsProps) {
+export function BiometricsInputs({ settings, updateSettings, showEffectHints = true }: BiometricsInputsProps) {
   const [bodyWeightUnit, setBodyWeightUnit] = useState<WeightUnit>(settings.weightUnit);
 
   const effectiveHeightUnit = (settings.heightUnit === 'cm' ? 'cm' : 'ft') as 'ft' | 'cm';
@@ -148,7 +149,7 @@ export function BiometricsInputs({ settings, updateSettings }: BiometricsInputsP
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm">Body weight</p>
-          <p className="text-[10px] text-muted-foreground/70">Largest effect (~30-50%)</p>
+          {showEffectHints && <p className="text-[10px] text-muted-foreground/70">Largest effect (~30-50%)</p>}
         </div>
         <div className={rightColClass}>
           <input
@@ -183,7 +184,7 @@ export function BiometricsInputs({ settings, updateSettings }: BiometricsInputsP
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm">Height</p>
-          <p className="text-[10px] text-muted-foreground/70">Moderate effect (~10-15%)</p>
+          {showEffectHints && <p className="text-[10px] text-muted-foreground/70">Moderate effect (~10-15%)</p>}
         </div>
         <div className={rightColClass}>
           <input
@@ -217,7 +218,7 @@ export function BiometricsInputs({ settings, updateSettings }: BiometricsInputsP
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm">Age</p>
-          <p className="text-[10px] text-muted-foreground/70">Small effect (~5% per decade)</p>
+          {showEffectHints && <p className="text-[10px] text-muted-foreground/70">Small effect (~5% per decade)</p>}
         </div>
         <div className={rightColClass}>
           <input
@@ -229,7 +230,7 @@ export function BiometricsInputs({ settings, updateSettings }: BiometricsInputsP
             min={10}
             max={120}
           />
-          <span className="w-8" />
+          <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground font-medium">years</span>
         </div>
       </div>
 
@@ -237,7 +238,7 @@ export function BiometricsInputs({ settings, updateSettings }: BiometricsInputsP
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm">Metabolic profile</p>
-          <p className="text-[10px] text-muted-foreground/70">Moderate effect (~5-10%)</p>
+          {showEffectHints && <p className="text-[10px] text-muted-foreground/70">Moderate effect (~5-10%)</p>}
         </div>
         <div className="flex gap-1">
           {compositionOptions.map(({ value, label }) => (

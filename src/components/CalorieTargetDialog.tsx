@@ -135,13 +135,13 @@ export function CalorieTargetDialog({
             <div className="overflow-hidden">
               <div className="space-y-4 pt-1">
                 {/* Mode dropdown */}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between overflow-visible">
                   <p className="text-xs text-muted-foreground">Mode</p>
                   <Select
                     value={settings.calorieTargetMode}
                     onValueChange={(val) => updateSettings({ calorieTargetMode: val as CalorieTargetMode })}
                   >
-                    <SelectTrigger className="w-[200px] h-auto py-1.5 text-xs">
+                    <SelectTrigger className="w-[240px] h-auto py-1.5 text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -179,8 +179,6 @@ export function CalorieTargetDialog({
                 {/* Body stats mode */}
                 {settings.calorieTargetMode === 'body_stats' && (
                   <div className="space-y-3">
-                    <BiometricsInputs settings={settings} updateSettings={updateSettings} />
-
                     {/* Activity level */}
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-xs text-muted-foreground">Activity level</p>
@@ -208,6 +206,8 @@ export function CalorieTargetDialog({
                         Average ~{activityHint.avgDailyBurn} calories/day burned over {activityHint.activeDays} active days. This is closest to "{activityHint.label}."
                       </p>
                     )}
+
+                    <BiometricsInputs settings={settings} updateSettings={updateSettings} showEffectHints={false} />
 
                     {/* Daily deficit */}
                     <div className="flex items-center justify-between gap-2">
@@ -260,13 +260,8 @@ export function CalorieTargetDialog({
                       Your daily target increases by calories burned from logged exercises.
                     </p>
 
-                    <BiometricsInputs settings={settings} updateSettings={updateSettings} />
+                    <BiometricsInputs settings={settings} updateSettings={updateSettings} showEffectHints={false} />
 
-                    {!settings.calorieBurnEnabled && (
-                      <p className="text-[10px] text-amber-600 dark:text-amber-400">
-                        Enable "Show estimated calorie burn" in Settings to use this mode effectively.
-                      </p>
-                    )}
                   </div>
                 )}
               </div>
