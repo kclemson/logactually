@@ -8,6 +8,7 @@ import { useSubmitFeedback, useUserFeedback, useDeleteFeedback, useMarkFeedbackR
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
+import { truncate } from "@/lib/feedback-utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -90,11 +91,6 @@ export function FeedbackForm() {
     }
   };
 
-  const truncate = (text: string, maxLen = 80) => {
-    const firstLine = text.split('\n')[0];
-    if (firstLine.length <= maxLen) return firstLine;
-    return firstLine.slice(0, maxLen) + "…";
-  };
 
   const resolvedLabel = (reason: string | null) => {
     if (reason === 'fixed') return 'Resolved (Fixed)';
