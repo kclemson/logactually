@@ -1,33 +1,36 @@
 
 
-# Divide Activity Hint by Days With Exercise
+# Simplify Backward Compatibility: Change Default Instead of Migration
 
-## Change
+## Problem
 
-In `src/components/CalorieTargetDialog.tsx`, change the average daily burn calculation to divide by `dailyBurnData.length` (days with exercise) instead of the fixed `30`. Update the hint text to show the count, e.g. "avg ~250 cal/day burned (12 active days)".
+The previously proposed migration in `useUserSettings.ts` added a fire-and-forget database write to backfill `calorieTargetEnabled: true` for existing users. This is fragile and unnecessary since the deficit feature hasn't shipped yet.
+
+## Solution
+
+Change `calorieTargetEnabled` default from `false` to `true` in `DEFAULT_SETTINGS`. This single-line change makes the system backward-compatible without any migration logic.
+
+## Why It Works
+
+| Scenario | Stored settings | Default fills in | `getEffectiveDailyTarget()` returns |
+|---|---|---|---|
+| Existing user, target = 2000 | `{ dailyCalorieTarget: 2000 }` | `calorieTargetEnabled: true` | `2000` (correct) |
+| New user, no target set | `{}` | `calorieTargetEnabled: true, dailyCalorieTarget: null` | `null` (correct) |
+| User explicitly disables | `{ calorieTargetEnabled: false }` | n/a (stored value wins) | `null` (correct) |
 
 ## Technical Details
 
-### File: `src/components/CalorieTargetDialog.tsx` (lines 51-56)
+### File: `src/hooks/useUserSettings.ts`
 
-Replace:
-```tsx
-const avgDailyBurn = Math.round(totalMidpoints / 30);
-const suggested = suggestActivityLevel(avgDailyBurn);
-return { avgDailyBurn, suggested, label: ACTIVITY_LABELS[suggested].label };
+Change one line in `DEFAULT_SETTINGS`:
+
+```
+calorieTargetEnabled: false
+```
+to:
+```
+calorieTargetEnabled: true
 ```
 
-With:
-```tsx
-const activeDays = dailyBurnData.length;
-const avgDailyBurn = Math.round(totalMidpoints / activeDays);
-const suggested = suggestActivityLevel(avgDailyBurn);
-return { avgDailyBurn, suggested, label: ACTIVITY_LABELS[suggested].label, activeDays };
-```
+One file, one line.
 
-Update the hint text (~line 186) to include the active days count:
-```
-Based on your last 30 days: avg ~250 cal/day burned (12 active days) -- closest to "Lightly active"
-```
-
-One file changed.
