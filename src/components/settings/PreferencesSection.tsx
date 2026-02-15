@@ -82,7 +82,7 @@ export function PreferencesSection({ settings, updateSettings }: PreferencesSect
               onClick={() => setCalorieTargetDialogOpen(true)}
               className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors"
             >
-              {settings.calorieTargetEnabled ? 'Configure' : 'Set up'}
+              {settings.calorieTargetEnabled ? 'Edit' : 'Set up'}
             </button>
           </div>
 
@@ -161,7 +161,7 @@ export function PreferencesSection({ settings, updateSettings }: PreferencesSect
                 onClick={() => setCalorieBurnDialogOpen(true)}
                 className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors"
               >
-                {settings.calorieBurnEnabled ? 'Configure' : 'Set up'}
+                {settings.calorieBurnEnabled ? 'Edit' : 'Set up'}
               </button>
             </div>
           )}
