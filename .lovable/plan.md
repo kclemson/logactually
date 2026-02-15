@@ -1,27 +1,39 @@
 
-
-# Always Show RYG Hint Text
+# Theme Selection: Switch to Dropdown
 
 ## Change
 
-In `src/components/settings/PreferencesSection.tsx`, remove the conditional that swaps between the configured target summary and the RYG hint. Always show the RYG colored-dot hint text ("Show ... color indicators on calendar view") regardless of whether a target is configured.
+Replace the three-button theme toggle (Light / Dark / System) with a Radix Select dropdown, keeping the same label and position.
 
 ## Technical Details
 
 ### File: `src/components/settings/PreferencesSection.tsx`
 
-Replace the conditional block (lines ~75-82) with just the static RYG hint:
+- Replace the `div.flex.gap-2` with button group (lines 53-67) with a `Select` component from `@/components/ui/select`
+- Each option shows its icon + label in the dropdown items
+- The trigger displays the currently selected theme with its icon
+- Update imports: add `Select, SelectTrigger, SelectValue, SelectContent, SelectItem` from `@/components/ui/select`, remove unused icon imports if desired (though keeping them for use inside SelectItems)
+
+The row stays as `flex items-center justify-between` with "Theme" label on the left and the Select trigger on the right.
 
 ```tsx
-<p className="text-[10px] text-muted-foreground/70">
-  Show <span className="text-green-500 dark:text-green-400">●</span>{' '}
-  <span className="text-amber-500 dark:text-amber-400">●</span>{' '}
-  <span className="text-rose-500 dark:text-rose-400">●</span>{' '}
-  color indicators on calendar view
-</p>
+<Select value={theme} onValueChange={(v) => handleThemeChange(v as 'light' | 'dark' | 'system')}>
+  <SelectTrigger className="w-[130px] h-9">
+    <SelectValue />
+  </SelectTrigger>
+  <SelectContent>
+    {themeOptions.map(({ value, label, icon: Icon }) => (
+      <SelectItem key={value} value={value}>
+        <span className="flex items-center gap-2">
+          <Icon className="h-4 w-4" />
+          {label}
+        </span>
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
 ```
 
-Remove the `effectiveTarget` conditional and the `getEffectiveDailyTarget` import (and the `effectiveTarget` variable) if no longer used elsewhere in this file.
+Remove the `mounted` state variable since it was only used for the button highlight styling.
 
-One file changed, no logic or consumer impact.
-
+One file changed, no logic impact.
