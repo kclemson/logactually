@@ -68,7 +68,7 @@ export function FeedbackForm() {
   };
 
   const handleReply = (item: { id: string; message: string }, isReopen: boolean) => async () => {
-    const updatedMessage = `${item.message}\n\n---\nFollow-up:\n${followUp.trim()}`;
+    const updatedMessage = `${item.message}\n---\nFollow-up on ${format(new Date(), "MMM d HH:mm")}:\n${followUp.trim()}`;
     const updatePayload: any = { message: updatedMessage };
     if (isReopen) {
       updatePayload.resolved_at = null;
@@ -150,7 +150,7 @@ export function FeedbackForm() {
                         "text-xs",
                         item.resolved_reason === 'fixed'
                           ? "text-green-600 dark:text-green-400"
-                          : "text-muted-foreground"
+                          : "text-[hsl(217_91%_60%)]"
                       )}>
                         ✓ {resolvedLabel(item.resolved_reason)}
                       </span>

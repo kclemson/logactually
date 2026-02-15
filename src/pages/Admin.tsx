@@ -499,8 +499,10 @@ export default function Admin() {
                       <span className="text-muted-foreground font-mono">#{f.feedback_id}</span>
                       <span className="text-muted-foreground">{format(parseISO(f.created_at), "MMM d, yyyy")}</span>
                       <span className="text-muted-foreground">User #{f.user_number}</span>
-                      {f.resolved_reason === 'fixed' && (
+                      {f.resolved_reason === 'fixed' ? (
                         <span className="text-green-600 dark:text-green-400">✓ Fixed</span>
+                      ) : (
+                        <span className="text-[hsl(217_91%_60%)]">✓ Resolved</span>
                       )}
                       {f.response && (
                         <span className="text-[hsl(217_91%_60%)]">• Response</span>
