@@ -54,6 +54,8 @@ export function computeTDEE(bmr: number, activityLevel: ActivityLevel): number {
  * existing consumers (dot-color, reference-line) work unchanged.
  */
 export function getEffectiveDailyTarget(settings: UserSettings): number | null {
+  if (!settings.calorieTargetEnabled) return null;
+
   if (settings.calorieTargetMode !== 'deficit') {
     return settings.dailyCalorieTarget;
   }
