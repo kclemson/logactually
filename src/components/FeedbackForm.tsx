@@ -38,7 +38,12 @@ export function FeedbackForm() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [replyingId, setReplyingId] = useState<string | null>(null);
   const [followUp, setFollowUp] = useState("");
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem('feedback-expanded-ids');
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch { return new Set(); }
+  });
   const queryClient = useQueryClient();
   const submitFeedback = useSubmitFeedback();
   const { data: feedbackHistory } = useUserFeedback();
@@ -84,6 +89,11 @@ export function FeedbackForm() {
     const next = new Set(expandedIds);
     if (next.has(id)) next.delete(id); else next.add(id);
     setExpandedIds(next);
+    if (next.size > 0) {
+      localStorage.setItem('feedback-expanded-ids', JSON.stringify([...next]));
+    } else {
+      localStorage.removeItem('feedback-expanded-ids');
+    }
     if (replyingId && replyingId !== id) {
       setReplyingId(null);
       setFollowUp("");
