@@ -94,7 +94,9 @@ serve(async (req) => {
           const nutriments = product.nutriments || {};
 
           // Extract serving size info
-          const servingSize = product.serving_size || '1 serving';
+          const servingSize = (product.serving_size || '1 serving')
+            .replace(/\s*\([^)]*\)\s*/g, '')
+            .trim() || '1 serving';
           const productName = product.product_name || 'Unknown product';
 
           // Prefer per-serving values, fall back to per-100g
@@ -160,7 +162,7 @@ I need the product name and nutritional information for one typical serving.
 
 IMPORTANT: Respond ONLY with valid JSON, no markdown formatting, no code blocks.
 Use this exact format:
-{"name": "Product Name", "serving": "serving size description", "calories": 0, "protein": 0, "carbs": 0, "fat": 0}
+{"name": "Product Name", "serving": "simple quantity-unit format like '1 bag' or '36 pretzels' -- never combine multiple units or add parenthetical context", "calories": 0, "protein": 0, "carbs": 0, "fat": 0}
 
 If you cannot identify the product, respond with:
 {"unknown": true}`
