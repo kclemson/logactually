@@ -12,11 +12,12 @@ export interface UserSettings {
   suggestMealSaves: boolean;
   suggestRoutineSaves: boolean;
   dailyCalorieTarget: number | null;
-  // TDEE-based deficit mode
+  // TDEE-based body stats mode
   calorieTargetEnabled: boolean;
-  calorieTargetMode: 'static' | 'deficit';
+  calorieTargetMode: 'static' | 'body_stats' | 'exercise_adjusted';
   activityLevel: 'sedentary' | 'light' | 'moderate' | 'active' | null;
   dailyDeficit: number | null;
+  exerciseAdjustedBase: number | null;
   // Calorie burn estimation
   calorieBurnEnabled: boolean;
   bodyWeightLbs: number | null;
@@ -39,6 +40,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   calorieTargetMode: 'static',
   activityLevel: null,
   dailyDeficit: null,
+  exerciseAdjustedBase: null,
   calorieBurnEnabled: true,
   bodyWeightLbs: null,
   heightInches: null,
@@ -68,7 +70,12 @@ export function useUserSettings() {
         return DEFAULT_SETTINGS;
       }
       
-      return { ...DEFAULT_SETTINGS, ...(data?.settings as Partial<UserSettings>) };
+      const merged = { ...DEFAULT_SETTINGS, ...(data?.settings as Partial<UserSettings>) };
+      // Migrate legacy 'deficit' key to 'body_stats'
+      if ((merged.calorieTargetMode as string) === 'deficit') {
+        merged.calorieTargetMode = 'body_stats';
+      }
+      return merged;
     },
     enabled: !!user,
     staleTime: Infinity,

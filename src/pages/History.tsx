@@ -11,6 +11,7 @@ import {
   subMonths,
   startOfWeek,
   endOfWeek,
+  differenceInDays,
 } from 'date-fns';
 import { ChevronLeft, ChevronRight, Dumbbell, Footprints, Bike, Activity, ClipboardList } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -18,7 +19,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { isCardioExercise } from '@/lib/exercise-metadata';
-import { getTargetDotColor, getEffectiveDailyTarget } from '@/lib/calorie-target';
+import { getTargetDotColor, getEffectiveDailyTarget, getExerciseAdjustedTarget } from '@/lib/calorie-target';
+import { useDailyCalorieBurn } from '@/hooks/useDailyCalorieBurn';
 
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { setStoredDate } from '@/lib/selected-date';
@@ -47,6 +49,22 @@ const History = () => {
   // Fetch entries for the visible month range
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
+
+  // For exercise-adjusted mode, fetch daily calorie burn for the visible month
+  const burnDays = useMemo(() => differenceInDays(monthEnd, monthStart) + 1, [monthStart, monthEnd]);
+  const { data: dailyBurnData } = useDailyCalorieBurn(
+    settings.calorieTargetMode === 'exercise_adjusted' ? burnDays + 30 : 0
+  );
+
+  // Build a Map<dateStr, midpointBurn> for exercise-adjusted mode
+  const burnByDate = useMemo(() => {
+    const map = new Map<string, number>();
+    if (settings.calorieTargetMode !== 'exercise_adjusted') return map;
+    dailyBurnData.forEach((d) => {
+      map.set(d.date, Math.round((d.low + d.high) / 2));
+    });
+    return map;
+  }, [dailyBurnData, settings.calorieTargetMode]);
   
   const { data: daySummaries = [], isLoading } = useQuery({
     queryKey: ['food-entries-summary', format(monthStart, 'yyyy-MM')],
@@ -249,7 +267,10 @@ const History = () => {
                     <>
                       {`${Math.round(summary.totalCalories).toLocaleString()}cal`}
                       {(() => {
-                        const target = getEffectiveDailyTarget(settings);
+                        const baseTarget = getEffectiveDailyTarget(settings);
+                        const target = settings.calorieTargetMode === 'exercise_adjusted' && baseTarget
+                          ? getExerciseAdjustedTarget(baseTarget, burnByDate.get(dateStr) ?? 0)
+                          : baseTarget;
                         return !isTodayDate && target && target > 0 ? (
                           <span className={`text-[10px] ml-0.5 leading-none relative top-[-0.5px] ${getTargetDotColor(summary.totalCalories, target)}`}>●</span>
                         ) : null;
