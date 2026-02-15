@@ -18,14 +18,14 @@ export default function Settings() {
 
   return (
     <div className="space-y-4">
-      <AccountSection user={user} signOut={signOut} isReadOnly={isReadOnly} queryClient={queryClient} />
       <PreferencesSection settings={settings} updateSettings={updateSettings} isLoading={isLoading} />
-      {settings.showCustomLogs && <CustomLogTypesSection isReadOnly={isReadOnly} />}
       <SavedMealsSection settings={settings} updateSettings={updateSettings} isReadOnly={isReadOnly} />
       {settings.showWeights && (
         <SavedRoutinesSection settings={settings} updateSettings={updateSettings} isReadOnly={isReadOnly} />
       )}
+      {settings.showCustomLogs && <CustomLogTypesSection isReadOnly={isReadOnly} />}
       <ImportExportSection showWeights={settings.showWeights} isReadOnly={isReadOnly} />
+      <AccountSection user={user} signOut={signOut} isReadOnly={isReadOnly} queryClient={queryClient} />
       <AboutSection />
     </div>
   );
