@@ -1,33 +1,48 @@
 
 
-# Update Help Tips + Add Feedback Changelog Entry
+# Persist Feedback Expansion State in localStorage
 
-## 1. Update Tips (src/pages/Help.tsx)
+A small quality-of-life fix: remember which feedback items the user has expanded so they don't lose their place when navigating away and back.
 
-Modify the `HELP_CONTENT.tips.items` array:
+## Approach
 
-- **Bullet 1** (changelog): Keep as-is
-- **Bullet 2** (braindump): Add "photo" to the list -- "via text, voice, photo, or scan a barcode"
-- **Bullet 3** (editing): Rewrite to also mention portion scaling -- "Once an item's logged, click or tap on it to make changes. Adjust portions with the +/- controls, or edit calories to auto-scale protein, carbs, and fat proportionally."
-- **Bullet 4** (save it): Keep as-is
-- **Bullet 5** (Settings): Rewrite to be broader -- "There's a lot you can customize in Settings — dark theme, calorie targets, estimated exercise burn, weight units, CSV export, and more."
-- **Bullet 6** (pin to home screen): Keep as-is
-- **New bullet** (Ask AI): "Have questions about your data? Use Ask AI on the Trends page to spot patterns, get insights, and ask questions about your food and exercise history in plain language."
-- **New bullet** (Custom logs): "Track more than food and exercise — enable Custom Logs in Settings to log things like body weight, blood pressure, sleep, or anything else you want to track over time."
+Modify `FeedbackForm.tsx` to persist `expandedIds` in localStorage, following the same event-driven pattern used by `CollapsibleSection`:
 
-## 2. Add Changelog Entry (src/pages/Changelog.tsx)
-
-Copy the uploaded screenshot to `public/changelog/feedback.png`, then add a new entry at the top of `CHANGELOG_ENTRIES` and update `LAST_UPDATED` to `"Feb-15-26"`.
-
-Proposed changelog text (matching the existing tone -- short, direct, no fluff):
-
-```
-{ date: "Feb-15", text: "Added a feedback system — submit bug reports, feature requests, or questions directly from the Help page. You'll see responses and status updates inline, and can reply or re-open resolved items.", image: "feedback.png" },
-```
+1. **Initialize from localStorage** -- read `feedback-expanded-ids` on mount to restore previously expanded items
+2. **Write on toggle** -- in `toggleExpand`, persist the updated set to localStorage immediately (no useEffect)
+3. **Clean up stale IDs** -- when feedback data loads, filter out any persisted IDs that no longer exist in the user's feedback history (items that were deleted)
 
 ## Technical Details
 
-- **Files modified**: `src/pages/Help.tsx`, `src/pages/Changelog.tsx`
-- **File copied**: `user-uploads://image-856.png` to `public/changelog/feedback.png`
-- **No database or backend changes**
+**File**: `src/pages/FeedbackForm.tsx` -- changes to ~3 spots:
+
+- **Line 41** -- change `useState<Set<string>>(new Set())` to initialize from localStorage:
+  ```ts
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem('feedback-expanded-ids');
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch { return new Set(); }
+  });
+  ```
+
+- **`toggleExpand` function (~line 83)** -- add localStorage write after updating state:
+  ```ts
+  const toggleExpand = (id: string) => {
+    const next = new Set(expandedIds);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setExpandedIds(next);
+    // Persist
+    if (next.size > 0) {
+      localStorage.setItem('feedback-expanded-ids', JSON.stringify([...next]));
+    } else {
+      localStorage.removeItem('feedback-expanded-ids');
+    }
+    // ... rest of existing logic
+  };
+  ```
+
+- **After delete** -- clear the deleted ID from persisted state too (already handled since toggleExpand won't fire, but the item disappears from the list; stale IDs are harmless and get cleaned up on next load)
+
+No new dependencies, no useEffect, consistent with the app's event-driven persistence pattern.
 
