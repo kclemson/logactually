@@ -7,7 +7,9 @@ import { useAdminFeedback, useRespondToFeedback, useResolveFeedback } from "@/ho
 import { useHasHover } from "@/hooks/use-has-hover";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { format, parseISO, isToday } from "date-fns";
-import { MessageSquare, FileSearch } from "lucide-react";
+import { MessageSquare, FileSearch, ChevronDown } from "lucide-react";
+import { truncate } from "@/lib/feedback-utils";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -22,6 +24,7 @@ export default function Admin() {
   const [replyText, setReplyText] = useState("");
   const [showPopulateDialog, setShowPopulateDialog] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+  const [expandedFeedbackIds, setExpandedFeedbackIds] = useState<Set<string>>(new Set());
 
   // All hooks must be called before any conditional returns
   const { data: isAdmin, isLoading: isAdminLoading } = useIsAdmin();
@@ -81,6 +84,12 @@ export default function Admin() {
   const handleCancelReply = () => {
     setReplyingToId(null);
     setReplyText("");
+  };
+
+  const toggleFeedbackExpand = (id: string) => {
+    const next = new Set(expandedFeedbackIds);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setExpandedFeedbackIds(next);
   };
 
   const handleSendReply = async (feedbackId: string) => {
@@ -366,73 +375,97 @@ export default function Admin() {
           storageKey="admin-feedback"
           iconClassName="text-muted-foreground"
         >
-          <div className="space-y-1">
-            {openFeedback.map((f) => (
-              <div key={f.id} className="text-xs border-b border-border/50 py-1 space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground">
-                    {`#${f.feedback_id} · User #${f.user_number}`} • {format(parseISO(f.created_at), "MMM d")}
-                  </span>
-                  {replyingToId !== f.id && (
-                    <>
-                      <button
-                        className="text-[hsl(217_91%_60%)] underline hover:text-[hsl(217_91%_70%)]"
-                        onClick={() => handleStartReply(f.id, f.response)}
-                      >
-                        {f.response ? "Edit Reply" : "Reply"}
-                      </button>
-                      <button
-                        className="text-muted-foreground underline hover:text-foreground"
-                        onClick={() => resolveFeedback.mutate({ feedbackId: f.id, resolve: true })}
-                      >
-                        Resolve
-                      </button>
-                      <button
-                        className="text-green-600 dark:text-green-400 underline hover:text-green-700 dark:hover:text-green-300"
-                        onClick={() => resolveFeedback.mutate({ feedbackId: f.id, resolve: true, reason: 'fixed' })}
-                      >
-                        Resolve Fixed
-                      </button>
-                    </>
+          <div className="space-y-0">
+            {openFeedback.map((f) => {
+              const isExpanded = expandedFeedbackIds.has(f.id);
+              return (
+                <div key={f.id} className="border-b border-border/50 last:border-0">
+                  <button
+                    type="button"
+                    onClick={() => toggleFeedbackExpand(f.id)}
+                    className="w-full text-left py-2 flex flex-col gap-0.5"
+                  >
+                    <div className="flex items-center gap-2 text-xs flex-wrap">
+                      <span className="text-muted-foreground font-mono">#{f.feedback_id}</span>
+                      <span className="text-muted-foreground">{format(parseISO(f.created_at), "MMM d, yyyy")}</span>
+                      <span className="text-muted-foreground">User #{f.user_number}</span>
+                      {f.response && (
+                        <span className="text-[hsl(217_91%_60%)]">• Response</span>
+                      )}
+                      {replyingToId !== f.id && (
+                        <>
+                          <button
+                            className="text-[hsl(217_91%_60%)] hover:underline"
+                            onClick={(e) => { e.stopPropagation(); handleStartReply(f.id, f.response); }}
+                          >
+                            {f.response ? "Edit Reply" : "Reply"}
+                          </button>
+                          <button
+                            className="text-muted-foreground hover:underline"
+                            onClick={(e) => { e.stopPropagation(); resolveFeedback.mutate({ feedbackId: f.id, resolve: true }); }}
+                          >
+                            Resolve
+                          </button>
+                          <button
+                            className="text-green-600 dark:text-green-400 hover:underline"
+                            onClick={(e) => { e.stopPropagation(); resolveFeedback.mutate({ feedbackId: f.id, resolve: true, reason: 'fixed' }); }}
+                          >
+                            Resolve Fixed
+                          </button>
+                        </>
+                      )}
+                      <ChevronDown className={cn(
+                        "h-3 w-3 ml-auto text-muted-foreground transition-transform",
+                        isExpanded && "rotate-180"
+                      )} />
+                    </div>
+                    {!isExpanded && (
+                      <p className="text-xs text-muted-foreground truncate">{truncate(f.message)}</p>
+                    )}
+                  </button>
+
+                  {isExpanded && (
+                    <div className="pb-3 space-y-2">
+                      <p className="text-xs whitespace-pre-wrap">{f.message}</p>
+
+                      {f.response && replyingToId !== f.id && (
+                        <div className="ml-3 pl-3 border-l-2 border-primary/30">
+                          <span className="text-xs text-muted-foreground">
+                            Response ({format(parseISO(f.responded_at!), "MMM d")})
+                          </span>
+                          <p className="text-xs whitespace-pre-wrap text-muted-foreground">{f.response}</p>
+                        </div>
+                      )}
+
+                      {replyingToId === f.id && (
+                        <div className="space-y-1 pt-1">
+                          <Textarea
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
+                            placeholder="Write a response..."
+                            className="min-h-[60px] text-xs"
+                            maxLength={1000}
+                          />
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              className="h-6 text-xs px-2"
+                              onClick={() => handleSendReply(f.id)}
+                              disabled={!replyText.trim() || respondToFeedback.isPending}
+                            >
+                              {respondToFeedback.isPending ? "Sending..." : "Send"}
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={handleCancelReply}>
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
-                <p className="whitespace-pre-wrap">{f.message}</p>
-
-                {/* Show existing response */}
-                {f.response && replyingToId !== f.id && (
-                  <div className="ml-2 pl-2 border-l-2 border-primary/30 text-muted-foreground">
-                    <span className="text-[10px]">Response ({format(parseISO(f.responded_at!), "MMM d")})</span>
-                    <p className="whitespace-pre-wrap">{f.response}</p>
-                  </div>
-                )}
-
-                {/* Reply form */}
-                {replyingToId === f.id ? (
-                  <div className="space-y-1 pt-1">
-                    <Textarea
-                      value={replyText}
-                      onChange={(e) => setReplyText(e.target.value)}
-                      placeholder="Write a response..."
-                      className="min-h-[60px] text-xs"
-                      maxLength={1000}
-                    />
-                    <div className="flex gap-1">
-                      <Button
-                        size="sm"
-                        className="h-6 text-xs px-2"
-                        onClick={() => handleSendReply(f.id)}
-                        disabled={!replyText.trim() || respondToFeedback.isPending}
-                      >
-                        {respondToFeedback.isPending ? "Sending..." : "Send"}
-                      </Button>
-                      <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={handleCancelReply}>
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </CollapsibleSection>
       )}
@@ -446,32 +479,58 @@ export default function Admin() {
           storageKey="admin-feedback-resolved"
           iconClassName="text-muted-foreground"
         >
-          <div className="space-y-1">
-            {resolvedFeedback.map((f) => (
-              <div key={f.id} className="text-xs border-b border-border/50 py-1 space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground">
-                    {`#${f.feedback_id} · User #${f.user_number}`} • {format(parseISO(f.created_at), "MMM d")}
-                  </span>
-                  {f.resolved_reason === 'fixed' && (
-                    <span className="text-green-600 dark:text-green-400">Fixed</span>
-                  )}
+          <div className="space-y-0">
+            {resolvedFeedback.map((f) => {
+              const isExpanded = expandedFeedbackIds.has(f.id);
+              return (
+                <div key={f.id} className="border-b border-border/50 last:border-0">
                   <button
-                    className="text-muted-foreground underline hover:text-foreground"
-                    onClick={() => resolveFeedback.mutate({ feedbackId: f.id, resolve: false })}
+                    type="button"
+                    onClick={() => toggleFeedbackExpand(f.id)}
+                    className="w-full text-left py-2 flex flex-col gap-0.5"
                   >
-                    Unresolve
+                    <div className="flex items-center gap-2 text-xs flex-wrap">
+                      <span className="text-muted-foreground font-mono">#{f.feedback_id}</span>
+                      <span className="text-muted-foreground">{format(parseISO(f.created_at), "MMM d, yyyy")}</span>
+                      <span className="text-muted-foreground">User #{f.user_number}</span>
+                      {f.resolved_reason === 'fixed' && (
+                        <span className="text-green-600 dark:text-green-400">✓ Fixed</span>
+                      )}
+                      {f.response && (
+                        <span className="text-[hsl(217_91%_60%)]">• Response</span>
+                      )}
+                      <button
+                        className="text-orange-500 hover:underline"
+                        onClick={(e) => { e.stopPropagation(); resolveFeedback.mutate({ feedbackId: f.id, resolve: false }); }}
+                      >
+                        Unresolve
+                      </button>
+                      <ChevronDown className={cn(
+                        "h-3 w-3 ml-auto text-muted-foreground transition-transform",
+                        isExpanded && "rotate-180"
+                      )} />
+                    </div>
+                    {!isExpanded && (
+                      <p className="text-xs text-muted-foreground truncate">{truncate(f.message)}</p>
+                    )}
                   </button>
+
+                  {isExpanded && (
+                    <div className="pb-3 space-y-2">
+                      <p className="text-xs whitespace-pre-wrap">{f.message}</p>
+                      {f.response && (
+                        <div className="ml-3 pl-3 border-l-2 border-primary/30">
+                          <span className="text-xs text-muted-foreground">
+                            Response ({format(parseISO(f.responded_at!), "MMM d")})
+                          </span>
+                          <p className="text-xs whitespace-pre-wrap text-muted-foreground">{f.response}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <p className="whitespace-pre-wrap">{f.message}</p>
-                {f.response && (
-                  <div className="ml-2 pl-2 border-l-2 border-primary/30 text-muted-foreground">
-                    <span className="text-[10px]">Response ({format(parseISO(f.responded_at!), "MMM d")})</span>
-                    <p className="whitespace-pre-wrap">{f.response}</p>
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </CollapsibleSection>
       )}
