@@ -1,54 +1,37 @@
 
 
-# Fix: Include portion data from barcode scans
+# Fix portion format in barcode lookup
 
 ## Problem
-When a barcode is scanned, the `lookup-upc` backend function returns a `portion` field (e.g., "1 bag", "1 serving"), but the client-side code in `useScanBarcode.ts` drops it. The `LookupResult` interface and `createFoodItemFromScan` function don't include `portion`, so scanned items never get portion data and the scaling UI can't be used.
+The `lookup-upc` function returns portions like "36 pretzels (56 g)" -- the dual-unit format that breaks the portion scaling parser. This happens in two places:
+
+1. **Open Food Facts** returns `serving_size` as-is (e.g., "36 pretzels (56 g)")
+2. **AI fallback** prompt doesn't enforce the simple "quantity unit" format
 
 ## Solution
-Add `portion` to the `LookupResult` interface and wire it through `createFoodItemFromScan`.
+
+### 1. Sanitize Open Food Facts `serving_size` (server-side)
+Strip parenthetical context from the `serving_size` string before returning it. For example, "36 pretzels (56 g)" becomes "36 pretzels".
+
+### 2. Update AI fallback prompt
+Add the same portion format rule used in `analyze-food`: a simple "quantity unit" format -- never combine multiple units or add parenthetical context.
 
 ## Technical Details
 
-**File: `src/hooks/useScanBarcode.ts`**
+**File: `supabase/functions/lookup-upc/index.ts`**
 
-1. Add `portion` to the `LookupResult` interface:
+1. After extracting `servingSize` from Open Food Facts (around line 100), strip any parenthetical suffixes:
    ```typescript
-   interface LookupResult {
-     description: string;
-     portion?: string;
-     calories: number;
-     protein: number;
-     carbs: number;
-     fat: number;
-     source: 'openfoodfacts' | 'ai';
-   }
+   const servingSize = (product.serving_size || '1 serving')
+     .replace(/\s*\([^)]*\)\s*/g, '')
+     .trim() || '1 serving';
    ```
 
-2. Include `portion` in the success response mapping (around line 48):
-   ```typescript
-   return {
-     success: true,
-     data: {
-       description: data.description,
-       portion: data.portion,
-       calories: data.calories,
-       ...
-     },
-   };
+2. Update the AI prompt (around line 133) to enforce the portion format:
+   ```
+   "serving": "simple quantity-unit format like '1 bag' or '36 pretzels' -- 
+    never combine multiple units or add parenthetical context"
    ```
 
-3. Include `portion` in `createFoodItemFromScan` (around line 69):
-   ```typescript
-   const createFoodItemFromScan = (result: LookupResult): Omit<FoodItem, 'uid' | 'entryId'> => {
-     return {
-       description: result.description,
-       portion: result.portion,
-       calories: result.calories,
-       ...
-     };
-   };
-   ```
-
-No other files need changes -- `FoodInput` and `LogInput` already pass the returned food item through to the entry creation flow, which already handles `portion`.
+No client-side changes needed.
 
