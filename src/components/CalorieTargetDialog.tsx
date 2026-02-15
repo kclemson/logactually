@@ -133,7 +133,7 @@ export function CalorieTargetDialog({
             )}
           >
             <div className="overflow-hidden">
-              <div className="space-y-4 pt-1">
+              <div className="space-y-4 pt-1 min-h-[200px]">
                 {/* Mode dropdown */}
                 <div className="flex items-center justify-between overflow-visible">
                   <p className="text-xs text-muted-foreground">Mode</p>
@@ -141,7 +141,7 @@ export function CalorieTargetDialog({
                     value={settings.calorieTargetMode}
                     onValueChange={(val) => updateSettings({ calorieTargetMode: val as CalorieTargetMode })}
                   >
-                    <SelectTrigger className="w-[240px] h-auto py-1.5 text-xs">
+                    <SelectTrigger className="w-[280px] h-auto py-1.5 text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -149,7 +149,7 @@ export function CalorieTargetDialog({
                         <SelectItem key={value} value={value} className="py-2">
                           <div className="flex flex-col items-start">
                             <span className="text-xs font-medium">{label}</span>
-                            <span className="text-[10px] text-muted-foreground">{description}</span>
+                            <span className="text-[10px] text-muted-foreground whitespace-nowrap">{description}</span>
                           </div>
                         </SelectItem>
                       ))}
@@ -203,7 +203,7 @@ export function CalorieTargetDialog({
                     {/* Activity hint */}
                     {activityHint && (
                       <p className="text-[10px] text-muted-foreground/70 italic">
-                        Average ~{activityHint.avgDailyBurn} calories/day burned over {activityHint.activeDays} active days. This is closest to "{activityHint.label}."
+                        Your logged exercise burned an average of ~{activityHint.avgDailyBurn} calories/day over {activityHint.activeDays} active days. This is closest to "{activityHint.label}."
                       </p>
                     )}
 
@@ -228,10 +228,8 @@ export function CalorieTargetDialog({
 
                     {/* Computed summary */}
                     {tdeeSummary && (
-                      <p className="text-[10px] text-muted-foreground bg-muted/50 rounded px-2 py-1.5">
-                        Base metabolic rate ~{tdeeSummary.bmr.toLocaleString()} × {tdeeSummary.multiplier} = ~{tdeeSummary.tdee.toLocaleString()} daily energy expenditure
-                        {tdeeSummary.deficit > 0 && <> − {tdeeSummary.deficit} = <strong className="text-foreground">{tdeeSummary.target.toLocaleString()} cal/day</strong></>}
-                        {tdeeSummary.deficit === 0 && <> = <strong className="text-foreground">{tdeeSummary.target.toLocaleString()} cal/day</strong></>}
+                      <p className="text-[10px] text-muted-foreground bg-muted/50 rounded py-1.5">
+                        Base metabolic rate ~{tdeeSummary.bmr.toLocaleString()} × {tdeeSummary.multiplier} = ~{tdeeSummary.tdee.toLocaleString()} daily energy expenditure − {tdeeSummary.deficit} deficit = <span className="text-foreground">{tdeeSummary.target.toLocaleString()} cal/day</span>
                       </p>
                     )}
                   </div>
