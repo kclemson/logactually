@@ -35,7 +35,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   suggestMealSaves: true,
   suggestRoutineSaves: true,
   dailyCalorieTarget: null,
-  calorieTargetEnabled: false,
+  calorieTargetEnabled: true,
   calorieTargetMode: 'static',
   activityLevel: null,
   dailyDeficit: null,
