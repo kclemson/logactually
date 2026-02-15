@@ -409,7 +409,7 @@ export default function Admin() {
                         )} />
                       </div>
                       {replyingToId !== f.id && (
-                        <div className="flex items-center gap-2 text-[10px] mt-0.5">
+                        <div className="flex items-center gap-2 text-xs mt-0.5">
                           <button
                             className="text-[hsl(217_91%_60%)] underline"
                             onClick={(e) => { e.stopPropagation(); handleStartReply(f.id, f.response); }}
@@ -519,7 +519,7 @@ export default function Admin() {
                           isExpanded && "rotate-180"
                         )} />
                       </div>
-                      <div className="flex items-center gap-2 text-[10px] mt-0.5">
+                      <div className="flex items-center gap-2 text-xs mt-0.5">
                         <button
                           className="text-orange-500 underline"
                           onClick={(e) => { e.stopPropagation(); handleResolve(f.id, false); }}
