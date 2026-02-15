@@ -1,35 +1,43 @@
 
 
-# Fix feedback list UX issues
+# Admin Feedback: Collapsible Rows (with shared utility)
 
-Two small changes in `src/components/FeedbackForm.tsx`:
+## 1. Extract shared `truncate` helper
 
-## 1. Allow multiple items to be expanded at once
+Create `src/lib/feedback-utils.ts` with the `truncate` function currently in `FeedbackForm.tsx`:
 
-Change `expandedId` from a single string to a Set of strings, so clicking one item doesn't collapse another.
+```typescript
+export const truncate = (text: string, maxLen = 80) => {
+  const firstLine = text.split('\n')[0];
+  if (firstLine.length <= maxLen) return firstLine;
+  return firstLine.slice(0, maxLen) + '...';
+};
+```
 
-- `const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());`
-- `toggleExpand` toggles the clicked ID in/out of the set
-- `isExpanded` checks `expandedIds.has(item.id)`
+Update `src/components/FeedbackForm.tsx` to import it from there instead of defining it inline.
 
-## 2. Reduce font size on expanded message body
+## 2. Redesign admin feedback items in `src/pages/Admin.tsx`
 
-Change the expanded message text and response text from `text-sm` to `text-xs` to match the rest of the compact feedback UI.
+Add collapsible row pattern matching the user-facing FeedbackForm:
 
-- Line 178: `<p className="text-sm ...">` becomes `text-xs`
-- Line 185: `<p className="text-sm ...">` becomes `text-xs`
+- Add `expandedFeedbackIds` state as `Set<string>`
+- Import `ChevronDown` and `truncate`
+
+**Collapsed state** (two lines):
+- Line 1: `#feedback_id`, date, `User #N`, status badge (green "Fixed" if applicable), action links (Reply, Resolve, Resolve Fixed / Unresolve)
+- Line 2: Truncated message preview + chevron
+
+**Expanded state:**
+- Full message text, admin response (if any), reply form
+- Compact `text-xs` styling throughout
+
+Apply to both open and resolved feedback sections.
 
 ## Technical details
 
-**File: `src/components/FeedbackForm.tsx`**
-
-| Line | Current | New |
-|------|---------|-----|
-| 39 | `const [expandedId, setExpandedId] = useState<string \| null>(null);` | `const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());` |
-| 83-89 | `toggleExpand` sets single ID or null | Toggles ID in/out of a `Set` copy |
-| 133 | `const isExpanded = expandedId === item.id;` | `const isExpanded = expandedIds.has(item.id);` |
-| 178 | `text-sm` on message body | `text-xs` |
-| 185 | `text-sm` on response body | `text-xs` |
-
-No other files changed.
+| File | Change |
+|------|--------|
+| `src/lib/feedback-utils.ts` | New file with `truncate` function |
+| `src/components/FeedbackForm.tsx` | Remove inline `truncate`, import from `feedback-utils` |
+| `src/pages/Admin.tsx` | Add `ChevronDown` import, `expandedFeedbackIds` state, collapsible row UI for both open and resolved sections, import `truncate` from `feedback-utils` |
 
