@@ -80,6 +80,7 @@ const baseSettings: UserSettings = {
   suggestMealSaves: true,
   suggestRoutineSaves: true,
   dailyCalorieTarget: 2000,
+  calorieTargetEnabled: true,
   calorieTargetMode: 'static',
   activityLevel: null,
   dailyDeficit: null,
@@ -93,6 +94,10 @@ const baseSettings: UserSettings = {
 };
 
 describe('getEffectiveDailyTarget', () => {
+  it('returns null when feature is disabled', () => {
+    expect(getEffectiveDailyTarget({ ...baseSettings, calorieTargetEnabled: false })).toBeNull();
+  });
+
   it('returns static target in static mode', () => {
     expect(getEffectiveDailyTarget(baseSettings)).toBe(2000);
   });

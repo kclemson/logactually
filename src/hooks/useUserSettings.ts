@@ -13,6 +13,7 @@ export interface UserSettings {
   suggestRoutineSaves: boolean;
   dailyCalorieTarget: number | null;
   // TDEE-based deficit mode
+  calorieTargetEnabled: boolean;
   calorieTargetMode: 'static' | 'deficit';
   activityLevel: 'sedentary' | 'light' | 'moderate' | 'active' | null;
   dailyDeficit: number | null;
@@ -34,6 +35,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   suggestMealSaves: true,
   suggestRoutineSaves: true,
   dailyCalorieTarget: null,
+  calorieTargetEnabled: false,
   calorieTargetMode: 'static',
   activityLevel: null,
   dailyDeficit: null,
