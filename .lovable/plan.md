@@ -1,50 +1,127 @@
 
 
-# Calorie Burn Chart: Bar Labels + Exercise Breakdown Tooltip
+# TDEE-Based Dynamic Calorie Target (Deficit Mode)
 
-## Changes
+## Overview
 
-### 1. Enrich hook with exercise counts (`src/hooks/useDailyCalorieBurn.ts`)
+Add an optional "deficit mode" to the Daily Calorie Target setting. Instead of a static number, users set an activity level and deficit amount. The app computes:
 
-Track unique exercise keys per date, splitting into cardio vs strength using `isCardioExercise` from `exercise-metadata.ts`.
+```text
+Target = TDEE - deficit
+TDEE   = BMR x activity_multiplier
+```
 
-New fields on `DailyCalorieBurn`:
-- `exerciseCount` -- total distinct exercises
-- `cardioCount` -- distinct cardio exercises  
-- `strengthCount` -- distinct non-cardio exercises
+All biometric data is reused from the existing calorie burn settings -- zero redundancy.
 
-Implementation: add a `Set<string>` per date to collect unique exercise keys, then count cardio/strength at the end.
+## Naming Convention
 
-### 2. Add bar labels (`src/components/trends/CalorieBurnChart.tsx`)
+All function and variable names will use fully capitalized acronyms: `BMR`, `TDEE` (not `Bmr`, `Tdee`).
 
-Follow the same pattern as `ExerciseChart.renderCardioLabel`:
-- Import `LabelList` from recharts and `getFullWidthLabelInterval` from `chart-label-interval`
-- Add `showLabel` field to `CalorieBurnChartData`
-- Add a `renderLabel` function: renders midpoint value above bar at font size 7 in chart color, only when `showLabel` is true
-- Add `<LabelList dataKey="midpoint" content={renderLabel} />` inside the `<Bar>`
-- Increase top margin from 4 to 12 for label room
+- `computeAbsoluteBMR()` (not `computeAbsoluteBmr`)
+- `computeTDEE()` (not `computeTdee`)
 
-### 3. Enhanced tooltip (`src/components/trends/CalorieBurnChart.tsx`)
+## Architecture
 
-Update `BurnTooltip` to always show range + exercise breakdown:
+Shared BMR logic is extracted from `calorie-burn.ts` so both features use the same computation:
 
-- Line 1 (in chart color, bold): `~112 cal (range: 104-129)`
-  - If low === high: `~112 cal`
-- Line 2 (muted): `3 exercises (1 cardio, 2 strength)`
-  - Omits categories with 0: `2 exercises (2 strength)` or `1 exercise (1 cardio)`
-- "Go to day" button on touch devices (already present, stays as-is)
+```text
+calorie-burn.ts                     calorie-target.ts
+       |                                    |
+  getBmrScalingFactor()             computeTDEE()
+       |                                    |
+       +----> computeAbsoluteBMR() <--------+
+               (shared, extracted)
+```
 
-### 4. Wire up in `src/pages/Trends.tsx`
+A single `getEffectiveDailyTarget(settings)` resolver replaces all 4 current consumers of `settings.dailyCalorieTarget`. It returns `number | null` -- same shape -- so dot-color and reference-line logic works unchanged.
 
-- Import `getFullWidthLabelInterval`
-- Compute `showLabel` using right-to-left interval pattern
-- Pass through `exerciseCount`, `cardioCount`, `strengthCount` from hook data
+## User Experience
 
-## Files changed
+The "Daily Calorie Target" row in Settings becomes a mode picker:
+
+- **Static** (current behavior): number input, e.g., 2000
+- **Deficit**: activity level dropdown + deficit amount input
+
+When Deficit is selected, the UI shows:
+
+1. Activity level dropdown: Sedentary (x1.2), Lightly active (x1.375), Moderately active (x1.55), Active (x1.725)
+2. Daily deficit input (e.g., 500)
+3. Computed summary: `BMR ~1,650 x 1.375 = ~2,269 TDEE - 500 = ~1,769 cal/day`
+4. Activity hint from logged data: "Based on your last 30 days: avg ~250 cal/day burned -- closest to Lightly active"
+
+If biometrics are missing, a note directs users to the calorie burn config dialog.
+
+## Technical Details
+
+### 1. Extract shared BMR (`src/lib/calorie-burn.ts`)
+
+New exported function:
+
+```typescript
+export function computeAbsoluteBMR(settings: {
+  bodyWeightLbs: number | null;
+  heightInches: number | null;
+  age: number | null;
+  bodyComposition: 'female' | 'male' | null;
+}): number | null
+```
+
+Returns null if weight is missing. `getBmrScalingFactor()` is refactored to call this -- no behavior change.
+
+### 2. New settings fields (`src/hooks/useUserSettings.ts`)
+
+```typescript
+calorieTargetMode: 'static' | 'deficit';   // default: 'static'
+activityLevel: 'sedentary' | 'light' | 'moderate' | 'active' | null;  // default: null
+dailyDeficit: number | null;                // default: null
+```
+
+### 3. TDEE and target resolution (`src/lib/calorie-target.ts`)
+
+New exports alongside existing `getTargetDotColor`:
+
+- `ACTIVITY_MULTIPLIERS` -- constant map of level to multiplier
+- `computeTDEE(bmr, activityLevel)` -- simple multiplication
+- `getEffectiveDailyTarget(settings)` -- resolves final target:
+  - Static mode: returns `settings.dailyCalorieTarget`
+  - Deficit mode: `BMR x multiplier - deficit`, null if biometrics missing
+- `suggestActivityLevel(avgDailyBurn)` -- maps average daily burn to closest tier
+
+### 4. Update all consumers (4 files)
+
+Replace `settings.dailyCalorieTarget` with `getEffectiveDailyTarget(settings)`:
+
+| File | Usage |
+|------|-------|
+| `src/pages/History.tsx` | Calendar dot color (line 251) |
+| `src/pages/FoodLog.tsx` | Passes to FoodItemsTable (line 706) |
+| `src/components/FoodItemsTable.tsx` | Totals row dot color (line 336) |
+| `src/pages/Trends.tsx` | Chart reference line (lines 323, 357) |
+
+Each is a one-line swap -- the resolver returns `number | null`, same shape as the raw field.
+
+### 5. Settings UI (`src/components/settings/PreferencesSection.tsx`)
+
+- Replace static number input with a Static/Deficit toggle (same button style as weight units)
+- Static: show existing number input
+- Deficit: show activity level dropdown (Radix Select) + deficit number input + computed summary + activity hint
+- Activity hint uses `useDailyCalorieBurn(30)` average + `suggestActivityLevel()`
+
+### 6. Test update (`src/pages/Settings.test.tsx`)
+
+Add new default fields to mock settings objects.
+
+### Files changed
 
 | File | What |
 |------|------|
-| `src/hooks/useDailyCalorieBurn.ts` | Track per-day exercise counts (cardio vs strength) |
-| `src/components/trends/CalorieBurnChart.tsx` | Add LabelList + enrich tooltip with range and exercise breakdown |
-| `src/pages/Trends.tsx` | Pass new fields + compute `showLabel` |
+| `src/lib/calorie-burn.ts` | Extract `computeAbsoluteBMR()`, refactor `getBmrScalingFactor` to use it |
+| `src/lib/calorie-target.ts` | Add `computeTDEE`, `getEffectiveDailyTarget`, `ACTIVITY_MULTIPLIERS`, `suggestActivityLevel` |
+| `src/hooks/useUserSettings.ts` | Add 3 new settings fields with defaults |
+| `src/components/settings/PreferencesSection.tsx` | Mode toggle, activity dropdown, deficit input, summary, hint |
+| `src/pages/History.tsx` | Use `getEffectiveDailyTarget()` |
+| `src/pages/FoodLog.tsx` | Use `getEffectiveDailyTarget()` |
+| `src/components/FoodItemsTable.tsx` | Use `getEffectiveDailyTarget()` |
+| `src/pages/Trends.tsx` | Use `getEffectiveDailyTarget()` |
+| `src/pages/Settings.test.tsx` | Add new defaults to mock |
 
