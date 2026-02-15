@@ -132,13 +132,6 @@ export function CalorieTargetDialog({
             >
               <div className="overflow-hidden">
                 <div className="space-y-4 pt-1">
-                  <p className="text-[10px] text-muted-foreground/70">
-                    Show <span className="text-green-500 dark:text-green-400">●</span>{' '}
-                    <span className="text-amber-500 dark:text-amber-400">●</span>{' '}
-                    <span className="text-rose-500 dark:text-rose-400">●</span>{' '}
-                    color indicators on calendar view
-                  </p>
-
                   {/* Mode toggle */}
                   <div className="flex items-center justify-between">
                     <p className="text-xs text-muted-foreground">Mode</p>

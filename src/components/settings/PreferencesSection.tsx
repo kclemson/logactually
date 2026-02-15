@@ -72,18 +72,15 @@ export function PreferencesSection({ settings, updateSettings }: PreferencesSect
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground">Daily Calorie Target</p>
-              {effectiveTarget != null ? (
-                <p className="text-[10px] text-muted-foreground/70">
-                  {Math.round(effectiveTarget).toLocaleString()} cal/day ({settings.calorieTargetMode})
-                </p>
-              ) : (
-                <p className="text-[10px] text-muted-foreground/70">
-                  Show <span className="text-green-500 dark:text-green-400">●</span>{' '}
-                  <span className="text-amber-500 dark:text-amber-400">●</span>{' '}
-                  <span className="text-rose-500 dark:text-rose-400">●</span>{' '}
-                  color indicators on calendar view
-                </p>
-              )}
+              <p className="text-[10px] text-muted-foreground/70">
+                {effectiveTarget != null
+                  ? `${Math.round(effectiveTarget).toLocaleString()} cal/day (${settings.calorieTargetMode})`
+                  : <>Show <span className="text-green-500 dark:text-green-400">●</span>{' '}
+                    <span className="text-amber-500 dark:text-amber-400">●</span>{' '}
+                    <span className="text-rose-500 dark:text-rose-400">●</span>{' '}
+                    color indicators on calendar view</>
+                }
+              </p>
             </div>
             <button
               onClick={() => setCalorieTargetDialogOpen(true)}
