@@ -392,18 +392,24 @@ export default function Admin() {
                     onClick={() => toggleFeedbackExpand(f.id)}
                     className="w-full text-left py-2 flex flex-col gap-0.5"
                   >
-                    <div className="flex items-center gap-2 text-xs flex-wrap">
-                      <span className="text-muted-foreground font-mono">#{f.feedback_id}</span>
-                      <span className="text-muted-foreground">{format(parseISO(f.created_at), "MMM d, yyyy")}</span>
-                      <span className="text-muted-foreground">User #{f.user_number}</span>
-                      {!f.response && (
-                        <span className="text-foreground">Active</span>
-                      )}
-                      {f.response && (
-                        <span className="text-[hsl(217_91%_60%)]">• Response</span>
-                      )}
+                    <div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-muted-foreground font-mono">#{f.feedback_id}</span>
+                        <span className="text-muted-foreground">{format(parseISO(f.created_at), "MMM d, yyyy")}</span>
+                        <span className="text-muted-foreground">User #{f.user_number}</span>
+                        {!f.response && (
+                          <span className="text-foreground">Active</span>
+                        )}
+                        {f.response && (
+                          <span className="text-[hsl(217_91%_60%)]">• Response</span>
+                        )}
+                        <ChevronDown className={cn(
+                          "h-3 w-3 ml-auto text-muted-foreground transition-transform",
+                          isExpanded && "rotate-180"
+                        )} />
+                      </div>
                       {replyingToId !== f.id && (
-                        <>
+                        <div className="flex items-center gap-2 text-[10px] mt-0.5">
                           <button
                             className="text-[hsl(217_91%_60%)] underline"
                             onClick={(e) => { e.stopPropagation(); handleStartReply(f.id, f.response); }}
@@ -422,12 +428,8 @@ export default function Admin() {
                           >
                             Resolve Fixed
                           </button>
-                        </>
+                        </div>
                       )}
-                      <ChevronDown className={cn(
-                        "h-3 w-3 ml-auto text-muted-foreground transition-transform",
-                        isExpanded && "rotate-180"
-                      )} />
                     </div>
                     {!isExpanded && (
                       <p className="text-xs text-muted-foreground truncate">{truncate(f.message)}</p>
@@ -499,28 +501,32 @@ export default function Admin() {
                     onClick={() => toggleFeedbackExpand(f.id)}
                     className="w-full text-left py-2 flex flex-col gap-0.5"
                   >
-                    <div className="flex items-center gap-2 text-xs flex-wrap">
-                      <span className="text-muted-foreground font-mono">#{f.feedback_id}</span>
-                      <span className="text-muted-foreground">{format(parseISO(f.created_at), "MMM d, yyyy")}</span>
-                      <span className="text-muted-foreground">User #{f.user_number}</span>
-                      {f.resolved_reason === 'fixed' ? (
-                        <span className="text-green-600 dark:text-green-400">✓ Fixed</span>
-                      ) : (
-                        <span className="text-[hsl(217_91%_60%)]">✓ Resolved</span>
-                      )}
-                      {f.response && (
-                        <span className="text-[hsl(217_91%_60%)]">• Response</span>
-                      )}
-                      <button
-                        className="text-orange-500 underline"
-                        onClick={(e) => { e.stopPropagation(); handleResolve(f.id, false); }}
-                      >
-                        Unresolve
-                      </button>
-                      <ChevronDown className={cn(
-                        "h-3 w-3 ml-auto text-muted-foreground transition-transform",
-                        isExpanded && "rotate-180"
-                      )} />
+                    <div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-muted-foreground font-mono">#{f.feedback_id}</span>
+                        <span className="text-muted-foreground">{format(parseISO(f.created_at), "MMM d, yyyy")}</span>
+                        <span className="text-muted-foreground">User #{f.user_number}</span>
+                        {f.resolved_reason === 'fixed' ? (
+                          <span className="text-green-600 dark:text-green-400">✓ Fixed</span>
+                        ) : (
+                          <span className="text-[hsl(217_91%_60%)]">✓ Resolved</span>
+                        )}
+                        {f.response && (
+                          <span className="text-[hsl(217_91%_60%)]">• Response</span>
+                        )}
+                        <ChevronDown className={cn(
+                          "h-3 w-3 ml-auto text-muted-foreground transition-transform",
+                          isExpanded && "rotate-180"
+                        )} />
+                      </div>
+                      <div className="flex items-center gap-2 text-[10px] mt-0.5">
+                        <button
+                          className="text-orange-500 underline"
+                          onClick={(e) => { e.stopPropagation(); handleResolve(f.id, false); }}
+                        >
+                          Unresolve
+                        </button>
+                      </div>
                     </div>
                     {!isExpanded && (
                       <p className="text-xs text-muted-foreground truncate">{truncate(f.message)}</p>
