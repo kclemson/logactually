@@ -1,43 +1,35 @@
 
 
-# Admin Feedback: Collapsible Rows (with shared utility)
+# Fix Admin Feedback UX: Scroll Jump and Action Link Styles
 
-## 1. Extract shared `truncate` helper
+## Changes
 
-Create `src/lib/feedback-utils.ts` with the `truncate` function currently in `FeedbackForm.tsx`:
+**File: `src/pages/Admin.tsx`**
+
+### 1. Prevent jarring scroll when resolving
+
+When "Resolve" or "Resolve Fixed" is clicked, the item disappears from the open list and appears in the resolved list, causing a layout shift that can jump the viewport. Fix by saving the scroll position before the mutation and restoring it after the query invalidation settles.
+
+Create a wrapper function that captures `window.scrollY`, calls the mutation, and uses `onSettled` (or a rAF after mutate) to restore scroll position. Alternatively, use a simpler approach: wrap the resolve calls to save and restore scroll position via `mutateAsync` + `requestAnimationFrame`.
 
 ```typescript
-export const truncate = (text: string, maxLen = 80) => {
-  const firstLine = text.split('\n')[0];
-  if (firstLine.length <= maxLen) return firstLine;
-  return firstLine.slice(0, maxLen) + '...';
+const handleResolve = async (feedbackId: string, resolve: boolean, reason?: string) => {
+  const scrollY = window.scrollY;
+  await resolveFeedback.mutateAsync({ feedbackId, resolve, reason });
+  requestAnimationFrame(() => window.scrollTo(0, scrollY));
 };
 ```
 
-Update `src/components/FeedbackForm.tsx` to import it from there instead of defining it inline.
+Update all resolve/unresolve button `onClick` handlers to call `handleResolve` instead of `resolveFeedback.mutate` directly.
 
-## 2. Redesign admin feedback items in `src/pages/Admin.tsx`
+### 2. Always show underline on action links
 
-Add collapsible row pattern matching the user-facing FeedbackForm:
+Change all feedback action buttons (Reply, Edit Reply, Resolve, Resolve Fixed, Unresolve) from `hover:underline` to `underline` so they always appear as hyperlinks.
 
-- Add `expandedFeedbackIds` state as `Set<string>`
-- Import `ChevronDown` and `truncate`
-
-**Collapsed state** (two lines):
-- Line 1: `#feedback_id`, date, `User #N`, status badge (green "Fixed" if applicable), action links (Reply, Resolve, Resolve Fixed / Unresolve)
-- Line 2: Truncated message preview + chevron
-
-**Expanded state:**
-- Full message text, admin response (if any), reply form
-- Compact `text-xs` styling throughout
-
-Apply to both open and resolved feedback sections.
-
-## Technical details
-
-| File | Change |
-|------|--------|
-| `src/lib/feedback-utils.ts` | New file with `truncate` function |
-| `src/components/FeedbackForm.tsx` | Remove inline `truncate`, import from `feedback-utils` |
-| `src/pages/Admin.tsx` | Add `ChevronDown` import, `expandedFeedbackIds` state, collapsible row UI for both open and resolved sections, import `truncate` from `feedback-utils` |
+| Line(s) | Current | New |
+|----------|---------|-----|
+| 398 | `hover:underline` | `underline` |
+| 404 | `hover:underline` | `underline` |
+| 410 | `hover:underline` | `underline` |
+| 503 | `hover:underline` | `underline` |
 
