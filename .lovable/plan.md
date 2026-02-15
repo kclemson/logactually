@@ -1,55 +1,71 @@
 
 
-# Responsive Admin Actions: Inline on Desktop, Second Row on Mobile
+# Extract Shared Feedback Message Display Component
 
-## Approach
+## What
 
-Merge the metadata row and actions row back into a single `flex flex-wrap` container. Use standard flex utilities to control wrapping behavior:
+Create a `FeedbackMessageBody` component that renders the labeled "You wrote" block and "Response" block, then use it in all three locations: FeedbackForm (user Help page), Admin open feedback, and Admin resolved feedback.
 
-- **Chevron**: Add `md:order-last` so it renders last on desktop (after actions) but stays in its natural position on mobile
-- **Actions wrapper**: Use `w-full md:w-auto md:ml-auto` -- `w-full` forces a line break on mobile; `md:w-auto md:ml-auto` keeps it inline and right-aligned on desktop
+## New file: `src/components/FeedbackMessageBody.tsx`
 
-### Desktop layout (single row)
-```text
-[#id] [date] [user] [status] --------ml-auto-------- [Reply] [Resolve] [Resolve Fixed] [v]
+A small presentational component accepting:
+- `message: string` -- the user's message text
+- `createdAt: string` -- ISO timestamp for the "You wrote" label
+- `response: string | null` -- admin response text (renders nothing if null)
+- `respondedAt: string | null` -- ISO timestamp for the "Response" label
+
+Renders:
+```
+border-l user block:
+  "You wrote (MMM d, HH:mm):"
+  [message text]
+
+border-l response block (if response exists):
+  "Response (MMM d HH:mm):"
+  [response text]
 ```
 
-### Mobile layout (two rows)
-```text
-[#id] [date] [user] [status]                                                          [v]
-[Reply] [Resolve] [Resolve Fixed]
-```
+Both blocks use `ml-3 pl-3 border-l-2` with `border-border` for the user block and `border-primary/30` for the response block. Text is `text-xs whitespace-pre-wrap`.
 
-## Changes
+## Updated files
 
-### File: `src/pages/Admin.tsx`
-
-**Open feedback section (lines 395-433):**
-Remove the outer wrapper `<div>` and merge into one `flex flex-wrap` container:
-
+### `src/components/FeedbackForm.tsx` (lines 178-188)
+Replace the inline `<p>` + response `<div>` with:
 ```tsx
-<div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
-  <span className="text-muted-foreground font-mono">#{f.feedback_id}</span>
-  <span className="text-muted-foreground">{format(...)}</span>
-  <span className="text-muted-foreground">User #{f.user_number}</span>
-  {/* status badges (Active / Response) -- unchanged */}
-  <ChevronDown className="h-3 w-3 text-muted-foreground transition-transform ml-auto md:ml-0 md:order-last ..." />
-  {replyingToId !== f.id && (
-    <div className="flex items-center gap-2 w-full md:w-auto md:ml-auto">
-      <button ...>Reply</button>
-      <button ...>Resolve</button>
-      <button ...>Resolve Fixed</button>
-    </div>
-  )}
-</div>
+<FeedbackMessageBody
+  message={item.message}
+  createdAt={item.created_at}
+  response={item.response}
+  respondedAt={item.responded_at}
+/>
 ```
 
-Key class changes:
-- Outer div: `flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs` (replaces two nested divs)
-- ChevronDown: add `md:ml-0 md:order-last` (keeps `ml-auto` for mobile, loses it on desktop where actions take that role, renders last on desktop)
-- Actions wrapper: `w-full md:w-auto md:ml-auto` (replaces `mt-0.5` second-row div)
+### `src/pages/Admin.tsx` -- Open feedback (lines 438-448)
+Replace the inline message + response block with:
+```tsx
+<FeedbackMessageBody
+  message={f.message}
+  createdAt={f.created_at}
+  response={replyingToId !== f.id ? f.response : null}
+  respondedAt={f.responded_at}
+/>
+```
+(The `replyingToId` guard stays -- when replying, the response is hidden so the reply textarea takes its place.)
 
-**Resolved feedback section (lines 505-529):**
-Same pattern -- merge into single flex-wrap container, same classes on chevron and actions wrapper (just one "Unresolve" button).
+### `src/pages/Admin.tsx` -- Resolved feedback (lines 532-542)
+Same replacement:
+```tsx
+<FeedbackMessageBody
+  message={f.message}
+  createdAt={f.created_at}
+  response={f.response}
+  respondedAt={f.responded_at}
+/>
+```
 
-No new files, no new dependencies, no CSS changes.
+## Technical notes
+
+- Uses `format` and `parseISO` from `date-fns` (already a dependency)
+- Timestamp format updated from `"MMM d"` to `"MMM d HH:mm"` on both labels
+- No new dependencies, no schema changes
+- Three rendering sites reduced to one source of truth
