@@ -18,7 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { isCardioExercise } from '@/lib/exercise-metadata';
-import { getTargetDotColor } from '@/lib/calorie-target';
+import { getTargetDotColor, getEffectiveDailyTarget } from '@/lib/calorie-target';
 
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { setStoredDate } from '@/lib/selected-date';
@@ -248,9 +248,12 @@ const History = () => {
                   ? (
                     <>
                       {`${Math.round(summary.totalCalories).toLocaleString()}cal`}
-                      {!isTodayDate && settings.dailyCalorieTarget && settings.dailyCalorieTarget > 0 && (
-                        <span className={`text-[10px] ml-0.5 leading-none relative top-[-0.5px] ${getTargetDotColor(summary.totalCalories, settings.dailyCalorieTarget)}`}>●</span>
-                      )}
+                      {(() => {
+                        const target = getEffectiveDailyTarget(settings);
+                        return !isTodayDate && target && target > 0 ? (
+                          <span className={`text-[10px] ml-0.5 leading-none relative top-[-0.5px] ${getTargetDotColor(summary.totalCalories, target)}`}>●</span>
+                        ) : null;
+                      })()}
                     </>
                   )
                   : "\u00A0"}
