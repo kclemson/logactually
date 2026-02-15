@@ -19,12 +19,8 @@ const HELP_CONTENT = {
         highlights: ["braindump"],
       },
       {
-        text: "Once an item's logged, click or tap on it to make changes. Adjust portions with the +/- controls, or edit calories to auto-scale protein, carbs, and fat proportionally.",
-        highlights: ["portions"],
-      },
-      {
-        text: "Select the > next to a row to see what you originally wrote, and then save it as a meal or exercise routine for easy access in the future.",
-        highlights: ["save it"],
+        text: "Once an item's logged, click or tap on it to make changes. Adjust portions with the +/- controls, or edit calories to auto-scale protein, carbs, and fat proportionally. Select the > next to a row to see what you originally wrote, and then save it as a meal or exercise routine for easy access in the future.",
+        highlights: ["Adjust portions"],
       },
       {
         text: "There's a lot you can customize in Settings — dark theme, calorie targets, estimated exercise burn, weight units, CSV export, and more.",
@@ -57,7 +53,11 @@ function highlightText(text: string, highlights: string[], link?: string) {
     const isHighlight = highlights.some((h) => h.toLowerCase() === part.toLowerCase());
     if (isHighlight && link) {
       return (
-        <Link key={i} to={link} className="text-foreground underline underline-offset-2 hover:text-primary transition-colors">
+        <Link
+          key={i}
+          to={link}
+          className="text-foreground underline underline-offset-2 hover:text-primary transition-colors"
+        >
           {part}
         </Link>
       );
