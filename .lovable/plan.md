@@ -1,113 +1,64 @@
 
 
-# Revamp Calorie Target: Mode Dropdown, Inline Biometrics, Exercise-Adjusted Mode
+# Calorie Target Dialog Polish: 7 Fixes
 
 ## Summary
 
-Rename the internal mode key from `'deficit'` to `'body_stats'`, replace the button toggle with a dropdown that shows descriptions inline, embed biometric inputs directly in the dialog (no more "set your body stats" gate), and add a new "Exercise adjusted" mode that uses actual daily exercise burn. No database migration needed.
+Seven UI refinements to the CalorieTargetDialog and BiometricsInputs components addressing clipping, layout, text, and conditional display issues.
 
 ---
 
-## Production Safety
+## Changes
 
-- No user in production has `calorieTargetMode` set to `'deficit'` (confirmed via database query -- only the dev account has it).
-- A lightweight client-side shim will map any stale `'deficit'` value to `'body_stats'` at read time, which self-heals on next save.
-- The new `exerciseAdjustedBase` field defaults to `null` via `DEFAULT_SETTINGS` spread, so existing users are unaffected.
-- No database migration required -- all settings live in the `profiles.settings` JSONB column.
+### 1. `src/components/CalorieTargetDialog.tsx` -- Fix focus ring clipping on mode dropdown
 
----
+The `SelectTrigger` is inside a container that may clip the focus ring. Add `overflow-visible` or slight padding to the parent, and widen the trigger.
 
-## Changes by File
+**Line 144**: Change `w-[200px]` to `w-[240px]` on the SelectTrigger (also fixes issue #2 -- prevents text wrapping).
 
-### `src/hooks/useUserSettings.ts`
-- Change type: `calorieTargetMode: 'static' | 'body_stats' | 'exercise_adjusted'`
-- Add field: `exerciseAdjustedBase: number | null` (default `null`)
-- Add shim in `queryFn` after the spread to map legacy `'deficit'` to `'body_stats'`
+Add a small right padding or `overflow-visible` on the parent flex container (line 138) to prevent the focus ring from being clipped.
 
-### `src/lib/calorie-target.ts`
-- Add `TARGET_MODE_OPTIONS` constant array:
-  - `static` / "Fixed number" / "You set a specific calorie number"
-  - `body_stats` / "Estimated from body stats" / "Calculated from your weight, height, and activity level"
-  - `exercise_adjusted` / "Exercise adjusted" / "Your base goal plus actual calories burned each day"
-- Update `getEffectiveDailyTarget` to handle all three modes explicitly:
-  - `'static'`: returns `dailyCalorieTarget` (unchanged)
-  - `'body_stats'`: BMR x activity - deficit (same logic as old `'deficit'`)
-  - `'exercise_adjusted'`: returns `exerciseAdjustedBase` (per-day adjustment happens at consumption sites)
-- Add `getExerciseAdjustedTarget(base: number, dailyBurn: number): number`
+### 2. `src/components/CalorieTargetDialog.tsx` -- Widen mode dropdown
 
-### `src/lib/calorie-target.test.ts`
-- Add `exerciseAdjustedBase: null` to `baseSettings`
-- Rename `'deficit'` references to `'body_stats'`
-- Add tests for exercise-adjusted mode and the new helper
+Covered by #1 above -- increasing from `w-[200px]` to `w-[240px]` gives enough room for all three labels + descriptions to render without wrapping.
 
-### New: `src/components/BiometricsInputs.tsx`
-Extract from `CalorieBurnDialog.tsx` (lines ~159-471) into a shared component:
-- Local state: `bodyWeightUnit`, `heightDisplay`
-- Handlers: `handleWeightChange`, `displayWeight`, `handleBodyWeightUnitChange`, `parseFeetInchesInput`, `handleHeightChange`, `handleHeightUnitChange`, `handleAgeChange`
-- `compositionOptions` array
-- All four input rows: body weight (with lbs/kg toggle), height (with ft/cm toggle), age, metabolic profile
-- Props: `settings: UserSettings`, `updateSettings: (updates: Partial<UserSettings>) => void`
+### 3. `src/components/BiometricsInputs.tsx` -- Conditionally show effect subtexts
 
-### `src/components/CalorieBurnDialog.tsx`
-- Import and render `BiometricsInputs` inside the "Your info" section
-- Remove the extracted local state, handlers, helpers, and input markup (~lines 84-86, 159-300, 360-471)
-- Keep: toggle, preview section header, "Workout defaults" section (default intensity)
+Add a new prop `showEffectHints?: boolean` (default `true`). When `false`, hide the "Largest effect (~30-50%)", "Moderate effect (~10-15%)", "Small effect (~5% per decade)", and "Moderate effect (~5-10%)" subtitle lines.
 
-### `src/components/CalorieTargetDialog.tsx`
-Major rework of the config body:
+- `CalorieBurnDialog.tsx` passes nothing (defaults to `true`) -- subtexts still show.
+- `CalorieTargetDialog.tsx` passes `showEffectHints={false}` -- subtexts hidden.
 
-**Mode selector**: Replace button toggle with Radix `Select`. Each `SelectItem` renders two lines -- bold label on top, muted description below (matching the saved meals popover pattern). Import `TARGET_MODE_OPTIONS` from `calorie-target.ts`.
+### 4. `src/components/CalorieTargetDialog.tsx` -- Remove calorieBurnEnabled warning
 
-**Fixed number mode** (`static`): Number input for target (unchanged).
+Remove lines 265-268 (the amber warning about enabling "Show estimated calorie burn"). The exercise-adjusted mode works independently as long as biometric data is entered here. The calorie burn toggle only controls whether burn estimates appear on the Exercise Log tab -- it's not a dependency for the target calculation.
 
-**Estimated from body stats mode** (`body_stats`):
-- Render `BiometricsInputs` inline (replaces the "Set your body stats" warning and the CalorieBurnDialog sub-dialog)
-- Activity level dropdown (unchanged)
-- Activity hint reworded: "Average ~193 calories/day burned over 27 active days. This is closest to "Lightly active.""
-- Daily deficit input (unchanged)
-- Summary reworded: "Base metabolic rate ~1,248 x 1.375 = ~1,716 daily energy expenditure - 500 = 1,216 cal/day"
+### 5. `src/components/BiometricsInputs.tsx` -- Add "years" unit next to Age
 
-**Exercise adjusted mode** (`exercise_adjusted`):
-- Base goal input (number, same styling as fixed number)
-- Explanation: "Your daily target increases by calories burned from logged exercises"
-- Render `BiometricsInputs` inline (calorie burn estimation needs body stats)
-- Note if `calorieBurnEnabled` is false, suggesting they enable it
+Replace the empty `<span className="w-8" />` spacer (line 232) with a styled "years" label using the same selected-unit styling as lbs/kg and ft/cm:
 
-**Toggle-off reset**: Clear new fields too (`exerciseAdjustedBase: null`).
+```
+<span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground font-medium">years</span>
+```
 
-Remove: `CalorieBurnDialog` import and sub-dialog state, `hasBiometrics` gate, `calorieBurnDialogOpen` state.
+### 6. `src/components/CalorieTargetDialog.tsx` -- Move activity level above biometrics
 
-### `src/pages/History.tsx`
-- Import `useDailyCalorieBurn` and `getExerciseAdjustedTarget`
-- When `settings.calorieTargetMode === 'exercise_adjusted'`:
-  - Call `useDailyCalorieBurn` for the visible month range (pass appropriate day count)
-  - Build a `Map<string, number>` from date to midpoint burn `(low + high) / 2`
-  - In the calendar cell render (line ~252), compute adjusted target: `getExerciseAdjustedTarget(base, burnMap.get(dateStr) ?? 0)`
-  - Pass adjusted target to `getTargetDotColor`
-- For `'static'` and `'body_stats'` modes: unchanged (still calls `getEffectiveDailyTarget(settings)`)
+In the `body_stats` mode section (lines 180-237), reorder so that the activity level dropdown + activity hint appear immediately after the mode dropdown, before `BiometricsInputs`. Current order: BiometricsInputs, Activity level, Activity hint, Daily deficit, Summary. New order: Activity level, Activity hint, BiometricsInputs, Daily deficit, Summary.
 
-### `src/pages/FoodLog.tsx`
-- Import `useDailyCalorieBurn` and `getExerciseAdjustedTarget`
-- When `exercise_adjusted`: look up the selected day's burn from `useDailyCalorieBurn` data, compute `getExerciseAdjustedTarget(base, midpoint)`
-- Pass adjusted target to `FoodItemsTable` via `dailyCalorieTarget` prop
-- For other modes: unchanged
+### 7. `src/lib/calorie-target.ts` -- Update description text
 
-### `src/pages/Trends.tsx`
-- When `exercise_adjusted`: use `settings.exerciseAdjustedBase` as the reference line value (base goal, since daily target varies per day)
-- For other modes: unchanged (uses `getEffectiveDailyTarget(settings)`)
-
-### `src/pages/Settings.test.tsx`
-- Add `exerciseAdjustedBase: null` to mock settings objects
-- `calorieTargetMode` stays `'static'` in mocks (no change needed there)
+Change line 43 from:
+`'Calculated from your weight, height, and activity level'`
+to:
+`'Calculated from your activity level, weight, and height'`
 
 ---
 
-## What Stays the Same
+## File Change Summary
 
-- `dailyDeficit` field name (accurately describes the value for body_stats mode)
-- `dailyCalorieTarget` field for static mode
-- `getTargetDotColor` function and its thresholds
-- All calorie burn estimation logic (`computeAbsoluteBMR`, `estimateCalorieBurn`, etc.)
-- Enable/disable toggle behavior
-- `FoodItemsTable` component (just receives a different target value from its parent)
+| File | Changes |
+|---|---|
+| `src/components/BiometricsInputs.tsx` | Add `showEffectHints` prop; conditionally render subtexts; replace Age spacer with "years" label |
+| `src/components/CalorieTargetDialog.tsx` | Widen SelectTrigger + fix focus clipping; pass `showEffectHints={false}`; reorder activity level above biometrics; remove calorieBurnEnabled warning |
+| `src/lib/calorie-target.ts` | Reword body_stats description to "activity level, weight, and height" |
 
