@@ -7,7 +7,7 @@ import { CollapsibleSection } from '@/components/CollapsibleSection';
 import { CalorieBurnDialog } from '@/components/CalorieBurnDialog';
 import { CalorieTargetDialog } from '@/components/CalorieTargetDialog';
 import type { UserSettings } from '@/hooks/useUserSettings';
-import { getEffectiveDailyTarget } from '@/lib/calorie-target';
+
 
 interface PreferencesSectionProps {
   settings: UserSettings;
@@ -42,7 +42,6 @@ export function PreferencesSection({ settings, updateSettings }: PreferencesSect
   };
 
   const showWeights = settings.showWeights;
-  const effectiveTarget = getEffectiveDailyTarget(settings);
 
   return (
     <>
@@ -73,13 +72,10 @@ export function PreferencesSection({ settings, updateSettings }: PreferencesSect
             <div>
               <p className="text-xs text-muted-foreground">Daily Calorie Target</p>
               <p className="text-[10px] text-muted-foreground/70">
-                {effectiveTarget != null
-                  ? `${Math.round(effectiveTarget).toLocaleString()} cal/day (${settings.calorieTargetMode})`
-                  : <>Show <span className="text-green-500 dark:text-green-400">●</span>{' '}
-                    <span className="text-amber-500 dark:text-amber-400">●</span>{' '}
-                    <span className="text-rose-500 dark:text-rose-400">●</span>{' '}
-                    color indicators on calendar view</>
-                }
+                Show <span className="text-green-500 dark:text-green-400">●</span>{' '}
+                <span className="text-amber-500 dark:text-amber-400">●</span>{' '}
+                <span className="text-rose-500 dark:text-rose-400">●</span>{' '}
+                color indicators on calendar view
               </p>
             </div>
             <button
