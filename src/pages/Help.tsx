@@ -15,24 +15,32 @@ const HELP_CONTENT = {
         link: "/changelog",
       },
       {
-        text: "Braindump your inputs however you want (via text, voice, or scan a barcode) — the AI figures out the formatting and does the math.",
+        text: "Braindump your inputs however you want (via text, voice, photo, or scan a barcode) — the AI figures out the formatting and does the math.",
         highlights: ["braindump"],
       },
       {
-        text: "Once an item's logged, click or tap on it to make changes. Editing calories auto-scales protein, carbs, and fat proportionally.",
-        highlights: ["editing calories"],
+        text: "Once an item's logged, click or tap on it to make changes. Adjust portions with the +/- controls, or edit calories to auto-scale protein, carbs, and fat proportionally.",
+        highlights: ["portions"],
       },
       {
         text: "Select the > next to a row to see what you originally wrote, and then save it as a meal or exercise routine for easy access in the future.",
         highlights: ["save it"],
       },
       {
-        text: "Switch to dark theme, show exercise weight in Kgs, or export to CSV in Settings.",
-        highlights: ["Export to CSV"],
+        text: "There's a lot you can customize in Settings — dark theme, calorie targets, estimated exercise burn, weight units, CSV export, and more.",
+        highlights: ["Settings"],
       },
       {
         text: 'Pin this app to your phone\'s home screen for quick access — tap Share (or your browser menu), then "Add to Home Screen."',
         highlights: ["Pin this app"],
+      },
+      {
+        text: "Have questions about your data? Use Ask AI on the Trends page to spot patterns, get insights, and ask questions about your food and exercise history in plain language.",
+        highlights: ["Ask AI"],
+      },
+      {
+        text: "Track more than food and exercise — enable Custom Logs in Settings to log things like body weight, blood pressure, sleep, or anything else you want to track over time.",
+        highlights: ["Custom Logs"],
       },
     ],
   },
