@@ -10,20 +10,22 @@ interface FeedbackMessageBodyProps {
 export function FeedbackMessageBody({ message, createdAt, response, respondedAt }: FeedbackMessageBodyProps) {
   return (
     <>
+      <span className="text-xs text-muted-foreground">
+        Feedback created ({format(parseISO(createdAt), "MMM d, HH:mm")}):
+      </span>
       <div className="ml-3 pl-3 border-l-2 border-border">
-        <span className="text-xs text-muted-foreground">
-          You wrote ({format(parseISO(createdAt), "MMM d, HH:mm")}):
-        </span>
         <p className="text-xs whitespace-pre-wrap mt-0.5">{message}</p>
       </div>
 
       {response && respondedAt && (
-        <div className="ml-3 pl-3 border-l-2 border-primary/30">
-          <span className="text-xs text-muted-foreground">
+        <>
+          <span className="text-xs text-muted-foreground mt-2 block">
             Response ({format(parseISO(respondedAt), "MMM d HH:mm")}):
           </span>
-          <p className="text-xs whitespace-pre-wrap text-muted-foreground mt-0.5">{response}</p>
-        </div>
+          <div className="ml-3 pl-3 border-l-2 border-primary/30">
+            <p className="text-xs whitespace-pre-wrap text-muted-foreground mt-0.5">{response}</p>
+          </div>
+        </>
       )}
     </>
   );
