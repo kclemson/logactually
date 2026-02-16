@@ -203,7 +203,7 @@ export function CalorieTargetDialog({
                         value={settings.activityLevel ?? ''}
                         onValueChange={(val) => updateSettings({ activityLevel: val as ActivityLevel })}
                       >
-                        <SelectTrigger className="w-[160px] h-8 text-xs">
+                        <SelectTrigger className="w-[200px] h-8 text-xs">
                           <SelectValue placeholder="Select..." />
                         </SelectTrigger>
                         <SelectContent>
