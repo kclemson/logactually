@@ -345,6 +345,14 @@ export function CalorieTargetDialog({
                                 {' '}- {equationData.deficit != null && equationData.deficit !== 0
                                   ? equationData.deficit
                                   : <em className="not-italic text-muted-foreground/50">deficit</em>}
+                                {equationData.tdee != null && (
+                                  <>
+                                    {' '}= {(equationData.tdee - (equationData.deficit ?? 0) > 0
+                                      ? (equationData.tdee - (equationData.deficit ?? 0)).toLocaleString()
+                                      : '…')}
+                                    {' '}+ logged exercise <span className="italic">(varies daily)</span>
+                                  </>
+                                )}
                               </p>
                             </div>
                             {loggedExerciseExamples.length > 0 && (
