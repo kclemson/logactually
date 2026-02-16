@@ -3,17 +3,6 @@ import { Link } from 'react-router-dom';
 import { WeightSet } from '@/types/weight';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -22,6 +11,10 @@ import { type WeightUnit, formatWeight, parseWeightToLbs, getWeightUnitLabel, fo
 import { isCardioExercise } from '@/lib/exercise-metadata';
 import { estimateCalorieBurn, formatCalorieBurnValue, type CalorieBurnSettings, type ExerciseInput } from '@/lib/calorie-burn';
 import { useHasHover } from '@/hooks/use-has-hover';
+import { type EntryBoundary, isFirstInBoundary, isLastInBoundary, isEntryNew, getEntryHighlightClasses, hasAnyEditedFields, formatEditedFields } from '@/lib/entry-boundaries';
+import { EntryChevron } from '@/components/EntryChevron';
+import { DeleteAllDialog } from '@/components/DeleteAllDialog';
+import { DeleteGroupDialog } from '@/components/DeleteGroupDialog';
 
 type EditableFieldKey = 'description' | 'sets' | 'reps' | 'weight_lbs';
 
@@ -38,11 +31,6 @@ interface EditingCell {
   originalValue: string | number;
 }
 
-interface EntryBoundary {
-  entryId: string;
-  startIndex: number;
-  endIndex: number;
-}
 
 interface WeightItemsTableProps {
   items: WeightSet[];
@@ -240,18 +228,6 @@ export function WeightItemsTable({
     }
   };
 
-  const hasAnyEditedFields = (item: WeightSet): boolean => {
-    return (item.editedFields?.length ?? 0) > 0;
-  };
-
-  const formatEditedFields = (item: WeightSet): string | null => {
-    if (!item.editedFields || item.editedFields.length === 0) return null;
-    const fieldLabels = item.editedFields.map(field => 
-      field.charAt(0).toUpperCase() + field.slice(1)
-    );
-    return `Edited: ${fieldLabels.join(', ')}`;
-  };
-
   // Calculate totals - volume stays in stored unit for consistency, convert for display
   const totals = useMemo(() => {
     const volumeLbs = items.reduce((sum, item) => sum + (item.sets * item.reps * item.weight_lbs), 0);
@@ -277,26 +253,8 @@ export function WeightItemsTable({
     return 'grid-cols-[1fr_45px_45px_60px]';
   };
 
-  const isLastItemInEntry = (index: number): EntryBoundary | null => {
-    if (!entryBoundaries) return null;
-    const boundary = entryBoundaries.find(b => b.endIndex === index);
-    return boundary || null;
-  };
-
-  const isFirstItemInEntry = (index: number): boolean => {
-    if (!entryBoundaries) return false;
-    return entryBoundaries.some(b => b.startIndex === index);
-  };
-
-  // Note: entryBoundaries is kept for visual grouping (isFirstItemInEntry, isLastItemInEntry)
-  // but data lookups use item.entryId directly to avoid race conditions
-
   const hasDeleteColumn = editable || hasEntryDeletion;
   const gridCols = getGridCols(!!hasDeleteColumn, selectable);
-
-  const isNewEntry = (entryId: string | null): boolean => {
-    return entryId ? (newEntryIds?.has(entryId) ?? false) : false;
-  };
 
   const TotalsRow = () => (
     <div className={cn(
@@ -335,35 +293,7 @@ export function WeightItemsTable({
       </span>
       {hasDeleteColumn && (
         onDeleteAll ? (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
-                aria-label="Delete all exercises"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-lg">
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete all exercises?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will permanently remove all exercises for today.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction 
-                  onClick={onDeleteAll}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  Delete All
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <DeleteAllDialog itemLabel="exercises" onConfirm={onDeleteAll} />
         ) : (
           <span></span>
         )
@@ -410,10 +340,11 @@ export function WeightItemsTable({
 
       {/* Data rows */}
       {items.map((item, index) => {
-        const isFirstInEntry = isFirstItemInEntry(index);
-        const isLastInEntry = !!isLastItemInEntry(index);
+        const isFirstInEntry = entryBoundaries ? !!isFirstInBoundary(index, entryBoundaries) : false;
+        const isLastInEntry = entryBoundaries ? !!isLastInBoundary(index, entryBoundaries) : false;
         const currentEntryId = item.entryId || null;
-        const entryIsNew = isNewEntry(currentEntryId);
+        const entryIsNew = isEntryNew(currentEntryId, newEntryIds);
+        const highlightClasses = getEntryHighlightClasses(entryIsNew, isFirstInEntry, isLastInEntry);
         const isCurrentExpanded = currentEntryId ? expandedEntryIds?.has(currentEntryId) : false;
         const currentRawInput = currentEntryId ? entryRawInputs?.get(currentEntryId) : null;
         const hasRawInput = !!currentRawInput;
@@ -426,14 +357,7 @@ export function WeightItemsTable({
               className={cn(
                 'grid gap-0.5 items-center group',
                 gridCols,
-                // Add padding for inset shadow when entry is new
-                entryIsNew && "pl-0.5",
-                entryIsNew && isLastInEntry && "pb-0.5",
-                // Grouped highlight: apply segmented outline to create connected visual
-                entryIsNew && isFirstInEntry && !isLastInEntry && "rounded-t-md animate-outline-fade-top",
-                entryIsNew && !isFirstInEntry && isLastInEntry && "rounded-b-md animate-outline-fade-bottom",
-                entryIsNew && !isFirstInEntry && !isLastInEntry && "animate-outline-fade-middle",
-                entryIsNew && isFirstInEntry && isLastInEntry && "rounded-md animate-outline-fade"
+                highlightClasses
               )}
             >
               {/* Checkbox cell for selection mode */}
@@ -453,16 +377,10 @@ export function WeightItemsTable({
                   {showEntryDividers && (
                     <div className="w-4 shrink-0 relative flex items-center justify-center self-stretch">
                       {isLastInEntry && isExpandable ? (
-                        <button
-                          onClick={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
-                          aria-label={isCurrentExpanded ? "Collapse entry" : "Expand entry"}
-                          className={cn(
-                            "absolute inset-0 w-[44px] -left-3 flex items-center justify-center text-muted-foreground/60 hover:text-muted-foreground transition-transform text-xl focus:outline-none focus-visible:outline-none",
-                            isCurrentExpanded && "rotate-90"
-                          )}
-                        >
-                          ›
-                        </button>
+                        <EntryChevron
+                          expanded={!!isCurrentExpanded}
+                          onToggle={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
+                        />
                       ) : null}
                     </div>
                   )}
@@ -495,16 +413,10 @@ export function WeightItemsTable({
                   {showEntryDividers && (
                     <div className="w-4 shrink-0 relative flex items-center justify-center self-stretch">
                       {isLastInEntry && isExpandable ? (
-                        <button
-                          onClick={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
-                          aria-label={isCurrentExpanded ? "Collapse entry" : "Expand entry"}
-                          className={cn(
-                            "absolute inset-0 w-[44px] -left-3 flex items-center justify-center text-muted-foreground/60 hover:text-muted-foreground transition-transform text-xl focus:outline-none focus-visible:outline-none",
-                            isCurrentExpanded && "rotate-90"
-                          )}
-                        >
-                          ›
-                        </button>
+                        <EntryChevron
+                          expanded={!!isCurrentExpanded}
+                          onToggle={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
+                        />
                       ) : null}
                     </div>
                   )}
@@ -840,36 +752,12 @@ export function WeightItemsTable({
                       </div>
                       {(() => {
                         const entryExercises = items.filter(i => i.entryId === currentEntryId);
-                        const count = entryExercises.length;
-                        if (!onDeleteEntry || count < 2) return null;
+                        if (!onDeleteEntry) return null;
                         return (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <button className="text-xs text-destructive underline">
-                                Delete this group ({count} items)
-                              </button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-lg">
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete this group?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This will permanently remove {count} items:
-                                  <ul className="list-disc list-inside mt-2 text-xs text-left">
-                                    {entryExercises.map(item => <li key={item.uid}>{item.description}</li>)}
-                                  </ul>
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => onDeleteEntry!(currentEntryId!)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                          <DeleteGroupDialog
+                            items={entryExercises}
+                            onConfirm={() => onDeleteEntry!(currentEntryId!)}
+                          />
                         );
                       })()}
                     </div>
