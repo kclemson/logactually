@@ -1,5 +1,12 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type { UserSettings } from '@/hooks/useUserSettings';
 import type { WeightUnit } from '@/lib/weight-units';
 import {
@@ -48,8 +55,8 @@ function parseFeetInchesInput(input: string): number | null {
   return null;
 }
 
-const compositionOptions: { value: 'female' | 'male' | null; label: string }[] = [
-  { value: null, label: 'Average' },
+const compositionOptions = [
+  { value: 'unspecified', label: 'Unspecified' },
   { value: 'female', label: 'Female' },
   { value: 'male', label: 'Male' },
 ];
@@ -241,21 +248,22 @@ export function BiometricsInputs({ settings, updateSettings, showEffectHints = t
           <p className="text-xs text-muted-foreground">Metabolic profile</p>
           {showEffectHints && <p className="text-[10px] text-muted-foreground/70">Moderate effect (~5-10%)</p>}
         </div>
-        <div className="flex gap-1">
-          {compositionOptions.map(({ value, label }) => (
-            <button
-              key={label}
-              onClick={() => updateSettings({ bodyComposition: value })}
-              className={cn(
-                "text-xs px-2 py-1.5 rounded-md border transition-colors",
-                settings.bodyComposition === value
-                  ? "border-primary bg-primary/5"
-                  : "border-border hover:bg-muted/50"
-              )}
-            >
-              {label}
-            </button>
-          ))}
+        <div className={rightColClass}>
+          <Select
+            value={settings.bodyComposition ?? 'unspecified'}
+            onValueChange={(v) => updateSettings({ bodyComposition: v === 'unspecified' ? null : v as 'female' | 'male' })}
+          >
+            <SelectTrigger className="h-8 text-xs w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {compositionOptions.map(({ value, label }) => (
+                <SelectItem key={value} value={value} className="text-xs">
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
     </div>
