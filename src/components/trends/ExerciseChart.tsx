@@ -102,10 +102,10 @@ export const ExerciseChart = ({ exercise, unit, onBarClick }: ExerciseChartProps
       const cardioLabel = cardioMode === 'mph' 
         ? `${mph}` 
         : cardioMode === 'distance'
-          ? `${Number(d.distance_miles || 0).toFixed(2)}`
+          ? `${parseFloat(Number(d.distance_miles || 0).toFixed(2))}`
           : isWalking
             ? formatWalkingDuration(Number(d.duration_minutes || 0))
-            : `${Number(d.duration_minutes || 0).toFixed(1)}`;
+            : `${parseFloat(Number(d.duration_minutes || 0).toFixed(1))}`;
       
       return {
         ...d,
