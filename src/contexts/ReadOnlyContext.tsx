@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, ReactNode, useEffect, useRef } from 'react';
+import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import { useReadOnly } from '@/hooks/useReadOnly';
 
 type OverlayMode = 'welcome' | 'blocked';
@@ -22,15 +22,14 @@ export function ReadOnlyProvider({ children }: ReadOnlyProviderProps) {
   const { isReadOnly, isLoading } = useReadOnly();
   const [showOverlay, setShowOverlay] = useState(false);
   const [overlayMode, setOverlayMode] = useState<OverlayMode>('welcome');
-  const hasSeenWelcomeRef = useRef(false);
 
-  // Show welcome overlay once when read-only user first loads
+  // Show welcome overlay once per device using localStorage
   useEffect(() => {
-    if (!isLoading && isReadOnly && !hasSeenWelcomeRef.current) {
+    if (!isLoading && isReadOnly && !localStorage.getItem('demo-welcome-seen')) {
       const timer = setTimeout(() => {
         setOverlayMode('welcome');
         setShowOverlay(true);
-        hasSeenWelcomeRef.current = true;
+        localStorage.setItem('demo-welcome-seen', 'true');
       }, 500);
       return () => clearTimeout(timer);
     }
