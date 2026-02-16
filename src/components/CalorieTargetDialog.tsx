@@ -233,7 +233,7 @@ export function CalorieTargetDialog({
                     {/* Daily deficit */}
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-xs text-muted-foreground">Target deficit</p>
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1 justify-start w-[8.5rem]">
                         <span className="text-xs text-muted-foreground">minus</span>
                         <input
                           type="number"
@@ -243,7 +243,7 @@ export function CalorieTargetDialog({
                             const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
                             updateSettings({ dailyDeficit: val });
                           }}
-                          className={inputClass}
+                          className="w-16 h-8 text-center text-sm rounded-md border border-input bg-background px-2 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           min={0}
                           max={9999}
                         />
