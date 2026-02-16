@@ -1,35 +1,44 @@
 
 
-# Calorie burn: account for reps and lifting weight in strength duration
+# Fix: Widen weight bonus range so changing lbs visibly affects calorie estimates
 
-## What changes
+## How this fits in the formula
 
-Replace the flat 35-45 seconds/set duration estimate with a bottoms-up calculation:
-
-```text
-Per-set active time = reps x seconds_per_rep (3s low, 4s high)
-Per-set rest time   = base_rest (30s low, 45s high) + weight_bonus
-  weight_bonus      = clamp(weight_lbs / 100, 0, 0.5) x 30s  (0-15s extra)
-Total duration      = sets x (active_time + rest_time)
+```
+calories = MET x body_weight_kg x duration_hours x composition x bmr_scale
+                                   ^^^^^^^^^^^^^^^
+                                   this is what we're fixing
 ```
 
-Example outputs (for intuition):
-- 3x10 @ 135 lbs: ~(30+40) to ~(40+51) sec/set = 3.5-4.6 min
-- 3x5 @ 135 lbs: ~(15+40) to ~(20+51) sec/set = 2.8-3.6 min (less time, fewer reps)
-- 3x15 @ 25 lbs: ~(45+34) to ~(60+49) sec/set = 3.9-5.4 min (more reps, less rest)
-- 3x10 @ 315 lbs: ~(30+45) to ~(40+60) sec/set = 3.8-5.0 min (heavier = more rest)
+Duration for strength = `sets x (reps x 3-4s + base_rest + weight_bonus)`
 
-The old constants `SECONDS_PER_SET_LOW` / `SECONDS_PER_SET_HIGH` are removed.
+The weight_bonus currently caps at just 50 lbs, making all heavier weights identical. We widen the curve so it differentiates across 25-200 lbs.
+
+## Constants to change in `src/lib/calorie-burn.ts`
+
+| Constant | Current | New | Effect |
+|---|---|---|---|
+| `WEIGHT_REST_DIVISOR` | 100 | 200 | Slower ramp-up |
+| `WEIGHT_REST_MAX_FACTOR` | 0.5 | 1.0 | Higher ceiling before cap |
+| `WEIGHT_REST_BONUS_SECONDS` | 30 | 45 | More total bonus available |
+
+New formula: `clamp(weight_lbs / 200, 0, 1.0) x 45s`
+
+- 25 lbs: ~6s extra rest
+- 100 lbs: ~23s
+- 135 lbs: ~30s
+- 200+ lbs: 45s (cap)
 
 ## Files changed
 
 | File | Change |
 |---|---|
-| `src/lib/calorie-burn.ts` | Update `estimateStrengthDuration` to accept `reps` and `weight_lbs`, compute duration from per-rep active time plus weight-scaled rest. Remove unused `SECONDS_PER_SET_*` constants. Update call site at line ~350 to pass `exercise.weight_lbs`. |
-| `src/lib/calorie-burn.test.ts` | Update existing `estimateStrengthDuration` tests for new formula. Add tests: more reps increases duration, heavier weight increases duration, 0 reps with sets still returns rest-only duration. |
+| `src/lib/calorie-burn.ts` | Update 3 constants (lines ~141-143) |
+| `src/lib/calorie-burn.test.ts` | Update `3x10 @ 135 lbs` test expectations for new rest values. Update `weight bonus caps` test to reflect cap at 200 lbs instead of 50 lbs. |
 
 ## What does NOT change
 
-- MET lookup, effort narrowing, incline bonus, BMR scaling, composition multiplier
-- Cardio estimation (uses explicit `duration_minutes`)
+- MET lookup, effort narrowing, incline bonus, BMR scaling
+- Cardio estimation
 - UI components, database, edge functions
+
