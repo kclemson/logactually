@@ -1,46 +1,28 @@
 
+# Make Non-Interactive Unit Labels Gray (No Background Fill)
 
-# Fix Label Redundancy and Unit Styling Consistency
+## Problem
+Non-interactive unit labels ("years", "cal/day") currently use `bg-primary/10 text-foreground` which gives them a filled background and white/black text -- making them look like interactive elements (identical to the active state of lbs/kg and ft/cm toggles). They should instead be plain muted text with no background.
 
-## Issue 1: Redundant "cal/day" in exercise-adjusted mode
+## Updated Rule
+- **Interactive units** (lbs/kg, ft/cm): Keep current styling -- active state gets `bg-primary/10 text-foreground font-medium`, inactive gets `text-muted-foreground`
+- **Non-interactive units** (years, cal/day): Use `text-muted-foreground` only -- no background fill, no bold, gray color
 
-The label says "Target (cal/day)" and there's also a "cal/day" badge next to the input. Remove "cal/day" from the label so it just says "Target", matching the pattern where the unit is shown beside the input.
+## Changes
 
-**File:** `src/components/CalorieTargetDialog.tsx`, line 289
-- Change `Target (cal/day)` to `Target`
+### 1. `src/components/BiometricsInputs.tsx` (line 234)
+"years" label for Age input:
+- From: `text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground`
+- To: `text-xs text-muted-foreground`
 
-## Issue 2: Non-interactive units styled like interactive ones
+### 2. `src/components/CalorieTargetDialog.tsx` (line 247)
+"cal/day" label for Target deficit:
+- From: `text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground whitespace-nowrap`
+- To: `text-xs text-muted-foreground whitespace-nowrap`
 
-Currently, "years" (age), "cal/day" (target deficit and exercise-adjusted), and the interactive unit toggles (lbs/kg, ft/cm) all share the same styling: `bg-primary/10 text-foreground font-medium`. But only lbs/kg and ft/cm are clickable toggles -- the rest are static labels.
+### 3. `src/components/CalorieTargetDialog.tsx` (line 303)
+"cal/day" label for Exercise-adjusted target:
+- From: `text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground whitespace-nowrap`
+- To: `text-xs text-muted-foreground whitespace-nowrap`
 
-**Rule:** Interactive units get `font-medium` (bold). Non-interactive units do not.
-
-### Changes in `src/components/BiometricsInputs.tsx`
-
-- **Line 234** (Age "years" span): Remove `font-medium` from the class
-  - From: `"text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground font-medium"`
-  - To: `"text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground"`
-
-### Changes in `src/components/CalorieTargetDialog.tsx`
-
-- **Line 247** (Target deficit "cal/day" span): Remove `font-medium`
-  - From: `"text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground font-medium whitespace-nowrap"`
-  - To: `"text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground whitespace-nowrap"`
-
-- **Line 303** (Exercise-adjusted "cal/day" span): Remove `font-medium`
-  - From: `"text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground font-medium whitespace-nowrap"`
-  - To: `"text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground whitespace-nowrap"`
-
-### No changes needed for interactive units
-
-The lbs/kg and ft/cm buttons in `BiometricsInputs.tsx` already correctly use `font-medium` only on the active selection, which is the right pattern for interactive toggles.
-
-## Summary
-
-| File | Line | Change |
-|---|---|---|
-| `CalorieTargetDialog.tsx` | 289 | Label: "Target (cal/day)" to "Target" |
-| `CalorieTargetDialog.tsx` | 247 | Remove `font-medium` from deficit "cal/day" |
-| `CalorieTargetDialog.tsx` | 303 | Remove `font-medium` from exercise "cal/day" |
-| `BiometricsInputs.tsx` | 234 | Remove `font-medium` from "years" |
-
+This matches the existing pattern used by "/10" in the Calorie Burn dialog, which already uses `text-xs text-muted-foreground` for a non-interactive unit.
