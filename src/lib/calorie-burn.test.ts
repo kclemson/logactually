@@ -130,17 +130,48 @@ describe('applyInclineBonus', () => {
 // ---------------------------------------------------------------------------
 
 describe('estimateStrengthDuration', () => {
-  it('estimates reasonable duration for 3 sets', () => {
-    const dur = estimateStrengthDuration(3, 10);
-    // 3 sets × 35s = 105s low, 3 sets × 45s = 135s high
-    expect(dur.low).toBeCloseTo(105 / 3600, 4);
-    expect(dur.high).toBeCloseTo(135 / 3600, 4);
+  it('estimates reasonable duration for 3x10 @ 135 lbs', () => {
+    const dur = estimateStrengthDuration(3, 10, 135);
+    // Per-set low: 10*3 + 30 + clamp(1.35,0,0.5)*30 = 30+30+15 = 75s
+    // Per-set high: 10*4 + 45 + 15 = 100s
+    // Total: 225s low, 300s high
+    expect(dur.low).toBeCloseTo(225 / 3600, 4);
+    expect(dur.high).toBeCloseTo(300 / 3600, 4);
   });
 
   it('returns 0 for 0 sets', () => {
-    const dur = estimateStrengthDuration(0, 10);
+    const dur = estimateStrengthDuration(0, 10, 135);
     expect(dur.low).toBe(0);
     expect(dur.high).toBe(0);
+  });
+
+  it('more reps increases duration', () => {
+    const fewReps = estimateStrengthDuration(3, 5, 100);
+    const manyReps = estimateStrengthDuration(3, 15, 100);
+    expect(manyReps.low).toBeGreaterThan(fewReps.low);
+    expect(manyReps.high).toBeGreaterThan(fewReps.high);
+  });
+
+  it('heavier weight increases duration via rest bonus', () => {
+    const light = estimateStrengthDuration(3, 10, 25);
+    const heavy = estimateStrengthDuration(3, 10, 315);
+    expect(heavy.low).toBeGreaterThan(light.low);
+    expect(heavy.high).toBeGreaterThan(light.high);
+  });
+
+  it('0 reps with sets still returns rest-only duration', () => {
+    const dur = estimateStrengthDuration(3, 0, 100);
+    // Per-set: 0 active + 30 + clamp(1,0,0.5)*30 = 45s low
+    expect(dur.low).toBeGreaterThan(0);
+    expect(dur.high).toBeGreaterThan(0);
+  });
+
+  it('weight bonus caps at 0.5 factor (15s max)', () => {
+    const at500 = estimateStrengthDuration(1, 10, 500);
+    const at1000 = estimateStrengthDuration(1, 10, 1000);
+    // Both should have same weight bonus (capped at 0.5*30=15s)
+    expect(at500.low).toBe(at1000.low);
+    expect(at500.high).toBe(at1000.high);
   });
 });
 
