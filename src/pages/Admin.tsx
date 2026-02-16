@@ -46,7 +46,16 @@ export default function Admin() {
   });
 
   const openFeedback = feedback?.filter(f => !f.resolved_at) ?? [];
-  const resolvedFeedback = feedback?.filter(f => !!f.resolved_at) ?? [];
+  const resolvedFeedback = (feedback?.filter(f => !!f.resolved_at) ?? [])
+    .sort((a, b) => {
+      const latest = (f: typeof a) =>
+        Math.max(
+          new Date(f.resolved_at!).getTime(),
+          f.responded_at ? new Date(f.responded_at).getTime() : 0,
+          new Date(f.created_at).getTime(),
+        );
+      return latest(b) - latest(a);
+    });
 
   const { data: demoLoginsTotal } = useLoginCount("demo", null);
   const { data: demoLogins24h } = useLoginCount("demo", 24);
