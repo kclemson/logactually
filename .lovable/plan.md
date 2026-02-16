@@ -1,44 +1,70 @@
 
 
-# CalorieTargetDialog Polish: 6 UI Fixes
+# Body Stats Equation Display: Two-Line Educational Breakdown
+
+## Goal
+
+Replace the single-line equation with a two-line stacked format that teaches users what BMR and TDEE mean, shows how each input feeds into the math, and uses italic placeholders for values not yet entered.
+
+## Design
+
+The equations will always render when in `body_stats` mode, regardless of whether all fields are filled in. Missing values appear as italic placeholder names so users can see what's needed.
+
+### Example outputs
+
+**Nothing filled in:**
+```
+BMR = 10 x weight + 6.25 x height - 5 x age +/- profile
+TDEE = BMR x activity level - deficit = ...
+```
+
+**Weight + height filled, age + profile + activity missing:**
+```
+BMR = 10 x 68kg + 6.25 x 173cm - 5 x age +/- profile
+TDEE = BMR x activity level - 0 deficit = ...
+```
+
+**Everything filled:**
+```
+BMR = 10 x 68 + 6.25 x 173 - 5 x 48 - 161 = ~1,248
+TDEE = 1,248 x 1.375 - 0 deficit = 1,716 cal/day
+```
+
+The `+/- profile` placeholder represents the Mifflin-St Jeor sex constant (+5 for male, -161 for female, average when unset). When a profile is selected, it shows the actual constant (e.g., `- 161`).
 
 ## Changes
 
-### 1. `src/components/CalorieTargetDialog.tsx` -- Reword activity hint (line 206)
+### `src/components/CalorieTargetDialog.tsx`
 
-Change from:
-"Average ~191 calories/day burned over 27 active days. This is closest to..."
+1. **Refactor `tdeeSummary` memo** to return partial data instead of null when values are missing. It will compute whatever intermediate values are available (weight in kg, height in cm, BMR if computable, TDEE if activity level is set) and return them along with flags for what's missing.
 
-To:
-"Your logged exercise burned an average of ~191 calories/day over 27 active days. This is closest to..."
+2. **Replace the equation rendering block** (lines 229-234). Remove the `{tdeeSummary && ...}` guard. Instead, always render the equation block when in `body_stats` mode. The block contains two lines:
 
-### 2. `src/components/CalorieTargetDialog.tsx` -- Fix dropdown text wrapping (line 144)
+   - **Line 1 (BMR):** Shows the Mifflin-St Jeor formula with actual numbers where available, italic placeholders where not. If BMR is computable, shows `= ~{bmr}` at the end.
+   - **Line 2 (TDEE):** Shows `BMR x activity_multiplier - deficit = target cal/day`, using the computed BMR value or italic "BMR" placeholder, and italic placeholders for missing activity level.
 
-The description text still wraps at `w-[240px]`. Widen the `SelectTrigger` to `w-[280px]` and add `whitespace-nowrap` to the description span (line 152) to prevent wrapping.
+3. **Fix focus ring clipping**: Change `pt-1` to `p-1` on line 136 so the mode dropdown's focus ring isn't clipped by the parent's `overflow-hidden`.
 
-### 3. `src/components/CalorieTargetDialog.tsx` -- Prevent layout jumping on mode change
+4. **Rename deficit label**: Change "Daily deficit (cal)" to "Target deficit (cal/day)" on line 214.
 
-The current approach conditionally renders different sections (`{mode === 'static' && ...}`, `{mode === 'body_stats' && ...}`, etc.), causing the dialog height to jump when switching modes.
+### Equation rendering logic (pseudocode)
 
-Fix: Add `min-h-[200px]` to the config body container so there's a stable minimum height that prevents the most jarring jumps. This keeps the dialog from collapsing to near-zero height when switching between modes with different amounts of controls.
+```tsx
+// Always render in body_stats mode
+const weightKg = settings.bodyWeightLbs ? (settings.bodyWeightLbs * 0.453592).toFixed(0) : null;
+const heightCm = settings.heightInches ? (settings.heightInches * 2.54).toFixed(0) : null;
+const age = settings.age;
+const profile = settings.bodyComposition;
+const bmr = computeAbsoluteBMR(settings); // null if no weight
+const multiplier = settings.activityLevel ? ACTIVITY_MULTIPLIERS[settings.activityLevel] : null;
+const deficit = settings.dailyDeficit ?? 0;
 
-### 4. `src/components/CalorieTargetDialog.tsx` -- Remove bold from final target in equation (lines 233-234)
+// Line 1: BMR = 10 x {wt} + 6.25 x {ht} - 5 x {age} {profile_constant} [= ~bmr]
+// Line 2: TDEE = {bmr} x {multiplier} - {deficit} deficit = {target} cal/day
 
-Change `<strong className="text-foreground">` to just `<span className="text-foreground">` for the cal/day value in the TDEE summary. The equation result should not be bolded.
-
-### 5. `src/components/CalorieTargetDialog.tsx` -- Fix equation left-alignment (line 231)
-
-The summary `<p>` currently has `px-2` padding which indents it slightly from the labels above. Change to `px-0` (or remove horizontal padding entirely) so it aligns flush left with the other labels. Keep the vertical padding and background styling.
-
-### 6. `src/components/CalorieTargetDialog.tsx` -- Always show deficit in equation (lines 232-234)
-
-Currently the deficit is hidden when it equals 0. Change the logic so the deficit is always shown in the equation, even when 0:
-
+// Italic placeholder component for missing values:
+// <em className="not-italic text-muted-foreground/50">placeholder</em>
 ```
-Base metabolic rate ~1,248 x 1.375 = ~1,716 daily energy expenditure - 0 deficit = 1,716 cal/day
-```
-
-This makes the user aware that the deficit field is part of the calculation. Replace the two conditional branches (deficit > 0 and deficit === 0) with a single expression that always includes "- {deficit} deficit =".
 
 ---
 
@@ -46,5 +72,5 @@ This makes the user aware that the deficit field is part of the calculation. Rep
 
 | File | Changes |
 |---|---|
-| `src/components/CalorieTargetDialog.tsx` | All 6 fixes: reword hint, widen dropdown + nowrap, min-height, unbold target, flush-left equation, always show deficit |
+| `src/components/CalorieTargetDialog.tsx` | Refactor tdeeSummary memo to partial; two-line equation with placeholders; fix focus ring padding; rename deficit label |
 
