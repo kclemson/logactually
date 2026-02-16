@@ -17,12 +17,12 @@ export interface DailyCalorieBurn {
   strengthCount: number;
 }
 
-export function useDailyCalorieBurn(days: number) {
+export function useDailyCalorieBurn(days: number, options?: { force?: boolean }) {
   const { data: exercises = [], isLoading: trendsLoading } = useWeightTrends(days);
   const { settings, isLoading: settingsLoading } = useUserSettings();
 
   const data = useMemo((): DailyCalorieBurn[] => {
-    if (!settings.calorieBurnEnabled) return [];
+    if (!settings.calorieBurnEnabled && !options?.force) return [];
 
     const burnSettings: CalorieBurnSettings = {
       calorieBurnEnabled: settings.calorieBurnEnabled,
