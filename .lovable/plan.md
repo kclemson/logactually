@@ -1,34 +1,31 @@
 
 
-# Fix: Anchor CalorieTargetDialog to top on all screen sizes
+# Fix: Activity level hint should show regardless of calorie burn toggle
 
 ## Problem
 
-The CalorieTargetDialog uses vertical centering (`top-50% translate-y-[-50%]`) on desktop. When content expands or collapses (toggling the enable switch, switching modes, equation breakdown appearing), the dialog visibly shifts up and down on the Y axis because its center point changes. This is disorienting.
+The activity level suggestion ("Your logged exercise burned an average of ~N calories/day over N active days. This is closest to [Level].") no longer appears in the "Estimated burn rate minus a deficit" mode.
 
-The mobile fix already anchors the dialog near the top of the viewport (`top-12 translate-y-0`), which avoids this problem. Desktop should behave the same way.
+**Root cause:** The `useDailyCalorieBurn` hook checks `settings.calorieBurnEnabled` and returns an empty array when it's `false`. The activity hint depends on this data, so it silently disappears whenever the user has the calorie burn estimation feature turned off -- even though the hint is conceptually independent.
 
 ## Solution
 
-Remove the `sm:top-[50%]` and `sm:translate-y-[-50%]` breakpoint overrides from the `DialogContent` className, so the dialog stays top-anchored at all screen sizes. Keep the horizontal centering on desktop (`sm:left-[50%] sm:translate-x-[-50%]`).
+The `CalorieTargetDialog` needs its own burn data that isn't gated by `calorieBurnEnabled`. Two options:
 
-## Technical Detail
+1. **Add a parameter to `useDailyCalorieBurn`** to bypass the enabled check (e.g., `useDailyCalorieBurn(30, { ignoreEnabledCheck: true })`)
+2. **Duplicate the minimal logic** inline in the dialog
 
-**File: `src/components/CalorieTargetDialog.tsx` (line 134)**
+Option 1 is cleaner. We'll add an optional `force` flag to `useDailyCalorieBurn` so the dialog can request burn data even when the feature is toggled off.
 
-Change the className from:
+## Technical Details
 
-```
-left-2 right-2 top-12 translate-x-0 translate-y-0 w-auto max-w-[calc(100vw-16px)] max-h-[85vh] overflow-y-auto p-4
-sm:left-[50%] sm:right-auto sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:w-full sm:max-w-md
-```
+### File: `src/hooks/useDailyCalorieBurn.ts`
 
-To:
+- Add an optional `options` parameter: `useDailyCalorieBurn(days: number, options?: { force?: boolean })`
+- Change the early-return guard from `if (!settings.calorieBurnEnabled) return [];` to `if (!settings.calorieBurnEnabled && !options?.force) return [];`
 
-```
-left-2 right-2 top-12 translate-x-0 translate-y-0 w-auto max-w-[calc(100vw-16px)] max-h-[85vh] overflow-y-auto p-4
-sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md
-```
+### File: `src/components/CalorieTargetDialog.tsx`
 
-Removes `sm:top-[50%]` and `sm:translate-y-[-50%]` so the dialog stays anchored at `top-12` on all viewports. Horizontal centering on desktop is preserved.
+- Change the call from `useDailyCalorieBurn(30)` to `useDailyCalorieBurn(30, { force: true })` so the activity hint (and exercise-adjusted example) always have data to work with, regardless of the burn toggle state.
 
+No other files are affected. The existing callers of `useDailyCalorieBurn` without the `force` flag continue to behave exactly as before.
