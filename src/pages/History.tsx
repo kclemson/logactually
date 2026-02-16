@@ -19,6 +19,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { isCardioExercise } from '@/lib/exercise-metadata';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { getTargetDotColor, getEffectiveDailyTarget, getExerciseAdjustedTarget } from '@/lib/calorie-target';
 import { useDailyCalorieBurn } from '@/hooks/useDailyCalorieBurn';
 
@@ -39,8 +40,16 @@ interface WeightDaySummary {
   hasOtherCardio: boolean;
 }
 
+const ICON_MAP: Record<string, React.FC<{ className?: string }>> = {
+  lifting: Dumbbell,
+  runwalk: Footprints,
+  cycling: Bike,
+  othercardio: Activity,
+};
+
 const History = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const { settings } = useUserSettings();
   const showWeights = settings.showWeights;
@@ -296,11 +305,26 @@ const History = () => {
                 "h-3 flex items-center justify-center gap-0.5",
                 !((hasWeights || hasCustomLogs) && isCurrentMonth) && "invisible"
               )}>
-                {weightData?.hasLifting && <Dumbbell className="h-3 w-3 text-purple-500 dark:text-purple-400" />}
-                {weightData?.hasRunWalk && <Footprints className="h-3 w-3 text-purple-500 dark:text-purple-400" />}
-                {weightData?.hasCycling && <Bike className="h-3 w-3 text-purple-500 dark:text-purple-400" />}
-                {weightData?.hasOtherCardio && <Activity className="h-3 w-3 text-purple-500 dark:text-purple-400" />}
-                {hasCustomLogs && <ClipboardList className="h-3 w-3 text-teal-500 dark:text-teal-400" />}
+                {(() => {
+                  const maxIcons = isMobile ? 3 : 4;
+                  const exerciseKeys: string[] = [];
+                  if (weightData?.hasLifting) exerciseKeys.push('lifting');
+                  if (weightData?.hasRunWalk) exerciseKeys.push('runwalk');
+                  if (weightData?.hasCycling) exerciseKeys.push('cycling');
+                  if (weightData?.hasOtherCardio) exerciseKeys.push('othercardio');
+                  const hasExercise = exerciseKeys.length > 0;
+                  const exerciseSlots = (hasCustomLogs && hasExercise) ? maxIcons - 1 : maxIcons;
+                  const visible = exerciseKeys.slice(0, exerciseSlots);
+                  return (
+                    <>
+                      {visible.map((key) => {
+                        const Icon = ICON_MAP[key];
+                        return <Icon key={key} className="h-3 w-3 text-purple-500 dark:text-purple-400" />;
+                      })}
+                      {hasCustomLogs && <ClipboardList className="h-3 w-3 text-teal-500 dark:text-teal-400" />}
+                    </>
+                  );
+                })()}
               </span>
             </button>
           );
