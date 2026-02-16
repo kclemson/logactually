@@ -1,33 +1,104 @@
 
 
-# CalorieTargetDialog Improvements
+# Shared Biometrics Clearing Logic
 
-## Changes
+## Why a shared codepath makes sense
 
-### 1. Target deficit: move "cal/day" to the right of the input box
-Change the label from "Target deficit (cal/day)" to just "Target deficit", and add a "cal/day" unit label to the right of the input box, matching the style used by BiometricsInputs (like "years" next to age).
+Right now the two features that consume biometrics (calorie burn and calorie target in body_stats mode) each have their own toggle-off handler that independently decides what to clear. This creates a coordination problem: each handler needs to know about the other feature's state to avoid wiping shared data. A shared utility centralizes that logic in one place, so if a third consumer ever appears (or the conditions change), there's only one spot to update.
 
-### 2. Remove BiometricsInputs from exercise adjusted mode
-The biometrics fields (weight, height, age, metabolic profile) are only needed for body_stats mode (BMR calculation). Exercise adjusted mode just needs a base goal number. Remove the `<BiometricsInputs>` component from the exercise_adjusted section.
+## What the shared function does
 
-### 3. Exercise adjusted: move "cal/day" to the right of the base goal input
-Change the label from "Base goal (cal/day)" to just "Base goal", and add "cal/day" to the right of the input box, same pattern as change 1.
+A single helper function (e.g. `buildBiometricsClearUpdates`) takes the current settings and returns the set of fields to nullify, based on this rule:
 
-### 4. Reword the exercise adjusted explanation
-Replace "Your daily target increases by calories burned from logged exercises" with something like: "Your target for each day is this base goal plus any calories you burn through logged exercises, so active days give you more room."
+- **Biometric fields** (bodyWeightLbs, heightInches, age, bodyComposition) are only cleared if **neither** remaining consumer needs them.
+- **Feature-specific fields** (like defaultIntensity for burn, or activityLevel/dailyDeficit for target) are always cleared when their own feature is disabled.
 
-This frames it as "active days give you more room" rather than the more clinical "target increases by calories burned."
+The callers just spread the result into their `updateSettings` call alongside their feature-specific flags.
 
 ## Technical details
 
-All changes are in `src/components/CalorieTargetDialog.tsx`:
+### New file: `src/lib/biometrics-clear.ts`
 
-| Lines | Change |
+```typescript
+import type { UserSettings } from '@/hooks/useUserSettings';
+
+// Shared biometric field keys
+const BIOMETRIC_KEYS = ['bodyWeightLbs', 'heightInches', 'age', 'bodyComposition'] as const;
+
+/**
+ * Returns the biometric fields to nullify when a feature is being disabled.
+ * Only clears shared biometrics if no other consumer still needs them.
+ *
+ * @param settings - current user settings
+ * @param disabling - which feature is being turned off: 'burn' or 'target'
+ */
+export function buildBiometricsClearUpdates(
+  settings: UserSettings,
+  disabling: 'burn' | 'target',
+): Partial<UserSettings> {
+  const otherNeedsBiometrics =
+    disabling === 'burn'
+      ? settings.calorieTargetEnabled && settings.calorieTargetMode === 'body_stats'
+      : settings.calorieBurnEnabled;
+
+  if (otherNeedsBiometrics) return {};
+
+  return Object.fromEntries(
+    BIOMETRIC_KEYS.map(k => [k, null])
+  ) as Partial<UserSettings>;
+}
+```
+
+### CalorieBurnDialog toggle (lines 138-151)
+
+Replace the inline nullification with:
+
+```typescript
+import { buildBiometricsClearUpdates } from '@/lib/biometrics-clear';
+
+const handleToggle = () => {
+  if (settings.calorieBurnEnabled) {
+    updateSettings({
+      calorieBurnEnabled: false,
+      defaultIntensity: null,
+      ...buildBiometricsClearUpdates(settings, 'burn'),
+    });
+  } else {
+    updateSettings({ calorieBurnEnabled: true });
+  }
+};
+```
+
+### CalorieTargetDialog toggle (lines 89-103)
+
+Add the same shared call so it also clears biometrics when safe:
+
+```typescript
+import { buildBiometricsClearUpdates } from '@/lib/biometrics-clear';
+
+const handleToggle = () => {
+  if (settings.calorieTargetEnabled) {
+    updateSettings({
+      calorieTargetEnabled: false,
+      dailyCalorieTarget: null,
+      calorieTargetMode: 'static',
+      activityLevel: null,
+      dailyDeficit: null,
+      exerciseAdjustedBase: null,
+      ...buildBiometricsClearUpdates(settings, 'target'),
+    });
+    onOpenChange(false);
+  } else {
+    updateSettings({ calorieTargetEnabled: true });
+  }
+};
+```
+
+### Summary of file changes
+
+| File | Change |
 |---|---|
-| 230-231 | Label: "Target deficit (cal/day)" becomes "Target deficit"; add `cal/day` styled label after input |
-| 281-305 | Remove `<BiometricsInputs>` from exercise_adjusted block |
-| 284 | Label: "Base goal (cal/day)" becomes "Base goal"; add `cal/day` styled label after input |
-| 299-301 | Reword explanation text |
-
-For the "cal/day" labels, they will use the same styling as BiometricsInputs' "years" label: `text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground font-medium`.
+| `src/lib/biometrics-clear.ts` (new) | Shared helper that determines which biometric fields to nullify |
+| `src/components/CalorieBurnDialog.tsx` | Import helper, replace inline null assignments in toggle handler |
+| `src/components/CalorieTargetDialog.tsx` | Import helper, add biometrics clearing to toggle handler |
 
