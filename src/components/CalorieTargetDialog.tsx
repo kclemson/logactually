@@ -262,7 +262,7 @@ export function CalorieTargetDialog({
                             {equationData.bmr != null ? equationData.bmr.toLocaleString() : <em className="not-italic text-muted-foreground/50">BMR</em>}
                             {' '}× {equationData.multiplier != null ? equationData.multiplier : <em className="not-italic text-muted-foreground/50">activity level</em>}
                             {' '}− {equationData.deficit} deficit
-                            {' '}= {equationData.target != null ? `${equationData.target.toLocaleString()} cal/day` : '…'}
+                            {' '}= {equationData.target != null ? `daily calorie target of ${equationData.target.toLocaleString()} cal/day` : '…'}
                           </p>
                         </div>
                       </div>
