@@ -228,19 +228,22 @@ export function CalorieTargetDialog({
 
                     {/* Daily deficit */}
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs text-muted-foreground">Target deficit (cal/day)</p>
-                      <input
-                        type="number"
-                        placeholder="0"
-                        value={settings.dailyDeficit ?? ''}
-                        onChange={(e) => {
-                          const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
-                          updateSettings({ dailyDeficit: val });
-                        }}
-                        className={inputClass}
-                        min={0}
-                        max={9999}
-                      />
+                      <p className="text-xs text-muted-foreground">Target deficit</p>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="number"
+                          placeholder="0"
+                          value={settings.dailyDeficit ?? ''}
+                          onChange={(e) => {
+                            const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
+                            updateSettings({ dailyDeficit: val });
+                          }}
+                          className={inputClass}
+                          min={0}
+                          max={9999}
+                        />
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground font-medium whitespace-nowrap">cal/day</span>
+                      </div>
                     </div>
 
                     {/* Equation breakdown */}
@@ -281,27 +284,27 @@ export function CalorieTargetDialog({
                 {settings.calorieTargetMode === 'exercise_adjusted' && (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <p className="text-xs text-muted-foreground">Base goal (cal/day)</p>
-                      <input
-                        type="number"
-                        placeholder="Not set"
-                        value={settings.exerciseAdjustedBase ?? ''}
-                        onChange={(e) => {
-                          const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
-                          updateSettings({ exerciseAdjustedBase: val });
-                        }}
-                        className={inputClass}
-                        min={0}
-                        max={99999}
-                      />
+                      <p className="text-xs text-muted-foreground">Base goal</p>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="number"
+                          placeholder="Not set"
+                          value={settings.exerciseAdjustedBase ?? ''}
+                          onChange={(e) => {
+                            const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
+                            updateSettings({ exerciseAdjustedBase: val });
+                          }}
+                          className={inputClass}
+                          min={0}
+                          max={99999}
+                        />
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground font-medium whitespace-nowrap">cal/day</span>
+                      </div>
                     </div>
 
                     <p className="text-[10px] text-muted-foreground/70">
-                      Your daily target increases by calories burned from logged exercises.
+                      Your target for each day is this base goal plus any calories you burn through logged exercises, so active days give you more room.
                     </p>
-
-                    <BiometricsInputs settings={settings} updateSettings={updateSettings} showEffectHints={false} />
-
                   </div>
                 )}
               </div>
