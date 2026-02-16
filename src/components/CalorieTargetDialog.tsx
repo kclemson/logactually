@@ -286,7 +286,7 @@ export function CalorieTargetDialog({
                 {settings.calorieTargetMode === 'exercise_adjusted' && (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <p className="text-xs text-muted-foreground">Base goal</p>
+                      <p className="text-xs text-muted-foreground">Target (cal/day)</p>
                       <div className="flex items-center gap-1.5">
                         <input
                           type="number"
@@ -305,7 +305,7 @@ export function CalorieTargetDialog({
                     </div>
 
                     <p className="text-[10px] text-muted-foreground/70">
-                      Your target for each day is this base goal plus any calories you burn through logged exercises, so active days give you more room.
+                      Calories burned from logged exercises are subtracted from your food intake before comparing to this target — so active days give you more room.
                     </p>
                   </div>
                 )}
