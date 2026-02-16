@@ -1,32 +1,16 @@
 
 
-# Fix Dialog Jumping: Top-Anchored Positioning
+# Fix Activity Level Dropdown Truncation
 
 ## Problem
-The CalorieTargetDialog jumps vertically when switching between modes (static / body stats / exercise adjusted) because it's vertically centered. As the content height changes, the center point shifts, causing the dialog to move up and down. The current `min-h-[200px]` workaround doesn't fully solve this.
+"Moderately active x1.55" is the longest option in the activity level dropdown. The trigger is fixed at `w-[160px]`, which is too narrow, causing the text to truncate to "Moderately..." and hiding the multiplier. The other options (Sedentary, Lightly active, Active) are shorter and fit fine.
 
 ## Solution
-Use the same top-anchored positioning pattern already used by SaveMealDialog, SaveRoutineDialog, and others. On mobile, the dialog is pinned near the top of the screen and grows downward. On desktop, it reverts to standard centered positioning.
+Widen the `SelectTrigger` from `w-[160px]` to `w-[200px]` so all activity level labels including their multipliers display without truncation.
 
 ## Technical details
 
-**File: `src/components/CalorieTargetDialog.tsx`**
-
-Update the `DialogContent` className (line ~109):
-
-From:
-```
-left-2 right-2 translate-x-0 w-auto max-w-[calc(100vw-16px)] max-h-[85vh] overflow-y-auto p-4
-sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md
-```
-
-To:
-```
-left-2 right-2 top-12 translate-x-0 translate-y-0 w-auto max-w-[calc(100vw-16px)] max-h-[85vh] overflow-y-auto p-4
-sm:left-[50%] sm:right-auto sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:w-full sm:max-w-md
-```
-
-Key additions: `top-12 translate-y-0` (mobile) and `sm:top-[50%] sm:translate-y-[-50%]` (desktop).
-
-Also remove `min-h-[200px]` from the inner content container (line ~131) since it's no longer needed -- the top-anchored positioning prevents visual jumping.
+| File | Change |
+|---|---|
+| `src/components/CalorieTargetDialog.tsx` line 206 | Change `w-[160px]` to `w-[200px]` on the activity level `SelectTrigger` |
 
