@@ -15,7 +15,7 @@ export interface UserSettings {
   // TDEE-based body stats mode
   calorieTargetEnabled: boolean;
   calorieTargetMode: 'static' | 'body_stats' | 'exercise_adjusted';
-  activityLevel: 'sedentary' | 'light' | 'moderate' | 'active' | null;
+  activityLevel: 'sedentary' | 'light' | 'moderate' | 'active' | 'logged' | null;
   dailyDeficit: number | null;
   
   // Calorie burn estimation

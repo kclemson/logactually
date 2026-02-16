@@ -16,9 +16,10 @@ export function getTargetDotColor(calories: number, target: number): string {
 // Activity multipliers (Harris-Benedict / standard tiers)
 // ---------------------------------------------------------------------------
 
-export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active';
+export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'logged';
+export type MultiplierActivityLevel = Exclude<ActivityLevel, 'logged'>;
 
-export const ACTIVITY_MULTIPLIERS: Record<ActivityLevel, number> = {
+export const ACTIVITY_MULTIPLIERS: Record<MultiplierActivityLevel, number> = {
   sedentary: 1.2,
   light: 1.375,
   moderate: 1.55,
@@ -30,6 +31,7 @@ export const ACTIVITY_LABELS: Record<ActivityLevel, { label: string; description
   light: { label: 'Lightly active', description: 'Light exercise 1-3 days/wk' },
   moderate: { label: 'Moderately active', description: 'Moderate exercise 3-5 days/wk' },
   active: { label: 'Active', description: 'Hard exercise 6-7 days/wk' },
+  logged: { label: 'Use my exercise logs', description: 'Actual logged exercise burns' },
 };
 
 // ---------------------------------------------------------------------------
@@ -48,7 +50,7 @@ export const TARGET_MODE_OPTIONS: { value: CalorieTargetMode; label: string; des
 // TDEE computation
 // ---------------------------------------------------------------------------
 
-export function computeTDEE(bmr: number, activityLevel: ActivityLevel): number {
+export function computeTDEE(bmr: number, activityLevel: Exclude<ActivityLevel, 'logged'>): number {
   return bmr * ACTIVITY_MULTIPLIERS[activityLevel];
 }
 
@@ -80,6 +82,13 @@ export function getEffectiveDailyTarget(settings: UserSettings): number | null {
   const bmr = computeAbsoluteBMR(settings);
   if (bmr == null) return null;
 
+  // 'logged' activity level: return BMR - deficit (actual burn added downstream)
+  if (settings.activityLevel === 'logged') {
+    const deficit = settings.dailyDeficit ?? 0;
+    const target = Math.round(bmr - deficit);
+    return target > 0 ? target : null;
+  }
+
   const tdee = computeTDEE(bmr, settings.activityLevel);
   const deficit = settings.dailyDeficit ?? 0;
   const target = Math.round(tdee - deficit);
@@ -106,9 +115,22 @@ export function getExerciseAdjustedTarget(base: number, dailyBurn: number): numb
 /**
  * Maps an average daily exercise calorie burn to the closest activity tier.
  */
-export function suggestActivityLevel(avgDailyBurn: number): ActivityLevel {
+export function suggestActivityLevel(avgDailyBurn: number): MultiplierActivityLevel {
   if (avgDailyBurn < 100) return 'sedentary';
   if (avgDailyBurn < 250) return 'light';
   if (avgDailyBurn < 450) return 'moderate';
   return 'active';
+}
+
+// ---------------------------------------------------------------------------
+// Helper: does this config use actual logged exercise burns?
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns true when the effective daily target should have actual logged
+ * exercise burns added on top (varies per day).
+ */
+export function usesActualExerciseBurns(settings: UserSettings): boolean {
+  return settings.calorieTargetMode === 'exercise_adjusted' ||
+    (settings.calorieTargetMode === 'body_stats' && settings.activityLevel === 'logged');
 }
