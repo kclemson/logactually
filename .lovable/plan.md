@@ -1,38 +1,46 @@
 
 
-# Reframe Exercise-Adjusted Mode Labeling
+# Fix Label Redundancy and Unit Styling Consistency
 
-## The core insight
+## Issue 1: Redundant "cal/day" in exercise-adjusted mode
 
-The exercise-adjusted input isn't a "base goal" — it's the same concept as the static target (your daily calorie target). The difference is only in how the comparison works: exercise calories get subtracted from your food intake before checking against the target. Calling it "base goal" makes it sound like a different concept and invites confusing "plus/minus" language.
+The label says "Target (cal/day)" and there's also a "cal/day" badge next to the input. Remove "cal/day" from the label so it just says "Target", matching the pattern where the unit is shown beside the input.
 
-## Changes
+**File:** `src/components/CalorieTargetDialog.tsx`, line 289
+- Change `Target (cal/day)` to `Target`
 
-### 1. Dropdown option in `src/lib/calorie-target.ts` (line 44)
+## Issue 2: Non-interactive units styled like interactive ones
 
-**Current:** label "Exercise adjusted", description "Your base goal plus actual calories burned each day"
+Currently, "years" (age), "cal/day" (target deficit and exercise-adjusted), and the interactive unit toggles (lbs/kg, ft/cm) all share the same styling: `bg-primary/10 text-foreground font-medium`. But only lbs/kg and ft/cm are clickable toggles -- the rest are static labels.
 
-**New:** label "Exercise adjusted", description "Logged exercise offsets your food intake"
+**Rule:** Interactive units get `font-medium` (bold). Non-interactive units do not.
 
-### 2. Exercise-adjusted input label in `CalorieTargetDialog.tsx` (line 289)
+### Changes in `src/components/BiometricsInputs.tsx`
 
-**Current:** "Base goal"
+- **Line 234** (Age "years" span): Remove `font-medium` from the class
+  - From: `"text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground font-medium"`
+  - To: `"text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground"`
 
-**New:** "Target (cal/day)" — identical to the static mode label, because it's the same concept
+### Changes in `src/components/CalorieTargetDialog.tsx`
 
-### 3. Explanatory text in `CalorieTargetDialog.tsx` (line 307-309)
+- **Line 247** (Target deficit "cal/day" span): Remove `font-medium`
+  - From: `"text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground font-medium whitespace-nowrap"`
+  - To: `"text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground whitespace-nowrap"`
 
-**Current:** "Your target for each day is this base goal plus any calories you burn through logged exercises, so active days give you more room."
+- **Line 303** (Exercise-adjusted "cal/day" span): Remove `font-medium`
+  - From: `"text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground font-medium whitespace-nowrap"`
+  - To: `"text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground whitespace-nowrap"`
 
-**New:** "Calories burned from logged exercises are subtracted from your food intake before comparing to this target — so active days give you more room."
+### No changes needed for interactive units
 
-This frames it as: food minus exercise < target, which is exactly how a user would think about it.
+The lbs/kg and ft/cm buttons in `BiometricsInputs.tsx` already correctly use `font-medium` only on the active selection, which is the right pattern for interactive toggles.
 
-## Technical details
+## Summary
 
-| File | Lines | Change |
+| File | Line | Change |
 |---|---|---|
-| `src/lib/calorie-target.ts` | 44 | Update description string |
-| `src/components/CalorieTargetDialog.tsx` | 289 | Change label from "Base goal" to "Target (cal/day)" |
-| `src/components/CalorieTargetDialog.tsx` | 307-309 | Reword explanation |
+| `CalorieTargetDialog.tsx` | 289 | Label: "Target (cal/day)" to "Target" |
+| `CalorieTargetDialog.tsx` | 247 | Remove `font-medium` from deficit "cal/day" |
+| `CalorieTargetDialog.tsx` | 303 | Remove `font-medium` from exercise "cal/day" |
+| `BiometricsInputs.tsx` | 234 | Remove `font-medium` from "years" |
 
