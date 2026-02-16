@@ -18,6 +18,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { EXERCISE_MUSCLE_GROUPS, getSubtypeDisplayName } from '@/lib/exercise-metadata';
 import { BiometricsInputs } from '@/components/BiometricsInputs';
+import { buildBiometricsClearUpdates } from '@/lib/biometrics-clear';
 
 interface CalorieBurnDialogProps {
   open: boolean;
@@ -139,11 +140,8 @@ export function CalorieBurnDialog({
     if (settings.calorieBurnEnabled) {
       updateSettings({
         calorieBurnEnabled: false,
-        bodyWeightLbs: null,
-        heightInches: null,
-        age: null,
-        bodyComposition: null,
         defaultIntensity: null,
+        ...buildBiometricsClearUpdates(settings, 'burn'),
       });
     } else {
       updateSettings({ calorieBurnEnabled: true });
