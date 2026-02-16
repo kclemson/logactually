@@ -90,6 +90,7 @@ export function BiometricsInputs({ settings, updateSettings, showEffectHints = t
   const handleBodyWeightUnitChange = (unit: WeightUnit) => {
     if (bodyWeightUnit === unit) return;
     setBodyWeightUnit(unit);
+    updateSettings({ weightUnit: unit });
   };
 
   const handleHeightChange = (val: string) => {

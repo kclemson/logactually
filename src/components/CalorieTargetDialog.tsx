@@ -245,21 +245,21 @@ export function CalorieTargetDialog({
 
                     {/* Equation breakdown */}
                     {equationData && (
-                      <div className="text-[10px] text-muted-foreground bg-muted/50 rounded py-1.5 px-2 space-y-1.5">
+                      <div className="text-xs text-muted-foreground space-y-1.5">
                         <div>
                           <p>Base metabolic rate (BMR)</p>
                           <p>
-                            = f({equationData.weightDisplay ?? <em className="not-italic text-muted-foreground/50">weight</em>}
+                            {equationData.weightDisplay ?? <em className="not-italic text-muted-foreground/50">weight</em>}
                             , {equationData.heightDisplay ?? <em className="not-italic text-muted-foreground/50">height</em>}
                             , {equationData.age != null ? `${equationData.age} years` : <em className="not-italic text-muted-foreground/50">age</em>}
-                            , {equationData.profile != null ? (equationData.profile === 'male' ? 'Male' : 'Female') : <em className="not-italic text-muted-foreground/50">profile</em>})
+                            {equationData.profile != null && <>, {equationData.profile === 'male' ? 'Male' : 'Female'}</>}
                             {equationData.bmr != null && <> = ~{equationData.bmr.toLocaleString()}</>}
                           </p>
                         </div>
                         <div>
                           <p>Total daily energy expenditure (TDEE)</p>
                           <p>
-                            = {equationData.bmr != null ? equationData.bmr.toLocaleString() : <em className="not-italic text-muted-foreground/50">BMR</em>}
+                            {equationData.bmr != null ? equationData.bmr.toLocaleString() : <em className="not-italic text-muted-foreground/50">BMR</em>}
                             {' '}× {equationData.multiplier != null ? equationData.multiplier : <em className="not-italic text-muted-foreground/50">activity level</em>}
                             {' '}− {equationData.deficit} deficit
                             {' '}= {equationData.target != null ? `${equationData.target.toLocaleString()} cal/day` : '…'}
