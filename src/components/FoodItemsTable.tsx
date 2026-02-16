@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { EntryExpandedPanel } from '@/components/EntryExpandedPanel';
 import { FoodItem, DailyTotals, calculateTotals, scaleMacrosByCalories, ScaledMacros } from '@/types/food';
 import { stepMultiplier, scaleItemByMultiplier, scalePortion } from '@/lib/portion-scaling';
@@ -23,16 +23,7 @@ import { getTargetDotColor } from '@/lib/calorie-target';
 import { type EntryBoundary, isFirstInBoundary, isLastInBoundary, isEntryNew, getEntryHighlightClasses, hasAnyEditedFields, formatEditedFields } from '@/lib/entry-boundaries';
 import { EntryChevron } from '@/components/EntryChevron';
 import { DeleteAllDialog } from '@/components/DeleteAllDialog';
-import { DeleteGroupDialog } from '@/components/DeleteGroupDialog';
-
-type EditableFieldKey = 'description' | 'calories';
-
-interface EditingCell {
-  index: number;
-  field: EditableFieldKey;
-  value: string | number;
-  originalValue: string | number;
-}
+import { useInlineEdit } from '@/hooks/useInlineEdit';
 
 
 interface FoodItemsTableProps {
@@ -107,9 +98,31 @@ export function FoodItemsTable({
   // Read-only mode blocks saves
   const { isReadOnly, triggerOverlay } = useReadOnlyContext();
 
-  // Local editing state - only saved on Enter
-  const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
-  const descriptionOriginalRef = useRef<string>('');
+  // Shared inline editing hook
+  const inlineEdit = useInlineEdit<'calories'>({
+    onSaveNumeric: (index, _field, value) => {
+      const item = items[index];
+      const scaled = scaleMacrosByCalories(
+        item.calories, item.protein, item.carbs, item.fat, value
+      );
+      onUpdateItemBatch?.(index, {
+        calories: scaled.calories,
+        protein: scaled.protein,
+        carbs: scaled.carbs,
+        fat: scaled.fat,
+      });
+    },
+    onSaveDescription: (index, newDescription) => {
+      onUpdateItem?.(index, 'description', newDescription);
+      if (items[index].portion) {
+        onUpdateItem?.(index, 'portion', '');
+      }
+    },
+    isReadOnly,
+    triggerOverlay,
+  });
+
+  const { editingCell } = inlineEdit;
 
   // Portion scaling stepper state
   const [portionScalingIndex, setPortionScalingIndex] = useState<number | null>(null);
@@ -120,126 +133,11 @@ export function FoodItemsTable({
   const getPreviewMacros = (item: FoodItem, index: number): ScaledMacros | null => {
     if (editingCell?.index === index && editingCell?.field === 'calories') {
       return scaleMacrosByCalories(
-        item.calories,
-        item.protein,
-        item.carbs,
-        item.fat,
-        Number(editingCell.value)
+        item.calories, item.protein, item.carbs, item.fat, Number(editingCell.value)
       );
     }
     return null;
   };
-
-  const handleKeyDown = (
-    e: React.KeyboardEvent,
-    index: number,
-    field: EditableFieldKey
-  ) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      
-      // Block save for read-only users
-      if (isReadOnly) {
-        triggerOverlay();
-        setEditingCell(null);
-        (e.target as HTMLElement).blur();
-        return;
-      }
-      
-      // Save the edit
-      if (editingCell && editingCell.value !== editingCell.originalValue && editingCell.value !== '') {
-        // If editing calories, batch all 4 fields with scaled values in one atomic call
-        if (field === 'calories') {
-          const item = items[index];
-          const scaled = scaleMacrosByCalories(
-            item.calories,
-            item.protein,
-            item.carbs,
-            item.fat,
-            Number(editingCell.value)
-          );
-          onUpdateItemBatch?.(index, {
-            calories: scaled.calories,
-            protein: scaled.protein,
-            carbs: scaled.carbs,
-            fat: scaled.fat,
-          });
-        } else {
-          onUpdateItem?.(index, field, editingCell.value);
-        }
-      }
-      setEditingCell(null);
-      (e.target as HTMLElement).blur();
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      // Cancel - revert to original (state will be cleared, input will show item value)
-      setEditingCell(null);
-      (e.target as HTMLElement).blur();
-    }
-  };
-
-  const handleDescriptionKeyDown = (
-    e: React.KeyboardEvent<HTMLSpanElement>,
-    index: number,
-    item: FoodItem
-  ) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      
-      // Block save for read-only users
-      if (isReadOnly) {
-        triggerOverlay();
-        e.currentTarget.textContent = descriptionOriginalRef.current;
-        (e.target as HTMLElement).blur();
-        return;
-      }
-      
-      const newDescription = e.currentTarget.textContent || '';
-      if (newDescription !== descriptionOriginalRef.current) {
-        onUpdateItem?.(index, 'description', newDescription);
-        // Clear portion when description is edited to prevent stale data
-        if (item.portion) {
-          onUpdateItem?.(index, 'portion', '');
-        }
-      }
-      (e.target as HTMLElement).blur();
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      // Revert to original
-      e.currentTarget.textContent = descriptionOriginalRef.current;
-      (e.target as HTMLElement).blur();
-    }
-  };
-
-  const handleDescriptionFocus = (e: React.FocusEvent<HTMLSpanElement>, item: FoodItem) => {
-    descriptionOriginalRef.current = item.description;
-  };
-
-  const handleDescriptionBlur = (
-    e: React.FocusEvent<HTMLSpanElement>,
-    index: number,
-    item: FoodItem
-  ) => {
-    // Read-only mode always reverts
-    if (isReadOnly) {
-      e.currentTarget.textContent = descriptionOriginalRef.current;
-      return;
-    }
-    
-    const newDescription = (e.currentTarget.textContent || '').trim();
-    
-    // Revert if empty, otherwise save
-    if (!newDescription) {
-      e.currentTarget.textContent = descriptionOriginalRef.current;
-    } else if (newDescription !== descriptionOriginalRef.current) {
-      onUpdateItem?.(index, 'description', newDescription);
-      // Clear portion when description is edited to prevent stale data
-      if (item.portion) {
-        onUpdateItem?.(index, 'portion', '');
-      }
-    }
-  };
-
 
   // Build tooltip for description (include portion if present)
   const getItemTooltip = (item: FoodItem): string => {
@@ -422,9 +320,7 @@ export function FoodItemsTable({
                         el.textContent = item.description;
                       }
                     }}
-                    onFocus={(e) => handleDescriptionFocus(e, item)}
-                    onBlur={(e) => handleDescriptionBlur(e, index, item)}
-                    onKeyDown={(e) => handleDescriptionKeyDown(e, index, item)}
+                    {...inlineEdit.getDescriptionEditProps(index, item.description)}
                     className="border-0 bg-transparent focus:outline-none cursor-text hover:bg-muted/50"
                   />
                   {item.portion && (
@@ -494,40 +390,10 @@ export function FoodItemsTable({
                       ? String(editingCell.value)
                       : item.calories
                   }
-                  onFocus={() => setEditingCell({
-                    index,
-                    field: 'calories',
-                    value: item.calories,
-                    originalValue: item.calories
-                  })}
-                onChange={(e) => {
-                  if (editingCell) {
-                    setEditingCell({ ...editingCell, value: e.target.value === '' ? '' : parseInt(e.target.value, 10) || 0 });
-                  }
-                }}
-                  onBlur={() => {
-                    // Save on blur if value changed and valid (non-zero)
-                    if (editingCell && editingCell.value !== editingCell.originalValue && !isReadOnly) {
-                      const numValue = Number(editingCell.value);
-                      if (editingCell.value !== '' && editingCell.value !== undefined) {
-                        const scaled = scaleMacrosByCalories(
-                          item.calories,
-                          item.protein,
-                          item.carbs,
-                          item.fat,
-                          numValue
-                        );
-                        onUpdateItemBatch?.(index, {
-                          calories: scaled.calories,
-                          protein: scaled.protein,
-                          carbs: scaled.carbs,
-                          fat: scaled.fat,
-                        });
-                      }
-                    }
-                    setEditingCell(null);
-                  }}
-                  onKeyDown={(e) => handleKeyDown(e, index, 'calories')}
+                  onFocus={() => inlineEdit.startEditing(index, 'calories', item.calories)}
+                  onChange={(e) => inlineEdit.updateEditingValue(e.target.value)}
+                  onBlur={() => inlineEdit.handleNumericBlur()}
+                  onKeyDown={(e) => inlineEdit.handleNumericKeyDown(e)}
                   className={getCaloriesClasses(item, isCaloriesEditing)}
                 />
                 {/* P/C/F combined - read-only with preview when editing calories */}

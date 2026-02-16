@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { WeightSet } from '@/types/weight';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,7 @@ import { EntryChevron } from '@/components/EntryChevron';
 import { DeleteAllDialog } from '@/components/DeleteAllDialog';
 import { DeleteGroupDialog } from '@/components/DeleteGroupDialog';
 import { EntryExpandedPanel } from '@/components/EntryExpandedPanel';
+import { useInlineEdit } from '@/hooks/useInlineEdit';
 
 type EditableFieldKey = 'description' | 'sets' | 'reps' | 'weight_lbs';
 
@@ -23,13 +24,6 @@ interface DiffValues {
   sets?: number;
   reps?: number;
   weight_lbs?: number;
-}
-
-interface EditingCell {
-  index: number;
-  field: EditableFieldKey;
-  value: string | number;
-  originalValue: string | number;
 }
 
 
@@ -144,91 +138,25 @@ export function WeightItemsTable({
   const { isReadOnly, triggerOverlay } = useReadOnlyContext();
   const hasHover = useHasHover();
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
-  const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
-  const descriptionOriginalRef = useRef<string>('');
 
-  const handleKeyDown = (
-    e: React.KeyboardEvent,
-    index: number,
-    field: EditableFieldKey
-  ) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      
-      // Block save for read-only users
-      if (isReadOnly) {
-        triggerOverlay();
-        setEditingCell(null);
-        (e.target as HTMLElement).blur();
-        return;
+  const inlineEdit = useInlineEdit<'sets' | 'reps' | 'weight_lbs'>({
+    onSaveNumeric: (index, field, value) => {
+      if (value <= 0) return; // Weight fields require positive values
+      if (field === 'weight_lbs') {
+        const lbsValue = parseWeightToLbs(value, weightUnit);
+        onUpdateItem?.(index, field, lbsValue);
+      } else {
+        onUpdateItem?.(index, field, value);
       }
-      
-      if (editingCell && editingCell.value !== editingCell.originalValue) {
-        const numValue = Number(editingCell.value);
-        if (numValue > 0) {
-          onUpdateItem?.(index, field, editingCell.value);
-        }
-      }
-      setEditingCell(null);
-      (e.target as HTMLElement).blur();
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      setEditingCell(null);
-      (e.target as HTMLElement).blur();
-    }
-  };
-
-  const handleDescriptionKeyDown = (
-    e: React.KeyboardEvent<HTMLSpanElement>,
-    index: number
-  ) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      
-      // Block save for read-only users
-      if (isReadOnly) {
-        triggerOverlay();
-        e.currentTarget.textContent = descriptionOriginalRef.current;
-        (e.target as HTMLElement).blur();
-        return;
-      }
-      
-      const newDescription = e.currentTarget.textContent || '';
-      if (newDescription !== descriptionOriginalRef.current) {
-        onUpdateItem?.(index, 'description', newDescription);
-      }
-      (e.target as HTMLElement).blur();
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      e.currentTarget.textContent = descriptionOriginalRef.current;
-      (e.target as HTMLElement).blur();
-    }
-  };
-
-  const handleDescriptionFocus = (e: React.FocusEvent<HTMLSpanElement>, item: WeightSet) => {
-    descriptionOriginalRef.current = item.description;
-  };
-
-  const handleDescriptionBlur = (
-    e: React.FocusEvent<HTMLSpanElement>,
-    index: number
-  ) => {
-    // Read-only mode always reverts
-    if (isReadOnly) {
-      e.currentTarget.textContent = descriptionOriginalRef.current;
-      return;
-    }
-    
-    const newDescription = (e.currentTarget.textContent || '').trim();
-    
-    // Revert if empty, otherwise save
-    if (!newDescription) {
-      e.currentTarget.textContent = descriptionOriginalRef.current;
-    } else if (newDescription !== descriptionOriginalRef.current) {
+    },
+    onSaveDescription: (index, newDescription) => {
       onUpdateItem?.(index, 'description', newDescription);
-    }
-  };
+    },
+    isReadOnly,
+    triggerOverlay,
+  });
 
+  const { editingCell } = inlineEdit;
   // Calculate totals - volume stays in stored unit for consistency, convert for display
   const totals = useMemo(() => {
     const volumeLbs = items.reduce((sum, item) => sum + (item.sets * item.reps * item.weight_lbs), 0);
@@ -399,9 +327,7 @@ export function WeightItemsTable({
                           el.textContent = item.description;
                         }
                       }}
-                      onFocus={(e) => handleDescriptionFocus(e, item)}
-                      onBlur={(e) => handleDescriptionBlur(e, index)}
-                      onKeyDown={(e) => handleDescriptionKeyDown(e, index)}
+                      {...inlineEdit.getDescriptionEditProps(index, item.description)}
                       className="border-0 bg-transparent focus:outline-none cursor-text hover:bg-muted/50"
                     />
                     {hasAnyEditedFields(item) && (
@@ -474,27 +400,10 @@ export function WeightItemsTable({
                             ? String(editingCell.value)
                             : item.sets
                         }
-                        onFocus={() => setEditingCell({
-                          index,
-                          field: 'sets',
-                          value: item.sets,
-                          originalValue: item.sets
-                        })}
-                        onChange={(e) => {
-                          if (editingCell) {
-                            setEditingCell({ ...editingCell, value: e.target.value === '' ? '' : parseInt(e.target.value, 10) || 0 });
-                          }
-                        }}
-                        onKeyDown={(e) => handleKeyDown(e, index, 'sets')}
-                        onBlur={() => {
-                          if (editingCell && editingCell.value !== editingCell.originalValue && !isReadOnly) {
-                            const numValue = Number(editingCell.value);
-                            if (numValue > 0) {
-                              onUpdateItem?.(index, 'sets', editingCell.value);
-                            }
-                          }
-                          setEditingCell(null);
-                        }}
+                        onFocus={() => inlineEdit.startEditing(index, 'sets', item.sets)}
+                        onChange={(e) => inlineEdit.updateEditingValue(e.target.value)}
+                        onKeyDown={(e) => inlineEdit.handleNumericKeyDown(e)}
+                        onBlur={() => inlineEdit.handleNumericBlur()}
                         className={getNumberInputClasses(editingCell?.index === index && editingCell?.field === 'sets')}
                       />
                     ) : (
@@ -512,27 +421,10 @@ export function WeightItemsTable({
                             ? String(editingCell.value)
                             : item.reps
                         }
-                        onFocus={() => setEditingCell({
-                          index,
-                          field: 'reps',
-                          value: item.reps,
-                          originalValue: item.reps
-                        })}
-                        onChange={(e) => {
-                          if (editingCell) {
-                            setEditingCell({ ...editingCell, value: e.target.value === '' ? '' : parseInt(e.target.value, 10) || 0 });
-                          }
-                        }}
-                        onKeyDown={(e) => handleKeyDown(e, index, 'reps')}
-                        onBlur={() => {
-                          if (editingCell && editingCell.value !== editingCell.originalValue && !isReadOnly) {
-                            const numValue = Number(editingCell.value);
-                            if (numValue > 0) {
-                              onUpdateItem?.(index, 'reps', editingCell.value);
-                            }
-                          }
-                          setEditingCell(null);
-                        }}
+                        onFocus={() => inlineEdit.startEditing(index, 'reps', item.reps)}
+                        onChange={(e) => inlineEdit.updateEditingValue(e.target.value)}
+                        onKeyDown={(e) => inlineEdit.handleNumericKeyDown(e)}
+                        onBlur={() => inlineEdit.handleNumericBlur()}
                         className={getNumberInputClasses(editingCell?.index === index && editingCell?.field === 'reps')}
                       />
                     ) : (
@@ -555,52 +447,11 @@ export function WeightItemsTable({
                           const displayValue = weightUnit === 'kg' 
                             ? parseFloat(formatWeight(item.weight_lbs, 'kg', 1))
                             : item.weight_lbs;
-                          setEditingCell({
-                            index,
-                            field: 'weight_lbs',
-                            value: displayValue,
-                            originalValue: displayValue
-                          });
+                          inlineEdit.startEditing(index, 'weight_lbs', displayValue);
                         }}
-                        onChange={(e) => {
-                          if (editingCell) {
-                            setEditingCell({ ...editingCell, value: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 });
-                          }
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            if (isReadOnly) {
-                              triggerOverlay();
-                              setEditingCell(null);
-                              (e.target as HTMLElement).blur();
-                              return;
-                            }
-                            if (editingCell && editingCell.value !== editingCell.originalValue) {
-                              const numValue = Number(editingCell.value);
-                              if (numValue > 0) {
-                                const lbsValue = parseWeightToLbs(numValue, weightUnit);
-                                onUpdateItem?.(index, 'weight_lbs', lbsValue);
-                              }
-                            }
-                            setEditingCell(null);
-                            (e.target as HTMLElement).blur();
-                          } else if (e.key === 'Escape') {
-                            e.preventDefault();
-                            setEditingCell(null);
-                            (e.target as HTMLElement).blur();
-                          }
-                        }}
-                        onBlur={() => {
-                          if (editingCell && editingCell.value !== editingCell.originalValue && !isReadOnly) {
-                            const numValue = Number(editingCell.value);
-                            if (numValue > 0) {
-                              const lbsValue = parseWeightToLbs(numValue, weightUnit);
-                              onUpdateItem?.(index, 'weight_lbs', lbsValue);
-                            }
-                          }
-                          setEditingCell(null);
-                        }}
+                        onChange={(e) => inlineEdit.updateEditingValue(e.target.value, parseFloat)}
+                        onKeyDown={(e) => inlineEdit.handleNumericKeyDown(e)}
+                        onBlur={() => inlineEdit.handleNumericBlur()}
                         className={getNumberInputClasses(editingCell?.index === index && editingCell?.field === 'weight_lbs')}
                       />
                     ) : (
