@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getTargetDotColor, getEffectiveDailyTarget, computeTDEE, suggestActivityLevel, getExerciseAdjustedTarget, ACTIVITY_MULTIPLIERS } from './calorie-target';
+import { getTargetDotColor, getEffectiveDailyTarget, computeTDEE, suggestActivityLevel, getExerciseAdjustedTarget, usesActualExerciseBurns, ACTIVITY_MULTIPLIERS } from './calorie-target';
 import type { UserSettings } from '@/hooks/useUserSettings';
 
 // ---------------------------------------------------------------------------
@@ -149,5 +149,40 @@ describe('getEffectiveDailyTarget', () => {
   it('returns null in exercise_adjusted mode without target', () => {
     const s = { ...baseSettings, calorieTargetMode: 'exercise_adjusted' as const, dailyCalorieTarget: null };
     expect(getEffectiveDailyTarget(s)).toBeNull();
+  });
+
+  it('returns BMR - deficit in body_stats mode with logged activity', () => {
+    const s = { ...baseSettings, calorieTargetMode: 'body_stats' as const, activityLevel: 'logged' as const, dailyDeficit: 500 };
+    const result = getEffectiveDailyTarget(s);
+    expect(result).not.toBeNull();
+    // Should be BMR - 500 (no multiplier applied)
+    expect(result!).toBeLessThan(2000);
+  });
+
+  it('returns null in body_stats + logged mode without body weight', () => {
+    const s = { ...baseSettings, calorieTargetMode: 'body_stats' as const, activityLevel: 'logged' as const, dailyDeficit: 500, bodyWeightLbs: null };
+    expect(getEffectiveDailyTarget(s)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// usesActualExerciseBurns
+// ---------------------------------------------------------------------------
+
+describe('usesActualExerciseBurns', () => {
+  it('returns true for exercise_adjusted mode', () => {
+    expect(usesActualExerciseBurns({ ...baseSettings, calorieTargetMode: 'exercise_adjusted' })).toBe(true);
+  });
+
+  it('returns true for body_stats + logged', () => {
+    expect(usesActualExerciseBurns({ ...baseSettings, calorieTargetMode: 'body_stats', activityLevel: 'logged' })).toBe(true);
+  });
+
+  it('returns false for body_stats + light', () => {
+    expect(usesActualExerciseBurns({ ...baseSettings, calorieTargetMode: 'body_stats', activityLevel: 'light' })).toBe(false);
+  });
+
+  it('returns false for static mode', () => {
+    expect(usesActualExerciseBurns(baseSettings)).toBe(false);
   });
 });

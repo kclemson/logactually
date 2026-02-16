@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { isCardioExercise } from '@/lib/exercise-metadata';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { getTargetDotColor, getEffectiveDailyTarget, getExerciseAdjustedTarget } from '@/lib/calorie-target';
+import { getTargetDotColor, getEffectiveDailyTarget, getExerciseAdjustedTarget, usesActualExerciseBurns } from '@/lib/calorie-target';
 import { useDailyCalorieBurn } from '@/hooks/useDailyCalorieBurn';
 
 import { useUserSettings } from '@/hooks/useUserSettings';
@@ -59,21 +59,21 @@ const History = () => {
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
 
-  // For exercise-adjusted mode, fetch daily calorie burn for the visible month
+  const usesBurns = usesActualExerciseBurns(settings);
   const burnDays = useMemo(() => differenceInDays(monthEnd, monthStart) + 1, [monthStart, monthEnd]);
   const { data: dailyBurnData } = useDailyCalorieBurn(
-    settings.calorieTargetMode === 'exercise_adjusted' ? burnDays + 30 : 0
+    usesBurns ? burnDays + 30 : 0
   );
 
-  // Build a Map<dateStr, midpointBurn> for exercise-adjusted mode
+  // Build a Map<dateStr, midpointBurn> for exercise burn modes
   const burnByDate = useMemo(() => {
     const map = new Map<string, number>();
-    if (settings.calorieTargetMode !== 'exercise_adjusted') return map;
+    if (!usesBurns) return map;
     dailyBurnData.forEach((d) => {
       map.set(d.date, Math.round((d.low + d.high) / 2));
     });
     return map;
-  }, [dailyBurnData, settings.calorieTargetMode]);
+  }, [dailyBurnData, usesBurns]);
   
   const { data: daySummaries = [], isLoading } = useQuery({
     queryKey: ['food-entries-summary', format(monthStart, 'yyyy-MM')],
@@ -277,7 +277,7 @@ const History = () => {
                       {`${Math.round(summary.totalCalories).toLocaleString()}cal`}
                       {(() => {
                         const baseTarget = getEffectiveDailyTarget(settings);
-                        const target = settings.calorieTargetMode === 'exercise_adjusted' && baseTarget
+                        const target = usesBurns && baseTarget
                           ? getExerciseAdjustedTarget(baseTarget, burnByDate.get(dateStr) ?? 0)
                           : baseTarget;
                         return !isTodayDate && target && target > 0 ? (

@@ -14,7 +14,9 @@ import {
   ACTIVITY_LABELS,
   ACTIVITY_MULTIPLIERS,
   TARGET_MODE_OPTIONS,
+  usesActualExerciseBurns,
   type ActivityLevel,
+  type MultiplierActivityLevel,
   type CalorieTargetMode,
 } from '@/lib/calorie-target';
 import { useDailyCalorieBurn } from '@/hooks/useDailyCalorieBurn';
@@ -37,7 +39,7 @@ interface CalorieTargetDialogProps {
   updateSettings: (updates: Partial<UserSettings>) => void;
 }
 
-const activityLevelKeys: ActivityLevel[] = ['sedentary', 'light', 'moderate', 'active'];
+const activityLevelKeys: ActivityLevel[] = ['sedentary', 'light', 'moderate', 'active', 'logged'];
 
 export function CalorieTargetDialog({
   open,
@@ -81,6 +83,8 @@ export function CalorieTargetDialog({
   const equationData = useMemo(() => {
     if (settings.calorieTargetMode !== 'body_stats') return null;
 
+    const isLogged = settings.activityLevel === 'logged';
+
     // Display weight in user's preferred unit
     const weightDisplay = settings.bodyWeightLbs
       ? settings.weightUnit === 'kg'
@@ -98,12 +102,15 @@ export function CalorieTargetDialog({
     const age = settings.age;
     const profile = settings.bodyComposition;
     const bmr = computeAbsoluteBMR(settings);
-    const multiplier = settings.activityLevel ? ACTIVITY_MULTIPLIERS[settings.activityLevel] : null;
+    const multiplier = !isLogged && settings.activityLevel ? ACTIVITY_MULTIPLIERS[settings.activityLevel as MultiplierActivityLevel] : null;
     const deficit = settings.dailyDeficit ?? 0;
-    const tdee = bmr != null && multiplier != null ? computeTDEE(bmr, settings.activityLevel!) : null;
-    const target = tdee != null ? Math.round(tdee - deficit) : null;
+    const tdee = bmr != null && multiplier != null ? computeTDEE(bmr, settings.activityLevel as MultiplierActivityLevel) : null;
+    const target = isLogged
+      ? (bmr != null ? (Math.round(bmr - deficit) > 0 ? Math.round(bmr - deficit) : null) : null)
+      : (tdee != null ? Math.round(tdee - deficit) : null);
 
     return {
+      isLogged,
       weightDisplay, heightDisplay, age, profile,
       bmr: bmr != null ? Math.round(bmr) : null,
       multiplier, deficit,
@@ -239,17 +246,26 @@ export function CalorieTargetDialog({
                           {activityLevelKeys.map((key) => (
                             <SelectItem key={key} value={key} className="text-xs">
                               <span>{ACTIVITY_LABELS[key].label}</span>
-                              <span className="text-muted-foreground ml-1">×{ACTIVITY_MULTIPLIERS[key]}</span>
+                              {key !== 'logged' && (
+                                <span className="text-muted-foreground ml-1">×{ACTIVITY_MULTIPLIERS[key as MultiplierActivityLevel]}</span>
+                              )}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
 
-                    {/* Activity hint */}
-                    {activityHint && (
+                    {/* Activity hint (hide for 'logged' mode) */}
+                    {activityHint && settings.activityLevel !== 'logged' && (
                       <p className="text-[10px] text-muted-foreground/70 italic">
                         Your logged exercise burned an average of ~{activityHint.avgDailyBurn} calories/day over {activityHint.activeDays} active days. This is closest to "{activityHint.label}."
+                      </p>
+                    )}
+
+                    {/* Calorie burn disabled warning for 'logged' mode */}
+                    {settings.activityLevel === 'logged' && !settings.calorieBurnEnabled && (
+                      <p className="text-[10px] text-amber-500 dark:text-amber-400 italic">
+                        Exercise calorie burn estimation is currently disabled. Enable it in Estimated Calorie Burn settings for this mode to work.
                       </p>
                     )}
 
@@ -289,22 +305,35 @@ export function CalorieTargetDialog({
                             {equationData.bmr != null && <> = {equationData.bmr.toLocaleString()}</>}
                           </p>
                         </div>
-                        <div>
-                          <p className="font-medium">Total daily energy expenditure (TDEE):</p>
-                          <p>
-                            {equationData.bmr != null ? equationData.bmr.toLocaleString() : <em className="not-italic text-muted-foreground/50">BMR</em>}
-                            {' '}× {equationData.multiplier != null ? equationData.multiplier : <em className="not-italic text-muted-foreground/50">activity level</em>}
-                            {' '}= {equationData.tdee != null ? equationData.tdee.toLocaleString() : '…'}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="font-medium">Daily calorie target:</p>
-                          <p>
-                            {equationData.tdee != null ? equationData.tdee.toLocaleString() : <em className="not-italic text-muted-foreground/50">TDEE</em>}
-                            {' '}− {equationData.deficit != null && equationData.deficit !== 0 ? equationData.deficit : <em className="not-italic text-muted-foreground/50">deficit</em>}
-                            {' '}= {equationData.target != null ? `${equationData.target.toLocaleString()} cal/day` : '…'}
-                          </p>
-                        </div>
+                        {equationData.isLogged ? (
+                          <div>
+                            <p className="font-medium">Daily calorie target:</p>
+                            <p>
+                              {equationData.bmr != null ? equationData.bmr.toLocaleString() : <em className="not-italic text-muted-foreground/50">BMR</em>}
+                              {' '}+ logged exercise <span className="italic">(varies daily)</span>
+                              {equationData.deficit > 0 && <> − {equationData.deficit}</>}
+                            </p>
+                          </div>
+                        ) : (
+                          <>
+                            <div>
+                              <p className="font-medium">Total daily energy expenditure (TDEE):</p>
+                              <p>
+                                {equationData.bmr != null ? equationData.bmr.toLocaleString() : <em className="not-italic text-muted-foreground/50">BMR</em>}
+                                {' '}× {equationData.multiplier != null ? equationData.multiplier : <em className="not-italic text-muted-foreground/50">activity level</em>}
+                                {' '}= {equationData.tdee != null ? equationData.tdee.toLocaleString() : '…'}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="font-medium">Daily calorie target:</p>
+                              <p>
+                                {equationData.tdee != null ? equationData.tdee.toLocaleString() : <em className="not-italic text-muted-foreground/50">TDEE</em>}
+                                {' '}− {equationData.deficit != null && equationData.deficit !== 0 ? equationData.deficit : <em className="not-italic text-muted-foreground/50">deficit</em>}
+                                {' '}= {equationData.target != null ? `${equationData.target.toLocaleString()} cal/day` : '…'}
+                              </p>
+                            </div>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
