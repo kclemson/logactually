@@ -65,7 +65,7 @@ export function CalorieTargetDialog({
     // dailyFoodData is sorted descending; skip today since it's incomplete
     const todayStr = format(new Date(), 'yyyy-MM-dd');
     for (const food of dailyFoodData) {
-      if (food.date === todayStr) continue;
+      if (food.date >= todayStr) continue;
       const burn = burnByDate.get(food.date);
       if (burn) {
         const burnCals = Math.round((burn.low + burn.high) / 2);
