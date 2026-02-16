@@ -95,7 +95,6 @@ export function CalorieTargetDialog({
         calorieTargetMode: 'static',
         activityLevel: null,
         dailyDeficit: null,
-        exerciseAdjustedBase: null,
         ...buildBiometricsClearUpdates(settings, 'target'),
       });
       onOpenChange(false);
@@ -294,10 +293,10 @@ export function CalorieTargetDialog({
                         <input
                           type="number"
                           placeholder="Not set"
-                          value={settings.exerciseAdjustedBase ?? ''}
+                          value={settings.dailyCalorieTarget ?? ''}
                           onChange={(e) => {
                             const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
-                            updateSettings({ exerciseAdjustedBase: val });
+                            updateSettings({ dailyCalorieTarget: val });
                           }}
                           className={inputClass}
                           min={0}

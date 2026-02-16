@@ -60,7 +60,7 @@ export function computeTDEE(bmr: number, activityLevel: ActivityLevel): number {
  * Resolves the effective daily calorie target based on user settings.
  * - Static mode: returns the raw `dailyCalorieTarget` value.
  * - Body stats mode: computes BMR × activity multiplier - deficit.
- * - Exercise adjusted mode: returns `exerciseAdjustedBase` (per-day adjustment at consumption sites).
+ * - Exercise adjusted mode: returns `dailyCalorieTarget` (per-day adjustment at consumption sites).
  *   Returns null if biometrics are insufficient or activity level not set.
  */
 export function getEffectiveDailyTarget(settings: UserSettings): number | null {
@@ -71,7 +71,7 @@ export function getEffectiveDailyTarget(settings: UserSettings): number | null {
   }
 
   if (settings.calorieTargetMode === 'exercise_adjusted') {
-    return settings.exerciseAdjustedBase;
+    return settings.dailyCalorieTarget;
   }
 
   // body_stats mode
@@ -92,7 +92,7 @@ export function getEffectiveDailyTarget(settings: UserSettings): number | null {
 
 /**
  * Computes the exercise-adjusted target for a specific day.
- * @param base The user's base goal (exerciseAdjustedBase)
+ * @param base The user's base goal (dailyCalorieTarget)
  * @param dailyBurn Midpoint of estimated calorie burn for that day
  */
 export function getExerciseAdjustedTarget(base: number, dailyBurn: number): number {
