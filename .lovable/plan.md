@@ -1,39 +1,20 @@
 
 
-# Persist "welcome to demo" dismissal in localStorage
+# Add changelog entry for calorie target modes
 
-## What changes
+## Changes
 
-In `src/contexts/ReadOnlyContext.tsx`, replace the in-memory `useRef` guard with a `localStorage` check so the welcome overlay only ever shows once per device.
+1. **Copy screenshot** `user-uploads://dailycalorietarget-screenshot-3.png` to `public/changelog/calorie-target-modes.png`
 
-## Technical details
+2. **Add entry** at the top of `CHANGELOG_ENTRIES` in `src/pages/Changelog.tsx`:
 
-**File: `src/contexts/ReadOnlyContext.tsx`**
-
-- Remove `hasSeenWelcomeRef`
-- On mount (when `isReadOnly` is true and not loading), check `localStorage.getItem('demo-welcome-seen')`
-- If not set, show the welcome overlay and write `localStorage.setItem('demo-welcome-seen', 'true')` when it appears
-- If already set, skip showing the overlay entirely
-- The "blocked" overlay (triggered by write attempts) remains unaffected
-
-```ts
-// Before (resets every reload):
-const hasSeenWelcomeRef = useRef(false);
-useEffect(() => {
-  if (!isLoading && isReadOnly && !hasSeenWelcomeRef.current) { ... }
-}, [isLoading, isReadOnly]);
-
-// After (persists across reloads):
-useEffect(() => {
-  if (!isLoading && isReadOnly && !localStorage.getItem('demo-welcome-seen')) {
-    const timer = setTimeout(() => {
-      setOverlayMode('welcome');
-      setShowOverlay(true);
-      localStorage.setItem('demo-welcome-seen', 'true');
-    }, 500);
-    return () => clearTimeout(timer);
-  }
-}, [isLoading, isReadOnly]);
+```
+{ date: "Feb-15", text: "Expanded the existing 'daily calorie target' feature to support two new modes: 'Exercise adjusted' mode offsets the calorie count from your food intake by calories burned from logged exercises. 'Estimated burn rate minus a deficit' uses your activity level and body stats to calculate your BMR/TDEE and then subtracts a daily deficit you set.", image: "calorie-target-modes.png" }
 ```
 
-No other files need changes.
+`LAST_UPDATED` already says `"Feb-15-26"` -- no change needed.
+
+## Text review
+
+The updated phrasing "offsets the calorie count from your food intake" is accurate -- in `exercise_adjusted` mode the burn midpoint is added to the base goal, effectively offsetting calories consumed against calories burned. The `body_stats` description correctly references BMR/TDEE calculation and deficit subtraction, matching the implementation in `calorie-target.ts`.
+
