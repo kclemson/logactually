@@ -1,28 +1,30 @@
 
-# Make Non-Interactive Unit Labels Gray (No Background Fill)
+# Remove `exerciseAdjustedBase` -- Use `dailyCalorieTarget` for Both Modes
 
-## Problem
-Non-interactive unit labels ("years", "cal/day") currently use `bg-primary/10 text-foreground` which gives them a filled background and white/black text -- making them look like interactive elements (identical to the active state of lbs/kg and ft/cm toggles). They should instead be plain muted text with no background.
-
-## Updated Rule
-- **Interactive units** (lbs/kg, ft/cm): Keep current styling -- active state gets `bg-primary/10 text-foreground font-medium`, inactive gets `text-muted-foreground`
-- **Non-interactive units** (years, cal/day): Use `text-muted-foreground` only -- no background fill, no bold, gray color
+Since exercise-adjusted mode hasn't shipped to production, we can cleanly remove the separate field entirely.
 
 ## Changes
 
-### 1. `src/components/BiometricsInputs.tsx` (line 234)
-"years" label for Age input:
-- From: `text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground`
-- To: `text-xs text-muted-foreground`
+### 1. `src/hooks/useUserSettings.ts`
+- Remove `exerciseAdjustedBase` from the `UserSettings` interface
+- Remove it from `DEFAULT_SETTINGS`
 
-### 2. `src/components/CalorieTargetDialog.tsx` (line 247)
-"cal/day" label for Target deficit:
-- From: `text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground whitespace-nowrap`
-- To: `text-xs text-muted-foreground whitespace-nowrap`
+### 2. `src/lib/calorie-target.ts`
+- Change the `exercise_adjusted` branch in `getEffectiveDailyTarget` to return `settings.dailyCalorieTarget`
+- Update JSDoc to reflect the change
 
-### 3. `src/components/CalorieTargetDialog.tsx` (line 303)
-"cal/day" label for Exercise-adjusted target:
-- From: `text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground whitespace-nowrap`
-- To: `text-xs text-muted-foreground whitespace-nowrap`
+### 3. `src/components/CalorieTargetDialog.tsx`
+- In the exercise-adjusted input: bind to `dailyCalorieTarget` instead of `exerciseAdjustedBase`
+- In the disable/reset handler: remove `exerciseAdjustedBase: null`
 
-This matches the existing pattern used by "/10" in the Calorie Burn dialog, which already uses `text-xs text-muted-foreground` for a non-interactive unit.
+### 4. `src/pages/Trends.tsx`
+- Remove the two special-case branches that read `exerciseAdjustedBase`; just use `getEffectiveDailyTarget(settings)` for both reference lines (it now returns `dailyCalorieTarget` for exercise-adjusted mode too)
+
+### 5. `src/lib/calorie-target.test.ts`
+- Update the two exercise-adjusted test cases to use `dailyCalorieTarget` instead of `exerciseAdjustedBase`
+
+### 6. `src/pages/Settings.test.tsx`
+- Remove `exerciseAdjustedBase` from the mock settings objects
+
+## Result
+Switching between "Fixed number" and "Exercise adjusted" preserves the target value automatically since both read from the same field.
