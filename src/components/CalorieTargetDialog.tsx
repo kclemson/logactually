@@ -268,7 +268,7 @@ export function CalorieTargetDialog({
                           <p className="font-medium">Daily calorie target</p>
                           <p>
                             {equationData.tdee != null ? equationData.tdee.toLocaleString() : <em className="not-italic text-muted-foreground/50">TDEE</em>}
-                            {' '}− {equationData.deficit} deficit
+                            {' '}− {equationData.deficit != null && equationData.deficit !== 0 ? equationData.deficit : <em className="not-italic text-muted-foreground/50">deficit</em>}
                             {' '}= {equationData.target != null ? `${equationData.target.toLocaleString()} cal/day` : '…'}
                           </p>
                         </div>
