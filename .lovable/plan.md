@@ -1,75 +1,50 @@
 
 
-# Use sedentary baseline for "Use my exercise logs" + show example days
+# Sort resolved feedback by most recently updated
 
-## Overview
+## What changes
 
-Instead of treating "Use my exercise logs" as a completely separate code path, reuse the existing TDEE equation display with the sedentary multiplier (x1.2) hardcoded. Then show the daily target formula as `TDEE + logged exercise - deficit`, followed by up to 5 recent example days with the actual math.
+The resolved feedback list in the admin portal currently inherits the `created_at desc` sort order from the database query. This means if you resolve an old feedback item, it stays buried at the bottom. Instead, resolved items should sort by their most recent activity -- whichever is latest among `resolved_at`, `responded_at`, or `created_at`.
 
-## What the user sees
+## How it works
 
-The equation breakdown when "Use my exercise logs" is selected:
+This is a client-side sort on the already-fetched data. No database changes needed.
 
-```text
-Base metabolic rate (BMR):
-180 lbs, 5'10", 35 years, Male = 1,650
+On line 49 of `Admin.tsx`, where `resolvedFeedback` is computed:
 
-Total daily energy expenditure (TDEE):
-1,650 x 1.2 = 1,980
-
-Daily calorie target:
-1,980 + logged exercise (varies daily) - 200
-
-Examples:
-February 14th: 1,980 + 320 - 200 = 2,100 cal
-February 12th: 1,980 + 85 - 200 = 1,865 cal
-February 11th: 1,980 + 540 - 200 = 2,320 cal
+```
+const resolvedFeedback = feedback?.filter(f => !!f.resolved_at) ?? [];
 ```
 
-- The TDEE line always shows x1.2 (sedentary) when "Use my exercise logs" is selected
-- The target line shows the dynamic formula with logged exercise
-- When deficit is unset, shows faded "deficit" placeholder (matching existing pattern)
-- Up to 5 most recent days before today with burn data are shown
-- If no recent burn data exists, just the formula lines are shown (no "Examples:" section)
+Add a `.sort()` after the filter that compares the latest timestamp across `resolved_at`, `responded_at`, and `created_at` for each item, descending. This covers:
+- Just resolved something --> `resolved_at` is newest, goes to top
+- User added a follow-up reply --> the message is updated (and if re-resolved, `resolved_at` updates)
+- Admin responded --> `responded_at` is newest, goes to top
 
-## Technical Details
+## Technical details
 
-### 1. `src/lib/calorie-target.ts` -- Update `getEffectiveDailyTarget`
+### File: `src/pages/Admin.tsx`
 
-Change the `'logged'` branch from `BMR - deficit` to `BMR x 1.2 - deficit`:
+Change the `resolvedFeedback` computation (line 49) to sort by the most recent of the three timestamps:
 
 ```typescript
-if (settings.activityLevel === 'logged') {
-  const deficit = settings.dailyDeficit ?? 0;
-  const sedentaryTdee = bmr * ACTIVITY_MULTIPLIERS.sedentary; // 1.2
-  const target = Math.round(sedentaryTdee - deficit);
-  return target > 0 ? target : null;
-}
+const resolvedFeedback = (feedback?.filter(f => !!f.resolved_at) ?? [])
+  .sort((a, b) => {
+    const latest = (f: FeedbackWithUser) =>
+      Math.max(
+        new Date(f.resolved_at!).getTime(),
+        f.responded_at ? new Date(f.responded_at).getTime() : 0,
+        new Date(f.created_at).getTime(),
+      );
+    return latest(b) - latest(a);
+  });
 ```
 
-### 2. `src/components/CalorieTargetDialog.tsx` -- Unify equation display + add examples
-
-**equationData memo**: When `isLogged`, set `multiplier` to `1.2` (sedentary) and compute `tdee` and `target` using it, instead of leaving them null. This means the existing TDEE and target display lines work for both paths.
-
-Remove the `isLogged` ternary branch in the equation breakdown. Instead, the existing TDEE + target lines render for all activity levels. The only difference for `isLogged`: the "Daily calorie target" line appends `+ logged exercise (varies daily)` before the deficit, and omits the computed `= X cal/day` result (since it varies).
-
-**Add `loggedExerciseExamples` memo**:
-- Filter `dailyBurnData` for dates strictly before today
-- Sort descending, take first 5
-- For each: compute `{ dateFormatted, burnCals (midpoint), total: tdee + burnCals - deficit }`
-- Only when `equationData?.isLogged` and `equationData?.tdee` are available
-
-**Render examples**: After the target line, if `isLogged` and examples exist, show "Examples:" heading followed by each row.
-
-### 3. `src/lib/calorie-target.test.ts` -- Update expected values
-
-Update the `'logged'` test to expect `BMR x 1.2 - deficit` instead of `BMR - deficit`. The test currently asserts `result < 2000`; with the x1.2 multiplier the value will be higher, so update accordingly.
+This requires importing `FeedbackWithUser` type (or just inlining the helper). No other files change.
 
 ### Files modified
 
 | File | Change |
 |---|---|
-| `src/lib/calorie-target.ts` | Logged branch uses `bmr * 1.2` |
-| `src/components/CalorieTargetDialog.tsx` | Unify equation display (logged uses same TDEE lines with x1.2), add examples memo + render |
-| `src/lib/calorie-target.test.ts` | Update expected values for logged tests |
+| `src/pages/Admin.tsx` | Sort `resolvedFeedback` by most recent timestamp descending |
 
