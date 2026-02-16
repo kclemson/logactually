@@ -341,7 +341,7 @@ export function CalorieTargetDialog({
                         </p>
 
                         {exampleData && settings.dailyCalorieTarget && (
-                          <p className="text-[10px] text-muted-foreground/70 italic">
+                          <p className="text-[10px] text-muted-foreground/70">
                             For example, on {exampleData.dateFormatted} you logged{' '}
                             {exampleData.foodCals.toLocaleString()} calories in food and
                             burned ~{exampleData.burnCals.toLocaleString()} calories
