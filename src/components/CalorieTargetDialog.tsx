@@ -45,7 +45,7 @@ export function CalorieTargetDialog({
   settings,
   updateSettings,
 }: CalorieTargetDialogProps) {
-  const { data: dailyBurnData } = useDailyCalorieBurn(30);
+  const { data: dailyBurnData } = useDailyCalorieBurn(30, { force: true });
   const { data: dailyFoodData = [] } = useDailyFoodTotals(30);
 
   const activityHint = useMemo(() => {
