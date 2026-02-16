@@ -82,10 +82,12 @@ export function getEffectiveDailyTarget(settings: UserSettings): number | null {
   const bmr = computeAbsoluteBMR(settings);
   if (bmr == null) return null;
 
-  // 'logged' activity level: return BMR - deficit (actual burn added downstream)
+  // 'logged' activity level: use sedentary baseline (BMR × 1.2) - deficit
+  // Actual logged exercise burns are added on top downstream.
   if (settings.activityLevel === 'logged') {
     const deficit = settings.dailyDeficit ?? 0;
-    const target = Math.round(bmr - deficit);
+    const sedentaryTdee = bmr * ACTIVITY_MULTIPLIERS.sedentary;
+    const target = Math.round(sedentaryTdee - deficit);
     return target > 0 ? target : null;
   }
 

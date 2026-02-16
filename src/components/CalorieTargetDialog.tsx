@@ -102,11 +102,14 @@ export function CalorieTargetDialog({
     const age = settings.age;
     const profile = settings.bodyComposition;
     const bmr = computeAbsoluteBMR(settings);
-    const multiplier = !isLogged && settings.activityLevel ? ACTIVITY_MULTIPLIERS[settings.activityLevel as MultiplierActivityLevel] : null;
+    // For 'logged' mode, hardcode sedentary multiplier (1.2) as baseline
+    const multiplier = isLogged
+      ? ACTIVITY_MULTIPLIERS.sedentary
+      : (settings.activityLevel ? ACTIVITY_MULTIPLIERS[settings.activityLevel as MultiplierActivityLevel] : null);
     const deficit = settings.dailyDeficit ?? 0;
-    const tdee = bmr != null && multiplier != null ? computeTDEE(bmr, settings.activityLevel as MultiplierActivityLevel) : null;
+    const tdee = bmr != null && multiplier != null ? Math.round(bmr * multiplier) : null;
     const target = isLogged
-      ? (bmr != null ? (Math.round(bmr - deficit) > 0 ? Math.round(bmr - deficit) : null) : null)
+      ? tdee // for logged, the base target is just the sedentary TDEE (exercise added downstream)
       : (tdee != null ? Math.round(tdee - deficit) : null);
 
     return {
@@ -118,6 +121,25 @@ export function CalorieTargetDialog({
       target: target != null && target > 0 ? target : null,
     };
   }, [settings]);
+
+  const loggedExerciseExamples = useMemo(() => {
+    if (!equationData?.isLogged || equationData.tdee == null) return [];
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const deficit = equationData.deficit ?? 0;
+    return dailyBurnData
+      .filter(d => d.date < todayStr)
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .slice(0, 5)
+      .map(d => {
+        const burnCals = Math.round((d.low + d.high) / 2);
+        const total = equationData.tdee! + burnCals - deficit;
+        return {
+          dateFormatted: format(parseISO(d.date), 'MMMM do'),
+          burnCals,
+          total,
+        };
+      });
+  }, [equationData, dailyBurnData]);
 
   const handleToggle = () => {
     if (settings.calorieTargetEnabled) {
@@ -306,14 +328,40 @@ export function CalorieTargetDialog({
                           </p>
                         </div>
                         {equationData.isLogged ? (
-                          <div>
-                            <p className="font-medium">Daily calorie target:</p>
-                            <p>
-                              {equationData.bmr != null ? equationData.bmr.toLocaleString() : <em className="not-italic text-muted-foreground/50">BMR</em>}
-                              {' '}+ logged exercise <span className="italic">(varies daily)</span>
-                              {equationData.deficit > 0 && <> − {equationData.deficit}</>}
-                            </p>
-                          </div>
+                          <>
+                            <div>
+                              <p className="font-medium">Total daily energy expenditure (TDEE):</p>
+                              <p>
+                                {equationData.bmr != null ? equationData.bmr.toLocaleString() : <em className="not-italic text-muted-foreground/50">BMR</em>}
+                                {' '}× {equationData.multiplier}
+                                {' '}= {equationData.tdee != null ? equationData.tdee.toLocaleString() : '…'}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="font-medium">Daily calorie target:</p>
+                              <p>
+                                {equationData.tdee != null ? equationData.tdee.toLocaleString() : <em className="not-italic text-muted-foreground/50">TDEE</em>}
+                                {' '}+ logged exercise <span className="italic">(varies daily)</span>
+                                {' '}- {equationData.deficit != null && equationData.deficit !== 0
+                                  ? equationData.deficit
+                                  : <em className="not-italic text-muted-foreground/50">deficit</em>}
+                              </p>
+                            </div>
+                            {loggedExerciseExamples.length > 0 && (
+                              <div>
+                                <p className="font-medium">Examples:</p>
+                                {loggedExerciseExamples.map((ex) => (
+                                  <p key={ex.dateFormatted}>
+                                    {ex.dateFormatted}: {equationData.tdee!.toLocaleString()} + {ex.burnCals.toLocaleString()}
+                                    {' '}- {equationData.deficit != null && equationData.deficit !== 0
+                                      ? equationData.deficit
+                                      : <em className="not-italic text-muted-foreground/50">deficit</em>}
+                                    {' '}= {ex.total.toLocaleString()} cal
+                                  </p>
+                                ))}
+                              </div>
+                            )}
+                          </>
                         ) : (
                           <>
                             <div>
