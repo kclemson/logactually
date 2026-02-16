@@ -179,19 +179,22 @@ export function CalorieTargetDialog({
                 {/* Static mode: number input */}
                 {settings.calorieTargetMode === 'static' && (
                   <div className="flex items-center justify-between">
-                    <p className="text-xs text-muted-foreground">Target (cal/day)</p>
-                    <input
-                      type="number"
-                      placeholder="Not set"
-                      value={settings.dailyCalorieTarget ?? ''}
-                      onChange={(e) => {
-                        const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
-                        updateSettings({ dailyCalorieTarget: val });
-                      }}
-                      className={inputClass}
-                      min={0}
-                      max={99999}
-                    />
+                    <p className="text-xs text-muted-foreground">Target</p>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        placeholder="Not set"
+                        value={settings.dailyCalorieTarget ?? ''}
+                        onChange={(e) => {
+                          const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
+                          updateSettings({ dailyCalorieTarget: val });
+                        }}
+                        className={inputClass}
+                        min={0}
+                        max={99999}
+                      />
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">cal/day</span>
+                    </div>
                   </div>
                 )}
 
