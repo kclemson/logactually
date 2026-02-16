@@ -1,46 +1,35 @@
 
 
-# Fix: Portion text should not be clickable when table is non-editable
+# Calorie burn: account for reps and lifting weight in strength duration
 
-## The bug
+## What changes
 
-The portion button (e.g., "(1 medium banana)") opens the portion scaling stepper even in read-only table contexts like SaveMealDialog, SimilarEntryPrompt, and FoodEntryCard.
+Replace the flat 35-45 seconds/set duration estimate with a bottoms-up calculation:
 
-## Approach: Render as span when not editable
-
-In the non-editable description cell (line ~464-473 of `FoodItemsTable.tsx`), conditionally render the portion as a plain `<span>` instead of a `<button>` when `editable` is false. This removes the click handler and pointer cursor entirely.
-
-The editable branch (main Food Log) is unchanged.
-
-```
-// Current (always a button):
-<button onClick={...} className="... cursor-pointer hover:text-foreground ...">
-  ({item.portion})
-</button>
-
-// After (span when not editable, button when editable):
-{editable ? (
-  <button onClick={...} className="... cursor-pointer hover:text-foreground ...">
-    ({item.portion})
-  </button>
-) : (
-  <span className="ml-1 text-xs text-muted-foreground whitespace-nowrap">
-    ({item.portion})
-  </span>
-)}
+```text
+Per-set active time = reps x seconds_per_rep (3s low, 4s high)
+Per-set rest time   = base_rest (30s low, 45s high) + weight_bonus
+  weight_bonus      = clamp(weight_lbs / 100, 0, 0.5) x 30s  (0-15s extra)
+Total duration      = sets x (active_time + rest_time)
 ```
 
-## File changed
+Example outputs (for intuition):
+- 3x10 @ 135 lbs: ~(30+40) to ~(40+51) sec/set = 3.5-4.6 min
+- 3x5 @ 135 lbs: ~(15+40) to ~(20+51) sec/set = 2.8-3.6 min (less time, fewer reps)
+- 3x15 @ 25 lbs: ~(45+34) to ~(60+49) sec/set = 3.9-5.4 min (more reps, less rest)
+- 3x10 @ 315 lbs: ~(30+45) to ~(40+60) sec/set = 3.8-5.0 min (heavier = more rest)
+
+The old constants `SECONDS_PER_SET_LOW` / `SECONDS_PER_SET_HIGH` are removed.
+
+## Files changed
 
 | File | Change |
 |---|---|
-| `src/components/FoodItemsTable.tsx` | Line ~464-473: wrap portion rendering in an `editable` ternary -- button when editable, span when not |
+| `src/lib/calorie-burn.ts` | Update `estimateStrengthDuration` to accept `reps` and `weight_lbs`, compute duration from per-rep active time plus weight-scaled rest. Remove unused `SECONDS_PER_SET_*` constants. Update call site at line ~350 to pass `exercise.weight_lbs`. |
+| `src/lib/calorie-burn.test.ts` | Update existing `estimateStrengthDuration` tests for new formula. Add tests: more reps increases duration, heavier weight increases duration, 0 reps with sets still returns rest-only duration. |
 
-## Verification
+## What does NOT change
 
-1. Food Log: tap a portion -- stepper should still open and work normally
-2. "Save as meal" dialog: portion text should display but not be clickable
-3. Settings saved meals: same, plain text
-4. History page (FoodEntryCard): same, plain text
-5. SimilarEntryPrompt: same, plain text
-
+- MET lookup, effort narrowing, incline bonus, BMR scaling, composition multiplier
+- Cardio estimation (uses explicit `duration_minutes`)
+- UI components, database, edge functions
