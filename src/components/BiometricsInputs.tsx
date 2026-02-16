@@ -231,7 +231,7 @@ export function BiometricsInputs({ settings, updateSettings, showEffectHints = t
             min={10}
             max={120}
           />
-          <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground font-medium">years</span>
+          <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground">years</span>
         </div>
       </div>
 
