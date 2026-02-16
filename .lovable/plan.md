@@ -1,50 +1,34 @@
 
 
-# Sort resolved feedback by most recently updated
+# Remove unnecessary ".0" from chart bar labels
 
 ## What changes
 
-The resolved feedback list in the admin portal currently inherits the `created_at desc` sort order from the database query. This means if you resolve an old feedback item, it stays buried at the bottom. Instead, resolved items should sort by their most recent activity -- whichever is latest among `resolved_at`, `responded_at`, or `created_at`.
+When a duration or distance value is a whole number (like 17 minutes), the bar label currently shows "17.0". It should show just "17". Same applies to mph and distance labels.
 
-## How it works
+## Technical Details
 
-This is a client-side sort on the already-fetched data. No database changes needed.
+### File: `src/components/trends/ExerciseChart.tsx`
 
-On line 49 of `Admin.tsx`, where `resolvedFeedback` is computed:
+Four places where `.toFixed()` produces unnecessary trailing zeros:
 
-```
-const resolvedFeedback = feedback?.filter(f => !!f.resolved_at) ?? [];
-```
+1. **Line 94** (mph calculation): `.toFixed(1)` -- wrap with `parseFloat()` to strip trailing zero
+2. **Line 97** (pace calculation): `.toFixed(1)` -- same fix
+3. **Line 105** (distance label): `.toFixed(2)` -- same fix
+4. **Line 108** (duration label for non-walking cardio): `.toFixed(1)` -- same fix
 
-Add a `.sort()` after the filter that compares the latest timestamp across `resolved_at`, `responded_at`, and `created_at` for each item, descending. This covers:
-- Just resolved something --> `resolved_at` is newest, goes to top
-- User added a follow-up reply --> the message is updated (and if re-resolved, `resolved_at` updates)
-- Admin responded --> `responded_at` is newest, goes to top
+The fix pattern is the same everywhere: wrap `Number(x.toFixed(n))` or `parseFloat(x.toFixed(n))` so that `17.0` becomes `17` and `11.3` stays `11.3`.
 
-## Technical details
+Concretely:
+- Line 94: `Number((d.distance_miles / (d.duration_minutes / 60)).toFixed(1))` -- already uses `Number()` wrapper, so this one is fine (Number strips trailing zeros). But let me verify... actually `Number("17.0")` returns `17`, so lines 94 and 97 are already correct for the data values. The issue is line 108 which produces a string directly.
+- **Line 108**: Change from `` `${Number(d.duration_minutes || 0).toFixed(1)}` `` to `` `${parseFloat(Number(d.duration_minutes || 0).toFixed(1))}` ``
+- **Line 105**: Change from `` `${Number(d.distance_miles || 0).toFixed(2)}` `` to `` `${parseFloat(Number(d.distance_miles || 0).toFixed(2))}` ``
 
-### File: `src/pages/Admin.tsx`
-
-Change the `resolvedFeedback` computation (line 49) to sort by the most recent of the three timestamps:
-
-```typescript
-const resolvedFeedback = (feedback?.filter(f => !!f.resolved_at) ?? [])
-  .sort((a, b) => {
-    const latest = (f: FeedbackWithUser) =>
-      Math.max(
-        new Date(f.resolved_at!).getTime(),
-        f.responded_at ? new Date(f.responded_at).getTime() : 0,
-        new Date(f.created_at).getTime(),
-      );
-    return latest(b) - latest(a);
-  });
-```
-
-This requires importing `FeedbackWithUser` type (or just inlining the helper). No other files change.
+Only lines 105 and 108 produce label strings with trailing zeros. Lines 94/97 already use `Number()` wrapper so their numeric values are clean.
 
 ### Files modified
 
 | File | Change |
 |---|---|
-| `src/pages/Admin.tsx` | Sort `resolvedFeedback` by most recent timestamp descending |
+| `src/components/trends/ExerciseChart.tsx` | Strip trailing ".0" from duration and distance bar labels (lines 105, 108) |
 
