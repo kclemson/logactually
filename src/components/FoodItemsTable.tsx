@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { EntryExpandedPanel } from '@/components/EntryExpandedPanel';
 import { FoodItem, DailyTotals, calculateTotals, scaleMacrosByCalories, ScaledMacros } from '@/types/food';
 import { stepMultiplier, scaleItemByMultiplier, scalePortion } from '@/lib/portion-scaling';
 import { Minus, Plus } from 'lucide-react';
@@ -675,61 +675,27 @@ export function FoodItemsTable({
             
             {/* Expanded raw input - shows after last item in entry */}
             {showEntryDividers && isLastInEntry && isCurrentExpanded && (() => {
-              // Check if this entry came from a saved meal (by ID, not name lookup)
               const isFromSavedMeal = currentEntryId && entrySourceMealIds?.has(currentEntryId);
               const mealName = currentEntryId && entryMealNames?.get(currentEntryId);
-              
+              const entryItems = items.filter(i => i.entryId === currentEntryId);
+
               return (
-                <div className={cn('grid gap-0.5', gridCols)}>
-                  <div className="col-span-full pl-6 pt-2 pb-1 space-y-1.5">
-                    {/* Only show raw input if NOT from a saved meal */}
-                    {!isFromSavedMeal && currentRawInput && (
-                      <p className="text-xs text-muted-foreground italic">
-                        Logged as: {currentRawInput}
-                      </p>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <div>
-                        {/* Show meal info if from saved meal, otherwise show "Save as meal" link */}
-                        {isFromSavedMeal ? (
-                          <p className="text-xs text-muted-foreground italic">
-                            From saved meal:{' '}
-                            {mealName ? (
-                              <Link 
-                                to="/settings" 
-                                className="text-blue-600 dark:text-blue-400 hover:underline"
-                              >
-                                {mealName}
-                              </Link>
-                            ) : (
-                              <span>(deleted)</span>
-                            )}
-                          </p>
-                        ) : onSaveAsMeal && currentEntryId && (
-                          <button
-                            onClick={() => {
-                              const entryItems = items.filter(i => i.entryId === currentEntryId);
-                              onSaveAsMeal(currentEntryId!, currentRawInput ?? null, entryItems);
-                            }}
-                            className="text-xs text-blue-600 dark:text-blue-400 underline"
-                          >
-                            Save as meal
-                          </button>
-                        )}
-                      </div>
-                      {(() => {
-                        const entryItems = items.filter(i => i.entryId === currentEntryId);
-                        if (!onDeleteEntry) return null;
-                        return (
-                          <DeleteGroupDialog
-                            items={entryItems}
-                            onConfirm={() => onDeleteEntry!(currentEntryId!)}
-                          />
-                        );
-                      })()}
-                    </div>
-                  </div>
-                </div>
+                <EntryExpandedPanel
+                  items={entryItems}
+                  rawInput={currentRawInput ?? null}
+                  savedItemInfo={{
+                    type: 'meal',
+                    name: mealName ?? null,
+                    isFromSaved: !!isFromSavedMeal,
+                  }}
+                  onSaveAs={onSaveAsMeal && currentEntryId
+                    ? () => onSaveAsMeal(currentEntryId!, currentRawInput ?? null, entryItems)
+                    : undefined}
+                  onDeleteEntry={onDeleteEntry && currentEntryId
+                    ? () => onDeleteEntry(currentEntryId!)
+                    : undefined}
+                  gridCols={gridCols}
+                />
               );
             })()}
           </div>
