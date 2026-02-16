@@ -234,6 +234,7 @@ export function CalorieTargetDialog({
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-xs text-muted-foreground">Target deficit</p>
                       <div className="flex items-center gap-1.5">
+                        <span className="text-xs text-muted-foreground">minus</span>
                         <input
                           type="number"
                           placeholder="0"
