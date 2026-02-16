@@ -253,7 +253,7 @@ export function CalorieTargetDialog({
                             , {equationData.heightDisplay ?? <em className="not-italic text-muted-foreground/50">height</em>}
                             , {equationData.age != null ? `${equationData.age} years` : <em className="not-italic text-muted-foreground/50">age</em>}
                             {equationData.profile != null && <>, {equationData.profile === 'male' ? 'Male' : 'Female'}</>}
-                            {equationData.bmr != null && <> = ~{equationData.bmr.toLocaleString()}</>}
+                            {equationData.bmr != null && <> = {equationData.bmr.toLocaleString()}</>}
                           </p>
                         </div>
                         <div>
@@ -261,8 +261,15 @@ export function CalorieTargetDialog({
                           <p>
                             {equationData.bmr != null ? equationData.bmr.toLocaleString() : <em className="not-italic text-muted-foreground/50">BMR</em>}
                             {' '}× {equationData.multiplier != null ? equationData.multiplier : <em className="not-italic text-muted-foreground/50">activity level</em>}
+                            {' '}= {equationData.tdee != null ? equationData.tdee.toLocaleString() : '…'}
+                          </p>
+                        </div>
+                        <div>
+                          <p>Daily calorie target</p>
+                          <p>
+                            {equationData.tdee != null ? equationData.tdee.toLocaleString() : <em className="not-italic text-muted-foreground/50">TDEE</em>}
                             {' '}− {equationData.deficit} deficit
-                            {' '}= {equationData.target != null ? `daily calorie target of ${equationData.target.toLocaleString()} cal/day` : '…'}
+                            {' '}= {equationData.target != null ? `${equationData.target.toLocaleString()} cal/day` : '…'}
                           </p>
                         </div>
                       </div>
