@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,6 +10,7 @@ import { computeAbsoluteBMR, formatInchesAsFeetInches } from '@/lib/calorie-burn
 import {
   computeTDEE,
   suggestActivityLevel,
+  getTargetDotColor,
   ACTIVITY_LABELS,
   ACTIVITY_MULTIPLIERS,
   TARGET_MODE_OPTIONS,
@@ -17,8 +18,10 @@ import {
   type CalorieTargetMode,
 } from '@/lib/calorie-target';
 import { useDailyCalorieBurn } from '@/hooks/useDailyCalorieBurn';
+import { useDailyFoodTotals } from '@/hooks/useDailyFoodTotals';
 import { BiometricsInputs } from '@/components/BiometricsInputs';
 import { buildBiometricsClearUpdates } from '@/lib/biometrics-clear';
+import { format, parseISO } from 'date-fns';
 import {
   Select,
   SelectContent,
@@ -43,6 +46,7 @@ export function CalorieTargetDialog({
   updateSettings,
 }: CalorieTargetDialogProps) {
   const { data: dailyBurnData } = useDailyCalorieBurn(30);
+  const { data: dailyFoodData = [] } = useDailyFoodTotals(30);
 
   const activityHint = useMemo(() => {
     if (dailyBurnData.length === 0) return null;
@@ -52,6 +56,25 @@ export function CalorieTargetDialog({
     const suggested = suggestActivityLevel(avgDailyBurn);
     return { avgDailyBurn, suggested, label: ACTIVITY_LABELS[suggested].label, activeDays };
   }, [dailyBurnData]);
+
+  const exampleData = useMemo(() => {
+    if (!settings.dailyCalorieTarget || dailyBurnData.length === 0 || dailyFoodData.length === 0) return null;
+
+    const burnByDate = new Map(dailyBurnData.map(d => [d.date, d]));
+
+    // dailyFoodData is sorted descending, so first match is most recent
+    for (const food of dailyFoodData) {
+      const burn = burnByDate.get(food.date);
+      if (burn) {
+        const burnCals = Math.round((burn.low + burn.high) / 2);
+        const net = food.totalCalories - burnCals;
+        const dotColorClass = getTargetDotColor(net, settings.dailyCalorieTarget);
+        const dateFormatted = format(parseISO(food.date), 'MMMM do');
+        return { dateFormatted, foodCals: food.totalCalories, burnCals, dotColorClass };
+      }
+    }
+    return null;
+  }, [dailyBurnData, dailyFoodData, settings.dailyCalorieTarget]);
 
   const equationData = useMemo(() => {
     if (settings.calorieTargetMode !== 'body_stats') return null;
@@ -288,28 +311,48 @@ export function CalorieTargetDialog({
                 {/* Exercise adjusted mode */}
                 {settings.calorieTargetMode === 'exercise_adjusted' && (
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-muted-foreground">Target</p>
-                      <div className="flex items-center gap-1.5">
-                        <input
-                          type="number"
-                          placeholder="Not set"
-                          value={settings.dailyCalorieTarget ?? ''}
-                          onChange={(e) => {
-                            const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
-                            updateSettings({ dailyCalorieTarget: val });
-                          }}
-                          className={inputClass}
-                          min={0}
-                          max={99999}
-                        />
-                        <span className="text-xs text-muted-foreground whitespace-nowrap">cal/day</span>
-                      </div>
-                    </div>
+                    {!settings.calorieBurnEnabled ? (
+                      <p className="text-[10px] text-amber-500 dark:text-amber-400 italic">
+                        Exercise calorie burn estimation is currently disabled. Enable it in Estimated Calorie Burn settings for this mode to work.
+                      </p>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-muted-foreground">Target</p>
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="number"
+                              placeholder="Not set"
+                              value={settings.dailyCalorieTarget ?? ''}
+                              onChange={(e) => {
+                                const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
+                                updateSettings({ dailyCalorieTarget: val });
+                              }}
+                              className={inputClass}
+                              min={0}
+                              max={99999}
+                            />
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">cal/day</span>
+                          </div>
+                        </div>
 
-                    <p className="text-[10px] text-muted-foreground/70">
-                      Calories burned from logged exercises are subtracted from your food intake before comparing to this target — so active days give you more room.
-                    </p>
+                        <p className="text-[10px] text-muted-foreground/70">
+                          Calories burned from logged exercises are subtracted from your food intake before comparing to this target — so active days give you more room.
+                        </p>
+
+                        {exampleData && settings.dailyCalorieTarget && (
+                          <p className="text-[10px] text-muted-foreground/70 italic">
+                            For example, on {exampleData.dateFormatted} you logged{' '}
+                            {exampleData.foodCals.toLocaleString()} calories in food and
+                            burned ~{exampleData.burnCals.toLocaleString()} calories
+                            exercising, which would show up{' '}
+                            <span className={exampleData.dotColorClass}>●</span> with a
+                            daily calorie target of{' '}
+                            {settings.dailyCalorieTarget.toLocaleString()} calories.
+                          </p>
+                        )}
+                      </>
+                    )}
                   </div>
                 )}
               </div>
