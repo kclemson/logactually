@@ -1,77 +1,33 @@
 
 
-# Phase 2: Migrate FoodItemsTable to EntryExpandedPanel
+# Fix: Bottom Nav Active Color Illegible in Light Theme
 
-## What changes
+## Problem
+Calendar, Trends, and Settings nav items use `text-white` as their active color. In dark mode this works fine, but in light mode the background is light gray, making white text invisible.
 
-Replace lines 677-734 of `FoodItemsTable.tsx` (~57 lines of inline expanded panel JSX) with a call to the shared `EntryExpandedPanel` component (~12 lines).
+## Solution
+Change the active color for these general-purpose nav items from `text-white` to `text-foreground`. This CSS variable resolves to near-black in light mode and near-white in dark mode, giving proper contrast in both themes.
 
-## Current Food panel code (lines 677-734)
+Food (blue), Exercise (purple), and Custom (teal) keep their explicit theme colors — those have sufficient contrast in both modes.
 
-The inline code does:
-1. Looks up `isFromSavedMeal` via `entrySourceMealIds?.has(currentEntryId)`
-2. Looks up `mealName` via `entryMealNames?.get(currentEntryId)`
-3. Renders "Logged as: {rawInput}" (hidden when from saved meal)
-4. Renders "From saved meal: {Name}" link or "Save as meal" button
-5. Renders `DeleteGroupDialog`
+## Technical Detail
 
-This is structurally identical to what `EntryExpandedPanel` already handles (validated in Phase 1 with Weight).
+**File: `src/components/BottomNav.tsx`**
 
-## The migration
-
-Replace the inline IIFE block (lines 677-734) with:
-
+Change lines 23-26 from:
 ```tsx
-{showEntryDividers && isLastInEntry && isCurrentExpanded && (() => {
-  const isFromSavedMeal = currentEntryId && entrySourceMealIds?.has(currentEntryId);
-  const mealName = currentEntryId && entryMealNames?.get(currentEntryId);
-  const entryItems = items.filter(i => i.entryId === currentEntryId);
-
-  return (
-    <EntryExpandedPanel
-      items={entryItems}
-      rawInput={currentRawInput ?? null}
-      savedItemInfo={{
-        type: 'meal',
-        name: mealName ?? null,
-        isFromSaved: !!isFromSavedMeal,
-      }}
-      onSaveAs={onSaveAsMeal && currentEntryId
-        ? () => onSaveAsMeal(currentEntryId!, currentRawInput ?? null, entryItems)
-        : undefined}
-      onDeleteEntry={onDeleteEntry && currentEntryId
-        ? () => onDeleteEntry(currentEntryId!)
-        : undefined}
-      gridCols={gridCols}
-    />
-  );
-})()}
+{ to: '/history', icon: CalendarDays, label: 'Calendar', activeColor: 'text-white' },
+{ to: '/trends', icon: TrendingUp, label: 'Trends', activeColor: 'text-white' },
+{ to: '/settings', icon: Settings, label: 'Settings', activeColor: 'text-white' },
+...(showAdmin ? [{ to: '/admin', icon: Shield, label: 'Admin', activeColor: 'text-white' }] : []),
 ```
 
-No `extraContent` needed (Food has no calorie burn estimates).
+To:
+```tsx
+{ to: '/history', icon: CalendarDays, label: 'Calendar', activeColor: 'text-foreground' },
+{ to: '/trends', icon: TrendingUp, label: 'Trends', activeColor: 'text-foreground' },
+{ to: '/settings', icon: Settings, label: 'Settings', activeColor: 'text-foreground' },
+...(showAdmin ? [{ to: '/admin', icon: Shield, label: 'Admin', activeColor: 'text-foreground' }] : []),
+```
 
-## One normalization
-
-The Food "Save as meal" button currently uses `underline` instead of `hover:underline`. After migration it will use `hover:underline` (matching the shared component). This is the only visual change -- the underline appears on hover instead of always being visible.
-
-## Files changed
-
-| File | Change |
-|---|---|
-| `src/components/FoodItemsTable.tsx` | Add import for `EntryExpandedPanel`, replace lines 677-734 with the component call above |
-
-## What does NOT change
-
-- Everything else in FoodItemsTable (item rows, editing, portion scaling, totals)
-- EntryExpandedPanel.tsx itself (no modifications needed)
-- WeightItemsTable.tsx (already migrated in Phase 1)
-
-## Test cases
-
-1. Multi-item food entry: click chevron, verify "Logged as", "Save as meal", and "Delete this group" all appear
-2. Single-item food entry: click chevron, verify "Logged as" appears, "Delete this group" is hidden
-3. Entry from saved meal: verify "From saved meal: {Name}" link appears, "Logged as" is hidden
-4. Entry from deleted saved meal: verify "(deleted)" text appears
-5. Click "Save as meal": verify dialog opens with correct items
-6. Click saved meal name link: verify navigation to /settings
-
+One file, 4 lines changed. No other files affected.
