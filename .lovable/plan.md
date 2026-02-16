@@ -1,101 +1,34 @@
 
 
-# Exercise-Adjusted Mode: Dynamic Example + Burn Guard
+# Fix: Anchor CalorieTargetDialog to top on all screen sizes
 
-## What's Changing
+## Problem
 
-Two enhancements to the "Exercise adjusted" calorie target mode in the settings dialog:
+The CalorieTargetDialog uses vertical centering (`top-50% translate-y-[-50%]`) on desktop. When content expands or collapses (toggling the enable switch, switching modes, equation breakdown appearing), the dialog visibly shifts up and down on the Y axis because its center point changes. This is disorienting.
 
-1. **A real-data example sentence** showing how the mode works using the user's own logged data, with a colored dot (green/amber/red) matching the calendar indicators.
+The mobile fix already anchors the dialog near the top of the viewport (`top-12 translate-y-0`), which avoids this problem. Desktop should behave the same way.
 
-2. **A warning** when exercise calorie burn estimation is disabled, since the mode can't function without it.
+## Solution
 
----
+Remove the `sm:top-[50%]` and `sm:translate-y-[-50%]` breakpoint overrides from the `DialogContent` className, so the dialog stays top-anchored at all screen sizes. Keep the horizontal centering on desktop (`sm:left-[50%] sm:translate-x-[-50%]`).
 
-## Example Sentence
+## Technical Detail
 
-Below the existing explanation text, a new line will appear (only when data is available):
+**File: `src/components/CalorieTargetDialog.tsx` (line 134)**
 
-> *For example, on February 12th you logged 1,850 calories in food and burned ~320 calories exercising, which would show up [colored dot] with a daily calorie target of 1,500 calories.*
+Change the className from:
 
-- The date is the most recent day where the user has **both** food entries and exercise burn data.
-- The burn number is prefixed with `~` since it's an estimate (midpoint of the low/high range).
-- The colored dot uses the same green/amber/red logic already used on the calendar.
-- If no qualifying day exists or no target is set, the example simply won't appear.
-
-## Burn-Disabled Guard
-
-If exercise calorie burn estimation is turned off, the target input and example are hidden and replaced with:
-
-> *Exercise calorie burn estimation is currently disabled. Enable it in Estimated Calorie Burn settings for this mode to work.*
-
----
-
-## Technical Details
-
-### New File: `src/hooks/useDailyFoodTotals.ts`
-
-A lightweight React Query hook that returns daily calorie totals, paralleling the existing `useDailyCalorieBurn` hook:
-
-- Queries `food_entries` with `SELECT eaten_date, SUM(total_calories)` grouped by date, filtered to the last N days
-- Returns `{ date: string; totalCalories: number }[]`
-- Uses 5-minute stale time (matching existing patterns)
-- Much lighter than `useRecentFoodEntries` -- no item parsing, just date + sum
-
-### Modified File: `src/components/CalorieTargetDialog.tsx`
-
-**New imports:**
-- `useDailyFoodTotals` from the new hook
-- `format` from `date-fns` for "February 12th" formatting
-- `getTargetDotColor` from `calorie-target.ts`
-
-**New `useMemo` for example data:**
-- Call `useDailyFoodTotals(30)` alongside the existing `useDailyCalorieBurn(30)`
-- Walk backward from today to find the most recent date present in both datasets
-- Compute: `foodCals`, `burnCals` (midpoint of low/high), `net = foodCals - burnCals`
-- Get dot color class via `getTargetDotColor(net, target)`
-- Format date as "February 12th" using `format(date, 'MMMM do')`
-- Return `null` if no qualifying day or no target set
-
-**Exercise-adjusted section changes (lines 289-313):**
-
-```tsx
-{settings.calorieTargetMode === 'exercise_adjusted' && (
-  <div className="space-y-3">
-    {!settings.calorieBurnEnabled ? (
-      <p className="text-[10px] text-amber-500 dark:text-amber-400 italic">
-        Exercise calorie burn estimation is currently disabled. Enable it in
-        Estimated Calorie Burn settings for this mode to work.
-      </p>
-    ) : (
-      <>
-        {/* Target input (existing) */}
-        <div className="flex items-center justify-between">...</div>
-
-        {/* Existing explanation */}
-        <p className="text-[10px] text-muted-foreground/70">
-          Calories burned from logged exercises are subtracted...
-        </p>
-
-        {/* NEW: Dynamic example */}
-        {exampleData && settings.dailyCalorieTarget && (
-          <p className="text-[10px] text-muted-foreground/70 italic">
-            For example, on {exampleData.dateFormatted} you logged{' '}
-            {exampleData.foodCals.toLocaleString()} calories in food and
-            burned ~{exampleData.burnCals.toLocaleString()} calories
-            exercising, which would show up{' '}
-            <span className={exampleData.dotColorClass}>●</span> with a
-            daily calorie target of{' '}
-            {settings.dailyCalorieTarget.toLocaleString()} calories.
-          </p>
-        )}
-      </>
-    )}
-  </div>
-)}
+```
+left-2 right-2 top-12 translate-x-0 translate-y-0 w-auto max-w-[calc(100vw-16px)] max-h-[85vh] overflow-y-auto p-4
+sm:left-[50%] sm:right-auto sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:w-full sm:max-w-md
 ```
 
-### No other files affected
-- `getTargetDotColor` already exists in `src/lib/calorie-target.ts`
-- No database changes needed -- querying existing `food_entries` table
+To:
+
+```
+left-2 right-2 top-12 translate-x-0 translate-y-0 w-auto max-w-[calc(100vw-16px)] max-h-[85vh] overflow-y-auto p-4
+sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md
+```
+
+Removes `sm:top-[50%]` and `sm:translate-y-[-50%]` so the dialog stays anchored at `top-12` on all viewports. Horizontal centering on desktop is preserved.
 
