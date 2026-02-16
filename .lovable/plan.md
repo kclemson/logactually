@@ -1,43 +1,25 @@
 
+# Update `get_top_exercises` RPC to exclude exercises with explicit calorie metadata
 
-# Two small changes to CalorieTargetDialog
+## Problem
+The calorie burn preview dialog shows exercises that have a precise `calories_burned` value (e.g., from an Apple Watch), which display as a single number instead of a range -- defeating the purpose of demonstrating range estimation.
 
-## 1. Reorder mode options
+## Solution
+Update the `get_top_exercises` database function to exclude rows where `exercise_metadata->>'calories_burned'` is set. Since `CalorieBurnDialog.tsx` is the only caller, this is the cleanest approach -- no client-side filtering needed.
 
-In `src/lib/calorie-target.ts`, swap the order of the `TARGET_MODE_OPTIONS` array so it reads:
-1. Fixed number (static)
-2. Exercise adjusted (exercise_adjusted)
-3. Estimated burn rate minus a deficit (body_stats)
+## Technical Details
 
-Currently body_stats is second and exercise_adjusted is third -- just swap those two entries.
+### Database migration (single SQL statement)
 
-## 2. Skip today when finding the example day
+Modify both `LATERAL` subqueries in the function to add a filter:
 
-In `src/components/CalorieTargetDialog.tsx`, the `exampleData` memo iterates `dailyFoodData` (sorted descending) and picks the first date that has both food and exercise data. Update this loop to skip today's date so the example always uses a completed day.
-
-Add a `const todayStr = format(new Date(), 'yyyy-MM-dd')` and add `if (food.date === todayStr) continue;` at the top of the loop.
-
-## Technical details
-
-**File: `src/lib/calorie-target.ts` (lines 42-44)**
-
-Reorder the array entries:
-```ts
-{ value: 'static', label: 'Fixed number', description: 'You set a specific calorie target' },
-{ value: 'exercise_adjusted', label: 'Exercise adjusted', description: 'Logged exercise offsets your food intake' },
-{ value: 'body_stats', label: 'Estimated burn rate minus a deficit', description: 'Calculated from your activity level, weight, and height' },
+```sql
+WHERE ...existing conditions...
+  AND (exercise_metadata IS NULL OR exercise_metadata->>'calories_burned' IS NULL)
 ```
 
-**File: `src/components/CalorieTargetDialog.tsx` (inside `exampleData` memo, ~line 65-66)**
+This applies to both the cardio and strength branches of the function. The frequency counts (used for ranking) and the lateral join (used for picking the most recent example) both need the filter so that:
+1. Exercises that always have explicit calories don't appear in the ranking
+2. The picked example row doesn't have explicit calories
 
-Add today-skip logic:
-```ts
-const todayStr = format(new Date(), 'yyyy-MM-dd');
-
-for (const food of dailyFoodData) {
-  if (food.date === todayStr) continue;
-  // ... rest unchanged
-}
-```
-
-No other files affected.
+The full function signature and return type remain unchanged. No code changes needed in `CalorieBurnDialog.tsx`.
