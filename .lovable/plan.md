@@ -1,31 +1,43 @@
 
 
-# Fix: Activity level hint should show regardless of calorie burn toggle
+# Two small changes to CalorieTargetDialog
 
-## Problem
+## 1. Reorder mode options
 
-The activity level suggestion ("Your logged exercise burned an average of ~N calories/day over N active days. This is closest to [Level].") no longer appears in the "Estimated burn rate minus a deficit" mode.
+In `src/lib/calorie-target.ts`, swap the order of the `TARGET_MODE_OPTIONS` array so it reads:
+1. Fixed number (static)
+2. Exercise adjusted (exercise_adjusted)
+3. Estimated burn rate minus a deficit (body_stats)
 
-**Root cause:** The `useDailyCalorieBurn` hook checks `settings.calorieBurnEnabled` and returns an empty array when it's `false`. The activity hint depends on this data, so it silently disappears whenever the user has the calorie burn estimation feature turned off -- even though the hint is conceptually independent.
+Currently body_stats is second and exercise_adjusted is third -- just swap those two entries.
 
-## Solution
+## 2. Skip today when finding the example day
 
-The `CalorieTargetDialog` needs its own burn data that isn't gated by `calorieBurnEnabled`. Two options:
+In `src/components/CalorieTargetDialog.tsx`, the `exampleData` memo iterates `dailyFoodData` (sorted descending) and picks the first date that has both food and exercise data. Update this loop to skip today's date so the example always uses a completed day.
 
-1. **Add a parameter to `useDailyCalorieBurn`** to bypass the enabled check (e.g., `useDailyCalorieBurn(30, { ignoreEnabledCheck: true })`)
-2. **Duplicate the minimal logic** inline in the dialog
+Add a `const todayStr = format(new Date(), 'yyyy-MM-dd')` and add `if (food.date === todayStr) continue;` at the top of the loop.
 
-Option 1 is cleaner. We'll add an optional `force` flag to `useDailyCalorieBurn` so the dialog can request burn data even when the feature is toggled off.
+## Technical details
 
-## Technical Details
+**File: `src/lib/calorie-target.ts` (lines 42-44)**
 
-### File: `src/hooks/useDailyCalorieBurn.ts`
+Reorder the array entries:
+```ts
+{ value: 'static', label: 'Fixed number', description: 'You set a specific calorie target' },
+{ value: 'exercise_adjusted', label: 'Exercise adjusted', description: 'Logged exercise offsets your food intake' },
+{ value: 'body_stats', label: 'Estimated burn rate minus a deficit', description: 'Calculated from your activity level, weight, and height' },
+```
 
-- Add an optional `options` parameter: `useDailyCalorieBurn(days: number, options?: { force?: boolean })`
-- Change the early-return guard from `if (!settings.calorieBurnEnabled) return [];` to `if (!settings.calorieBurnEnabled && !options?.force) return [];`
+**File: `src/components/CalorieTargetDialog.tsx` (inside `exampleData` memo, ~line 65-66)**
 
-### File: `src/components/CalorieTargetDialog.tsx`
+Add today-skip logic:
+```ts
+const todayStr = format(new Date(), 'yyyy-MM-dd');
 
-- Change the call from `useDailyCalorieBurn(30)` to `useDailyCalorieBurn(30, { force: true })` so the activity hint (and exercise-adjusted example) always have data to work with, regardless of the burn toggle state.
+for (const food of dailyFoodData) {
+  if (food.date === todayStr) continue;
+  // ... rest unchanged
+}
+```
 
-No other files are affected. The existing callers of `useDailyCalorieBurn` without the `force` flag continue to behave exactly as before.
+No other files affected.
