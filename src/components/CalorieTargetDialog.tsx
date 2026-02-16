@@ -244,7 +244,7 @@ export function CalorieTargetDialog({
                           min={0}
                           max={9999}
                         />
-                        <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground whitespace-nowrap">cal/day</span>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">cal/day</span>
                       </div>
                     </div>
 
@@ -300,7 +300,7 @@ export function CalorieTargetDialog({
                           min={0}
                           max={99999}
                         />
-                        <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground whitespace-nowrap">cal/day</span>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">cal/day</span>
                       </div>
                     </div>
 
