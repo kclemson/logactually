@@ -151,12 +151,13 @@ describe('getEffectiveDailyTarget', () => {
     expect(getEffectiveDailyTarget(s)).toBeNull();
   });
 
-  it('returns BMR - deficit in body_stats mode with logged activity', () => {
+  it('returns BMR × 1.2 - deficit in body_stats mode with logged activity', () => {
     const s = { ...baseSettings, calorieTargetMode: 'body_stats' as const, activityLevel: 'logged' as const, dailyDeficit: 500 };
     const result = getEffectiveDailyTarget(s);
     expect(result).not.toBeNull();
-    // Should be BMR - 500 (no multiplier applied)
-    expect(result!).toBeLessThan(2000);
+    // Should be BMR × 1.2 (sedentary) - 500
+    expect(result!).toBeGreaterThan(1000);
+    expect(result!).toBeLessThan(2500);
   });
 
   it('returns null in body_stats + logged mode without body weight', () => {
