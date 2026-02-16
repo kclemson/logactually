@@ -132,11 +132,11 @@ describe('applyInclineBonus', () => {
 describe('estimateStrengthDuration', () => {
   it('estimates reasonable duration for 3x10 @ 135 lbs', () => {
     const dur = estimateStrengthDuration(3, 10, 135);
-    // Per-set low: 10*3 + 30 + clamp(1.35,0,0.5)*30 = 30+30+15 = 75s
-    // Per-set high: 10*4 + 45 + 15 = 100s
-    // Total: 225s low, 300s high
-    expect(dur.low).toBeCloseTo(225 / 3600, 4);
-    expect(dur.high).toBeCloseTo(300 / 3600, 4);
+    // Per-set low: 10*3 + 30 + clamp(135/200,0,1.0)*45 = 30+30+30.375 = 90.375s
+    // Per-set high: 10*4 + 45 + 30.375 = 115.375s
+    // Total: 271.125s low, 346.125s high
+    expect(dur.low).toBeCloseTo(271.125 / 3600, 4);
+    expect(dur.high).toBeCloseTo(346.125 / 3600, 4);
   });
 
   it('returns 0 for 0 sets', () => {
@@ -161,15 +161,15 @@ describe('estimateStrengthDuration', () => {
 
   it('0 reps with sets still returns rest-only duration', () => {
     const dur = estimateStrengthDuration(3, 0, 100);
-    // Per-set: 0 active + 30 + clamp(1,0,0.5)*30 = 45s low
+    // Per-set: 0 active + 30 + clamp(100/200,0,1.0)*45 = 52.5s low
     expect(dur.low).toBeGreaterThan(0);
     expect(dur.high).toBeGreaterThan(0);
   });
 
-  it('weight bonus caps at 0.5 factor (15s max)', () => {
+  it('weight bonus caps at 1.0 factor (45s max)', () => {
     const at500 = estimateStrengthDuration(1, 10, 500);
     const at1000 = estimateStrengthDuration(1, 10, 1000);
-    // Both should have same weight bonus (capped at 0.5*30=15s)
+    // Both should have same weight bonus (capped at 1.0*45=45s)
     expect(at500.low).toBe(at1000.low);
     expect(at500.high).toBe(at1000.high);
   });
