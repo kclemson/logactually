@@ -20,6 +20,10 @@ import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { getTargetDotColor } from '@/lib/calorie-target';
+import { type EntryBoundary, isFirstInBoundary, isLastInBoundary, isEntryNew, getEntryHighlightClasses, hasAnyEditedFields, formatEditedFields } from '@/lib/entry-boundaries';
+import { EntryChevron } from '@/components/EntryChevron';
+import { DeleteAllDialog } from '@/components/DeleteAllDialog';
+import { DeleteGroupDialog } from '@/components/DeleteGroupDialog';
 
 type EditableFieldKey = 'description' | 'calories';
 
@@ -30,11 +34,6 @@ interface EditingCell {
   originalValue: string | number;
 }
 
-interface EntryBoundary {
-  entryId: string;
-  startIndex: number;
-  endIndex: number;
-}
 
 interface FoodItemsTableProps {
   items: FoodItem[];
@@ -241,21 +240,6 @@ export function FoodItemsTable({
     }
   };
 
-  // Check if any field was user-edited (row-level indicator)
-  const hasAnyEditedFields = (item: FoodItem): boolean => {
-    return (item.editedFields?.length ?? 0) > 0;
-  };
-
-  // Format edited fields for tooltip display (reusable helper)
-  const formatEditedFields = (item: FoodItem): string | null => {
-    if (!item.editedFields || item.editedFields.length === 0) {
-      return null;
-    }
-    const fieldLabels = item.editedFields.map(field => 
-      field.charAt(0).toUpperCase() + field.slice(1)
-    );
-    return `Edited: ${fieldLabels.join(', ')}`;
-  };
 
   // Build tooltip for description (include portion if present)
   const getItemTooltip = (item: FoodItem): string => {
@@ -286,29 +270,8 @@ export function FoodItemsTable({
     return 'grid-cols-[1fr_50px_90px]';
   };
 
-  // For entry-deletion mode, check if this index is the last item in its entry
-  const isLastItemInEntry = (index: number): EntryBoundary | null => {
-    if (!entryBoundaries) return null;
-    const boundary = entryBoundaries.find(b => b.endIndex === index);
-    return boundary || null;
-  };
-
-  // Check if this is the first item in an entry (for visual grouping)
-  const isFirstItemInEntry = (index: number): boolean => {
-    if (!entryBoundaries) return false;
-    return entryBoundaries.some(b => b.startIndex === index);
-  };
-
-  // Note: entryBoundaries is kept for visual grouping (isFirstItemInEntry, isLastItemInEntry)
-  // but data lookups use item.entryId directly to avoid race conditions
-
   const hasDeleteColumn = editable || hasEntryDeletion;
   const gridCols = getGridCols(!!hasDeleteColumn, selectable);
-
-  // Check if an entry ID is in the "new" set for grouped highlighting
-  const isNewEntry = (entryId: string | null): boolean => {
-    return entryId ? (newEntryIds?.has(entryId) ?? false) : false;
-  };
 
   const TotalsRow = () => {
     // Calculate calorie contribution from each macro
@@ -347,35 +310,7 @@ export function FoodItemsTable({
         </span>
       {hasDeleteColumn && (
         onDeleteAll ? (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
-                aria-label="Delete all entries"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-lg">
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete all entries?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will permanently remove all food entries for today.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction 
-                  onClick={onDeleteAll}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  Delete All
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <DeleteAllDialog itemLabel="entries" onConfirm={onDeleteAll} />
         ) : (
           <span></span>
         )
@@ -423,8 +358,8 @@ export function FoodItemsTable({
 
       {/* Data rows */}
       {items.map((item, index) => {
-        const entryBoundary = isLastItemInEntry(index);
-        const isFirstInEntry = isFirstItemInEntry(index);
+        const entryBoundary = entryBoundaries ? isLastInBoundary(index, entryBoundaries) : null;
+        const isFirstInEntry = entryBoundaries ? !!isFirstInBoundary(index, entryBoundaries) : false;
         const isLastInEntry = !!entryBoundary;
         const currentEntryId = item.entryId || null;
         const isCurrentExpanded = currentEntryId ? expandedEntryIds?.has(currentEntryId) : false;
@@ -434,7 +369,8 @@ export function FoodItemsTable({
         const previewMacros = getPreviewMacros(item, index);
         
         // Check if this entry should have grouped highlighting
-        const entryIsNew = isNewEntry(currentEntryId);
+        const entryIsNew = isEntryNew(currentEntryId, newEntryIds);
+        const highlightClasses = getEntryHighlightClasses(entryIsNew, isFirstInEntry, isLastInEntry);
         
         return (
           <div key={item.uid || index} className="contents">
@@ -442,14 +378,7 @@ export function FoodItemsTable({
               className={cn(
                 'grid gap-0.5 items-center group',
                 gridCols,
-                // Add padding for inset shadow when entry is new
-                entryIsNew && "pl-0.5",
-                entryIsNew && isLastInEntry && "pb-0.5",
-                // Grouped highlight: apply segmented outline to create connected visual
-                entryIsNew && isFirstInEntry && !isLastInEntry && "rounded-t-md animate-outline-fade-top",
-                entryIsNew && !isFirstInEntry && isLastInEntry && "rounded-b-md animate-outline-fade-bottom",
-                entryIsNew && !isFirstInEntry && !isLastInEntry && "animate-outline-fade-middle",
-                entryIsNew && isFirstInEntry && isLastInEntry && "rounded-md animate-outline-fade"
+                highlightClasses
               )}
             >
             {/* Checkbox cell for selection mode */}
@@ -470,16 +399,10 @@ export function FoodItemsTable({
                 {showEntryDividers && (
                   <div className="w-3 shrink-0 relative flex items-center justify-center self-stretch">
                     {isLastInEntry ? (
-                      <button
-                        onClick={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
-                        aria-label={isCurrentExpanded ? "Collapse entry" : "Expand entry"}
-                        className={cn(
-                          "absolute inset-0 w-[44px] -left-3 flex items-center justify-center text-muted-foreground/60 hover:text-muted-foreground transition-transform text-xl focus:outline-none focus-visible:outline-none",
-                          isCurrentExpanded && "rotate-90"
-                        )}
-                      >
-                        ›
-                      </button>
+                      <EntryChevron
+                        expanded={!!isCurrentExpanded}
+                        onToggle={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
+                      />
                     ) : null}
                   </div>
                 )}
@@ -526,16 +449,10 @@ export function FoodItemsTable({
                 {showEntryDividers && (
                   <div className="w-3 shrink-0 relative flex items-center justify-center self-stretch">
                     {isLastInEntry ? (
-                      <button
-                        onClick={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
-                        aria-label={isCurrentExpanded ? "Collapse entry" : "Expand entry"}
-                        className={cn(
-                          "absolute inset-0 w-[44px] -left-3 flex items-center justify-center text-muted-foreground/60 hover:text-muted-foreground transition-transform text-xl focus:outline-none focus-visible:outline-none",
-                          isCurrentExpanded && "rotate-90"
-                        )}
-                      >
-                        ›
-                      </button>
+                      <EntryChevron
+                        expanded={!!isCurrentExpanded}
+                        onToggle={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
+                      />
                     ) : null}
                   </div>
                 )}
@@ -798,36 +715,12 @@ export function FoodItemsTable({
                       </div>
                       {(() => {
                         const entryItems = items.filter(i => i.entryId === currentEntryId);
-                        const count = entryItems.length;
-                        if (!onDeleteEntry || count < 2) return null;
+                        if (!onDeleteEntry) return null;
                         return (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <button className="text-xs text-destructive underline">
-                                Delete this group ({count} items)
-                              </button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-lg">
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete this group?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This will permanently remove {count} items:
-                                  <ul className="list-disc list-inside mt-2 text-xs text-left">
-                                    {entryItems.map(item => <li key={item.uid}>{item.description}</li>)}
-                                  </ul>
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => onDeleteEntry!(currentEntryId!)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                          <DeleteGroupDialog
+                            items={entryItems}
+                            onConfirm={() => onDeleteEntry!(currentEntryId!)}
+                          />
                         );
                       })()}
                     </div>
