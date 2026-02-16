@@ -52,21 +52,18 @@ export function CalorieTargetDialog({
     return { avgDailyBurn, suggested, label: ACTIVITY_LABELS[suggested].label, activeDays };
   }, [dailyBurnData]);
 
-  const tdeeSummary = useMemo(() => {
+  const equationData = useMemo(() => {
     if (settings.calorieTargetMode !== 'body_stats') return null;
+    const weightKg = settings.bodyWeightLbs ? Math.round(settings.bodyWeightLbs * 0.453592) : null;
+    const heightCm = settings.heightInches ? Math.round(settings.heightInches * 2.54) : null;
+    const age = settings.age;
+    const profile = settings.bodyComposition;
     const bmr = computeAbsoluteBMR(settings);
-    if (bmr == null || !settings.activityLevel) return null;
-    const multiplier = ACTIVITY_MULTIPLIERS[settings.activityLevel];
-    const tdee = computeTDEE(bmr, settings.activityLevel);
+    const multiplier = settings.activityLevel ? ACTIVITY_MULTIPLIERS[settings.activityLevel] : null;
     const deficit = settings.dailyDeficit ?? 0;
-    const target = Math.round(tdee - deficit);
-    return {
-      bmr: Math.round(bmr),
-      multiplier,
-      tdee: Math.round(tdee),
-      deficit,
-      target: target > 0 ? target : 0,
-    };
+    const tdee = bmr != null && multiplier != null ? computeTDEE(bmr, settings.activityLevel!) : null;
+    const target = tdee != null ? Math.round(tdee - deficit) : null;
+    return { weightKg, heightCm, age, profile, bmr: bmr != null ? Math.round(bmr) : null, multiplier, deficit, tdee: tdee != null ? Math.round(tdee) : null, target: target != null && target > 0 ? target : null };
   }, [settings]);
 
   const handleToggle = () => {
@@ -133,7 +130,7 @@ export function CalorieTargetDialog({
             )}
           >
             <div className="overflow-hidden">
-              <div className="space-y-4 pt-1 min-h-[200px]">
+              <div className="space-y-4 p-1 min-h-[200px]">
                 {/* Mode dropdown */}
                 <div className="flex items-center justify-between overflow-visible">
                   <p className="text-xs text-muted-foreground">Mode</p>
@@ -211,7 +208,7 @@ export function CalorieTargetDialog({
 
                     {/* Daily deficit */}
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs text-muted-foreground">Daily deficit (cal)</p>
+                      <p className="text-xs text-muted-foreground">Target deficit (cal/day)</p>
                       <input
                         type="number"
                         placeholder="0"
@@ -226,11 +223,25 @@ export function CalorieTargetDialog({
                       />
                     </div>
 
-                    {/* Computed summary */}
-                    {tdeeSummary && (
-                      <p className="text-[10px] text-muted-foreground bg-muted/50 rounded py-1.5">
-                        Base metabolic rate ~{tdeeSummary.bmr.toLocaleString()} × {tdeeSummary.multiplier} = ~{tdeeSummary.tdee.toLocaleString()} daily energy expenditure − {tdeeSummary.deficit} deficit = <span className="text-foreground">{tdeeSummary.target.toLocaleString()} cal/day</span>
-                      </p>
+                    {/* Equation breakdown */}
+                    {equationData && (
+                      <div className="text-[10px] text-muted-foreground bg-muted/50 rounded py-1.5 space-y-0.5">
+                        <p>
+                          Base metabolic rate (BMR) = 10 × {equationData.weightKg != null ? `${equationData.weightKg}kg` : <em className="not-italic text-muted-foreground/50">weight</em>}{' '}
+                          + 6.25 × {equationData.heightCm != null ? `${equationData.heightCm}cm` : <em className="not-italic text-muted-foreground/50">height</em>}{' '}
+                          − 5 × {equationData.age != null ? equationData.age : <em className="not-italic text-muted-foreground/50">age</em>}{' '}
+                          {equationData.profile != null
+                            ? `${equationData.profile === 'male' ? '+ 5' : '− 161'}`
+                            : <em className="not-italic text-muted-foreground/50">+/− profile</em>}
+                          {equationData.bmr != null && <>{' '}= <span className="text-foreground">~{equationData.bmr.toLocaleString()}</span></>}
+                        </p>
+                        <p>
+                          Total daily energy expenditure (TDEE) = {equationData.bmr != null ? `${equationData.bmr.toLocaleString()}` : <em className="not-italic text-muted-foreground/50">BMR</em>}{' '}
+                          × {equationData.multiplier != null ? equationData.multiplier : <em className="not-italic text-muted-foreground/50">activity level</em>}{' '}
+                          − {equationData.deficit} deficit{' '}
+                          = {equationData.target != null ? <span className="text-foreground">{equationData.target.toLocaleString()} cal/day</span> : '…'}
+                        </p>
+                      </div>
                     )}
                   </div>
                 )}
