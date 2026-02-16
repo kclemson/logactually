@@ -244,7 +244,7 @@ export function CalorieTargetDialog({
                           min={0}
                           max={9999}
                         />
-                        <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground font-medium whitespace-nowrap">cal/day</span>
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground whitespace-nowrap">cal/day</span>
                       </div>
                     </div>
 
@@ -286,7 +286,7 @@ export function CalorieTargetDialog({
                 {settings.calorieTargetMode === 'exercise_adjusted' && (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <p className="text-xs text-muted-foreground">Target (cal/day)</p>
+                      <p className="text-xs text-muted-foreground">Target</p>
                       <div className="flex items-center gap-1.5">
                         <input
                           type="number"
@@ -300,7 +300,7 @@ export function CalorieTargetDialog({
                           min={0}
                           max={99999}
                         />
-                        <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground font-medium whitespace-nowrap">cal/day</span>
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-foreground whitespace-nowrap">cal/day</span>
                       </div>
                     </div>
 
