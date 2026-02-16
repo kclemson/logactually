@@ -100,7 +100,7 @@ const baseSettings: UserSettings = {
   calorieTargetMode: 'static',
   activityLevel: null,
   dailyDeficit: null,
-  exerciseAdjustedBase: null,
+  
   calorieBurnEnabled: true,
   bodyWeightLbs: 170,
   heightInches: 70,
@@ -141,13 +141,13 @@ describe('getEffectiveDailyTarget', () => {
     expect(getEffectiveDailyTarget(s)).toBeNull();
   });
 
-  it('returns exerciseAdjustedBase in exercise_adjusted mode', () => {
-    const s = { ...baseSettings, calorieTargetMode: 'exercise_adjusted' as const, exerciseAdjustedBase: 1800 };
+  it('returns dailyCalorieTarget in exercise_adjusted mode', () => {
+    const s = { ...baseSettings, calorieTargetMode: 'exercise_adjusted' as const, dailyCalorieTarget: 1800 };
     expect(getEffectiveDailyTarget(s)).toBe(1800);
   });
 
-  it('returns null in exercise_adjusted mode without base', () => {
-    const s = { ...baseSettings, calorieTargetMode: 'exercise_adjusted' as const, exerciseAdjustedBase: null };
+  it('returns null in exercise_adjusted mode without target', () => {
+    const s = { ...baseSettings, calorieTargetMode: 'exercise_adjusted' as const, dailyCalorieTarget: null };
     expect(getEffectiveDailyTarget(s)).toBeNull();
   });
 });

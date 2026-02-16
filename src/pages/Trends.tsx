@@ -322,9 +322,7 @@ const Trends = () => {
                 color={CHART_COLORS.calories}
                 onNavigate={(date) => navigate(`/?date=${date}`)}
                 referenceLine={(() => {
-                  const t = settings.calorieTargetMode === 'exercise_adjusted'
-                    ? settings.exerciseAdjustedBase
-                    : getEffectiveDailyTarget(settings);
+                  const t = getEffectiveDailyTarget(settings);
                   return t ? { value: t, color: "hsl(var(--muted-foreground))" } : undefined;
                 })()}
               />
@@ -361,9 +359,7 @@ const Trends = () => {
               labelColor={CHART_COLORS.calories}
               height="h-28"
               referenceLine={(() => {
-                const t = settings.calorieTargetMode === 'exercise_adjusted'
-                  ? settings.exerciseAdjustedBase
-                  : getEffectiveDailyTarget(settings);
+                const t = getEffectiveDailyTarget(settings);
                 return t ? { value: t, color: "hsl(var(--muted-foreground))" } : undefined;
               })()}
             />

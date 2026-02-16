@@ -17,7 +17,7 @@ export interface UserSettings {
   calorieTargetMode: 'static' | 'body_stats' | 'exercise_adjusted';
   activityLevel: 'sedentary' | 'light' | 'moderate' | 'active' | null;
   dailyDeficit: number | null;
-  exerciseAdjustedBase: number | null;
+  
   // Calorie burn estimation
   calorieBurnEnabled: boolean;
   bodyWeightLbs: number | null;
@@ -40,7 +40,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   calorieTargetMode: 'static',
   activityLevel: null,
   dailyDeficit: null,
-  exerciseAdjustedBase: null,
+  
   calorieBurnEnabled: true,
   bodyWeightLbs: null,
   heightInches: null,

@@ -18,7 +18,8 @@ let mockSettings = {
   calorieTargetMode: 'static' as const,
   activityLevel: null,
   dailyDeficit: null,
-  exerciseAdjustedBase: null,
+
+
   calorieBurnEnabled: false,
   bodyWeightLbs: null,
   heightInches: null,
@@ -136,7 +137,7 @@ describe('Settings smoke test', () => {
       calorieTargetMode: 'static',
       activityLevel: null,
       dailyDeficit: null,
-      exerciseAdjustedBase: null,
+      
       calorieBurnEnabled: false,
       bodyWeightLbs: null,
       heightInches: null,
