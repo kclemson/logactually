@@ -1,42 +1,37 @@
 
 
-# Equation Section Refinements
+# Three-Step Equation + Remove Tilde
 
 ## Changes to `src/components/CalorieTargetDialog.tsx`
 
-### 1. Match font styling to input labels
-The input labels (Body weight, Height, Age, etc.) use `text-xs text-muted-foreground`. The equation section currently uses `text-[10px]` which is smaller. Change the equation block to use `text-xs text-muted-foreground` to match.
+### 1. Split into three equation rows
+Currently the TDEE row combines `BMR x multiplier - deficit = target`. Split this into:
 
-### 2. Remove indentation, left-align with labels
-Remove the `bg-muted/50 rounded py-1.5 px-2` wrapper styling that creates a visually indented box. The equations should sit flush-left like the other label rows above them.
+```
+Base metabolic rate (BMR)
+150 lbs, 5'1", 48 years, Female = 1,248
 
-### 3. Drop the `f()` notation
-Instead of `f(150 lbs, 5'1", 48 years, Female) = ~1,248`, just list the inputs naturally separated by commas and show the result:
-```
-150 lbs, 5'1", 48 years, Female = ~1,248
-```
+Total daily energy expenditure (TDEE)
+1,248 x 1.375 = 1,716
 
-### 4. Remove leading `=` from equations
-The second line of each equation currently starts with `= `. Remove that so it reads naturally:
-```
-1,248 x 1.375 - 0 deficit = 1,716 cal/day
+Daily calorie target
+1,716 - 500 deficit = 1,216 cal/day
 ```
 
-### 5. Hide "Average" profile from equation
-When `bodyComposition` is null (Average), omit it from the BMR equation entirely since it's the default and doesn't add information. Only show "Male" or "Female" when explicitly selected.
+### 2. Remove tilde (~) from BMR and TDEE results
+Currently shows `= ~1,248`. Change to `= 1,248` (and same for TDEE).
 
-### 6. Fix unit reactivity bug
-The `equationData` memo depends on `settings` but the weight display uses `settings.weightUnit` which is correct. However, the `BiometricsInputs` component has a local `bodyWeightUnit` state that can diverge from `settings.weightUnit`. The equation should read from `settings.weightUnit` directly (which it already does in the memo). The issue is that the BiometricsInputs unit toggle only updates local state, not `settings.weightUnit`. We need to update `BiometricsInputs` to also persist the weight unit change to settings via `updateSettings({ weightUnit: unit })` when toggled.
+### Technical details
 
-### File changes
+The `equationData` memo already computes and returns `tdee` separately from `target`, so no memo changes are needed.
 
-**`src/components/CalorieTargetDialog.tsx`** (lines 247-268):
-- Remove `bg-muted/50 rounded py-1.5 px-2` wrapper
-- Change `text-[10px]` to `text-xs`
-- Remove `f(` and `)` from BMR line
-- Remove leading `= ` from equation lines
-- Skip profile display when `bodyComposition` is null
+The JSX equation block (lines 248-268) will be updated from two `div` blocks to three:
 
-**`src/components/BiometricsInputs.tsx`** (line 93):
-- Add `updateSettings({ weightUnit: unit })` inside `handleBodyWeightUnitChange` so changing the weight unit toggle persists to settings and triggers the equation memo to recompute with the correct unit.
+1. **BMR row** -- same as now but `~` removed from result
+2. **TDEE row** -- shows `BMR x multiplier = TDEE` (no deficit, no tilde)
+3. **Daily calorie target row** -- shows `TDEE - deficit = target cal/day`
+
+| File | Change |
+|---|---|
+| `src/components/CalorieTargetDialog.tsx` | Replace two equation divs with three; remove `~` prefix from BMR and TDEE values |
 
