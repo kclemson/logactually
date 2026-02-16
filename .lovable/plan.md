@@ -1,37 +1,32 @@
 
 
-# Three-Step Equation + Remove Tilde
+# Fix Dialog Jumping: Top-Anchored Positioning
 
-## Changes to `src/components/CalorieTargetDialog.tsx`
+## Problem
+The CalorieTargetDialog jumps vertically when switching between modes (static / body stats / exercise adjusted) because it's vertically centered. As the content height changes, the center point shifts, causing the dialog to move up and down. The current `min-h-[200px]` workaround doesn't fully solve this.
 
-### 1. Split into three equation rows
-Currently the TDEE row combines `BMR x multiplier - deficit = target`. Split this into:
+## Solution
+Use the same top-anchored positioning pattern already used by SaveMealDialog, SaveRoutineDialog, and others. On mobile, the dialog is pinned near the top of the screen and grows downward. On desktop, it reverts to standard centered positioning.
 
+## Technical details
+
+**File: `src/components/CalorieTargetDialog.tsx`**
+
+Update the `DialogContent` className (line ~109):
+
+From:
 ```
-Base metabolic rate (BMR)
-150 lbs, 5'1", 48 years, Female = 1,248
-
-Total daily energy expenditure (TDEE)
-1,248 x 1.375 = 1,716
-
-Daily calorie target
-1,716 - 500 deficit = 1,216 cal/day
+left-2 right-2 translate-x-0 w-auto max-w-[calc(100vw-16px)] max-h-[85vh] overflow-y-auto p-4
+sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md
 ```
 
-### 2. Remove tilde (~) from BMR and TDEE results
-Currently shows `= ~1,248`. Change to `= 1,248` (and same for TDEE).
+To:
+```
+left-2 right-2 top-12 translate-x-0 translate-y-0 w-auto max-w-[calc(100vw-16px)] max-h-[85vh] overflow-y-auto p-4
+sm:left-[50%] sm:right-auto sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:w-full sm:max-w-md
+```
 
-### Technical details
+Key additions: `top-12 translate-y-0` (mobile) and `sm:top-[50%] sm:translate-y-[-50%]` (desktop).
 
-The `equationData` memo already computes and returns `tdee` separately from `target`, so no memo changes are needed.
-
-The JSX equation block (lines 248-268) will be updated from two `div` blocks to three:
-
-1. **BMR row** -- same as now but `~` removed from result
-2. **TDEE row** -- shows `BMR x multiplier = TDEE` (no deficit, no tilde)
-3. **Daily calorie target row** -- shows `TDEE - deficit = target cal/day`
-
-| File | Change |
-|---|---|
-| `src/components/CalorieTargetDialog.tsx` | Replace two equation divs with three; remove `~` prefix from BMR and TDEE values |
+Also remove `min-h-[200px]` from the inner content container (line ~131) since it's no longer needed -- the top-anchored positioning prevents visual jumping.
 
