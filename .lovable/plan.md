@@ -1,29 +1,39 @@
 
 
-# Update demo account settings
+# Persist "welcome to demo" dismissal in localStorage
 
-## Changes
+## What changes
 
-A single database migration to update the demo account's profile settings:
+In `src/contexts/ReadOnlyContext.tsx`, replace the in-memory `useRef` guard with a `localStorage` check so the welcome overlay only ever shows once per device.
 
-1. Set `calorieTargetMode` to `exercise_adjusted` (was `body_stats`)
-2. Restore biometric data that was lost:
-   - `bodyWeightLbs`: 165
-   - `heightInches`: 67 (5'7")
-   - `bodyComposition`: "male"
-   - `age`: 35
-3. Keep existing values: `dailyCalorieTarget` (2000), `calorieBurnEnabled` (true)
+## Technical details
 
-## Technical Details
+**File: `src/contexts/ReadOnlyContext.tsx`**
 
-Single SQL migration using `jsonb_set` chained calls (or `||` merge operator) to update the `profiles.settings` column for the demo account (`id = 'f65d7de9-...'`).
+- Remove `hasSeenWelcomeRef`
+- On mount (when `isReadOnly` is true and not loading), check `localStorage.getItem('demo-welcome-seen')`
+- If not set, show the welcome overlay and write `localStorage.setItem('demo-welcome-seen', 'true')` when it appears
+- If already set, skip showing the overlay entirely
+- The "blocked" overlay (triggered by write attempts) remains unaffected
 
-```sql
-UPDATE profiles
-SET settings = settings
-  || '{"calorieTargetMode":"exercise_adjusted","bodyWeightLbs":165,"heightInches":67,"bodyComposition":"male","age":35}'::jsonb
-WHERE id = 'f65d7de9-91bf-4140-b16e-5e4a951eeca5';
+```ts
+// Before (resets every reload):
+const hasSeenWelcomeRef = useRef(false);
+useEffect(() => {
+  if (!isLoading && isReadOnly && !hasSeenWelcomeRef.current) { ... }
+}, [isLoading, isReadOnly]);
+
+// After (persists across reloads):
+useEffect(() => {
+  if (!isLoading && isReadOnly && !localStorage.getItem('demo-welcome-seen')) {
+    const timer = setTimeout(() => {
+      setOverlayMode('welcome');
+      setShowOverlay(true);
+      localStorage.setItem('demo-welcome-seen', 'true');
+    }, 500);
+    return () => clearTimeout(timer);
+  }
+}, [isLoading, isReadOnly]);
 ```
 
-No code changes needed -- all settings are already supported by the existing UI and logic.
-
+No other files need changes.
