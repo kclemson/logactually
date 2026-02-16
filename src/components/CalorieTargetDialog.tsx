@@ -62,8 +62,10 @@ export function CalorieTargetDialog({
 
     const burnByDate = new Map(dailyBurnData.map(d => [d.date, d]));
 
-    // dailyFoodData is sorted descending, so first match is most recent
+    // dailyFoodData is sorted descending; skip today since it's incomplete
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
     for (const food of dailyFoodData) {
+      if (food.date === todayStr) continue;
       const burn = burnByDate.get(food.date);
       if (burn) {
         const burnCals = Math.round((burn.low + burn.high) / 2);
