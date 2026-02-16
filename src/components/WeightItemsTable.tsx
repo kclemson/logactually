@@ -15,6 +15,7 @@ import { type EntryBoundary, isFirstInBoundary, isLastInBoundary, isEntryNew, ge
 import { EntryChevron } from '@/components/EntryChevron';
 import { DeleteAllDialog } from '@/components/DeleteAllDialog';
 import { DeleteGroupDialog } from '@/components/DeleteGroupDialog';
+import { EntryExpandedPanel } from '@/components/EntryExpandedPanel';
 
 type EditableFieldKey = 'description' | 'sets' | 'reps' | 'weight_lbs';
 
@@ -674,95 +675,52 @@ export function WeightItemsTable({
 
             {/* Expanded content section */}
             {showEntryDividers && isLastInEntry && isCurrentExpanded && (() => {
-              // Check if this entry came from a saved routine (by ID, not name lookup)
-              const isFromSavedRoutine = currentEntryId && entrySourceRoutineIds?.has(currentEntryId);
-              const routineName = currentEntryId && entryRoutineNames?.get(currentEntryId);
-              
-              // Get all exercises in this entry for cardio metadata
+              const isFromSavedRoutine = !!(currentEntryId && entrySourceRoutineIds?.has(currentEntryId));
+              const routineName = (currentEntryId && entryRoutineNames?.get(currentEntryId)) || null;
               const entryExercises = items.filter(i => i.entryId === currentEntryId);
-              
-              // Build cardio metadata for exercises that have duration/distance
-              const cardioItems = entryExercises.filter(ex => 
-                (ex.duration_minutes ?? 0) > 0 || (ex.distance_miles ?? 0) > 0
-              );
-              
-              return (
-                <div className={cn('grid gap-0.5', gridCols)}>
-                  <div className="col-span-full pl-6 py-1 space-y-1">
-                    {/* Per-exercise calorie burn estimates */}
-                    {calorieBurnSettings?.calorieBurnEnabled && (() => {
-                      const parts = entryExercises.map(ex => {
-                        const result = estimateCalorieBurn({
-                          exercise_key: ex.exercise_key,
-                          exercise_subtype: ex.exercise_subtype,
-                          sets: ex.sets,
-                          reps: ex.reps,
-                          weight_lbs: ex.weight_lbs,
-                          duration_minutes: ex.duration_minutes,
-                          distance_miles: ex.distance_miles,
-                          exercise_metadata: ex.exercise_metadata,
-                        }, calorieBurnSettings);
-                        return { name: ex.description, display: formatCalorieBurnValue(result) };
-                      }).filter(p => p.display);
-                      if (parts.length === 0) return null;
-                      const detail = parts.length === 1
-                        ? parts[0].display
-                        : parts.map(p => `${p.display} (${p.name})`).join(', ');
-                      return (
-                        <p className="text-xs text-muted-foreground italic">
-                          Estimated calories burned: {detail}
-                        </p>
-                      );
-                    })()}
 
-                    {/* Only show raw input if NOT from a saved routine */}
-                    {!isFromSavedRoutine && currentRawInput && (
-                      <p className="text-xs text-muted-foreground italic">
-                        Logged as: {currentRawInput}
-                      </p>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <div>
-                        {/* Show routine info if from saved routine, otherwise show "Save as routine" */}
-                        {isFromSavedRoutine ? (
-                          <p className="text-xs text-muted-foreground italic">
-                            From saved routine:{' '}
-                            {routineName ? (
-                              <Link 
-                                to="/settings" 
-                                className="text-blue-600 dark:text-blue-400 hover:underline"
-                              >
-                                {routineName}
-                              </Link>
-                            ) : (
-                              <span>(deleted)</span>
-                            )}
-                          </p>
-                        ) : onSaveAsRoutine && currentEntryId && (
-                          <button
-                            onClick={() => {
-                              const entryExercises = items.filter(i => i.entryId === currentEntryId);
-                              onSaveAsRoutine(currentEntryId, currentRawInput ?? null, entryExercises);
-                            }}
-                            className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-                          >
-                            Save as routine
-                          </button>
-                        )}
-                      </div>
-                      {(() => {
-                        const entryExercises = items.filter(i => i.entryId === currentEntryId);
-                        if (!onDeleteEntry) return null;
-                        return (
-                          <DeleteGroupDialog
-                            items={entryExercises}
-                            onConfirm={() => onDeleteEntry!(currentEntryId!)}
-                          />
-                        );
-                      })()}
-                    </div>
-                  </div>
-                </div>
+              // Calorie burn estimates as extraContent
+              const calorieBurnContent = calorieBurnSettings?.calorieBurnEnabled ? (() => {
+                const parts = entryExercises.map(ex => {
+                  const result = estimateCalorieBurn({
+                    exercise_key: ex.exercise_key,
+                    exercise_subtype: ex.exercise_subtype,
+                    sets: ex.sets,
+                    reps: ex.reps,
+                    weight_lbs: ex.weight_lbs,
+                    duration_minutes: ex.duration_minutes,
+                    distance_miles: ex.distance_miles,
+                    exercise_metadata: ex.exercise_metadata,
+                  }, calorieBurnSettings);
+                  return { name: ex.description, display: formatCalorieBurnValue(result) };
+                }).filter(p => p.display);
+                if (parts.length === 0) return null;
+                const detail = parts.length === 1
+                  ? parts[0].display
+                  : parts.map(p => `${p.display} (${p.name})`).join(', ');
+                return (
+                  <p className="text-xs text-muted-foreground italic">
+                    Estimated calories burned: {detail}
+                  </p>
+                );
+              })() : undefined;
+
+              return (
+                <EntryExpandedPanel
+                  items={entryExercises}
+                  rawInput={currentRawInput ?? null}
+                  savedItemInfo={{
+                    type: 'routine',
+                    name: routineName,
+                    isFromSaved: isFromSavedRoutine,
+                  }}
+                  onSaveAs={onSaveAsRoutine && currentEntryId ? () => {
+                    onSaveAsRoutine(currentEntryId, currentRawInput ?? null, entryExercises);
+                  } : undefined}
+                  onDeleteEntry={onDeleteEntry && currentEntryId ? () => onDeleteEntry(currentEntryId) : undefined}
+                  gridCols={gridCols}
+                  extraContent={calorieBurnContent}
+                />
               );
             })()}
           </div>
