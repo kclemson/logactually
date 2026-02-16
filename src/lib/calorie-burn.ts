@@ -144,9 +144,9 @@ const BASE_REST_LOW = 30;
 const BASE_REST_HIGH = 45;
 
 // Extra rest scaling for heavy weight: clamp(weight_lbs/100, 0, 0.5) * 30s
-const WEIGHT_REST_DIVISOR = 100;
-const WEIGHT_REST_MAX_FACTOR = 0.5;
-const WEIGHT_REST_BONUS_SECONDS = 30;
+const WEIGHT_REST_DIVISOR = 200;
+const WEIGHT_REST_MAX_FACTOR = 1.0;
+const WEIGHT_REST_BONUS_SECONDS = 45;
 
 // ---------------------------------------------------------------------------
 // Helpers
