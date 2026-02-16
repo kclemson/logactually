@@ -135,9 +135,18 @@ const GENERIC_CARDIO: MetRange = { low: 4.0, high: 8.0 };
 const DEFAULT_WEIGHT_LOW_LBS = 130;
 const DEFAULT_WEIGHT_HIGH_LBS = 190;
 
-// Seconds per set (including rest) for strength duration estimation
-const SECONDS_PER_SET_LOW = 35;
-const SECONDS_PER_SET_HIGH = 45;
+// Per-rep active time (seconds) for strength duration estimation
+const SECONDS_PER_REP_LOW = 3;
+const SECONDS_PER_REP_HIGH = 4;
+
+// Base rest between sets (seconds)
+const BASE_REST_LOW = 30;
+const BASE_REST_HIGH = 45;
+
+// Extra rest scaling for heavy weight: clamp(weight_lbs/100, 0, 0.5) * 30s
+const WEIGHT_REST_DIVISOR = 100;
+const WEIGHT_REST_MAX_FACTOR = 0.5;
+const WEIGHT_REST_BONUS_SECONDS = 30;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -193,15 +202,28 @@ export function applyInclineBonus(met: MetRange, inclinePct: number): MetRange {
 }
 
 /**
- * Estimate duration in hours for strength exercises based on sets and reps.
+ * Estimate duration in hours for strength exercises based on sets, reps, and weight.
+ *
+ * Per-set time = (reps × seconds_per_rep) + base_rest + weight_bonus
+ *   weight_bonus = clamp(weight_lbs / 100, 0, 0.5) × 30s
  */
-export function estimateStrengthDuration(sets: number, reps: number): { low: number; high: number } {
-  const totalSets = sets; // sets is already total sets
-  const lowSeconds = totalSets * SECONDS_PER_SET_LOW;
-  const highSeconds = totalSets * SECONDS_PER_SET_HIGH;
+export function estimateStrengthDuration(
+  sets: number,
+  reps: number,
+  weightLbs: number = 0,
+): { low: number; high: number } {
+  if (sets <= 0) return { low: 0, high: 0 };
+
+  const weightFactor = Math.min(Math.max(weightLbs / WEIGHT_REST_DIVISOR, 0), WEIGHT_REST_MAX_FACTOR);
+  const weightBonusLow = weightFactor * WEIGHT_REST_BONUS_SECONDS;
+  const weightBonusHigh = weightFactor * WEIGHT_REST_BONUS_SECONDS;
+
+  const perSetLow = reps * SECONDS_PER_REP_LOW + BASE_REST_LOW + weightBonusLow;
+  const perSetHigh = reps * SECONDS_PER_REP_HIGH + BASE_REST_HIGH + weightBonusHigh;
+
   return {
-    low: lowSeconds / 3600,
-    high: highSeconds / 3600,
+    low: (sets * perSetLow) / 3600,
+    high: (sets * perSetHigh) / 3600,
   };
 }
 
@@ -347,7 +369,7 @@ export function estimateCalorieBurn(
     durationLow = hours;
     durationHigh = hours;
   } else if (!isCardio && exercise.sets > 0) {
-    const est = estimateStrengthDuration(exercise.sets, exercise.reps);
+    const est = estimateStrengthDuration(exercise.sets, exercise.reps, exercise.weight_lbs);
     durationLow = est.low;
     durationHigh = est.high;
   } else {
