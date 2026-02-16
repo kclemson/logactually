@@ -18,6 +18,7 @@ import {
 } from '@/lib/calorie-target';
 import { useDailyCalorieBurn } from '@/hooks/useDailyCalorieBurn';
 import { BiometricsInputs } from '@/components/BiometricsInputs';
+import { buildBiometricsClearUpdates } from '@/lib/biometrics-clear';
 import {
   Select,
   SelectContent,
@@ -95,6 +96,7 @@ export function CalorieTargetDialog({
         activityLevel: null,
         dailyDeficit: null,
         exerciseAdjustedBase: null,
+        ...buildBiometricsClearUpdates(settings, 'target'),
       });
       onOpenChange(false);
     } else {
