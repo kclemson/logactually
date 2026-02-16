@@ -247,7 +247,7 @@ export function CalorieTargetDialog({
                     {equationData && (
                       <div className="text-xs text-muted-foreground space-y-1.5">
                         <div>
-                          <p>Base metabolic rate (BMR)</p>
+                          <p className="font-medium">Base metabolic rate (BMR)</p>
                           <p>
                             {equationData.weightDisplay ?? <em className="not-italic text-muted-foreground/50">weight</em>}
                             , {equationData.heightDisplay ?? <em className="not-italic text-muted-foreground/50">height</em>}
@@ -257,7 +257,7 @@ export function CalorieTargetDialog({
                           </p>
                         </div>
                         <div>
-                          <p>Total daily energy expenditure (TDEE)</p>
+                          <p className="font-medium">Total daily energy expenditure (TDEE)</p>
                           <p>
                             {equationData.bmr != null ? equationData.bmr.toLocaleString() : <em className="not-italic text-muted-foreground/50">BMR</em>}
                             {' '}× {equationData.multiplier != null ? equationData.multiplier : <em className="not-italic text-muted-foreground/50">activity level</em>}
@@ -265,7 +265,7 @@ export function CalorieTargetDialog({
                           </p>
                         </div>
                         <div>
-                          <p>Daily calorie target</p>
+                          <p className="font-medium">Daily calorie target</p>
                           <p>
                             {equationData.tdee != null ? equationData.tdee.toLocaleString() : <em className="not-italic text-muted-foreground/50">TDEE</em>}
                             {' '}− {equationData.deficit} deficit
