@@ -462,15 +462,19 @@ export function FoodItemsTable({
                 >
                   {item.description}
                   {item.portion && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPortionScalingIndex(portionScalingIndex === index ? null : index);
-                        setPortionMultiplier(1.0);
-                      }}
-                      className="ml-1 text-xs text-muted-foreground whitespace-nowrap cursor-pointer hover:text-foreground transition-colors"
-                    >({item.portion})</button>
+                    editable ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPortionScalingIndex(portionScalingIndex === index ? null : index);
+                          setPortionMultiplier(1.0);
+                        }}
+                        className="ml-1 text-xs text-muted-foreground whitespace-nowrap cursor-pointer hover:text-foreground transition-colors"
+                      >({item.portion})</button>
+                    ) : (
+                      <span className="ml-1 text-xs text-muted-foreground whitespace-nowrap">({item.portion})</span>
+                    )
                   )}
                   {hasAnyEditedFields(item) && (
                     <span className="text-focus-ring font-bold" title={formatEditedFields(item) || 'Edited'}> *</span>
