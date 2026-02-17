@@ -95,6 +95,20 @@ export function useWeightTrends(days: number) {
           existing.volume += row.sets * row.reps * weight;
           existing.duration_minutes = (existing.duration_minutes || 0) + duration;
           existing.distance_miles = (existing.distance_miles || 0) + distance;
+          // Merge exercise_metadata: sum calories_burned across aggregated entries
+          if (row.exercise_metadata && typeof row.exercise_metadata === 'object') {
+            const incoming = row.exercise_metadata as Record<string, number>;
+            if (incoming.calories_burned != null) {
+              if (!existing.exercise_metadata) {
+                existing.exercise_metadata = { calories_burned: incoming.calories_burned };
+              } else {
+                existing.exercise_metadata = {
+                  ...existing.exercise_metadata,
+                  calories_burned: (existing.exercise_metadata.calories_burned ?? 0) + incoming.calories_burned,
+                };
+              }
+            }
+          }
           // Track reps uniformity: if new reps-per-set differs, mark as undefined
           if (existing.repsPerSet !== undefined && existing.repsPerSet !== rowRepsPerSet) {
             existing.repsPerSet = undefined;
