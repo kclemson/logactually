@@ -1,24 +1,20 @@
 
 
-# Show calorie target dot on today (Food Log + Calendar)
+# Fix calendar calorie row alignment on mobile
 
-## Summary
+## Problem
 
-Remove the "not today" exclusion so the colored calorie-target dot appears on the current day in both views. Since the tooltip now provides context about targets, users benefit from seeing the dot even for an in-progress day.
+The calorie count row (e.g. "1,583cal●") in each calendar day cell overflows horizontally. The text appears left-padded while the colored dot on the right spills past the cell edge. This is because the combined width of the calorie text plus the dot exceeds the narrow cell width on mobile, and there's no overflow control.
 
 ## Changes
 
-### 1. Food Log (`src/pages/FoodLog.tsx`, line 739)
+**File: `src/pages/History.tsx`**
 
-Change `showCalorieTargetDot={!isTodaySelected}` to `showCalorieTargetDot={true}` (or simply remove the today guard).
+1. Add `whitespace-nowrap overflow-hidden w-full text-center` to the calorie row `<span>` (around line 357) so the content stays on one line, clips if too wide, and is centered within the cell.
 
-### 2. Calendar (`src/pages/History.tsx`)
+2. Remove the `ml-0.5` margin on the dot `<span>` (line 372) to save horizontal space -- change to `ml-px` (1px) or remove entirely.
 
-Three spots where `!isTodayDate` suppresses the dot:
+3. Optionally reduce the calorie text size from `text-[10px]` to `text-[9px]` on mobile to give more breathing room, though the overflow fix alone may suffice.
 
-- **Line 217** (in `handleDayClick`): Change `const hasDot = !!summary && !isTodayDate && baseTarget != null && baseTarget > 0` -- remove `!isTodayDate`
-- **Line 334** (in render): Same change for `const hasDot = hasEntries && !isTodayDate && baseTarget != null && baseTarget > 0`
-- **Line 371** (inline dot render): Change `return !isTodayDate && target && target > 0 ?` to `return target && target > 0 ?`
-
-All three removals ensure the dot and tooltip appear on today's cell in the calendar grid, consistent with the Food Log change.
+These are purely styling tweaks -- no logic changes.
 
