@@ -1,23 +1,55 @@
 
+# Align percentages in the Macro Split (%) chart tooltip
 
-# Tighten chart grid spacing to prevent title wrapping on mobile
+## What changes
 
-## Problem
+The Macro Split (%) tooltip currently shows unaligned lines like:
+```
+Protein: 20%
+Carbs: 36%
+Fat: 44%
+```
 
-Long chart titles like "Estimated Exercise Calorie Burn" wrap to two lines on mobile because the combination of layout padding (`px-3` on `<main>`) and grid gap (`gap-3` between chart columns) leaves each chart too narrow.
+We'll switch to a grid layout so the names and percentages align in columns:
+```
+Protein   20%
+Carbs     36%
+Fat       44%
+```
 
-## Approach
+## How
 
-Reduce the inter-column gap from `gap-3` (12px) to `gap-2` (8px) on the 2-column chart grids, and widen the existing negative margin hack from `-mx-1` to `-mx-2` to reclaim a bit more edge space. This gives each chart ~6px more width total, which should prevent the title wrap without making the layout feel cramped.
+**`src/pages/Trends.tsx`** (line 337-348, the Macro Split chart)
 
-## Changes
+Replace the `formatter` prop with a `renderRows` prop that uses a 2-column CSS grid:
 
-**`src/pages/Trends.tsx`**
+```tsx
+<StackedMacroChart
+  title="Macro Split (%)"
+  subtitle={...}
+  chartData={chartData}
+  bars={[...]}
+  onNavigate={(date) => navigate(`/?date=${date}`)}
+  renderRows={(rows) => {
+    const p = rows[0]?.payload;
+    if (!p) return null;
+    const macros = [
+      { name: "Protein", pct: p.proteinPct, color: CHART_COLORS.protein },
+      { name: "Carbs", pct: p.carbsPct, color: CHART_COLORS.carbs },
+      { name: "Fat", pct: p.fatPct, color: CHART_COLORS.fat },
+    ];
+    return (
+      <div className="grid grid-cols-[auto_auto] gap-x-2 text-[10px]">
+        {macros.map(m => (
+          <React.Fragment key={m.name}>
+            <span style={{ color: m.color }}>{m.name}</span>
+            <span className="text-right" style={{ color: m.color }}>{m.pct}%</span>
+          </React.Fragment>
+        ))}
+      </div>
+    );
+  }}
+/>
+```
 
-1. Root container: change `-mx-1` to `-mx-2` (line 295)
-2. Food charts 2-col grid: change `gap-3` to `gap-2` (line 323)
-3. P/C/F 3-col grid: change `gap-1` stays as-is (already tight)
-4. Exercise charts 2-col grid: change `gap-3` to `gap-2` (line 438)
-5. Custom log charts 2-col grid: change `gap-3` to `gap-2` (line 494)
-
-Five single-class tweaks in one file, no logic changes.
+One prop swap in one file. The `renderRows` path in `CompactChartTooltip` and `StackedMacroChart` is already wired up from the previous changes.
