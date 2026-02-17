@@ -203,6 +203,34 @@ export interface RollupResult {
  * Excludes today (incomplete) and days with no food entries.
  * Returns null if fewer than 2 eligible days.
  */
+// ---------------------------------------------------------------------------
+// Structured target components (for multi-line equation tooltips)
+// ---------------------------------------------------------------------------
+
+export interface CalorieTargetComponents {
+  tdee: number;
+  deficit: number;
+  mode: 'body_stats_logged';
+}
+
+/**
+ * Returns the structured components of the calorie target equation
+ * for body_stats + logged mode. Returns null for all other modes.
+ */
+export function getCalorieTargetComponents(settings: UserSettings): CalorieTargetComponents | null {
+  if (!settings.calorieTargetEnabled) return null;
+  if (settings.calorieTargetMode !== 'body_stats') return null;
+  if (settings.activityLevel !== 'logged') return null;
+
+  const bmr = computeAbsoluteBMR(settings);
+  if (bmr == null) return null;
+
+  const tdee = Math.round(bmr * ACTIVITY_MULTIPLIERS.sedentary);
+  const deficit = settings.dailyDeficit ?? 0;
+
+  return { tdee, deficit, mode: 'body_stats_logged' };
+}
+
 export function computeCalorieRollup(
   foodTotals: { date: string; totalCalories: number }[],
   windowDays: number,

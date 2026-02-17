@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getTargetDotColor, getEffectiveDailyTarget, computeTDEE, suggestActivityLevel, getExerciseAdjustedTarget, usesActualExerciseBurns, ACTIVITY_MULTIPLIERS, getRollupDotColor, computeCalorieRollup, describeCalorieTarget } from './calorie-target';
+import { getTargetDotColor, getEffectiveDailyTarget, computeTDEE, suggestActivityLevel, getExerciseAdjustedTarget, usesActualExerciseBurns, ACTIVITY_MULTIPLIERS, getRollupDotColor, computeCalorieRollup, describeCalorieTarget, getCalorieTargetComponents } from './calorie-target';
 import { format, subDays } from 'date-fns';
 import type { UserSettings } from '@/hooks/useUserSettings';
 
@@ -343,5 +343,51 @@ describe('describeCalorieTarget', () => {
   it('returns null when body stats lacks biometrics', () => {
     const s = { ...baseSettings, calorieTargetMode: 'body_stats' as const, activityLevel: 'light' as const, bodyWeightLbs: null };
     expect(describeCalorieTarget(s)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getCalorieTargetComponents
+// ---------------------------------------------------------------------------
+
+describe('getCalorieTargetComponents', () => {
+  it('returns tdee and deficit for body_stats + logged', () => {
+    const s = { ...baseSettings, calorieTargetMode: 'body_stats' as const, activityLevel: 'logged' as const, dailyDeficit: 500 };
+    const result = getCalorieTargetComponents(s);
+    expect(result).not.toBeNull();
+    expect(result!.mode).toBe('body_stats_logged');
+    expect(result!.deficit).toBe(500);
+    expect(result!.tdee).toBeGreaterThan(1000);
+  });
+
+  it('returns deficit 0 when not set', () => {
+    const s = { ...baseSettings, calorieTargetMode: 'body_stats' as const, activityLevel: 'logged' as const, dailyDeficit: null };
+    const result = getCalorieTargetComponents(s);
+    expect(result).not.toBeNull();
+    expect(result!.deficit).toBe(0);
+  });
+
+  it('returns null for static mode', () => {
+    expect(getCalorieTargetComponents(baseSettings)).toBeNull();
+  });
+
+  it('returns null for exercise_adjusted mode', () => {
+    const s = { ...baseSettings, calorieTargetMode: 'exercise_adjusted' as const };
+    expect(getCalorieTargetComponents(s)).toBeNull();
+  });
+
+  it('returns null for body_stats with fixed activity level', () => {
+    const s = { ...baseSettings, calorieTargetMode: 'body_stats' as const, activityLevel: 'light' as const };
+    expect(getCalorieTargetComponents(s)).toBeNull();
+  });
+
+  it('returns null when disabled', () => {
+    const s = { ...baseSettings, calorieTargetEnabled: false, calorieTargetMode: 'body_stats' as const, activityLevel: 'logged' as const };
+    expect(getCalorieTargetComponents(s)).toBeNull();
+  });
+
+  it('returns null without body weight', () => {
+    const s = { ...baseSettings, calorieTargetMode: 'body_stats' as const, activityLevel: 'logged' as const, bodyWeightLbs: null };
+    expect(getCalorieTargetComponents(s)).toBeNull();
   });
 });
