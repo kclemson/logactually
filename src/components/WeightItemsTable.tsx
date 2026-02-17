@@ -84,6 +84,8 @@ interface WeightItemsTableProps {
   entryGroupNames?: Map<string, string>;
   /** Callback to persist updated group name via inline editing */
   onUpdateGroupName?: (entryId: string, newName: string) => void;
+  /** Callback when user clicks "Details" on an entry's expanded panel */
+  onShowDetails?: (entryId: string, itemIndex: number) => void;
 }
 
 /**
@@ -152,6 +154,7 @@ export function WeightItemsTable({
   totalCalorieBurnDisplay,
   entryGroupNames,
   onUpdateGroupName,
+  onShowDetails,
 }: WeightItemsTableProps) {
   const { isReadOnly, triggerOverlay } = useReadOnlyContext();
   const hasHover = useHasHover();
@@ -793,6 +796,12 @@ export function WeightItemsTable({
                     } : undefined}
                     gridCols={gridCols}
                     extraContent={calorieBurnContent}
+                    onShowDetails={onShowDetails && currentEntryId
+                      ? () => {
+                          const firstIdx = entryBoundaries?.find(b => b.entryId === currentEntryId)?.startIndex ?? index;
+                          onShowDetails(currentEntryId, firstIdx);
+                        }
+                      : undefined}
                   />
                 );
               })()}

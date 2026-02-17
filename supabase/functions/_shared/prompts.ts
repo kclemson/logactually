@@ -166,6 +166,9 @@ If the user explicitly mentions any of the following, include an "exercise_metad
   - 9-10: all-out, maximum effort, brutal, hardest ever
   - If the user gives a numeric rating (e.g., "8/10 difficulty"), use that number directly
 - calories_burned: calories the user says they burned (e.g., "burned 350 cal" -> 350)
+- heart_rate: average heart rate in BPM if mentioned (e.g., "avg hr 145" -> 145, "heart rate 120" -> 120)
+- cadence_rpm: cycling cadence if mentioned (e.g., "80 rpm" -> 80)
+- speed_mph: average speed if mentioned (e.g., "3.5 mph" -> 3.5). Convert km/h to mph (1 km/h = 0.621 mph).
 
 ## RESPONSE FORMAT
 
@@ -173,7 +176,7 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
 {
   "exercises": [
     { "exercise_key": "bench_press", "description": "Bench Press", "sets": 3, "reps": 10, "weight_lbs": 135 },
-    { "exercise_key": "walk_run", "exercise_subtype": "running", "description": "Hard Treadmill Run", "duration_minutes": 20, "distance_miles": 2.1, "exercise_metadata": { "incline_pct": 5, "effort": 8, "calories_burned": 320 } },
+    { "exercise_key": "walk_run", "exercise_subtype": "running", "description": "Hard Treadmill Run", "duration_minutes": 20, "distance_miles": 2.1, "exercise_metadata": { "incline_pct": 5, "effort": 8, "calories_burned": 320, "heart_rate": 155 } },
     { "exercise_key": "walk_run", "description": "Treadmill Walk", "duration_minutes": 30 }
   ]
 }`;
@@ -232,6 +235,9 @@ If the user explicitly mentions any of the following, include an "exercise_metad
   - 9-10: all-out, maximum effort, brutal, hardest ever
   - If the user gives a numeric rating (e.g., "8/10 difficulty"), use that number directly
 - calories_burned: calories the user says they burned (e.g., "burned 350 cal" -> 350)
+- heart_rate: average heart rate in BPM if mentioned (e.g., "avg hr 145" -> 145, "heart rate 120" -> 120)
+- cadence_rpm: cycling cadence if mentioned (e.g., "80 rpm" -> 80)
+- speed_mph: average speed if mentioned (e.g., "3.5 mph" -> 3.5). Convert km/h to mph (1 km/h = 0.621 mph).
 
 ## RESPONSE FORMAT
 
@@ -239,7 +245,7 @@ Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
 {
   "exercises": [
     { "exercise_key": "bench_press", "description": "Bench Press", "sets": 3, "reps": 10, "weight_lbs": 135 },
-    { "exercise_key": "walk_run", "exercise_subtype": "running", "description": "Hard Treadmill Run", "duration_minutes": 20, "distance_miles": 2.1, "exercise_metadata": { "incline_pct": 5, "effort": 8, "calories_burned": 320 } },
+    { "exercise_key": "walk_run", "exercise_subtype": "running", "description": "Hard Treadmill Run", "duration_minutes": 20, "distance_miles": 2.1, "exercise_metadata": { "incline_pct": 5, "effort": 8, "calories_burned": 320, "heart_rate": 155 } },
     { "exercise_key": "walk_run", "description": "Treadmill Walk", "duration_minutes": 30 }
   ]
 }`;

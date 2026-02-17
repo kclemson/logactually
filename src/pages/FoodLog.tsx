@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
+import { DetailDialog, buildFoodDetailFields } from '@/components/DetailDialog';
 import { useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { format, isToday, parseISO } from 'date-fns';
@@ -77,6 +78,9 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   // Save suggestion state (for repeated entries detection)
   const [saveSuggestion, setSaveSuggestion] = useState<FoodSaveSuggestion | null>(null);
   const [saveSuggestionItems, setSaveSuggestionItems] = useState<FoodItem[]>([]);
+
+  // Detail dialog state
+  const [detailDialogItem, setDetailDialogItem] = useState<{ index: number; entryId: string } | null>(null);
   
   // Date is stable for this component instance - derived from props, no state needed
   const dateStr = initialDate;
@@ -463,6 +467,10 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     });
   };
 
+  const handleShowDetails = useCallback((entryId: string, itemIndex: number) => {
+    setDetailDialogItem({ index: itemIndex, entryId });
+  }, []);
+
   // Handle saving the meal - receives selected items directly from dialog
   const handleSaveMealConfirm = (name: string, selectedItems: FoodItem[]) => {
     if (!saveMealDialogData) return;
@@ -597,6 +605,12 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       saveEntry(entryInfo.entryId, updatedItems);
     }
   }, [updateItemBatch, findEntryForIndex, getItemsForEntry, saveEntry]);
+
+  const handleDetailSave = useCallback((updates: Record<string, any>) => {
+    if (!detailDialogItem) return;
+    handleItemUpdateBatch(detailDialogItem.index, updates as Partial<FoodItem>);
+    setDetailDialogItem(null);
+  }, [detailDialogItem, handleItemUpdateBatch]);
 
   // Auto-save handler for item removal (called on delete)
   const handleItemRemove = useCallback((index: number) => {
@@ -773,6 +787,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
                 return next;
               });
             }}
+            onShowDetails={handleShowDetails}
           />
         )}
 
@@ -820,6 +835,23 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
         foodItems={demoPreviewItems}
         rawInput={demoPreviewRawInput}
       />
+
+      {/* Detail Dialog for viewing/editing individual food items */}
+      {detailDialogItem && (() => {
+        const item = displayItems[detailDialogItem.index];
+        if (!item) return null;
+        return (
+          <DetailDialog
+            open={true}
+            onOpenChange={() => setDetailDialogItem(null)}
+            title={item.description}
+            fields={buildFoodDetailFields(item)}
+            values={item}
+            onSave={handleDetailSave}
+            readOnly={isReadOnly}
+          />
+        );
+      })()}
     </div>
   );
 };

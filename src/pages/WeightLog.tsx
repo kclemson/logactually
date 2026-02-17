@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
+import { DetailDialog, buildExerciseDetailFields, flattenExerciseValues, processExerciseSaveUpdates } from '@/components/DetailDialog';
 import { isMultiItemEntry } from '@/lib/entry-boundaries';
 import { useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
@@ -68,6 +69,9 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   const [saveSuggestionExercises, setSaveSuggestionExercises] = useState<AnalyzedExercise[]>([]);
   // Note: createRoutineFromSuggestion state removed - direct save now used
   const [matchingRoutineForSuggestion, setMatchingRoutineForSuggestion] = useState<MatchingRoutine | null>(null);
+
+  // Detail dialog state
+  const [detailDialogItem, setDetailDialogItem] = useState<{ index: number; entryId: string } | null>(null);
   
   const dateStr = initialDate;
   const selectedDate = parseISO(initialDate);
@@ -336,6 +340,28 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
       });
     }
   }, [updateItem, displayItems, updateSet]);
+
+  // Detail dialog handlers
+  const handleShowDetails = useCallback((entryId: string, itemIndex: number) => {
+    setDetailDialogItem({ index: itemIndex, entryId });
+  }, []);
+
+  const handleDetailSave = useCallback((updates: Record<string, any>) => {
+    if (!detailDialogItem) return;
+    const item = displayItems[detailDialogItem.index];
+    if (!item) return;
+
+    const { regularUpdates, newMetadata } = processExerciseSaveUpdates(updates, item.exercise_metadata ?? null);
+    const allUpdates: Record<string, any> = { ...regularUpdates };
+    if (newMetadata !== (item.exercise_metadata ?? null)) {
+      allUpdates.exercise_metadata = newMetadata;
+    }
+
+    if (Object.keys(allUpdates).length > 0) {
+      updateSet.mutate({ id: item.id, updates: allUpdates });
+    }
+    setDetailDialogItem(null);
+  }, [detailDialogItem, displayItems, updateSet]);
 
   // Auto-save handler for item removal
   const handleItemRemove = useCallback((index: number) => {
@@ -642,6 +668,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
               const value = formatCalorieBurnValue(total);
               return value ? `(${value} cal)` : undefined;
             })() : undefined}
+            onShowDetails={handleShowDetails}
           />
         </>
       )}
@@ -698,6 +725,24 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
         weightUnit={settings.weightUnit}
         rawInput={demoPreviewRawInput}
       />
+
+      {/* Detail Dialog for viewing/editing individual exercise items */}
+      {detailDialogItem && (() => {
+        const item = displayItems[detailDialogItem.index];
+        if (!item) return null;
+        const flatValues = flattenExerciseValues(item);
+        return (
+          <DetailDialog
+            open={true}
+            onOpenChange={() => setDetailDialogItem(null)}
+            title={item.description}
+            fields={buildExerciseDetailFields(item)}
+            values={flatValues}
+            onSave={handleDetailSave}
+            readOnly={isReadOnly}
+          />
+        );
+      })()}
     </div>
   );
 };

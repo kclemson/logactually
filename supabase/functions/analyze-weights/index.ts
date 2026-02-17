@@ -9,7 +9,7 @@ const corsHeaders = {
 };
 
 // Allowlisted exercise_metadata keys with validation
-const METADATA_ALLOWLIST = ['incline_pct', 'effort', 'calories_burned'] as const;
+const METADATA_ALLOWLIST = ['incline_pct', 'effort', 'calories_burned', 'heart_rate', 'cadence_rpm', 'speed_mph'] as const;
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -192,6 +192,8 @@ serve(async (req) => {
           if (val > 0 && isFinite(val)) {
             if (key === 'effort') {
               cleaned[key] = Math.min(10, Math.max(1, Math.round(val)));
+            } else if (key === 'heart_rate') {
+              cleaned[key] = Math.min(250, Math.max(30, Math.round(val)));
             } else {
               cleaned[key] = Math.round(val * 10) / 10;
             }
