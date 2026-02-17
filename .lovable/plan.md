@@ -1,23 +1,32 @@
 
+# Change calorie burn preview to 3 cardio + 1 strength
 
-# Add `dvh` fallback to all tall dialogs
+## Overview
+Update the preview in the "Show estimated calorie burn" dialog to display 3 cardio exercises and 1 strength exercise instead of the current 2+2 split, both for user data and sample fallbacks.
 
-## What this fixes
-The same mobile keyboard issue we fixed in CalorieTargetDialog exists in several other dialogs. When a user taps an input, the keyboard shrinks the visible area but `vh` doesn't adjust, so content can get hidden behind the keyboard.
+## Changes (single file: `src/components/CalorieBurnDialog.tsx`)
 
-## Changes
+### 1. Add a 3rd sample cardio fallback
+Add a swimming entry to `SAMPLE_CARDIO`:
+```ts
+{ exercise_key: 'swimming', sets: 0, reps: 0, weight_lbs: 0, duration_minutes: 20 }
+```
 
-Add `max-h-[Xdvh]` immediately after the existing `max-h-[Xvh]` in each dialog's `DialogContent` className. The `dvh` value overrides `vh` in modern browsers; older browsers fall back gracefully.
+### 2. Trim `SAMPLE_STRENGTH` to 1 entry
+Keep only bench press, remove squat (we only need one fallback now).
 
-**Files to edit (8 total):**
+### 3. Pass `p_limit_per_group: 3` to the RPC
+This fetches up to 3 cardio from the user's history. The extra strength rows returned (up to 3) are harmless -- the client slices to 1.
 
-1. `src/components/CalorieBurnDialog.tsx` -- `max-h-[85vh]` to `max-h-[85vh] max-h-[85dvh]`
-2. `src/components/AskTrendsAIDialog.tsx` -- `max-h-[85vh]` to `max-h-[85vh] max-h-[85dvh]`
-3. `src/components/SaveMealDialog.tsx` -- `max-h-[90vh]` to `max-h-[90vh] max-h-[90dvh]`
-4. `src/components/SaveRoutineDialog.tsx` -- `max-h-[90vh]` to `max-h-[90vh] max-h-[90dvh]`
-5. `src/components/CreateSavedDialog.tsx` -- `max-h-[90vh]` to `max-h-[90vh] max-h-[90dvh]`
-6. `src/components/DemoPreviewDialog.tsx` -- `max-h-[80vh]` to `max-h-[80vh] max-h-[80dvh]`
-7. `src/components/AppleHealthImport.tsx` -- `max-h-[80vh]` to `max-h-[80vh] max-h-[80dvh]`
-8. `src/components/PopulateDemoDataDialog.tsx` -- `max-h-[85vh]` to `max-h-[85vh] max-h-[85dvh]`
+### 4. Update the assembly logic
+Change the fill-loop caps:
+- Cardio: fill to 3 (was 2)
+- Strength: fill to 1 (was 2)
 
-Each is a single class addition on one line per file. No logic changes.
+Also slice user arrays so we never exceed the target count:
+```ts
+const userCardio = (userExercises || []).filter(e => e.is_cardio).slice(0, 3);
+const userStrength = (userExercises || []).filter(e => !e.is_cardio).slice(0, 1);
+```
+
+No database migration needed -- the RPC already accepts `p_limit_per_group`.
