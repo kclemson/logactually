@@ -1,0 +1,1 @@
+ALTER TABLE weight_sets ADD COLUMN group_name text;

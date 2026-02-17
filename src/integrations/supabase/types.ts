@@ -385,6 +385,7 @@ export type Database = {
           exercise_key: string
           exercise_metadata: Json | null
           exercise_subtype: string | null
+          group_name: string | null
           id: string
           logged_date: string
           raw_input: string | null
@@ -404,6 +405,7 @@ export type Database = {
           exercise_key: string
           exercise_metadata?: Json | null
           exercise_subtype?: string | null
+          group_name?: string | null
           id?: string
           logged_date?: string
           raw_input?: string | null
@@ -423,6 +425,7 @@ export type Database = {
           exercise_key?: string
           exercise_metadata?: Json | null
           exercise_subtype?: string | null
+          group_name?: string | null
           id?: string
           logged_date?: string
           raw_input?: string | null

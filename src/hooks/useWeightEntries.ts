@@ -42,6 +42,7 @@ export function useWeightEntries(date: string) {
         exercise_metadata: row.exercise_metadata ?? null,
         rawInput: row.raw_input,
         sourceRoutineId: row.source_routine_id,
+        groupName: row.group_name,
         createdAt: row.created_at,
       }));
     },
@@ -55,6 +56,7 @@ export function useWeightEntries(date: string) {
       logged_date: string;
       raw_input: string | null;
       source_routine_id?: string | null;
+      group_name?: string | null;
       weight_sets: Omit<WeightSet, 'id' | 'uid' | 'editedFields'>[];
     }) => {
       if (!user) throw new Error('Not authenticated');
@@ -73,9 +75,10 @@ export function useWeightEntries(date: string) {
         duration_minutes: set.duration_minutes ?? null,
         distance_miles: set.distance_miles ?? null,
         exercise_metadata: set.exercise_metadata ?? null,
-        // Only store raw_input and source_routine_id on the first set
+        // Only store raw_input, source_routine_id, group_name on the first set
         raw_input: index === 0 ? params.raw_input : null,
         source_routine_id: index === 0 ? (params.source_routine_id ?? null) : null,
+        group_name: index === 0 ? (params.group_name ?? null) : null,
       }));
 
       const { error } = await supabase.from('weight_sets').insert(rows);
@@ -150,6 +153,33 @@ export function useWeightEntries(date: string) {
     },
   });
 
+  // Update group_name on the first weight_set row for an entry
+  const updateGroupName = useMutation({
+    mutationFn: async (params: { entryId: string; groupName: string }) => {
+      // Find the first row for this entry (by created_at order)
+      const { data: rows, error: fetchError } = await supabase
+        .from('weight_sets')
+        .select('id')
+        .eq('entry_id', params.entryId)
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true })
+        .limit(1);
+
+      if (fetchError) throw fetchError;
+      if (!rows || rows.length === 0) throw new Error('No rows found for entry');
+
+      const { error } = await supabase
+        .from('weight_sets')
+        .update({ group_name: params.groupName } as any)
+        .eq('id', rows[0].id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['weight-sets', date] });
+    },
+  });
+
   return {
     weightSets: query.data || [],
     isLoading: query.isLoading,
@@ -160,5 +190,6 @@ export function useWeightEntries(date: string) {
     deleteSet,
     deleteEntry,
     deleteAllByDate,
+    updateGroupName,
   };
 }

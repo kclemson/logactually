@@ -23,6 +23,7 @@ export interface WeightSet {
   exercise_metadata?: Record<string, number> | null; // Optional metadata (incline, effort, calories_burned)
   rawInput?: string | null; // Only present on first set of entry
   sourceRoutineId?: string | null; // Links to saved_routines.id when entry originated from a routine
+  groupName?: string | null; // Editable group name, stored on first set of entry
   createdAt?: string;     // Database created_at timestamp (optional for non-DB objects)
   editedFields?: WeightEditableField[];
 }
@@ -59,6 +60,7 @@ export interface WeightSetRow {
   exercise_metadata: Record<string, number> | null;
   raw_input: string | null;
   source_routine_id: string | null;
+  group_name: string | null;
   created_at: string;
   updated_at: string;
 }
