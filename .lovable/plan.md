@@ -1,63 +1,45 @@
 
+# Fix DCT dialog wording + tooltip formula mismatch
 
-# Bug Fix: exercise_metadata lost during trend aggregation
+## Issue 1: DCT dialog wording
 
-## The Problem
-
-When multiple entries of the same exercise are logged on the same day (e.g., 3 dog walks), `useWeightTrends` merges them into a single data point. It correctly sums `duration_minutes` and `distance_miles`, but **silently discards `exercise_metadata` from all but the first entry**.
-
-Your Feb 14 data:
-- Dog walk 1: 14:35, calories_burned = 57
-- Dog walk 2: 23:05, calories_burned = 88
-- Dog walk 3: 28:57, calories_burned = 109
-
-After aggregation, the merged point has `calories_burned = 57` instead of `254`. This flows through to the DCT examples and the calorie burn chart on Trends, underreporting burn by ~197 cal on that day alone.
-
-The WeightLog page is correct because it passes each entry individually without aggregation.
-
-## The Fix
-
-**File: `src/hooks/useWeightTrends.ts`**
-
-In the aggregation branch (the `if (existing)` block, ~line 92), add logic to merge `exercise_metadata` from the incoming row into the existing point:
-
-- If the incoming row has `calories_burned`, add it to the existing point's `calories_burned` (summing the overrides)
-- Similarly sum `effort` as a weighted average or take the max -- but `calories_burned` is the critical one since it's an additive quantity
-- For `effort` and `incline_pct`, these are per-session intensities, not additive. Keep the existing value (first-wins) since they describe the overall session character. Only `calories_burned` needs summing.
-
-Concretely, after line 97 (`existing.distance_miles = ...`), add:
-
-```typescript
-// Merge exercise_metadata: sum calories_burned across aggregated entries
-if (row.exercise_metadata && typeof row.exercise_metadata === 'object') {
-  const incoming = row.exercise_metadata as Record<string, number>;
-  if (incoming.calories_burned != null) {
-    if (!existing.exercise_metadata) {
-      existing.exercise_metadata = { calories_burned: incoming.calories_burned };
-    } else {
-      existing.exercise_metadata = {
-        ...existing.exercise_metadata,
-        calories_burned: (existing.exercise_metadata.calories_burned ?? 0) + incoming.calories_burned,
-      };
-    }
-  }
-}
+In `CalorieTargetDialog.tsx` line 344, change:
+```
++ logged exercise (varies daily)
+```
+to:
+```
++ calories burned from exercise logs (varies daily)
 ```
 
-This ensures that when the aggregated point reaches `estimateCalorieBurn`, it sees the correct summed `calories_burned` override and returns the right exact value.
+## Issue 2: Tooltip shows confusing number
 
-## What this fixes
+The rollup tooltip currently says "Target: 1,147 cal/day + exercise (from TDEE)". That 1,147 is the pre-computed base (TDEE minus deficit), which doesn't match anything the user sees in the DCT dialog. The dialog shows the formula as "1,497 + exercise - 350".
 
-- DCT dialog examples will show the correct burn for days with multiple entries of the same exercise
-- Calorie burn chart on Trends will show correct values
-- Rolling calorie target rollup (7-day/30-day averages) will use correct burn data
-- Calendar day tooltips showing intake vs target will be accurate
+The fix: for body_stats/logged mode, show the formula components separately in the tooltip so it matches the dialog:
 
-## Files changed
+```
+Target: 1,497 + exercise - 350 cal/day
+```
 
-- `src/hooks/useWeightTrends.ts` -- add metadata merging in the aggregation branch (~5 lines)
+Or when deficit is 0:
+```
+Target: 1,497 + exercise cal/day
+```
 
-## No other files need changes
+For body_stats with a fixed activity level (non-logged), the current approach is fine since there's no exercise component -- just show the resolved number like "Target: 1,650 cal/day (from TDEE)".
 
-The downstream consumers (`useDailyCalorieBurn`, `CalorieTargetDialog`, `CalorieTargetRollup`, Trends charts) all read from `useWeightTrends` and will automatically get the corrected data.
+## Technical Details
 
+### File: `src/components/CalorieTargetDialog.tsx`
+- Line 344: change "logged exercise" to "calories burned from exercise logs"
+
+### File: `src/lib/calorie-target.ts`
+- Update `describeCalorieTarget` for the body_stats/logged branch:
+  - Compute BMR and sedentary TDEE separately (same math as `getEffectiveDailyTarget` but without subtracting deficit)
+  - Format as `"Target: {tdee} + exercise - {deficit} cal/day"` when deficit > 0
+  - Format as `"Target: {tdee} + exercise cal/day"` when deficit is 0
+  - This matches exactly what the DCT dialog shows
+
+### File: `src/lib/calorie-target.test.ts`
+- Update the existing test for body_stats/logged to match the new format
