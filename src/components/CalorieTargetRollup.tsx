@@ -38,26 +38,26 @@ export function CalorieTargetRollup({ settings, burnByDate, usesBurns }: Calorie
       <div className="grid grid-cols-[auto_1fr] gap-x-2 pl-2 opacity-75 tabular-nums">
         {isExerciseAdjusted ? (
           <>
-            <div className="text-right">{components!.baseTarget!.toLocaleString()}</div>
+            <div className="text-right text-[9px]">{components!.baseTarget!.toLocaleString()}</div>
             <div className="text-[9px] italic opacity-60">(daily calorie target)</div>
-            <div className="text-right">+ {avgBurn.toLocaleString()}</div>
+            <div className="text-right text-[9px]">+ {avgBurn.toLocaleString()}</div>
             <div className="text-[9px] italic opacity-60">(avg calories burned {periodLabel})</div>
           </>
         ) : (
           <>
-            <div className="text-right">{components!.tdee.toLocaleString()}</div>
+            <div className="text-right text-[9px]">{components!.tdee.toLocaleString()}</div>
             <div className="text-[9px] italic opacity-60">(total daily energy expenditure)</div>
-            <div className="text-right">+ {avgBurn.toLocaleString()}</div>
+            <div className="text-right text-[9px]">+ {avgBurn.toLocaleString()}</div>
             <div className="text-[9px] italic opacity-60">(avg calories burned {periodLabel})</div>
             {components!.deficit > 0 && (
               <>
-                <div className="text-right">- {components!.deficit.toLocaleString()}</div>
+                <div className="text-right text-[9px]">- {components!.deficit.toLocaleString()}</div>
                 <div className="text-[9px] italic opacity-60">(deficit configured in settings)</div>
               </>
             )}
           </>
         )}
-        <div className="text-right border-t border-muted-foreground/30 pt-0.5">= {Math.round(total).toLocaleString()}</div>
+        <div className="text-right text-[9px] border-t border-muted-foreground/30 pt-0.5">= {Math.round(total).toLocaleString()}</div>
         <div className="text-[9px] italic opacity-60 border-t border-muted-foreground/30 pt-0.5">avg target {periodLabel}</div>
       </div>
     );
