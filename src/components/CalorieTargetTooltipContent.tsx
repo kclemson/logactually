@@ -23,11 +23,28 @@ export function CalorieTargetTooltipContent({
 
   return (
     <div className="space-y-1">
-      {/* Daily dot legend */}
-      <div className="space-y-0.5">
-        <div><span className="text-green-400">●</span> within 2.5% of target</div>
-        <div><span className="text-amber-400">●</span> up to 10% over</div>
-        <div><span className="text-rose-400">●</span> more than 10% over</div>
+      {/* Dot legend */}
+      <div className="text-[10px] tabular-nums space-y-px">
+        <div className="grid grid-cols-[auto_1fr_1fr] gap-x-2">
+          <div />
+          <div className="opacity-60">daily</div>
+          {weekRollup && weekLabel && <div className="opacity-60">weekly</div>}
+        </div>
+        <div className="grid grid-cols-[auto_1fr_1fr] gap-x-2">
+          <span className="text-green-400">●</span>
+          <div>≤2.5% over</div>
+          {weekRollup && weekLabel && <div>at/under target</div>}
+        </div>
+        <div className="grid grid-cols-[auto_1fr_1fr] gap-x-2">
+          <span className="text-amber-400">●</span>
+          <div>≤10% over</div>
+          {weekRollup && weekLabel && <div>≤5% over</div>}
+        </div>
+        <div className="grid grid-cols-[auto_1fr_1fr] gap-x-2">
+          <span className="text-rose-400">●</span>
+          <div>&gt;10% over</div>
+          {weekRollup && weekLabel && <div>&gt;5% over</div>}
+        </div>
       </div>
 
       {/* Day header with intake and dot */}
