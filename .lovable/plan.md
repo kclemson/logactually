@@ -1,33 +1,50 @@
 
-# Revert equation number size and fix daily tooltip result row
+# Style static-mode tooltips to match equation modes
 
-Two changes to make the equation tooltips consistent across both the rollup and daily views.
+The static calorie target mode tooltips currently render plain text strings, while the other two modes get a structured grid with numbers at default size and labels in `text-[9px] italic opacity-60`. This plan brings visual consistency.
 
-## 1. Revert rollup equation number font size
+## What changes
 
-In `CalorieTargetRollup.tsx`, remove `text-[9px]` from all six number divs (lines 41, 43, 48, 50, 54, 60), restoring them to the default tooltip font size. The principle: numbers are primary data (default size, full opacity), labels are secondary annotations (`text-[9px]`, italic, 60% opacity).
+### 1. Daily tooltip (History.tsx) -- the fallback block at lines 287-302
 
-## 2. Fix the daily tooltip result row in History.tsx
+Replace the plain `1,583 / 1,500 cal target` text with a styled layout matching the equation modes:
+- Use the same `grid grid-cols-[auto_1fr] gap-x-2 pl-2 opacity-75 tabular-nums` container
+- One row: number on the left (e.g., `1,500`), label on the right in `text-[9px] italic opacity-60` (`(daily calorie target)`)
+- Keep the day label and dot legend above it (same as now)
 
-Currently (line 281-282), the bottom result row is a standalone `<div>` outside the grid:
+### 2. Rollup tooltip (CalorieTargetRollup.tsx) -- the `targetDescription` fallback at line 109
 
+Replace the plain `Target: 1,500 cal/day` string with a styled single-row grid matching `renderEquationBlock`:
+- Same grid container styling
+- One row: `1,500` on the left, `(daily calorie target)` label on the right in `text-[9px] italic opacity-60`
+
+## Technical details
+
+**File: `src/pages/History.tsx` (lines 287-302)**
+
+Replace the fallback return block. Instead of:
 ```
-<div className="border-t border-primary-foreground/20 pt-1 pl-2 tabular-nums">
-  1,983 adjusted daily calorie target
+<div>
+  {intake} / {target} cal target
 </div>
 ```
 
-This doesn't match the equation rows above it. Change it to sit inside the same two-column grid, using the same pattern as the rollup tooltip:
+Render:
+```
+<div className="grid grid-cols-[auto_1fr] gap-x-2 pl-2 opacity-75 tabular-nums">
+  <div className="text-right">{target.toLocaleString()}</div>
+  <div className="text-[9px] italic opacity-60">(daily calorie target)</div>
+</div>
+```
 
-- Number on the left: `= 1,983`
-- Label on the right: `adjusted daily calorie target` (or `daily calorie target`)
-- Both separated by the top border
-- The label uses `text-[9px] italic opacity-60` like the other labels
-- The number uses default size like the other numbers
+**File: `src/components/CalorieTargetRollup.tsx` (line 109)**
 
-This means moving the result row inside the grid (before the closing `</div>` of the grid on line 280) and removing the separate `<div>` on lines 281-283.
+Replace `targetDescription && <div>{targetDescription}</div>` with a styled single-row grid:
+```
+<div className="grid grid-cols-[auto_1fr] gap-x-2 pl-2 opacity-75 tabular-nums">
+  <div className="text-right">{baseTarget.toLocaleString()}</div>
+  <div className="text-[9px] italic opacity-60">(daily calorie target)</div>
+</div>
+```
 
-## Files to edit
-
-- `src/components/CalorieTargetRollup.tsx` -- revert `text-[9px]` on number divs
-- `src/pages/History.tsx` -- restructure result row into the equation grid
+The `describeCalorieTarget` function can remain for now (used in tests, possibly elsewhere), but the rollup tooltip will no longer call it.
