@@ -154,6 +154,35 @@ export function getRollupDotColor(avgCalories: number, avgTarget: number): strin
 }
 
 // ---------------------------------------------------------------------------
+// Describe active calorie target config (for tooltips)
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns a short human-readable description of the user's calorie target,
+ * or null if the target is not enabled / can't be resolved.
+ */
+export function describeCalorieTarget(settings: UserSettings): string | null {
+  const base = getEffectiveDailyTarget(settings);
+  if (base == null) return null;
+
+  const formatted = base.toLocaleString();
+
+  if (settings.calorieTargetMode === 'static') {
+    return `Target: ${formatted} cal/day`;
+  }
+
+  if (settings.calorieTargetMode === 'exercise_adjusted') {
+    return `Target: ${formatted} cal/day + exercise`;
+  }
+
+  // body_stats
+  if (settings.activityLevel === 'logged') {
+    return `Target: ${formatted} cal/day + exercise (from TDEE)`;
+  }
+  return `Target: ${formatted} cal/day (from TDEE)`;
+}
+
+// ---------------------------------------------------------------------------
 // Rolling calorie rollup computation
 // ---------------------------------------------------------------------------
 
