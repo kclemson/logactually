@@ -418,7 +418,7 @@ const Trends = () => {
                   const bmr = computeAbsoluteBMR(settings);
                   const sedentaryTDEE = bmr != null ? Math.round(bmr * ACTIVITY_MULTIPLIERS.sedentary) : null;
                     const subtitle = sedentaryTDEE != null
-                      ? `Daily expenditure (excl. exercise): ~${sedentaryTDEE.toLocaleString()}`
+                      ? `TDEE (excluding exercise): ~${sedentaryTDEE.toLocaleString()}`
                       : "Set bio in Settings for precision";
                   return (
                     <CalorieBurnChart
