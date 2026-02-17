@@ -736,7 +736,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
               }
               return base;
             })()}
-            showCalorieTargetDot={!isTodaySelected}
+            showCalorieTargetDot={true}
             dailyBurn={dailyBurnForSelectedDay}
             calorieTargetComponents={getCalorieTargetComponents(settings)}
             onDeleteEntry={(entryId) => {
