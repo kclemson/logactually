@@ -54,8 +54,8 @@ interface FoodItemsTableProps {
   entryGroupNames?: Map<string, string>;
   /** Map of entryId to cumulative portion multiplier for group scaling */
   entryPortionMultipliers?: Map<string, number>;
-  /** Callback to persist updated cumulative portion multiplier */
-  onUpdateEntryPortionMultiplier?: (entryId: string, newMultiplier: number) => void;
+  /** Callback to atomically scale all items in a group and persist multiplier */
+  onScaleGroupPortion?: (entryId: string, multiplier: number) => void;
   /** Set of entry IDs that originated from a saved meal (even if meal was deleted) */
   entrySourceMealIds?: Set<string>;
   /** When true, show inline labels after numeric values (e.g., "250 cal") */
@@ -101,7 +101,7 @@ export function FoodItemsTable({
   entryMealNames,
   entryGroupNames,
   entryPortionMultipliers,
-  onUpdateEntryPortionMultiplier,
+  onScaleGroupPortion,
   entrySourceMealIds,
   showInlineLabels = false,
   showMacroPercentages = true,
@@ -461,20 +461,15 @@ export function FoodItemsTable({
                       ><Plus className="h-3.5 w-3.5" /></button>
                       <button type="button"
                         onClick={() => {
-                          if (groupPortionMultiplier !== 1.0) {
-                            if (isReadOnly) {
-                              triggerOverlay();
-                            } else {
-                              for (let i = boundary.startIndex; i <= boundary.endIndex; i++) {
-                                const gi = items[i];
-                                onUpdateItemBatch?.(i, scaleItemByMultiplier(gi, groupPortionMultiplier));
-                              }
-                              const existing = entryPortionMultipliers?.get(boundary.entryId) ?? 1.0;
-                              onUpdateEntryPortionMultiplier?.(boundary.entryId, existing * groupPortionMultiplier);
-                            }
-                          }
-                          setGroupScalingEntryId(null);
-                          setGroupPortionMultiplier(1.0);
+                           if (groupPortionMultiplier !== 1.0) {
+                             if (isReadOnly) {
+                               triggerOverlay();
+                             } else {
+                               onScaleGroupPortion?.(boundary.entryId, groupPortionMultiplier);
+                             }
+                           }
+                           setGroupScalingEntryId(null);
+                           setGroupPortionMultiplier(1.0);
                         }}
                         className="text-xs font-medium text-primary hover:underline"
                       >Done</button>
@@ -602,16 +597,9 @@ export function FoodItemsTable({
                           if (groupPortionMultiplier !== 1.0) {
                             if (isReadOnly) {
                               triggerOverlay();
-                            } else {
-                              // Scale all items in the group
-                              for (let i = boundary.startIndex; i <= boundary.endIndex; i++) {
-                                const gi = items[i];
-                                onUpdateItemBatch?.(i, scaleItemByMultiplier(gi, groupPortionMultiplier));
-                              }
-                              // Persist cumulative multiplier
-                              const existing = entryPortionMultipliers?.get(boundary.entryId) ?? 1.0;
-                              onUpdateEntryPortionMultiplier?.(boundary.entryId, existing * groupPortionMultiplier);
-                            }
+                             } else {
+                               onScaleGroupPortion?.(boundary.entryId, groupPortionMultiplier);
+                             }
                           }
                           setGroupScalingEntryId(null);
                           setGroupPortionMultiplier(1.0);
