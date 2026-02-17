@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { getTargetDotColor, getEffectiveDailyTarget, computeTDEE, suggestActivityLevel, getExerciseAdjustedTarget, usesActualExerciseBurns, ACTIVITY_MULTIPLIERS } from './calorie-target';
+import { getTargetDotColor, getEffectiveDailyTarget, computeTDEE, suggestActivityLevel, getExerciseAdjustedTarget, usesActualExerciseBurns, ACTIVITY_MULTIPLIERS, getRollupDotColor, computeCalorieRollup } from './calorie-target';
+import { format, subDays } from 'date-fns';
 import type { UserSettings } from '@/hooks/useUserSettings';
 
 // ---------------------------------------------------------------------------
@@ -185,5 +186,115 @@ describe('usesActualExerciseBurns', () => {
 
   it('returns false for static mode', () => {
     expect(usesActualExerciseBurns(baseSettings)).toBe(false);
+});
+
+// ---------------------------------------------------------------------------
+// getRollupDotColor (stricter thresholds)
+// ---------------------------------------------------------------------------
+
+describe('getRollupDotColor', () => {
+  it('returns green when under target', () => {
+    expect(getRollupDotColor(1800, 2000)).toContain('green');
   });
+  it('returns green when exactly at target', () => {
+    expect(getRollupDotColor(2000, 2000)).toContain('green');
+  });
+  it('returns amber when 3% over', () => {
+    expect(getRollupDotColor(2060, 2000)).toContain('amber');
+  });
+  it('returns rose when 6% over', () => {
+    expect(getRollupDotColor(2120, 2000)).toContain('rose');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// computeCalorieRollup
+// ---------------------------------------------------------------------------
+
+describe('computeCalorieRollup', () => {
+  const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+  const twoDaysAgo = format(subDays(new Date(), 2), 'yyyy-MM-dd');
+  const threeDaysAgo = format(subDays(new Date(), 3), 'yyyy-MM-dd');
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const tenDaysAgo = format(subDays(new Date(), 10), 'yyyy-MM-dd');
+  const emptyBurns = new Map<string, number>();
+
+  it('returns null with fewer than 2 days of data', () => {
+    const result = computeCalorieRollup(
+      [{ date: yesterday, totalCalories: 1800 }],
+      7, 2000, false, emptyBurns,
+    );
+    expect(result).toBeNull();
+  });
+
+  it('returns null with 0 days of data', () => {
+    expect(computeCalorieRollup([], 7, 2000, false, emptyBurns)).toBeNull();
+  });
+
+  it('returns green when average is under target', () => {
+    const result = computeCalorieRollup(
+      [
+        { date: yesterday, totalCalories: 1800 },
+        { date: twoDaysAgo, totalCalories: 1900 },
+      ],
+      7, 2000, false, emptyBurns,
+    );
+    expect(result).not.toBeNull();
+    expect(result!.avgIntake).toBe(1850);
+    expect(result!.dotColor).toContain('green');
+    expect(result!.dayCount).toBe(2);
+  });
+
+  it('returns rose when average is well over target', () => {
+    const result = computeCalorieRollup(
+      [
+        { date: yesterday, totalCalories: 2500 },
+        { date: twoDaysAgo, totalCalories: 2400 },
+      ],
+      7, 2000, false, emptyBurns,
+    );
+    expect(result!.dotColor).toContain('rose');
+  });
+
+  it('excludes today from the window', () => {
+    const result = computeCalorieRollup(
+      [
+        { date: today, totalCalories: 5000 },
+        { date: yesterday, totalCalories: 1800 },
+        { date: twoDaysAgo, totalCalories: 1900 },
+      ],
+      7, 2000, false, emptyBurns,
+    );
+    expect(result!.avgIntake).toBe(1850);
+  });
+
+  it('handles exercise-adjusted targets', () => {
+    const burns = new Map<string, number>();
+    burns.set(yesterday, 300);
+    burns.set(twoDaysAgo, 200);
+    // base 1800 + burns → targets are 2100 and 2000, avg target = 2050
+    // intake avg = 2000, under target → green
+    const result = computeCalorieRollup(
+      [
+        { date: yesterday, totalCalories: 2000 },
+        { date: twoDaysAgo, totalCalories: 2000 },
+      ],
+      7, 1800, true, burns,
+    );
+    expect(result!.dotColor).toContain('green');
+  });
+
+  it('7-day window excludes older data', () => {
+    const result = computeCalorieRollup(
+      [
+        { date: yesterday, totalCalories: 1800 },
+        { date: twoDaysAgo, totalCalories: 1900 },
+        { date: tenDaysAgo, totalCalories: 5000 },
+      ],
+      7, 2000, false, emptyBurns,
+    );
+    expect(result!.avgIntake).toBe(1850);
+    expect(result!.dayCount).toBe(2);
+  });
+});
 });
