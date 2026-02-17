@@ -61,7 +61,7 @@ export function SavedItemRow({
         <div className="flex items-center gap-1 flex-1 min-w-0">
           <div
             className={cn(
-              'text-sm truncate cursor-text hover:bg-muted/50 focus-within:bg-focus-bg focus-within:ring-2 focus-within:ring-focus-ring rounded px-1 py-0.5 transition-colors',
+              'flex-1 min-w-0 text-sm cursor-text hover:bg-muted/50 focus-within:bg-focus-bg focus-within:ring-2 focus-within:ring-focus-ring rounded px-1 py-0.5 transition-colors',
               flashError && 'ring-2 ring-destructive bg-destructive/10'
             )}
           >
