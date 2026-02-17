@@ -192,10 +192,10 @@ export const ExerciseChart = ({ exercise, unit, onBarClick }: ExerciseChartProps
     : undefined;
 
   return (
-    <Card className="border-0 shadow-none relative">
+    <Card className={cn("border-0 shadow-none relative", isTouchDevice && activeBarIndex !== null && "z-50")}>
       {isTouchDevice && activeBarIndex !== null && (
         <div 
-          className="fixed inset-0 z-10" 
+          className="fixed inset-0 z-30" 
           onClick={() => setActiveBarIndex(null)}
         />
       )}

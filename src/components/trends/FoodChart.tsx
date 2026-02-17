@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, LabelList, ReferenceLine } from "recharts";
 import { Card, CardContent, CardHeader, ChartTitle, ChartSubtitle } from "@/components/ui/card";
 import { useHasHover } from "@/hooks/use-has-hover";
+import { cn } from "@/lib/utils";
 
 // Density-based spacing helpers
 const getFoodLabelOffsetPx = (dataLength: number): number =>
@@ -117,10 +118,10 @@ export const FoodChart = ({
   };
 
   return (
-    <Card className="border-0 shadow-none relative">
+    <Card className={cn("border-0 shadow-none relative", isTouchDevice && activeBarIndex !== null && "z-50")}>
       {isTouchDevice && activeBarIndex !== null && (
         <div 
-          className="fixed inset-0 z-10" 
+          className="fixed inset-0 z-30" 
           onClick={() => setActiveBarIndex(null)}
         />
       )}
@@ -261,10 +262,10 @@ export const StackedMacroChart = ({
   };
 
   return (
-    <Card className="border-0 shadow-none relative">
+    <Card className={cn("border-0 shadow-none relative", isTouchDevice && activeBarIndex !== null && "z-50")}>
       {isTouchDevice && activeBarIndex !== null && (
         <div 
-          className="fixed inset-0 z-10" 
+          className="fixed inset-0 z-30" 
           onClick={() => setActiveBarIndex(null)}
         />
       )}
@@ -417,10 +418,10 @@ export const VolumeChart = ({
   };
 
   return (
-    <Card className="border-0 shadow-none relative">
+    <Card className={cn("border-0 shadow-none relative", isTouchDevice && activeBarIndex !== null && "z-50")}>
       {isTouchDevice && activeBarIndex !== null && (
         <div 
-          className="fixed inset-0 z-10" 
+          className="fixed inset-0 z-30" 
           onClick={() => setActiveBarIndex(null)}
         />
       )}
