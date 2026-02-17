@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { EntryExpandedPanel } from '@/components/EntryExpandedPanel';
+import { DescriptionCell } from '@/components/DescriptionCell';
 import { FoodItem, DailyTotals, calculateTotals, scaleMacrosByCalories, ScaledMacros } from '@/types/food';
 import { stepMultiplier, scaleItemByMultiplier, scalePortion } from '@/lib/portion-scaling';
 import { Minus, Plus } from 'lucide-react';
@@ -111,12 +112,6 @@ export function FoodItemsTable({
         carbs: scaled.carbs,
         fat: scaled.fat,
       });
-    },
-    onSaveDescription: (index, newDescription) => {
-      onUpdateItem?.(index, 'description', newDescription);
-      if (items[index].portion) {
-        onUpdateItem?.(index, 'portion', '');
-      }
     },
     isReadOnly,
     triggerOverlay,
@@ -309,34 +304,29 @@ export function FoodItemsTable({
                   "overflow-hidden max-h-[3rem]",
                   "focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg"
                 )}>
-                  <span
-                    contentEditable
-                    suppressContentEditableWarning
-                    spellCheck={false}
-                    title={getItemTooltip(item)}
-                    ref={(el) => {
-                      // Only sync content when element exists and is NOT being edited
-                      if (el && el.textContent !== item.description && document.activeElement !== el) {
-                        el.textContent = item.description;
-                      }
+                  <DescriptionCell
+                    value={item.description}
+                    onSave={(desc) => {
+                      onUpdateItem?.(index, 'description', desc);
+                      if (item.portion) onUpdateItem?.(index, 'portion', '');
                     }}
-                    {...inlineEdit.getDescriptionEditProps(index, item.description)}
-                    className="border-0 bg-transparent focus:outline-none cursor-text hover:bg-muted/50"
-                  />
-                  {item.portion && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPortionScalingIndex(portionScalingIndex === index ? null : index);
-                        setPortionMultiplier(1.0);
-                      }}
-                      className="ml-1 text-xs text-muted-foreground whitespace-nowrap cursor-pointer hover:text-foreground transition-colors"
-                    >({item.portion})</button>
-                  )}
-                  {hasAnyEditedFields(item) && (
-                    <span className="text-focus-ring font-bold whitespace-nowrap" title={formatEditedFields(item) || 'Edited'}> *</span>
-                  )}
+                    title={getItemTooltip(item)}
+                  >
+                    {item.portion && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPortionScalingIndex(portionScalingIndex === index ? null : index);
+                          setPortionMultiplier(1.0);
+                        }}
+                        className="ml-1 text-xs text-muted-foreground whitespace-nowrap cursor-pointer hover:text-foreground transition-colors"
+                      >({item.portion})</button>
+                    )}
+                    {hasAnyEditedFields(item) && (
+                      <span className="text-focus-ring font-bold whitespace-nowrap" title={formatEditedFields(item) || 'Edited'}> *</span>
+                    )}
+                  </DescriptionCell>
                 </div>
               </div>
             ) : (

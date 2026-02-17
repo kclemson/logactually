@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { DescriptionCell } from '@/components/DescriptionCell';
 import { WeightSet } from '@/types/weight';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -148,9 +149,6 @@ export function WeightItemsTable({
       } else {
         onUpdateItem?.(index, field, value);
       }
-    },
-    onSaveDescription: (index, newDescription) => {
-      onUpdateItem?.(index, 'description', newDescription);
     },
     isReadOnly,
     triggerOverlay,
@@ -317,22 +315,15 @@ export function WeightItemsTable({
                     "flex-1 min-w-0 rounded pl-1 py-1 line-clamp-2",
                     "focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg"
                   )}>
-                    <span
-                      contentEditable
-                      suppressContentEditableWarning
-                      spellCheck={false}
+                    <DescriptionCell
+                      value={item.description}
+                      onSave={(desc) => onUpdateItem?.(index, 'description', desc)}
                       title={item.description}
-                      ref={(el) => {
-                        if (el && el.textContent !== item.description && document.activeElement !== el) {
-                          el.textContent = item.description;
-                        }
-                      }}
-                      {...inlineEdit.getDescriptionEditProps(index, item.description)}
-                      className="border-0 bg-transparent focus:outline-none cursor-text hover:bg-muted/50"
-                    />
-                    {hasAnyEditedFields(item) && (
-                      <span className="text-focus-ring font-bold" title={formatEditedFields(item) || 'Edited'}> *</span>
-                    )}
+                    >
+                      {hasAnyEditedFields(item) && (
+                        <span className="text-focus-ring font-bold" title={formatEditedFields(item) || 'Edited'}> *</span>
+                      )}
+                    </DescriptionCell>
                   </div>
                 </div>
               ) : (
