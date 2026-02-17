@@ -465,7 +465,7 @@ export function WeightItemsTable({
           const isFromRoutine = currentEntryId ? entrySourceRoutineIds?.has(currentEntryId) : false;
           // When item belongs to a group, the group header handles expand/collapse
           // Also show chevron if entry is already expanded (so user can collapse it)
-          const isExpandable = !belongsToGroup && (hasRawInput || isFromRoutine || !!isCurrentExpanded);
+          const isExpandable = !belongsToGroup;
 
           rows.push(
             <div key={item.uid || index} className="contents">
