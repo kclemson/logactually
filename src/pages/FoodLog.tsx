@@ -200,7 +200,11 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     return map;
   }, [entries]);
 
+  // Optimistic multipliers for instant UI update on group portion scaling
+  const [optimisticMultipliers, setOptimisticMultipliers] = useState<Map<string, number>>(new Map());
+
   // Build map of entryId -> cumulative portion multiplier for group scaling display
+  // Optimistic values take priority over server-derived values
   const entryPortionMultipliers = useMemo(() => {
     const map = new Map<string, number>();
     entries.forEach(entry => {
@@ -208,8 +212,16 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
         map.set(entry.id, entry.group_portion_multiplier);
       }
     });
+    // Merge optimistic overrides (takes priority)
+    optimisticMultipliers.forEach((val, key) => {
+      if (val === 1.0) {
+        map.delete(key);
+      } else {
+        map.set(key, val);
+      }
+    });
     return map;
-  }, [entries]);
+  }, [entries, optimisticMultipliers]);
 
   const handleToggleEntryExpand = (entryId: string) => {
     setExpandedEntryIds(prev => {
@@ -757,7 +769,25 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
             entryGroupNames={entryGroupNames}
             entryPortionMultipliers={entryPortionMultipliers}
             onUpdateEntryPortionMultiplier={(entryId, newMultiplier) => {
-              updateEntry.mutate({ id: entryId, group_portion_multiplier: newMultiplier } as any);
+              // Instant UI update
+              setOptimisticMultipliers(prev => {
+                const next = new Map(prev);
+                next.set(entryId, newMultiplier);
+                return next;
+              });
+              // Persist in background, clear optimistic on settle
+              updateEntry.mutate(
+                { id: entryId, group_portion_multiplier: newMultiplier } as any,
+                {
+                  onSettled: () => {
+                    setOptimisticMultipliers(prev => {
+                      const next = new Map(prev);
+                      next.delete(entryId);
+                      return next;
+                    });
+                  },
+                }
+              );
             }}
             dailyCalorieTarget={(() => {
               const base = getEffectiveDailyTarget(settings);
