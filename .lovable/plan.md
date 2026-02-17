@@ -1,24 +1,37 @@
 
 
-# Fix: Collapsed Group Header Appearing in Wrong Position
+# Fix: Enable Inline Editing of Group Names
 
 ## Problem
-When expanding one group and collapsing another, the collapsed group's header row can appear in the middle of the expanded group's child items. This happens because collapsed group rows are inserted into the `rows` array using `rows.splice(boundary.startIndex, 0, ...)` (line 809), where `boundary.startIndex` is the index in the **items** array. But the `rows` array has different indexing -- items from other collapsed groups are skipped, and expanded groups inject extra header rows, making the splice position incorrect.
+The group header name (e.g., "stuffed turkey dinner with sides") is rendered as a plain `<span>`, so tapping/clicking it does nothing. Users expect to be able to edit it inline, consistent with how individual item descriptions work via `DescriptionCell`.
 
-## Fix
-Render collapsed group headers inline during the main `items.forEach` loop rather than splicing them in afterward. When the loop encounters the first index of a collapsed group boundary, it pushes the collapsed header row directly into `rows` at that point (and the rest of the items in that boundary are already skipped via `collapsedGroupIndices`).
+## Solution
+Replace the plain `<span>` with the existing `DescriptionCell` component in both locations (collapsed header and expanded header), and wire up an `onUpdateGroupName` callback that persists the change via `updateEntry`.
 
 ## Technical Details
 
 ### `src/components/FoodItemsTable.tsx`
 
-**Remove** the post-loop splice block (lines ~795-890) that iterates `groupHeaders` and calls `rows.splice(boundary.startIndex, 0, ...)`.
+1. Add a new prop: `onUpdateGroupName?: (entryId: string, newName: string) => void`
 
-**Add** to the main `items.forEach` loop: at the top, before the existing `if (collapsedGroupIndices.has(index)) return;` check, detect if `index` is the `startIndex` of a collapsed group. If so, render the collapsed header row (the same JSX currently in the splice block), push it to `rows`, and then `return` to skip rendering the individual item.
+2. In both the collapsed group header (around line 362) and the expanded group header (around line 525), replace the plain `<span>` that displays `groupName` with a `DescriptionCell`:
+   - `value={groupName}`
+   - `onSave={(newName) => onUpdateGroupName?.(boundary.entryId, newName)}`
+   - `readOnly={isReadOnly}` / `onReadOnlyAttempt={triggerOverlay}`
+   - Keep the portion scaling button as a `children` prop of `DescriptionCell`
 
-This ensures every row is pushed in the correct visual order during a single pass, regardless of which groups are expanded or collapsed.
+3. The existing `DescriptionCell` handles Enter/Escape/blur commit/revert, empty-string rejection, and contentEditable -- no new components needed.
+
+### `src/pages/FoodLog.tsx`
+
+1. Add an `onUpdateGroupName` handler that calls `updateEntry.mutate({ id: entryId, group_name: newName })`.
+
+2. Add optimistic state (same pattern as `optimisticMultipliers`) so the name updates instantly in the UI while the server save happens in the background. Merge optimistic names into the `entryGroupNames` map.
+
+3. Pass `onUpdateGroupName` to `FoodItemsTable`.
 
 | File | Change |
 |------|--------|
-| `src/components/FoodItemsTable.tsx` | Move collapsed group header rendering from post-loop splice into the main forEach loop, triggered when `index === boundary.startIndex` for a collapsed group |
+| `src/components/FoodItemsTable.tsx` | Add `onUpdateGroupName` prop; replace plain `<span>` with `DescriptionCell` in both collapsed and expanded header locations |
+| `src/pages/FoodLog.tsx` | Add optimistic state + handler for group name updates; pass callback to table |
 
