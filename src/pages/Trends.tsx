@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { AskTrendsAIDialog } from "@/components/AskTrendsAIDialog";
 import { useNavigate } from "react-router-dom";
-import { format, subDays, startOfDay } from "date-fns";
+import { format, subDays, startOfDay, eachDayOfInterval } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, ChartTitle, ChartSubtitle } from "@/components/ui/card";
@@ -168,26 +168,32 @@ const Trends = () => {
 
   // Calorie burn chart data (range bars)
   const calorieBurnChartData = useMemo(() => {
-    if (dailyCalorieBurn.length === 0) return [];
+    const lookup = new Map(dailyCalorieBurn.map(d => [d.date, d]));
+    const fullRange = eachDayOfInterval({
+      start: subDays(startOfDay(new Date()), selectedPeriod - 1),
+      end: startOfDay(new Date()),
+    });
 
-    const dataLength = dailyCalorieBurn.length;
+    const dataLength = fullRange.length;
     const labelInterval = getLabelInterval(dataLength);
 
-    return dailyCalorieBurn.map((d, index) => {
+    return fullRange.map((day, index) => {
+      const dateStr = format(day, "yyyy-MM-dd");
+      const d = lookup.get(dateStr);
       const distanceFromEnd = dataLength - 1 - index;
       return {
-        rawDate: d.date,
-        date: format(new Date(`${d.date}T12:00:00`), "MMM d"),
-        low: d.low,
-        high: d.high,
-        midpoint: Math.round((d.low + d.high) / 2),
+        rawDate: dateStr,
+        date: format(day, "MMM d"),
+        low: d?.low ?? 0,
+        high: d?.high ?? 0,
+        midpoint: d ? Math.round((d.low + d.high) / 2) : 0,
         showLabel: distanceFromEnd % labelInterval === 0,
-        exerciseCount: d.exerciseCount,
-        cardioCount: d.cardioCount,
-        strengthCount: d.strengthCount,
+        exerciseCount: d?.exerciseCount ?? 0,
+        cardioCount: d?.cardioCount ?? 0,
+        strengthCount: d?.strengthCount ?? 0,
       };
     });
-  }, [dailyCalorieBurn]);
+  }, [dailyCalorieBurn, selectedPeriod]);
 
   // Visible exercises (load more pattern)
   const visibleExercises = weightExercises.slice(0, visibleExerciseCount);
@@ -422,7 +428,7 @@ const Trends = () => {
                       : "Set bio in Settings for precision";
                   return (
                     <CalorieBurnChart
-                      title="Estimated Daily Calorie Burn"
+                      title="Estimated Exercise Calorie Burn"
                       subtitle={subtitle}
                       chartData={calorieBurnChartData}
                       color={CHART_COLORS.calorieBurn}
