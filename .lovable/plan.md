@@ -1,26 +1,42 @@
 
 
-# Remove question-mark cursor from Food Log calorie total tooltip
+# Fix tooltip flicker on mobile tap for CalorieTargetRollup
 
 ## Problem
 
-The `cursor-help` class on the calorie total in the Food Log's Total row shows a question-mark cursor on hover, which feels inconsistent with other tooltips in the app (e.g., the Calendar page tooltips use default/pointer cursors).
+On touch devices, tapping the rollup row causes the tooltip to flash and disappear. Two competing mechanisms fight:
 
-## Change
+1. Radix Tooltip calls `onOpenChange(true)` from its internal pointer/focus handling
+2. The `onClick` handler calls `setTooltipOpen(o => !o)`, which sees it as already `true` and flips it back to `false`
 
-**File: `src/components/FoodItemsTable.tsx` (line ~199)**
+## Fix
 
-Remove `cursor-help` from the calorie content span. The tooltip will still appear on hover -- only the cursor style changes back to the default.
+**File: `src/components/CalorieTargetRollup.tsx`**
 
-Before:
+On touch devices (when `hasHover` is false), stop passing `onOpenChange` to Radix entirely. Only control the tooltip via the explicit `onClick` toggle. This prevents Radix from setting the state before the click handler runs.
+
+Change:
 ```tsx
-<span className={cn("px-1 text-center inline-flex items-center justify-center", showDot && "cursor-help", ...)}>
+<Tooltip
+  open={hasHover ? undefined : tooltipOpen}
+  onOpenChange={hasHover ? undefined : setTooltipOpen}
+>
 ```
 
-After:
+To:
 ```tsx
-<span className={cn("px-1 text-center inline-flex items-center justify-center", compact ? "text-xs" : "text-heading")}>
+<Tooltip
+  open={hasHover ? undefined : tooltipOpen}
+  onOpenChange={hasHover ? undefined : undefined}
+>
 ```
 
-No other files affected. The `cursor-help` in `WeightItemsTable.tsx` is on a different element (a small italic helper label) and is unrelated.
+Which simplifies to just removing the `onOpenChange` prop for touch:
+```tsx
+<Tooltip
+  open={hasHover ? undefined : tooltipOpen}
+>
+```
+
+The `onClick` handler already manages toggling correctly on its own. Without `onOpenChange`, Radix will not interfere with the controlled state on touch devices. On desktop (`hasHover` true), both props are `undefined`, letting Radix handle hover natively as before.
 
