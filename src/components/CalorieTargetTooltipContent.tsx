@@ -32,7 +32,7 @@ export function CalorieTargetTooltipContent({
 
       {/* Day header with intake and dot */}
       {label && (
-        <div className="font-medium">
+        <div className="opacity-75">
           {label}: <span className="text-blue-400">{intake.toLocaleString()}</span> cal <span className={dotColor}>●</span>
         </div>
       )}
@@ -51,7 +51,7 @@ export function CalorieTargetTooltipContent({
       {weekRollup && weekLabel && (
         <>
           <div className="border-t border-muted-foreground/30 my-1" />
-          <div className="font-medium">
+          <div className="opacity-75">
             {weekLabel}: <span className="text-blue-400">{weekRollup.avgIntake.toLocaleString()}</span> avg <span className={weekRollup.dotColor}>●</span>
           </div>
           {targetComponents ? (
@@ -62,11 +62,6 @@ export function CalorieTargetTooltipContent({
               <div className="text-[9px] italic opacity-60">(daily calorie target)</div>
             </div>
           )}
-          <div className="space-y-0.5 opacity-75">
-            <div><span className="text-green-400">●</span> at or under target</div>
-            <div><span className="text-amber-400">●</span> up to 5% over</div>
-            <div><span className="text-rose-400">●</span> more than 5% over</div>
-          </div>
         </>
       )}
     </div>
