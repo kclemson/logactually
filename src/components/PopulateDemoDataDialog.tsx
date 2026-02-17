@@ -32,8 +32,12 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
   const [generateFood, setGenerateFood] = useState(true);
   const [generateWeights, setGenerateWeights] = useState(true);
   const [generateCustomLogs, setGenerateCustomLogs] = useState(true);
+  const [generateSavedMeals, setGenerateSavedMeals] = useState(true);
+  const [generateSavedRoutines, setGenerateSavedRoutines] = useState(true);
   const [savedMealsCount, setSavedMealsCount] = useState(5);
   const [savedRoutinesCount, setSavedRoutinesCount] = useState(4);
+
+  const nothingSelected = !generateFood && !generateWeights && !generateCustomLogs && !generateSavedMeals && !generateSavedRoutines;
 
   const handleSubmit = async () => {
     const params: PopulateDemoDataParams = {
@@ -43,36 +47,8 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
       generateFood,
       generateWeights,
       generateCustomLogs,
-      generateSavedMeals: savedMealsCount,
-      generateSavedRoutines: savedRoutinesCount,
-    };
-    await populate(params);
-  };
-
-  const handleRegenerateSavedOnly = async () => {
-    const params: PopulateDemoDataParams = {
-      startDate: format(startDate, "yyyy-MM-dd"),
-      endDate: format(endDate, "yyyy-MM-dd"),
-      clearExisting: true,
-      generateFood: false,
-      generateWeights: false,
-      generateCustomLogs: false,
-      generateSavedMeals: savedMealsCount,
-      generateSavedRoutines: savedRoutinesCount,
-    };
-    await populate(params);
-  };
-
-  const handleCustomLogsOnly = async () => {
-    const params: PopulateDemoDataParams = {
-      startDate: format(startDate, "yyyy-MM-dd"),
-      endDate: format(endDate, "yyyy-MM-dd"),
-      clearExisting: false,
-      generateFood: false,
-      generateWeights: false,
-      generateCustomLogs: true,
-      generateSavedMeals: 0,
-      generateSavedRoutines: 0,
+      generateSavedMeals: generateSavedMeals ? savedMealsCount : 0,
+      generateSavedRoutines: generateSavedRoutines ? savedRoutinesCount : 0,
     };
     await populate(params);
   };
@@ -178,40 +154,46 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
                   onChange={(e) => setGenerateCustomLogs(e.target.checked)}
                   className="rounded border-input"
                 />
-                <span>Generate Custom Logs</span>
+               <span>Generate Custom Logs</span>
               </label>
-            </div>
-          </div>
-
-          {/* Saved items counts */}
-          <div className="flex gap-4">
-            <div className="space-y-1">
-              <Label htmlFor="savedMeals" className="text-xs text-muted-foreground">
-                Saved Meals
-              </Label>
-              <Input
-                id="savedMeals"
-                type="number"
-                min={0}
-                max={20}
-                value={savedMealsCount}
-                onChange={(e) => setSavedMealsCount(Number(e.target.value))}
-                className="w-20 h-8"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="savedRoutines" className="text-xs text-muted-foreground">
-                Saved Routines
-              </Label>
-              <Input
-                id="savedRoutines"
-                type="number"
-                min={0}
-                max={20}
-                value={savedRoutinesCount}
-                onChange={(e) => setSavedRoutinesCount(Number(e.target.value))}
-                className="w-20 h-8"
-              />
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={generateSavedMeals}
+                  onChange={(e) => setGenerateSavedMeals(e.target.checked)}
+                  className="rounded border-input"
+                />
+                <span>Saved Meals</span>
+                {generateSavedMeals && (
+                  <Input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={savedMealsCount}
+                    onChange={(e) => setSavedMealsCount(Number(e.target.value))}
+                    className="w-16 h-7 text-xs"
+                  />
+                )}
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={generateSavedRoutines}
+                  onChange={(e) => setGenerateSavedRoutines(e.target.checked)}
+                  className="rounded border-input"
+                />
+                <span>Saved Routines</span>
+                {generateSavedRoutines && (
+                  <Input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={savedRoutinesCount}
+                    onChange={(e) => setSavedRoutinesCount(Number(e.target.value))}
+                    className="w-16 h-7 text-xs"
+                  />
+                )}
+              </label>
             </div>
           </div>
 
@@ -270,32 +252,16 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
             {result?.success ? "Close" : "Cancel"}
           </Button>
           {!result?.success && !result?.status && (
-            <>
-              <Button 
-                variant="outline" 
-                onClick={handleRegenerateSavedOnly} 
-                disabled={isLoading}
-              >
-                {isLoading ? "Starting..." : "Saved Only"}
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={handleCustomLogsOnly} 
-                disabled={isLoading}
-              >
-              {isLoading ? "Starting..." : "Custom Logs Only"}
-              </Button>
-              <Button onClick={handleSubmit} disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
-                    Starting...
-                  </>
-                ) : (
-                  "Populate All"
-                )}
-              </Button>
-            </>
+            <Button onClick={handleSubmit} disabled={isLoading || nothingSelected}>
+              {isLoading ? (
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+                  Starting...
+                </>
+              ) : (
+                "Populate"
+              )}
+            </Button>
           )}
         </DialogFooter>
       </DialogContent>
