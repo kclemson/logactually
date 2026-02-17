@@ -343,8 +343,26 @@ const Trends = () => {
                   { dataKey: "carbsPct", name: "Carbs", color: CHART_COLORS.carbs },
                   { dataKey: "proteinPct", name: "Protein", color: CHART_COLORS.protein, isTop: true },
                 ]}
-                onNavigate={(date) => navigate(`/?date=${date}`)}
-                formatter={(value, name) => `${name}: ${value}%`}
+              onNavigate={(date) => navigate(`/?date=${date}`)}
+              renderRows={(rows) => {
+                const p = rows[0]?.payload;
+                if (!p) return null;
+                const macros = [
+                  { name: "Protein", pct: p.proteinPct, color: CHART_COLORS.protein },
+                  { name: "Carbs", pct: p.carbsPct, color: CHART_COLORS.carbs },
+                  { name: "Fat", pct: p.fatPct, color: CHART_COLORS.fat },
+                ];
+                return (
+                  <div className="grid grid-cols-[auto_auto] gap-x-2 text-[10px]">
+                    {macros.map(m => (
+                      <React.Fragment key={m.name}>
+                        <span style={{ color: m.color }}>{m.name}</span>
+                        <span className="text-right" style={{ color: m.color }}>{m.pct}%</span>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                );
+              }}
               />
             </div>
 
