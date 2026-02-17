@@ -1,28 +1,35 @@
 
 
-# Remove section separator lines from tooltips
+# Fix separator lines in tooltips
 
 ## Problem
 
-Both tooltips now have three horizontal lines visible: one separating the daily/weekly (or weekly/30-day) sections, plus the underline on each equation's total row. That's too many lines competing for attention.
+The wrong lines were removed. The section separators between daily/weekly (and weekly/30-day) should stay. Instead, the border on the text description side of the `= total` row should be removed — keeping the underline only under the numbers.
 
-## Solution
+## Changes
 
-Remove the full-width separator lines between sections, keeping only the underlines on the `= total` rows in the equation blocks. The legend row starting a new section (e.g., "weekly:" or "30-day:") already provides enough visual separation via the change in content.
+### 1. Restore section separators
 
-## Technical detail
+**`src/components/CalorieTargetTooltipContent.tsx` (line 80)**
+- Change `<div className="mt-2" />` back to `<div className="border-t border-muted-foreground/30 my-1" />`
 
-### `src/components/CalorieTargetTooltipContent.tsx`
+**`src/components/CalorieTargetRollup.tsx` (line 158)**
+- Change `<div className="mt-2" />` back to `<div className="border-t border-muted-foreground/30 my-1" />`
 
-- **Line 80**: Remove `<div className="border-t border-muted-foreground/30 my-1" />` (the separator between daily and weekly sections)
-- Add a small top margin (e.g., `mt-2`) to the weekly section's container to keep some breathing room without a line
+### 2. Remove border from text column on `= total` rows
 
-### `src/components/CalorieTargetRollup.tsx`
+**`src/components/CalorieTargetTooltipContent.tsx` (line 156)**
+- Change: `<div className="text-[9px] italic opacity-60 border-t border-muted-foreground/30 pt-0.5">`
+- To: `<div className="text-[9px] italic opacity-60 pt-0.5">`
 
-- **Line 158**: Remove `{r7 && r30 && <div className="border-t border-muted-foreground/30 my-1" />}` (the separator between 7-day and 30-day sections)
-- Add a small top margin to the 30-day legend block for spacing
+**`src/components/CalorieTargetRollup.tsx`**
+- Line 60: Remove `border-t border-muted-foreground/30` from the text div on the multiplier total row
+- Line 95: Remove `border-t border-muted-foreground/30` from the text div on the standard total row
 
-### No changes to equation blocks
+### Files changed
 
-The `border-t` on the `= total` line in `TargetEquation` and `renderEquationBlock` stays — that's the "underline in the math part" the user wants to keep.
+| File | Changes |
+|------|---------|
+| `src/components/CalorieTargetTooltipContent.tsx` | Restore section separator; remove border from text column on total row |
+| `src/components/CalorieTargetRollup.tsx` | Restore section separator; remove border from text column on both total rows |
 
