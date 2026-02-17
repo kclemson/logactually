@@ -1,42 +1,61 @@
 
 
-# Fix tooltip flicker on mobile tap for CalorieTargetRollup
+# Add tap-to-toggle tooltip on mobile for Food Log calorie total
 
 ## Problem
 
-On touch devices, tapping the rollup row causes the tooltip to flash and disappear. Two competing mechanisms fight:
-
-1. Radix Tooltip calls `onOpenChange(true)` from its internal pointer/focus handling
-2. The `onClick` handler calls `setTooltipOpen(o => !o)`, which sees it as already `true` and flips it back to `false`
+The calorie total tooltip in the Food Log's TotalsRow only works on hover (desktop). On mobile/touch devices there's no way to see it since there's no tap handler or controlled open state.
 
 ## Fix
 
-**File: `src/components/CalorieTargetRollup.tsx`**
+**File: `src/components/FoodItemsTable.tsx`**
 
-On touch devices (when `hasHover` is false), stop passing `onOpenChange` to Radix entirely. Only control the tooltip via the explicit `onClick` toggle. This prevents Radix from setting the state before the click handler runs.
+Apply the same tap-to-toggle pattern used by `CalorieTargetRollup` and other touch-friendly tooltips:
 
-Change:
+1. Import `useHasHover` and add `useState` for `tooltipOpen`
+2. On the `Tooltip`, set `open={hasHover ? undefined : tooltipOpen}` so touch devices use controlled state while desktop uses native hover
+3. On the `TooltipTrigger` content span, add `tabIndex={0}`, `role="button"`, and an `onClick` that toggles `tooltipOpen` when `!hasHover`
+4. On `TooltipContent`, add `onPointerDownOutside={(e) => e.preventDefault()}` to prevent flicker (matching existing pattern)
+
+### Before (lines ~207-224):
 ```tsx
-<Tooltip
-  open={hasHover ? undefined : tooltipOpen}
-  onOpenChange={hasHover ? undefined : setTooltipOpen}
->
+<TooltipProvider delayDuration={150}>
+  <Tooltip>
+    <TooltipTrigger asChild>
+      {calorieContent}
+    </TooltipTrigger>
+    <TooltipContent side="bottom" sideOffset={5}>
+      ...
+    </TooltipContent>
+  </Tooltip>
+</TooltipProvider>
 ```
 
-To:
+### After:
 ```tsx
-<Tooltip
-  open={hasHover ? undefined : tooltipOpen}
-  onOpenChange={hasHover ? undefined : undefined}
->
+<TooltipProvider delayDuration={150}>
+  <Tooltip open={hasHover ? undefined : tooltipOpen}>
+    <TooltipTrigger asChild>
+      <span
+        className={cn("px-1 text-center inline-flex items-center justify-center", compact ? "text-xs" : "text-heading")}
+        tabIndex={0}
+        role="button"
+        onClick={hasHover ? undefined : () => setTooltipOpen(o => !o)}
+      >
+        {Math.round(totals.calories)}
+        <span className={...}>...</span>
+      </span>
+    </TooltipTrigger>
+    <TooltipContent
+      side="bottom"
+      sideOffset={5}
+      onPointerDownOutside={(e) => e.preventDefault()}
+    >
+      ...
+    </TooltipContent>
+  </Tooltip>
+</TooltipProvider>
 ```
 
-Which simplifies to just removing the `onOpenChange` prop for touch:
-```tsx
-<Tooltip
-  open={hasHover ? undefined : tooltipOpen}
->
-```
-
-The `onClick` handler already manages toggling correctly on its own. Without `onOpenChange`, Radix will not interfere with the controlled state on touch devices. On desktop (`hasHover` true), both props are `undefined`, letting Radix handle hover natively as before.
+The `hasHover` and `tooltipOpen` state will be added inside the `TotalsRow` component. This matches the exact pattern used in `CalorieTargetRollup` and the exercise log tooltips.
 
