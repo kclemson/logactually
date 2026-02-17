@@ -155,7 +155,7 @@ export function CalorieTargetRollup({ settings, burnByDate, usesBurns, tooltipOp
                     )}
                   </>
                 )}
-                {r7 && r30 && <div className="border-t border-muted-foreground/30 my-1" />}
+                {r7 && r30 && <div className="border-t border-muted-foreground/20 my-1 -mx-3" />}
                 {r30 && (
                   <>
                     <RollupLegend label="30-day" />
