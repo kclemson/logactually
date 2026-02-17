@@ -987,7 +987,6 @@ export function FoodItemsTable({
 
                 return (
                   <EntryExpandedPanel
-                    items={entryItems}
                     rawInput={currentRawInput ?? null}
                     savedItemInfo={{
                       type: 'meal',
@@ -996,9 +995,6 @@ export function FoodItemsTable({
                     }}
                     onSaveAs={onSaveAsMeal && currentEntryId
                       ? () => onSaveAsMeal(currentEntryId!, currentRawInput ?? null, entryItems)
-                      : undefined}
-                    onDeleteEntry={onDeleteEntry && currentEntryId
-                      ? () => onDeleteEntry(currentEntryId!)
                       : undefined}
                     gridCols={gridCols}
                   />
