@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useDailyFoodTotals } from '@/hooks/useDailyFoodTotals';
-import { getEffectiveDailyTarget, computeCalorieRollup, describeCalorieTarget, getCalorieTargetComponents } from '@/lib/calorie-target';
+import { getEffectiveDailyTarget, computeCalorieRollup, describeCalorieTarget, getCalorieTargetComponents, ROLLUP_GREEN_MAX, ROLLUP_AMBER_MAX } from '@/lib/calorie-target';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { useHasHover } from '@/hooks/use-has-hover';
 import type { UserSettings } from '@/hooks/useUserSettings';
@@ -11,6 +11,17 @@ interface CalorieTargetRollupProps {
   usesBurns: boolean;
   tooltipOpen?: boolean;
   onTooltipToggle?: () => void;
+}
+
+function RollupLegend() {
+  return (
+    <div className="text-[10px] tabular-nums grid grid-cols-[auto_auto_auto_auto] gap-x-2 items-center">
+      <div>rolling:</div>
+      <div><span className="text-green-400">●</span> {ROLLUP_GREEN_MAX === 0 ? 'under' : `≤${ROLLUP_GREEN_MAX}%`}</div>
+      <div><span className="text-amber-400">●</span> ≤{ROLLUP_AMBER_MAX}%</div>
+      <div><span className="text-rose-400">●</span> &gt;{ROLLUP_AMBER_MAX}%</div>
+    </div>
+  );
 }
 
 export function CalorieTargetRollup({ settings, burnByDate, usesBurns, tooltipOpen: externalOpen, onTooltipToggle }: CalorieTargetRollupProps) {
@@ -33,7 +44,6 @@ export function CalorieTargetRollup({ settings, burnByDate, usesBurns, tooltipOp
   const targetDescription = !components ? describeCalorieTarget(settings) : null;
 
   const isExerciseAdjusted = components?.mode === 'exercise_adjusted';
-
   const isMultiplier = components?.mode === 'body_stats_multiplier';
 
   const renderEquationBlock = (periodLabel: string, avgBurn: number) => {
@@ -119,11 +129,7 @@ export function CalorieTargetRollup({ settings, burnByDate, usesBurns, tooltipOp
           onPointerDownOutside={(e) => e.preventDefault()}
         >
           <div className="space-y-1.5">
-            <div className="space-y-0.5">
-              <div><span className="text-green-400">●</span> at or under target</div>
-              <div><span className="text-amber-400">●</span> up to 5% over</div>
-              <div><span className="text-rose-400">●</span> more than 5% over</div>
-            </div>
+            <RollupLegend />
             {components ? (
               <div className="space-y-2">
                 {isMultiplier
