@@ -1,54 +1,42 @@
 
 
-# Tooltip Refinements: Separate Averages, Tighter Labels, Dot Colors
+# Tooltip Visual Refinements
 
 ## Changes
 
-### 1. Separate burn averages for 7-day and 30-day rollup tooltip
+### 1. Fix inconsistent rose dot color in daily tooltip
 
-Currently the rollup tooltip uses a single `displayBurn` value (whichever is available first). Instead, show two separate equation blocks -- one for the 7-day average burn and one for the 30-day average burn -- or conditionally show the appropriate average. Since the tooltip is shared for both rollup periods, the simplest approach: show both periods' equations stacked, each with its own average burn.
+The dot on line 268 uses `dotClass` which is derived from `getTargetDotColor`, but the legend dots on lines 271-273 use hardcoded Tailwind classes (`text-rose-400`). The issue is that `dotClass` mapping may produce a different shade. The fix: ensure the dot class derivation is consistent -- the legend dots already use `text-rose-400` directly, so the computed `dotClass` just needs to match. Looking at the code, the mapping is correct (`text-rose-400`), so the pale appearance is likely from the `opacity-75` on the parent div (line 267). Move the result line out of the opacity context or remove opacity from it.
 
-### 2. Tighten equation labels
+### 2. Move dot next to target number (not end of string)
 
-- Rollup tooltip exercise line: `(avg calories burned last 7 days)` / `(avg calories burned last 30 days)`
-- Daily tooltip exercise line: `(calories burned from exercise)` (keep short, it's a specific day)
+Change line 253 from:
+```
+1,521 / 1,585 daily calorie target [dot]
+```
+To:
+```
+1,521 / 1,585 [dot] daily calorie target
+```
 
-### 3. Remove extra border-top line from daily tooltip
+### 3. Smaller, darker, italic text for parenthetical descriptions
 
-Currently there are two `border-t` dividers: one above the equation result (1,585) and one above the dot legend. Remove the one above the dot legend so the result and legend flow together.
-
-### 4. Show colored dot next to target number in daily tooltip
-
-In two places where the computed target appears (the "intake / target daily calorie target" line and the equation result line), add a colored dot using `getTargetDotColor(intake, target)` to match the dot shown on the calendar cell.
+In both tooltips, change the parenthetical text column to use `text-[9px] italic opacity-60` (smaller than the current 10px-equivalent tooltip text, and italic). Apply to both `CalorieTargetRollup.tsx` and `History.tsx` equation grids.
 
 ## Technical Details
 
+### File: `src/pages/History.tsx`
+
+- Line 253: Move dot to after target number: `{intake} / {target} <dot> daily calorie target`
+- Lines 257, 259, 263: Add `text-[9px] italic opacity-60` to parenthetical text divs
+- Line 267: Remove `opacity-75` from the result line div so the dot color is full strength
+- Lines 271-273: Add `text-[9px]` to legend lines for consistency
+
 ### File: `src/components/CalorieTargetRollup.tsx`
 
-- Instead of a single equation block, show two stacked blocks (one per available rollup period) each with its own average burn:
-  ```
-  7-day avg calorie target:
-    1,497  (total daily energy expenditure)
-  +   355  (avg calories burned last 7 days)
-  -   350  (deficit configured in settings)
-
-  30-day avg calorie target:
-    1,497  (total daily energy expenditure)
-  +   328  (avg calories burned last 30 days)
-  -   350  (deficit configured in settings)
-  ```
-  If only one period is available, show just that one.
-
-- Remove the `displayBurn` variable since each block uses its own `r7.avgBurn` / `r30.avgBurn`.
-
-### File: `src/pages/History.tsx` (`buildDayTooltip`)
-
-- Line 250: Add a colored dot after the target number using `getTargetDotColor(intake, target)`
-- Line 264-266: Add the same colored dot after the equation result target number
-- Line 267: Remove the second `border-t` divider -- change it to just `pt-1.5 space-y-0.5` (no border)
-- Line 256: Tighten label to `(calories burned from exercise)`
+- Lines 35, 37, 41: Add `text-[9px] italic opacity-60` to parenthetical text divs in `renderEquationBlock`
 
 ### Files Changed
-- `src/components/CalorieTargetRollup.tsx`
 - `src/pages/History.tsx`
+- `src/components/CalorieTargetRollup.tsx`
 
