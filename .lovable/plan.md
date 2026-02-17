@@ -1,27 +1,26 @@
 
 
-# Rename label + fix dialog cropping
+# Fix dialog cropping on desktop
 
-Two changes in `src/components/PopulateDemoDataDialog.tsx`:
+The `max-h-[85vh] overflow-y-auto` fix addressed vertical overflow, but the actual problem is **horizontal** -- the dialog at `sm:max-w-md` (448px) is too narrow for:
+1. Three checkboxes in a row ("Generate Food", "Generate Exercise", "Generate Custom Logs")  
+2. Four footer buttons ("Cancel", "Saved Only", "Custom Logs Only", "Populate All")
 
-## 1. Rename "Generate Weights" to "Generate Exercise"
+## Changes in `src/components/PopulateDemoDataDialog.tsx`
 
-Line 172: change the label text from "Generate Weights" to "Generate Exercise". The state variable `generateWeights` stays the same since it maps to the edge function parameter.
+### 1. Widen the dialog
+Change `sm:max-w-md` to `sm:max-w-lg` (512px), giving enough room for the content.
 
-## 2. Fix dialog cropping with scrollable content
+### 2. Allow checkbox row to wrap
+Add `flex-wrap` to the options checkbox container (line 155) so if the window is still tight, labels wrap instead of clipping.
 
-The dialog has a lot of content (date pickers, checkboxes, inputs, result display, footer buttons) that can overflow the viewport.
-
-Add `max-h-[85vh] overflow-y-auto` to the `DialogContent` className (line 87), following the project's established mobile dialog pattern.
-
-```
-Before: className="sm:max-w-md"
-After:  className="sm:max-w-md max-h-[85vh] overflow-y-auto"
-```
+### 3. Allow footer buttons to wrap  
+Add `flex-wrap` to the `DialogFooter` (line 265) so the four buttons can wrap to a second row if needed.
 
 ## Technical details
 
 - **File**: `src/components/PopulateDemoDataDialog.tsx`
-- **Line 87**: Add `max-h-[85vh] overflow-y-auto` to DialogContent
-- **Line 172**: Change label text "Generate Weights" to "Generate Exercise"
+- **Line 87**: `sm:max-w-md` becomes `sm:max-w-lg`
+- **Line 155**: Add `flex-wrap` to the checkboxes flex container
+- **Line 265**: Add `flex-wrap` to `DialogFooter`
 
