@@ -531,7 +531,7 @@ export function AppleHealthImport() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         {dialogOpen && (
           <DialogContent
-            className="max-w-md max-h-[80vh] overflow-y-auto"
+            className="max-w-md max-h-[80vh] max-h-[80dvh] overflow-y-auto"
             onInteractOutside={(e) => e.preventDefault()}
           >
             <DialogHeader>
