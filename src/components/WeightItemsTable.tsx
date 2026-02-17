@@ -302,7 +302,7 @@ export function WeightItemsTable({
               {editable ? (
                 <div className="flex min-w-0">
                   {showEntryDividers && (
-                    <div className="w-4 shrink-0 relative flex items-center justify-center self-stretch">
+                    <div className="w-6 shrink-0 relative flex items-center justify-center self-stretch overflow-hidden">
                       {isLastInEntry && isExpandable ? (
                         <EntryChevron
                           expanded={!!isCurrentExpanded}
@@ -329,7 +329,7 @@ export function WeightItemsTable({
               ) : (
                 <div className="flex items-baseline min-w-0">
                   {showEntryDividers && (
-                    <div className="w-4 shrink-0 relative flex items-center justify-center self-stretch">
+                    <div className="w-6 shrink-0 relative flex items-center justify-center self-stretch overflow-hidden">
                       {isLastInEntry && isExpandable ? (
                         <EntryChevron
                           expanded={!!isCurrentExpanded}
