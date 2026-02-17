@@ -1,33 +1,23 @@
 
 
-# Fix clipped mode label in CalorieTargetDialog dropdown
+# Add `dvh` fallback to all tall dialogs
 
-## Problem
-The Radix Select trigger renders the full SelectItem content (label + description) even when closed. The description line inflates the content width, causing the label to clip with an ellipsis even though the description itself is not visible in the collapsed state.
+## What this fixes
+The same mobile keyboard issue we fixed in CalorieTargetDialog exists in several other dialogs. When a user taps an input, the keyboard shrinks the visible area but `vh` doesn't adjust, so content can get hidden behind the keyboard.
 
-## Solution
-Use a custom render function on `SelectValue` so the trigger only displays the short label text, not the two-line layout used inside the dropdown menu.
+## Changes
 
-## Technical Detail
+Add `max-h-[Xdvh]` immediately after the existing `max-h-[Xvh]` in each dialog's `DialogContent` className. The `dvh` value overrides `vh` in modern browsers; older browsers fall back gracefully.
 
-**File: `src/components/CalorieTargetDialog.tsx` (lines 216-218)**
+**Files to edit (8 total):**
 
-Replace:
-```tsx
-<SelectTrigger className="w-[280px] h-auto py-1.5 text-xs">
-  <SelectValue />
-</SelectTrigger>
-```
+1. `src/components/CalorieBurnDialog.tsx` -- `max-h-[85vh]` to `max-h-[85vh] max-h-[85dvh]`
+2. `src/components/AskTrendsAIDialog.tsx` -- `max-h-[85vh]` to `max-h-[85vh] max-h-[85dvh]`
+3. `src/components/SaveMealDialog.tsx` -- `max-h-[90vh]` to `max-h-[90vh] max-h-[90dvh]`
+4. `src/components/SaveRoutineDialog.tsx` -- `max-h-[90vh]` to `max-h-[90vh] max-h-[90dvh]`
+5. `src/components/CreateSavedDialog.tsx` -- `max-h-[90vh]` to `max-h-[90vh] max-h-[90dvh]`
+6. `src/components/DemoPreviewDialog.tsx` -- `max-h-[80vh]` to `max-h-[80vh] max-h-[80dvh]`
+7. `src/components/AppleHealthImport.tsx` -- `max-h-[80vh]` to `max-h-[80vh] max-h-[80dvh]`
+8. `src/components/PopulateDemoDataDialog.tsx` -- `max-h-[85vh]` to `max-h-[85vh] max-h-[85dvh]`
 
-With:
-```tsx
-<SelectTrigger className="w-[280px] h-8 text-xs">
-  <SelectValue>
-    {TARGET_MODE_OPTIONS.find(o => o.value === settings.calorieTargetMode)?.label}
-  </SelectValue>
-</SelectTrigger>
-```
-
-This ensures only the short label (e.g. "Estimated burn rate - deficit") appears in the trigger, while the full two-line layout (label + description) remains inside the dropdown items. The trigger width of 280px is more than enough for any of the three labels.
-
-Single-file, three-line change.
+Each is a single class addition on one line per file. No logic changes.
