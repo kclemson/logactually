@@ -211,7 +211,7 @@ export interface RollupResult {
 export interface CalorieTargetComponents {
   tdee: number;
   deficit: number;
-  mode: 'body_stats_logged' | 'exercise_adjusted';
+  mode: 'body_stats_logged' | 'body_stats_multiplier' | 'exercise_adjusted';
   baseTarget?: number; // used for exercise_adjusted
 }
 
@@ -228,15 +228,20 @@ export function getCalorieTargetComponents(settings: UserSettings): CalorieTarge
   }
 
   if (settings.calorieTargetMode !== 'body_stats') return null;
-  if (settings.activityLevel !== 'logged') return null;
+  if (!settings.activityLevel) return null;
 
   const bmr = computeAbsoluteBMR(settings);
   if (bmr == null) return null;
 
-  const tdee = Math.round(bmr * ACTIVITY_MULTIPLIERS.sedentary);
-  const deficit = settings.dailyDeficit ?? 0;
+  if (settings.activityLevel === 'logged') {
+    const tdee = Math.round(bmr * ACTIVITY_MULTIPLIERS.sedentary);
+    const deficit = settings.dailyDeficit ?? 0;
+    return { tdee, deficit, mode: 'body_stats_logged' };
+  }
 
-  return { tdee, deficit, mode: 'body_stats_logged' };
+  const tdee = Math.round(computeTDEE(bmr, settings.activityLevel));
+  const deficit = settings.dailyDeficit ?? 0;
+  return { tdee, deficit, mode: 'body_stats_multiplier' };
 }
 
 export function computeCalorieRollup(

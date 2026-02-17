@@ -247,6 +247,7 @@ const History = () => {
 
     if (targetComponents) {
       const isExerciseAdjusted = targetComponents.mode === 'exercise_adjusted';
+      const isMultiplier = targetComponents.mode === 'body_stats_multiplier';
       return (
         <div className="space-y-1">
           <div className="font-medium">{dayLabel}</div>
@@ -263,6 +264,17 @@ const History = () => {
                 <div className="text-right">+ {burn.toLocaleString()}</div>
                 <div className="text-[9px] italic opacity-60">(calories burned from exercise)</div>
               </>
+            ) : isMultiplier ? (
+              <>
+                <div className="text-right">{targetComponents.tdee.toLocaleString()}</div>
+                <div className="text-[9px] italic opacity-60">(total daily energy expenditure)</div>
+                {targetComponents.deficit > 0 && (
+                  <>
+                    <div className="text-right">- {targetComponents.deficit.toLocaleString()}</div>
+                    <div className="text-[9px] italic opacity-60">(deficit configured in settings)</div>
+                  </>
+                )}
+              </>
             ) : (
               <>
                 <div className="text-right">{targetComponents.tdee.toLocaleString()}</div>
@@ -277,8 +289,12 @@ const History = () => {
                 )}
               </>
             )}
-            <div className="text-right border-t border-primary-foreground/20 pt-0.5">= {target.toLocaleString()}</div>
-            <div className="text-[9px] italic opacity-60 border-t border-primary-foreground/20 pt-0.5">{isExerciseAdjusted ? 'adjusted daily calorie target' : 'daily calorie target'}</div>
+            {(isExerciseAdjusted || !isMultiplier || targetComponents.deficit > 0) && (
+              <>
+                <div className="text-right border-t border-primary-foreground/20 pt-0.5">= {target.toLocaleString()}</div>
+                <div className="text-[9px] italic opacity-60 border-t border-primary-foreground/20 pt-0.5">{isExerciseAdjusted ? 'adjusted daily calorie target' : 'daily calorie target'}</div>
+              </>
+            )}
           </div>
         </div>
       );
