@@ -1,63 +1,67 @@
 
 
-# Tooltip Layout Overhaul
+# Exercise-Adjusted Mode: Equation Tooltips
 
-## Summary of all changes
+## What this changes
 
-### 1. Daily tooltip: remove header row, move label to equation result
-Remove the `intake / target [dot] daily calorie target` line (line 252-254). Append "daily calorie target" to the equation result line instead. Remove the dot from that result line (since the dot compares intake vs target, and intake is no longer shown in tooltip).
+Currently, when the user's calorie target mode is "exercise adjusted", both the daily and rollup tooltips fall through to a simple text fallback (e.g., `1,666 / 1,800 cal target (incl. 300 burn)`). This change adds a structured math equation -- matching the style already used for `body_stats + logged` mode -- so users can see exactly how their adjusted target is calculated from their live data.
 
-### 2. Remove dots from daily tooltip entirely
-The colored dot no longer appears in the tooltip body (only on the calendar cell).
+## The math being shown
 
-### 3. Force daily tooltip below the trigger
-Add `side="bottom"` to both desktop (line 448) and mobile (line 462) `TooltipContent` elements.
-
-### 4. Move legend to top of both tooltips
-- Daily tooltip: move the legend block (lines 270-274) to right after the `dayLabel` div, before the equation grid.
-- Rollup tooltip: move the legend block (lines 88-92) to the top of the tooltip content div.
-
-### 5. Match legend font size across both tooltips
-The daily tooltip legend currently uses `text-[9px]` but the rollup tooltip legend has no size class (inherits default tooltip size). To match them, remove `text-[9px]` from the daily legend so both use the default tooltip font size.
-
-## Technical Details
-
-### File: `src/pages/History.tsx` (buildDayTooltip, lines 248-276)
-
-Current structure:
-```
-dayLabel
-intake / target [dot] daily calorie target   <-- REMOVE
-equation grid (opacity-75)
-border-t: target [dot]                        <-- change to: target daily calorie target (no dot)
-legend (text-[9px])                           <-- move to top, remove text-[9px]
+**Daily tooltip (per calendar cell):**
+```text
+1,500  (daily calorie target)
++ 300  (calories burned from exercise)
+---------
+1,800  adjusted daily calorie target
 ```
 
-New structure:
-```
-dayLabel
-legend (no text-[9px], matches rollup)        <-- moved here
-equation grid (opacity-75)
-border-t: target daily calorie target         <-- no dot
-```
-
-Also add `side="bottom"` to both `TooltipContent` on lines 448 and 462.
-
-### File: `src/components/CalorieTargetRollup.tsx` (lines 79-92)
-
-Current structure:
-```
-equation blocks
-border-t legend
+**Rollup tooltip (7-day / 30-day averages):**
+```text
+1,500  (daily calorie target)
++ 285  (avg calories burned last 7 days)
+---------
+1,785  average adjusted target
 ```
 
-New structure:
-```
-legend (no border-t)
-equation blocks
+If the user had zero exercise burns on a given day, the `+ 0` row still appears so the equation is consistent and educational.
+
+## Technical approach
+
+### File: `src/lib/calorie-target.ts`
+
+Extend `getCalorieTargetComponents` to also return structured data for `exercise_adjusted` mode. Add a new variant to the return type:
+
+```typescript
+export interface CalorieTargetComponents {
+  tdee: number;
+  deficit: number;
+  mode: 'body_stats_logged' | 'exercise_adjusted';
+  baseTarget?: number; // used for exercise_adjusted
+}
 ```
 
-### Files Changed
+For `exercise_adjusted` mode, return `{ tdee: 0, deficit: 0, mode: 'exercise_adjusted', baseTarget: dailyCalorieTarget }`. Using a `mode` discriminator lets the tooltip code render the right labels.
+
+### File: `src/pages/History.tsx` (buildDayTooltip)
+
+When `targetComponents.mode === 'exercise_adjusted'`, render a two-row equation grid:
+- Row 1: `baseTarget` with label "(daily calorie target)"
+- Row 2: `+ burn` with label "(calories burned from exercise)"
+- Divider + result: `target` adjusted daily calorie target
+
+The existing `body_stats_logged` branch continues to show TDEE / burn / deficit as before.
+
+### File: `src/components/CalorieTargetRollup.tsx`
+
+Update `renderEquationBlock` to handle the `exercise_adjusted` mode. When components.mode is `exercise_adjusted`:
+- Row 1: `baseTarget` with label "(daily calorie target)"
+- Row 2: `+ avgBurn` with label "(avg calories burned last N days)"
+- No deficit row
+
+The existing body_stats_logged rendering is unchanged.
+
+### Files changed
+- `src/lib/calorie-target.ts`
 - `src/pages/History.tsx`
 - `src/components/CalorieTargetRollup.tsx`
-
