@@ -84,7 +84,7 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Populate Demo Data</DialogTitle>
           <DialogDescription>Generate realistic demo entries for the demo account.</DialogDescription>
@@ -169,7 +169,7 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
                   onChange={(e) => setGenerateWeights(e.target.checked)}
                   className="rounded border-input"
                 />
-                <span>Generate Weights</span>
+                <span>Generate Exercise</span>
               </label>
               <label className="flex items-center gap-2 text-sm">
                 <input
