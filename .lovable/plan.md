@@ -1,22 +1,29 @@
 
 
-# Add changelog entry for rolling calorie target summary
+# Fix CalorieTargetDialog scrolling when mobile keyboard opens
+
+## Problem
+
+When a user taps an input field inside the Daily Calorie Target dialog on mobile, the virtual keyboard appears and shrinks the visible area. The dialog uses `max-h-[85vh]`, but `vh` refers to the **layout viewport** (which doesn't change when the keyboard opens), so the dialog overflows the actual visible space and content gets cut off. The dialog technically scrolls, but users can't tell because the overflow is hidden behind the keyboard.
+
+## Solution
+
+Replace `vh` with `dvh` (dynamic viewport height), which automatically adjusts when the mobile keyboard appears or disappears. This is well-supported in modern browsers (Safari 15.4+, Chrome 108+). As a fallback for older browsers, we keep the `vh` value as well.
 
 ## Changes
 
-### 1. Copy screenshot to public/changelog/
-Copy the uploaded image `calorie_rolling.png` to `public/changelog/calorie-rolling.png`.
+**File: `src/components/CalorieTargetDialog.tsx` (line 165)**
 
-### 2. Add new changelog entry (`src/pages/Changelog.tsx`)
-Insert a new entry at the top of `CHANGELOG_ENTRIES` dated "Feb-16":
+Change the DialogContent className from:
+```
+max-h-[85vh]
+```
+to:
+```
+max-h-[85vh] max-h-[85dvh]
+```
 
-> "Added rolling 7-day and 30-day average calorie summaries to the Calendar view, with color-coded status dots showing whether you're on track relative to your daily target. Works across all calorie target modes — fixed, exercise-adjusted, and estimated burn rate. Also added tooltips on the Food Log and Calendar pages that break down the math behind your target."
+The second declaration overrides the first in browsers that support `dvh`, while older browsers gracefully fall back to `vh`.
 
-Image: `calorie-rolling.png`
-
-### 3. Update `LAST_UPDATED` (`src/pages/Changelog.tsx`)
-Change from `"Feb-15-26"` to `"Feb-16-26"`.
-
-### 4. Update Settings link text (`src/components/settings/AboutSection.tsx`)
-Change `"Changelog (last updated Feb-15)"` to `"Changelog (last updated Feb-16)"`.
+This is a single-line, one-property change.
 
