@@ -1,29 +1,25 @@
 
 
-# Fix CalorieTargetDialog scrolling when mobile keyboard opens
+# Shorten "Estimated burn rate" mode label
 
 ## Problem
+The third calorie target mode label "Estimated burn rate minus a deficit" gets clipped in the dropdown on mobile viewports.
 
-When a user taps an input field inside the Daily Calorie Target dialog on mobile, the virtual keyboard appears and shrinks the visible area. The dialog uses `max-h-[85vh]`, but `vh` refers to the **layout viewport** (which doesn't change when the keyboard opens), so the dialog overflows the actual visible space and content gets cut off. The dialog technically scrolls, but users can't tell because the overflow is hidden behind the keyboard.
+## Change
+Rename it to **"Estimated burn rate - deficit"** (shorter, fits the dropdown).
 
-## Solution
+## Technical Detail
 
-Replace `vh` with `dvh` (dynamic viewport height), which automatically adjusts when the mobile keyboard appears or disappears. This is well-supported in modern browsers (Safari 15.4+, Chrome 108+). As a fallback for older browsers, we keep the `vh` value as well.
+**File: `src/lib/calorie-target.ts` (line 47)**
 
-## Changes
-
-**File: `src/components/CalorieTargetDialog.tsx` (line 165)**
-
-Change the DialogContent className from:
+Change:
 ```
-max-h-[85vh]
+label: 'Estimated burn rate minus a deficit'
 ```
 to:
 ```
-max-h-[85vh] max-h-[85dvh]
+label: 'Estimated burn rate - deficit'
 ```
 
-The second declaration overrides the first in browsers that support `dvh`, while older browsers gracefully fall back to `vh`.
-
-This is a single-line, one-property change.
+Single string change, one file.
 
