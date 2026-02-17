@@ -189,7 +189,14 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     return map;
   }, [entries, savedMeals]);
 
+  // Optimistic multipliers for instant UI update on group portion scaling
+  const [optimisticMultipliers, setOptimisticMultipliers] = useState<Map<string, number>>(new Map());
+
+  // Optimistic group names for instant UI update on inline editing
+  const [optimisticGroupNames, setOptimisticGroupNames] = useState<Map<string, string>>(new Map());
+
   // Build map of entryId -> group name for multi-item entries (for collapsed display)
+  // Optimistic names take priority over server-derived values
   const entryGroupNames = useMemo(() => {
     const map = new Map<string, string>();
     entries.forEach(entry => {
@@ -197,12 +204,9 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
         map.set(entry.id, entry.group_name);
       }
     });
+    optimisticGroupNames.forEach((val, key) => map.set(key, val));
     return map;
-  }, [entries]);
-
-  // Optimistic multipliers for instant UI update on group portion scaling
-  const [optimisticMultipliers, setOptimisticMultipliers] = useState<Map<string, number>>(new Map());
-
+  }, [entries, optimisticGroupNames]);
   // Build map of entryId -> cumulative portion multiplier for group scaling display
   // Optimistic values take priority over server-derived values
   const entryPortionMultipliers = useMemo(() => {
@@ -767,6 +771,25 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
             entryMealNames={entryMealNames}
             entrySourceMealIds={entrySourceMealIds}
             entryGroupNames={entryGroupNames}
+            onUpdateGroupName={(entryId, newName) => {
+              setOptimisticGroupNames(prev => {
+                const next = new Map(prev);
+                next.set(entryId, newName);
+                return next;
+              });
+              updateEntry.mutate(
+                { id: entryId, group_name: newName } as any,
+                {
+                  onSettled: () => {
+                    setOptimisticGroupNames(prev => {
+                      const next = new Map(prev);
+                      next.delete(entryId);
+                      return next;
+                    });
+                  },
+                }
+              );
+            }}
             entryPortionMultipliers={entryPortionMultipliers}
             onUpdateEntryPortionMultiplier={(entryId, newMultiplier) => {
               // Instant UI update

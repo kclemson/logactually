@@ -76,6 +76,8 @@ interface FoodItemsTableProps {
   showCalorieTargetDot?: boolean;
   dailyBurn?: number;
   calorieTargetComponents?: CalorieTargetComponents | null;
+  /** Callback to persist updated group name via inline editing */
+  onUpdateGroupName?: (entryId: string, newName: string) => void;
 }
 
 export function FoodItemsTable({
@@ -112,6 +114,7 @@ export function FoodItemsTable({
   showCalorieTargetDot = false,
   dailyBurn = 0,
   calorieTargetComponents,
+  onUpdateGroupName,
 }: FoodItemsTableProps) {
   // Read-only mode blocks saves
   const { isReadOnly, triggerOverlay } = useReadOnlyContext();
@@ -359,10 +362,14 @@ export function FoodItemsTable({
                         />
                       </div>
                     )}
-                    <span className={cn("pl-1 pr-0 py-1 line-clamp-1 shrink min-w-0", compact && "text-sm")}
+                    <DescriptionCell
+                      value={groupName}
+                      onSave={(newName) => onUpdateGroupName?.(boundary.entryId, newName)}
+                      readOnly={isReadOnly}
+                      onReadOnlyAttempt={triggerOverlay}
+                      className={cn("pl-1 pr-0 py-1 line-clamp-1 shrink min-w-0", compact && "text-sm")}
                       title={groupName}
                     >
-                      {groupName}
                       {(() => {
                         const cumulative = entryPortionMultipliers?.get(boundary.entryId) ?? 1.0;
                         return (
@@ -377,7 +384,7 @@ export function FoodItemsTable({
                           >({scalePortion("1 portion", cumulative)})</button>
                         );
                       })()}
-                    </span>
+                    </DescriptionCell>
                   </div>
                   <span className={cn("px-1 py-1 text-center", compact ? "text-xs" : "")}>
                     {Math.round(groupCalories)}
@@ -522,10 +529,14 @@ export function FoodItemsTable({
                         />
                       </div>
                     )}
-                    <span className={cn("pl-1 pr-0 py-1 font-semibold line-clamp-1 shrink min-w-0", compact && "text-sm")}
+                    <DescriptionCell
+                      value={groupName}
+                      onSave={(newName) => onUpdateGroupName?.(boundary.entryId, newName)}
+                      readOnly={isReadOnly}
+                      onReadOnlyAttempt={triggerOverlay}
+                      className={cn("pl-1 pr-0 py-1 font-semibold line-clamp-1 shrink min-w-0", compact && "text-sm")}
                       title={groupName}
                     >
-                      {groupName}
                       {(() => {
                         const cumulative = entryPortionMultipliers?.get(boundary.entryId) ?? 1.0;
                         return (
@@ -540,7 +551,7 @@ export function FoodItemsTable({
                           >({scalePortion("1 portion", cumulative)})</button>
                         );
                       })()}
-                    </span>
+                    </DescriptionCell>
                   </div>
                   <span className={cn("px-1 py-1 text-center", compact ? "text-xs" : "text-heading")}>
                     {Math.round(groupCalories)}
