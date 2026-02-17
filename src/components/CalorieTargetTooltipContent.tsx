@@ -77,7 +77,7 @@ export function CalorieTargetTooltipContent({
           : target;
         return (
         <>
-          <div className="border-t border-muted-foreground/30 my-1" />
+          <div className="border-t border-muted-foreground/20 my-1 -mx-3" />
           <WeeklyLegend />
           <div className="opacity-75">
             {weekLabel}: <span className="text-blue-400">{weekRollup.avgIntake.toLocaleString()}</span> avg <span className={`opacity-100 ${weekRollup.dotColor}`}>●</span>
