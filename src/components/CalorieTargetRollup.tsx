@@ -26,7 +26,24 @@ export function CalorieTargetRollup({ settings, burnByDate, usesBurns }: Calorie
 
   const components = getCalorieTargetComponents(settings);
   const targetDescription = !components ? describeCalorieTarget(settings) : null;
-  const displayBurn = r7?.avgBurn ?? r30?.avgBurn ?? 0;
+
+  const renderEquationBlock = (label: string, burnLabel: string, avgBurn: number) => (
+    <div className="space-y-0.5">
+      <div>{label}:</div>
+      <div className="grid grid-cols-[auto_1fr] gap-x-2 pl-2 opacity-75 tabular-nums">
+        <div className="text-right">{components!.tdee.toLocaleString()}</div>
+        <div>(total daily energy expenditure)</div>
+        <div className="text-right">+ {avgBurn.toLocaleString()}</div>
+        <div>({burnLabel})</div>
+        {components!.deficit > 0 && (
+          <>
+            <div className="text-right">- {components!.deficit.toLocaleString()}</div>
+            <div>(deficit configured in settings)</div>
+          </>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -61,20 +78,9 @@ export function CalorieTargetRollup({ settings, burnByDate, usesBurns }: Calorie
         >
           <div className="space-y-1.5">
             {components ? (
-              <div className="space-y-0.5">
-                <div>Daily calorie target:</div>
-                <div className="grid grid-cols-[auto_1fr] gap-x-2 pl-2 opacity-75 tabular-nums">
-                  <div className="text-right">{components.tdee.toLocaleString()}</div>
-                  <div>(total daily energy expenditure)</div>
-                  <div className="text-right">+ {displayBurn.toLocaleString()}</div>
-                  <div>(avg calories burned from logged exercise)</div>
-                  {components.deficit > 0 && (
-                    <>
-                      <div className="text-right">- {components.deficit.toLocaleString()}</div>
-                      <div>(deficit configured in settings)</div>
-                    </>
-                  )}
-                </div>
+              <div className="space-y-2">
+                {r7 && renderEquationBlock('7-day avg calorie target', 'avg calories burned last 7 days', r7.avgBurn)}
+                {r30 && renderEquationBlock('30-day avg calorie target', 'avg calories burned last 30 days', r30.avgBurn)}
               </div>
             ) : (
               targetDescription && <div>{targetDescription}</div>
