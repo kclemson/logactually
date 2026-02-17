@@ -22,6 +22,7 @@ type ChangelogEntry = {
 
 // prettier-ignore
 const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+{ date: "Feb-16", text: "Added rolling 7-day and 30-day average calorie summaries to the Calendar view, with color-coded status dots showing whether you're on track relative to your daily target. Works across all calorie target modes — fixed, exercise-adjusted, and estimated burn rate. Also added tooltips on the Food Log and Calendar pages that break down the math behind your target.", image: "calorie-rolling.png" },
 { date: "Feb-15", text: "Expanded the existing 'daily calorie target' feature to support two new modes: 'Exercise adjusted' mode offsets the calorie count from your food intake by calories burned from logged exercises. 'Estimated burn rate minus a deficit' uses your activity level and body stats to calculate your BMR/TDEE and then subtracts a daily deficit you set.", image: "calorie-target-modes.png" },
 { date: "Feb-15", text: "Updated the feedback system — submit bug reports, feature requests, or questions directly from the Help page. See responses and status updates inline, and reply or re-open resolved items.", image: "feedback.png" },
 { date: "Feb-14", text: "Added portion scaling — tap any portion label to adjust it with +/- controls. Scales the quantity, unit, and all nutritional values proportionally.", image: "portion-scaling.png" },
@@ -45,7 +46,7 @@ const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   { date: "Jan-23", text: "It's alive! v1 of app published with support for food logging & AI integration, editing logged items (and editing calories auto-scales protein/carbs/fat), charts for trends over time, mobile & desktop layouts, PWA support for pinning to home screen." },
 ];
 
-export const LAST_UPDATED = "Feb-15-26";
+export const LAST_UPDATED = "Feb-16-26";
 // ============================================
 
 export default function Changelog() {
