@@ -36,11 +36,11 @@ const CARDIO_KEYS = Object.entries(EXERCISE_MUSCLE_GROUPS)
 const SAMPLE_CARDIO: ExerciseInput[] = [
   { exercise_key: 'walk_run', exercise_subtype: 'walking', sets: 0, reps: 0, weight_lbs: 0, duration_minutes: 25 },
   { exercise_key: 'cycling', sets: 0, reps: 0, weight_lbs: 0, duration_minutes: 30 },
+  { exercise_key: 'swimming', sets: 0, reps: 0, weight_lbs: 0, duration_minutes: 20 },
 ];
 
 const SAMPLE_STRENGTH: ExerciseInput[] = [
   { exercise_key: 'bench_press', sets: 3, reps: 10, weight_lbs: 135 },
-  { exercise_key: 'squat', sets: 3, reps: 10, weight_lbs: 185 },
 ];
 
 function exerciseLabel(ex: ExerciseInput, weightUnit: WeightUnit): string {
@@ -88,6 +88,7 @@ export function CalorieBurnDialog({
       const { data, error } = await supabase.rpc('get_top_exercises', {
         p_user_id: user.id,
         p_cardio_keys: CARDIO_KEYS,
+        p_limit_per_group: 3,
       });
       if (error || !data?.length) return [];
       return data as (ExerciseInput & { description: string; is_cardio: boolean; frequency: number })[];
@@ -96,20 +97,20 @@ export function CalorieBurnDialog({
     staleTime: 60_000,
   });
 
-  // Assemble 2 cardio + 2 strength, filling gaps with samples
+  // Assemble 3 cardio + 1 strength, filling gaps with samples
   const { previewExercises, isUsingSamples } = useMemo(() => {
-    const userCardio = (userExercises || []).filter(e => e.is_cardio);
-    const userStrength = (userExercises || []).filter(e => !e.is_cardio);
+    const userCardio = (userExercises || []).filter(e => e.is_cardio).slice(0, 3);
+    const userStrength = (userExercises || []).filter(e => !e.is_cardio).slice(0, 1);
 
     const cardio: ExerciseInput[] = [...userCardio];
     let usedSamples = false;
-    for (let i = cardio.length; i < 2; i++) {
+    for (let i = cardio.length; i < 3; i++) {
       cardio.push(SAMPLE_CARDIO[i]);
       usedSamples = true;
     }
 
     const strength: ExerciseInput[] = [...userStrength];
-    for (let i = strength.length; i < 2; i++) {
+    for (let i = strength.length; i < 1; i++) {
       strength.push(SAMPLE_STRENGTH[i]);
       usedSamples = true;
     }
