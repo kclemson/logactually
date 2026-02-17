@@ -106,7 +106,10 @@ export function CalorieTargetRollup({ settings, burnByDate, usesBurns }: Calorie
                 {r30 && renderEquationBlock('last 30 days', r30.avgBurn)}
               </div>
             ) : (
-              targetDescription && <div>{targetDescription}</div>
+              <div className="grid grid-cols-[auto_1fr] gap-x-2 pl-2 opacity-75 tabular-nums">
+                <div className="text-right">{baseTarget.toLocaleString()}</div>
+                <div className="text-[9px] italic opacity-60">(daily calorie target)</div>
+              </div>
             )}
           </div>
         </TooltipContent>
