@@ -242,18 +242,21 @@ const History = () => {
     const intake = Math.round(summary.totalCalories);
     const dayLabel = format(day, 'EEE, MMM d');
 
+    const dotColor = getTargetDotColor(intake, target);
+    const dotClass = dotColor === 'text-green-400' ? 'text-green-400' : dotColor === 'text-amber-400' ? 'text-amber-400' : 'text-rose-400';
+
     if (targetComponents) {
       return (
         <div className="space-y-1">
           <div className="font-medium">{dayLabel}</div>
           <div>
-            {intake.toLocaleString()} / {target.toLocaleString()} daily calorie target
+            {intake.toLocaleString()} / {target.toLocaleString()} daily calorie target <span className={dotClass}>●</span>
           </div>
           <div className="grid grid-cols-[auto_1fr] gap-x-2 pl-2 opacity-75 tabular-nums">
             <div className="text-right">{targetComponents.tdee.toLocaleString()}</div>
             <div>(total daily energy expenditure)</div>
             <div className="text-right">+ {burn.toLocaleString()}</div>
-            <div>(calories burned from logged exercise)</div>
+            <div>(calories burned from exercise)</div>
             {targetComponents.deficit > 0 && (
               <>
                 <div className="text-right">- {targetComponents.deficit.toLocaleString()}</div>
@@ -262,9 +265,9 @@ const History = () => {
             )}
           </div>
           <div className="border-t border-primary-foreground/20 pt-1 pl-2 opacity-75 tabular-nums">
-            {target.toLocaleString()}
+            {target.toLocaleString()} <span className={dotClass}>●</span>
           </div>
-          <div className="border-t border-primary-foreground/20 pt-1.5 space-y-0.5">
+          <div className="pt-1.5 space-y-0.5">
             <div><span className="text-green-400">●</span> within 2.5% of target</div>
             <div><span className="text-amber-400">●</span> up to 10% over</div>
             <div><span className="text-rose-400">●</span> more than 10% over</div>
