@@ -214,7 +214,7 @@ const History = () => {
     const summary = summaryByDate.get(dateStr);
     const baseTarget = getEffectiveDailyTarget(settings);
     const isTodayDate = isToday(day);
-    const hasDot = !!summary && !isTodayDate && baseTarget != null && baseTarget > 0;
+    const hasDot = !!summary && baseTarget != null && baseTarget > 0;
 
     // Desktop: always navigate directly
     if (hasHover) {
@@ -331,7 +331,7 @@ const History = () => {
             const hasCustomLogs = showCustomLogs && customLogDates.has(dateStr);
 
             const baseTarget = getEffectiveDailyTarget(settings);
-            const hasDot = hasEntries && !isTodayDate && baseTarget != null && baseTarget > 0;
+            const hasDot = hasEntries && baseTarget != null && baseTarget > 0;
             const showTooltip = hasDot && isCurrentMonth;
 
             const tooltipContent = showTooltip && summary ? buildDayTooltip(day, summary) : null;
@@ -368,7 +368,7 @@ const History = () => {
                           const target = usesBurns && baseTarget
                             ? getExerciseAdjustedTarget(baseTarget, burnByDate.get(dateStr) ?? 0)
                             : baseTarget;
-                          return !isTodayDate && target && target > 0 ? (
+                          return target && target > 0 ? (
                             <span className={`text-[10px] ml-0.5 leading-none relative top-[-0.5px] ${getTargetDotColor(summary.totalCalories, target)}`}>●</span>
                           ) : null;
                         })()}
