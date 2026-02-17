@@ -28,8 +28,8 @@ export const CompactChartTooltip = ({
   const totalValue = totalKey && payload[0]?.payload?.[totalKey];
 
   return (
-    <div className="rounded-md border border-border/50 bg-white dark:bg-slate-800 px-2 py-1 shadow-md">
-      <p className="text-[10px] font-medium text-slate-900 dark:text-slate-100 mb-0.5">{label}</p>
+    <div className="rounded-md border border-border/50 bg-popover text-popover-foreground px-2 py-1 shadow-md">
+      <p className="text-[10px] font-medium mb-0.5">{label}</p>
       {totalValue !== undefined && (
         <p className="text-[10px] font-semibold mb-0.5" style={{ color: totalColor || '#2563EB' }}>
           {totalLabel || 'Total'}: {Math.round(totalValue)} cal
