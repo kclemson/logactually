@@ -250,24 +250,24 @@ const History = () => {
         <div className="space-y-1">
           <div className="font-medium">{dayLabel}</div>
           <div>
-            {intake.toLocaleString()} / {target.toLocaleString()} daily calorie target <span className={dotClass}>●</span>
+            {intake.toLocaleString()} / {target.toLocaleString()} <span className={dotClass}>●</span> daily calorie target
           </div>
           <div className="grid grid-cols-[auto_1fr] gap-x-2 pl-2 opacity-75 tabular-nums">
             <div className="text-right">{targetComponents.tdee.toLocaleString()}</div>
-            <div>(total daily energy expenditure)</div>
+            <div className="text-[9px] italic opacity-60">(total daily energy expenditure)</div>
             <div className="text-right">+ {burn.toLocaleString()}</div>
-            <div>(calories burned from exercise)</div>
+            <div className="text-[9px] italic opacity-60">(calories burned from exercise)</div>
             {targetComponents.deficit > 0 && (
               <>
                 <div className="text-right">- {targetComponents.deficit.toLocaleString()}</div>
-                <div>(deficit configured in settings)</div>
+                <div className="text-[9px] italic opacity-60">(deficit configured in settings)</div>
               </>
             )}
           </div>
-          <div className="border-t border-primary-foreground/20 pt-1 pl-2 opacity-75 tabular-nums">
+          <div className="border-t border-primary-foreground/20 pt-1 pl-2 tabular-nums">
             {target.toLocaleString()} <span className={dotClass}>●</span>
           </div>
-          <div className="pt-1.5 space-y-0.5">
+          <div className="pt-1.5 space-y-0.5 text-[9px]">
             <div><span className="text-green-400">●</span> within 2.5% of target</div>
             <div><span className="text-amber-400">●</span> up to 10% over</div>
             <div><span className="text-rose-400">●</span> more than 10% over</div>

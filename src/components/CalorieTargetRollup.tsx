@@ -32,13 +32,13 @@ export function CalorieTargetRollup({ settings, burnByDate, usesBurns }: Calorie
       <div>{label}:</div>
       <div className="grid grid-cols-[auto_1fr] gap-x-2 pl-2 opacity-75 tabular-nums">
         <div className="text-right">{components!.tdee.toLocaleString()}</div>
-        <div>(total daily energy expenditure)</div>
+        <div className="text-[9px] italic opacity-60">(total daily energy expenditure)</div>
         <div className="text-right">+ {avgBurn.toLocaleString()}</div>
-        <div>({burnLabel})</div>
+        <div className="text-[9px] italic opacity-60">({burnLabel})</div>
         {components!.deficit > 0 && (
           <>
             <div className="text-right">- {components!.deficit.toLocaleString()}</div>
-            <div>(deficit configured in settings)</div>
+            <div className="text-[9px] italic opacity-60">(deficit configured in settings)</div>
           </>
         )}
       </div>
