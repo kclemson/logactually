@@ -66,6 +66,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     match: SimilarEntryMatch;
     originalInput: string;
   } | null>(null);
+  const [dismissedMatchText, setDismissedMatchText] = useState<string | null>(null);
 
   // Demo preview state (for read-only demo users)
   const [demoPreviewOpen, setDemoPreviewOpen] = useState(false);
@@ -245,7 +246,11 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
 
   const handleSubmit = async (text: string) => {
     // 1. Check for history reference patterns BEFORE AI call (skip for demo mode)
-    if (!isReadOnly && recentEntries?.length) {
+    // Skip similarity check if user already cancelled this exact input
+    if (dismissedMatchText === text) {
+      setDismissedMatchText(null);
+      // fall through to AI analysis below
+    } else if (!isReadOnly && recentEntries?.length) {
       const historyRef = detectHistoryReference(text);
       
       if (historyRef.hasReference) {
@@ -354,7 +359,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   const dismissEntryMatch = useCallback(async () => {
     if (!pendingEntryMatch) return;
     
-    // User dismissed - fall back to AI analysis
+    // User chose "Log as new" - fall back to AI analysis
     const text = pendingEntryMatch.originalInput;
     setPendingEntryMatch(null);
     
@@ -363,6 +368,12 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       createEntryFromItems(result.food_items, text);
     }
   }, [pendingEntryMatch, analyzeFood, createEntryFromItems]);
+
+  const handleCancelEntryMatch = useCallback(() => {
+    if (!pendingEntryMatch) return;
+    setDismissedMatchText(pendingEntryMatch.originalInput);
+    setPendingEntryMatch(null);
+  }, [pendingEntryMatch]);
 
   // Handle direct scan results (when barcode lookup succeeds)
   const handleScanResult = async (foodItem: Omit<FoodItem, 'uid' | 'entryId'>, originalInput: string) => {
@@ -639,6 +650,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
               match={pendingEntryMatch.match}
               onUsePastEntry={handleUsePastEntry}
               onDismiss={dismissEntryMatch}
+              onCancel={handleCancelEntryMatch}
               isLoading={isAnalyzing || createEntry.isPending}
             />
           </div>
