@@ -57,7 +57,7 @@ export function CalorieTargetRollup({ settings, burnByDate, usesBurns, tooltipOp
               <div className="text-right">- {components!.deficit.toLocaleString()}</div>
               <div className="text-[9px] italic opacity-60">(deficit configured in settings)</div>
               <div className="text-right border-t border-muted-foreground/30 pt-0.5">= {baseTarget!.toLocaleString()}</div>
-              <div className="text-[9px] italic opacity-60 border-t border-muted-foreground/30 pt-0.5">daily calorie target</div>
+              <div className="text-[9px] italic opacity-60 pt-0.5">daily calorie target</div>
             </>
           )}
         </div>
@@ -92,7 +92,7 @@ export function CalorieTargetRollup({ settings, burnByDate, usesBurns, tooltipOp
           </>
         )}
         <div className="text-right border-t border-muted-foreground/30 pt-0.5">= {Math.round(total).toLocaleString()}</div>
-        <div className="text-[9px] italic opacity-60 border-t border-muted-foreground/30 pt-0.5">avg target {periodLabel}</div>
+        <div className="text-[9px] italic opacity-60 pt-0.5">avg target {periodLabel}</div>
       </div>
     );
   };
@@ -155,7 +155,7 @@ export function CalorieTargetRollup({ settings, burnByDate, usesBurns, tooltipOp
                     )}
                   </>
                 )}
-                {r7 && r30 && <div className="mt-2" />}
+                {r7 && r30 && <div className="border-t border-muted-foreground/30 my-1" />}
                 {r30 && (
                   <>
                     <RollupLegend label="30-day" />
