@@ -355,7 +355,7 @@ const History = () => {
               >
                 {/* Row 1: Calorie count */}
                 <span className={cn(
-                  "text-[10px]",
+                  "text-[9px] sm:text-[10px] w-full text-center whitespace-nowrap overflow-hidden",
                   hasEntries && isCurrentMonth 
                     ? "text-blue-500 dark:text-blue-400" 
                     : "invisible"
@@ -369,7 +369,7 @@ const History = () => {
                             ? getExerciseAdjustedTarget(baseTarget, burnByDate.get(dateStr) ?? 0)
                             : baseTarget;
                           return target && target > 0 ? (
-                            <span className={`text-[10px] ml-0.5 leading-none relative top-[-0.5px] ${getTargetDotColor(summary.totalCalories, target)}`}>●</span>
+                            <span className={`text-[9px] sm:text-[10px] leading-none relative top-[-0.5px] ${getTargetDotColor(summary.totalCalories, target)}`}>●</span>
                           ) : null;
                         })()}
                       </>
