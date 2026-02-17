@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { AskTrendsAIDialog } from "@/components/AskTrendsAIDialog";
 import { useNavigate } from "react-router-dom";
 import { format, subDays, startOfDay, eachDayOfInterval } from "date-fns";
@@ -358,7 +358,26 @@ const Trends = () => {
                 { dataKey: "proteinCals", name: "Protein", color: CHART_COLORS.protein, isTop: true },
               ]}
               onNavigate={(date) => navigate(`/?date=${date}`)}
-              formatter={(value, name) => `${name}: ${Math.round(value)} cal`}
+              renderRows={(rows) => {
+                const p = rows[0]?.payload;
+                if (!p) return null;
+                const macros = [
+                  { name: "Protein", grams: p.protein, cals: p.proteinCals, color: CHART_COLORS.protein },
+                  { name: "Carbs", grams: p.carbs, cals: p.carbsCals, color: CHART_COLORS.carbs },
+                  { name: "Fat", grams: p.fat, cals: p.fatCals, color: CHART_COLORS.fat },
+                ];
+                return (
+                  <div className="grid grid-cols-[auto_auto_auto] gap-x-2 text-[10px]">
+                    {macros.map(m => (
+                      <React.Fragment key={m.name}>
+                        <span style={{ color: m.color }}>{m.name}</span>
+                        <span className="text-right" style={{ color: m.color }}>{Math.round(m.grams)}g</span>
+                        <span className="text-right" style={{ color: m.color }}>{Math.round(m.cals)} cal</span>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                );
+              }}
               totalKey="calories"
               totalLabel="Calories"
               totalColor={CHART_COLORS.calories}

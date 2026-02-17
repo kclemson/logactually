@@ -223,6 +223,7 @@ interface StackedMacroChartProps {
   referenceLine?: { value: number; color?: string };
   subtitle?: string;
   grouped?: boolean;
+  renderRows?: (payload: any[]) => React.ReactNode;
 }
 
 export const StackedMacroChart = ({
@@ -240,6 +241,7 @@ export const StackedMacroChart = ({
   referenceLine,
   subtitle,
   grouped,
+  renderRows,
 }: StackedMacroChartProps) => {
   const isTouchDevice = !useHasHover();
   const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
@@ -323,6 +325,7 @@ export const StackedMacroChart = ({
                     : undefined}
                   content={
                     <CompactChartTooltip
+                      renderRows={renderRows}
                       formatter={formatter}
                       totalKey={totalKey}
                       totalLabel={totalLabel}
