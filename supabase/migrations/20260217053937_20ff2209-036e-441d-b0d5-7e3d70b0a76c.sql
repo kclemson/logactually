@@ -1,0 +1,1 @@
+ALTER TABLE public.food_entries ADD COLUMN group_portion_multiplier REAL DEFAULT 1.0;

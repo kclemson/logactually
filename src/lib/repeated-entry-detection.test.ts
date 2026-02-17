@@ -109,6 +109,7 @@ describe('detectRepeatedFoodEntry', () => {
     total_fat: 0,
     source_meal_id: null,
     group_name: null,
+    group_portion_multiplier: null,
     created_at: '2025-01-01',
     updated_at: '2025-01-01',
     ...opts,
