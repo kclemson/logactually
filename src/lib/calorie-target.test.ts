@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getTargetDotColor, getEffectiveDailyTarget, computeTDEE, suggestActivityLevel, getExerciseAdjustedTarget, usesActualExerciseBurns, ACTIVITY_MULTIPLIERS, getRollupDotColor, computeCalorieRollup } from './calorie-target';
+import { getTargetDotColor, getEffectiveDailyTarget, computeTDEE, suggestActivityLevel, getExerciseAdjustedTarget, usesActualExerciseBurns, ACTIVITY_MULTIPLIERS, getRollupDotColor, computeCalorieRollup, describeCalorieTarget } from './calorie-target';
 import { format, subDays } from 'date-fns';
 import type { UserSettings } from '@/hooks/useUserSettings';
 
@@ -186,6 +186,7 @@ describe('usesActualExerciseBurns', () => {
 
   it('returns false for static mode', () => {
     expect(usesActualExerciseBurns(baseSettings)).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -297,4 +298,41 @@ describe('computeCalorieRollup', () => {
     expect(result!.dayCount).toBe(2);
   });
 });
+
+// ---------------------------------------------------------------------------
+// describeCalorieTarget
+// ---------------------------------------------------------------------------
+
+
+describe('describeCalorieTarget', () => {
+  it('returns null when target is disabled', () => {
+    expect(describeCalorieTarget({ ...baseSettings, calorieTargetEnabled: false })).toBeNull();
+  });
+
+  it('returns static description', () => {
+    expect(describeCalorieTarget(baseSettings)).toBe('Target: 2,000 cal/day');
+  });
+
+  it('returns exercise adjusted description', () => {
+    const s = { ...baseSettings, calorieTargetMode: 'exercise_adjusted' as const, dailyCalorieTarget: 1800 };
+    expect(describeCalorieTarget(s)).toBe('Target: 1,800 cal/day + exercise');
+  });
+
+  it('returns body stats description with fixed activity', () => {
+    const s = { ...baseSettings, calorieTargetMode: 'body_stats' as const, activityLevel: 'light' as const, dailyDeficit: 500 };
+    const result = describeCalorieTarget(s);
+    expect(result).toContain('cal/day (from TDEE)');
+    expect(result).not.toContain('exercise');
+  });
+
+  it('returns body stats + logged description', () => {
+    const s = { ...baseSettings, calorieTargetMode: 'body_stats' as const, activityLevel: 'logged' as const, dailyDeficit: 500 };
+    const result = describeCalorieTarget(s);
+    expect(result).toContain('cal/day + exercise (from TDEE)');
+  });
+
+  it('returns null when body stats lacks biometrics', () => {
+    const s = { ...baseSettings, calorieTargetMode: 'body_stats' as const, activityLevel: 'light' as const, bodyWeightLbs: null };
+    expect(describeCalorieTarget(s)).toBeNull();
+  });
 });

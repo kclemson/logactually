@@ -17,9 +17,11 @@ import { ChevronLeft, ChevronRight, Dumbbell, Footprints, Bike, Activity, Clipbo
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { isCardioExercise } from '@/lib/exercise-metadata';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useHasHover } from '@/hooks/use-has-hover';
 import { getTargetDotColor, getEffectiveDailyTarget, getExerciseAdjustedTarget, usesActualExerciseBurns } from '@/lib/calorie-target';
 import { useDailyCalorieBurn } from '@/hooks/useDailyCalorieBurn';
 import { CalorieTargetRollup } from '@/components/CalorieTargetRollup';
@@ -51,7 +53,9 @@ const ICON_MAP: Record<string, React.FC<{ className?: string }>> = {
 const History = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const hasHover = useHasHover();
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [activeDayIndex, setActiveDayIndex] = useState<number | null>(null);
   const { settings } = useUserSettings();
   const showWeights = settings.showWeights;
   const showCustomLogs = settings.showCustomLogs;
@@ -186,7 +190,7 @@ const History = () => {
     return map;
   }, [weightSummaries]);
 
-  const handleDayClick = (date: Date) => {
+  const navigateToDay = (date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
     const todayStr = format(new Date(), 'yyyy-MM-dd');
     setStoredDate(dateStr);
@@ -198,10 +202,56 @@ const History = () => {
     }
   };
 
+  const handleDayClick = (day: Date, index: number) => {
+    const dateStr = format(day, 'yyyy-MM-dd');
+    const summary = summaryByDate.get(dateStr);
+    const baseTarget = getEffectiveDailyTarget(settings);
+    const isTodayDate = isToday(day);
+    const hasDot = !!summary && !isTodayDate && baseTarget != null && baseTarget > 0;
+
+    // Desktop: always navigate directly
+    if (hasHover) {
+      navigateToDay(day);
+      return;
+    }
+
+    // Mobile: if this day has a calorie dot, show tooltip instead
+    if (hasDot) {
+      setActiveDayIndex(prev => prev === index ? null : index);
+    } else {
+      setActiveDayIndex(null);
+      navigateToDay(day);
+    }
+  };
+
   const goToPreviousMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
   const goToNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
 
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  /** Build tooltip content for a day cell */
+  const buildDayTooltip = (day: Date, summary: DaySummary) => {
+    const dateStr = format(day, 'yyyy-MM-dd');
+    const baseTarget = getEffectiveDailyTarget(settings);
+    if (!baseTarget || baseTarget <= 0) return null;
+
+    const burn = usesBurns ? (burnByDate.get(dateStr) ?? 0) : 0;
+    const target = usesBurns ? getExerciseAdjustedTarget(baseTarget, burn) : baseTarget;
+    const intake = Math.round(summary.totalCalories);
+    const dayLabel = format(day, 'EEE, MMM d');
+
+    return (
+      <div className="space-y-1">
+        <div className="font-medium">{dayLabel}</div>
+        <div>
+          {intake.toLocaleString()} / {target.toLocaleString()} cal target
+          {usesBurns && burn > 0 && (
+            <span className="opacity-75"> (incl. {burn.toLocaleString()} burn)</span>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -241,101 +291,160 @@ const History = () => {
         ))}
       </div>
 
-      {/* Calendar Grid */}
-      <div className="grid grid-cols-7 gap-1.5">
-      {calendarDays.map((day, index) => {
-          const dateStr = format(day, 'yyyy-MM-dd');
-          const summary = summaryByDate.get(dateStr);
-          const isCurrentMonth = isSameMonth(day, currentMonth);
-          const isTodayDate = isToday(day);
-          const isFutureDate = day > new Date();
-          const hasEntries = !!summary;
-          const weightData = weightByDate.get(dateStr);
-          const hasWeights = showWeights && !!weightData;
-          const hasCustomLogs = showCustomLogs && customLogDates.has(dateStr);
+      {/* Mobile overlay to dismiss active tooltip */}
+      {!hasHover && activeDayIndex != null && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setActiveDayIndex(null)}
+        />
+      )}
 
-          return (
-            <button
-              key={index}
-              onClick={() => handleDayClick(day)}
-              disabled={isFutureDate}
-              className={cn(
-                "grid grid-rows-3 content-center items-center justify-items-center p-1.5 min-h-[64px] rounded-xl transition-colors",
-                isFutureDate && "bg-muted/20 text-muted-foreground/50 cursor-default",
-                !isCurrentMonth && !isFutureDate && "bg-muted/30 hover:bg-muted/50 text-muted-foreground/60 cursor-pointer",
-                isCurrentMonth && !isFutureDate && !hasEntries && !hasWeights && "bg-muted/40 hover:bg-muted/60 cursor-pointer",
-                hasEntries && !hasWeights && !isFutureDate && "bg-rose-100 hover:bg-rose-200 dark:bg-rose-900/40 dark:hover:bg-rose-800/50",
-                hasWeights && !hasEntries && !isFutureDate && "bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/40 dark:hover:bg-purple-800/50",
-                hasWeights && hasEntries && !isFutureDate && "bg-gradient-to-br from-rose-100 to-purple-100 hover:from-rose-200 hover:to-purple-200 dark:from-rose-900/40 dark:to-purple-900/40 dark:hover:from-rose-800/50 dark:hover:to-purple-800/50",
-                isTodayDate && "ring-2 ring-primary ring-inset",
-              )}
-            >
-              {/* Row 1: Calorie count (always takes space) */}
-              <span className={cn(
-                "text-[10px]",
-                hasEntries && isCurrentMonth 
-                  ? "text-blue-500 dark:text-blue-400" 
-                  : "invisible"
-              )}>
-                {hasEntries && isCurrentMonth 
-                  ? (
-                    <>
-                      {`${Math.round(summary.totalCalories).toLocaleString()}cal`}
-                      {(() => {
-                        const baseTarget = getEffectiveDailyTarget(settings);
-                        const target = usesBurns && baseTarget
-                          ? getExerciseAdjustedTarget(baseTarget, burnByDate.get(dateStr) ?? 0)
-                          : baseTarget;
-                        return !isTodayDate && target && target > 0 ? (
-                          <span className={`text-[10px] ml-0.5 leading-none relative top-[-0.5px] ${getTargetDotColor(summary.totalCalories, target)}`}>●</span>
-                        ) : null;
-                      })()}
-                    </>
-                  )
-                  : "\u00A0"}
-              </span>
-              
-              {/* Row 2: Day number (always centered in middle row) */}
-              <span
+      {/* Calendar Grid */}
+      <TooltipProvider delayDuration={150}>
+        <div className="grid grid-cols-7 gap-1.5">
+        {calendarDays.map((day, index) => {
+            const dateStr = format(day, 'yyyy-MM-dd');
+            const summary = summaryByDate.get(dateStr);
+            const isCurrentMonth = isSameMonth(day, currentMonth);
+            const isTodayDate = isToday(day);
+            const isFutureDate = day > new Date();
+            const hasEntries = !!summary;
+            const weightData = weightByDate.get(dateStr);
+            const hasWeights = showWeights && !!weightData;
+            const hasCustomLogs = showCustomLogs && customLogDates.has(dateStr);
+
+            const baseTarget = getEffectiveDailyTarget(settings);
+            const hasDot = hasEntries && !isTodayDate && baseTarget != null && baseTarget > 0;
+            const showTooltip = hasDot && isCurrentMonth;
+
+            const tooltipContent = showTooltip && summary ? buildDayTooltip(day, summary) : null;
+            const isActive = activeDayIndex === index;
+
+            const cellContent = (
+              <button
+                key={index}
+                onClick={() => !isFutureDate && handleDayClick(day, index)}
+                disabled={isFutureDate}
                 className={cn(
-                  "font-medium",
-                  isTodayDate && "text-primary font-semibold",
-                  !isCurrentMonth && "text-muted-foreground/30",
+                  "grid grid-rows-3 content-center items-center justify-items-center p-1.5 min-h-[64px] rounded-xl transition-colors relative z-auto",
+                  isFutureDate && "bg-muted/20 text-muted-foreground/50 cursor-default",
+                  !isCurrentMonth && !isFutureDate && "bg-muted/30 hover:bg-muted/50 text-muted-foreground/60 cursor-pointer",
+                  isCurrentMonth && !isFutureDate && !hasEntries && !hasWeights && "bg-muted/40 hover:bg-muted/60 cursor-pointer",
+                  hasEntries && !hasWeights && !isFutureDate && "bg-rose-100 hover:bg-rose-200 dark:bg-rose-900/40 dark:hover:bg-rose-800/50",
+                  hasWeights && !hasEntries && !isFutureDate && "bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/40 dark:hover:bg-purple-800/50",
+                  hasWeights && hasEntries && !isFutureDate && "bg-gradient-to-br from-rose-100 to-purple-100 hover:from-rose-200 hover:to-purple-200 dark:from-rose-900/40 dark:to-purple-900/40 dark:hover:from-rose-800/50 dark:hover:to-purple-800/50",
+                  isTodayDate && "ring-2 ring-primary ring-inset",
                 )}
               >
-                {format(day, 'd')}
-              </span>
+                {/* Row 1: Calorie count */}
+                <span className={cn(
+                  "text-[10px]",
+                  hasEntries && isCurrentMonth 
+                    ? "text-blue-500 dark:text-blue-400" 
+                    : "invisible"
+                )}>
+                  {hasEntries && isCurrentMonth 
+                    ? (
+                      <>
+                        {`${Math.round(summary.totalCalories).toLocaleString()}cal`}
+                        {(() => {
+                          const target = usesBurns && baseTarget
+                            ? getExerciseAdjustedTarget(baseTarget, burnByDate.get(dateStr) ?? 0)
+                            : baseTarget;
+                          return !isTodayDate && target && target > 0 ? (
+                            <span className={`text-[10px] ml-0.5 leading-none relative top-[-0.5px] ${getTargetDotColor(summary.totalCalories, target)}`}>●</span>
+                          ) : null;
+                        })()}
+                      </>
+                    )
+                    : "\u00A0"}
+                </span>
+                
+                {/* Row 2: Day number */}
+                <span
+                  className={cn(
+                    "font-medium",
+                    isTodayDate && "text-primary font-semibold",
+                    !isCurrentMonth && "text-muted-foreground/30",
+                  )}
+                >
+                  {format(day, 'd')}
+                </span>
 
-              {/* Row 3: Exercise/custom log indicators (always takes space) */}
-              <span className={cn(
-                "h-3 flex items-center justify-center gap-0.5",
-                !((hasWeights || hasCustomLogs) && isCurrentMonth) && "invisible"
-              )}>
-                {(() => {
-                  const maxIcons = isMobile ? 3 : 4;
-                  const exerciseKeys: string[] = [];
-                  if (weightData?.hasLifting) exerciseKeys.push('lifting');
-                  if (weightData?.hasRunWalk) exerciseKeys.push('runwalk');
-                  if (weightData?.hasCycling) exerciseKeys.push('cycling');
-                  if (weightData?.hasOtherCardio) exerciseKeys.push('othercardio');
-                  const hasExercise = exerciseKeys.length > 0;
-                  const exerciseSlots = (hasCustomLogs && hasExercise) ? maxIcons - 1 : maxIcons;
-                  const visible = exerciseKeys.slice(0, exerciseSlots);
-                  return (
-                    <>
-                      {visible.map((key) => {
-                        const Icon = ICON_MAP[key];
-                        return <Icon key={key} className="h-3 w-3 text-purple-500 dark:text-purple-400" />;
-                      })}
-                      {hasCustomLogs && <ClipboardList className="h-3 w-3 text-teal-500 dark:text-teal-400" />}
-                    </>
-                  );
-                })()}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+                {/* Row 3: Exercise/custom log indicators */}
+                <span className={cn(
+                  "h-3 flex items-center justify-center gap-0.5",
+                  !((hasWeights || hasCustomLogs) && isCurrentMonth) && "invisible"
+                )}>
+                  {(() => {
+                    const maxIcons = isMobile ? 3 : 4;
+                    const exerciseKeys: string[] = [];
+                    if (weightData?.hasLifting) exerciseKeys.push('lifting');
+                    if (weightData?.hasRunWalk) exerciseKeys.push('runwalk');
+                    if (weightData?.hasCycling) exerciseKeys.push('cycling');
+                    if (weightData?.hasOtherCardio) exerciseKeys.push('othercardio');
+                    const hasExercise = exerciseKeys.length > 0;
+                    const exerciseSlots = (hasCustomLogs && hasExercise) ? maxIcons - 1 : maxIcons;
+                    const visible = exerciseKeys.slice(0, exerciseSlots);
+                    return (
+                      <>
+                        {visible.map((key) => {
+                          const Icon = ICON_MAP[key];
+                          return <Icon key={key} className="h-3 w-3 text-purple-500 dark:text-purple-400" />;
+                        })}
+                        {hasCustomLogs && <ClipboardList className="h-3 w-3 text-teal-500 dark:text-teal-400" />}
+                      </>
+                    );
+                  })()}
+                </span>
+              </button>
+            );
+
+            // Wrap in tooltip when applicable
+            if (tooltipContent) {
+              if (hasHover) {
+                // Desktop: hover tooltip, click still navigates
+                return (
+                  <Tooltip key={index}>
+                    <TooltipTrigger asChild>
+                      {cellContent}
+                    </TooltipTrigger>
+                    <TooltipContent sideOffset={5} onPointerDownOutside={(e) => e.preventDefault()}>
+                      {tooltipContent}
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              } else {
+                // Mobile: controlled tooltip via activeDayIndex
+                return (
+                  <Tooltip key={index} open={isActive} onOpenChange={(open) => {
+                    if (!open) setActiveDayIndex(null);
+                  }}>
+                    <TooltipTrigger asChild>
+                      {cellContent}
+                    </TooltipTrigger>
+                    <TooltipContent sideOffset={5} onPointerDownOutside={(e) => e.preventDefault()}>
+                      {tooltipContent}
+                      <button
+                        className="mt-1.5 text-primary-foreground/80 underline underline-offset-2 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveDayIndex(null);
+                          navigateToDay(day);
+                        }}
+                      >
+                        Go to day →
+                      </button>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              }
+            }
+
+            return cellContent;
+          })}
+        </div>
+      </TooltipProvider>
 
       {isLoading && (
         <div className="flex justify-center py-4">
