@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useDailyFoodTotals } from '@/hooks/useDailyFoodTotals';
-import { getEffectiveDailyTarget, computeCalorieRollup, describeCalorieTarget } from '@/lib/calorie-target';
+import { getEffectiveDailyTarget, computeCalorieRollup, describeCalorieTarget, getCalorieTargetComponents } from '@/lib/calorie-target';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { useHasHover } from '@/hooks/use-has-hover';
 import type { UserSettings } from '@/hooks/useUserSettings';
@@ -24,7 +24,8 @@ export function CalorieTargetRollup({ settings, burnByDate, usesBurns }: Calorie
 
   if (!r7 && !r30) return null;
 
-  const targetDescription = describeCalorieTarget(settings);
+  const components = getCalorieTargetComponents(settings);
+  const targetDescription = !components ? describeCalorieTarget(settings) : null;
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -58,7 +59,20 @@ export function CalorieTargetRollup({ settings, burnByDate, usesBurns }: Calorie
           onPointerDownOutside={(e) => e.preventDefault()}
         >
           <div className="space-y-1.5">
-            {targetDescription && <div>{targetDescription}</div>}
+            {components ? (
+              <div className="space-y-0.5">
+                <div>Daily calorie target:</div>
+                <div className="pl-2 space-y-0">
+                  <div>{components.tdee.toLocaleString()} (total daily energy expenditure)</div>
+                  <div>+ calories burned from logged exercise</div>
+                  {components.deficit > 0 && (
+                    <div>- {components.deficit.toLocaleString()} (deficit configured in settings)</div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              targetDescription && <div>{targetDescription}</div>
+            )}
             <div className="border-t border-primary-foreground/20 pt-1.5 space-y-0.5">
               <div><span className="text-green-400">●</span> at or under target</div>
               <div><span className="text-amber-400">●</span> up to 5% over</div>

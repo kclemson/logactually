@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils';
 import { isCardioExercise } from '@/lib/exercise-metadata';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useHasHover } from '@/hooks/use-has-hover';
-import { getTargetDotColor, getEffectiveDailyTarget, getExerciseAdjustedTarget, usesActualExerciseBurns } from '@/lib/calorie-target';
+import { getTargetDotColor, getEffectiveDailyTarget, getExerciseAdjustedTarget, usesActualExerciseBurns, getCalorieTargetComponents } from '@/lib/calorie-target';
 import { useDailyCalorieBurn } from '@/hooks/useDailyCalorieBurn';
 import { CalorieTargetRollup } from '@/components/CalorieTargetRollup';
 
@@ -229,6 +229,8 @@ const History = () => {
 
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+  const targetComponents = useMemo(() => getCalorieTargetComponents(settings), [settings]);
+
   /** Build tooltip content for a day cell */
   const buildDayTooltip = (day: Date, summary: DaySummary) => {
     const dateStr = format(day, 'yyyy-MM-dd');
@@ -239,6 +241,24 @@ const History = () => {
     const target = usesBurns ? getExerciseAdjustedTarget(baseTarget, burn) : baseTarget;
     const intake = Math.round(summary.totalCalories);
     const dayLabel = format(day, 'EEE, MMM d');
+
+    if (targetComponents) {
+      return (
+        <div className="space-y-1">
+          <div className="font-medium">{dayLabel}</div>
+          <div>
+            {intake.toLocaleString()} / {target.toLocaleString()} daily calorie target
+          </div>
+          <div className="pl-2 space-y-0 opacity-75">
+            <div>{targetComponents.tdee.toLocaleString()} (total daily energy expenditure)</div>
+            <div>+ {burn.toLocaleString()} (calories burned from logged exercise)</div>
+            {targetComponents.deficit > 0 && (
+              <div>- {targetComponents.deficit.toLocaleString()} (deficit configured in settings)</div>
+            )}
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className="space-y-1">
