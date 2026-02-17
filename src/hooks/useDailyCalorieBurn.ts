@@ -34,10 +34,11 @@ export function useDailyCalorieBurn(days: number, options?: { force?: boolean })
     };
 
     // Aggregate low/high per day across all exercises
-    const byDate: Record<string, { low: number; high: number }> = {};
-    const exercisesByDate: Record<string, Set<string>> = {};
+    const byDate: Record<string, { low: number; high: number; cardioCount: number; strengthCount: number }> = {};
 
     for (const exercise of exercises) {
+      const isCardio = isCardioExercise(exercise.exercise_key);
+
       for (const point of exercise.weightData) {
         const input: ExerciseInput = {
           exercise_key: exercise.exercise_key,
@@ -53,14 +54,12 @@ export function useDailyCalorieBurn(days: number, options?: { force?: boolean })
         const result = estimateCalorieBurn(input, burnSettings);
 
         if (!byDate[point.date]) {
-          byDate[point.date] = { low: 0, high: 0 };
-          exercisesByDate[point.date] = new Set();
+          byDate[point.date] = { low: 0, high: 0, cardioCount: 0, strengthCount: 0 };
         }
 
-        const compositeKey = exercise.exercise_subtype
-          ? `${exercise.exercise_key}::${exercise.exercise_subtype}`
-          : exercise.exercise_key;
-        exercisesByDate[point.date].add(compositeKey);
+        const count = point.entryCount ?? 1;
+        if (isCardio) byDate[point.date].cardioCount += count;
+        else byDate[point.date].strengthCount += count;
 
         if (result.type === 'exact') {
           byDate[point.date].low += result.value;
@@ -76,24 +75,14 @@ export function useDailyCalorieBurn(days: number, options?: { force?: boolean })
     return Object.entries(byDate)
       .filter(([_, v]) => v.low > 0 || v.high > 0)
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, totals]) => {
-        const keys = exercisesByDate[date] || new Set();
-        let cardioCount = 0;
-        let strengthCount = 0;
-        keys.forEach(k => {
-          const baseKey = k.includes('::') ? k.split('::')[0] : k;
-          if (isCardioExercise(baseKey)) cardioCount++;
-          else strengthCount++;
-        });
-        return {
-          date,
-          low: totals.low,
-          high: totals.high,
-          exerciseCount: keys.size,
-          cardioCount,
-          strengthCount,
-        };
-      });
+      .map(([date, totals]) => ({
+        date,
+        low: totals.low,
+        high: totals.high,
+        exerciseCount: totals.cardioCount + totals.strengthCount,
+        cardioCount: totals.cardioCount,
+        strengthCount: totals.strengthCount,
+      }));
   }, [exercises, settings]);
 
   return {

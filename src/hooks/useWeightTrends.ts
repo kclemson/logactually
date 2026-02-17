@@ -9,6 +9,7 @@ export interface WeightPoint {
   sets: number;
   reps: number;
   volume: number;  // Pre-calculated volume for accurate aggregation
+  entryCount: number;  // Number of raw DB entries merged into this point
   duration_minutes?: number;  // For cardio exercises
   distance_miles?: number;    // For distance-based cardio (walk_run, cycling)
   repsPerSet?: number;  // undefined if reps vary across sets, number if consistent
@@ -90,6 +91,7 @@ export function useWeightTrends(days: number) {
         const rowRepsPerSet = row.reps;
         
         if (existing) {
+          existing.entryCount += 1;
           existing.sets += row.sets;
           existing.reps += row.reps;
           existing.volume += row.sets * row.reps * weight;
@@ -120,6 +122,7 @@ export function useWeightTrends(days: number) {
             sets: row.sets,
             reps: row.reps,
             volume: row.sets * row.reps * weight,
+            entryCount: 1,
             duration_minutes: duration > 0 ? duration : undefined,
             distance_miles: distance > 0 ? distance : undefined,
             repsPerSet: rowRepsPerSet,
