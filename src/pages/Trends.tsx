@@ -292,7 +292,7 @@ const Trends = () => {
   ];
 
   return (
-    <div className="space-y-6 -mx-1">
+    <div className="space-y-6 -mx-2">
       <div className="flex items-center justify-center gap-2">
         {periods.map(({ label, days }) => (
           <Button
@@ -320,7 +320,7 @@ const Trends = () => {
         ) : (
           <div className="space-y-3">
             {/* Row 1: Calories + Macros Breakdown */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               <FoodChart
                 title="Calories"
                 subtitle={`avg: ${averages.calories}, today: ${todayValues.calories}`}
@@ -435,7 +435,7 @@ const Trends = () => {
                 />
               )}
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 {volumeByDay.length > 0 && (
                   <VolumeChart
                     title={`Total Volume (${settings.weightUnit})`}
@@ -491,7 +491,7 @@ const Trends = () => {
       {/* Other Trends Section */}
       {showCustomLogs && customLogTrends.length > 0 && (
         <CollapsibleSection title="Custom Trends" icon={ClipboardList} iconClassName="text-teal-500 dark:text-teal-400" defaultOpen={true} storageKey="trends-other">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             {customLogTrends.map((trend) => (
               <CustomLogTrendChart key={trend.logTypeId} trend={trend} days={selectedPeriod} onNavigate={(date) => navigate(`/custom?date=${date}`)} />
             ))}
