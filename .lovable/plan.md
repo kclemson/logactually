@@ -1,91 +1,92 @@
 
 
-# Settings Refactor: Unified SavedItemRow for All Three Row Types
+# DescriptionCell Component — Updated Plan
 
-## Approach
+## Key Clarification: Editable vs Non-Editable
 
-Create a single `SavedItemRow` component that all three settings row types flow through, with an optional expander flag. This unifies the codepath so that when `DescriptionCell` is introduced later, the name-editing logic only needs to change in one place.
+FoodItemsTable and WeightItemsTable use a full `{editable ? ... : ...}` ternary in the parent. The non-editable branch renders a plain `<span>` with no interactivity. DescriptionCell only gets rendered inside the editable branch for those two callers.
 
-## Layout Model
+The `readOnly` prop is only needed by CustomLogEntryRow (for demo/read-only accounts). SavedItemRow is always editable.
 
-All three row types share this structure:
+## Component API (refined)
 
 ```text
-[chevron?] [editable name] [meta slot] [delete button]
-            optional children when expanded
+DescriptionCell
+  Props:
+  - value: string               -- text to display
+  - onSave: (newValue) => void  -- called on commit (blur or Enter)
+  - readOnly?: boolean          -- blocks saves, reverts on blur (default: false)
+  - onReadOnlyAttempt?: () => void  -- trigger overlay in demo mode
+  - className?: string          -- extra classes on the span
+  - title?: string              -- tooltip
+  - validate?: (newValue) => boolean  -- pre-save check (SavedItemRow uses for duplicates)
+  - onValidationFail?: () => void     -- called when validate returns false
+  - children?: ReactNode        -- inline decorations AFTER the text (portion badge, * indicator)
 ```
 
-- **Saved Meals**: chevron + name + "3 items" + delete, expands to FoodItemsTable
-- **Saved Routines**: chevron + name + "2 exercises" + delete, expands to WeightItemsTable
-- **Custom Log Types**: no chevron + name + "numeric (kg)" badge + delete, no expansion
+## Who uses what
 
-## Files Changed
+| Caller | readOnly | validate | children |
+|--------|----------|----------|----------|
+| FoodItemsTable (editable branch only) | no | no | portion button, edited indicator |
+| WeightItemsTable (editable branch only) | no | no | edited indicator |
+| CustomLogEntryRow | yes (from isReadOnly prop) | no | no |
+| SavedItemRow | no | yes (duplicate name check) | no |
 
-### 1. New: `src/components/DeleteConfirmPopover.tsx` (~45 lines)
+## File Changes
 
-Extracts the identical trash-icon-with-confirmation-popover used in all three rows.
+### 1. New: `src/components/DescriptionCell.tsx` (~60 lines)
 
-Props:
-- `id`, `label`, `description` -- what to show in the confirmation
-- `onDelete` -- callback
-- `openPopoverId` / `setOpenPopoverId` -- shared open-state pattern
+A `contentEditable` span with:
+- `useRef` to capture original text on focus
+- Blur: save if changed and valid; revert if empty or validation fails
+- Enter: prevent default, blur (triggers save)
+- Escape: revert to original, blur
+- Read-only mode: revert on blur, optionally call `onReadOnlyAttempt`
+- Ref callback syncs `textContent` with `value` prop when not focused
 
-### 2. New: `src/components/SavedItemRow.tsx` (~80 lines)
+### 2. Update: `src/components/FoodItemsTable.tsx`
 
-Shared row shell with optional expansion.
+Replace lines 312-339 (the `contentEditable` span + portion button + edited indicator) with DescriptionCell. The wrapping div with `focus-within:ring-2` stays.
 
-Props:
-- `id`, `name` -- item identity
-- `onUpdateName(newName)` -- save callback
-- `onDelete()` -- delete callback
-- `deleteConfirmLabel`, `deleteConfirmDescription` -- confirmation text
-- `expandable?: boolean` -- whether chevron shows (default true)
-- `isExpanded?`, `onToggleExpand?` -- expansion state (ignored when not expandable)
-- `meta?: ReactNode` -- slot for item count or value-type badge
-- `openDeletePopoverId` / `setOpenDeletePopoverId` -- popover coordination
-- `children?: ReactNode` -- expanded content
-- `existingNames?: string[]` -- for duplicate name validation
+Remove `onSaveDescription` from the `useInlineEdit` call. The save callback moves inline:
+```text
+onSave={(desc) => {
+  onUpdateItem?.(index, 'description', desc);
+  if (item.portion) onUpdateItem?.(index, 'portion', '');
+}}
+```
 
-Internals:
-- `useRef` for name rollback (replaces `dataset.original` hack in all three files)
-- Uses `DeleteConfirmPopover`
-- Conditionally renders chevron based on `expandable`
+Calorie-to-PCF scaling is NOT affected -- that lives in `onSaveNumeric`, completely separate.
 
-### 3. Refactor: `SavedMealRow.tsx` (~40 lines, down from ~210)
+### 3. Update: `src/components/WeightItemsTable.tsx`
 
-- Remove `localItems` state and `useMemo` side effect
-- Keep `itemsWithUids` memo (still needed for uid generation)
-- `handleUpdateItem` / `handleRemoveItem` compute new items array and call `onUpdateMeal` directly
-- Render `SavedItemRow` with `expandable` (default true), pass item count as `meta`, `FoodItemsTable` as children
+Same pattern as FoodItemsTable. Replace lines 320-336 with DescriptionCell. Remove `onSaveDescription` from `useInlineEdit`.
 
-### 4. Refactor: `SavedRoutineRow.tsx` (~45 lines, down from ~200)
+### 4. Update: `src/components/CustomLogEntryRow.tsx`
 
-Same treatment as SavedMealRow but with `WeightItemsTable` as children.
+Replace the `contentEditable` span (lines ~235-251) with DescriptionCell, passing `readOnly={isReadOnly}`. Delete `textOriginalRef`, `handleTextFocus`, `handleTextBlur`, `handleTextKeyDown` (~20 lines removed).
 
-### 5. Refactor: `CustomLogTypeRow.tsx` (~30 lines, down from ~150)
+### 5. Update: `src/components/SavedItemRow.tsx`
 
-- Uses `SavedItemRow` with `expandable={false}`
-- Passes value-type badge + unit as `meta` slot
-- No children (nothing to expand)
-- Duplicate name validation via `existingNames` prop (same as current)
+Replace the name-editing `contentEditable` div (lines ~79-105) with DescriptionCell, using `validate` and `onValidationFail` for duplicate detection. Delete `originalNameRef` and `handleSave`. The `isDuplicateName` helper and `flashError` state remain local.
 
-## Anti-Patterns Fixed
+### 6. Update: `src/hooks/useInlineEdit.ts`
 
-| Issue | Where | Fix |
-|---|---|---|
-| `dataset.original` DOM hack | All 3 rows | `useRef` in SavedItemRow |
-| `useMemo` as side effect | Meal + Routine | Removed entirely |
-| Redundant `localItems` state | Meal + Routine | Data flows from props/cache |
-| Duplicated delete popover | All 3 rows | `DeleteConfirmPopover` |
-| Duplicated contentEditable logic | All 3 rows | Single implementation in SavedItemRow |
+Remove `onSaveDescription`, `descriptionOriginalRef`, and `getDescriptionEditProps`. The hook becomes purely about numeric inline editing (~30 lines removed).
 
-## Why This Sets Up DescriptionCell
+## What stays unchanged
 
-When the column model and `DescriptionCell` arrive, the editable name logic inside `SavedItemRow` is the single place to swap. All three row types -- meals, routines, and custom log types -- get the upgrade at once without touching their individual wrapper components.
+- The `{editable ? ... : ...}` ternary in FoodItemsTable and WeightItemsTable -- the non-editable branch (plain span) is untouched
+- The wrapping div with `focus-within:ring-2` stays in each caller
+- All numeric editing via `useInlineEdit` is unchanged
+- Calorie-to-PCF scaling logic is unchanged
+- Chevron/entry-divider rendering stays in the parent
+- Mobile vs desktop: no differences needed (contentEditable works identically)
 
-## Net Impact
+## Rollout order
 
-- ~560 lines across 3 files reduces to ~240 lines across 5 files (including the 2 new shared components)
-- Single codepath for all settings rows
-- All identified anti-patterns eliminated
+1. Create `DescriptionCell.tsx`
+2. Wire into all four callers simultaneously
+3. Clean up `useInlineEdit` (remove description code)
 
