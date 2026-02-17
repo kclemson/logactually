@@ -1,32 +1,24 @@
 
-# Fix: Make Group Portion Scaling Feel Instant (Optimistic Update)
+
+# Fix: Collapsed Group Header Appearing in Wrong Position
 
 ## Problem
-When you scale a group's portion (e.g., "Done" on the stepper), there's a noticeable delay before the "(1.5 portions)" label updates. This is because the multiplier is persisted to the server via `updateEntry.mutate()`, and the UI waits for the network round-trip + query refetch before showing the new value.
+When expanding one group and collapsing another, the collapsed group's header row can appear in the middle of the expanded group's child items. This happens because collapsed group rows are inserted into the `rows` array using `rows.splice(boundary.startIndex, 0, ...)` (line 809), where `boundary.startIndex` is the index in the **items** array. But the `rows` array has different indexing -- items from other collapsed groups are skipped, and expanded groups inject extra header rows, making the splice position incorrect.
 
-Individual item scaling feels instant because it uses `useEditableItems` with local `pendingEdits` state -- the UI updates immediately in memory, then saves in the background.
-
-## Solution
-Add optimistic local state for the group portion multiplier, so the label updates immediately when "Done" is tapped, while the server save happens in the background.
+## Fix
+Render collapsed group headers inline during the main `items.forEach` loop rather than splicing them in afterward. When the loop encounters the first index of a collapsed group boundary, it pushes the collapsed header row directly into `rows` at that point (and the rest of the items in that boundary are already skipped via `collapsedGroupIndices`).
 
 ## Technical Details
 
-### `src/pages/FoodLog.tsx`
+### `src/components/FoodItemsTable.tsx`
 
-1. Add a local `optimisticMultipliers` state (`Map<string, number>`) alongside the existing memoized `entryPortionMultipliers`.
+**Remove** the post-loop splice block (lines ~795-890) that iterates `groupHeaders` and calls `rows.splice(boundary.startIndex, 0, ...)`.
 
-2. When building the map passed to `FoodItemsTable`, merge the server-derived values with any optimistic overrides (optimistic takes priority).
+**Add** to the main `items.forEach` loop: at the top, before the existing `if (collapsedGroupIndices.has(index)) return;` check, detect if `index` is the `startIndex` of a collapsed group. If so, render the collapsed header row (the same JSX currently in the splice block), push it to `rows`, and then `return` to skip rendering the individual item.
 
-3. In the `onUpdateEntryPortionMultiplier` callback:
-   - Immediately set the optimistic value in local state (instant UI update).
-   - Then call `updateEntry.mutate(...)` as before.
-   - On successful mutation + query invalidation, clear the optimistic entry (server data now has the correct value).
+This ensures every row is pushed in the correct visual order during a single pass, regardless of which groups are expanded or collapsed.
 
-This mirrors the pattern used by `useEditableItems` where local pending state overlays server data for instant feedback.
-
-### Files changed
 | File | Change |
 |------|--------|
-| `src/pages/FoodLog.tsx` | Add `optimisticMultipliers` state, merge into the map passed to `FoodItemsTable`, set optimistic value before calling mutate, clear on settle |
+| `src/components/FoodItemsTable.tsx` | Move collapsed group header rendering from post-loop splice into the main forEach loop, triggered when `index === boundary.startIndex` for a collapsed group |
 
-No database or type changes needed -- this is purely a UI responsiveness fix.
