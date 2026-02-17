@@ -7,6 +7,7 @@ interface UseGroupPortionScaleOptions {
   entries: FoodEntry[];
   updateEntry: UseMutationResult<any, Error, Partial<FoodEntry> & { id: string }>;
   getItemsForEntry: (entryId: string) => FoodItem[];
+  clearPendingForItems: (uids: string[]) => void;
 }
 
 /**
@@ -20,6 +21,7 @@ export function useGroupPortionScale({
   entries,
   updateEntry,
   getItemsForEntry,
+  clearPendingForItems,
 }: UseGroupPortionScaleOptions) {
   const queryClient = useQueryClient();
 
@@ -77,6 +79,9 @@ export function useGroupPortionScale({
     const entry = entries.find(e => e.id === entryId);
     const existingMultiplier = entry?.group_portion_multiplier ?? 1.0;
     const newMultiplier = existingMultiplier * multiplier;
+
+    // Clear stale pending edits so they don't override scaled values
+    clearPendingForItems(currentItems.map(item => item.uid));
 
     // Set optimistic state for instant UI
     setOptimisticMultipliers(prev => {
