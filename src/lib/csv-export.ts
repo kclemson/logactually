@@ -100,7 +100,7 @@ export interface WeightSetExport {
 const LBS_TO_KG = 0.453592;
 
 export function exportWeightLog(sets: WeightSetExport[]) {
-  const headers = ['Date', 'Time', 'Exercise', 'Sets', 'Reps', 'Weight (lbs)', 'Weight (kg)', 'Incline (%)', 'Effort (1-10)', 'Calories Burned', 'Raw Input'];
+  const headers = ['Date', 'Time', 'Exercise', 'Sets', 'Reps', 'Weight (lbs)', 'Weight (kg)', 'Incline (%)', 'Effort (1-10)', 'Calories Burned', 'Heart Rate (bpm)', 'Cadence (rpm)', 'Speed (mph)', 'Raw Input'];
 
   const sorted = [...sets].sort((a, b) => {
     if (a.logged_date !== b.logged_date) {
@@ -120,6 +120,9 @@ export function exportWeightLog(sets: WeightSetExport[]) {
     set.exercise_metadata?.incline_pct ?? '',
     set.exercise_metadata?.effort ?? '',
     set.exercise_metadata?.calories_burned ?? '',
+    set.exercise_metadata?.heart_rate ?? '',
+    set.exercise_metadata?.cadence_rpm ?? '',
+    set.exercise_metadata?.speed_mph ?? '',
     set.raw_input || '',
   ]);
 

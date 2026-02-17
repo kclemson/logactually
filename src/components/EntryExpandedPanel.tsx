@@ -21,6 +21,8 @@ interface EntryExpandedPanelProps {
   gridCols: string;
   /** Optional content rendered before the standard panel (e.g. calorie burn estimates) */
   extraContent?: ReactNode;
+  /** Callback to open the detail dialog for this entry */
+  onShowDetails?: () => void;
 }
 
 /**
@@ -33,6 +35,7 @@ export function EntryExpandedPanel({
   onSaveAs,
   gridCols,
   extraContent,
+  onShowDetails,
 }: EntryExpandedPanelProps) {
   const { type, name, isFromSaved } = savedItemInfo;
   const typeLabel = type === 'meal' ? 'meal' : 'routine';
@@ -69,6 +72,15 @@ export function EntryExpandedPanel({
             className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
           >
             Save as {typeLabel}
+          </button>
+        )}
+
+        {onShowDetails && (
+          <button
+            onClick={onShowDetails}
+            className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            Details
           </button>
         )}
       </div>

@@ -78,6 +78,8 @@ interface FoodItemsTableProps {
   calorieTargetComponents?: CalorieTargetComponents | null;
   /** Callback to persist updated group name via inline editing */
   onUpdateGroupName?: (entryId: string, newName: string) => void;
+  /** Callback when user clicks "Details" on an entry's expanded panel */
+  onShowDetails?: (entryId: string, itemIndex: number) => void;
 }
 
 export function FoodItemsTable({
@@ -115,6 +117,7 @@ export function FoodItemsTable({
   dailyBurn = 0,
   calorieTargetComponents,
   onUpdateGroupName,
+  onShowDetails,
 }: FoodItemsTableProps) {
   // Read-only mode blocks saves
   const { isReadOnly, triggerOverlay } = useReadOnlyContext();
@@ -997,6 +1000,13 @@ export function FoodItemsTable({
                       ? () => onSaveAsMeal(currentEntryId!, currentRawInput ?? null, entryItems)
                       : undefined}
                     gridCols={gridCols}
+                    onShowDetails={onShowDetails && currentEntryId
+                      ? () => {
+                          // Open details for first item in the entry
+                          const firstIdx = entryBoundaries?.find(b => b.entryId === currentEntryId)?.startIndex ?? index;
+                          onShowDetails(currentEntryId!, firstIdx);
+                        }
+                      : undefined}
                   />
                 );
               })()}

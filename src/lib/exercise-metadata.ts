@@ -173,3 +173,26 @@ export function getExerciseMuscles(exerciseKey: string): ExerciseMuscles | null 
 export function hasDistanceTracking(exerciseKey: string): boolean {
   return ['walk_run', 'cycling'].includes(exerciseKey);
 }
+
+// ============================================================================
+// KNOWN METADATA KEYS REGISTRY
+// Drives the DetailDialog UI for exercise metadata fields
+// ============================================================================
+
+export interface MetadataKeyConfig {
+  key: string;
+  label: string;
+  unit: string;
+  appliesTo: 'cardio' | 'strength' | 'both';
+  min?: number;
+  max?: number;
+}
+
+export const KNOWN_METADATA_KEYS: MetadataKeyConfig[] = [
+  { key: 'effort', label: 'Effort', unit: '/10', appliesTo: 'both', min: 1, max: 10 },
+  { key: 'calories_burned', label: 'Cal Burned', unit: 'cal', appliesTo: 'both', min: 1 },
+  { key: 'heart_rate', label: 'Heart Rate', unit: 'bpm', appliesTo: 'both', min: 30, max: 250 },
+  { key: 'incline_pct', label: 'Incline', unit: '%', appliesTo: 'cardio', min: 0, max: 30 },
+  { key: 'cadence_rpm', label: 'Cadence', unit: 'rpm', appliesTo: 'cardio', min: 1 },
+  { key: 'speed_mph', label: 'Speed', unit: 'mph', appliesTo: 'cardio', min: 0.1 },
+];

@@ -91,11 +91,33 @@ export function useWeightEntries(date: string) {
   const updateSet = useMutation({
     mutationFn: async (params: {
       id: string;
-      updates: Partial<Pick<WeightSet, 'description' | 'sets' | 'reps' | 'weight_lbs'>>;
+      updates: Partial<Pick<WeightSet,
+        'description' | 'sets' | 'reps' | 'weight_lbs' |
+        'duration_minutes' | 'distance_miles' |
+        'exercise_key' | 'exercise_subtype' | 'exercise_metadata'
+      >>;
     }) => {
+      // Map camelCase to snake_case for DB columns that differ
+      const dbUpdates: Record<string, any> = {};
+      for (const [key, value] of Object.entries(params.updates)) {
+        if (key === 'exercise_metadata') {
+          dbUpdates.exercise_metadata = value;
+        } else if (key === 'exercise_subtype') {
+          dbUpdates.exercise_subtype = value;
+        } else if (key === 'exercise_key') {
+          dbUpdates.exercise_key = value;
+        } else if (key === 'duration_minutes') {
+          dbUpdates.duration_minutes = value;
+        } else if (key === 'distance_miles') {
+          dbUpdates.distance_miles = value;
+        } else {
+          dbUpdates[key] = value;
+        }
+      }
+
       const { error } = await supabase
         .from('weight_sets')
-        .update(params.updates)
+        .update(dbUpdates)
         .eq('id', params.id);
 
       if (error) throw error;
