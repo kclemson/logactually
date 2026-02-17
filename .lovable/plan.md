@@ -1,32 +1,45 @@
 
-# Change calorie burn preview to 3 cardio + 1 strength
+
+# Add sedentary TDEE to Estimated Calorie Burn chart
 
 ## Overview
-Update the preview in the "Show estimated calorie burn" dialog to display 3 cardio exercises and 1 strength exercise instead of the current 2+2 split, both for user data and sample fallbacks.
+For users with biometrics configured, enhance the calorie burn chart tooltip with a "show the math" equation using the established term "total daily energy expenditure" (matching the Calendar/DCT tooltip on line 42/52 of `CalorieTargetTooltipContent.tsx`). Also update the chart subtitle.
 
-## Changes (single file: `src/components/CalorieBurnDialog.tsx`)
+## Terminology (consistent with existing tooltips)
+- Sedentary TDEE (BMR x 1.2) labeled as: **(total daily energy expenditure)** -- same label used in the DCT tooltip
+- Exercise burn labeled as: **(exercise burn estimate)**
+- Sum labeled as: **(est. total incl. exercise)**
 
-### 1. Add a 3rd sample cardio fallback
-Add a swimming entry to `SAMPLE_CARDIO`:
-```ts
-{ exercise_key: 'swimming', sets: 0, reps: 0, weight_lbs: 0, duration_minutes: 20 }
+## Changes
+
+### 1. `src/pages/Trends.tsx`
+- Import `computeAbsoluteBMR` from `@/lib/calorie-burn` and `ACTIVITY_MULTIPLIERS` from `@/lib/calorie-target`
+- Compute `sedentaryTDEE`: if `computeAbsoluteBMR(settings)` returns a number, multiply by `ACTIVITY_MULTIPLIERS.sedentary` and round; otherwise null
+- Pass `sedentaryTDEE` as a new prop to `CalorieBurnChart`
+- Update subtitle: when `sedentaryTDEE` is available, append ` · TDEE: ~{sedentaryTDEE}` to the existing subtitle
+
+### 2. `src/components/trends/CalorieBurnChart.tsx`
+- Add optional `sedentaryTDEE?: number | null` to `CalorieBurnChartProps`
+- Pass it through to `BurnTooltip`
+- When `sedentaryTDEE` is present, append below the exercise count line:
+
+```text
+Feb 5
+~384 cal (range: 358-409)
+9 exercises (1 cardio, 8 strength)
+
+  2,054  (total daily energy expenditure)
++   384  (exercise burn estimate)
+= 2,438  (est. total incl. exercise)
 ```
 
-### 2. Trim `SAMPLE_STRENGTH` to 1 entry
-Keep only bench press, remove squat (we only need one fallback now).
+- Styling: `grid grid-cols-[auto_1fr]`, `text-[10px]`, `tabular-nums`, `opacity-75`, separated by a `border-t` -- matching `CalorieTargetTooltipContent` exactly
+- When `sedentaryTDEE` is null, tooltip remains unchanged
 
-### 3. Pass `p_limit_per_group: 3` to the RPC
-This fetches up to 3 cardio from the user's history. The extra strength rows returned (up to 3) are harmless -- the client slices to 1.
+## Files modified
+- `src/pages/Trends.tsx`
+- `src/components/trends/CalorieBurnChart.tsx`
 
-### 4. Update the assembly logic
-Change the fill-loop caps:
-- Cardio: fill to 3 (was 2)
-- Strength: fill to 1 (was 2)
+## No backend changes needed
+`computeAbsoluteBMR` and `ACTIVITY_MULTIPLIERS.sedentary` already exist. No database or edge function changes required.
 
-Also slice user arrays so we never exceed the target count:
-```ts
-const userCardio = (userExercises || []).filter(e => e.is_cardio).slice(0, 3);
-const userStrength = (userExercises || []).filter(e => !e.is_cardio).slice(0, 1);
-```
-
-No database migration needed -- the RPC already accepts `p_limit_per_group`.
