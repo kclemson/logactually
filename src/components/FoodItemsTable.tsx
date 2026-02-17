@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { EntryExpandedPanel } from '@/components/EntryExpandedPanel';
 import { DescriptionCell } from '@/components/DescriptionCell';
+import { useHasHover } from '@/hooks/use-has-hover';
 import { FoodItem, DailyTotals, calculateTotals, scaleMacrosByCalories, ScaledMacros } from '@/types/food';
 import { stepMultiplier, scaleItemByMultiplier, scalePortion } from '@/lib/portion-scaling';
 import { Minus, Plus } from 'lucide-react';
@@ -173,6 +174,9 @@ export function FoodItemsTable({
   const gridCols = getGridCols(!!hasDeleteColumn, selectable);
 
   const TotalsRow = () => {
+    const hasHover = useHasHover();
+    const [tooltipOpen, setTooltipOpen] = useState(false);
+
     // Calculate calorie contribution from each macro
     const proteinCals = totals.protein * 4;
     const carbsCals = totals.carbs * 4;
@@ -195,23 +199,27 @@ export function FoodItemsTable({
         <span className={cn("px-1 font-semibold", showEntryDividers && "pl-4", compact && "text-sm")}>Total</span>
         {(() => {
           const showDot = showCalorieTargetDot && dailyCalorieTarget && dailyCalorieTarget > 0;
-          const calorieContent = (
-            <span className={cn("px-1 text-center inline-flex items-center justify-center", compact ? "text-xs" : "text-heading")}>
-              {Math.round(totals.calories)}
-              {showDot && (
-                <span className={`text-[10px] ml-0.5 leading-none relative top-[-0.5px] ${getTargetDotColor(totals.calories, dailyCalorieTarget)}`}>●</span>
-              )}
-            </span>
-          );
 
           if (showDot) {
             return (
               <TooltipProvider delayDuration={150}>
-                <Tooltip>
+                <Tooltip open={hasHover ? undefined : tooltipOpen}>
                   <TooltipTrigger asChild>
-                    {calorieContent}
+                    <span
+                      className={cn("px-1 text-center inline-flex items-center justify-center", compact ? "text-xs" : "text-heading")}
+                      tabIndex={0}
+                      role="button"
+                      onClick={hasHover ? undefined : () => setTooltipOpen(o => !o)}
+                    >
+                      {Math.round(totals.calories)}
+                      <span className={`text-[10px] ml-0.5 leading-none relative top-[-0.5px] ${getTargetDotColor(totals.calories, dailyCalorieTarget)}`}>●</span>
+                    </span>
                   </TooltipTrigger>
-                  <TooltipContent side="bottom" sideOffset={5}>
+                  <TooltipContent
+                    side="bottom"
+                    sideOffset={5}
+                    onPointerDownOutside={(e) => e.preventDefault()}
+                  >
                     <CalorieTargetTooltipContent
                       label="Total"
                       intake={Math.round(totals.calories)}
@@ -225,7 +233,11 @@ export function FoodItemsTable({
             );
           }
 
-          return calorieContent;
+          return (
+            <span className={cn("px-1 text-center inline-flex items-center justify-center", compact ? "text-xs" : "text-heading")}>
+              {Math.round(totals.calories)}
+            </span>
+          );
         })()}
         <span className={cn("px-1 text-center", compact ? "text-xs" : "text-heading")}>
           <div>{Math.round(totals.protein)}/{Math.round(totals.carbs)}/{Math.round(totals.fat)}</div>
