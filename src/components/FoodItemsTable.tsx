@@ -362,29 +362,30 @@ export function FoodItemsTable({
                         />
                       </div>
                     )}
-                    <DescriptionCell
-                      value={groupName}
-                      onSave={(newName) => onUpdateGroupName?.(boundary.entryId, newName)}
-                      readOnly={isReadOnly}
-                      onReadOnlyAttempt={triggerOverlay}
-                      className={cn("pl-1 pr-0 py-1 truncate shrink min-w-0", compact && "text-sm")}
-                      title={groupName}
-                    >
-                      {(() => {
-                        const cumulative = entryPortionMultipliers?.get(boundary.entryId) ?? 1.0;
-                        return (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setGroupScalingEntryId(groupScalingEntryId === boundary.entryId ? null : boundary.entryId);
-                              setGroupPortionMultiplier(1.0);
-                            }}
-                            className="ml-1 text-xs text-muted-foreground whitespace-nowrap cursor-pointer hover:text-foreground transition-colors"
-                          >({scalePortion("1 portion", cumulative)})</button>
-                        );
-                      })()}
-                    </DescriptionCell>
+                    <div className={cn("flex-1 min-w-0 overflow-hidden max-h-[1.5rem] pl-1 py-1", compact && "text-sm")}>
+                      <DescriptionCell
+                        value={groupName}
+                        onSave={(newName) => onUpdateGroupName?.(boundary.entryId, newName)}
+                        readOnly={isReadOnly}
+                        onReadOnlyAttempt={triggerOverlay}
+                        title={groupName}
+                      >
+                        {(() => {
+                          const cumulative = entryPortionMultipliers?.get(boundary.entryId) ?? 1.0;
+                          return (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setGroupScalingEntryId(groupScalingEntryId === boundary.entryId ? null : boundary.entryId);
+                                setGroupPortionMultiplier(1.0);
+                              }}
+                              className="ml-1 text-xs text-muted-foreground whitespace-nowrap cursor-pointer hover:text-foreground transition-colors"
+                            >({scalePortion("1 portion", cumulative)})</button>
+                          );
+                        })()}
+                      </DescriptionCell>
+                    </div>
                   </div>
                   <span className={cn("px-1 py-1 text-center", compact ? "text-xs" : "")}>
                     {Math.round(groupCalories)}
@@ -529,29 +530,30 @@ export function FoodItemsTable({
                         />
                       </div>
                     )}
-                    <DescriptionCell
-                      value={groupName}
-                      onSave={(newName) => onUpdateGroupName?.(boundary.entryId, newName)}
-                      readOnly={isReadOnly}
-                      onReadOnlyAttempt={triggerOverlay}
-                      className={cn("pl-1 pr-0 py-1 font-semibold truncate shrink min-w-0", compact && "text-sm")}
-                      title={groupName}
-                    >
-                      {(() => {
-                        const cumulative = entryPortionMultipliers?.get(boundary.entryId) ?? 1.0;
-                        return (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setGroupScalingEntryId(groupScalingEntryId === boundary.entryId ? null : boundary.entryId);
-                              setGroupPortionMultiplier(1.0);
-                            }}
-                            className="ml-1 text-xs text-muted-foreground whitespace-nowrap cursor-pointer hover:text-foreground transition-colors"
-                          >({scalePortion("1 portion", cumulative)})</button>
-                        );
-                      })()}
-                    </DescriptionCell>
+                    <div className={cn("flex-1 min-w-0 overflow-hidden max-h-[1.5rem] pl-1 py-1 font-semibold", compact && "text-sm")}>
+                      <DescriptionCell
+                        value={groupName}
+                        onSave={(newName) => onUpdateGroupName?.(boundary.entryId, newName)}
+                        readOnly={isReadOnly}
+                        onReadOnlyAttempt={triggerOverlay}
+                        title={groupName}
+                      >
+                        {(() => {
+                          const cumulative = entryPortionMultipliers?.get(boundary.entryId) ?? 1.0;
+                          return (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setGroupScalingEntryId(groupScalingEntryId === boundary.entryId ? null : boundary.entryId);
+                                setGroupPortionMultiplier(1.0);
+                              }}
+                              className="ml-1 text-xs text-muted-foreground whitespace-nowrap cursor-pointer hover:text-foreground transition-colors"
+                            >({scalePortion("1 portion", cumulative)})</button>
+                          );
+                        })()}
+                      </DescriptionCell>
+                    </div>
                   </div>
                   <span className={cn("px-1 py-1 text-center", compact ? "text-xs" : "text-heading")}>
                     {Math.round(groupCalories)}
