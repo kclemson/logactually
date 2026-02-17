@@ -1,92 +1,54 @@
 
 
-# DescriptionCell Component — Updated Plan
+# Fix SavedItemRow Width and Demo Mode Editing Behavior
 
-## Key Clarification: Editable vs Non-Editable
+## Issue #1: Narrow Edit Box in Settings
 
-FoodItemsTable and WeightItemsTable use a full `{editable ? ... : ...}` ternary in the parent. The non-editable branch renders a plain `<span>` with no interactivity. DescriptionCell only gets rendered inside the editable branch for those two callers.
+**Root cause:** In `SavedItemRow.tsx` line 63-64, the wrapper div has the `truncate` class, which sets `overflow: hidden; text-overflow: ellipsis; white-space: nowrap` -- this constrains the editable area to only the width of the current text.
 
-The `readOnly` prop is only needed by CustomLogEntryRow (for demo/read-only accounts). SavedItemRow is always editable.
+In contrast, on the food/exercise pages, the wrapper div uses `flex-1 min-w-0` which lets the editable area fill all available horizontal space.
 
-## Component API (refined)
+**Fix:** In `SavedItemRow.tsx`, change the wrapper div from:
+```
+'text-sm truncate cursor-text hover:bg-muted/50 focus-within:...'
+```
+to use `flex-1 min-w-0` like the food/exercise tables, so the ring expands to fill available width. The `truncate` stays on the DescriptionCell span itself (not the wrapper) so long names still ellipsis when not focused.
 
-```text
-DescriptionCell
-  Props:
-  - value: string               -- text to display
-  - onSave: (newValue) => void  -- called on commit (blur or Enter)
-  - readOnly?: boolean          -- blocks saves, reverts on blur (default: false)
-  - onReadOnlyAttempt?: () => void  -- trigger overlay in demo mode
-  - className?: string          -- extra classes on the span
-  - title?: string              -- tooltip
-  - validate?: (newValue) => boolean  -- pre-save check (SavedItemRow uses for duplicates)
-  - onValidationFail?: () => void     -- called when validate returns false
-  - children?: ReactNode        -- inline decorations AFTER the text (portion badge, * indicator)
+## Issue #2: Demo Mode -- Food Page Shows Edits Temporarily, Settings Does Not
+
+**Root cause:** Two completely different data flow architectures:
+
+- **Food/Exercise pages** use `useEditableItems`, which maintains a local `pendingEdits` Map in React state. When you edit a cell, `updateItem()` writes to this local Map immediately, and `displayItems` merges those edits over the query data. The DB write fails silently (RLS blocks it), but the local pending state persists until you navigate away (which unmounts the component and clears the state). That's why edits "stick" within a session.
+
+- **Settings saved meals/routines** do NOT use `useEditableItems`. The `onUpdateName` callback goes directly to `useUpdateSavedMeal().mutate()`, which calls the DB. The DB write fails (RLS), `onSuccess` never fires, so the React Query cache never updates. Meanwhile, `DescriptionCell`'s ref callback sees `value` (the prop) hasn't changed and resets `textContent` back to the original on the next render.
+
+**This is actually the correct behavior for Settings** -- saved meal/routine names should not appear edited when they weren't actually saved. The food page behavior is a side effect of the optimistic local editing layer, which is designed for a different purpose (batching edits before auto-save).
+
+**No code change needed for issue #2.** The difference is architectural and each behavior is appropriate for its context.
+
+## Technical Changes
+
+### File: `src/components/SavedItemRow.tsx`
+
+Change the wrapper div (lines 61-66) from:
+```
+<div className="flex items-center gap-1 flex-1 min-w-0">
+  <div className={cn(
+    'text-sm truncate cursor-text hover:bg-muted/50 focus-within:bg-focus-bg focus-within:ring-2 focus-within:ring-focus-ring rounded px-1 py-0.5 transition-colors',
+    flashError && 'ring-2 ring-destructive bg-destructive/10'
+  )}>
 ```
 
-## Who uses what
-
-| Caller | readOnly | validate | children |
-|--------|----------|----------|----------|
-| FoodItemsTable (editable branch only) | no | no | portion button, edited indicator |
-| WeightItemsTable (editable branch only) | no | no | edited indicator |
-| CustomLogEntryRow | yes (from isReadOnly prop) | no | no |
-| SavedItemRow | no | yes (duplicate name check) | no |
-
-## File Changes
-
-### 1. New: `src/components/DescriptionCell.tsx` (~60 lines)
-
-A `contentEditable` span with:
-- `useRef` to capture original text on focus
-- Blur: save if changed and valid; revert if empty or validation fails
-- Enter: prevent default, blur (triggers save)
-- Escape: revert to original, blur
-- Read-only mode: revert on blur, optionally call `onReadOnlyAttempt`
-- Ref callback syncs `textContent` with `value` prop when not focused
-
-### 2. Update: `src/components/FoodItemsTable.tsx`
-
-Replace lines 312-339 (the `contentEditable` span + portion button + edited indicator) with DescriptionCell. The wrapping div with `focus-within:ring-2` stays.
-
-Remove `onSaveDescription` from the `useInlineEdit` call. The save callback moves inline:
-```text
-onSave={(desc) => {
-  onUpdateItem?.(index, 'description', desc);
-  if (item.portion) onUpdateItem?.(index, 'portion', '');
-}}
+to:
+```
+<div className="flex items-center gap-1 flex-1 min-w-0">
+  <div className={cn(
+    'flex-1 min-w-0 text-sm cursor-text hover:bg-muted/50 focus-within:bg-focus-bg focus-within:ring-2 focus-within:ring-focus-ring rounded px-1 py-0.5 transition-colors',
+    flashError && 'ring-2 ring-destructive bg-destructive/10'
+  )}>
 ```
 
-Calorie-to-PCF scaling is NOT affected -- that lives in `onSaveNumeric`, completely separate.
+The key change: replace `truncate` with `flex-1 min-w-0`. This makes the edit box fill the available width (matching food/exercise pages) while `min-w-0` still allows text to be clipped properly within flex layout.
 
-### 3. Update: `src/components/WeightItemsTable.tsx`
-
-Same pattern as FoodItemsTable. Replace lines 320-336 with DescriptionCell. Remove `onSaveDescription` from `useInlineEdit`.
-
-### 4. Update: `src/components/CustomLogEntryRow.tsx`
-
-Replace the `contentEditable` span (lines ~235-251) with DescriptionCell, passing `readOnly={isReadOnly}`. Delete `textOriginalRef`, `handleTextFocus`, `handleTextBlur`, `handleTextKeyDown` (~20 lines removed).
-
-### 5. Update: `src/components/SavedItemRow.tsx`
-
-Replace the name-editing `contentEditable` div (lines ~79-105) with DescriptionCell, using `validate` and `onValidationFail` for duplicate detection. Delete `originalNameRef` and `handleSave`. The `isDuplicateName` helper and `flashError` state remain local.
-
-### 6. Update: `src/hooks/useInlineEdit.ts`
-
-Remove `onSaveDescription`, `descriptionOriginalRef`, and `getDescriptionEditProps`. The hook becomes purely about numeric inline editing (~30 lines removed).
-
-## What stays unchanged
-
-- The `{editable ? ... : ...}` ternary in FoodItemsTable and WeightItemsTable -- the non-editable branch (plain span) is untouched
-- The wrapping div with `focus-within:ring-2` stays in each caller
-- All numeric editing via `useInlineEdit` is unchanged
-- Calorie-to-PCF scaling logic is unchanged
-- Chevron/entry-divider rendering stays in the parent
-- Mobile vs desktop: no differences needed (contentEditable works identically)
-
-## Rollout order
-
-1. Create `DescriptionCell.tsx`
-2. Wire into all four callers simultaneously
-3. Clean up `useInlineEdit` (remove description code)
+The DescriptionCell span already has `truncate`-like behavior via its own class, so long names will still display correctly when not focused.
 
