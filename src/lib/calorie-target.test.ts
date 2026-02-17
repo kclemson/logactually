@@ -390,9 +390,13 @@ describe('getCalorieTargetComponents', () => {
     expect(result!.baseTarget).toBeNull();
   });
 
-  it('returns null for body_stats with fixed activity level', () => {
+  it('returns body_stats_multiplier for body_stats with fixed activity level', () => {
     const s = { ...baseSettings, calorieTargetMode: 'body_stats' as const, activityLevel: 'light' as const };
-    expect(getCalorieTargetComponents(s)).toBeNull();
+    const result = getCalorieTargetComponents(s);
+    expect(result).not.toBeNull();
+    expect(result!.mode).toBe('body_stats_multiplier');
+    expect(result!.tdee).toBeGreaterThan(1000);
+    expect(result!.deficit).toBe(0);
   });
 
   it('returns null when disabled', () => {
