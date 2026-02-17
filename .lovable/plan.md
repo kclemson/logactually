@@ -1,45 +1,85 @@
 
-# Fix DCT dialog wording + tooltip formula mismatch
 
-## Issue 1: DCT dialog wording
+# Multi-line Equation Tooltips for body_stats + logged Mode
 
-In `CalorieTargetDialog.tsx` line 344, change:
-```
-+ logged exercise (varies daily)
-```
-to:
-```
-+ calories burned from exercise logs (varies daily)
-```
+## Overview
 
-## Issue 2: Tooltip shows confusing number
+Replace the single-line target description with a stacked math equation in both the rollup tooltip and the per-day calendar tooltips, but only when the user is in `body_stats` mode with `logged` activity level. Other modes keep their current format.
 
-The rollup tooltip currently says "Target: 1,147 cal/day + exercise (from TDEE)". That 1,147 is the pre-computed base (TDEE minus deficit), which doesn't match anything the user sees in the DCT dialog. The dialog shows the formula as "1,497 + exercise - 350".
+## Rollup Tooltip (CalorieTargetRollup)
 
-The fix: for body_stats/logged mode, show the formula components separately in the tooltip so it matches the dialog:
-
+Current:
 ```
 Target: 1,497 + exercise - 350 cal/day
 ```
 
-Or when deficit is 0:
+New:
 ```
-Target: 1,497 + exercise cal/day
+Daily calorie target:
+  1,497 (total daily energy expenditure)
++ calories burned from logged exercise
+- 350 (deficit configured in settings)
 ```
 
-For body_stats with a fixed activity level (non-logged), the current approach is fine since there's no exercise component -- just show the resolved number like "Target: 1,650 cal/day (from TDEE)".
+When deficit is 0, the third line is omitted.
+
+## Per-Day Calendar Tooltip (History)
+
+Current:
+```
+Mon, Feb 14
+1,666 / 1,630 cal target (incl. 483 burn)
+```
+
+New:
+```
+Mon, Feb 14
+1,666 / 1,630 daily calorie target
+
+  1,497 (total daily energy expenditure)
++ 483 (calories burned from logged exercise)
+- 350 (deficit configured in settings)
+```
+
+When deficit is 0, the deficit line is omitted. When burn is 0 for that day, the exercise line shows "+ 0".
 
 ## Technical Details
 
-### File: `src/components/CalorieTargetDialog.tsx`
-- Line 344: change "logged exercise" to "calories burned from exercise logs"
-
 ### File: `src/lib/calorie-target.ts`
-- Update `describeCalorieTarget` for the body_stats/logged branch:
-  - Compute BMR and sedentary TDEE separately (same math as `getEffectiveDailyTarget` but without subtracting deficit)
-  - Format as `"Target: {tdee} + exercise - {deficit} cal/day"` when deficit > 0
-  - Format as `"Target: {tdee} + exercise cal/day"` when deficit is 0
-  - This matches exactly what the DCT dialog shows
+
+Add a new function `getCalorieTargetComponents` that returns structured data instead of a string:
+
+```typescript
+export interface CalorieTargetComponents {
+  tdee: number;
+  deficit: number;
+  mode: 'body_stats_logged';
+}
+
+export function getCalorieTargetComponents(settings: UserSettings): CalorieTargetComponents | null
+```
+
+Returns non-null only for `body_stats` + `logged` mode. Computes the sedentary TDEE and deficit from settings.
+
+`describeCalorieTarget` remains unchanged for use in non-logged modes. The rollup and day tooltips will check `getCalorieTargetComponents` first; if non-null, render the equation; otherwise fall back to `describeCalorieTarget`.
+
+### File: `src/components/CalorieTargetRollup.tsx`
+
+- Import `getCalorieTargetComponents`
+- In the tooltip content, check if components are available
+- If yes: render the multi-line equation with monospace-style alignment using left-aligned text
+- If no: render `targetDescription` as before (single line)
+- The equation lines use `text-primary-foreground` to match the existing tooltip style
+
+### File: `src/pages/History.tsx`
+
+- Import `getCalorieTargetComponents`
+- In `buildDayTooltip`, check if components are available
+- If yes: after the `intake / target daily calorie target` line, render the equation breakdown with the actual burn value for that day
+- If no: keep the current format (`intake / target cal target (incl. burn)`)
 
 ### File: `src/lib/calorie-target.test.ts`
-- Update the existing test for body_stats/logged to match the new format
+
+- Add tests for `getCalorieTargetComponents`: returns correct tdee/deficit for body_stats+logged, returns null for other modes
+
+### No other files changed
