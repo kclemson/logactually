@@ -1,56 +1,33 @@
 
 
-# Fix: Stale Pending Edits Override Group Scaling
+# Part 1: Add Delete Icon to Expanded Group Header
 
-## Problem
+## What's Changing
 
-When the user edits a child item's calories inline (e.g., 200 to 300) and then scales the parent group (e.g., 1.5x), the child item's calories should become 450 but instead stay at 300.
+Line 575 has `{hasDeleteColumn && <span></span>}` -- an empty placeholder in the expanded group header's delete column. The collapsed header (lines 396-426) has the full AlertDialog + Trash2 icon. The fix is simply replacing the empty span with the same AlertDialog block.
 
-## Root Cause
-
-The `useEditableItems` hook stores inline edits in a `pendingEdits` map (keyed by item UID). These pending edits are never automatically cleared after a successful save. The flow:
-
-1. User edits child calories: `pendingEdits` stores `{calories: 300}` for that item's UID
-2. Save fires, DB now has 300, query refetches with 300
-3. `displayItems` = query data (300) + pending edit (300) = 300 (looks correct)
-4. User scales group by 1.5x: `scaleGroupPortion` reads `displayItems` (300), scales to 450, saves
-5. Query refetches with 450
-6. `displayItems` = query data (450) + **stale pending edit (300)** = **300** -- bug!
-
-The pending edit from step 1 is never cleared, so it permanently overrides any subsequent changes to that item's calories from other sources (like group scaling).
-
-## Fix
-
-In `useGroupPortionScale.scaleGroupPortion`, after building the scaled items, clear all pending edits for items in that entry. This requires passing a `clearPendingForItem` function from `useEditableItems` into the hook.
-
-### 1. `src/hooks/useGroupPortionScale.ts`
-
-- Add `clearPendingForItems: (uids: string[]) => void` to the options interface
-- In `scaleGroupPortion`, call `clearPendingForItems` with all item UIDs before firing the mutation
-
-### 2. `src/pages/FoodLog.tsx`
-
-- Destructure `clearPendingForItem` from `useEditableFoodItems`
-- Create a small wrapper `clearPendingForItems` that calls `clearPendingForItem` for each UID
-- Pass it to `useGroupPortionScale`
-
-### 3. `src/hooks/useEditableItems.ts`
-
-No changes needed -- `clearPendingForItem` already exists and does exactly what we need.
+To your question about whether there's a shared codepath we could unify: no, the collapsed and expanded headers are two entirely separate `rows.push()` blocks. They share the same grid layout but render different content (collapsed shows a chevron + summary row; expanded shows an editable name + child items below). There's no wrapper component or conditional branch to simplify -- it's just a missing copy of the delete icon in the expanded variant. The fix is a straightforward copy of the AlertDialog block.
 
 ## Technical Details
 
-```text
-useEditableFoodItems (existing)
-  --> clearPendingForItem(uid)  // already exists, clears pendingEdits for one item
+### File: `src/components/FoodItemsTable.tsx`
 
-useGroupPortionScale (updated)
-  --> receives clearPendingForItems callback
-  --> scaleGroupPortion() calls it before mutating, clearing stale edits
-```
+**Line 575**: Replace `{hasDeleteColumn && <span></span>}` with the same AlertDialog block from lines 396-426 (Trash2 icon, confirmation dialog with group name and item count, calls `onDeleteEntry`).
+
+---
+
+# Part 2 Opinion: `portion_multiplier` on FoodItem
+
+Honestly, I'd recommend **skipping this** for now. Here's why:
+
+- **It adds a persistent tracking field to every food item** in the JSONB column, purely for a UI convenience (showing "Reset to 1x" on individual items). The group-level reset already works via `group_portion_multiplier` on the entry.
+- **Individual item scaling is rare** compared to group scaling. Most users scale the whole group, not individual children. Singletons are even less likely to need a reset -- if you scaled a single item, you probably meant to.
+- **It increases surface area for bugs**: every code path that touches food items (AI analysis, barcode lookup, photo logging, saved meals, CSV export, Apple Health import) now needs to be aware of this field. Even if it's optional, you'd want to strip or reset it in various places (e.g., when saving as a meal template).
+- **The group-level "Reset to 1x" you just shipped covers the main use case** -- reversing a group scale that used non-step increments.
+
+My recommendation: ship the expanded header delete icon fix, and defer `portion_multiplier` unless you find yourself actually wanting it in practice. It's a clean idea architecturally, but the cost/benefit doesn't justify it as a "nice to have."
 
 | File | Change |
 |------|--------|
-| `src/hooks/useGroupPortionScale.ts` | Add `clearPendingForItems` to options; call it in `scaleGroupPortion` before the mutation |
-| `src/pages/FoodLog.tsx` | Destructure `clearPendingForItem` from `useEditableFoodItems`; create wrapper; pass to hook |
+| `src/components/FoodItemsTable.tsx` | Replace empty `<span>` at line 575 with AlertDialog + Trash2 delete icon (same as collapsed header) |
 
