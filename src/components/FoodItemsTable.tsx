@@ -473,14 +473,30 @@ export function FoodItemsTable({
                         }}
                         className="text-xs font-medium text-primary hover:underline"
                       >Done</button>
-                      {groupPortionMultiplier !== 1.0 && (() => {
+                      {(() => {
                         const existingMult = entryPortionMultipliers?.get(boundary.entryId) ?? 1.0;
-                        const previewMult = existingMult * groupPortionMultiplier;
-                        return (
-                          <span className="text-xs text-muted-foreground tabular-nums">
-                            ({scalePortion("1 portion", previewMult)}, {Math.round(groupCalories * groupPortionMultiplier)} cal)
-                          </span>
-                        );
+                        if (groupPortionMultiplier !== 1.0) {
+                          const previewMult = existingMult * groupPortionMultiplier;
+                          return (
+                            <span className="text-xs text-muted-foreground tabular-nums">
+                              ({scalePortion("1 portion", previewMult)}, {Math.round(groupCalories * groupPortionMultiplier)} cal)
+                            </span>
+                          );
+                        }
+                        if (existingMult !== 1.0) {
+                          return (
+                            <button type="button"
+                              onClick={() => {
+                                if (isReadOnly) { triggerOverlay(); return; }
+                                onScaleGroupPortion?.(boundary.entryId, 1 / existingMult);
+                                setGroupScalingEntryId(null);
+                                setGroupPortionMultiplier(1.0);
+                              }}
+                              className="text-xs text-muted-foreground hover:text-foreground hover:underline transition-colors"
+                            >Reset to 1x</button>
+                          );
+                        }
+                        return null;
                       })()}
                     </div>
                   </div>
@@ -606,14 +622,30 @@ export function FoodItemsTable({
                         }}
                         className="text-xs font-medium text-primary hover:underline"
                       >Done</button>
-                      {groupPortionMultiplier !== 1.0 && (() => {
+                      {(() => {
                         const existingMult = entryPortionMultipliers?.get(boundary.entryId) ?? 1.0;
-                        const previewMult = existingMult * groupPortionMultiplier;
-                        return (
-                          <span className="text-xs text-muted-foreground tabular-nums">
-                            ({scalePortion("1 portion", previewMult)}, {Math.round(groupCalories * groupPortionMultiplier)} cal)
-                          </span>
-                        );
+                        if (groupPortionMultiplier !== 1.0) {
+                          const previewMult = existingMult * groupPortionMultiplier;
+                          return (
+                            <span className="text-xs text-muted-foreground tabular-nums">
+                              ({scalePortion("1 portion", previewMult)}, {Math.round(groupCalories * groupPortionMultiplier)} cal)
+                            </span>
+                          );
+                        }
+                        if (existingMult !== 1.0) {
+                          return (
+                            <button type="button"
+                              onClick={() => {
+                                if (isReadOnly) { triggerOverlay(); return; }
+                                onScaleGroupPortion?.(boundary.entryId, 1 / existingMult);
+                                setGroupScalingEntryId(null);
+                                setGroupPortionMultiplier(1.0);
+                              }}
+                              className="text-xs text-muted-foreground hover:text-foreground hover:underline transition-colors"
+                            >Reset to 1x</button>
+                          );
+                        }
+                        return null;
                       })()}
                     </div>
                   </div>
