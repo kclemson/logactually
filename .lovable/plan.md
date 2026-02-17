@@ -1,92 +1,52 @@
 
 
-# Collapsed Group Rows for Multi-Item Food Entries
+# Group Portion Scaling — Reuse `scalePortion` for Display
 
-## Overview
-Multi-item food entries (from photos, saved meals, or multi-item text input) will default to a collapsed "group header" row showing a summary name, aggregate calories/P/C/F, and a portion multiplier. Expanding reveals indented sub-items with full edit capabilities, plus the existing metadata panel.
+## Problem
+The group header currently hardcodes "(1 portion)". After scaling, it should show the cumulative result (e.g., "(0.5 portions)", "(2 portions)") using the same `scalePortion()` function that individual items already use for natural pluralization.
 
-## How grouping works (data model)
-
-No new database relationships are needed. The existing `food_entries` table already contains a `food_items` JSONB array -- each entry IS the group. A new nullable `group_name TEXT` column on the `food_entries` table stores the display label for the collapsed row. Single-item entries (1 item) render exactly as today with no group header.
-
-There is no risk of name collisions across days or duplicate entries, because `group_name` is just a display label on a specific `food_entries` row (identified by its UUID `id`). Two entries on different days -- or even the same day -- can share the same `group_name` without conflict.
-
-## Deletion behavior
-
-- **Collapsed group**: The delete button (trash icon) on the group header row triggers the existing `DeleteGroupDialog` (confirmation listing all sub-items), then deletes the entire entry.
-- **Expanded sub-items**: Each sub-item has its own delete button (same as today). Deleting individual items updates the entry; deleting the last item removes the entry.
-
-## Inline editing in expanded state
-
-The expanded sub-items reuse the exact same rendering code paths as today (same `DescriptionCell`, `useInlineEdit`, portion scaling stepper, calorie input, P/C/F preview). No behavioral changes to individual item editing -- it's the same code, just visually indented under the group header.
-
----
-
-## Technical details
+## Approach
 
 ### 1. Database migration
-Add nullable `group_name TEXT` column to `food_entries`.
+Add `group_portion_multiplier REAL DEFAULT 1.0` to `food_entries`. This stores the cumulative multiplier so the label persists after save/reload.
 
 ### 2. `src/types/food.ts`
-Add `group_name: string | null` to the `FoodEntry` interface.
+Add `group_portion_multiplier: number | null` to the `FoodEntry` interface.
 
-### 3. `supabase/functions/_shared/prompts.ts`
-In `buildPhotoAnalysisPrompt()`, tighten the `summary` instruction from "max ~60 chars" to "max ~30 chars" so it fits cleanly as a group header label (e.g., "Turkey dinner", "Chicken salad").
+### 3. `src/hooks/useFoodEntries.ts`
+Include `group_portion_multiplier` in the `createEntry` mutation (default 1.0).
 
-### 4. `src/pages/FoodLog.tsx` -- populate `group_name` at creation time
+### 4. `src/components/FoodItemsTable.tsx`
 
-- **Photo entries** (`handlePhotoSubmit`): Use `result.summary` as `group_name`.
-- **Saved meal entries** (`handleLogSavedMeal` / `createEntryFromItems`): Look up the meal name from the `mealId` parameter and pass it as `group_name`.
-- **Text entries** (`handleSubmit`): For multi-item results (2+ items), use `raw_input` as fallback `group_name` (or null; client truncates for display).
+**Display label**: Replace the hardcoded `(1 portion)` with a call to `scalePortion("1 portion", cumulativeMultiplier)`. This reuses the existing pluralization logic:
+- multiplier 1.0 displays "(1 portion)"
+- multiplier 0.5 displays "(0.5 portions)"
+- multiplier 2.0 displays "(2 portions)"
 
-Build an `entryGroupNames` map (like existing `entryMealNames`) from `entries` data and pass to `FoodItemsTable`.
+This applies in both locations (expanded group header ~line 378 and collapsed group header ~line 816).
 
-### 5. `src/components/FoodItemsTable.tsx` -- major rendering changes
+**New prop**: `entryPortionMultipliers?: Map<string, number>` to look up the stored cumulative multiplier per entry.
 
-This is the core change. For each entry boundary with 2+ items:
+**Stepper "Done" handler**: When the user hits "Done":
+1. Scale all sub-items by the stepper multiplier (same as today).
+2. Compute the new cumulative multiplier: `(existingMultiplier) * stepperMultiplier`.
+3. Call a new `onUpdateEntryPortionMultiplier(entryId, newCumulative)` callback to persist it.
+4. Reset stepper to 1.0 (as today).
 
-**New props:**
-- `entryGroupNames?: Map<string, string>` -- maps entryId to group display name
+**Preview text**: During active scaling, the preview already shows `({Math.round(groupCalories * groupPortionMultiplier)} cal)`. Add the scaled portion label too: `(scalePortion("1 portion", cumulative * stepper), X cal)` for consistency with individual items.
 
-**Collapsed state (default -- entry NOT in `expandedEntryIds`):**
-- Render a single "group header" row instead of individual items
-- Description cell: group name (truncated if needed) with clickable "(1 portion)" for group-level scaling
-- Calories cell: sum of all items' calories in that entry
-- P/C/F cell: summed P/C/F
-- Chevron on left to expand
-- Delete button on right triggers `DeleteGroupDialog` (lists all sub-items)
+### 5. `src/pages/FoodLog.tsx`
 
-**Expanded state (entry IS in `expandedEntryIds`):**
-- Group header row stays visible (semibold styling)
-- Individual sub-items rendered below with `pl-6` indent and smaller/muted text
-- Each sub-item has full inline edit (description, calories, portion scaling, individual delete)
-- Below sub-items: existing `EntryExpandedPanel` (Logged as, Save as meal, Delete group)
+- Build `entryPortionMultipliers` map from entries data, pass to `FoodItemsTable`.
+- Add `handleUpdateEntryPortionMultiplier` handler that calls `updateEntry` with the new `group_portion_multiplier` value.
 
-**Group-level portion scaling:**
-- Tapping "(1 portion)" on the group header opens the same stepper UI (-, 1x, +, Done)
-- On "Done", applies `scaleItemByMultiplier` to every item in the group, then saves via existing `handleItemUpdateBatch` pattern
-
-**Single-item entries (1 item):**
-- Render exactly as today, no group header, no behavior change
-
-### 6. `src/lib/entry-boundaries.ts`
-Add a small helper `isMultiItemEntry(boundary)` that returns `boundary.endIndex > boundary.startIndex`. Used to decide whether to render the group header vs individual rows.
-
-### 7. Files summary
+### Files summary
 
 | File | Change |
 |------|--------|
-| Database migration | Add `group_name TEXT` column to `food_entries` |
-| `src/types/food.ts` | Add `group_name` to `FoodEntry` |
-| `supabase/functions/_shared/prompts.ts` | Shorten photo summary to ~30 chars |
-| `src/pages/FoodLog.tsx` | Populate `group_name` on creation; build + pass `entryGroupNames` map |
-| `src/components/FoodItemsTable.tsx` | Render collapsed group headers for multi-item entries; group-level portion scaling; indent sub-items when expanded |
-| `src/lib/entry-boundaries.ts` | Add `isMultiItemEntry` helper |
-
-### 8. What does NOT change
-- Single-item entries look and behave identically to today
-- `EntryExpandedPanel`, `DeleteGroupDialog`, `EntryChevron` -- reused as-is
-- `WeightItemsTable` -- no grouping changes in this phase
-- Settings pages, `SavedItemRow` -- no changes (different UX pattern)
-- All existing inline editing behavior (description, calories, portion) remains identical for sub-items
+| Database migration | Add `group_portion_multiplier REAL DEFAULT 1.0` to `food_entries` |
+| `src/types/food.ts` | Add `group_portion_multiplier` to `FoodEntry` |
+| `src/hooks/useFoodEntries.ts` | Include `group_portion_multiplier` in create mutation |
+| `src/pages/FoodLog.tsx` | Build multiplier map + add update handler, pass both to table |
+| `src/components/FoodItemsTable.tsx` | Use `scalePortion("1 portion", cumulative)` for label; persist cumulative on Done; new props for multiplier map and update callback |
 
