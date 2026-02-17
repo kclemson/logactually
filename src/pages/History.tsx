@@ -246,6 +246,7 @@ const History = () => {
     const dotClass = dotColor === 'text-green-400' ? 'text-green-400' : dotColor === 'text-amber-400' ? 'text-amber-400' : 'text-rose-400';
 
     if (targetComponents) {
+      const isExerciseAdjusted = targetComponents.mode === 'exercise_adjusted';
       return (
         <div className="space-y-1">
           <div className="font-medium">{dayLabel}</div>
@@ -255,19 +256,30 @@ const History = () => {
             <div><span className="text-rose-400">●</span> more than 10% over</div>
           </div>
           <div className="grid grid-cols-[auto_1fr] gap-x-2 pl-2 opacity-75 tabular-nums">
-            <div className="text-right">{targetComponents.tdee.toLocaleString()}</div>
-            <div className="text-[9px] italic opacity-60">(total daily energy expenditure)</div>
-            <div className="text-right">+ {burn.toLocaleString()}</div>
-            <div className="text-[9px] italic opacity-60">(calories burned from exercise)</div>
-            {targetComponents.deficit > 0 && (
+            {isExerciseAdjusted ? (
               <>
-                <div className="text-right">- {targetComponents.deficit.toLocaleString()}</div>
-                <div className="text-[9px] italic opacity-60">(deficit configured in settings)</div>
+                <div className="text-right">{targetComponents.baseTarget!.toLocaleString()}</div>
+                <div className="text-[9px] italic opacity-60">(daily calorie target)</div>
+                <div className="text-right">+ {burn.toLocaleString()}</div>
+                <div className="text-[9px] italic opacity-60">(calories burned from exercise)</div>
+              </>
+            ) : (
+              <>
+                <div className="text-right">{targetComponents.tdee.toLocaleString()}</div>
+                <div className="text-[9px] italic opacity-60">(total daily energy expenditure)</div>
+                <div className="text-right">+ {burn.toLocaleString()}</div>
+                <div className="text-[9px] italic opacity-60">(calories burned from exercise)</div>
+                {targetComponents.deficit > 0 && (
+                  <>
+                    <div className="text-right">- {targetComponents.deficit.toLocaleString()}</div>
+                    <div className="text-[9px] italic opacity-60">(deficit configured in settings)</div>
+                  </>
+                )}
               </>
             )}
           </div>
           <div className="border-t border-primary-foreground/20 pt-1 pl-2 tabular-nums">
-            {target.toLocaleString()} daily calorie target
+            {target.toLocaleString()} {isExerciseAdjusted ? 'adjusted daily calorie target' : 'daily calorie target'}
           </div>
         </div>
       );

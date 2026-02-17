@@ -211,15 +211,22 @@ export interface RollupResult {
 export interface CalorieTargetComponents {
   tdee: number;
   deficit: number;
-  mode: 'body_stats_logged';
+  mode: 'body_stats_logged' | 'exercise_adjusted';
+  baseTarget?: number; // used for exercise_adjusted
 }
 
 /**
  * Returns the structured components of the calorie target equation
- * for body_stats + logged mode. Returns null for all other modes.
+ * for body_stats + logged mode or exercise_adjusted mode.
+ * Returns null for static mode or other configurations.
  */
 export function getCalorieTargetComponents(settings: UserSettings): CalorieTargetComponents | null {
   if (!settings.calorieTargetEnabled) return null;
+
+  if (settings.calorieTargetMode === 'exercise_adjusted') {
+    return { tdee: 0, deficit: 0, mode: 'exercise_adjusted', baseTarget: settings.dailyCalorieTarget };
+  }
+
   if (settings.calorieTargetMode !== 'body_stats') return null;
   if (settings.activityLevel !== 'logged') return null;
 
