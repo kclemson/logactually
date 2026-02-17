@@ -20,7 +20,9 @@ import {
 import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
-import { getTargetDotColor } from '@/lib/calorie-target';
+import { getTargetDotColor, type CalorieTargetComponents } from '@/lib/calorie-target';
+import { CalorieTargetTooltipContent } from '@/components/CalorieTargetTooltipContent';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { type EntryBoundary, isFirstInBoundary, isLastInBoundary, isEntryNew, getEntryHighlightClasses, hasAnyEditedFields, formatEditedFields } from '@/lib/entry-boundaries';
 import { EntryChevron } from '@/components/EntryChevron';
 import { DeleteAllDialog } from '@/components/DeleteAllDialog';
@@ -64,6 +66,8 @@ interface FoodItemsTableProps {
   onSelectionChange?: (index: number, selected: boolean) => void;
   dailyCalorieTarget?: number;
   showCalorieTargetDot?: boolean;
+  dailyBurn?: number;
+  calorieTargetComponents?: CalorieTargetComponents | null;
 }
 
 export function FoodItemsTable({
@@ -95,6 +99,8 @@ export function FoodItemsTable({
   onSelectionChange,
   dailyCalorieTarget,
   showCalorieTargetDot = false,
+  dailyBurn = 0,
+  calorieTargetComponents,
 }: FoodItemsTableProps) {
   // Read-only mode blocks saves
   const { isReadOnly, triggerOverlay } = useReadOnlyContext();
@@ -187,12 +193,40 @@ export function FoodItemsTable({
       )}>
         {selectable && <span></span>}
         <span className={cn("px-1 font-semibold", showEntryDividers && "pl-4", compact && "text-sm")}>Total</span>
-        <span className={cn("px-1 text-center inline-flex items-center justify-center", compact ? "text-xs" : "text-heading")}>
-          {Math.round(totals.calories)}
-          {showCalorieTargetDot && dailyCalorieTarget && dailyCalorieTarget > 0 && (
-            <span className={`text-[10px] ml-0.5 leading-none relative top-[-0.5px] ${getTargetDotColor(totals.calories, dailyCalorieTarget)}`}>●</span>
-          )}
-        </span>
+        {(() => {
+          const showDot = showCalorieTargetDot && dailyCalorieTarget && dailyCalorieTarget > 0;
+          const calorieContent = (
+            <span className={cn("px-1 text-center inline-flex items-center justify-center", showDot && "cursor-help", compact ? "text-xs" : "text-heading")}>
+              {Math.round(totals.calories)}
+              {showDot && (
+                <span className={`text-[10px] ml-0.5 leading-none relative top-[-0.5px] ${getTargetDotColor(totals.calories, dailyCalorieTarget)}`}>●</span>
+              )}
+            </span>
+          );
+
+          if (showDot) {
+            return (
+              <TooltipProvider delayDuration={150}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    {calorieContent}
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" sideOffset={5}>
+                    <CalorieTargetTooltipContent
+                      label="Total"
+                      intake={Math.round(totals.calories)}
+                      target={dailyCalorieTarget}
+                      burn={dailyBurn}
+                      targetComponents={calorieTargetComponents ?? null}
+                    />
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            );
+          }
+
+          return calorieContent;
+        })()}
         <span className={cn("px-1 text-center", compact ? "text-xs" : "text-heading")}>
           <div>{Math.round(totals.protein)}/{Math.round(totals.carbs)}/{Math.round(totals.fat)}</div>
           {showMacroPercentages && (

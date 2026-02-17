@@ -25,7 +25,7 @@ import { detectHistoryReference, MIN_SIMILARITY_REQUIRED } from '@/lib/history-p
 import { detectRepeatedFoodEntry, isDismissed, dismissSuggestion, shouldShowOptOutLink, FoodSaveSuggestion } from '@/lib/repeated-entry-detection';
 import { FoodItem, SavedMeal, calculateTotals } from '@/types/food';
 import { getStoredDate, setStoredDate } from '@/lib/selected-date';
-import { getEffectiveDailyTarget, getExerciseAdjustedTarget, usesActualExerciseBurns } from '@/lib/calorie-target';
+import { getEffectiveDailyTarget, getExerciseAdjustedTarget, usesActualExerciseBurns, getCalorieTargetComponents } from '@/lib/calorie-target';
 import { useDailyCalorieBurn } from '@/hooks/useDailyCalorieBurn';
 
 // Wrapper component: extracts date from URL, forces remount via key
@@ -737,6 +737,8 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
               return base;
             })()}
             showCalorieTargetDot={!isTodaySelected}
+            dailyBurn={dailyBurnForSelectedDay}
+            calorieTargetComponents={getCalorieTargetComponents(settings)}
             onDeleteEntry={(entryId) => {
               deleteEntry.mutate(entryId);
               setExpandedEntryIds(prev => {

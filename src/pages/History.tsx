@@ -25,6 +25,7 @@ import { useHasHover } from '@/hooks/use-has-hover';
 import { getTargetDotColor, getEffectiveDailyTarget, getExerciseAdjustedTarget, usesActualExerciseBurns, getCalorieTargetComponents } from '@/lib/calorie-target';
 import { useDailyCalorieBurn } from '@/hooks/useDailyCalorieBurn';
 import { CalorieTargetRollup } from '@/components/CalorieTargetRollup';
+import { CalorieTargetTooltipContent } from '@/components/CalorieTargetTooltipContent';
 
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { setStoredDate } from '@/lib/selected-date';
@@ -242,77 +243,14 @@ const History = () => {
     const intake = Math.round(summary.totalCalories);
     const dayLabel = format(day, 'EEE, MMM d');
 
-    const dotColor = getTargetDotColor(intake, target);
-    const dotClass = dotColor === 'text-green-400' ? 'text-green-400' : dotColor === 'text-amber-400' ? 'text-amber-400' : 'text-rose-400';
-
-    if (targetComponents) {
-      const isExerciseAdjusted = targetComponents.mode === 'exercise_adjusted';
-      const isMultiplier = targetComponents.mode === 'body_stats_multiplier';
-      return (
-        <div className="space-y-1">
-          <div className="font-medium">{dayLabel}</div>
-          <div className="space-y-0.5">
-            <div><span className="text-green-400">●</span> within 2.5% of target</div>
-            <div><span className="text-amber-400">●</span> up to 10% over</div>
-            <div><span className="text-rose-400">●</span> more than 10% over</div>
-          </div>
-          <div className="grid grid-cols-[auto_1fr] gap-x-2 pl-2 opacity-75 tabular-nums">
-            {isExerciseAdjusted ? (
-              <>
-                <div className="text-right">{targetComponents.baseTarget!.toLocaleString()}</div>
-                <div className="text-[9px] italic opacity-60">(daily calorie target)</div>
-                <div className="text-right">+ {burn.toLocaleString()}</div>
-                <div className="text-[9px] italic opacity-60">(calories burned from exercise)</div>
-              </>
-            ) : isMultiplier ? (
-              <>
-                <div className="text-right">{targetComponents.tdee.toLocaleString()}</div>
-                <div className="text-[9px] italic opacity-60">(total daily energy expenditure)</div>
-                {targetComponents.deficit > 0 && (
-                  <>
-                    <div className="text-right">- {targetComponents.deficit.toLocaleString()}</div>
-                    <div className="text-[9px] italic opacity-60">(deficit configured in settings)</div>
-                  </>
-                )}
-              </>
-            ) : (
-              <>
-                <div className="text-right">{targetComponents.tdee.toLocaleString()}</div>
-                <div className="text-[9px] italic opacity-60">(total daily energy expenditure)</div>
-                <div className="text-right">+ {burn.toLocaleString()}</div>
-                <div className="text-[9px] italic opacity-60">(calories burned from exercise)</div>
-                {targetComponents.deficit > 0 && (
-                  <>
-                    <div className="text-right">- {targetComponents.deficit.toLocaleString()}</div>
-                    <div className="text-[9px] italic opacity-60">(deficit configured in settings)</div>
-                  </>
-                )}
-              </>
-            )}
-            {(isExerciseAdjusted || !isMultiplier || targetComponents.deficit > 0) && (
-              <>
-                <div className="text-right border-t border-primary-foreground/20 pt-0.5">= {target.toLocaleString()}</div>
-                <div className="text-[9px] italic opacity-60 border-t border-primary-foreground/20 pt-0.5">{isExerciseAdjusted ? 'adjusted daily calorie target' : 'daily calorie target'}</div>
-              </>
-            )}
-          </div>
-        </div>
-      );
-    }
-
     return (
-      <div className="space-y-1">
-        <div className="font-medium">{dayLabel}</div>
-        <div className="space-y-0.5">
-          <div><span className="text-green-400">●</span> within 2.5% of target</div>
-          <div><span className="text-amber-400">●</span> up to 10% over</div>
-          <div><span className="text-rose-400">●</span> more than 10% over</div>
-        </div>
-        <div className="grid grid-cols-[auto_1fr] gap-x-2 pl-2 opacity-75 tabular-nums">
-          <div className="text-right">{target.toLocaleString()}</div>
-          <div className="text-[9px] italic opacity-60">(daily calorie target)</div>
-        </div>
-      </div>
+      <CalorieTargetTooltipContent
+        label={dayLabel}
+        intake={intake}
+        target={target}
+        burn={burn}
+        targetComponents={targetComponents}
+      />
     );
   };
 
