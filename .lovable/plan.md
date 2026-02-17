@@ -1,26 +1,34 @@
 
+# Switch legend from columns to rows
 
-# Fix: Weekly equation shows wrong total
+## Change in `src/components/CalorieTargetTooltipContent.tsx` (lines 27-47)
 
-## Problem
-The weekly `TargetEquation` receives `burn={weekRollup.avgBurn}` (correct) but `target={target}` (the daily target for that specific day). So if the day burned 465 cal but the weekly average is 474 cal, the equation shows "1500 + 474" but still says "= 1965" (which is 1500 + 465, the daily total). It should say "= 1974".
+Replace the current column-based grid (one row per color, daily/weekly as columns) with a row-based layout (one row per context, all three dots inline):
 
-## Fix in `src/components/CalorieTargetTooltipContent.tsx`
-
-Compute a `weeklyTarget` before passing it to the weekly `TargetEquation`:
-
-- **exercise_adjusted**: `Math.round(targetComponents.baseTarget + weekRollup.avgBurn)`
-- **body_stats_logged**: `Math.round(targetComponents.tdee + weekRollup.avgBurn - targetComponents.deficit)`
-- **body_stats_multiplier** or **static**: use the same `target` value (no per-day variation)
-
-Change line 58 from:
-```tsx
-<TargetEquation targetComponents={targetComponents} target={target} burn={weekRollup.avgBurn} isWeekly />
 ```
-to:
-```tsx
-<TargetEquation targetComponents={targetComponents} target={weeklyTarget} burn={weekRollup.avgBurn} isWeekly />
+daily:   ● ≤2.5%   ● ≤10%   ● >10%
+weekly:  ● under   ● ≤5%    ● >5%
 ```
 
-where `weeklyTarget` is computed just above based on the mode. This ensures the "= X" total line matches the equation's addends.
+### Technical detail
 
+Replace lines 27-47 with two rows, each using an inline layout:
+
+```tsx
+<div className="text-[10px] tabular-nums space-y-px">
+  <div>
+    daily: <span className="text-green-400">●</span> ≤2.5%{' '}
+    <span className="text-amber-400">●</span> ≤10%{' '}
+    <span className="text-rose-400">●</span> &gt;10%
+  </div>
+  {weekRollup && weekLabel && (
+    <div>
+      weekly: <span className="text-green-400">●</span> under{' '}
+      <span className="text-amber-400">●</span> ≤5%{' '}
+      <span className="text-rose-400">●</span> &gt;5%
+    </div>
+  )}
+</div>
+```
+
+The "over" / "over target" suffixes are dropped since context is obvious from the tooltip. The weekly row only renders when rollup data is present.
