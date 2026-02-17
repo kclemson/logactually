@@ -780,7 +780,8 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
               updateEntry.mutate(
                 { id: entryId, group_name: newName } as any,
                 {
-                  onSettled: () => {
+                  onSuccess: async () => {
+                    await queryClient.invalidateQueries({ queryKey: ['food-entries'] });
                     setOptimisticGroupNames(prev => {
                       const next = new Map(prev);
                       next.delete(entryId);
@@ -802,7 +803,8 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
               updateEntry.mutate(
                 { id: entryId, group_portion_multiplier: newMultiplier } as any,
                 {
-                  onSettled: () => {
+                  onSuccess: async () => {
+                    await queryClient.invalidateQueries({ queryKey: ['food-entries'] });
                     setOptimisticMultipliers(prev => {
                       const next = new Map(prev);
                       next.delete(entryId);
