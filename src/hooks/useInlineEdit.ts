@@ -107,8 +107,10 @@ export function useInlineEdit<TField extends string>(
           (e.target as HTMLElement).blur();
           return;
         }
-        const newDescription = e.currentTarget.textContent || '';
-        if (newDescription !== descriptionOriginalRef.current) {
+        const newDescription = (e.currentTarget.textContent || '').trim();
+        if (!newDescription) {
+          e.currentTarget.textContent = descriptionOriginalRef.current;
+        } else if (newDescription !== descriptionOriginalRef.current) {
           onSaveDescription?.(index, newDescription);
         }
         (e.target as HTMLElement).blur();
