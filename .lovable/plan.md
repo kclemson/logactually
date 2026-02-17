@@ -1,25 +1,36 @@
 
-# Fix tooltip width to fit content
+
+# Fix Estimated Exercise Calorie Burn tooltip width and spacing
 
 ## Problem
 
-Chart tooltips (e.g., Protein, Carbs, Estimated Exercise Calorie Burn) are too narrow on mobile, causing text like "protein: 80g (320 cal)" to wrap mid-line. The tooltip container has no intrinsic sizing instruction, so Recharts constrains it to whatever width it calculates.
+The `BurnTooltip` in `CalorieBurnChart.tsx` is a standalone tooltip component (not using `CompactChartTooltip`), so it missed the `w-max` fix. The exercise count string (e.g., "15 exercises (4 cardio, 11 strength)") is long and wraps awkwardly, and the tooltip feels cramped at the edges.
 
-## Fix
+## Changes
 
-Add `w-max` to the tooltip's root `<div>` in `CompactChartTooltip.tsx`. This is a single CSS class that tells the container to size itself to fit its content, preventing unwanted line wraps across all charts that use this tooltip.
+**`src/components/trends/CalorieBurnChart.tsx`** -- line 55
 
-## Technical details
-
-**`src/components/trends/CompactChartTooltip.tsx`** (line 33)
+1. Add `w-max` to the tooltip container so it sizes to its content (same fix as `CompactChartTooltip`)
+2. Increase horizontal padding from `px-2` to `px-3` to add breathing room at the edges
+3. Shrink the exercise count line from `text-[10px]` to `text-[9px]` since it's supplementary info and the longest line
 
 Change:
 ```tsx
-<div className="rounded-md border border-border bg-popover text-popover-foreground px-2 py-1 shadow-md">
+<div className="rounded-md border border-border/50 bg-white dark:bg-slate-800 px-2 py-1 shadow-md">
 ```
 To:
 ```tsx
-<div className="rounded-md border border-border bg-popover text-popover-foreground px-2 py-1 shadow-md w-max">
+<div className="rounded-md border border-border/50 bg-white dark:bg-slate-800 px-3 py-1 shadow-md w-max">
 ```
 
-One class addition, one file, fixes all tooltips at once since every chart uses this shared component.
+And on line 61, change:
+```tsx
+<p className="text-[10px] text-muted-foreground">{exerciseText}</p>
+```
+To:
+```tsx
+<p className="text-[9px] text-muted-foreground">{exerciseText}</p>
+```
+
+Two class tweaks in one file.
+
