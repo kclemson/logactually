@@ -414,7 +414,170 @@ const SAVED_ROUTINE_TEMPLATES = [
   { name: 'Push Day', exercises: ['bench_press', 'shoulder_press_machine', 'chest_press_machine', 'lateral_raise'] },
   { name: 'Pull Day', exercises: ['lat_pulldown', 'seated_row', 'bicep_curl', 'hammer_curl', 'dumbbell_row'] },
   { name: 'Machine Circuit', exercises: ['chest_press_machine', 'lat_pulldown', 'leg_press', 'shoulder_press_machine'] },
+  { name: 'Cardio Day', exercises: ['walk_run', 'elliptical'] },
+  { name: 'Cardio + Strength', exercises: ['walk_run', 'bench_press', 'lat_pulldown', 'bicep_curl'] },
 ];
+
+// ============================================================================
+// CARDIO & CASUAL ACTIVITY DATA
+// ============================================================================
+
+interface CardioActivityDef {
+  key: string;
+  subtype: string | null;
+  description: string;
+  durationMin: number;
+  durationMax: number;
+  distanceMin?: number;
+  distanceMax?: number;
+  inputTemplates: ((dur: number, dist?: number) => string)[];
+}
+
+const CARDIO_EXERCISES: CardioActivityDef[] = [
+  {
+    key: 'walk_run', subtype: 'walking', description: 'Walking',
+    durationMin: 15, durationMax: 20, distanceMin: 0.7, distanceMax: 1.2,
+    inputTemplates: [
+      (dur, dist) => `walked ${dur} min`,
+      (dur, dist) => `morning walk, about ${dist} miles`,
+      (dur, dist) => `quick walk ${dur} min`,
+      (dur, dist) => `walked ${dist} mi ${dur} min`,
+    ],
+  },
+  {
+    key: 'walk_run', subtype: 'running', description: 'Running',
+    durationMin: 20, durationMax: 35, distanceMin: 2, distanceMax: 4,
+    inputTemplates: [
+      (dur, dist) => `ran ${dist} miles ${dur} min`,
+      (dur, dist) => `went for a run, ${dist} miles in ${dur} min`,
+      (dur, dist) => `run ${dur} min`,
+      (dur, dist) => `jogged ${dist} miles`,
+    ],
+  },
+  {
+    key: 'cycling', subtype: 'outdoor', description: 'Cycling',
+    durationMin: 25, durationMax: 45, distanceMin: 5, distanceMax: 12,
+    inputTemplates: [
+      (dur, dist) => `bike ride ${dist} miles ${dur} min`,
+      (dur, dist) => `rode my bike around the neighborhood, maybe ${dist} miles`,
+      (dur, dist) => `cycling ${dur} min, about ${dist} miles`,
+    ],
+  },
+  {
+    key: 'cycling', subtype: 'indoor', description: 'Stationary Bike',
+    durationMin: 15, durationMax: 30,
+    inputTemplates: [
+      (dur) => `spin bike ${dur} min`,
+      (dur) => `stationary bike ${dur} min`,
+      (dur) => `${dur} min on the exercise bike`,
+    ],
+  },
+  {
+    key: 'elliptical', subtype: null, description: 'Elliptical',
+    durationMin: 20, durationMax: 35,
+    inputTemplates: [
+      (dur) => `elliptical ${dur} min`,
+      (dur) => `${dur} min on the elliptical`,
+      (dur) => `elliptical machine ${dur} minutes`,
+    ],
+  },
+  {
+    key: 'swimming', subtype: null, description: 'Swimming',
+    durationMin: 20, durationMax: 40,
+    inputTemplates: [
+      (dur) => `swam laps ${dur} min`,
+      (dur) => `swimming ${dur} minutes`,
+      (dur) => `${dur} min in the pool`,
+    ],
+  },
+  {
+    key: 'rowing', subtype: null, description: 'Rowing',
+    durationMin: 15, durationMax: 25,
+    inputTemplates: [
+      (dur) => `rower ${dur} min`,
+      (dur) => `rowing machine ${dur} min`,
+      (dur) => `rowed ${dur} minutes`,
+    ],
+  },
+  {
+    key: 'stair_climber', subtype: null, description: 'Stairmaster',
+    durationMin: 15, durationMax: 25,
+    inputTemplates: [
+      (dur) => `stairmaster ${dur} min`,
+      (dur) => `stair climber ${dur} min`,
+      (dur) => `${dur} min on the stairmaster`,
+    ],
+  },
+];
+
+const CASUAL_ACTIVITIES: CardioActivityDef[] = [
+  {
+    key: 'functional_strength', subtype: 'gardening', description: 'Gardening',
+    durationMin: 30, durationMax: 60,
+    inputTemplates: [
+      (dur) => `gardening ${dur} min`,
+      (dur) => `gardening ${dur} min, planting and weeding`,
+      (dur) => `worked in the garden for about ${dur} minutes`,
+    ],
+  },
+  {
+    key: 'functional_strength', subtype: 'yard_work', description: 'Yard Work',
+    durationMin: 30, durationMax: 75,
+    inputTemplates: [
+      (dur) => `yard work mowing and raking ${dur} min`,
+      (dur) => `did yard work for about ${dur >= 60 ? Math.round(dur / 60 * 10) / 10 + ' hr' : dur + ' min'}`,
+      (dur) => `mowed the lawn and raked leaves ${dur} min`,
+    ],
+  },
+  {
+    key: 'functional_strength', subtype: 'cleaning', description: 'House Cleaning',
+    durationMin: 30, durationMax: 90,
+    inputTemplates: [
+      (dur) => `deep cleaned the house ${dur} min`,
+      (dur) => `house cleaning ${dur} min`,
+      (dur) => `cleaned the house for about ${dur >= 60 ? Math.round(dur / 60 * 10) / 10 + ' hours' : dur + ' min'}`,
+    ],
+  },
+  {
+    key: 'walk_run', subtype: 'hiking', description: 'Hiking',
+    durationMin: 60, durationMax: 120, distanceMin: 2, distanceMax: 5,
+    inputTemplates: [
+      (dur, dist) => `hiked ${dist} miles, about ${dur >= 60 ? Math.round(dur / 60 * 10) / 10 + ' hours' : dur + ' min'}`,
+      (dur, dist) => `went hiking, ${dist} miles in ${dur} min`,
+      (dur, dist) => `trail hike ${dist} mi`,
+    ],
+  },
+  {
+    key: 'functional_strength', subtype: 'playing_with_kids', description: 'Playing with Kids',
+    durationMin: 30, durationMax: 60,
+    inputTemplates: [
+      (dur) => `played outside with kids ${dur} min`,
+      (dur) => `playing with the kids at the park ${dur} min`,
+      (dur) => `ran around with the kids for about ${dur} minutes`,
+    ],
+  },
+];
+
+function generateCardioEntry(activity: CardioActivityDef): GeneratedExercise {
+  const duration = randomInt(activity.durationMin, activity.durationMax);
+  let distance: number | undefined;
+  if (activity.distanceMin != null && activity.distanceMax != null) {
+    distance = Math.round((activity.distanceMin + Math.random() * (activity.distanceMax - activity.distanceMin)) * 10) / 10;
+  }
+  const template = randomChoice(activity.inputTemplates);
+  const rawInput = template(duration, distance);
+  return {
+    exercise_key: activity.key,
+    exercise_subtype: activity.subtype,
+    description: activity.description,
+    sets: 0,
+    reps: 0,
+    weight_lbs: 0,
+    duration_minutes: duration,
+    distance_miles: distance ?? null,
+    rawInput,
+  };
+}
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -527,10 +690,14 @@ function calculateSetsReps(dayIndex: number, totalDays: number): { sets: number;
 
 interface GeneratedExercise {
   exercise_key: string;
+  exercise_subtype?: string | null;
   description: string;
   sets: number;
   reps: number;
   weight_lbs: number;
+  duration_minutes?: number | null;
+  distance_miles?: number | null;
+  rawInput?: string;
 }
 
 function generateWeightEntriesForDay(
@@ -630,6 +797,20 @@ function generateSavedRoutines(count: number): Array<{ name: string; original_in
   
   return templates.map(template => {
     const exerciseSets = template.exercises.map(key => {
+      // Check if it's a cardio exercise
+      const cardioMatch = CARDIO_EXERCISES.find(c => c.key === key);
+      if (cardioMatch) {
+        return {
+          exercise_key: cardioMatch.key,
+          exercise_subtype: cardioMatch.subtype,
+          description: cardioMatch.description,
+          sets: 0,
+          reps: 0,
+          weight_lbs: 0,
+          duration_minutes: randomInt(cardioMatch.durationMin, cardioMatch.durationMax),
+        };
+      }
+
       const allExercises = [...EXERCISES.machine, ...EXERCISES.compound, ...EXERCISES.freeWeight];
       const exercise = allExercises.find(e => e.key === key) || { key, name: key, startWeight: 50 };
       
@@ -906,10 +1087,13 @@ async function doPopulationWork(
               entry_id: entryId,
               logged_date: dateStr,
               exercise_key: exercise.exercise_key,
+              exercise_subtype: exercise.exercise_subtype ?? null,
               description: exercise.description,
               sets: exercise.sets,
               reps: exercise.reps,
               weight_lbs: exercise.weight_lbs,
+              duration_minutes: exercise.duration_minutes ?? null,
+              distance_miles: exercise.distance_miles ?? null,
               raw_input: j === 0 ? rawInput : null,
             });
 
@@ -918,6 +1102,76 @@ async function doPopulationWork(
           } else {
             weightSetsCreated++;
           }
+        }
+      }
+
+      // Generate cardio entries (40% chance per day)
+      if (generateWeights && Math.random() < 0.4) {
+        const cardioCount = Math.random() < 0.3 ? 2 : 1; // 30% chance of 2 cardio exercises
+        const usedCardioKeys = new Set<string>();
+
+        for (let c = 0; c < cardioCount; c++) {
+          // Avoid duplicating the same activity
+          const available = CARDIO_EXERCISES.filter(a => !usedCardioKeys.has(`${a.key}_${a.subtype}`));
+          if (available.length === 0) break;
+
+          const activity = randomChoice(available);
+          usedCardioKeys.add(`${activity.key}_${activity.subtype}`);
+          const entry = generateCardioEntry(activity);
+
+          const cardioEntryId = crypto.randomUUID();
+          const { error: cardioError } = await serviceClient
+            .from('weight_sets')
+            .insert({
+              user_id: demoUserId,
+              entry_id: cardioEntryId,
+              logged_date: dateStr,
+              exercise_key: entry.exercise_key,
+              exercise_subtype: entry.exercise_subtype ?? null,
+              description: entry.description,
+              sets: 0,
+              reps: 0,
+              weight_lbs: 0,
+              duration_minutes: entry.duration_minutes ?? null,
+              distance_miles: entry.distance_miles ?? null,
+              raw_input: entry.rawInput ?? null,
+            });
+
+          if (cardioError) {
+            console.error('Error inserting cardio entry:', cardioError);
+          } else {
+            weightSetsCreated++;
+          }
+        }
+      }
+
+      // Generate casual activity (12% chance per day)
+      if (generateWeights && Math.random() < 0.12) {
+        const activity = randomChoice(CASUAL_ACTIVITIES);
+        const entry = generateCardioEntry(activity);
+
+        const casualEntryId = crypto.randomUUID();
+        const { error: casualError } = await serviceClient
+          .from('weight_sets')
+          .insert({
+            user_id: demoUserId,
+            entry_id: casualEntryId,
+            logged_date: dateStr,
+            exercise_key: entry.exercise_key,
+            exercise_subtype: entry.exercise_subtype ?? null,
+            description: entry.description,
+            sets: 0,
+            reps: 0,
+            weight_lbs: 0,
+            duration_minutes: entry.duration_minutes ?? null,
+            distance_miles: entry.distance_miles ?? null,
+            raw_input: entry.rawInput ?? null,
+          });
+
+        if (casualError) {
+          console.error('Error inserting casual activity:', casualError);
+        } else {
+          weightSetsCreated++;
         }
       }
     }
