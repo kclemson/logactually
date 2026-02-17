@@ -117,14 +117,7 @@ export function DetailDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="top-[5%] translate-y-0 max-h-[90dvh] max-h-[90vh] flex flex-col p-0 gap-0 sm:max-w-md">
         <DialogHeader className="px-4 pt-4 pb-2 flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-base">{title}</DialogTitle>
-            {!editing && !readOnly && (
-              <Button variant="ghost" size="sm" onClick={enterEditMode} className="h-7 gap-1 text-xs">
-                <Pencil className="h-3 w-3" /> Edit
-              </Button>
-            )}
-          </div>
+          <DialogTitle className="text-base">{title}</DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-4 pb-2">
@@ -184,10 +177,18 @@ export function DetailDialog({
           ))}
         </div>
 
-        {editing && (
+        {!readOnly && (
           <DialogFooter className="px-4 py-3 border-t flex-shrink-0">
-            <Button variant="outline" size="sm" onClick={cancelEdit}>Cancel</Button>
-            <Button size="sm" onClick={handleSave}>Save</Button>
+            {editing ? (
+              <>
+                <Button variant="outline" size="sm" onClick={cancelEdit}>Cancel</Button>
+                <Button size="sm" onClick={handleSave}>Save</Button>
+              </>
+            ) : (
+              <Button variant="outline" size="sm" onClick={enterEditMode} className="gap-1">
+                <Pencil className="h-3 w-3" /> Edit
+              </Button>
+            )}
           </DialogFooter>
         )}
       </DialogContent>
