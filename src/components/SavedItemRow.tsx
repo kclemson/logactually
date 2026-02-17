@@ -1,7 +1,8 @@
-import { type ReactNode, useRef, useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DeleteConfirmPopover } from '@/components/DeleteConfirmPopover';
+import { DescriptionCell } from '@/components/DescriptionCell';
 
 interface SavedItemRowProps {
   id: string;
@@ -36,30 +37,12 @@ export function SavedItemRow({
   children,
   existingNames = [],
 }: SavedItemRowProps) {
-  const originalNameRef = useRef(name);
-  const [isEditing, setIsEditing] = useState(false);
   const [flashError, setFlashError] = useState(false);
 
   const isDuplicateName = (newName: string) =>
     existingNames.some(
       (n) => n.toLowerCase() === newName.toLowerCase() && n.toLowerCase() !== name.toLowerCase()
     );
-
-  const handleSave = (el: HTMLElement) => {
-    const newName = (el.textContent || '').trim();
-    const original = originalNameRef.current;
-
-    if (!newName || isDuplicateName(newName)) {
-      el.textContent = original;
-      if (newName && isDuplicateName(newName)) {
-        setFlashError(true);
-        setTimeout(() => setFlashError(false), 1500);
-      }
-    } else if (newName !== original) {
-      onUpdateName(newName);
-      originalNameRef.current = newName;
-    }
-  };
 
   return (
     <li className="py-0.5">
@@ -77,39 +60,25 @@ export function SavedItemRow({
 
         <div className="flex items-center gap-1 flex-1 min-w-0">
           <div
-            contentEditable
-            suppressContentEditableWarning
-            spellCheck={false}
-            onFocus={() => {
-              setIsEditing(true);
-              originalNameRef.current = name;
-            }}
-            onBlur={(e) => {
-              setIsEditing(false);
-              handleSave(e.currentTarget);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                e.currentTarget.blur();
-              }
-              if (e.key === 'Escape') {
-                e.preventDefault();
-                e.currentTarget.textContent = originalNameRef.current;
-                e.currentTarget.blur();
-              }
-            }}
             className={cn(
-              'text-sm truncate cursor-text hover:bg-muted/50 focus:bg-focus-bg focus:ring-2 focus:ring-focus-ring focus:outline-none rounded px-1 py-0.5 transition-colors',
-              isEditing ? 'flex-1' : '',
+              'text-sm truncate cursor-text hover:bg-muted/50 focus-within:bg-focus-bg focus-within:ring-2 focus-within:ring-focus-ring rounded px-1 py-0.5 transition-colors',
               flashError && 'ring-2 ring-destructive bg-destructive/10'
             )}
           >
-            {name}
+            <DescriptionCell
+              value={name}
+              onSave={onUpdateName}
+              validate={(newName) => !isDuplicateName(newName)}
+              onValidationFail={() => {
+                setFlashError(true);
+                setTimeout(() => setFlashError(false), 1500);
+              }}
+              className="focus:outline-none"
+            />
           </div>
         </div>
 
-        {meta && !isEditing && (
+        {meta && (
           <span className="text-xs text-muted-foreground shrink-0">{meta}</span>
         )}
 

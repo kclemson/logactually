@@ -3,6 +3,7 @@ import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { DescriptionCell } from '@/components/DescriptionCell';
 import type { CustomLogEntry } from '@/hooks/useCustomLogEntries';
 
 function MultilineTextArea({ value, isReadOnly, onSave }: { value: string; isReadOnly: boolean; onSave: (val: string) => void }) {
@@ -56,9 +57,7 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
   const [numericValue, setNumericValue] = useState('');
   const numericOriginalRef = useRef<string>('');
 
-  // Text editing state
-  const textOriginalRef = useRef<string>('');
-
+  // (Text editing now handled by DescriptionCell)
   const isDualNumeric = valueType === 'dual_numeric';
   const hasNumeric = valueType === 'numeric' || valueType === 'text_numeric' || isDualNumeric;
   const hasText = valueType === 'text' || valueType === 'text_numeric' || valueType === 'text_multiline';
@@ -127,34 +126,6 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
     }
   };
 
-  // --- Text handlers ---
-  const handleTextFocus = (e: React.FocusEvent<HTMLSpanElement>) => {
-    if (isReadOnly) {
-      (e.target as HTMLElement).blur();
-      return;
-    }
-    textOriginalRef.current = e.currentTarget.textContent || '';
-  };
-
-  const handleTextBlur = (e: React.FocusEvent<HTMLSpanElement>) => {
-    const newVal = e.currentTarget.textContent?.trim() || '';
-    if (isReadOnly || newVal === '' || newVal === textOriginalRef.current) {
-      e.currentTarget.textContent = textOriginalRef.current;
-      return;
-    }
-    onUpdate({ id: entry.id, text_value: newVal });
-  };
-
-  const handleTextKeyDown = (e: React.KeyboardEvent<HTMLSpanElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      (e.target as HTMLElement).blur();
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      e.currentTarget.textContent = textOriginalRef.current;
-      (e.target as HTMLElement).blur();
-    }
-  };
 
   // Dual numeric layout: [value1] / [value2] [unit] [delete]
   if (isDualNumeric) {
@@ -232,20 +203,12 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
           isTextOnly && "w-[280px] max-w-full",
           !isReadOnly && "focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg"
         )}>
-          <span
-            contentEditable={!isReadOnly}
-            suppressContentEditableWarning
-            spellCheck={false}
-            ref={(el) => {
-              if (el && el.textContent !== (entry.text_value || '') && document.activeElement !== el) {
-                el.textContent = entry.text_value || '';
-              }
-            }}
-            onFocus={handleTextFocus}
-            onBlur={handleTextBlur}
-            onKeyDown={handleTextKeyDown}
+          <DescriptionCell
+            value={entry.text_value || ''}
+            onSave={(val) => onUpdate({ id: entry.id, text_value: val })}
+            readOnly={isReadOnly}
             className={cn(
-              "text-sm border-0 bg-transparent focus:outline-none cursor-text hover:bg-muted/50 block",
+              "text-sm block",
               isTextOnly ? "text-left" : "text-right"
             )}
           />
