@@ -292,11 +292,9 @@ const History = () => {
           <div><span className="text-amber-400">●</span> up to 10% over</div>
           <div><span className="text-rose-400">●</span> more than 10% over</div>
         </div>
-        <div>
-          {intake.toLocaleString()} / {target.toLocaleString()} cal target
-          {usesBurns && burn > 0 && (
-            <span className="opacity-75"> (incl. {burn.toLocaleString()} burn)</span>
-          )}
+        <div className="grid grid-cols-[auto_1fr] gap-x-2 pl-2 opacity-75 tabular-nums">
+          <div className="text-right">{target.toLocaleString()}</div>
+          <div className="text-[9px] italic opacity-60">(daily calorie target)</div>
         </div>
       </div>
     );
