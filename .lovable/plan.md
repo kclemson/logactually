@@ -1,120 +1,146 @@
 
-# Fix Exercise Type Dropdown: Add Grouping and Better Display Names
 
-## Problem
+# Add multi-item mode to DetailDialog + styling fixes
 
-Two issues with the Exercise Type dropdown in the Detail Dialog:
+## What changes
 
-1. **Overwhelming flat list** -- 70+ exercises in one dropdown with no organization. Users have to scroll through everything to find what they want.
-2. **Awkward display names** -- The auto-generated names from snake_case keys produce unnatural results like "Walk Run", "T Bar Row", "Shoulder Press Machine". The Title Case On Every Word feels robotic.
+### 1. DetailDialog gains a multi-item list/drill-down mode
 
-## Solution
+Currently `DetailDialog` accepts a single `values` object. For grouped food entries, clicking "Details" only shows the first item -- confusing when the group has multiple items.
 
-### 1. Add a display name registry to `exercise-metadata.ts`
+The fix: add optional `items` and `onSaveItem` props alongside the existing single-item props. When `items` is provided with more than one entry, the dialog initially renders a **summary list** showing each item's name, portion, and calories. Tapping an item drills into the existing single-item detail/edit view for that specific item. A back arrow in the header returns to the list.
 
-Instead of auto-generating labels from keys, add an explicit `EXERCISE_DISPLAY_NAMES` map with human-written names. This gives us full control over natural phrasing:
+Internal state: `selectedIndex: number | null` -- `null` means "show list", a number means "show single item at that index".
 
-```
-bench_press      -> "Bench press"
-walk_run         -> "Walk/run"
-t_bar_row        -> "T-bar row"
-chest_press_machine -> "Chest press (machine)"
-assisted_dip_machine -> "Assisted dips (machine)"
-bulgarian_split_squat -> "Bulgarian split squat"
-```
+### 2. Soften the bold value styling
 
-Rules:
-- Sentence case (capitalize first word only), not Title Case
-- Use "/" for compound activities: "Walk/run"
-- Use parenthetical for machine variants: "Bench press (machine)" instead of "Bench Press Machine"
-- Keep it concise
+Remove `font-medium` from the read-only value spans (line 190) so values render at normal weight. The right-alignment and foreground color already differentiate them from labels.
 
-### 2. Group the dropdown by category using `<optgroup>`
+### 3. Hide zero-value secondary nutrition fields in view mode
 
-Replace the flat `<select>` with grouped options using the existing comment categories in `EXERCISE_MUSCLE_GROUPS`:
+Fields like fiber, sugar, saturated fat, sodium, cholesterol are often 0. In view mode, filter them out when their value is 0/null/undefined. Edit mode still shows all fields so users can set values.
 
-- **Upper body -- push**: bench_press through dips
-- **Upper body -- pull**: lat_pulldown through shrugs
-- **Lower body**: squat through step_up
-- **Compound/full body**: deadlift through kettlebell_swing
-- **Core**: cable_crunch through crunch
-- **Machines**: chest_press_machine through assisted_pullup_machine
-- **Cardio**: walk_run through jump_rope
-- **Other**: functional_strength, other
+---
 
-Add a `group` field to each exercise entry (or a parallel `EXERCISE_GROUPS` ordered array) so the dropdown renders `<optgroup label="Upper body -- push">` sections.
+## Technical details
 
-### 3. Implementation details
+### File: `src/components/DetailDialog.tsx`
 
-**File: `src/lib/exercise-metadata.ts`**
-
-Add two new exports:
+**Props change:**
 
 ```typescript
-// Human-friendly display names (sentence case, natural phrasing)
-export const EXERCISE_DISPLAY_NAMES: Record<string, string> = {
-  bench_press: 'Bench press',
-  incline_bench_press: 'Incline bench press',
-  // ... all ~70 exercises
-  walk_run: 'Walk/run',
-  // ...
-};
-
-// Ordered groups for dropdown rendering
-export const EXERCISE_GROUPS: { label: string; keys: string[] }[] = [
-  { label: 'Upper body -- push', keys: ['bench_press', 'incline_bench_press', ...] },
-  { label: 'Upper body -- pull', keys: ['lat_pulldown', 'pull_up', ...] },
-  { label: 'Lower body', keys: ['squat', 'front_squat', ...] },
-  { label: 'Compound', keys: ['deadlift', 'sumo_deadlift', ...] },
-  { label: 'Core', keys: ['cable_crunch', 'hanging_leg_raise', ...] },
-  { label: 'Machines', keys: ['chest_press_machine', ...] },
-  { label: 'Cardio', keys: ['walk_run', 'cycling', ...] },
-  { label: 'Other', keys: ['functional_strength'] },
-];
-
-// Helper to get display name with fallback
-export function getExerciseDisplayName(key: string): string {
-  return EXERCISE_DISPLAY_NAMES[key] || key.replace(/_/g, ' ');
+export interface DetailDialogProps {
+  // ... existing props unchanged
+  
+  // NEW: multi-item mode (optional)
+  items?: Record<string, any>[];
+  onSaveItem?: (itemIndex: number, updates: Record<string, any>) => void;
+  buildFields?: (item: Record<string, any>) => FieldConfig[];
+  /** Fields to hide in view mode when value is 0/null */
+  hideWhenZero?: Set<string>;
 }
 ```
 
-**File: `src/components/DetailDialog.tsx`**
+When `items` is provided with length > 1, the dialog uses multi-item mode. When length === 1 or `items` is not provided, it behaves exactly as today (single-item mode using `values`/`fields`/`onSave`).
 
-Update `buildExerciseKeyOptions()` to return grouped options, and update the `<select>` rendering for exercise_key to use `<optgroup>`:
+**New internal state:**
+
+```typescript
+const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+```
+
+Reset to `null` when dialog closes (alongside existing `editing`/`draft` resets).
+
+**List view rendering** (when `selectedIndex === null` and multi-item mode):
+
+- Title shows the group name (passed via existing `title` prop)
+- Body renders a compact list of items, each as a tappable row showing:
+  - Description (left)
+  - Calories (right)
+  - A subtle chevron or tap affordance
+- Tapping a row sets `selectedIndex` to that item's index
+- Footer: no Edit button (editing happens at item level)
+
+**Drill-down view** (when `selectedIndex !== null`):
+
+- Header shows a back button (ChevronLeft) + item name
+- Body/footer render exactly as current single-item view
+- `values` becomes `items[selectedIndex]`, `fields` becomes `buildFields(items[selectedIndex])`
+- On save, calls `onSaveItem(selectedIndex, updates)` instead of `onSave(updates)`
+- After save, returns to list view (`setSelectedIndex(null)`)
+
+**Styling fix** (line 190):
 
 ```tsx
-// The select element for exercise_key will render:
-<select ...>
-  <option value="">--</option>
-  <optgroup label="Upper body -- push">
-    <option value="bench_press">Bench press</option>
-    <option value="incline_bench_press">Incline bench press</option>
-    ...
-  </optgroup>
-  <optgroup label="Cardio">
-    <option value="walk_run">Walk/run</option>
-    ...
-  </optgroup>
-  <option value="other">Other</option>
-</select>
+// Before:
+<span className="text-sm font-medium text-right">
+
+// After:
+<span className="text-sm text-right">
 ```
 
-This requires a small change to the `FieldConfig` type to support grouped options, or we handle it as a special case for the exercise_key field. The simplest approach: add an optional `optgroups` field to `FieldConfig`:
+**Zero-value hiding** in the view-mode loop:
+
+```tsx
+const FOOD_HIDE_WHEN_ZERO = new Set(['fiber', 'sugar', 'saturated_fat', 'sodium', 'cholesterol']);
+
+// In view-mode section rendering, filter:
+{sectionFields
+  .filter(field => {
+    if (!hideWhenZero?.has(field.key)) return true;
+    const val = values[field.key];
+    return val !== 0 && val !== null && val !== undefined;
+  })
+  .map(field => (...))}
+```
+
+### File: `src/components/FoodItemsTable.tsx`
+
+**Change `onShowDetails` call** (around line 1003-1008):
+
+Instead of passing `firstIdx`, pass the boundary's start and end indices so the parent can extract all items:
 
 ```typescript
-interface FieldConfig {
-  // ... existing fields
-  optgroups?: { label: string; options: { value: string; label: string }[] }[];
-}
+onShowDetails={onShowDetails && currentEntryId
+  ? () => {
+      const boundary = entryBoundaries?.find(b => b.entryId === currentEntryId);
+      onShowDetails(currentEntryId!, boundary?.startIndex ?? index, boundary?.endIndex);
+    }
+  : undefined}
 ```
 
-When `optgroups` is present, the select renderer uses `<optgroup>` tags instead of flat `<option>` tags.
+Update `onShowDetails` prop type to include optional `endIndex`:
 
-**Also update**: the `displayValue` function and view-mode rendering should use `getExerciseDisplayName()` so the read-only view also shows the friendly name.
+```typescript
+onShowDetails?: (entryId: string, startIndex: number, endIndex?: number) => void;
+```
 
-## Summary of changes
+### File: `src/pages/FoodLog.tsx`
 
-| File | Change |
-|------|--------|
-| `src/lib/exercise-metadata.ts` | Add `EXERCISE_DISPLAY_NAMES`, `EXERCISE_GROUPS`, `getExerciseDisplayName()` |
-| `src/components/DetailDialog.tsx` | Add `optgroups` to `FieldConfig`, update select rendering to use `<optgroup>`, update `buildExerciseKeyOptions()` to return grouped options |
+**Update `handleShowDetails`** to detect multi-item vs single-item:
+
+```typescript
+const [detailDialogItem, setDetailDialogItem] = useState<
+  | { mode: 'single'; index: number; entryId: string }
+  | { mode: 'group'; startIndex: number; endIndex: number; entryId: string }
+  | null
+>(null);
+
+const handleShowDetails = useCallback((entryId: string, startIndex: number, endIndex?: number) => {
+  if (endIndex !== undefined && endIndex > startIndex) {
+    setDetailDialogItem({ mode: 'group', startIndex, endIndex, entryId });
+  } else {
+    setDetailDialogItem({ mode: 'single', index: startIndex, entryId });
+  }
+}, []);
+```
+
+**Update DetailDialog rendering** (around line 840):
+
+- Single mode: same as today
+- Group mode: pass `items` array (slice of `displayItems`), `buildFields={buildFoodDetailFields}`, `onSaveItem` callback, and `hideWhenZero={FOOD_HIDE_WHEN_ZERO}`
+
+### File: `src/pages/WeightLog.tsx`
+
+No changes needed -- exercise entries already pass single items. The multi-item mode is opt-in via the `items` prop.
+
