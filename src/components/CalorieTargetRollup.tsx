@@ -13,10 +13,10 @@ interface CalorieTargetRollupProps {
   onTooltipToggle?: () => void;
 }
 
-function RollupLegend() {
+function RollupLegend({ label }: { label: string }) {
   return (
     <div className="text-[10px] tabular-nums grid grid-cols-[auto_auto_auto_auto] gap-x-2 items-center">
-      <div>rolling:</div>
+      <div>{label}:</div>
       <div><span className="text-green-400">●</span> {ROLLUP_GREEN_MAX === 0 ? 'under' : `≤${ROLLUP_GREEN_MAX}%`}</div>
       <div><span className="text-amber-400">●</span> ≤{ROLLUP_AMBER_MAX}%</div>
       <div><span className="text-rose-400">●</span> &gt;{ROLLUP_AMBER_MAX}%</div>
@@ -129,22 +129,48 @@ export function CalorieTargetRollup({ settings, burnByDate, usesBurns, tooltipOp
           onPointerDownOutside={(e) => e.preventDefault()}
         >
           <div className="space-y-1.5">
-            <RollupLegend />
-            {components ? (
-              <div className="space-y-2">
-                {isMultiplier
-                  ? renderEquationBlock('', 0)
-                  : <>
-                      {r7 && renderEquationBlock('last 7 days', r7.avgBurn)}
-                      {r30 && renderEquationBlock('last 30 days', r30.avgBurn)}
-                    </>
-                }
-              </div>
+            {isMultiplier ? (
+              <>
+                <RollupLegend label="weekly" />
+                {components ? renderEquationBlock('', 0) : (
+                  <div className="grid grid-cols-[auto_1fr] gap-x-2 pl-2 opacity-75 tabular-nums">
+                    <div className="text-right">{baseTarget.toLocaleString()}</div>
+                    <div className="text-[9px] italic opacity-60">(daily calorie target)</div>
+                  </div>
+                )}
+              </>
             ) : (
-              <div className="grid grid-cols-[auto_1fr] gap-x-2 pl-2 opacity-75 tabular-nums">
-                <div className="text-right">{baseTarget.toLocaleString()}</div>
-                <div className="text-[9px] italic opacity-60">(daily calorie target)</div>
-              </div>
+              <>
+                {r7 && (
+                  <>
+                    <RollupLegend label="weekly" />
+                    <div className="opacity-75">
+                      7 days: <span className="text-blue-500 dark:text-blue-400">{r7.avgIntake.toLocaleString()}</span> avg <span className={`opacity-100 ${r7.dotColor}`}>●</span>
+                    </div>
+                    {components ? renderEquationBlock('last 7 days', r7.avgBurn) : (
+                      <div className="grid grid-cols-[auto_1fr] gap-x-2 pl-2 opacity-75 tabular-nums">
+                        <div className="text-right">{baseTarget.toLocaleString()}</div>
+                        <div className="text-[9px] italic opacity-60">(daily calorie target)</div>
+                      </div>
+                    )}
+                  </>
+                )}
+                {r7 && r30 && <div className="border-t border-muted-foreground/30 my-1" />}
+                {r30 && (
+                  <>
+                    <RollupLegend label="30-day" />
+                    <div className="opacity-75">
+                      30 days: <span className="text-blue-500 dark:text-blue-400">{r30.avgIntake.toLocaleString()}</span> avg <span className={`opacity-100 ${r30.dotColor}`}>●</span>
+                    </div>
+                    {components ? renderEquationBlock('last 30 days', r30.avgBurn) : (
+                      <div className="grid grid-cols-[auto_1fr] gap-x-2 pl-2 opacity-75 tabular-nums">
+                        <div className="text-right">{baseTarget.toLocaleString()}</div>
+                        <div className="text-[9px] italic opacity-60">(daily calorie target)</div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </>
             )}
           </div>
         </TooltipContent>
