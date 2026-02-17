@@ -77,6 +77,11 @@ export function CalorieTargetRollup({ settings, burnByDate, usesBurns }: Calorie
           onPointerDownOutside={(e) => e.preventDefault()}
         >
           <div className="space-y-1.5">
+            <div className="space-y-0.5">
+              <div><span className="text-green-400">●</span> at or under target</div>
+              <div><span className="text-amber-400">●</span> up to 5% over</div>
+              <div><span className="text-rose-400">●</span> more than 5% over</div>
+            </div>
             {components ? (
               <div className="space-y-2">
                 {r7 && renderEquationBlock('7-day average calorie target', 'avg calories burned last 7 days', r7.avgBurn)}
@@ -85,11 +90,6 @@ export function CalorieTargetRollup({ settings, burnByDate, usesBurns }: Calorie
             ) : (
               targetDescription && <div>{targetDescription}</div>
             )}
-            <div className="border-t border-primary-foreground/20 pt-1.5 space-y-0.5">
-              <div><span className="text-green-400">●</span> at or under target</div>
-              <div><span className="text-amber-400">●</span> up to 5% over</div>
-              <div><span className="text-rose-400">●</span> more than 5% over</div>
-            </div>
           </div>
         </TooltipContent>
       </Tooltip>

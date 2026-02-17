@@ -249,8 +249,10 @@ const History = () => {
       return (
         <div className="space-y-1">
           <div className="font-medium">{dayLabel}</div>
-          <div>
-            {intake.toLocaleString()} / {target.toLocaleString()} <span className={dotClass}>●</span> daily calorie target
+          <div className="space-y-0.5">
+            <div><span className="text-green-400">●</span> within 2.5% of target</div>
+            <div><span className="text-amber-400">●</span> up to 10% over</div>
+            <div><span className="text-rose-400">●</span> more than 10% over</div>
           </div>
           <div className="grid grid-cols-[auto_1fr] gap-x-2 pl-2 opacity-75 tabular-nums">
             <div className="text-right">{targetComponents.tdee.toLocaleString()}</div>
@@ -265,12 +267,7 @@ const History = () => {
             )}
           </div>
           <div className="border-t border-primary-foreground/20 pt-1 pl-2 tabular-nums">
-            {target.toLocaleString()} <span className={dotClass}>●</span>
-          </div>
-          <div className="pt-1.5 space-y-0.5 text-[9px]">
-            <div><span className="text-green-400">●</span> within 2.5% of target</div>
-            <div><span className="text-amber-400">●</span> up to 10% over</div>
-            <div><span className="text-rose-400">●</span> more than 10% over</div>
+            {target.toLocaleString()} daily calorie target
           </div>
         </div>
       );
@@ -445,7 +442,7 @@ const History = () => {
                     <TooltipTrigger asChild>
                       {cellContent}
                     </TooltipTrigger>
-                    <TooltipContent sideOffset={5} onPointerDownOutside={(e) => e.preventDefault()}>
+                    <TooltipContent side="bottom" sideOffset={5} onPointerDownOutside={(e) => e.preventDefault()}>
                       {tooltipContent}
                     </TooltipContent>
                   </Tooltip>
@@ -459,7 +456,7 @@ const History = () => {
                     <TooltipTrigger asChild>
                       {cellContent}
                     </TooltipTrigger>
-                    <TooltipContent sideOffset={5} onPointerDownOutside={(e) => e.preventDefault()}>
+                    <TooltipContent side="bottom" sideOffset={5} onPointerDownOutside={(e) => e.preventDefault()}>
                       {tooltipContent}
                       <button
                         className="mt-1.5 text-primary-foreground/80 underline underline-offset-2 text-xs"
