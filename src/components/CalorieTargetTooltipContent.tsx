@@ -22,7 +22,7 @@ export function CalorieTargetTooltipContent({
     const isMultiplier = targetComponents.mode === 'body_stats_multiplier';
     return (
       <div className="space-y-1">
-        <div className="font-medium">{label}</div>
+        {label && <div className="font-medium">{label}</div>}
         <div className="space-y-0.5">
           <div><span className="text-green-400">●</span> within 2.5% of target</div>
           <div><span className="text-amber-400">●</span> up to 10% over</div>
@@ -74,7 +74,7 @@ export function CalorieTargetTooltipContent({
 
   return (
     <div className="space-y-1">
-      <div className="font-medium">{label}</div>
+      {label && <div className="font-medium">{label}</div>}
       <div className="space-y-0.5">
         <div><span className="text-green-400">●</span> within 2.5% of target</div>
         <div><span className="text-amber-400">●</span> up to 10% over</div>
