@@ -69,6 +69,7 @@ export function useFoodEntries(date?: string) {
       total_carbs: number;
       total_fat: number;
       source_meal_id?: string | null;
+      group_name?: string | null;
     }) => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error('Not authenticated');
@@ -86,6 +87,7 @@ export function useFoodEntries(date?: string) {
           total_carbs: entry.total_carbs,
           total_fat: entry.total_fat,
           source_meal_id: entry.source_meal_id ?? null,
+          group_name: entry.group_name ?? null,
         })
         .select()
         .single();

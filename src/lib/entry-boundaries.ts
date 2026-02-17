@@ -89,3 +89,11 @@ export function formatEditedFields(item: { editedFields?: string[] }): string | 
   );
   return `Edited: ${fieldLabels.join(', ')}`;
 }
+
+/**
+ * Returns true if the boundary spans more than one item (i.e., a multi-item entry
+ * that should render as a collapsible group header).
+ */
+export function isMultiItemEntry(boundary: EntryBoundary): boolean {
+  return boundary.endIndex > boundary.startIndex;
+}

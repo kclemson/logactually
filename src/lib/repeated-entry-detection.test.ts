@@ -108,6 +108,7 @@ describe('detectRepeatedFoodEntry', () => {
     total_carbs: 0,
     total_fat: 0,
     source_meal_id: null,
+    group_name: null,
     created_at: '2025-01-01',
     updated_at: '2025-01-01',
     ...opts,
