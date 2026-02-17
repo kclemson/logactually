@@ -9,12 +9,17 @@ interface CalorieTargetRollupProps {
   settings: UserSettings;
   burnByDate: Map<string, number>;
   usesBurns: boolean;
+  tooltipOpen?: boolean;
+  onTooltipToggle?: () => void;
 }
 
-export function CalorieTargetRollup({ settings, burnByDate, usesBurns }: CalorieTargetRollupProps) {
+export function CalorieTargetRollup({ settings, burnByDate, usesBurns, tooltipOpen: externalOpen, onTooltipToggle }: CalorieTargetRollupProps) {
   const { data: foodTotals = [] } = useDailyFoodTotals(30);
   const hasHover = useHasHover();
-  const [tooltipOpen, setTooltipOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = externalOpen !== undefined;
+  const tooltipOpen = isControlled ? externalOpen : internalOpen;
+  const handleToggle = isControlled ? onTooltipToggle! : () => setInternalOpen(o => !o);
 
   const baseTarget = getEffectiveDailyTarget(settings);
   if (baseTarget == null) return null;
@@ -92,7 +97,7 @@ export function CalorieTargetRollup({ settings, burnByDate, usesBurns }: Calorie
             className="flex items-center justify-center gap-6 text-xs text-muted-foreground cursor-default"
             tabIndex={0}
             role="button"
-            onClick={hasHover ? undefined : () => setTooltipOpen(o => !o)}
+            onClick={hasHover ? undefined : handleToggle}
           >
             {r7 && (
               <span>

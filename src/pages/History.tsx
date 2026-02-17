@@ -57,6 +57,12 @@ const History = () => {
   const hasHover = useHasHover();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [activeDayIndex, setActiveDayIndex] = useState<number | null>(null);
+  const [rollupTooltipOpen, setRollupTooltipOpen] = useState(false);
+
+  const dismissAllTooltips = () => {
+    setActiveDayIndex(null);
+    setRollupTooltipOpen(false);
+  };
   const { settings } = useUserSettings();
   const showWeights = settings.showWeights;
   const showCustomLogs = settings.showCustomLogs;
@@ -217,6 +223,7 @@ const History = () => {
     }
 
     // Mobile: if this day has a calorie dot, show tooltip instead
+    setRollupTooltipOpen(false);
     if (hasDot) {
       setActiveDayIndex(prev => prev === index ? null : index);
     } else {
@@ -277,7 +284,16 @@ const History = () => {
 
       {/* Rolling calorie target summary */}
       {settings.calorieTargetEnabled && isSameMonth(currentMonth, new Date()) && (
-        <CalorieTargetRollup settings={settings} burnByDate={burnByDate} usesBurns={usesBurns} />
+        <CalorieTargetRollup
+          settings={settings}
+          burnByDate={burnByDate}
+          usesBurns={usesBurns}
+          tooltipOpen={rollupTooltipOpen}
+          onTooltipToggle={() => {
+            setActiveDayIndex(null);
+            setRollupTooltipOpen(o => !o);
+          }}
+        />
       )}
 
       {/* Week day headers */}
@@ -293,10 +309,10 @@ const History = () => {
       </div>
 
       {/* Mobile overlay to dismiss active tooltip */}
-      {!hasHover && activeDayIndex != null && (
+      {!hasHover && (activeDayIndex != null || rollupTooltipOpen) && (
         <div
           className="fixed inset-0 z-40"
-          onClick={() => setActiveDayIndex(null)}
+          onClick={dismissAllTooltips}
         />
       )}
 
