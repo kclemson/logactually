@@ -77,7 +77,7 @@ export function CalorieTargetTooltipContent({
           : target;
         return (
         <>
-          <div className="mt-2" />
+          <div className="border-t border-muted-foreground/30 my-1" />
           <WeeklyLegend />
           <div className="opacity-75">
             {weekLabel}: <span className="text-blue-400">{weekRollup.avgIntake.toLocaleString()}</span> avg <span className={`opacity-100 ${weekRollup.dotColor}`}>●</span>
@@ -153,7 +153,7 @@ function TargetEquation({
       {(isExerciseAdjusted || !isMultiplier || targetComponents.deficit > 0) && (
         <>
           <div className="text-right border-t border-muted-foreground/30 pt-0.5">= {target.toLocaleString()}</div>
-          <div className="text-[9px] italic opacity-60 border-t border-muted-foreground/30 pt-0.5">{targetLabel}</div>
+          <div className="text-[9px] italic opacity-60 pt-0.5">{targetLabel}</div>
         </>
       )}
     </div>
