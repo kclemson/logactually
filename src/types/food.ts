@@ -34,6 +34,7 @@ export interface FoodEntry {
   updated_at: string;
   source_meal_id: string | null;  // Tracks if entry came from a saved meal
   group_name: string | null;  // Display label for collapsed multi-item group header
+  group_portion_multiplier: number | null;  // Cumulative portion multiplier for group scaling
 }
 
 export interface DailyTotals {

@@ -200,6 +200,17 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     return map;
   }, [entries]);
 
+  // Build map of entryId -> cumulative portion multiplier for group scaling display
+  const entryPortionMultipliers = useMemo(() => {
+    const map = new Map<string, number>();
+    entries.forEach(entry => {
+      if (entry.group_portion_multiplier != null && entry.group_portion_multiplier !== 1.0) {
+        map.set(entry.id, entry.group_portion_multiplier);
+      }
+    });
+    return map;
+  }, [entries]);
+
   const handleToggleEntryExpand = (entryId: string) => {
     setExpandedEntryIds(prev => {
       const next = new Set(prev);
@@ -744,6 +755,10 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
             entryMealNames={entryMealNames}
             entrySourceMealIds={entrySourceMealIds}
             entryGroupNames={entryGroupNames}
+            entryPortionMultipliers={entryPortionMultipliers}
+            onUpdateEntryPortionMultiplier={(entryId, newMultiplier) => {
+              updateEntry.mutate({ id: entryId, group_portion_multiplier: newMultiplier } as any);
+            }}
             dailyCalorieTarget={(() => {
               const base = getEffectiveDailyTarget(settings);
               if (base == null) return undefined;

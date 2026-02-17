@@ -52,6 +52,10 @@ interface FoodItemsTableProps {
   entryMealNames?: Map<string, string>;
   /** Map of entryId to group display name for collapsed multi-item entries */
   entryGroupNames?: Map<string, string>;
+  /** Map of entryId to cumulative portion multiplier for group scaling */
+  entryPortionMultipliers?: Map<string, number>;
+  /** Callback to persist updated cumulative portion multiplier */
+  onUpdateEntryPortionMultiplier?: (entryId: string, newMultiplier: number) => void;
   /** Set of entry IDs that originated from a saved meal (even if meal was deleted) */
   entrySourceMealIds?: Set<string>;
   /** When true, show inline labels after numeric values (e.g., "250 cal") */
@@ -94,6 +98,8 @@ export function FoodItemsTable({
   onSaveAsMeal,
   entryMealNames,
   entryGroupNames,
+  entryPortionMultipliers,
+  onUpdateEntryPortionMultiplier,
   entrySourceMealIds,
   showInlineLabels = false,
   showMacroPercentages = true,
@@ -367,15 +373,20 @@ export function FoodItemsTable({
                       title={groupName}
                     >
                       {groupName}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setGroupScalingEntryId(groupScalingEntryId === boundary.entryId ? null : boundary.entryId);
-                          setGroupPortionMultiplier(1.0);
-                        }}
-                        className="ml-1 text-xs text-muted-foreground whitespace-nowrap cursor-pointer hover:text-foreground transition-colors"
-                      >(1 portion)</button>
+                      {(() => {
+                        const cumulative = entryPortionMultipliers?.get(boundary.entryId) ?? 1.0;
+                        return (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setGroupScalingEntryId(groupScalingEntryId === boundary.entryId ? null : boundary.entryId);
+                              setGroupPortionMultiplier(1.0);
+                            }}
+                            className="ml-1 text-xs text-muted-foreground whitespace-nowrap cursor-pointer hover:text-foreground transition-colors"
+                          >({scalePortion("1 portion", cumulative)})</button>
+                        );
+                      })()}
                     </span>
                   </div>
                   <span className={cn("px-1 py-1 text-center", compact ? "text-xs" : "text-heading")}>
@@ -431,6 +442,9 @@ export function FoodItemsTable({
                                 const gi = items[i];
                                 onUpdateItemBatch?.(i, scaleItemByMultiplier(gi, groupPortionMultiplier));
                               }
+                              // Persist cumulative multiplier
+                              const existing = entryPortionMultipliers?.get(boundary.entryId) ?? 1.0;
+                              onUpdateEntryPortionMultiplier?.(boundary.entryId, existing * groupPortionMultiplier);
                             }
                           }
                           setGroupScalingEntryId(null);
@@ -438,11 +452,15 @@ export function FoodItemsTable({
                         }}
                         className="text-xs font-medium text-primary hover:underline"
                       >Done</button>
-                      {groupPortionMultiplier !== 1.0 && (
-                        <span className="text-xs text-muted-foreground tabular-nums">
-                          ({Math.round(groupCalories * groupPortionMultiplier)} cal)
-                        </span>
-                      )}
+                      {groupPortionMultiplier !== 1.0 && (() => {
+                        const existingMult = entryPortionMultipliers?.get(boundary.entryId) ?? 1.0;
+                        const previewMult = existingMult * groupPortionMultiplier;
+                        return (
+                          <span className="text-xs text-muted-foreground tabular-nums">
+                            ({scalePortion("1 portion", previewMult)}, {Math.round(groupCalories * groupPortionMultiplier)} cal)
+                          </span>
+                        );
+                      })()}
                     </div>
                   </div>
                 )}
@@ -805,15 +823,20 @@ export function FoodItemsTable({
                     title={groupName}
                   >
                     {groupName}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setGroupScalingEntryId(groupScalingEntryId === boundary.entryId ? null : boundary.entryId);
-                        setGroupPortionMultiplier(1.0);
-                      }}
-                      className="ml-1 text-xs text-muted-foreground whitespace-nowrap cursor-pointer hover:text-foreground transition-colors"
-                    >(1 portion)</button>
+                    {(() => {
+                      const cumulative = entryPortionMultipliers?.get(boundary.entryId) ?? 1.0;
+                      return (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setGroupScalingEntryId(groupScalingEntryId === boundary.entryId ? null : boundary.entryId);
+                            setGroupPortionMultiplier(1.0);
+                          }}
+                          className="ml-1 text-xs text-muted-foreground whitespace-nowrap cursor-pointer hover:text-foreground transition-colors"
+                        >({scalePortion("1 portion", cumulative)})</button>
+                      );
+                    })()}
                   </span>
                 </div>
                 <span className={cn("px-1 py-1 text-center", compact ? "text-xs" : "")}>
@@ -898,6 +921,9 @@ export function FoodItemsTable({
                               const gi = items[i];
                               onUpdateItemBatch?.(i, scaleItemByMultiplier(gi, groupPortionMultiplier));
                             }
+                            // Persist cumulative multiplier
+                            const existing = entryPortionMultipliers?.get(boundary.entryId) ?? 1.0;
+                            onUpdateEntryPortionMultiplier?.(boundary.entryId, existing * groupPortionMultiplier);
                           }
                         }
                         setGroupScalingEntryId(null);
@@ -905,11 +931,15 @@ export function FoodItemsTable({
                       }}
                       className="text-xs font-medium text-primary hover:underline"
                     >Done</button>
-                    {groupPortionMultiplier !== 1.0 && (
-                      <span className="text-xs text-muted-foreground tabular-nums">
-                        ({Math.round(groupCalories * groupPortionMultiplier)} cal)
-                      </span>
-                    )}
+                    {groupPortionMultiplier !== 1.0 && (() => {
+                      const existingMult = entryPortionMultipliers?.get(boundary.entryId) ?? 1.0;
+                      const previewMult = existingMult * groupPortionMultiplier;
+                      return (
+                        <span className="text-xs text-muted-foreground tabular-nums">
+                          ({scalePortion("1 portion", previewMult)}, {Math.round(groupCalories * groupPortionMultiplier)} cal)
+                        </span>
+                      );
+                    })()}
                   </div>
                 </div>
               )}

@@ -139,6 +139,7 @@ export type Database = {
           eaten_date: string
           food_items: Json
           group_name: string | null
+          group_portion_multiplier: number | null
           id: string
           raw_input: string | null
           source_meal_id: string | null
@@ -154,6 +155,7 @@ export type Database = {
           eaten_date?: string
           food_items?: Json
           group_name?: string | null
+          group_portion_multiplier?: number | null
           id?: string
           raw_input?: string | null
           source_meal_id?: string | null
@@ -169,6 +171,7 @@ export type Database = {
           eaten_date?: string
           food_items?: Json
           group_name?: string | null
+          group_portion_multiplier?: number | null
           id?: string
           raw_input?: string | null
           source_meal_id?: string | null
