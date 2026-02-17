@@ -154,7 +154,7 @@ export const CalorieBurnChart = ({
                 />
                 <YAxis domain={[0, 'dataMax + 20']} hide />
                 <Tooltip
-                  wrapperStyle={{ pointerEvents: "auto", zIndex: 50 }}
+                  wrapperStyle={{ pointerEvents: "auto", zIndex: 9999 }}
                   active={isTouchDevice ? activeBarIndex !== null : undefined}
                   payload={
                     isTouchDevice && activeBarIndex !== null
