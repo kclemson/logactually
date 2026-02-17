@@ -1,131 +1,114 @@
 
 
-# Rolling Calorie Target Summary on Calendar Page
+# Calorie Target Tooltips: Rollup Row + Calendar Day Cells
 
-## What it does
+## Overview
 
-When calorie target is enabled and viewing the current month, a compact summary line appears above the calendar showing average daily intake with a colored dot for the last 7 and 30 days. The dot uses stricter thresholds than the daily dot, since averages over time should not have the same "single bad day" forgiveness.
+Two tooltip additions to the Calendar page, plus blue color consistency on the rollup numbers.
+
+## Change 1: Blue calorie numbers in rollup
+
+The rollup row's numeric values use `text-blue-500 dark:text-blue-400` to match the per-day cell numbers. The "7 days:" and "avg" labels stay muted.
+
+## Change 2: Rollup row tooltip
+
+A tooltip on the rollup summary row showing:
+- The user's current target config line
+- The threshold legend using actual colored dots (not color words)
 
 ```text
-7 days: 1,842 avg  [dot]     30 days: 1,910 avg  [dot]
+Target: 1,800 cal/day + exercise
+  ● at or under target
+  ● up to 5% over
+  ● more than 5% over
 ```
 
-## Rollup thresholds vs daily thresholds
+Each dot is rendered with its actual color class (green/amber/rose). No color words.
 
-Daily dot (existing, unchanged):
-- Green: at or under target, up to 2.5% over
-- Amber: 2.5% to 10% over  
-- Rose: more than 10% over
+Interaction:
+- Desktop: hover tooltip
+- Mobile: tap toggles tooltip open/closed (existing pattern from exercise log tooltips)
 
-Rollup dot (new, stricter):
-- Green: at or under target (0% over)
-- Amber: up to 5% over
-- Rose: more than 5% over
+## Change 3: Calendar day cell tooltips
 
-Rationale: day-to-day variance is normal, but if your weekly average is 5%+ over target, that's a real trend. The tighter thresholds surface this.
+Follow the exact Trends chart pattern:
+- **Desktop**: hover shows tooltip with day's intake vs target breakdown; click navigates to that day (unchanged)
+- **Mobile**: tap shows tooltip with the same breakdown plus a "Go to day" link; tapping the link navigates
 
-## How it works across all three target modes
+Tooltip content for a day with a calorie dot:
+```text
+Mon, Feb 16
+1,842 / 1,800 cal target
+```
 
-- **Fixed number**: every day's target is the same static value
-- **Exercise adjusted**: each day's target = base goal + that day's logged exercise burn
-- **Body stats with fixed activity**: every day's target is the same TDEE-based value
-- **Body stats with "Use my exercise logs"**: each day's target = (BMR x 1.2 - deficit) + that day's logged burn
+For exercise-adjusted days:
+```text
+Mon, Feb 16
+1,842 / 2,050 cal target (incl. 250 burn)
+```
 
-The implementation handles all of these uniformly: `baseTarget` from `getEffectiveDailyTarget(settings)` plus per-day burn from `burnByDate` when `usesActualExerciseBurns` is true.
+Days without calorie data or without a target enabled show no tooltip.
 
-## Architecture (3 layers)
+### Mobile tap-to-show pattern (mirroring Trends)
 
-1. **Pure functions** in `src/lib/calorie-target.ts` -- testable, no React
-2. **Tests** in `src/lib/calorie-target.test.ts`
-3. **Thin component** `src/components/CalorieTargetRollup.tsx` -- fetches data, calls pure functions, renders
-4. **Integration** in `src/pages/History.tsx` -- conditional render
+The Trends charts use `activeBarIndex` state: tap toggles the tooltip, a fixed inset-0 overlay dismisses it, and "Go to day" navigates. The calendar will use the same pattern with `activeDayIndex`:
+- Tap a day cell: sets `activeDayIndex`, shows tooltip
+- Tap again or tap outside: clears it
+- Tap "Go to day": navigates to that day
+
+On desktop, `activeDayIndex` is not used; click directly navigates as before.
 
 ## Technical Details
 
 ### File: `src/lib/calorie-target.ts`
 
-Add two new exports:
+Add one new pure function:
 
 ```typescript
-// Stricter thresholds for rolling averages
-export function getRollupDotColor(avgCalories: number, avgTarget: number): string {
-  const overPercent = ((avgCalories - avgTarget) / avgTarget) * 100;
-  if (overPercent <= 0) return "text-green-500 dark:text-green-400";
-  if (overPercent <= 5) return "text-amber-500 dark:text-amber-400";
-  return "text-rose-500 dark:text-rose-400";
-}
-
-export interface RollupResult {
-  avgIntake: number;
-  dotColor: string;
-  dayCount: number;
-}
-
-export function computeCalorieRollup(
-  foodTotals: { date: string; totalCalories: number }[],
-  windowDays: number,
-  baseTarget: number,
-  usesBurns: boolean,
-  burnByDate: Map<string, number>,
-): RollupResult | null
+export function describeCalorieTarget(settings: UserSettings): string | null
 ```
 
-The `computeCalorieRollup` function:
-- Computes cutoff date = today minus `windowDays`
-- Filters food totals to dates in `[cutoff, yesterday]` (excludes today -- incomplete day skews average)
-- Returns null if fewer than 2 eligible days (not enough signal)
-- For each eligible day, computes effective target: `baseTarget + burn` if `usesBurns`, else just `baseTarget`
-- Averages both intake and target across eligible days
-- Returns `{ avgIntake, dotColor: getRollupDotColor(avg, avgTarget), dayCount }`
+Returns a one-liner based on mode:
+- Static: "Target: 2,000 cal/day"
+- Exercise adjusted: "Target: 1,800 cal/day + exercise"
+- Body stats (fixed activity): "Target: 1,650 cal/day (from TDEE)"
+- Body stats (logged exercise): "Target: 1,650 cal/day + exercise (from TDEE)"
 
-Adds `format` and `subDays` imports from `date-fns`.
+Returns null if target not enabled or base target can't be resolved.
 
 ### File: `src/lib/calorie-target.test.ts`
 
-New test suites:
-
-**`getRollupDotColor`:**
-- Green when under target
-- Green when exactly at target
-- Amber when 3% over
-- Rose when 6% over
-
-**`computeCalorieRollup`:**
-- Returns null with 0-1 days of data
-- Correct average and green dot when under target
-- Correct rose dot when average is well over
-- Excludes today from the window
-- Handles exercise-adjusted targets (varying per-day targets via burn map)
-- 7-day window only includes last 7 days, not older data
+Add tests for `describeCalorieTarget` covering all four mode/sub-mode combos plus null cases.
 
 ### File: `src/components/CalorieTargetRollup.tsx`
 
-New component (~45 lines):
-
-```typescript
-interface CalorieTargetRollupProps {
-  settings: UserSettings;
-  burnByDate: Map<string, number>;
-  usesBurns: boolean;
-}
-```
-
-- Calls `useDailyFoodTotals(30)` internally for its own data
-- Calls `getEffectiveDailyTarget(settings)` for the base target
-- Calls `computeCalorieRollup()` twice: once for 7-day, once for 30-day window
-- Returns null if base target is null or both windows return null
-- If only one window has data (e.g., new user with 4 days), shows only that one
-- Renders a single centered row: `text-xs text-muted-foreground`, with a filled circle character for the dot
+- Import Tooltip components, `useHasHover`, `describeCalorieTarget`
+- Add `tooltipOpen` state for mobile tap-to-toggle
+- Make avg numbers blue (`text-blue-500 dark:text-blue-400`), labels stay muted
+- Wrap content in Tooltip:
+  - Desktop: standard hover
+  - Mobile: `open`/`onOpenChange` controlled by `tooltipOpen` state, `onClick` toggles
+- Tooltip content: target description line, then three lines each with a colored dot span and its meaning
 
 ### File: `src/pages/History.tsx`
 
-- Import `CalorieTargetRollup` and conditionally render between month navigation and calendar
-- Only shown when `settings.calorieTargetEnabled` and viewing the current month
-- Props: `settings`, `burnByDate`, `usesBurns` (all already available in History)
+- Import `useHasHover`, Tooltip components, `format` (for day label)
+- Add `activeDayIndex` state (number | null) for mobile tooltip
+- Add `TooltipProvider` wrapping the calendar grid
+- On desktop (`hasHover`): dismiss overlay not needed
+  - Each day cell with a calorie dot gets a Radix Tooltip (hover-only) showing intake vs target
+  - Click behavior unchanged (navigates)
+- On mobile (`!hasHover`):
+  - Day cell tap sets `activeDayIndex` instead of navigating
+  - A fixed inset-0 overlay clears `activeDayIndex` on tap (same as Trends)
+  - The tooltip appears anchored to the tapped cell, showing intake vs target + "Go to day" link
+  - "Go to day" clears `activeDayIndex` and navigates
+- Tooltip content built inline: `"{intake} / {target} cal target"` with optional `"(incl. {burn} burn)"` suffix for exercise-adjusted days
+- Days without entries or without a target: no tooltip, click/tap navigates directly
 
 ### Files not changed
-- `useDailyFoodTotals.ts` -- used as-is
-- `useDailyCalorieBurn` -- already fetched in History
-- `useUserSettings` -- used as-is
-- `getTargetDotColor` -- daily thresholds stay unchanged
+- `CompactChartTooltip.tsx` (Trends-specific, not reused -- calendar tooltip is simpler)
+- `calorie-target.ts` rollup/dot functions (unchanged)
+- `useDailyFoodTotals`, `useDailyCalorieBurn`, `useUserSettings` (unchanged)
+- Tooltip UI component (used as-is)
 
