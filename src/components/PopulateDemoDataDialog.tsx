@@ -84,7 +84,7 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()}>
+      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Populate Demo Data</DialogTitle>
           <DialogDescription>Generate realistic demo entries for the demo account.</DialogDescription>
@@ -152,7 +152,7 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
           {/* Generate options */}
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">Options</Label>
-            <div className="flex gap-4">
+            <div className="flex flex-wrap gap-4">
               <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
@@ -265,7 +265,7 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
           )}
         </div>
 
-        <DialogFooter className="flex gap-2">
+        <DialogFooter className="flex flex-wrap gap-2">
           <Button variant="ghost" onClick={handleClose} disabled={isLoading}>
             {result?.success ? "Close" : "Cancel"}
           </Button>
