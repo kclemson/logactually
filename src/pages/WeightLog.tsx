@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
+import { isMultiItemEntry } from '@/lib/entry-boundaries';
 import { useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { format, isToday, parseISO } from 'date-fns';
@@ -73,7 +74,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   const isTodaySelected = isToday(selectedDate);
   
   const queryClient = useQueryClient();
-  const { weightSets, isFetching, createEntry, updateSet, deleteSet, deleteEntry, deleteAllByDate } = useWeightEntries(dateStr);
+  const { weightSets, isFetching, createEntry, updateSet, deleteSet, deleteEntry, deleteAllByDate, updateGroupName } = useWeightEntries(dateStr);
   const { data: datesWithWeights = [] } = useWeightDatesWithData(dateNav.calendarMonth);
   const { analyzeWeights, isAnalyzing, error: analyzeError, warning: analyzeWarning } = useAnalyzeWeights();
   const saveRoutineMutation = useSaveRoutine();
@@ -146,6 +147,29 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
     return map;
   }, [weightSets, savedRoutines]);
 
+  // Build group names for multi-item entries (for collapsed group headers)
+  const entryGroupNames = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const boundary of entryBoundaries) {
+      if (!isMultiItemEntry(boundary)) continue;
+      const { entryId } = boundary;
+      // Priority: saved routine name > DB group_name > raw input > first exercise description
+      const routineName = entryRoutineNames.get(entryId);
+      if (routineName) { map.set(entryId, routineName); continue; }
+      const firstSet = weightSets.find(s => s.entryId === entryId);
+      if (firstSet?.groupName) { map.set(entryId, firstSet.groupName); continue; }
+      const rawInput = entryRawInputs.get(entryId);
+      if (rawInput) { map.set(entryId, rawInput); continue; }
+      if (firstSet) { map.set(entryId, firstSet.description); }
+    }
+    return map;
+  }, [entryBoundaries, entryRoutineNames, entryRawInputs, weightSets]);
+
+  // Update group name callback
+  const handleUpdateGroupName = useCallback((entryId: string, newName: string) => {
+    updateGroupName.mutate({ entryId, groupName: newName });
+  }, [updateGroupName]);
+
   // Toggle entry expansion
   const handleToggleEntryExpand = useCallback((entryId: string) => {
     setExpandedEntryIds(prev => {
@@ -190,6 +214,17 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
       ...exercise,
       entryId,
     }));
+
+    // Determine group_name for multi-item entries
+    let groupName: string | null = null;
+    if (exercises.length >= 2) {
+      if (sourceRoutineId && savedRoutines) {
+        const routine = savedRoutines.find(r => r.id === sourceRoutineId);
+        if (routine) groupName = routine.name;
+      }
+      if (!groupName && rawInput) groupName = rawInput;
+      if (!groupName) groupName = exercises[0].description;
+    }
     
     try {
       await createEntry.mutateAsync({
@@ -197,6 +232,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
         logged_date: dateStr,
         raw_input: rawInput,
         source_routine_id: sourceRoutineId,
+        group_name: groupName,
         weight_sets: setsWithEntryId,
       });
       
@@ -206,6 +242,12 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
       await queryClient.invalidateQueries({ queryKey: ['weight-dates', format(selectedDate, 'yyyy-MM')] });
       
       markEntryAsNew(entryId);
+
+      // Auto-expand multi-item entries so user sees exercises immediately
+      if (exercises.length >= 2) {
+        setExpandedEntryIds(prev => new Set(prev).add(entryId));
+      }
+
       weightInputRef.current?.clear();
       
       // Check for repeated patterns (skip demo mode and saved routine entries)
@@ -581,6 +623,8 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
             weightUnit={settings.weightUnit}
             entryRoutineNames={entryRoutineNames}
             entrySourceRoutineIds={entrySourceRoutineIds}
+            entryGroupNames={entryGroupNames}
+            onUpdateGroupName={handleUpdateGroupName}
             calorieBurnSettings={settings.calorieBurnEnabled ? settings as CalorieBurnSettings : undefined}
             totalCalorieBurnDisplay={settings.calorieBurnEnabled ? (() => {
               const exercises: ExerciseInput[] = displayItems.map(item => ({

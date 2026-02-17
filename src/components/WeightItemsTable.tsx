@@ -1,9 +1,21 @@
 import { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { isMultiItemEntry } from '@/lib/entry-boundaries';
+
 import { DescriptionCell } from '@/components/DescriptionCell';
 import { WeightSet } from '@/types/weight';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -69,6 +81,10 @@ interface WeightItemsTableProps {
   onSelectionChange?: (index: number, selected: boolean) => void;
   /** Pre-formatted total calorie burn display string, e.g. "(~81-157 cal)" */
   totalCalorieBurnDisplay?: string;
+  /** Map of entryId to group display name for collapsed multi-item entries */
+  entryGroupNames?: Map<string, string>;
+  /** Callback to persist updated group name via inline editing */
+  onUpdateGroupName?: (entryId: string, newName: string) => void;
 }
 
 /**
@@ -135,6 +151,8 @@ export function WeightItemsTable({
   onSelectionChange,
   calorieBurnSettings,
   totalCalorieBurnDisplay,
+  entryGroupNames,
+  onUpdateGroupName,
 }: WeightItemsTableProps) {
   const { isReadOnly, triggerOverlay } = useReadOnlyContext();
   const hasHover = useHasHover();
@@ -294,308 +312,468 @@ export function WeightItemsTable({
       )}
 
       {/* Data rows */}
-      {items.map((item, index) => {
-        const isFirstInEntry = entryBoundaries ? !!isFirstInBoundary(index, entryBoundaries) : false;
-        const isLastInEntry = entryBoundaries ? !!isLastInBoundary(index, entryBoundaries) : false;
-        const currentEntryId = item.entryId || null;
-        const entryIsNew = isEntryNew(currentEntryId, newEntryIds);
-        const highlightClasses = getEntryHighlightClasses(entryIsNew, isFirstInEntry, isLastInEntry);
-        const isCurrentExpanded = currentEntryId ? expandedEntryIds?.has(currentEntryId) : false;
-        const currentRawInput = currentEntryId ? entryRawInputs?.get(currentEntryId) : null;
-        const hasRawInput = !!currentRawInput;
-        const isFromRoutine = currentEntryId ? entrySourceRoutineIds?.has(currentEntryId) : false;
-        const isExpandable = hasRawInput || isFromRoutine;
+      {(() => {
+        // Build collapsed group indices and group headers (same IIFE pattern as FoodItemsTable)
+        const collapsedGroupIndices = new Set<number>();
+        const groupHeaders: { boundary: EntryBoundary; groupName: string }[] = [];
 
-        return (
-          <div key={item.uid || index} className="contents">
-            <div
-              className={cn(
-                'grid gap-0.5 items-center group',
-                gridCols,
-                highlightClasses
-              )}
-            >
-              {/* Checkbox cell for selection mode */}
-              {selectable && (
-                <div className="flex items-center justify-center">
-                  <input
-                    type="checkbox"
-                    checked={selectedIndices?.has(index) ?? false}
-                    onChange={(e) => onSelectionChange?.(index, e.target.checked)}
-                    className="h-4 w-4 rounded border-input"
-                  />
-                </div>
-              )}
-              {/* Description cell */}
-              {editable ? (
-                <div className="flex min-w-0">
-                  {showEntryDividers && (
-                    <div className="w-6 shrink-0 relative flex items-center justify-center self-stretch overflow-hidden">
-                      {isLastInEntry && isExpandable ? (
-                        <EntryChevron
-                          expanded={!!isCurrentExpanded}
-                          onToggle={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
-                        />
-                      ) : null}
-                    </div>
-                  )}
-                  <div className={cn(
-                    "flex-1 min-w-0 rounded pl-1 py-1 line-clamp-2",
-                    "focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg"
-                  )}>
-                    <DescriptionCell
-                      value={item.description}
-                      onSave={(desc) => onUpdateItem?.(index, 'description', desc)}
-                      title={item.description}
-                    >
-                      {hasAnyEditedFields(item) && (
-                        <span className="text-focus-ring font-bold" title={formatEditedFields(item) || 'Edited'}> *</span>
-                      )}
-                    </DescriptionCell>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-baseline min-w-0">
-                  {showEntryDividers && (
-                    <div className="w-6 shrink-0 relative flex items-center justify-center self-stretch overflow-hidden">
-                      {isLastInEntry && isExpandable ? (
-                        <EntryChevron
-                          expanded={!!isCurrentExpanded}
-                          onToggle={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
-                        />
-                      ) : null}
-                    </div>
-                  )}
-                  <span 
-                    title={item.description}
-                    className={cn("pl-1 pr-0 py-1 line-clamp-2 shrink min-w-0", compact && "text-sm")}
-                  >
-                    {item.description}
-                    {hasAnyEditedFields(item) && (
-                      <span className="text-focus-ring font-bold" title={formatEditedFields(item) || 'Edited'}> *</span>
-                    )}
-                  </span>
-                </div>
-              )}
-
-              {/* Sets, Reps, Weight - show "cardio" label for cardio items */}
-              {(() => {
-                const hasDuration = (item.duration_minutes ?? 0) > 0;
-                const hasDistance = (item.distance_miles ?? 0) > 0;
-                const isCardioItem = item.weight_lbs === 0 && 
-                  (hasDuration || hasDistance || isCardioExercise(item.exercise_key));
-                
-                if (isCardioItem && (editable || showCardioLabel)) {
-                  // Build a data-driven shorthand label for cardio items
-                  const parts: string[] = [];
-                  const dist = item.distance_miles ?? 0;
-                  const dur = item.duration_minutes ?? 0;
-
-                  if (dist > 0) parts.push(`${dist.toFixed(2)} mi`);
-                  if (dur > 0) parts.push(formatDurationMmSs(dur));
-                  if (dist > 0 && dur > 0) {
-                    const mph = dist / (dur / 60);
-                    parts.push(`${mph.toFixed(1)} mph`);
-                  }
-
-                  const label = parts.length > 0 ? parts.join(', ') : 'cardio';
-
-                  return (
-                    <span className="col-span-3 text-center text-xs text-muted-foreground italic py-1">
-                      {label}
-                    </span>
-                  );
+        if (entryBoundaries && entryGroupNames) {
+          for (const boundary of entryBoundaries) {
+            const groupName = entryGroupNames.get(boundary.entryId);
+            if (groupName && isMultiItemEntry(boundary)) {
+              const isExpanded = expandedEntryIds?.has(boundary.entryId);
+              groupHeaders.push({ boundary, groupName });
+              if (!isExpanded) {
+                for (let i = boundary.startIndex; i <= boundary.endIndex; i++) {
+                  collapsedGroupIndices.add(i);
                 }
-                
-                // Normal rendering for weight exercises
-                return (
-                  <>
-                    {/* Sets */}
-                    {editable ? (
-                      <Input
-                        type="number"
-                        value={
-                          editingCell?.index === index && editingCell?.field === 'sets'
-                            ? String(editingCell.value)
-                            : item.sets
-                        }
-                        onFocus={() => inlineEdit.startEditing(index, 'sets', item.sets)}
-                        onChange={(e) => inlineEdit.updateEditingValue(e.target.value)}
-                        onKeyDown={(e) => inlineEdit.handleNumericKeyDown(e)}
-                        onBlur={() => inlineEdit.handleNumericBlur()}
-                        className={getNumberInputClasses(editingCell?.index === index && editingCell?.field === 'sets')}
-                      />
-                    ) : (
-                      <span className="px-1 py-1 text-center">
-                        {item.sets === 0 && ((item.duration_minutes ?? 0) > 0 || (item.distance_miles ?? 0) > 0) ? '—' : item.sets}
-                      </span>
+              }
+            }
+          }
+        }
+
+        const rows: React.ReactNode[] = [];
+
+        items.forEach((item, index) => {
+          // Collapsed group header
+          const collapsedHeader = groupHeaders.find(g => g.boundary.startIndex === index && !expandedEntryIds?.has(g.boundary.entryId));
+          if (collapsedHeader) {
+            const { boundary, groupName } = collapsedHeader;
+            const exerciseCount = boundary.endIndex - boundary.startIndex + 1;
+            const entryIsNew = isEntryNew(boundary.entryId, newEntryIds);
+            const highlightClasses = getEntryHighlightClasses(entryIsNew, true, true);
+
+            rows.push(
+              <div key={`group-collapsed-${boundary.entryId}`} className="contents">
+                <div className={cn('grid gap-0.5 items-center group', gridCols, highlightClasses)}>
+                  {selectable && <span></span>}
+                  <div className="flex min-w-0">
+                    {showEntryDividers && (
+                      <div className="w-6 shrink-0 relative flex items-center justify-center self-stretch overflow-hidden">
+                        <EntryChevron
+                          expanded={false}
+                          onToggle={() => onToggleEntryExpand?.(boundary.entryId)}
+                        />
+                      </div>
                     )}
-
-                    {/* Reps */}
-                    {editable ? (
-                      <Input
-                        type="number"
-                        value={
-                          editingCell?.index === index && editingCell?.field === 'reps'
-                            ? String(editingCell.value)
-                            : item.reps
-                        }
-                        onFocus={() => inlineEdit.startEditing(index, 'reps', item.reps)}
-                        onChange={(e) => inlineEdit.updateEditingValue(e.target.value)}
-                        onKeyDown={(e) => inlineEdit.handleNumericKeyDown(e)}
-                        onBlur={() => inlineEdit.handleNumericBlur()}
-                        className={getNumberInputClasses(editingCell?.index === index && editingCell?.field === 'reps')}
+                    <div className={cn("flex-1 min-w-0 overflow-hidden max-h-[3rem] rounded pl-1 py-1 focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg", compact && "text-sm")}>
+                      <DescriptionCell
+                        value={groupName}
+                        onSave={(newName) => onUpdateGroupName?.(boundary.entryId, newName)}
+                        readOnly={isReadOnly}
+                        onReadOnlyAttempt={triggerOverlay}
+                        title={groupName}
                       />
-                    ) : (
-                      <span className="px-1 py-1 text-center">
-                        {item.reps === 0 && ((item.duration_minutes ?? 0) > 0 || (item.distance_miles ?? 0) > 0) ? '—' : item.reps}
-                      </span>
-                    )}
-
-                    {/* Weight */}
-                    {editable ? (
-                      <Input
-                        type="number"
-                        step={weightUnit === 'kg' ? '0.5' : '1'}
-                        value={
-                          editingCell?.index === index && editingCell?.field === 'weight_lbs'
-                            ? String(editingCell.value)
-                            : formatWeight(item.weight_lbs, weightUnit, weightUnit === 'kg' ? 1 : 0)
-                        }
-                        onFocus={() => {
-                          const displayValue = weightUnit === 'kg' 
-                            ? parseFloat(formatWeight(item.weight_lbs, 'kg', 1))
-                            : item.weight_lbs;
-                          inlineEdit.startEditing(index, 'weight_lbs', displayValue);
-                        }}
-                        onChange={(e) => inlineEdit.updateEditingValue(e.target.value, parseFloat)}
-                        onKeyDown={(e) => inlineEdit.handleNumericKeyDown(e)}
-                        onBlur={() => inlineEdit.handleNumericBlur()}
-                        className={getNumberInputClasses(editingCell?.index === index && editingCell?.field === 'weight_lbs')}
-                      />
-                    ) : (
-                      <span className="px-1 py-1 text-center">
-                        {(() => {
-                          const dur = item.duration_minutes ?? 0;
-                          const dist = item.distance_miles ?? 0;
-                          if (item.weight_lbs === 0 && (dur > 0 || dist > 0 || isCardioExercise(item.exercise_key))) {
-                            if (dur > 0) return `${Number(dur).toFixed(1)} min`;
-                            if (dist > 0) return `${Number(dist).toFixed(2)} mi`;
-                            return 'cardio';
-                          }
-                          return formatWeight(item.weight_lbs, weightUnit, weightUnit === 'kg' ? 1 : 0);
-                        })()}
-                      </span>
-                    )}
-                  </>
-                );
-              })()}
-
-              {/* Delete */}
-              {hasDeleteColumn && (
-                hasEntryDeletion && isLastInEntry ? (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onDeleteEntry?.(currentEntryId!)}
-                    className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
-                    aria-label="Delete entry"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                ) : editable ? (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onRemoveItem?.(index)}
-                    className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
-                    aria-label="Delete exercise"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                ) : (
-                  <span></span>
-                )
-                )}
-            </div>
-
-            
-            {/* Diff row - show progression delta if provided */}
-            {diffs?.has(index) && (() => {
-              const diff = diffs.get(index)!;
-              const hasDiff = diff.sets || diff.reps || diff.weight_lbs;
-              if (!hasDiff) return null;
-              
-              return (
-                <div className={cn('grid gap-0.5 items-center', gridCols)}>
-                  <span className={cn("px-1", showEntryDividers && "pl-4")}></span>
-                  <span className="px-1 text-center">
-                    <DiffValue value={diff.sets} />
+                    </div>
+                  </div>
+                  <span className="col-span-3 text-center text-xs text-muted-foreground italic py-1">
+                    {exerciseCount} exercises
                   </span>
-                  <span className="px-1 text-center">
-                    <DiffValue value={diff.reps} />
-                  </span>
-                  <span className="px-1 text-center">
-                    <DiffValue value={diff.weight_lbs} weightUnit={weightUnit} isWeight />
+                  {hasDeleteColumn && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                          aria-label="Delete entry"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-lg">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete this entry?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently remove {groupName} ({exerciseCount} exercises).
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => onDeleteEntry?.(boundary.entryId)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
+              </div>
+            );
+            return; // skip individual rendering for collapsed items
+          }
+
+          // Expanded group header (render at start of expanded group)
+          const expandedHeader = groupHeaders.find(g => g.boundary.startIndex === index && expandedEntryIds?.has(g.boundary.entryId));
+          if (expandedHeader) {
+            const { boundary, groupName } = expandedHeader;
+            const exerciseCount = boundary.endIndex - boundary.startIndex + 1;
+            const entryIsNew = isEntryNew(boundary.entryId, newEntryIds);
+            const highlightClasses = getEntryHighlightClasses(entryIsNew, true, false);
+
+            rows.push(
+              <div key={`group-expanded-${boundary.entryId}`} className="contents">
+                <div className={cn('grid gap-0.5 items-center group', gridCols, highlightClasses)}>
+                  {selectable && <span></span>}
+                  <div className="flex min-w-0">
+                    {showEntryDividers && (
+                      <div className="w-6 shrink-0 relative flex items-center justify-center self-stretch overflow-hidden">
+                        <EntryChevron
+                          expanded={true}
+                          onToggle={() => onToggleEntryExpand?.(boundary.entryId)}
+                        />
+                      </div>
+                    )}
+                    <div className={cn("flex-1 min-w-0 overflow-hidden max-h-[3rem] rounded pl-1 py-1 focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg", compact && "text-sm")}>
+                      <DescriptionCell
+                        value={groupName}
+                        onSave={(newName) => onUpdateGroupName?.(boundary.entryId, newName)}
+                        readOnly={isReadOnly}
+                        onReadOnlyAttempt={triggerOverlay}
+                        title={groupName}
+                      />
+                    </div>
+                  </div>
+                  <span className="col-span-3 text-center text-xs text-muted-foreground italic py-1">
+                    {exerciseCount} exercises
                   </span>
                   {hasDeleteColumn && <span></span>}
                 </div>
-              );
-            })()}
+              </div>
+            );
+          }
 
-            {/* Expanded content section */}
-            {showEntryDividers && isLastInEntry && isCurrentExpanded && (() => {
-              const isFromSavedRoutine = !!(currentEntryId && entrySourceRoutineIds?.has(currentEntryId));
-              const routineName = (currentEntryId && entryRoutineNames?.get(currentEntryId)) || null;
-              const entryExercises = items.filter(i => i.entryId === currentEntryId);
+          // Skip individual items that are in a collapsed group
+          if (collapsedGroupIndices.has(index)) return;
 
-              // Calorie burn estimates as extraContent
-              const calorieBurnContent = calorieBurnSettings?.calorieBurnEnabled ? (() => {
-                const parts = entryExercises.map(ex => {
-                  const result = estimateCalorieBurn({
-                    exercise_key: ex.exercise_key,
-                    exercise_subtype: ex.exercise_subtype,
-                    sets: ex.sets,
-                    reps: ex.reps,
-                    weight_lbs: ex.weight_lbs,
-                    duration_minutes: ex.duration_minutes,
-                    distance_miles: ex.distance_miles,
-                    exercise_metadata: ex.exercise_metadata,
-                  }, calorieBurnSettings);
-                  return { name: ex.description, display: formatCalorieBurnValue(result) };
-                }).filter(p => p.display);
-                if (parts.length === 0) return null;
-                const detail = parts.length === 1
-                  ? parts[0].display
-                  : parts.map(p => `${p.display} (${p.name})`).join(', ');
+          // Check if this item belongs to a group with a header
+          const belongsToGroup = groupHeaders.some(g => index >= g.boundary.startIndex && index <= g.boundary.endIndex);
+
+          const isFirstInEntry = entryBoundaries ? !!isFirstInBoundary(index, entryBoundaries) : false;
+          const isLastInEntry = entryBoundaries ? !!isLastInBoundary(index, entryBoundaries) : false;
+          const currentEntryId = item.entryId || null;
+          const entryIsNew = isEntryNew(currentEntryId, newEntryIds);
+          // When item belongs to an expanded group, the group header handles the first highlight
+          const effectiveIsFirst = belongsToGroup ? false : isFirstInEntry;
+          const highlightClasses = getEntryHighlightClasses(entryIsNew, effectiveIsFirst, isLastInEntry);
+          const isCurrentExpanded = currentEntryId ? expandedEntryIds?.has(currentEntryId) : false;
+          const currentRawInput = currentEntryId ? entryRawInputs?.get(currentEntryId) : null;
+          const hasRawInput = !!currentRawInput;
+          const isFromRoutine = currentEntryId ? entrySourceRoutineIds?.has(currentEntryId) : false;
+          // When item belongs to a group, the group header handles expand/collapse
+          const isExpandable = !belongsToGroup && (hasRawInput || isFromRoutine);
+
+          rows.push(
+            <div key={item.uid || index} className="contents">
+              <div
+                className={cn(
+                  'grid gap-0.5 items-center group',
+                  gridCols,
+                  highlightClasses
+                )}
+              >
+                {/* Checkbox cell for selection mode */}
+                {selectable && (
+                  <div className="flex items-center justify-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedIndices?.has(index) ?? false}
+                      onChange={(e) => onSelectionChange?.(index, e.target.checked)}
+                      className="h-4 w-4 rounded border-input"
+                    />
+                  </div>
+                )}
+                {/* Description cell */}
+                {editable ? (
+                  <div className="flex min-w-0">
+                    {showEntryDividers && (
+                      <div className="w-6 shrink-0 relative flex items-center justify-center self-stretch overflow-hidden">
+                        {isLastInEntry && isExpandable ? (
+                          <EntryChevron
+                            expanded={!!isCurrentExpanded}
+                            onToggle={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
+                          />
+                        ) : null}
+                      </div>
+                    )}
+                    <div className={cn(
+                      "flex-1 min-w-0 rounded pl-1 py-1 line-clamp-2",
+                      "focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg"
+                    )}>
+                      <DescriptionCell
+                        value={item.description}
+                        onSave={(desc) => onUpdateItem?.(index, 'description', desc)}
+                        title={item.description}
+                      >
+                        {hasAnyEditedFields(item) && (
+                          <span className="text-focus-ring font-bold" title={formatEditedFields(item) || 'Edited'}> *</span>
+                        )}
+                      </DescriptionCell>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-baseline min-w-0">
+                    {showEntryDividers && (
+                      <div className="w-6 shrink-0 relative flex items-center justify-center self-stretch overflow-hidden">
+                        {isLastInEntry && isExpandable ? (
+                          <EntryChevron
+                            expanded={!!isCurrentExpanded}
+                            onToggle={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
+                          />
+                        ) : null}
+                      </div>
+                    )}
+                    <span 
+                      title={item.description}
+                      className={cn("pl-1 pr-0 py-1 line-clamp-2 shrink min-w-0", compact && "text-sm")}
+                    >
+                      {item.description}
+                      {hasAnyEditedFields(item) && (
+                        <span className="text-focus-ring font-bold" title={formatEditedFields(item) || 'Edited'}> *</span>
+                      )}
+                    </span>
+                  </div>
+                )}
+
+                {/* Sets, Reps, Weight - show "cardio" label for cardio items */}
+                {(() => {
+                  const hasDuration = (item.duration_minutes ?? 0) > 0;
+                  const hasDistance = (item.distance_miles ?? 0) > 0;
+                  const isCardioItem = item.weight_lbs === 0 && 
+                    (hasDuration || hasDistance || isCardioExercise(item.exercise_key));
+                  
+                  if (isCardioItem && (editable || showCardioLabel)) {
+                    const parts: string[] = [];
+                    const dist = item.distance_miles ?? 0;
+                    const dur = item.duration_minutes ?? 0;
+
+                    if (dist > 0) parts.push(`${dist.toFixed(2)} mi`);
+                    if (dur > 0) parts.push(formatDurationMmSs(dur));
+                    if (dist > 0 && dur > 0) {
+                      const mph = dist / (dur / 60);
+                      parts.push(`${mph.toFixed(1)} mph`);
+                    }
+
+                    const label = parts.length > 0 ? parts.join(', ') : 'cardio';
+
+                    return (
+                      <span className="col-span-3 text-center text-xs text-muted-foreground italic py-1">
+                        {label}
+                      </span>
+                    );
+                  }
+                  
+                  return (
+                    <>
+                      {/* Sets */}
+                      {editable ? (
+                        <Input
+                          type="number"
+                          value={
+                            editingCell?.index === index && editingCell?.field === 'sets'
+                              ? String(editingCell.value)
+                              : item.sets
+                          }
+                          onFocus={() => inlineEdit.startEditing(index, 'sets', item.sets)}
+                          onChange={(e) => inlineEdit.updateEditingValue(e.target.value)}
+                          onKeyDown={(e) => inlineEdit.handleNumericKeyDown(e)}
+                          onBlur={() => inlineEdit.handleNumericBlur()}
+                          className={getNumberInputClasses(editingCell?.index === index && editingCell?.field === 'sets')}
+                        />
+                      ) : (
+                        <span className="px-1 py-1 text-center">
+                          {item.sets === 0 && ((item.duration_minutes ?? 0) > 0 || (item.distance_miles ?? 0) > 0) ? '—' : item.sets}
+                        </span>
+                      )}
+
+                      {/* Reps */}
+                      {editable ? (
+                        <Input
+                          type="number"
+                          value={
+                            editingCell?.index === index && editingCell?.field === 'reps'
+                              ? String(editingCell.value)
+                              : item.reps
+                          }
+                          onFocus={() => inlineEdit.startEditing(index, 'reps', item.reps)}
+                          onChange={(e) => inlineEdit.updateEditingValue(e.target.value)}
+                          onKeyDown={(e) => inlineEdit.handleNumericKeyDown(e)}
+                          onBlur={() => inlineEdit.handleNumericBlur()}
+                          className={getNumberInputClasses(editingCell?.index === index && editingCell?.field === 'reps')}
+                        />
+                      ) : (
+                        <span className="px-1 py-1 text-center">
+                          {item.reps === 0 && ((item.duration_minutes ?? 0) > 0 || (item.distance_miles ?? 0) > 0) ? '—' : item.reps}
+                        </span>
+                      )}
+
+                      {/* Weight */}
+                      {editable ? (
+                        <Input
+                          type="number"
+                          step={weightUnit === 'kg' ? '0.5' : '1'}
+                          value={
+                            editingCell?.index === index && editingCell?.field === 'weight_lbs'
+                              ? String(editingCell.value)
+                              : formatWeight(item.weight_lbs, weightUnit, weightUnit === 'kg' ? 1 : 0)
+                          }
+                          onFocus={() => {
+                            const displayValue = weightUnit === 'kg' 
+                              ? parseFloat(formatWeight(item.weight_lbs, 'kg', 1))
+                              : item.weight_lbs;
+                            inlineEdit.startEditing(index, 'weight_lbs', displayValue);
+                          }}
+                          onChange={(e) => inlineEdit.updateEditingValue(e.target.value, parseFloat)}
+                          onKeyDown={(e) => inlineEdit.handleNumericKeyDown(e)}
+                          onBlur={() => inlineEdit.handleNumericBlur()}
+                          className={getNumberInputClasses(editingCell?.index === index && editingCell?.field === 'weight_lbs')}
+                        />
+                      ) : (
+                        <span className="px-1 py-1 text-center">
+                          {(() => {
+                            const dur = item.duration_minutes ?? 0;
+                            const dist = item.distance_miles ?? 0;
+                            if (item.weight_lbs === 0 && (dur > 0 || dist > 0 || isCardioExercise(item.exercise_key))) {
+                              if (dur > 0) return `${Number(dur).toFixed(1)} min`;
+                              if (dist > 0) return `${Number(dist).toFixed(2)} mi`;
+                              return 'cardio';
+                            }
+                            return formatWeight(item.weight_lbs, weightUnit, weightUnit === 'kg' ? 1 : 0);
+                          })()}
+                        </span>
+                      )}
+                    </>
+                  );
+                })()}
+
+                {/* Delete */}
+                {hasDeleteColumn && (
+                  belongsToGroup ? (
+                    // Within an expanded group: per-item delete only
+                    editable ? (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onRemoveItem?.(index)}
+                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                        aria-label="Delete exercise"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    ) : (
+                      <span></span>
+                    )
+                  ) : (
+                    hasEntryDeletion && isLastInEntry ? (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onDeleteEntry?.(currentEntryId!)}
+                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                        aria-label="Delete entry"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    ) : editable ? (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onRemoveItem?.(index)}
+                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                        aria-label="Delete exercise"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    ) : (
+                      <span></span>
+                    )
+                  )
+                )}
+              </div>
+
+              
+              {/* Diff row - show progression delta if provided */}
+              {diffs?.has(index) && (() => {
+                const diff = diffs.get(index)!;
+                const hasDiff = diff.sets || diff.reps || diff.weight_lbs;
+                if (!hasDiff) return null;
+                
                 return (
-                  <p className="text-xs text-muted-foreground italic">
-                    Estimated calories burned: {detail}
-                  </p>
+                  <div className={cn('grid gap-0.5 items-center', gridCols)}>
+                    <span className={cn("px-1", showEntryDividers && "pl-4")}></span>
+                    <span className="px-1 text-center">
+                      <DiffValue value={diff.sets} />
+                    </span>
+                    <span className="px-1 text-center">
+                      <DiffValue value={diff.reps} />
+                    </span>
+                    <span className="px-1 text-center">
+                      <DiffValue value={diff.weight_lbs} weightUnit={weightUnit} isWeight />
+                    </span>
+                    {hasDeleteColumn && <span></span>}
+                  </div>
                 );
-              })() : undefined;
+              })()}
 
-              return (
-                <EntryExpandedPanel
-                  items={entryExercises}
-                  rawInput={currentRawInput ?? null}
-                  savedItemInfo={{
-                    type: 'routine',
-                    name: routineName,
-                    isFromSaved: isFromSavedRoutine,
-                  }}
-                  onSaveAs={onSaveAsRoutine && currentEntryId ? () => {
-                    onSaveAsRoutine(currentEntryId, currentRawInput ?? null, entryExercises);
-                  } : undefined}
-                  onDeleteEntry={onDeleteEntry && currentEntryId ? () => onDeleteEntry(currentEntryId) : undefined}
-                  gridCols={gridCols}
-                  extraContent={calorieBurnContent}
-                />
-              );
-            })()}
-          </div>
-        );
-      })}
+              {/* Expanded content section */}
+              {showEntryDividers && isLastInEntry && isCurrentExpanded && (() => {
+                const isFromSavedRoutine = !!(currentEntryId && entrySourceRoutineIds?.has(currentEntryId));
+                const routineName = (currentEntryId && entryRoutineNames?.get(currentEntryId)) || null;
+                const entryExercises = items.filter(i => i.entryId === currentEntryId);
+
+                // Calorie burn estimates as extraContent
+                const calorieBurnContent = calorieBurnSettings?.calorieBurnEnabled ? (() => {
+                  const parts = entryExercises.map(ex => {
+                    const result = estimateCalorieBurn({
+                      exercise_key: ex.exercise_key,
+                      exercise_subtype: ex.exercise_subtype,
+                      sets: ex.sets,
+                      reps: ex.reps,
+                      weight_lbs: ex.weight_lbs,
+                      duration_minutes: ex.duration_minutes,
+                      distance_miles: ex.distance_miles,
+                      exercise_metadata: ex.exercise_metadata,
+                    }, calorieBurnSettings);
+                    return { name: ex.description, display: formatCalorieBurnValue(result) };
+                  }).filter(p => p.display);
+                  if (parts.length === 0) return null;
+                  const detail = parts.length === 1
+                    ? parts[0].display
+                    : parts.map(p => `${p.display} (${p.name})`).join(', ');
+                  return (
+                    <p className="text-xs text-muted-foreground italic">
+                      Estimated calories burned: {detail}
+                    </p>
+                  );
+                })() : undefined;
+
+                return (
+                  <EntryExpandedPanel
+                    items={entryExercises}
+                    rawInput={currentRawInput ?? null}
+                    savedItemInfo={{
+                      type: 'routine',
+                      name: routineName,
+                      isFromSaved: isFromSavedRoutine,
+                    }}
+                    onSaveAs={onSaveAsRoutine && currentEntryId ? () => {
+                      onSaveAsRoutine(currentEntryId, currentRawInput ?? null, entryExercises);
+                    } : undefined}
+                    onDeleteEntry={onDeleteEntry && currentEntryId ? () => onDeleteEntry(currentEntryId) : undefined}
+                    gridCols={gridCols}
+                    extraContent={calorieBurnContent}
+                  />
+                );
+              })()}
+            </div>
+          );
+        });
+
+        return rows;
+      })()}
 
       {/* Totals at bottom */}
       {showTotals && items.length > 0 && totalsPosition === 'bottom' && <TotalsRow />}
