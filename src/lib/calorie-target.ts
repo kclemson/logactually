@@ -44,7 +44,7 @@ export type CalorieTargetMode = 'static' | 'body_stats' | 'exercise_adjusted';
 export const TARGET_MODE_OPTIONS: { value: CalorieTargetMode; label: string; description: string }[] = [
   { value: 'static', label: 'Fixed number', description: 'You set a specific calorie target' },
   { value: 'exercise_adjusted', label: 'Exercise adjusted', description: 'Logged exercise offsets your food intake' },
-  { value: 'body_stats', label: 'Estimated burn rate minus a deficit', description: 'Calculated from your activity level, weight, and height' },
+  { value: 'body_stats', label: 'Estimated burn rate - deficit', description: 'Calculated from your activity level, weight, and height' },
 ];
 
 // ---------------------------------------------------------------------------
