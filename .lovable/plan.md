@@ -1,43 +1,69 @@
 
 
-# Fix: Group Header Inline Editing - Match Working Individual Item Pattern Exactly
+# Fix: Atomic Group Portion Scaling via Dedicated Hook
 
-## Problem
-Clicking on group header text (e.g., "Stuffed turkey dinner with sides") selects text instead of placing an editing cursor. Individual item descriptions work fine with the exact same `DescriptionCell` component.
+## Overview
 
-## Root Cause
-Two issues working together:
+Extract the group portion scaling logic into a new hook (`useGroupPortionScale`) that performs a single atomic database save -- fixing both the missing child portion text updates and the flicker.
 
-1. **EntryChevron tap target bleeds into text area**: The button uses `absolute inset-0 w-[44px] -left-3`, extending ~20px past its 12px container into the description text. This steals clicks from the beginning of the text.
+## Why a Hook (Not a Utility)
 
-2. **Wrapper div differs from the working individual item pattern**: Group headers use `max-h-[1.5rem]` (24px) which, combined with `py-1` padding (8px), leaves only 16px for the contentEditable span whose line-height is 24px -- the span overflows its container. Individual items use `max-h-[3rem]` and include `rounded` and `focus-within:` classes. The tight constraint plus `overflow-hidden` may cause browser-specific issues with contentEditable cursor placement.
+A pure utility can't help here because the operation needs access to React Query's `updateEntry` mutation, `queryClient` for invalidation, and optimistic state management. A custom hook is the right pattern -- it encapsulates the mutation, optimistic state, and derived maps, keeping FoodLog.tsx focused on orchestration.
 
-## Fix
+## Root Cause Recap
 
-### 1. `src/components/EntryChevron.tsx`
-Constrain the button to its container so it can never overlap adjacent elements:
-- Remove `inset-0 w-[44px] -left-3`
-- Use `w-full h-full` so the button fills only its parent container
-- The parent container controls the tap target size
+1. **Missing portion text**: The "Done" button loops N times calling `onUpdateItemBatch` per item. Each call triggers `handleItemUpdateBatch` which reads `displayItems` (stale during the loop) and fires a separate `updateEntry.mutate()`. These race -- intermediate saves overwrite final ones, so some items' `portion` fields never get persisted.
 
-### 2. `src/components/FoodItemsTable.tsx` (chevron containers)
-Widen chevron containers from `w-3` (12px) to `w-6` (24px) and add `overflow-hidden` to physically prevent any child from escaping. This gives a reasonable 24px tap target. Apply to all 6 chevron container locations (2 group headers + 2 individual item branches + 2 in WeightItemsTable).
-
-### 3. `src/components/FoodItemsTable.tsx` (group header wrappers)
-Make both group header description wrappers (collapsed line ~365, expanded line ~533) identical to the working individual item wrapper:
-- Change `max-h-[1.5rem]` to `max-h-[3rem]`
-- Add `rounded`
-- Add `focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg`
-- Keep `font-semibold` on the expanded header wrapper to distinguish it visually
-
-### 4. `src/components/WeightItemsTable.tsx` (chevron containers)
-Apply the same chevron container changes (widen + overflow-hidden) for consistency.
+2. **Flicker**: N+1 separate mutations (N item updates + 1 multiplier update) each trigger query invalidation and refetch. Old server data briefly appears between invalidations.
 
 ## Technical Details
 
+### New file: `src/hooks/useGroupPortionScale.ts`
+
+Encapsulates:
+- `optimisticMultipliers` state (moved from FoodLog)
+- `optimisticGroupNames` state (moved from FoodLog)
+- Derived `entryPortionMultipliers` map (moved from FoodLog)
+- Derived `entryGroupNames` map (moved from FoodLog)
+- `scaleGroupPortion(entryId, multiplier)` -- the atomic handler:
+  1. Gets all items for the entry via a passed-in getter
+  2. Applies `scaleItemByMultiplier` to every item in one pass (this includes portion text scaling)
+  3. Computes new cumulative multiplier
+  4. Sets optimistic multiplier state
+  5. Calls `updateEntry.mutate()` ONCE with both updated `food_items` AND `group_portion_multiplier`
+  6. On success: awaits query invalidation, then clears optimistic state
+- `updateGroupName(entryId, newName)` -- the existing inline-edit handler, moved here
+
+### Modified: `src/components/FoodItemsTable.tsx`
+
+Replace both "Done" button implementations (collapsed ~line 463, expanded ~line 601):
+
+**Before:**
+```
+for (let i = boundary.startIndex; i <= boundary.endIndex; i++) {
+  onUpdateItemBatch?.(i, scaleItemByMultiplier(items[i], groupPortionMultiplier));
+}
+onUpdateEntryPortionMultiplier?.(boundary.entryId, existing * groupPortionMultiplier);
+```
+
+**After:**
+```
+onScaleGroupPortion?.(boundary.entryId, groupPortionMultiplier);
+```
+
+Replace `onUpdateEntryPortionMultiplier` prop with `onScaleGroupPortion` prop.
+
+### Modified: `src/pages/FoodLog.tsx`
+
+- Import and call `useGroupPortionScale`, passing `entries`, `updateEntry`, `queryClient`, and `getItemsForEntry`
+- Remove ~60 lines of inline state and handlers (optimistic multipliers/names, derived maps)
+- Pass `onScaleGroupPortion` and `onUpdateGroupName` from the hook to `FoodItemsTable`
+
+## File Summary
+
 | File | Change |
 |------|--------|
-| `src/components/EntryChevron.tsx` | Replace `absolute inset-0 w-[44px] -left-3` with `w-full h-full` |
-| `src/components/FoodItemsTable.tsx` | Widen all 4 chevron containers from `w-3` to `w-6`, add `overflow-hidden`; update both group header wrappers to match individual item pattern (`max-h-[3rem]`, `rounded`, `focus-within:` classes) |
-| `src/components/WeightItemsTable.tsx` | Widen 2 chevron containers from `w-4`/`w-3` to `w-6`, add `overflow-hidden` |
+| `src/hooks/useGroupPortionScale.ts` | **New** -- hook with atomic scale + optimistic state |
+| `src/pages/FoodLog.tsx` | Remove optimistic state/maps/handlers, use new hook instead |
+| `src/components/FoodItemsTable.tsx` | Replace `onUpdateEntryPortionMultiplier` prop with `onScaleGroupPortion`; simplify "Done" button to single call |
 
