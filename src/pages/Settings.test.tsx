@@ -27,6 +27,7 @@ let mockSettings = {
   age: null,
   bodyComposition: null,
   defaultIntensity: null,
+  weekStartDay: 0 as const,
 };
 
 vi.mock('@/hooks/useAuth', () => ({
@@ -145,6 +146,7 @@ describe('Settings smoke test', () => {
       age: null,
       bodyComposition: null,
       defaultIntensity: null,
+      weekStartDay: 0,
     };
   });
 

@@ -18,6 +18,7 @@ interface DateNavigationProps {
   onGoToToday: () => void;
   datesWithData: Date[];
   highlightClassName: string;
+  weekStartDay?: 0 | 1 | 2 | 3 | 4 | 5 | 6;
 }
 
 export function DateNavigation({
@@ -33,6 +34,7 @@ export function DateNavigation({
   onGoToToday,
   datesWithData,
   highlightClassName,
+  weekStartDay = 0,
 }: DateNavigationProps) {
   return (
     <div className="flex items-center justify-center gap-1 relative">
@@ -81,6 +83,7 @@ export function DateNavigation({
             disabled={(date) => isFuture(date)}
             modifiers={{ hasData: datesWithData }}
             modifiersClassNames={{ hasData: highlightClassName }}
+            weekStartsOn={weekStartDay}
             initialFocus
             className="pointer-events-auto"
           />

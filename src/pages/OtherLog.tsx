@@ -178,6 +178,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
         onGoToToday={dateNav.goToToday}
         datesWithData={datesWithData}
         highlightClassName="text-teal-600 dark:text-teal-400 font-semibold"
+        weekStartDay={settings.weekStartDay}
       />
 
       {/* Entries grouped by log type */}
