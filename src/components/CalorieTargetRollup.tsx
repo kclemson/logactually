@@ -110,6 +110,7 @@ export function CalorieTargetRollup({ settings, burnByDate, usesBurns }: Calorie
           </div>
         </TooltipTrigger>
         <TooltipContent
+          side="bottom"
           sideOffset={5}
           onPointerDownOutside={(e) => e.preventDefault()}
         >
