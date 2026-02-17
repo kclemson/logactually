@@ -1,33 +1,27 @@
 
 
-# Fix: Tooltip z-order and multiple tooltip issues + exercise count bug
+# Fix: Exercise entry counts in calorie burn tooltip
 
-## Problem 1: Multiple tooltips and z-order
+## Problem
+The tooltip shows "2 cardio" for Feb 16 when there were actually 3 cardio entries (2 dog walks + 1 treadmill run), and "2 cardio" for Feb 15 when there were 5 (3 dog walks + 2 biking). This happens because `useWeightTrends` aggregates multiple entries of the same exercise type on the same date into a single data point. The counting logic in `useDailyCalorieBurn` uses a Set of unique exercise keys, which can only count distinct types, not individual entries.
 
-Each chart uses the same pattern: a dismiss overlay at `z-10` and chart content at `z-20`. This means tapping a bar on a different chart passes right through the first chart's overlay (since `z-20 > z-10`), opening a second tooltip without closing the first. The tooltip also renders behind lower charts because its `zIndex: 9999` is trapped inside the `z-20` stacking context.
-
-**Fix (CSS only, no React context needed):**
-- Raise the dismiss overlay from `z-10` to `z-30` so it sits above all other charts' `z-20` content -- this prevents opening a second tooltip
-- When a tooltip is active, add `z-50` to the Card itself so the tooltip renders above all sibling charts
-
-## Problem 2: Exercise count in tooltip
-
-The calorie burn hook counts unique exercises per day using a Set keyed by `exercise_key`. But `walk_run` covers walking, running, and hiking as separate trend entries that all share the same key. So 2 dog walks + 1 treadmill run = 1 cardio instead of 2.
-
-**Fix:** Use a composite key `exercise_key::subtype` when adding to the Set, so walking and running count separately.
+## Solution
+Add an `entryCount` field to each aggregated data point in `useWeightTrends`, then sum those counts in `useDailyCalorieBurn` instead of counting unique keys.
 
 ## Files to change
 
-### `src/components/trends/CalorieBurnChart.tsx`
-- Change dismiss overlay from `z-10` to `z-30`
-- Conditionally add `z-50` to the Card when tooltip is active
+### 1. `src/hooks/useWeightTrends.ts`
+- Add `entryCount: number` to the `WeightPoint` interface
+- Initialize it to `1` when creating a new data point (line 117)
+- Increment it when merging entries (inside the `if (existing)` block, around line 92)
 
-### `src/components/trends/FoodChart.tsx`
-- Same overlay and Card z-index changes (applies to FoodChart, StackedMacroChart, and VolumeChart components in this file)
+### 2. `src/hooks/useDailyCalorieBurn.ts`
+- Replace the `Set<string>` approach with simple counters
+- For each data point, determine if the exercise is cardio or strength, then add `point.entryCount` (or default to 1) to the appropriate counter
+- Remove the Set-based counting and the post-processing loop that iterated over keys
+- Sum `exerciseCount` as `cardioCount + strengthCount`
 
-### `src/components/trends/ExerciseChart.tsx`
-- Same overlay and Card z-index changes
+### Expected results after fix
+- Feb 16: 2 dog walks (merged into 1 walking point with entryCount=2) + 1 treadmill (entryCount=1) = **3 cardio**
+- Feb 15: 3 dog walks (entryCount=3) + 2 biking entries (entryCount=2, or 1+1 if indoor/outdoor split) = **5 cardio**
 
-### `src/hooks/useDailyCalorieBurn.ts`
-- Line 60: change `exercise.exercise_key` to a composite key that includes `exercise.exercise_subtype` when present
-- Update the `isCardioExercise` check to still use the base `exercise_key`
