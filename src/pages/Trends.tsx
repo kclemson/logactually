@@ -417,11 +417,12 @@ const Trends = () => {
                 {calorieBurnChartData.length > 0 && (() => {
                   const bmr = computeAbsoluteBMR(settings);
                   const sedentaryTDEE = bmr != null ? Math.round(bmr * ACTIVITY_MULTIPLIERS.sedentary) : null;
-                  const baseSubtitle = settings.bodyWeightLbs ? "Daily estimate" : "Set bio in Settings for precision";
-                  const subtitle = sedentaryTDEE != null ? `${baseSubtitle} · TDEE: ~${sedentaryTDEE.toLocaleString()}` : baseSubtitle;
+                  const subtitle = sedentaryTDEE != null
+                    ? `Total daily energy expenditure: ~${sedentaryTDEE.toLocaleString()}`
+                    : "Set bio in Settings for precision";
                   return (
                     <CalorieBurnChart
-                      title="Estimated Calorie Burn"
+                      title="Estimated Daily Calorie Burn"
                       subtitle={subtitle}
                       chartData={calorieBurnChartData}
                       color={CHART_COLORS.calorieBurn}
