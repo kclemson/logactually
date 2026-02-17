@@ -194,6 +194,7 @@ export function describeCalorieTarget(settings: UserSettings): string | null {
 
 export interface RollupResult {
   avgIntake: number;
+  avgBurn: number;
   dotColor: string;
   dayCount: number;
 }
@@ -249,11 +250,14 @@ export function computeCalorieRollup(
 
   let totalIntake = 0;
   let totalTarget = 0;
+  let totalBurn = 0;
 
   for (const day of eligible) {
     totalIntake += day.totalCalories;
+    const burn = usesBurns ? (burnByDate.get(day.date) ?? 0) : 0;
+    totalBurn += burn;
     const dayTarget = usesBurns
-      ? getExerciseAdjustedTarget(baseTarget, burnByDate.get(day.date) ?? 0)
+      ? getExerciseAdjustedTarget(baseTarget, burn)
       : baseTarget;
     totalTarget += dayTarget;
   }
@@ -263,6 +267,7 @@ export function computeCalorieRollup(
 
   return {
     avgIntake,
+    avgBurn: usesBurns ? Math.round(totalBurn / eligible.length) : 0,
     dotColor: getRollupDotColor(avgIntake, avgTarget),
     dayCount: eligible.length,
   };
