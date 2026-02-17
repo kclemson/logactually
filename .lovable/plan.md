@@ -1,74 +1,91 @@
 
 
-# Fix: SimilarEntryPrompt UX -- Three Distinct Actions
+# Settings Refactor: Unified SavedItemRow for All Three Row Types
 
-## Problem
-Currently, both the X button and "Log as New" call the same `onDismiss` handler (AI analysis). Users who just want to close the prompt get surprised when it triggers food logging. And if they re-submit the same text, the prompt reappears in an infinite loop.
+## Approach
 
-## Solution
+Create a single `SavedItemRow` component that all three settings row types flow through, with an optional expander flag. This unifies the codepath so that when `DescriptionCell` is introduced later, the name-editing logic only needs to change in one place.
 
-Three distinct actions with clear labels:
-- **"Use past entry"** -- logs the matched historical items
-- **"Log as new"** -- sends text to AI analysis and creates a new entry
-- **"Cancel"** -- closes the prompt, keeps text in textarea, does nothing else
+## Layout Model
 
-To prevent the re-prompt loop: track the dismissed input text so re-submitting skips the similarity check.
+All three row types share this structure:
 
-## Changes
-
-### 1. `src/components/SimilarEntryPrompt.tsx`
-
-- Add `onCancel: () => void` prop
-- Remove the X button entirely
-- Rename button labels: "Log this" becomes "Use past entry", keep "Log as new", add "Cancel"
-- Wire: "Use past entry" calls `onUsePastEntry`, "Log as new" calls `onDismiss`, "Cancel" calls `onCancel`
-- Remove the `X` import from lucide-react since it's no longer used
-
-### 2. `src/pages/FoodLog.tsx`
-
-**New state** (near other state declarations):
-```typescript
-const [dismissedMatchText, setDismissedMatchText] = useState<string | null>(null);
+```text
+[chevron?] [editable name] [meta slot] [delete button]
+            optional children when expanded
 ```
 
-**New handler** `handleCancelEntryMatch`:
-```typescript
-const handleCancelEntryMatch = useCallback(() => {
-  if (!pendingEntryMatch) return;
-  setDismissedMatchText(pendingEntryMatch.originalInput);
-  setPendingEntryMatch(null);
-}, [pendingEntryMatch]);
-```
+- **Saved Meals**: chevron + name + "3 items" + delete, expands to FoodItemsTable
+- **Saved Routines**: chevron + name + "2 exercises" + delete, expands to WeightItemsTable
+- **Custom Log Types**: no chevron + name + "numeric (kg)" badge + delete, no expansion
 
-**Update `handleSubmit`** (around line 248): add a check before the similarity detection block:
-```typescript
-// Skip similarity check if user already cancelled this exact input
-if (dismissedMatchText === text) {
-  setDismissedMatchText(null);
-  // fall through to AI analysis below
-} else if (!isReadOnly && recentEntries?.length) {
-  // existing similarity detection logic...
-}
-```
+## Files Changed
 
-**Clear dismissed text** when input changes -- add to the `handleSubmit` entry point so it only matters on exact re-submission.
+### 1. New: `src/components/DeleteConfirmPopover.tsx` (~45 lines)
 
-**Pass new prop** in JSX:
-```tsx
-<SimilarEntryPrompt
-  match={pendingEntryMatch.match}
-  onUsePastEntry={handleUsePastEntry}
-  onDismiss={dismissEntryMatch}
-  onCancel={handleCancelEntryMatch}
-  isLoading={isAnalyzing || createEntry.isPending}
-/>
-```
+Extracts the identical trash-icon-with-confirmation-popover used in all three rows.
 
-## Files changed
+Props:
+- `id`, `label`, `description` -- what to show in the confirmation
+- `onDelete` -- callback
+- `openPopoverId` / `setOpenPopoverId` -- shared open-state pattern
 
-| File | What changes |
-|---|---|
-| `src/components/SimilarEntryPrompt.tsx` | Remove X button, add `onCancel` prop, rename button labels |
-| `src/pages/FoodLog.tsx` | Add `dismissedMatchText` state, `handleCancelEntryMatch` handler, bypass check in `handleSubmit` |
+### 2. New: `src/components/SavedItemRow.tsx` (~80 lines)
 
-~15 lines added/changed across 2 files.
+Shared row shell with optional expansion.
+
+Props:
+- `id`, `name` -- item identity
+- `onUpdateName(newName)` -- save callback
+- `onDelete()` -- delete callback
+- `deleteConfirmLabel`, `deleteConfirmDescription` -- confirmation text
+- `expandable?: boolean` -- whether chevron shows (default true)
+- `isExpanded?`, `onToggleExpand?` -- expansion state (ignored when not expandable)
+- `meta?: ReactNode` -- slot for item count or value-type badge
+- `openDeletePopoverId` / `setOpenDeletePopoverId` -- popover coordination
+- `children?: ReactNode` -- expanded content
+- `existingNames?: string[]` -- for duplicate name validation
+
+Internals:
+- `useRef` for name rollback (replaces `dataset.original` hack in all three files)
+- Uses `DeleteConfirmPopover`
+- Conditionally renders chevron based on `expandable`
+
+### 3. Refactor: `SavedMealRow.tsx` (~40 lines, down from ~210)
+
+- Remove `localItems` state and `useMemo` side effect
+- Keep `itemsWithUids` memo (still needed for uid generation)
+- `handleUpdateItem` / `handleRemoveItem` compute new items array and call `onUpdateMeal` directly
+- Render `SavedItemRow` with `expandable` (default true), pass item count as `meta`, `FoodItemsTable` as children
+
+### 4. Refactor: `SavedRoutineRow.tsx` (~45 lines, down from ~200)
+
+Same treatment as SavedMealRow but with `WeightItemsTable` as children.
+
+### 5. Refactor: `CustomLogTypeRow.tsx` (~30 lines, down from ~150)
+
+- Uses `SavedItemRow` with `expandable={false}`
+- Passes value-type badge + unit as `meta` slot
+- No children (nothing to expand)
+- Duplicate name validation via `existingNames` prop (same as current)
+
+## Anti-Patterns Fixed
+
+| Issue | Where | Fix |
+|---|---|---|
+| `dataset.original` DOM hack | All 3 rows | `useRef` in SavedItemRow |
+| `useMemo` as side effect | Meal + Routine | Removed entirely |
+| Redundant `localItems` state | Meal + Routine | Data flows from props/cache |
+| Duplicated delete popover | All 3 rows | `DeleteConfirmPopover` |
+| Duplicated contentEditable logic | All 3 rows | Single implementation in SavedItemRow |
+
+## Why This Sets Up DescriptionCell
+
+When the column model and `DescriptionCell` arrive, the editable name logic inside `SavedItemRow` is the single place to swap. All three row types -- meals, routines, and custom log types -- get the upgrade at once without touching their individual wrapper components.
+
+## Net Impact
+
+- ~560 lines across 3 files reduces to ~240 lines across 5 files (including the 2 new shared components)
+- Single codepath for all settings rows
+- All identified anti-patterns eliminated
+
