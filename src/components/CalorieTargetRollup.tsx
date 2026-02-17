@@ -79,8 +79,8 @@ export function CalorieTargetRollup({ settings, burnByDate, usesBurns }: Calorie
           <div className="space-y-1.5">
             {components ? (
               <div className="space-y-2">
-                {r7 && renderEquationBlock('7-day avg calorie target', 'avg calories burned last 7 days', r7.avgBurn)}
-                {r30 && renderEquationBlock('30-day avg calorie target', 'avg calories burned last 30 days', r30.avgBurn)}
+                {r7 && renderEquationBlock('7-day average calorie target', 'avg calories burned last 7 days', r7.avgBurn)}
+                {r30 && renderEquationBlock('30-day average calorie target', 'avg calories burned last 30 days', r30.avgBurn)}
               </div>
             ) : (
               targetDescription && <div>{targetDescription}</div>
