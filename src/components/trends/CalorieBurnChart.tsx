@@ -52,13 +52,13 @@ const BurnTooltip = ({
     : null;
 
   return (
-    <div className="rounded-md border border-border/50 bg-white dark:bg-slate-800 px-2 py-1 shadow-md">
+    <div className="rounded-md border border-border/50 bg-white dark:bg-slate-800 px-3 py-1 shadow-md w-max">
       <p className="text-[10px] font-medium text-slate-900 dark:text-slate-100 mb-0.5">{label}</p>
       <p className="text-[10px] font-semibold" style={{ color }}>
         {rangeText}
       </p>
       {exerciseText && (
-        <p className="text-[10px] text-muted-foreground">{exerciseText}</p>
+        <p className="text-[9px] text-muted-foreground">{exerciseText}</p>
       )}
       {sedentaryTDEE != null && midpoint > 0 && (
         <div className="grid grid-cols-[auto_1fr] gap-x-2 tabular-nums text-[10px] mt-1 pt-1 border-t border-border/30 opacity-75">
