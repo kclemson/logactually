@@ -177,7 +177,13 @@ export function describeCalorieTarget(settings: UserSettings): string | null {
 
   // body_stats
   if (settings.activityLevel === 'logged') {
-    return `Target: ${formatted} cal/day + exercise (from TDEE)`;
+    // Show the formula components so the tooltip matches the DCT dialog
+    const bmr = computeAbsoluteBMR(settings);
+    const sedentaryTdee = bmr != null ? Math.round(bmr * ACTIVITY_MULTIPLIERS.sedentary) : null;
+    if (sedentaryTdee == null) return null;
+    const deficit = settings.dailyDeficit ?? 0;
+    const deficitStr = deficit > 0 ? ` - ${deficit.toLocaleString()}` : '';
+    return `Target: ${sedentaryTdee.toLocaleString()} + exercise${deficitStr} cal/day`;
   }
   return `Target: ${formatted} cal/day (from TDEE)`;
 }
