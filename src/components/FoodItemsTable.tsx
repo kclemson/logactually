@@ -334,6 +334,159 @@ export function FoodItemsTable({
         const rows: React.ReactNode[] = [];
 
         items.forEach((item, index) => {
+          // If this is the start of a collapsed group, render its header row inline
+          const collapsedHeader = groupHeaders.find(g => g.boundary.startIndex === index && !expandedEntryIds?.has(g.boundary.entryId));
+          if (collapsedHeader) {
+            const { boundary, groupName } = collapsedHeader;
+            const groupItems = items.slice(boundary.startIndex, boundary.endIndex + 1);
+            const groupCalories = groupItems.reduce((sum, gi) => sum + gi.calories, 0);
+            const groupProtein = groupItems.reduce((sum, gi) => sum + gi.protein, 0);
+            const groupCarbs = groupItems.reduce((sum, gi) => sum + gi.carbs, 0);
+            const groupFat = groupItems.reduce((sum, gi) => sum + gi.fat, 0);
+            const entryIsNew = isEntryNew(boundary.entryId, newEntryIds);
+            const highlightClasses = getEntryHighlightClasses(entryIsNew, true, true);
+
+            rows.push(
+              <div key={`group-collapsed-${boundary.entryId}`} className="contents">
+                <div className={cn('grid gap-0.5 items-center group', gridCols, highlightClasses)}>
+                  {selectable && <span></span>}
+                  <div className="flex min-w-0">
+                    {showEntryDividers && (
+                      <div className="w-3 shrink-0 relative flex items-center justify-center self-stretch">
+                        <EntryChevron
+                          expanded={false}
+                          onToggle={() => onToggleEntryExpand?.(boundary.entryId)}
+                        />
+                      </div>
+                    )}
+                    <span className={cn("pl-1 pr-0 py-1 line-clamp-1 shrink min-w-0", compact && "text-sm")}
+                      title={groupName}
+                    >
+                      {groupName}
+                      {(() => {
+                        const cumulative = entryPortionMultipliers?.get(boundary.entryId) ?? 1.0;
+                        return (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setGroupScalingEntryId(groupScalingEntryId === boundary.entryId ? null : boundary.entryId);
+                              setGroupPortionMultiplier(1.0);
+                            }}
+                            className="ml-1 text-xs text-muted-foreground whitespace-nowrap cursor-pointer hover:text-foreground transition-colors"
+                          >({scalePortion("1 portion", cumulative)})</button>
+                        );
+                      })()}
+                    </span>
+                  </div>
+                  <span className={cn("px-1 py-1 text-center", compact ? "text-xs" : "")}>
+                    {Math.round(groupCalories)}
+                  </span>
+                  <span className={cn("px-1 py-1 text-center text-muted-foreground", compact && "text-xs")}>
+                    {Math.round(groupProtein)}/{Math.round(groupCarbs)}/{Math.round(groupFat)}
+                  </span>
+                  {hasDeleteColumn && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                          aria-label="Delete entry"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-lg">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete this entry?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently remove {groupName} ({groupItems.length} items).
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={() => onDeleteEntry?.(boundary.entryId)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
+
+                {/* Group-level portion scaling stepper */}
+                {groupScalingEntryId === boundary.entryId && (
+                  <div className={cn('grid gap-0.5', gridCols)}>
+                    <div
+                      className="col-span-full pl-6 pr-2 py-1.5 flex items-center gap-2"
+                      tabIndex={-1}
+                      ref={(el) => { if (el) el.focus(); }}
+                      onBlur={(e) => {
+                        if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                        setGroupScalingEntryId(null);
+                        setGroupPortionMultiplier(1.0);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          e.stopPropagation();
+                          setGroupScalingEntryId(null);
+                          setGroupPortionMultiplier(1.0);
+                        }
+                      }}
+                    >
+                      <button type="button" disabled={groupPortionMultiplier <= 0.25}
+                        onClick={() => setGroupPortionMultiplier(stepMultiplier(groupPortionMultiplier, 'down'))}
+                        className="h-7 w-7 rounded-full border border-input bg-background flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+                        aria-label="Decrease portion"
+                      ><Minus className="h-3.5 w-3.5" /></button>
+                      <span className={cn("text-sm font-medium min-w-[3rem] text-center tabular-nums", groupPortionMultiplier !== 1.0 && "text-primary")}>
+                        {groupPortionMultiplier}x
+                      </span>
+                      <button type="button" disabled={groupPortionMultiplier >= 5.0}
+                        onClick={() => setGroupPortionMultiplier(stepMultiplier(groupPortionMultiplier, 'up'))}
+                        className="h-7 w-7 rounded-full border border-input bg-background flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+                        aria-label="Increase portion"
+                      ><Plus className="h-3.5 w-3.5" /></button>
+                      <button type="button"
+                        onClick={() => {
+                          if (groupPortionMultiplier !== 1.0) {
+                            if (isReadOnly) {
+                              triggerOverlay();
+                            } else {
+                              for (let i = boundary.startIndex; i <= boundary.endIndex; i++) {
+                                const gi = items[i];
+                                onUpdateItemBatch?.(i, scaleItemByMultiplier(gi, groupPortionMultiplier));
+                              }
+                              const existing = entryPortionMultipliers?.get(boundary.entryId) ?? 1.0;
+                              onUpdateEntryPortionMultiplier?.(boundary.entryId, existing * groupPortionMultiplier);
+                            }
+                          }
+                          setGroupScalingEntryId(null);
+                          setGroupPortionMultiplier(1.0);
+                        }}
+                        className="text-xs font-medium text-primary hover:underline"
+                      >Done</button>
+                      {groupPortionMultiplier !== 1.0 && (() => {
+                        const existingMult = entryPortionMultipliers?.get(boundary.entryId) ?? 1.0;
+                        const previewMult = existingMult * groupPortionMultiplier;
+                        return (
+                          <span className="text-xs text-muted-foreground tabular-nums">
+                            ({scalePortion("1 portion", previewMult)}, {Math.round(groupCalories * groupPortionMultiplier)} cal)
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+            return; // Skip individual item rendering
+          }
+
           // Skip items that are part of a collapsed group
           if (collapsedGroupIndices.has(index)) return;
 
@@ -792,160 +945,8 @@ export function FoodItemsTable({
           );
         });
 
-        // Render collapsed group headers for entries not yet rendered
-        for (const { boundary, groupName } of groupHeaders) {
-          const isExpanded = expandedEntryIds?.has(boundary.entryId);
-          if (isExpanded) continue; // Already rendered above
 
-          const groupItems = items.slice(boundary.startIndex, boundary.endIndex + 1);
-          const groupCalories = groupItems.reduce((sum, gi) => sum + gi.calories, 0);
-          const groupProtein = groupItems.reduce((sum, gi) => sum + gi.protein, 0);
-          const groupCarbs = groupItems.reduce((sum, gi) => sum + gi.carbs, 0);
-          const groupFat = groupItems.reduce((sum, gi) => sum + gi.fat, 0);
-          const entryIsNew = isEntryNew(boundary.entryId, newEntryIds);
-          const highlightClasses = getEntryHighlightClasses(entryIsNew, true, true);
 
-          // Insert at the position of the first item in the boundary
-          rows.splice(boundary.startIndex, 0,
-            <div key={`group-collapsed-${boundary.entryId}`} className="contents">
-              <div className={cn('grid gap-0.5 items-center group', gridCols, highlightClasses)}>
-                {selectable && <span></span>}
-                <div className="flex min-w-0">
-                  {showEntryDividers && (
-                    <div className="w-3 shrink-0 relative flex items-center justify-center self-stretch">
-                      <EntryChevron
-                        expanded={false}
-                        onToggle={() => onToggleEntryExpand?.(boundary.entryId)}
-                      />
-                    </div>
-                  )}
-                  <span className={cn("pl-1 pr-0 py-1 line-clamp-1 shrink min-w-0", compact && "text-sm")}
-                    title={groupName}
-                  >
-                    {groupName}
-                    {(() => {
-                      const cumulative = entryPortionMultipliers?.get(boundary.entryId) ?? 1.0;
-                      return (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setGroupScalingEntryId(groupScalingEntryId === boundary.entryId ? null : boundary.entryId);
-                            setGroupPortionMultiplier(1.0);
-                          }}
-                          className="ml-1 text-xs text-muted-foreground whitespace-nowrap cursor-pointer hover:text-foreground transition-colors"
-                        >({scalePortion("1 portion", cumulative)})</button>
-                      );
-                    })()}
-                  </span>
-                </div>
-                <span className={cn("px-1 py-1 text-center", compact ? "text-xs" : "")}>
-                  {Math.round(groupCalories)}
-                </span>
-                <span className={cn("px-1 py-1 text-center text-muted-foreground", compact && "text-xs")}>
-                  {Math.round(groupProtein)}/{Math.round(groupCarbs)}/{Math.round(groupFat)}
-                </span>
-                {hasDeleteColumn && (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
-                        aria-label="Delete entry"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-lg">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete this entry?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will permanently remove {groupName} ({groupItems.length} items).
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction 
-                          onClick={() => onDeleteEntry?.(boundary.entryId)}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          Delete
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                )}
-              </div>
-
-              {/* Group-level portion scaling stepper */}
-              {groupScalingEntryId === boundary.entryId && (
-                <div className={cn('grid gap-0.5', gridCols)}>
-                  <div
-                    className="col-span-full pl-6 pr-2 py-1.5 flex items-center gap-2"
-                    tabIndex={-1}
-                    ref={(el) => { if (el) el.focus(); }}
-                    onBlur={(e) => {
-                      if (e.currentTarget.contains(e.relatedTarget as Node)) return;
-                      setGroupScalingEntryId(null);
-                      setGroupPortionMultiplier(1.0);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Escape') {
-                        e.stopPropagation();
-                        setGroupScalingEntryId(null);
-                        setGroupPortionMultiplier(1.0);
-                      }
-                    }}
-                  >
-                    <button type="button" disabled={groupPortionMultiplier <= 0.25}
-                      onClick={() => setGroupPortionMultiplier(stepMultiplier(groupPortionMultiplier, 'down'))}
-                      className="h-7 w-7 rounded-full border border-input bg-background flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
-                      aria-label="Decrease portion"
-                    ><Minus className="h-3.5 w-3.5" /></button>
-                    <span className={cn("text-sm font-medium min-w-[3rem] text-center tabular-nums", groupPortionMultiplier !== 1.0 && "text-primary")}>
-                      {groupPortionMultiplier}x
-                    </span>
-                    <button type="button" disabled={groupPortionMultiplier >= 5.0}
-                      onClick={() => setGroupPortionMultiplier(stepMultiplier(groupPortionMultiplier, 'up'))}
-                      className="h-7 w-7 rounded-full border border-input bg-background flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
-                      aria-label="Increase portion"
-                    ><Plus className="h-3.5 w-3.5" /></button>
-                    <button type="button"
-                      onClick={() => {
-                        if (groupPortionMultiplier !== 1.0) {
-                          if (isReadOnly) {
-                            triggerOverlay();
-                          } else {
-                            for (let i = boundary.startIndex; i <= boundary.endIndex; i++) {
-                              const gi = items[i];
-                              onUpdateItemBatch?.(i, scaleItemByMultiplier(gi, groupPortionMultiplier));
-                            }
-                            // Persist cumulative multiplier
-                            const existing = entryPortionMultipliers?.get(boundary.entryId) ?? 1.0;
-                            onUpdateEntryPortionMultiplier?.(boundary.entryId, existing * groupPortionMultiplier);
-                          }
-                        }
-                        setGroupScalingEntryId(null);
-                        setGroupPortionMultiplier(1.0);
-                      }}
-                      className="text-xs font-medium text-primary hover:underline"
-                    >Done</button>
-                    {groupPortionMultiplier !== 1.0 && (() => {
-                      const existingMult = entryPortionMultipliers?.get(boundary.entryId) ?? 1.0;
-                      const previewMult = existingMult * groupPortionMultiplier;
-                      return (
-                        <span className="text-xs text-muted-foreground tabular-nums">
-                          ({scalePortion("1 portion", previewMult)}, {Math.round(groupCalories * groupPortionMultiplier)} cal)
-                        </span>
-                      );
-                    })()}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        }
 
         return rows;
       })()}
