@@ -71,7 +71,11 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   const [matchingRoutineForSuggestion, setMatchingRoutineForSuggestion] = useState<MatchingRoutine | null>(null);
 
   // Detail dialog state
-  const [detailDialogItem, setDetailDialogItem] = useState<{ index: number; entryId: string } | null>(null);
+  const [detailDialogItem, setDetailDialogItem] = useState<
+    | { mode: 'single'; index: number; entryId: string }
+    | { mode: 'group'; startIndex: number; endIndex: number; entryId: string }
+    | null
+  >(null);
   
   const dateStr = initialDate;
   const selectedDate = parseISO(initialDate);
@@ -342,12 +346,16 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   }, [updateItem, displayItems, updateSet]);
 
   // Detail dialog handlers
-  const handleShowDetails = useCallback((entryId: string, itemIndex: number) => {
-    setDetailDialogItem({ index: itemIndex, entryId });
+  const handleShowDetails = useCallback((entryId: string, startIndex: number, endIndex?: number) => {
+    if (endIndex !== undefined && endIndex > startIndex) {
+      setDetailDialogItem({ mode: 'group', startIndex, endIndex, entryId });
+    } else {
+      setDetailDialogItem({ mode: 'single', index: startIndex, entryId });
+    }
   }, []);
 
   const handleDetailSave = useCallback((updates: Record<string, any>) => {
-    if (!detailDialogItem) return;
+    if (!detailDialogItem || detailDialogItem.mode !== 'single') return;
     const item = displayItems[detailDialogItem.index];
     if (!item) return;
 
@@ -361,6 +369,23 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
       updateSet.mutate({ id: item.id, updates: allUpdates });
     }
     setDetailDialogItem(null);
+  }, [detailDialogItem, displayItems, updateSet]);
+
+  const handleDetailSaveItem = useCallback((itemIndex: number, updates: Record<string, any>) => {
+    if (!detailDialogItem || detailDialogItem.mode !== 'group') return;
+    const globalIndex = detailDialogItem.startIndex + itemIndex;
+    const item = displayItems[globalIndex];
+    if (!item) return;
+
+    const { regularUpdates, newMetadata } = processExerciseSaveUpdates(updates, item.exercise_metadata ?? null);
+    const allUpdates: Record<string, any> = { ...regularUpdates };
+    if (newMetadata !== (item.exercise_metadata ?? null)) {
+      allUpdates.exercise_metadata = newMetadata;
+    }
+
+    if (Object.keys(allUpdates).length > 0) {
+      updateSet.mutate({ id: item.id, updates: allUpdates });
+    }
   }, [detailDialogItem, displayItems, updateSet]);
 
   // Auto-save handler for item removal
@@ -726,8 +751,29 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
         rawInput={demoPreviewRawInput}
       />
 
-      {/* Detail Dialog for viewing/editing individual exercise items */}
+      {/* Detail Dialog for viewing/editing exercise items */}
       {detailDialogItem && (() => {
+        if (detailDialogItem.mode === 'group') {
+          const groupItems = displayItems.slice(detailDialogItem.startIndex, detailDialogItem.endIndex + 1);
+          if (groupItems.length === 0) return null;
+          const groupName = entryGroupNames.get(detailDialogItem.entryId) || groupItems[0].description;
+          const flatItems = groupItems.map(flattenExerciseValues);
+          return (
+            <DetailDialog
+              open={true}
+              onOpenChange={() => setDetailDialogItem(null)}
+              title={groupName}
+              fields={buildExerciseDetailFields(groupItems[0])}
+              values={flatItems[0]}
+              onSave={handleDetailSave}
+              items={flatItems}
+              onSaveItem={handleDetailSaveItem}
+              buildFields={buildExerciseDetailFields}
+              readOnly={isReadOnly}
+            />
+          );
+        }
+        // Single item mode
         const item = displayItems[detailDialogItem.index];
         if (!item) return null;
         const flatValues = flattenExerciseValues(item);

@@ -85,7 +85,7 @@ interface WeightItemsTableProps {
   /** Callback to persist updated group name via inline editing */
   onUpdateGroupName?: (entryId: string, newName: string) => void;
   /** Callback when user clicks "Details" on an entry's expanded panel */
-  onShowDetails?: (entryId: string, itemIndex: number) => void;
+  onShowDetails?: (entryId: string, startIndex: number, endIndex?: number) => void;
 }
 
 /**
@@ -798,8 +798,10 @@ export function WeightItemsTable({
                     extraContent={calorieBurnContent}
                     onShowDetails={onShowDetails && currentEntryId
                       ? () => {
-                          const firstIdx = entryBoundaries?.find(b => b.entryId === currentEntryId)?.startIndex ?? index;
-                          onShowDetails(currentEntryId, firstIdx);
+                          const boundary = entryBoundaries?.find(b => b.entryId === currentEntryId);
+                          const startIdx = boundary?.startIndex ?? index;
+                          const endIdx = boundary?.endIndex;
+                          onShowDetails(currentEntryId, startIdx, endIdx);
                         }
                       : undefined}
                   />
