@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { DescriptionCell } from '@/components/DescriptionCell';
+import { useInlineEdit } from '@/hooks/useInlineEdit';
+import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import type { CustomLogEntry } from '@/hooks/useCustomLogEntries';
 
 function MultilineTextArea({ value, isReadOnly, onSave }: { value: string; isReadOnly: boolean; onSave: (val: string) => void }) {
@@ -39,6 +41,8 @@ function MultilineTextArea({ value, isReadOnly, onSave }: { value: string; isRea
   );
 }
 
+type NumericField = 'numeric' | 'numeric_2';
+
 interface CustomLogEntryRowProps {
   entry: CustomLogEntry;
   typeName: string;
@@ -51,81 +55,24 @@ interface CustomLogEntryRowProps {
 
 export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDelete, onUpdate, isReadOnly }: CustomLogEntryRowProps) {
   const unitLabel = entry.unit || typeUnit;
+  const { triggerOverlay } = useReadOnlyContext();
 
-  // Numeric editing state
-  const [editingNumeric, setEditingNumeric] = useState(false);
-  const [numericValue, setNumericValue] = useState('');
-  const numericOriginalRef = useRef<string>('');
+  const inlineEdit = useInlineEdit<NumericField>({
+    onSaveNumeric: (_index, field, value) => {
+      if (field === 'numeric') {
+        onUpdate({ id: entry.id, numeric_value: value });
+      } else {
+        onUpdate({ id: entry.id, numeric_value_2: value });
+      }
+    },
+    isReadOnly: !!isReadOnly,
+    triggerOverlay,
+  });
 
-  // (Text editing now handled by DescriptionCell)
   const isDualNumeric = valueType === 'dual_numeric';
   const hasNumeric = valueType === 'numeric' || valueType === 'text_numeric' || isDualNumeric;
   const hasText = valueType === 'text' || valueType === 'text_numeric' || valueType === 'text_multiline';
   const isMultiline = valueType === 'text_multiline';
-
-  // Dual numeric second value editing state
-  const [editingNumeric2, setEditingNumeric2] = useState(false);
-  const [numericValue2, setNumericValue2] = useState('');
-  const numericOriginal2Ref = useRef<string>('');
-
-  const handleNumeric2Focus = () => {
-    if (isReadOnly) return;
-    const val = entry.numeric_value_2 != null ? String(entry.numeric_value_2) : '';
-    numericOriginal2Ref.current = val;
-    setNumericValue2(val);
-    setEditingNumeric2(true);
-  };
-
-  const saveNumeric2 = () => {
-    if (isReadOnly) { setEditingNumeric2(false); return; }
-    if (numericValue2 === '' || isNaN(Number(numericValue2))) { setEditingNumeric2(false); return; }
-    if (numericValue2 !== numericOriginal2Ref.current) {
-      onUpdate({ id: entry.id, numeric_value_2: Number(numericValue2) });
-    }
-    setEditingNumeric2(false);
-  };
-
-  const handleNumeric2KeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') { e.preventDefault(); saveNumeric2(); (e.target as HTMLElement).blur(); }
-    else if (e.key === 'Escape') { e.preventDefault(); setEditingNumeric2(false); (e.target as HTMLElement).blur(); }
-  };
-
-  // --- Numeric handlers ---
-  const handleNumericFocus = () => {
-    if (isReadOnly) return;
-    const val = entry.numeric_value != null ? String(entry.numeric_value) : '';
-    numericOriginalRef.current = val;
-    setNumericValue(val);
-    setEditingNumeric(true);
-  };
-
-  const saveNumeric = () => {
-    if (isReadOnly) {
-      setEditingNumeric(false);
-      return;
-    }
-    if (numericValue === '' || isNaN(Number(numericValue))) {
-      setEditingNumeric(false);
-      return;
-    }
-    if (numericValue !== numericOriginalRef.current) {
-      onUpdate({ id: entry.id, numeric_value: Number(numericValue) });
-    }
-    setEditingNumeric(false);
-  };
-
-  const handleNumericKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      saveNumeric();
-      (e.target as HTMLElement).blur();
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      setEditingNumeric(false);
-      (e.target as HTMLElement).blur();
-    }
-  };
-
 
   // Dual numeric layout: [value1] / [value2] [unit] [delete]
   if (isDualNumeric) {
@@ -134,22 +81,30 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
         <Input
           type="number"
           inputMode="decimal"
-          value={editingNumeric ? numericValue : (entry.numeric_value ?? '')}
-          onFocus={handleNumericFocus}
-          onChange={(e) => { if (editingNumeric) setNumericValue(e.target.value); }}
-          onBlur={saveNumeric}
-          onKeyDown={handleNumericKeyDown}
+          value={
+            inlineEdit.editingCell?.field === 'numeric'
+              ? inlineEdit.editingCell.value
+              : (entry.numeric_value ?? '')
+          }
+          onFocus={() => inlineEdit.startEditing(0, 'numeric', entry.numeric_value ?? 0)}
+          onChange={(e) => inlineEdit.updateEditingValue(e.target.value, parseFloat)}
+          onBlur={inlineEdit.handleNumericBlur}
+          onKeyDown={inlineEdit.handleNumericKeyDown}
           className={cn("h-7 w-full text-sm text-center px-1 border-0 bg-transparent", "focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:bg-focus-bg")}
         />
         <span className="text-sm text-muted-foreground text-center">/</span>
         <Input
           type="number"
           inputMode="decimal"
-          value={editingNumeric2 ? numericValue2 : (entry.numeric_value_2 ?? '')}
-          onFocus={handleNumeric2Focus}
-          onChange={(e) => { if (editingNumeric2) setNumericValue2(e.target.value); }}
-          onBlur={saveNumeric2}
-          onKeyDown={handleNumeric2KeyDown}
+          value={
+            inlineEdit.editingCell?.field === 'numeric_2'
+              ? inlineEdit.editingCell.value
+              : (entry.numeric_value_2 ?? '')
+          }
+          onFocus={() => inlineEdit.startEditing(0, 'numeric_2', entry.numeric_value_2 ?? 0)}
+          onChange={(e) => inlineEdit.updateEditingValue(e.target.value, parseFloat)}
+          onBlur={inlineEdit.handleNumericBlur}
+          onKeyDown={inlineEdit.handleNumericKeyDown}
           className={cn("h-7 w-full text-sm text-center px-1 border-0 bg-transparent", "focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:bg-focus-bg")}
         />
         {unitLabel ? (
@@ -231,13 +186,15 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
             <Input
               type="number"
               inputMode="decimal"
-              value={editingNumeric ? numericValue : (entry.numeric_value ?? '')}
-              onFocus={handleNumericFocus}
-              onChange={(e) => {
-                if (editingNumeric) setNumericValue(e.target.value);
-              }}
-              onBlur={saveNumeric}
-              onKeyDown={handleNumericKeyDown}
+              value={
+                inlineEdit.editingCell?.field === 'numeric'
+                  ? inlineEdit.editingCell.value
+                  : (entry.numeric_value ?? '')
+              }
+              onFocus={() => inlineEdit.startEditing(0, 'numeric', entry.numeric_value ?? 0)}
+              onChange={(e) => inlineEdit.updateEditingValue(e.target.value, parseFloat)}
+              onBlur={inlineEdit.handleNumericBlur}
+              onKeyDown={inlineEdit.handleNumericKeyDown}
               className={cn(
                 "h-7 w-full text-sm text-center px-1 border-0 bg-transparent",
                 "focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:bg-focus-bg"
