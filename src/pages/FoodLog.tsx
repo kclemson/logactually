@@ -146,13 +146,14 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   }, [entries]);
 
   // Derive display items from query data + pending local edits
-  const { 
+  const {
     displayItems,
     newEntryIds,
     markEntryAsNew,
     updateItem,
     updateItemBatch,
     removeItem,
+    clearPendingForItem,
   } = useEditableFoodItems(allItems);
 
   // Calculate display totals based on current edit state
@@ -526,11 +527,17 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     return displayItems.filter(item => item.entryId === entryId);
   }, [displayItems]);
 
+  // Wrapper to clear pending edits for multiple items at once
+  const clearPendingForItems = useCallback((uids: string[]) => {
+    uids.forEach(clearPendingForItem);
+  }, [clearPendingForItem]);
+
   // Group portion scaling hook (atomic saves + optimistic state)
   const { entryGroupNames, entryPortionMultipliers, scaleGroupPortion, updateGroupName } = useGroupPortionScale({
     entries,
     updateEntry,
     getItemsForEntry,
+    clearPendingForItems,
   });
 
   // Save a single entry to the database
