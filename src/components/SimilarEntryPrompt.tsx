@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { format, parseISO } from 'date-fns';
-import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FoodItemsTable } from '@/components/FoodItemsTable';
 import { SimilarEntryMatch } from '@/lib/text-similarity';
@@ -9,6 +8,7 @@ interface SimilarEntryPromptProps {
   match: SimilarEntryMatch;
   onUsePastEntry: () => void;
   onDismiss: () => void;
+  onCancel: () => void;
   isLoading?: boolean;
 }
 
@@ -16,6 +16,7 @@ export function SimilarEntryPrompt({
   match,
   onUsePastEntry,
   onDismiss,
+  onCancel,
   isLoading,
 }: SimilarEntryPromptProps) {
   const matchPercent = Math.round(match.score * 100);
@@ -32,15 +33,8 @@ export function SimilarEntryPrompt({
   );
   
   return (
-    <div className="relative rounded-md border bg-muted/50 p-3 space-y-3">
-      <button
-        onClick={onDismiss}
-        className="absolute top-2 right-2 p-1 rounded-sm hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-        aria-label="Log as new entry"
-      >
-        <X className="h-4 w-4" />
-      </button>
-      <p className="text-sm pr-6">
+    <div className="rounded-md border bg-muted/50 p-3 space-y-3">
+      <p className="text-sm">
         Looks like your entry from{' '}
         <span className="font-medium">{formattedDate}</span>{' '}
         <span className="text-muted-foreground">({matchPercent}% match):</span>
@@ -66,7 +60,7 @@ export function SimilarEntryPrompt({
           onClick={onUsePastEntry}
           disabled={isLoading}
         >
-          Log this
+          Use past entry
         </Button>
         <Button
           size="sm"
@@ -74,7 +68,15 @@ export function SimilarEntryPrompt({
           onClick={onDismiss}
           disabled={isLoading}
         >
-          Log as New
+          Log as new
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={onCancel}
+          disabled={isLoading}
+        >
+          Cancel
         </Button>
       </div>
     </div>
