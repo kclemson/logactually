@@ -84,10 +84,9 @@ export function CalorieTargetRollup({ settings, burnByDate, usesBurns }: Calorie
 
   return (
     <TooltipProvider delayDuration={150}>
-      <Tooltip
-        open={hasHover ? undefined : tooltipOpen}
-        onOpenChange={hasHover ? undefined : setTooltipOpen}
-      >
+        <Tooltip
+          open={hasHover ? undefined : tooltipOpen}
+        >
         <TooltipTrigger asChild>
           <div
             className="flex items-center justify-center gap-6 text-xs text-muted-foreground cursor-default"
