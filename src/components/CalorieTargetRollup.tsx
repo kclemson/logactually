@@ -26,6 +26,7 @@ export function CalorieTargetRollup({ settings, burnByDate, usesBurns }: Calorie
 
   const components = getCalorieTargetComponents(settings);
   const targetDescription = !components ? describeCalorieTarget(settings) : null;
+  const displayBurn = r7?.avgBurn ?? r30?.avgBurn ?? 0;
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -62,11 +63,16 @@ export function CalorieTargetRollup({ settings, burnByDate, usesBurns }: Calorie
             {components ? (
               <div className="space-y-0.5">
                 <div>Daily calorie target:</div>
-                <div className="pl-2 space-y-0">
-                  <div>{components.tdee.toLocaleString()} (total daily energy expenditure)</div>
-                  <div>+ calories burned from logged exercise</div>
+                <div className="grid grid-cols-[auto_1fr] gap-x-2 pl-2 opacity-75 tabular-nums">
+                  <div className="text-right">{components.tdee.toLocaleString()}</div>
+                  <div>(total daily energy expenditure)</div>
+                  <div className="text-right">+ {displayBurn.toLocaleString()}</div>
+                  <div>(avg calories burned from logged exercise)</div>
                   {components.deficit > 0 && (
-                    <div>- {components.deficit.toLocaleString()} (deficit configured in settings)</div>
+                    <>
+                      <div className="text-right">- {components.deficit.toLocaleString()}</div>
+                      <div>(deficit configured in settings)</div>
+                    </>
                   )}
                 </div>
               </div>
