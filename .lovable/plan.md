@@ -1,42 +1,24 @@
 
 
-# Coordinate tooltip dismissal between rollup and calendar day cells
+# Show calorie target dot on today (Food Log + Calendar)
 
-## Problem
+## Summary
 
-On mobile in the Calendar view, tapping a calendar day while the rollup tooltip is open (or vice versa) leaves both tooltips visible simultaneously. Each tooltip manages its own state independently with no cross-communication.
+Remove the "not today" exclusion so the colored calorie-target dot appears on the current day in both views. Since the tooltip now provides context about targets, users benefit from seeing the dot even for an in-progress day.
 
-## Solution
+## Changes
 
-Lift the rollup tooltip state up to the History page so that any tap interaction can close all tooltips:
+### 1. Food Log (`src/pages/FoodLog.tsx`, line 739)
 
-1. **History.tsx** -- pass a `dismissTooltip` callback and controlled open state down to `CalorieTargetRollup`
-2. **CalorieTargetRollup.tsx** -- accept optional external tooltip control props
-3. **History.tsx** -- when a day cell is tapped, also close the rollup tooltip; when the rollup is tapped, also close any active day tooltip
+Change `showCalorieTargetDot={!isTodaySelected}` to `showCalorieTargetDot={true}` (or simply remove the today guard).
 
-## Technical details
+### 2. Calendar (`src/pages/History.tsx`)
 
-### CalorieTargetRollup.tsx
+Three spots where `!isTodayDate` suppresses the dot:
 
-Add optional props for external tooltip control:
+- **Line 217** (in `handleDayClick`): Change `const hasDot = !!summary && !isTodayDate && baseTarget != null && baseTarget > 0` -- remove `!isTodayDate`
+- **Line 334** (in render): Same change for `const hasDot = hasEntries && !isTodayDate && baseTarget != null && baseTarget > 0`
+- **Line 371** (inline dot render): Change `return !isTodayDate && target && target > 0 ?` to `return target && target > 0 ?`
 
-```tsx
-interface CalorieTargetRollupProps {
-  settings: UserSettings;
-  burnByDate: Map<string, number>;
-  usesBurns: boolean;
-  tooltipOpen?: boolean;
-  onTooltipToggle?: () => void;
-}
-```
-
-When these props are provided, use them instead of local state. When not provided, fall back to local `useState` (backward compatible).
-
-### History.tsx
-
-- Add `rollupTooltipOpen` state alongside the existing `activeDayIndex`
-- Create a helper that clears both: setting `activeDayIndex` to null and `rollupTooltipOpen` to false
-- In `handleDayClick`: close rollup tooltip before toggling day tooltip
-- Pass `tooltipOpen` and `onTooltipToggle` to `CalorieTargetRollup`, where the toggle clears `activeDayIndex` before toggling `rollupTooltipOpen`
-- Update the fixed dismiss overlay to also close the rollup tooltip
+All three removals ensure the dot and tooltip appear on today's cell in the calendar grid, consistent with the Food Log change.
 
