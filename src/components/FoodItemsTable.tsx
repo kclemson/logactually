@@ -196,7 +196,7 @@ export function FoodItemsTable({
         {(() => {
           const showDot = showCalorieTargetDot && dailyCalorieTarget && dailyCalorieTarget > 0;
           const calorieContent = (
-            <span className={cn("px-1 text-center inline-flex items-center justify-center", showDot && "cursor-help", compact ? "text-xs" : "text-heading")}>
+            <span className={cn("px-1 text-center inline-flex items-center justify-center", compact ? "text-xs" : "text-heading")}>
               {Math.round(totals.calories)}
               {showDot && (
                 <span className={`text-[10px] ml-0.5 leading-none relative top-[-0.5px] ${getTargetDotColor(totals.calories, dailyCalorieTarget)}`}>●</span>
