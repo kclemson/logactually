@@ -27,7 +27,6 @@ import { useHasHover } from '@/hooks/use-has-hover';
 import { type EntryBoundary, isFirstInBoundary, isLastInBoundary, isEntryNew, getEntryHighlightClasses, hasAnyEditedFields, formatEditedFields } from '@/lib/entry-boundaries';
 import { EntryChevron } from '@/components/EntryChevron';
 import { DeleteAllDialog } from '@/components/DeleteAllDialog';
-import { DeleteGroupDialog } from '@/components/DeleteGroupDialog';
 import { EntryExpandedPanel } from '@/components/EntryExpandedPanel';
 import { useInlineEdit } from '@/hooks/useInlineEdit';
 
@@ -753,7 +752,6 @@ export function WeightItemsTable({
 
                 return (
                   <EntryExpandedPanel
-                    items={entryExercises}
                     rawInput={currentRawInput ?? null}
                     savedItemInfo={{
                       type: 'routine',
@@ -763,7 +761,6 @@ export function WeightItemsTable({
                     onSaveAs={onSaveAsRoutine && currentEntryId ? () => {
                       onSaveAsRoutine(currentEntryId, currentRawInput ?? null, entryExercises);
                     } : undefined}
-                    onDeleteEntry={onDeleteEntry && currentEntryId ? () => onDeleteEntry(currentEntryId) : undefined}
                     gridCols={gridCols}
                     extraContent={calorieBurnContent}
                   />

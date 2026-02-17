@@ -1,7 +1,6 @@
 import { type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { DeleteGroupDialog } from '@/components/DeleteGroupDialog';
 
 interface SavedItemInfo {
   type: 'meal' | 'routine';
@@ -12,16 +11,12 @@ interface SavedItemInfo {
 }
 
 interface EntryExpandedPanelProps {
-  /** Items in the entry, used for DeleteGroupDialog bullet list */
-  items: { uid: string; description: string }[];
   /** Original raw input text the user typed */
   rawInput: string | null;
   /** Info about whether this entry came from a saved meal/routine */
   savedItemInfo: SavedItemInfo;
   /** Callback to save the entry as a meal/routine */
   onSaveAs?: () => void;
-  /** Callback when the user confirms group deletion */
-  onDeleteEntry?: () => void;
   /** Parent grid column class so the panel spans the full grid */
   gridCols: string;
   /** Optional content rendered before the standard panel (e.g. calorie burn estimates) */
@@ -30,14 +25,12 @@ interface EntryExpandedPanelProps {
 
 /**
  * Shared expanded content panel revealed by the entry chevron.
- * Shows "Logged as", saved item link / save button, and DeleteGroupDialog.
+ * Shows "Logged as", saved item link / save button.
  */
 export function EntryExpandedPanel({
-  items,
   rawInput,
   savedItemInfo,
   onSaveAs,
-  onDeleteEntry,
   gridCols,
   extraContent,
 }: EntryExpandedPanelProps) {
@@ -56,38 +49,28 @@ export function EntryExpandedPanel({
           </p>
         )}
 
-        <div className="flex items-center justify-between">
-          <div>
-            {isFromSaved ? (
-              <p className="text-xs text-muted-foreground italic">
-                From saved {typeLabel}:{' '}
-                {name ? (
-                  <Link
-                    to="/settings"
-                    className="text-blue-600 dark:text-blue-400 hover:underline"
-                  >
-                    {name}
-                  </Link>
-                ) : (
-                  <span>(deleted)</span>
-                )}
-              </p>
-            ) : onSaveAs && (
-              <button
-                onClick={onSaveAs}
-                className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+        {isFromSaved ? (
+          <p className="text-xs text-muted-foreground italic">
+            From saved {typeLabel}:{' '}
+            {name ? (
+              <Link
+                to="/settings"
+                className="text-blue-600 dark:text-blue-400 hover:underline"
               >
-                Save as {typeLabel}
-              </button>
+                {name}
+              </Link>
+            ) : (
+              <span>(deleted)</span>
             )}
-          </div>
-          {onDeleteEntry && (
-            <DeleteGroupDialog
-              items={items}
-              onConfirm={onDeleteEntry}
-            />
-          )}
-        </div>
+          </p>
+        ) : onSaveAs && (
+          <button
+            onClick={onSaveAs}
+            className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            Save as {typeLabel}
+          </button>
+        )}
       </div>
     </div>
   );
