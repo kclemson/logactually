@@ -368,6 +368,9 @@ const Trends = () => {
                 ];
                 return (
                   <div className="grid grid-cols-[auto_auto_auto] gap-x-2 text-[10px]">
+                    <span className="font-semibold" style={{ color: CHART_COLORS.calories }}>Calories</span>
+                    <span />
+                    <span className="text-right font-semibold" style={{ color: CHART_COLORS.calories }}>{Math.round(p.calories)} cal</span>
                     {macros.map(m => (
                       <React.Fragment key={m.name}>
                         <span style={{ color: m.color }}>{m.name}</span>
@@ -378,9 +381,6 @@ const Trends = () => {
                   </div>
                 );
               }}
-              totalKey="calories"
-              totalLabel="Calories"
-              totalColor={CHART_COLORS.calories}
               labelDataKey="calories"
               labelColor={CHART_COLORS.calories}
               height="h-28"
@@ -401,6 +401,13 @@ const Trends = () => {
                   dataKey={key}
                   color={color}
                   onNavigate={(date) => navigate(`/?date=${date}`)}
+                  formatter={(value, name, entry) => {
+                    const calKey = `${key}Cals`;
+                    const cals = entry?.payload?.[calKey];
+                    return cals != null
+                      ? `${name}: ${Math.round(value)}g (${Math.round(cals)} cal)`
+                      : `${name}: ${Math.round(value)}g`;
+                  }}
                 />
               ))}
             </div>

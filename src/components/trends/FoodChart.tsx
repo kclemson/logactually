@@ -83,6 +83,7 @@ interface FoodChartProps {
   height?: string;
   referenceLine?: { value: number; color?: string };
   subtitle?: string;
+  formatter?: (value: any, name: string, entry?: any, index?: number, payload?: any) => string | string[];
 }
 
 export const FoodChart = ({
@@ -95,6 +96,7 @@ export const FoodChart = ({
   height = "h-24",
   referenceLine,
   subtitle,
+  formatter,
 }: FoodChartProps) => {
   const isTouchDevice = !useHasHover();
   const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
@@ -165,6 +167,7 @@ export const FoodChart = ({
                     : undefined}
                   content={
                     <CompactChartTooltip
+                      formatter={formatter}
                       isTouchDevice={isTouchDevice}
                       onGoToDay={handleGoToDay}
                       rawDate={activeBarIndex !== null ? chartData[activeBarIndex]?.rawDate : undefined}
