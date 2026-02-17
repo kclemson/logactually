@@ -1,55 +1,25 @@
 
-# Align percentages in the Macro Split (%) chart tooltip
+# Fix tooltip width to fit content
 
-## What changes
+## Problem
 
-The Macro Split (%) tooltip currently shows unaligned lines like:
-```
-Protein: 20%
-Carbs: 36%
-Fat: 44%
-```
+Chart tooltips (e.g., Protein, Carbs, Estimated Exercise Calorie Burn) are too narrow on mobile, causing text like "protein: 80g (320 cal)" to wrap mid-line. The tooltip container has no intrinsic sizing instruction, so Recharts constrains it to whatever width it calculates.
 
-We'll switch to a grid layout so the names and percentages align in columns:
-```
-Protein   20%
-Carbs     36%
-Fat       44%
-```
+## Fix
 
-## How
+Add `w-max` to the tooltip's root `<div>` in `CompactChartTooltip.tsx`. This is a single CSS class that tells the container to size itself to fit its content, preventing unwanted line wraps across all charts that use this tooltip.
 
-**`src/pages/Trends.tsx`** (line 337-348, the Macro Split chart)
+## Technical details
 
-Replace the `formatter` prop with a `renderRows` prop that uses a 2-column CSS grid:
+**`src/components/trends/CompactChartTooltip.tsx`** (line 33)
 
+Change:
 ```tsx
-<StackedMacroChart
-  title="Macro Split (%)"
-  subtitle={...}
-  chartData={chartData}
-  bars={[...]}
-  onNavigate={(date) => navigate(`/?date=${date}`)}
-  renderRows={(rows) => {
-    const p = rows[0]?.payload;
-    if (!p) return null;
-    const macros = [
-      { name: "Protein", pct: p.proteinPct, color: CHART_COLORS.protein },
-      { name: "Carbs", pct: p.carbsPct, color: CHART_COLORS.carbs },
-      { name: "Fat", pct: p.fatPct, color: CHART_COLORS.fat },
-    ];
-    return (
-      <div className="grid grid-cols-[auto_auto] gap-x-2 text-[10px]">
-        {macros.map(m => (
-          <React.Fragment key={m.name}>
-            <span style={{ color: m.color }}>{m.name}</span>
-            <span className="text-right" style={{ color: m.color }}>{m.pct}%</span>
-          </React.Fragment>
-        ))}
-      </div>
-    );
-  }}
-/>
+<div className="rounded-md border border-border bg-popover text-popover-foreground px-2 py-1 shadow-md">
+```
+To:
+```tsx
+<div className="rounded-md border border-border bg-popover text-popover-foreground px-2 py-1 shadow-md w-max">
 ```
 
-One prop swap in one file. The `renderRows` path in `CompactChartTooltip` and `StackedMacroChart` is already wired up from the previous changes.
+One class addition, one file, fixes all tooltips at once since every chart uses this shared component.
