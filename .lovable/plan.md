@@ -1,51 +1,120 @@
 
-
-# Move "Edit" button from header to footer
+# Fix Exercise Type Dropdown: Add Grouping and Better Display Names
 
 ## Problem
 
-The "Edit" button sits in the top-right corner directly next to the dialog's X close button. On mobile this is a fat-finger hazard -- users intending to edit will accidentally close the dialog. Beyond the proximity issue, the header isn't the best place for this action: users naturally read the content first, then decide to edit, so the action belongs at the bottom of the flow.
+Two issues with the Exercise Type dropdown in the Detail Dialog:
+
+1. **Overwhelming flat list** -- 70+ exercises in one dropdown with no organization. Users have to scroll through everything to find what they want.
+2. **Awkward display names** -- The auto-generated names from snake_case keys produce unnatural results like "Walk Run", "T Bar Row", "Shoulder Press Machine". The Title Case On Every Word feels robotic.
 
 ## Solution
 
-Move the Edit button to a sticky footer bar at the bottom of the dialog. This means:
+### 1. Add a display name registry to `exercise-metadata.ts`
 
-- **View mode**: footer shows a single "Edit" button (left-aligned or full-width)
-- **Edit mode**: footer shows "Cancel" and "Save" buttons (same spot, same footer)
-- **Header**: only contains the title and the X close button (standard Radix dialog pattern)
+Instead of auto-generating labels from keys, add an explicit `EXERCISE_DISPLAY_NAMES` map with human-written names. This gives us full control over natural phrasing:
 
-This puts the primary action in the thumb zone on mobile, eliminates the proximity issue with X, and creates a consistent footer area that's always the "action zone" regardless of mode.
-
-## Technical details
-
-### File: `src/components/DetailDialog.tsx`
-
-**Header (lines 119-127)** -- remove the Edit button entirely:
-
-```tsx
-<DialogHeader className="px-4 pt-4 pb-2 flex-shrink-0">
-  <DialogTitle className="text-base">{title}</DialogTitle>
-</DialogHeader>
+```
+bench_press      -> "Bench press"
+walk_run         -> "Walk/run"
+t_bar_row        -> "T-bar row"
+chest_press_machine -> "Chest press (machine)"
+assisted_dip_machine -> "Assisted dips (machine)"
+bulgarian_split_squat -> "Bulgarian split squat"
 ```
 
-**Footer (currently only renders in edit mode, around line 155)** -- render in both modes:
+Rules:
+- Sentence case (capitalize first word only), not Title Case
+- Use "/" for compound activities: "Walk/run"
+- Use parenthetical for machine variants: "Bench press (machine)" instead of "Bench Press Machine"
+- Keep it concise
 
-```tsx
-{!readOnly && (
-  <DialogFooter className="px-4 py-3 border-t flex-shrink-0">
-    {editing ? (
-      <>
-        <Button variant="outline" size="sm" onClick={cancelEdit}>Cancel</Button>
-        <Button size="sm" onClick={handleSave}>Save</Button>
-      </>
-    ) : (
-      <Button variant="outline" size="sm" onClick={enterEditMode} className="gap-1">
-        <Pencil className="h-3 w-3" /> Edit
-      </Button>
-    )}
-  </DialogFooter>
-)}
+### 2. Group the dropdown by category using `<optgroup>`
+
+Replace the flat `<select>` with grouped options using the existing comment categories in `EXERCISE_MUSCLE_GROUPS`:
+
+- **Upper body -- push**: bench_press through dips
+- **Upper body -- pull**: lat_pulldown through shrugs
+- **Lower body**: squat through step_up
+- **Compound/full body**: deadlift through kettlebell_swing
+- **Core**: cable_crunch through crunch
+- **Machines**: chest_press_machine through assisted_pullup_machine
+- **Cardio**: walk_run through jump_rope
+- **Other**: functional_strength, other
+
+Add a `group` field to each exercise entry (or a parallel `EXERCISE_GROUPS` ordered array) so the dropdown renders `<optgroup label="Upper body -- push">` sections.
+
+### 3. Implementation details
+
+**File: `src/lib/exercise-metadata.ts`**
+
+Add two new exports:
+
+```typescript
+// Human-friendly display names (sentence case, natural phrasing)
+export const EXERCISE_DISPLAY_NAMES: Record<string, string> = {
+  bench_press: 'Bench press',
+  incline_bench_press: 'Incline bench press',
+  // ... all ~70 exercises
+  walk_run: 'Walk/run',
+  // ...
+};
+
+// Ordered groups for dropdown rendering
+export const EXERCISE_GROUPS: { label: string; keys: string[] }[] = [
+  { label: 'Upper body -- push', keys: ['bench_press', 'incline_bench_press', ...] },
+  { label: 'Upper body -- pull', keys: ['lat_pulldown', 'pull_up', ...] },
+  { label: 'Lower body', keys: ['squat', 'front_squat', ...] },
+  { label: 'Compound', keys: ['deadlift', 'sumo_deadlift', ...] },
+  { label: 'Core', keys: ['cable_crunch', 'hanging_leg_raise', ...] },
+  { label: 'Machines', keys: ['chest_press_machine', ...] },
+  { label: 'Cardio', keys: ['walk_run', 'cycling', ...] },
+  { label: 'Other', keys: ['functional_strength'] },
+];
+
+// Helper to get display name with fallback
+export function getExerciseDisplayName(key: string): string {
+  return EXERCISE_DISPLAY_NAMES[key] || key.replace(/_/g, ' ');
+}
 ```
 
-No logic changes -- just moving the Edit entry point from header to footer so it's always in the same action zone as Save/Cancel.
+**File: `src/components/DetailDialog.tsx`**
 
+Update `buildExerciseKeyOptions()` to return grouped options, and update the `<select>` rendering for exercise_key to use `<optgroup>`:
+
+```tsx
+// The select element for exercise_key will render:
+<select ...>
+  <option value="">--</option>
+  <optgroup label="Upper body -- push">
+    <option value="bench_press">Bench press</option>
+    <option value="incline_bench_press">Incline bench press</option>
+    ...
+  </optgroup>
+  <optgroup label="Cardio">
+    <option value="walk_run">Walk/run</option>
+    ...
+  </optgroup>
+  <option value="other">Other</option>
+</select>
+```
+
+This requires a small change to the `FieldConfig` type to support grouped options, or we handle it as a special case for the exercise_key field. The simplest approach: add an optional `optgroups` field to `FieldConfig`:
+
+```typescript
+interface FieldConfig {
+  // ... existing fields
+  optgroups?: { label: string; options: { value: string; label: string }[] }[];
+}
+```
+
+When `optgroups` is present, the select renderer uses `<optgroup>` tags instead of flat `<option>` tags.
+
+**Also update**: the `displayValue` function and view-mode rendering should use `getExerciseDisplayName()` so the read-only view also shows the friendly name.
+
+## Summary of changes
+
+| File | Change |
+|------|--------|
+| `src/lib/exercise-metadata.ts` | Add `EXERCISE_DISPLAY_NAMES`, `EXERCISE_GROUPS`, `getExerciseDisplayName()` |
+| `src/components/DetailDialog.tsx` | Add `optgroups` to `FieldConfig`, update select rendering to use `<optgroup>`, update `buildExerciseKeyOptions()` to return grouped options |
