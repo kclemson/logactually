@@ -371,9 +371,22 @@ describe('getCalorieTargetComponents', () => {
     expect(getCalorieTargetComponents(baseSettings)).toBeNull();
   });
 
-  it('returns null for exercise_adjusted mode', () => {
-    const s = { ...baseSettings, calorieTargetMode: 'exercise_adjusted' as const };
-    expect(getCalorieTargetComponents(s)).toBeNull();
+  it('returns exercise_adjusted components with baseTarget', () => {
+    const s = { ...baseSettings, calorieTargetMode: 'exercise_adjusted' as const, dailyCalorieTarget: 1500 };
+    const result = getCalorieTargetComponents(s);
+    expect(result).not.toBeNull();
+    expect(result!.mode).toBe('exercise_adjusted');
+    expect(result!.baseTarget).toBe(1500);
+    expect(result!.tdee).toBe(0);
+    expect(result!.deficit).toBe(0);
+  });
+
+  it('returns exercise_adjusted with null dailyCalorieTarget', () => {
+    const s = { ...baseSettings, calorieTargetMode: 'exercise_adjusted' as const, dailyCalorieTarget: null };
+    const result = getCalorieTargetComponents(s);
+    expect(result).not.toBeNull();
+    expect(result!.mode).toBe('exercise_adjusted');
+    expect(result!.baseTarget).toBeNull();
   });
 
   it('returns null for body_stats with fixed activity level', () => {
@@ -389,5 +402,60 @@ describe('getCalorieTargetComponents', () => {
   it('returns null without body weight', () => {
     const s = { ...baseSettings, calorieTargetMode: 'body_stats' as const, activityLevel: 'logged' as const, bodyWeightLbs: null };
     expect(getCalorieTargetComponents(s)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Exercise-adjusted equation math (end-to-end)
+// ---------------------------------------------------------------------------
+
+describe('exercise-adjusted equation math', () => {
+  it('getExerciseAdjustedTarget adds base + burn correctly', () => {
+    // User base target 1500, burned 300 → adjusted = 1800
+    expect(getExerciseAdjustedTarget(1500, 300)).toBe(1800);
+    expect(getExerciseAdjustedTarget(1500, 0)).toBe(1500);
+  });
+
+  it('computeCalorieRollup averages burns for exercise-adjusted', () => {
+    const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+    const twoDaysAgo = format(subDays(new Date(), 2), 'yyyy-MM-dd');
+    const burns = new Map<string, number>();
+    burns.set(yesterday, 400);
+    burns.set(twoDaysAgo, 200);
+
+    const result = computeCalorieRollup(
+      [
+        { date: yesterday, totalCalories: 1900 },
+        { date: twoDaysAgo, totalCalories: 1700 },
+      ],
+      7, 1500, true, burns,
+    );
+    expect(result).not.toBeNull();
+    // avg burn = (400+200)/2 = 300
+    expect(result!.avgBurn).toBe(300);
+    // avg intake = (1900+1700)/2 = 1800
+    expect(result!.avgIntake).toBe(1800);
+    // avg target = (1500+400 + 1500+200)/2 = 1800 → intake == target → green
+    expect(result!.dotColor).toContain('green');
+  });
+
+  it('rollup with zero burns still works', () => {
+    const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+    const twoDaysAgo = format(subDays(new Date(), 2), 'yyyy-MM-dd');
+    const burns = new Map<string, number>();
+    // no burns set
+
+    const result = computeCalorieRollup(
+      [
+        { date: yesterday, totalCalories: 1600 },
+        { date: twoDaysAgo, totalCalories: 1400 },
+      ],
+      7, 1500, true, burns,
+    );
+    expect(result).not.toBeNull();
+    expect(result!.avgBurn).toBe(0);
+    // target stays 1500, avg intake 1500 → green
+    expect(result!.avgIntake).toBe(1500);
+    expect(result!.dotColor).toContain('green');
   });
 });
