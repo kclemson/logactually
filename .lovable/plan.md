@@ -1,32 +1,23 @@
 
 
-# Remove redundant "Delete this group" text link from expanded panel
+# Show delete icon on expanded exercise group headers
 
-## Summary
+## Problem
 
-Now that the grouped entry UI has a delete icon on the group header row (with its own confirmation dialog), the text-based "Delete this group (N items)" link in the expanded details panel is redundant. This removes that link while keeping the group header delete icon and its confirmation dialog intact.
+When an exercise group is expanded, the group header renders an empty `<span></span>` in the delete column (line 442) instead of the delete button with confirmation dialog. The collapsed group header correctly shows the delete icon (lines 371-401). This was already fixed for the food log but the exercise log was missed.
 
-## Changes
+## Fix
 
-### 1. `src/components/EntryExpandedPanel.tsx`
-- Remove the `DeleteGroupDialog` import
-- Remove the `items` and `onDeleteEntry` props from the interface
-- Remove the `DeleteGroupDialog` rendering block (lines 84-89)
-- Since those were the only reason for the `flex items-center justify-between` wrapper, simplify the layout: the saved-item info / "Save as" button no longer needs the justify-between wrapper
-- Update the JSDoc comment
+**`src/components/WeightItemsTable.tsx`** -- line 442
 
-### 2. `src/components/FoodItemsTable.tsx`
-- Stop passing `items` and `onDeleteEntry` to `EntryExpandedPanel`
+Replace:
+```tsx
+{hasDeleteColumn && <span></span>}
+```
 
-### 3. `src/components/WeightItemsTable.tsx`
-- Remove the unused `DeleteGroupDialog` import (line 30)
-- Stop passing `items` and `onDeleteEntry` to `EntryExpandedPanel`
+With the same AlertDialog delete button used by the collapsed group header (lines 372-401), which includes:
+- The trash icon button (with `md:opacity-0 md:group-hover:opacity-100` for hover-reveal on desktop)
+- The confirmation AlertDialog showing the group name and exercise count
+- The `onDeleteEntry` callback on confirm
 
-### 4. `src/components/DeleteGroupDialog.tsx`
-- Keep the file -- it may still be imported directly elsewhere or useful in the future. But if it's now fully unused after these changes, it can be deleted.
-
-## What stays
-
-- The trash icon on group header rows in both Food and Weight tables
-- The confirmation AlertDialog triggered by that trash icon
-- All other expanded panel content ("Logged as", "From saved meal/routine", "Save as" button)
+This is a single-line-to-block replacement in one file.
