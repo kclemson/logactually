@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getTargetDotColor, getEffectiveDailyTarget, computeTDEE, suggestActivityLevel, getExerciseAdjustedTarget, usesActualExerciseBurns, ACTIVITY_MULTIPLIERS, getRollupDotColor, computeCalorieRollup, describeCalorieTarget, getCalorieTargetComponents } from './calorie-target';
+import { getTargetDotColor, getEffectiveDailyTarget, computeTDEE, suggestActivityLevel, getExerciseAdjustedTarget, usesActualExerciseBurns, ACTIVITY_MULTIPLIERS, getRollupDotColor, computeCalorieRollup, describeCalorieTarget, getCalorieTargetComponents, computeWeekRollup } from './calorie-target';
 import { format, subDays } from 'date-fns';
 import type { UserSettings } from '@/hooks/useUserSettings';
 
@@ -462,5 +462,100 @@ describe('exercise-adjusted equation math', () => {
     // target stays 1500, avg intake 1500 → green
     expect(result!.avgIntake).toBe(1500);
     expect(result!.dotColor).toContain('green');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// computeWeekRollup
+// ---------------------------------------------------------------------------
+
+describe('computeWeekRollup', () => {
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+  const twoDaysAgo = format(subDays(new Date(), 2), 'yyyy-MM-dd');
+  const threeDaysAgo = format(subDays(new Date(), 3), 'yyyy-MM-dd');
+  const tenDaysAgo = format(subDays(new Date(), 10), 'yyyy-MM-dd');
+  const emptyBurns = new Map<string, number>();
+
+  it('returns null with fewer than 2 days', () => {
+    const result = computeWeekRollup(
+      [{ date: yesterday, totalCalories: 1800 }],
+      tenDaysAgo, today, 2000, false, emptyBurns,
+    );
+    expect(result).toBeNull();
+  });
+
+  it('returns result scoped to the given range', () => {
+    const result = computeWeekRollup(
+      [
+        { date: yesterday, totalCalories: 1800 },
+        { date: twoDaysAgo, totalCalories: 1900 },
+        { date: tenDaysAgo, totalCalories: 5000 }, // outside range
+      ],
+      threeDaysAgo, today, 2000, false, emptyBurns,
+    );
+    expect(result).not.toBeNull();
+    expect(result!.avgIntake).toBe(1850);
+    expect(result!.dayCount).toBe(2);
+  });
+
+  it('excludes today', () => {
+    const result = computeWeekRollup(
+      [
+        { date: today, totalCalories: 9999 },
+        { date: yesterday, totalCalories: 1800 },
+        { date: twoDaysAgo, totalCalories: 1900 },
+      ],
+      threeDaysAgo, today, 2000, false, emptyBurns,
+    );
+    expect(result!.avgIntake).toBe(1850);
+  });
+
+  it('uses rollup dot color thresholds (green at/under)', () => {
+    const result = computeWeekRollup(
+      [
+        { date: yesterday, totalCalories: 2000 },
+        { date: twoDaysAgo, totalCalories: 2000 },
+      ],
+      threeDaysAgo, today, 2000, false, emptyBurns,
+    );
+    expect(result!.dotColor).toContain('green');
+  });
+
+  it('uses rollup dot color thresholds (amber 1-5% over)', () => {
+    const result = computeWeekRollup(
+      [
+        { date: yesterday, totalCalories: 2060 },
+        { date: twoDaysAgo, totalCalories: 2060 },
+      ],
+      threeDaysAgo, today, 2000, false, emptyBurns,
+    );
+    expect(result!.dotColor).toContain('amber');
+  });
+
+  it('uses rollup dot color thresholds (rose >5% over)', () => {
+    const result = computeWeekRollup(
+      [
+        { date: yesterday, totalCalories: 2200 },
+        { date: twoDaysAgo, totalCalories: 2200 },
+      ],
+      threeDaysAgo, today, 2000, false, emptyBurns,
+    );
+    expect(result!.dotColor).toContain('rose');
+  });
+
+  it('handles exercise burns', () => {
+    const burns = new Map<string, number>();
+    burns.set(yesterday, 400);
+    burns.set(twoDaysAgo, 200);
+    const result = computeWeekRollup(
+      [
+        { date: yesterday, totalCalories: 2000 },
+        { date: twoDaysAgo, totalCalories: 2000 },
+      ],
+      threeDaysAgo, today, 1800, true, burns,
+    );
+    expect(result!.avgBurn).toBe(300);
+    expect(result!.avgIntake).toBe(2000);
   });
 });
