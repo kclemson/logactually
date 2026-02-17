@@ -165,9 +165,15 @@ serve(async (req) => {
         if (reps === 0) reps = 10;
       }
       
+      // Force sets/reps to 0 for pure cardio (no weight)
+      const hasCardioData = duration_minutes > 0 || distance_miles > 0;
+      if (hasCardioData && weight_lbs === 0) {
+        sets = 0;
+        reps = 0;
+      }
+      
       // Valid if EITHER weight data OR cardio data present
       const hasWeightData = sets > 0 && reps > 0;
-      const hasCardioData = duration_minutes > 0 || distance_miles > 0;
       
       if (!hasWeightData && !hasCardioData) {
         const knownCardioKeys = ['walk_run', 'cycling', 'elliptical', 'rowing', 'stair_climber', 'swimming', 'jump_rope'];
