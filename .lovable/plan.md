@@ -1,103 +1,54 @@
 
 
-# Enhanced Equation Tooltips: Grade-School Math Layout
+# Tooltip Refinements: Separate Averages, Tighter Labels, Dot Colors
 
-## Changes Overview
+## Changes
 
-Four improvements to the calorie target tooltips on the History page:
+### 1. Separate burn averages for 7-day and 30-day rollup tooltip
 
-1. **Per-day tooltip: complete the equation** -- add a horizontal rule and show the computed target as the "answer" line, making it look like a proper math equation
-2. **Right-align all numbers** in both tooltips so they line up like a real equation
-3. **Rollup tooltip: show average burn** -- compute and display the actual average daily burn from logged exercise instead of the generic "calories burned from logged exercise" text
-4. **Per-day tooltip: correct dot thresholds** -- show 2.5% and 10% (matching the daily `getTargetDotColor` thresholds) instead of the rollup's 0%/5% thresholds
+Currently the rollup tooltip uses a single `displayBurn` value (whichever is available first). Instead, show two separate equation blocks -- one for the 7-day average burn and one for the 30-day average burn -- or conditionally show the appropriate average. Since the tooltip is shared for both rollup periods, the simplest approach: show both periods' equations stacked, each with its own average burn.
 
----
+### 2. Tighten equation labels
 
-## Per-Day Tooltip (New Layout)
+- Rollup tooltip exercise line: `(avg calories burned last 7 days)` / `(avg calories burned last 30 days)`
+- Daily tooltip exercise line: `(calories burned from exercise)` (keep short, it's a specific day)
 
-```text
-Sun, Feb 15
-1,666 / 1,630 daily calorie target
+### 3. Remove extra border-top line from daily tooltip
 
-      1,497  (total daily energy expenditure)
-    +   483  (calories burned from logged exercise)
-    -   350  (deficit configured in settings)
-   ────────
-      1,630
-```
+Currently there are two `border-t` dividers: one above the equation result (1,585) and one above the dot legend. Remove the one above the dot legend so the result and legend flow together.
 
-The numbers right-align. A thin border-top acts as the "line under the equation" and the result repeats the target number.
+### 4. Show colored dot next to target number in daily tooltip
 
-## Rollup Tooltip (New Layout)
-
-```text
-Daily calorie target:
-      1,497  (total daily energy expenditure)
-    +   328  (avg calories burned from logged exercise)
-    -   350  (deficit configured in settings)
-
- * at or under target       (green)
- * up to 5% over            (amber)
- * more than 5% over        (rose)
-```
-
-Where 328 is the actual average daily burn across the eligible days in the window.
-
-## Per-Day Dot Legend
-
-Change from rollup thresholds (0%/5%) to daily thresholds (2.5%/10%):
-- Green: within 2.5% of target
-- Amber: up to 10% over
-- Rose: more than 10% over
-
----
+In two places where the computed target appears (the "intake / target daily calorie target" line and the equation result line), add a colored dot using `getTargetDotColor(intake, target)` to match the dot shown on the calendar cell.
 
 ## Technical Details
 
-### File: `src/lib/calorie-target.ts`
-
-**Add `avgBurn` to `RollupResult`:**
-
-```typescript
-export interface RollupResult {
-  avgIntake: number;
-  avgBurn: number;   // NEW
-  dotColor: string;
-  dayCount: number;
-}
-```
-
-In `computeCalorieRollup`, accumulate total burn across eligible days and compute the average:
-
-```typescript
-let totalBurn = 0;
-for (const day of eligible) {
-  const burn = usesBurns ? (burnByDate.get(day.date) ?? 0) : 0;
-  totalBurn += burn;
-  // ... existing target logic
-}
-// add to return:
-avgBurn: usesBurns ? Math.round(totalBurn / eligible.length) : 0,
-```
-
 ### File: `src/components/CalorieTargetRollup.tsx`
 
-Replace the equation section in the tooltip with a right-aligned grid layout. Use `r7.avgBurn` (or `r30.avgBurn`) for the exercise burn line. Since both windows may have different averages, use the 7-day average if available, else the 30-day average.
+- Instead of a single equation block, show two stacked blocks (one per available rollup period) each with its own average burn:
+  ```
+  7-day avg calorie target:
+    1,497  (total daily energy expenditure)
+  +   355  (avg calories burned last 7 days)
+  -   350  (deficit configured in settings)
 
-The equation uses a 2-column grid:
-- Column 1 (right-aligned, tabular-nums): the numbers with +/- prefix
-- Column 2: the parenthetical description
+  30-day avg calorie target:
+    1,497  (total daily energy expenditure)
+  +   328  (avg calories burned last 30 days)
+  -   350  (deficit configured in settings)
+  ```
+  If only one period is available, show just that one.
 
-### File: `src/pages/History.tsx`
+- Remove the `displayBurn` variable since each block uses its own `r7.avgBurn` / `r30.avgBurn`.
 
-In `buildDayTooltip`, for the `targetComponents` branch:
-- Use the same 2-column grid for the equation
-- Add a border-top line after the equation rows
-- Add a final row showing the computed `target` value as the "answer"
-- Add the dot threshold legend at the bottom with 2.5%/10% thresholds (matching `getTargetDotColor`)
+### File: `src/pages/History.tsx` (`buildDayTooltip`)
+
+- Line 250: Add a colored dot after the target number using `getTargetDotColor(intake, target)`
+- Line 264-266: Add the same colored dot after the equation result target number
+- Line 267: Remove the second `border-t` divider -- change it to just `pt-1.5 space-y-0.5` (no border)
+- Line 256: Tighten label to `(calories burned from exercise)`
 
 ### Files Changed
-- `src/lib/calorie-target.ts` -- add `avgBurn` to `RollupResult`, compute it in `computeCalorieRollup`
-- `src/components/CalorieTargetRollup.tsx` -- right-aligned equation grid with actual avg burn value
-- `src/pages/History.tsx` -- right-aligned equation grid with sum line, 2.5%/10% dot legend
+- `src/components/CalorieTargetRollup.tsx`
+- `src/pages/History.tsx`
 
