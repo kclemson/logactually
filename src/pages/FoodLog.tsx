@@ -189,7 +189,17 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     return map;
   }, [entries, savedMeals]);
 
-  // Toggle handler for expanding/collapsing raw inputs
+  // Build map of entryId -> group name for multi-item entries (for collapsed display)
+  const entryGroupNames = useMemo(() => {
+    const map = new Map<string, string>();
+    entries.forEach(entry => {
+      if (entry.group_name && entry.food_items.length >= 2) {
+        map.set(entry.id, entry.group_name);
+      }
+    });
+    return map;
+  }, [entries]);
+
   const handleToggleEntryExpand = (entryId: string) => {
     setExpandedEntryIds(prev => {
       const next = new Set(prev);
@@ -200,7 +210,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   };
 
   // Helper to create and save entry from food items
-  const createEntryFromItems = useCallback(async (items: FoodItem[], rawInput: string | null, sourceMealId?: string) => {
+  const createEntryFromItems = useCallback(async (items: FoodItem[], rawInput: string | null, sourceMealId?: string, groupName?: string | null) => {
     const entryId = crypto.randomUUID();
     const itemsWithUids = items.map(item => ({
       ...item,
@@ -221,6 +231,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
         total_carbs: Math.round(totals.carbs * 10) / 10,
         total_fat: Math.round(totals.fat * 10) / 10,
         source_meal_id: sourceMealId ?? null,
+        group_name: groupName ?? null,
       });
       
       // Wait for cache to update so entry is in DOM
@@ -283,7 +294,8 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       }
 
       // Proceed with creating entry
-      createEntryFromItems(result.food_items, text);
+      const groupName = result.food_items.length >= 2 ? text : null;
+      createEntryFromItems(result.food_items, text, undefined, groupName);
     }
   };
 
@@ -300,7 +312,8 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
         setDemoPreviewOpen(true);
         return;
       }
-      createEntryFromItems(result.food_items, result.summary || "photo");
+      const photoGroupName = result.summary || "Photo";
+      createEntryFromItems(result.food_items, result.summary || "photo", undefined, photoGroupName);
     }
   }, [analyzePhoto, isReadOnly, createEntryFromItems]);
 
@@ -435,13 +448,16 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       return;
     }
 
-    createEntryFromItems(foodItems, null, mealId);
+    // Look up meal name for group_name
+    const meal = savedMeals?.find(m => m.id === mealId);
+    const groupName = meal?.name ?? null;
+    createEntryFromItems(foodItems, null, mealId, groupName);
   };
 
   // Handle meal created from CreateMealDialog - optionally log it
   const handleMealCreated = (_meal: SavedMeal, foodItems: FoodItem[]) => {
     // User chose "Yes, log it too" from the dialog prompt
-    createEntryFromItems(foodItems, null, _meal.id);
+    createEntryFromItems(foodItems, null, _meal.id, _meal.name);
   };
 
   // Handle save as meal from FoodItemsTable expando
@@ -727,6 +743,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
             onSaveAsMeal={handleSaveAsMeal}
             entryMealNames={entryMealNames}
             entrySourceMealIds={entrySourceMealIds}
+            entryGroupNames={entryGroupNames}
             dailyCalorieTarget={(() => {
               const base = getEffectiveDailyTarget(settings);
               if (base == null) return undefined;

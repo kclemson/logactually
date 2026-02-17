@@ -1,0 +1,1 @@
+ALTER TABLE public.food_entries ADD COLUMN group_name TEXT;

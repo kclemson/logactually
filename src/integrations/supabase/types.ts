@@ -138,6 +138,7 @@ export type Database = {
           created_at: string
           eaten_date: string
           food_items: Json
+          group_name: string | null
           id: string
           raw_input: string | null
           source_meal_id: string | null
@@ -152,6 +153,7 @@ export type Database = {
           created_at?: string
           eaten_date?: string
           food_items?: Json
+          group_name?: string | null
           id?: string
           raw_input?: string | null
           source_meal_id?: string | null
@@ -166,6 +168,7 @@ export type Database = {
           created_at?: string
           eaten_date?: string
           food_items?: Json
+          group_name?: string | null
           id?: string
           raw_input?: string | null
           source_meal_id?: string | null

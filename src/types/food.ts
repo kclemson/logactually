@@ -33,6 +33,7 @@ export interface FoodEntry {
   created_at: string;
   updated_at: string;
   source_meal_id: string | null;  // Tracks if entry came from a saved meal
+  group_name: string | null;  // Display label for collapsed multi-item group header
 }
 
 export interface DailyTotals {

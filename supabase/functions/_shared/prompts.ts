@@ -291,7 +291,7 @@ If you cannot identify any food in the image, return an empty food_items array.
 
 Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
 {
-  "summary": "Brief natural-language description of the meal/food seen (max ~60 chars, e.g. 'Grilled chicken salad with ranch dressing')",
+  "summary": "Concise meal label (max ~30 chars, e.g. 'Chicken salad', 'Turkey dinner')",
   "food_items": [
     ${FOOD_ITEM_JSON_EXAMPLE}
   ]

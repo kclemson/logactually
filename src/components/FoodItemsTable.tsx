@@ -3,6 +3,7 @@ import { EntryExpandedPanel } from '@/components/EntryExpandedPanel';
 import { DescriptionCell } from '@/components/DescriptionCell';
 import { useHasHover } from '@/hooks/use-has-hover';
 import { FoodItem, DailyTotals, calculateTotals, scaleMacrosByCalories, ScaledMacros } from '@/types/food';
+import { isMultiItemEntry } from '@/lib/entry-boundaries';
 import { stepMultiplier, scaleItemByMultiplier, scalePortion } from '@/lib/portion-scaling';
 import { Minus, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -49,6 +50,8 @@ interface FoodItemsTableProps {
   onToggleEntryExpand?: (entryId: string) => void;
   onSaveAsMeal?: (entryId: string, rawInput: string | null, foodItems: FoodItem[]) => void;
   entryMealNames?: Map<string, string>;
+  /** Map of entryId to group display name for collapsed multi-item entries */
+  entryGroupNames?: Map<string, string>;
   /** Set of entry IDs that originated from a saved meal (even if meal was deleted) */
   entrySourceMealIds?: Set<string>;
   /** When true, show inline labels after numeric values (e.g., "250 cal") */
@@ -90,6 +93,7 @@ export function FoodItemsTable({
   onToggleEntryExpand,
   onSaveAsMeal,
   entryMealNames,
+  entryGroupNames,
   entrySourceMealIds,
   showInlineLabels = false,
   showMacroPercentages = true,
@@ -126,9 +130,13 @@ export function FoodItemsTable({
 
   const { editingCell } = inlineEdit;
 
-  // Portion scaling stepper state
+  // Portion scaling stepper state (individual items)
   const [portionScalingIndex, setPortionScalingIndex] = useState<number | null>(null);
   const [portionMultiplier, setPortionMultiplier] = useState<number>(1.0);
+
+  // Group-level portion scaling state
+  const [groupScalingEntryId, setGroupScalingEntryId] = useState<string | null>(null);
+  const [groupPortionMultiplier, setGroupPortionMultiplier] = useState<number>(1.0);
 
 
   // Get preview macros when editing calories (uses same helper as save)
@@ -296,313 +304,621 @@ export function FoodItemsTable({
       )}
 
       {/* Data rows */}
-      {items.map((item, index) => {
-        const entryBoundary = entryBoundaries ? isLastInBoundary(index, entryBoundaries) : null;
-        const isFirstInEntry = entryBoundaries ? !!isFirstInBoundary(index, entryBoundaries) : false;
-        const isLastInEntry = !!entryBoundary;
-        const currentEntryId = item.entryId || null;
-        const isCurrentExpanded = currentEntryId ? expandedEntryIds?.has(currentEntryId) : false;
-        const currentRawInput = currentEntryId ? entryRawInputs?.get(currentEntryId) : null;
-        
-        const isCaloriesEditing = editingCell?.index === index && editingCell?.field === 'calories';
-        const previewMacros = getPreviewMacros(item, index);
-        
-        // Check if this entry should have grouped highlighting
-        const entryIsNew = isEntryNew(currentEntryId, newEntryIds);
-        const highlightClasses = getEntryHighlightClasses(entryIsNew, isFirstInEntry, isLastInEntry);
-        
-        return (
-          <div key={item.uid || index} className="contents">
-            <div
-              className={cn(
-                'grid gap-0.5 items-center group',
-                gridCols,
-                highlightClasses
-              )}
-            >
-            {/* Checkbox cell for selection mode */}
-            {selectable && (
-              <div className="flex items-center justify-center">
-                <input
-                  type="checkbox"
-                  checked={selectedIndices?.has(index) ?? false}
-                  onChange={(e) => onSelectionChange?.(index, e.target.checked)}
-                  className="h-4 w-4 rounded border-input"
-                />
-              </div>
-            )}
-            {/* Description cell (with chevron space when showing entry dividers) */}
-            {editable ? (
-              <div className="flex min-w-0">
-                {/* Always reserve chevron space when showing entry dividers */}
-                {showEntryDividers && (
-                  <div className="w-3 shrink-0 relative flex items-center justify-center self-stretch">
-                    {isLastInEntry ? (
-                      <EntryChevron
-                        expanded={!!isCurrentExpanded}
-                        onToggle={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
-                      />
-                    ) : null}
-                  </div>
-                )}
-                <div className={cn(
-                  "flex-1 min-w-0 rounded pl-1 py-1",
-                  "overflow-hidden max-h-[3rem]",
-                  "focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg"
-                )}>
-                  <DescriptionCell
-                    value={item.description}
-                    onSave={(desc) => {
-                      onUpdateItem?.(index, 'description', desc);
-                      if (item.portion) onUpdateItem?.(index, 'portion', '');
-                    }}
-                    title={getItemTooltip(item)}
-                  >
-                    {item.portion && (
+      {(() => {
+        // Build a set of indices that belong to collapsed groups (skip individual rendering)
+        const collapsedGroupIndices = new Set<number>();
+        const groupHeaders: { boundary: EntryBoundary; groupName: string }[] = [];
+
+        if (entryBoundaries && entryGroupNames) {
+          for (const boundary of entryBoundaries) {
+            const groupName = entryGroupNames.get(boundary.entryId);
+            if (groupName && isMultiItemEntry(boundary)) {
+              const isExpanded = expandedEntryIds?.has(boundary.entryId);
+              groupHeaders.push({ boundary, groupName });
+              if (!isExpanded) {
+                // Mark all indices in this boundary as collapsed (don't render individually)
+                for (let i = boundary.startIndex; i <= boundary.endIndex; i++) {
+                  collapsedGroupIndices.add(i);
+                }
+              }
+            }
+          }
+        }
+
+        const rows: React.ReactNode[] = [];
+
+        items.forEach((item, index) => {
+          // Skip items that are part of a collapsed group
+          if (collapsedGroupIndices.has(index)) return;
+
+          const entryBoundary = entryBoundaries ? isLastInBoundary(index, entryBoundaries) : null;
+          const isFirstInEntry = entryBoundaries ? !!isFirstInBoundary(index, entryBoundaries) : false;
+          const isLastInEntry = !!entryBoundary;
+          const currentEntryId = item.entryId || null;
+          const isCurrentExpanded = currentEntryId ? expandedEntryIds?.has(currentEntryId) : false;
+          const currentRawInput = currentEntryId ? entryRawInputs?.get(currentEntryId) : null;
+
+          // Check if this is the first item in an expanded group — render group header before it
+          const groupHeader = groupHeaders.find(g => g.boundary.startIndex === index);
+          if (groupHeader && isCurrentExpanded) {
+            const { boundary, groupName } = groupHeader;
+            const groupItems = items.slice(boundary.startIndex, boundary.endIndex + 1);
+            const groupCalories = groupItems.reduce((sum, gi) => sum + gi.calories, 0);
+            const groupProtein = groupItems.reduce((sum, gi) => sum + gi.protein, 0);
+            const groupCarbs = groupItems.reduce((sum, gi) => sum + gi.carbs, 0);
+            const groupFat = groupItems.reduce((sum, gi) => sum + gi.fat, 0);
+            const entryIsNew = isEntryNew(currentEntryId, newEntryIds);
+            const highlightClasses = getEntryHighlightClasses(entryIsNew, true, false);
+
+            rows.push(
+              <div key={`group-header-${boundary.entryId}`} className="contents">
+                <div className={cn('grid gap-0.5 items-center group', gridCols, highlightClasses)}>
+                  {selectable && <span></span>}
+                  <div className="flex min-w-0">
+                    {showEntryDividers && (
+                      <div className="w-3 shrink-0 relative flex items-center justify-center self-stretch">
+                        <EntryChevron
+                          expanded={true}
+                          onToggle={() => onToggleEntryExpand?.(boundary.entryId)}
+                        />
+                      </div>
+                    )}
+                    <span className={cn("pl-1 pr-0 py-1 font-semibold line-clamp-1 shrink min-w-0", compact && "text-sm")}
+                      title={groupName}
+                    >
+                      {groupName}
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setPortionScalingIndex(portionScalingIndex === index ? null : index);
-                          setPortionMultiplier(1.0);
+                          setGroupScalingEntryId(groupScalingEntryId === boundary.entryId ? null : boundary.entryId);
+                          setGroupPortionMultiplier(1.0);
                         }}
                         className="ml-1 text-xs text-muted-foreground whitespace-nowrap cursor-pointer hover:text-foreground transition-colors"
-                      >({item.portion})</button>
+                      >(1 portion)</button>
+                    </span>
+                  </div>
+                  <span className={cn("px-1 py-1 text-center", compact ? "text-xs" : "text-heading")}>
+                    {Math.round(groupCalories)}
+                  </span>
+                  <span className={cn("px-1 py-1 text-center text-muted-foreground", compact && "text-xs")}>
+                    {Math.round(groupProtein)}/{Math.round(groupCarbs)}/{Math.round(groupFat)}
+                  </span>
+                  {hasDeleteColumn && <span></span>}
+                </div>
+
+                {/* Group-level portion scaling stepper */}
+                {groupScalingEntryId === boundary.entryId && (
+                  <div className={cn('grid gap-0.5', gridCols)}>
+                    <div
+                      className="col-span-full pl-6 pr-2 py-1.5 flex items-center gap-2"
+                      tabIndex={-1}
+                      ref={(el) => { if (el) el.focus(); }}
+                      onBlur={(e) => {
+                        if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                        setGroupScalingEntryId(null);
+                        setGroupPortionMultiplier(1.0);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          e.stopPropagation();
+                          setGroupScalingEntryId(null);
+                          setGroupPortionMultiplier(1.0);
+                        }
+                      }}
+                    >
+                      <button type="button" disabled={groupPortionMultiplier <= 0.25}
+                        onClick={() => setGroupPortionMultiplier(stepMultiplier(groupPortionMultiplier, 'down'))}
+                        className="h-7 w-7 rounded-full border border-input bg-background flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+                        aria-label="Decrease portion"
+                      ><Minus className="h-3.5 w-3.5" /></button>
+                      <span className={cn("text-sm font-medium min-w-[3rem] text-center tabular-nums", groupPortionMultiplier !== 1.0 && "text-primary")}>
+                        {groupPortionMultiplier}x
+                      </span>
+                      <button type="button" disabled={groupPortionMultiplier >= 5.0}
+                        onClick={() => setGroupPortionMultiplier(stepMultiplier(groupPortionMultiplier, 'up'))}
+                        className="h-7 w-7 rounded-full border border-input bg-background flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+                        aria-label="Increase portion"
+                      ><Plus className="h-3.5 w-3.5" /></button>
+                      <button type="button"
+                        onClick={() => {
+                          if (groupPortionMultiplier !== 1.0) {
+                            if (isReadOnly) {
+                              triggerOverlay();
+                            } else {
+                              // Scale all items in the group
+                              for (let i = boundary.startIndex; i <= boundary.endIndex; i++) {
+                                const gi = items[i];
+                                onUpdateItemBatch?.(i, scaleItemByMultiplier(gi, groupPortionMultiplier));
+                              }
+                            }
+                          }
+                          setGroupScalingEntryId(null);
+                          setGroupPortionMultiplier(1.0);
+                        }}
+                        className="text-xs font-medium text-primary hover:underline"
+                      >Done</button>
+                      {groupPortionMultiplier !== 1.0 && (
+                        <span className="text-xs text-muted-foreground tabular-nums">
+                          ({Math.round(groupCalories * groupPortionMultiplier)} cal)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          // For expanded group sub-items, check if this item is part of an expanded group
+          const isInExpandedGroup = groupHeader || groupHeaders.some(g => 
+            index > g.boundary.startIndex && index <= g.boundary.endIndex && expandedEntryIds?.has(g.boundary.entryId)
+          );
+
+          const isCaloriesEditing = editingCell?.index === index && editingCell?.field === 'calories';
+          const previewMacros = getPreviewMacros(item, index);
+
+          // Check if this entry should have grouped highlighting
+          const entryIsNew = isEntryNew(currentEntryId, newEntryIds);
+          // For items in expanded groups, adjust highlight classes
+          const isGroupSubItem = isInExpandedGroup && groupHeaders.some(g => 
+            index >= g.boundary.startIndex && index <= g.boundary.endIndex
+          );
+          const highlightClasses = isGroupSubItem 
+            ? '' // Group header handles highlight for expanded groups
+            : getEntryHighlightClasses(entryIsNew, isFirstInEntry, isLastInEntry);
+
+          rows.push(
+            <div key={item.uid || index} className="contents">
+              <div
+                className={cn(
+                  'grid gap-0.5 items-center group',
+                  gridCols,
+                  highlightClasses,
+                  isGroupSubItem && "pl-4 text-sm text-muted-foreground"
+                )}
+              >
+              {/* Checkbox cell for selection mode */}
+              {selectable && (
+                <div className="flex items-center justify-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedIndices?.has(index) ?? false}
+                    onChange={(e) => onSelectionChange?.(index, e.target.checked)}
+                    className="h-4 w-4 rounded border-input"
+                  />
+                </div>
+              )}
+              {/* Description cell (with chevron space when showing entry dividers) */}
+              {editable ? (
+                <div className="flex min-w-0">
+                  {/* Always reserve chevron space when showing entry dividers */}
+                  {showEntryDividers && !isGroupSubItem && (
+                    <div className="w-3 shrink-0 relative flex items-center justify-center self-stretch">
+                      {isLastInEntry ? (
+                        <EntryChevron
+                          expanded={!!isCurrentExpanded}
+                          onToggle={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
+                        />
+                      ) : null}
+                    </div>
+                  )}
+                  <div className={cn(
+                    "flex-1 min-w-0 rounded pl-1 py-1",
+                    "overflow-hidden max-h-[3rem]",
+                    "focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg"
+                  )}>
+                    <DescriptionCell
+                      value={item.description}
+                      onSave={(desc) => {
+                        onUpdateItem?.(index, 'description', desc);
+                        if (item.portion) onUpdateItem?.(index, 'portion', '');
+                      }}
+                      title={getItemTooltip(item)}
+                    >
+                      {item.portion && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPortionScalingIndex(portionScalingIndex === index ? null : index);
+                            setPortionMultiplier(1.0);
+                          }}
+                          className="ml-1 text-xs text-muted-foreground whitespace-nowrap cursor-pointer hover:text-foreground transition-colors"
+                        >({item.portion})</button>
+                      )}
+                      {hasAnyEditedFields(item) && (
+                        <span className="text-focus-ring font-bold whitespace-nowrap" title={formatEditedFields(item) || 'Edited'}> *</span>
+                      )}
+                    </DescriptionCell>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-baseline min-w-0">
+                  {/* Always reserve chevron space when showing entry dividers */}
+                  {showEntryDividers && !isGroupSubItem && (
+                    <div className="w-3 shrink-0 relative flex items-center justify-center self-stretch">
+                      {isLastInEntry ? (
+                        <EntryChevron
+                          expanded={!!isCurrentExpanded}
+                          onToggle={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
+                        />
+                      ) : null}
+                    </div>
+                  )}
+                  <span 
+                    title={getItemTooltip(item)}
+                    className={cn("pl-1 pr-0 py-1 line-clamp-2 shrink min-w-0", compact && "text-sm")}
+                  >
+                    {item.description}
+                    {item.portion && (
+                      editable ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPortionScalingIndex(portionScalingIndex === index ? null : index);
+                            setPortionMultiplier(1.0);
+                          }}
+                          className="ml-1 text-xs text-muted-foreground whitespace-nowrap cursor-pointer hover:text-foreground transition-colors"
+                        >({item.portion})</button>
+                      ) : (
+                        <span className="ml-1 text-xs text-muted-foreground whitespace-nowrap">({item.portion})</span>
+                      )
                     )}
                     {hasAnyEditedFields(item) && (
-                      <span className="text-focus-ring font-bold whitespace-nowrap" title={formatEditedFields(item) || 'Edited'}> *</span>
+                      <span className="text-focus-ring font-bold" title={formatEditedFields(item) || 'Edited'}> *</span>
                     )}
-                  </DescriptionCell>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-baseline min-w-0">
-                {/* Always reserve chevron space when showing entry dividers */}
-                {showEntryDividers && (
-                  <div className="w-3 shrink-0 relative flex items-center justify-center self-stretch">
-                    {isLastInEntry ? (
-                      <EntryChevron
-                        expanded={!!isCurrentExpanded}
-                        onToggle={() => currentEntryId && onToggleEntryExpand?.(currentEntryId)}
-                      />
-                    ) : null}
-                  </div>
-                )}
-                <span 
-                  title={getItemTooltip(item)}
-                  className={cn("pl-1 pr-0 py-1 line-clamp-2 shrink min-w-0", compact && "text-sm")}
-                >
-                  {item.description}
-                  {item.portion && (
-                    editable ? (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setPortionScalingIndex(portionScalingIndex === index ? null : index);
-                          setPortionMultiplier(1.0);
-                        }}
-                        className="ml-1 text-xs text-muted-foreground whitespace-nowrap cursor-pointer hover:text-foreground transition-colors"
-                      >({item.portion})</button>
-                    ) : (
-                      <span className="ml-1 text-xs text-muted-foreground whitespace-nowrap">({item.portion})</span>
-                    )
-                  )}
-                  {hasAnyEditedFields(item) && (
-                    <span className="text-focus-ring font-bold" title={formatEditedFields(item) || 'Edited'}> *</span>
-                  )}
-                </span>
-                <div className="flex-1" />
-              </div>
-            )}
-
-            {/* Calories + P/C/F cells */}
-            {editable ? (
-              <>
-                <Input
-                  type="number"
-                  value={
-                    editingCell?.index === index && editingCell?.field === 'calories'
-                      ? String(editingCell.value)
-                      : item.calories
-                  }
-                  onFocus={() => inlineEdit.startEditing(index, 'calories', item.calories)}
-                  onChange={(e) => inlineEdit.updateEditingValue(e.target.value)}
-                  onBlur={() => inlineEdit.handleNumericBlur()}
-                  onKeyDown={(e) => inlineEdit.handleNumericKeyDown(e)}
-                  className={getCaloriesClasses(item, isCaloriesEditing)}
-                />
-                {/* P/C/F combined - read-only with preview when editing calories */}
-                <span className={cn(
-                  "px-1 py-1 text-center",
-                  isCaloriesEditing ? "text-focus-ring" : "text-muted-foreground"
-                )}>
-                  {previewMacros 
-                    ? `${previewMacros.protein}/${previewMacros.carbs}/${previewMacros.fat}`
-                    : `${Math.round(item.protein)}/${Math.round(item.carbs)}/${Math.round(item.fat)}`
-                  }
-                </span>
-              </>
-            ) : (
-              <>
-                <span className={cn("px-1 py-1 text-muted-foreground text-center", compact && "text-xs")}>
-                  {item.calories}
-                </span>
-                <span className={cn("px-1 py-1 text-muted-foreground text-center", compact && "text-xs")}>
-                  {Math.round(item.protein)}/{Math.round(item.carbs)}/{Math.round(item.fat)}
-                </span>
-              </>
-            )}
-
-            {/* Delete button */}
-            {editable && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onRemoveItem?.(index)}
-                className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
-                aria-label="Delete item"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            )}
-            
-            {/* Entry delete button (only on last item of each entry) */}
-            {!editable && hasEntryDeletion && (
-              entryBoundary ? (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
-                      aria-label="Delete entry"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-lg">
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete this entry?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This will permanently remove this meal and all its items.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction 
-                        onClick={() => onDeleteEntry!(entryBoundary.entryId)}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      >
-                        Delete
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              ) : (
-                <span></span>
-              )
-            )}
-            </div>
-
-            {/* Portion scaling stepper - inline below the item */}
-            {portionScalingIndex === index && (
-              <div className={cn('grid gap-0.5', gridCols)}>
-                <div
-                  className="col-span-full pl-6 pr-2 py-1.5 flex items-center gap-2"
-                  tabIndex={-1}
-                  ref={(el) => { if (el) el.focus(); }}
-                  onBlur={(e) => {
-                    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
-                    setPortionScalingIndex(null);
-                    setPortionMultiplier(1.0);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Escape') {
-                      e.stopPropagation();
-                      setPortionScalingIndex(null);
-                      setPortionMultiplier(1.0);
-                    }
-                  }}
-                >
-                  <button
-                    type="button"
-                    disabled={portionMultiplier <= 0.25}
-                    onClick={() => setPortionMultiplier(stepMultiplier(portionMultiplier, 'down'))}
-                    className="h-7 w-7 rounded-full border border-input bg-background flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
-                    aria-label="Decrease portion"
-                  >
-                    <Minus className="h-3.5 w-3.5" />
-                  </button>
-                  <span className={cn(
-                    "text-sm font-medium min-w-[3rem] text-center tabular-nums",
-                    portionMultiplier !== 1.0 && "text-primary"
-                  )}>
-                    {portionMultiplier}x
                   </span>
-                  <button
-                    type="button"
-                    disabled={portionMultiplier >= 5.0}
-                    onClick={() => setPortionMultiplier(stepMultiplier(portionMultiplier, 'up'))}
-                    className="h-7 w-7 rounded-full border border-input bg-background flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
-                    aria-label="Increase portion"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (portionMultiplier !== 1.0) {
-                        if (isReadOnly) {
-                          triggerOverlay();
-                        } else {
-                          onUpdateItemBatch?.(index, scaleItemByMultiplier(item, portionMultiplier));
-                        }
-                      }
+                  <div className="flex-1" />
+                </div>
+              )}
+
+              {/* Calories + P/C/F cells */}
+              {editable ? (
+                <>
+                  <Input
+                    type="number"
+                    value={
+                      editingCell?.index === index && editingCell?.field === 'calories'
+                        ? String(editingCell.value)
+                        : item.calories
+                    }
+                    onFocus={() => inlineEdit.startEditing(index, 'calories', item.calories)}
+                    onChange={(e) => inlineEdit.updateEditingValue(e.target.value)}
+                    onBlur={() => inlineEdit.handleNumericBlur()}
+                    onKeyDown={(e) => inlineEdit.handleNumericKeyDown(e)}
+                    className={getCaloriesClasses(item, isCaloriesEditing)}
+                  />
+                  {/* P/C/F combined - read-only with preview when editing calories */}
+                  <span className={cn(
+                    "px-1 py-1 text-center",
+                    isCaloriesEditing ? "text-focus-ring" : "text-muted-foreground"
+                  )}>
+                    {previewMacros 
+                      ? `${previewMacros.protein}/${previewMacros.carbs}/${previewMacros.fat}`
+                      : `${Math.round(item.protein)}/${Math.round(item.carbs)}/${Math.round(item.fat)}`
+                    }
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className={cn("px-1 py-1 text-muted-foreground text-center", compact && "text-xs")}>
+                    {item.calories}
+                  </span>
+                  <span className={cn("px-1 py-1 text-muted-foreground text-center", compact && "text-xs")}>
+                    {Math.round(item.protein)}/{Math.round(item.carbs)}/{Math.round(item.fat)}
+                  </span>
+                </>
+              )}
+
+              {/* Delete button */}
+              {editable && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onRemoveItem?.(index)}
+                  className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                  aria-label="Delete item"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              )}
+              
+              {/* Entry delete button (only on last item of each entry, NOT for group sub-items) */}
+              {!editable && hasEntryDeletion && !isGroupSubItem && (
+                entryBoundary ? (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                        aria-label="Delete entry"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-lg">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete this entry?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently remove this meal and all its items.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={() => onDeleteEntry!(entryBoundary.entryId)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                ) : (
+                  <span></span>
+                )
+              )}
+              {/* For group sub-items, show delete button per item */}
+              {!editable && hasEntryDeletion && isGroupSubItem && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onRemoveItem?.(index)}
+                  className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                  aria-label="Delete item"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              )}
+              </div>
+
+              {/* Portion scaling stepper - inline below the item */}
+              {portionScalingIndex === index && (
+                <div className={cn('grid gap-0.5', gridCols)}>
+                  <div
+                    className="col-span-full pl-6 pr-2 py-1.5 flex items-center gap-2"
+                    tabIndex={-1}
+                    ref={(el) => { if (el) el.focus(); }}
+                    onBlur={(e) => {
+                      if (e.currentTarget.contains(e.relatedTarget as Node)) return;
                       setPortionScalingIndex(null);
                       setPortionMultiplier(1.0);
                     }}
-                    className="text-xs font-medium text-primary hover:underline"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        e.stopPropagation();
+                        setPortionScalingIndex(null);
+                        setPortionMultiplier(1.0);
+                      }
+                    }}
                   >
-                    Done
-                  </button>
-                  {portionMultiplier !== 1.0 && (
-                    <span className="text-xs text-muted-foreground tabular-nums">
-                      ({item.portion ? scalePortion(item.portion, portionMultiplier) + ', ' : ''}{Math.round(item.calories * portionMultiplier)} cal)
+                    <button
+                      type="button"
+                      disabled={portionMultiplier <= 0.25}
+                      onClick={() => setPortionMultiplier(stepMultiplier(portionMultiplier, 'down'))}
+                      className="h-7 w-7 rounded-full border border-input bg-background flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+                      aria-label="Decrease portion"
+                    >
+                      <Minus className="h-3.5 w-3.5" />
+                    </button>
+                    <span className={cn(
+                      "text-sm font-medium min-w-[3rem] text-center tabular-nums",
+                      portionMultiplier !== 1.0 && "text-primary"
+                    )}>
+                      {portionMultiplier}x
                     </span>
-                  )}
+                    <button
+                      type="button"
+                      disabled={portionMultiplier >= 5.0}
+                      onClick={() => setPortionMultiplier(stepMultiplier(portionMultiplier, 'up'))}
+                      className="h-7 w-7 rounded-full border border-input bg-background flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+                      aria-label="Increase portion"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (portionMultiplier !== 1.0) {
+                          if (isReadOnly) {
+                            triggerOverlay();
+                          } else {
+                            onUpdateItemBatch?.(index, scaleItemByMultiplier(item, portionMultiplier));
+                          }
+                        }
+                        setPortionScalingIndex(null);
+                        setPortionMultiplier(1.0);
+                      }}
+                      className="text-xs font-medium text-primary hover:underline"
+                    >
+                      Done
+                    </button>
+                    {portionMultiplier !== 1.0 && (
+                      <span className="text-xs text-muted-foreground tabular-nums">
+                        ({item.portion ? scalePortion(item.portion, portionMultiplier) + ', ' : ''}{Math.round(item.calories * portionMultiplier)} cal)
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
-            
-            {/* Expanded raw input - shows after last item in entry */}
-            {showEntryDividers && isLastInEntry && isCurrentExpanded && (() => {
-              const isFromSavedMeal = currentEntryId && entrySourceMealIds?.has(currentEntryId);
-              const mealName = currentEntryId && entryMealNames?.get(currentEntryId);
-              const entryItems = items.filter(i => i.entryId === currentEntryId);
+              )}
+              
+              {/* Expanded raw input - shows after last item in entry */}
+              {showEntryDividers && isLastInEntry && isCurrentExpanded && (() => {
+                const isFromSavedMeal = currentEntryId && entrySourceMealIds?.has(currentEntryId);
+                const mealName = currentEntryId && entryMealNames?.get(currentEntryId);
+                const entryItems = items.filter(i => i.entryId === currentEntryId);
 
-              return (
-                <EntryExpandedPanel
-                  items={entryItems}
-                  rawInput={currentRawInput ?? null}
-                  savedItemInfo={{
-                    type: 'meal',
-                    name: mealName ?? null,
-                    isFromSaved: !!isFromSavedMeal,
-                  }}
-                  onSaveAs={onSaveAsMeal && currentEntryId
-                    ? () => onSaveAsMeal(currentEntryId!, currentRawInput ?? null, entryItems)
-                    : undefined}
-                  onDeleteEntry={onDeleteEntry && currentEntryId
-                    ? () => onDeleteEntry(currentEntryId!)
-                    : undefined}
-                  gridCols={gridCols}
-                />
-              );
-            })()}
-          </div>
-        );
-      })}
+                return (
+                  <EntryExpandedPanel
+                    items={entryItems}
+                    rawInput={currentRawInput ?? null}
+                    savedItemInfo={{
+                      type: 'meal',
+                      name: mealName ?? null,
+                      isFromSaved: !!isFromSavedMeal,
+                    }}
+                    onSaveAs={onSaveAsMeal && currentEntryId
+                      ? () => onSaveAsMeal(currentEntryId!, currentRawInput ?? null, entryItems)
+                      : undefined}
+                    onDeleteEntry={onDeleteEntry && currentEntryId
+                      ? () => onDeleteEntry(currentEntryId!)
+                      : undefined}
+                    gridCols={gridCols}
+                  />
+                );
+              })()}
+            </div>
+          );
+        });
+
+        // Render collapsed group headers for entries not yet rendered
+        for (const { boundary, groupName } of groupHeaders) {
+          const isExpanded = expandedEntryIds?.has(boundary.entryId);
+          if (isExpanded) continue; // Already rendered above
+
+          const groupItems = items.slice(boundary.startIndex, boundary.endIndex + 1);
+          const groupCalories = groupItems.reduce((sum, gi) => sum + gi.calories, 0);
+          const groupProtein = groupItems.reduce((sum, gi) => sum + gi.protein, 0);
+          const groupCarbs = groupItems.reduce((sum, gi) => sum + gi.carbs, 0);
+          const groupFat = groupItems.reduce((sum, gi) => sum + gi.fat, 0);
+          const entryIsNew = isEntryNew(boundary.entryId, newEntryIds);
+          const highlightClasses = getEntryHighlightClasses(entryIsNew, true, true);
+
+          // Insert at the position of the first item in the boundary
+          rows.splice(boundary.startIndex, 0,
+            <div key={`group-collapsed-${boundary.entryId}`} className="contents">
+              <div className={cn('grid gap-0.5 items-center group', gridCols, highlightClasses)}>
+                {selectable && <span></span>}
+                <div className="flex min-w-0">
+                  {showEntryDividers && (
+                    <div className="w-3 shrink-0 relative flex items-center justify-center self-stretch">
+                      <EntryChevron
+                        expanded={false}
+                        onToggle={() => onToggleEntryExpand?.(boundary.entryId)}
+                      />
+                    </div>
+                  )}
+                  <span className={cn("pl-1 pr-0 py-1 line-clamp-1 shrink min-w-0", compact && "text-sm")}
+                    title={groupName}
+                  >
+                    {groupName}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setGroupScalingEntryId(groupScalingEntryId === boundary.entryId ? null : boundary.entryId);
+                        setGroupPortionMultiplier(1.0);
+                      }}
+                      className="ml-1 text-xs text-muted-foreground whitespace-nowrap cursor-pointer hover:text-foreground transition-colors"
+                    >(1 portion)</button>
+                  </span>
+                </div>
+                <span className={cn("px-1 py-1 text-center", compact ? "text-xs" : "")}>
+                  {Math.round(groupCalories)}
+                </span>
+                <span className={cn("px-1 py-1 text-center text-muted-foreground", compact && "text-xs")}>
+                  {Math.round(groupProtein)}/{Math.round(groupCarbs)}/{Math.round(groupFat)}
+                </span>
+                {hasDeleteColumn && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                        aria-label="Delete entry"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="left-4 right-4 translate-x-0 w-auto max-w-[calc(100vw-32px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-lg">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete this entry?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently remove {groupName} ({groupItems.length} items).
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={() => onDeleteEntry?.(boundary.entryId)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+              </div>
+
+              {/* Group-level portion scaling stepper */}
+              {groupScalingEntryId === boundary.entryId && (
+                <div className={cn('grid gap-0.5', gridCols)}>
+                  <div
+                    className="col-span-full pl-6 pr-2 py-1.5 flex items-center gap-2"
+                    tabIndex={-1}
+                    ref={(el) => { if (el) el.focus(); }}
+                    onBlur={(e) => {
+                      if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                      setGroupScalingEntryId(null);
+                      setGroupPortionMultiplier(1.0);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        e.stopPropagation();
+                        setGroupScalingEntryId(null);
+                        setGroupPortionMultiplier(1.0);
+                      }
+                    }}
+                  >
+                    <button type="button" disabled={groupPortionMultiplier <= 0.25}
+                      onClick={() => setGroupPortionMultiplier(stepMultiplier(groupPortionMultiplier, 'down'))}
+                      className="h-7 w-7 rounded-full border border-input bg-background flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+                      aria-label="Decrease portion"
+                    ><Minus className="h-3.5 w-3.5" /></button>
+                    <span className={cn("text-sm font-medium min-w-[3rem] text-center tabular-nums", groupPortionMultiplier !== 1.0 && "text-primary")}>
+                      {groupPortionMultiplier}x
+                    </span>
+                    <button type="button" disabled={groupPortionMultiplier >= 5.0}
+                      onClick={() => setGroupPortionMultiplier(stepMultiplier(groupPortionMultiplier, 'up'))}
+                      className="h-7 w-7 rounded-full border border-input bg-background flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+                      aria-label="Increase portion"
+                    ><Plus className="h-3.5 w-3.5" /></button>
+                    <button type="button"
+                      onClick={() => {
+                        if (groupPortionMultiplier !== 1.0) {
+                          if (isReadOnly) {
+                            triggerOverlay();
+                          } else {
+                            for (let i = boundary.startIndex; i <= boundary.endIndex; i++) {
+                              const gi = items[i];
+                              onUpdateItemBatch?.(i, scaleItemByMultiplier(gi, groupPortionMultiplier));
+                            }
+                          }
+                        }
+                        setGroupScalingEntryId(null);
+                        setGroupPortionMultiplier(1.0);
+                      }}
+                      className="text-xs font-medium text-primary hover:underline"
+                    >Done</button>
+                    {groupPortionMultiplier !== 1.0 && (
+                      <span className="text-xs text-muted-foreground tabular-nums">
+                        ({Math.round(groupCalories * groupPortionMultiplier)} cal)
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        return rows;
+      })()}
 
       {/* Totals at bottom */}
       {showTotals && totalsPosition === 'bottom' && <TotalsRow />}
