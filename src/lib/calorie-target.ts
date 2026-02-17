@@ -1,4 +1,5 @@
 import { computeAbsoluteBMR } from './calorie-burn';
+import { format, subDays } from 'date-fns';
 import type { UserSettings } from '@/hooks/useUserSettings';
 
 // ---------------------------------------------------------------------------
@@ -135,4 +136,71 @@ export function suggestActivityLevel(avgDailyBurn: number): MultiplierActivityLe
 export function usesActualExerciseBurns(settings: UserSettings): boolean {
   return settings.calorieTargetMode === 'exercise_adjusted' ||
     (settings.calorieTargetMode === 'body_stats' && settings.activityLevel === 'logged');
+}
+
+// ---------------------------------------------------------------------------
+// Rollup dot color (stricter thresholds for rolling averages)
+// ---------------------------------------------------------------------------
+
+/**
+ * Like getTargetDotColor but with tighter thresholds for multi-day averages.
+ * Green only when at or under target (no 2.5% buffer).
+ */
+export function getRollupDotColor(avgCalories: number, avgTarget: number): string {
+  const overPercent = ((avgCalories - avgTarget) / avgTarget) * 100;
+  if (overPercent <= 0) return "text-green-500 dark:text-green-400";
+  if (overPercent <= 5) return "text-amber-500 dark:text-amber-400";
+  return "text-rose-500 dark:text-rose-400";
+}
+
+// ---------------------------------------------------------------------------
+// Rolling calorie rollup computation
+// ---------------------------------------------------------------------------
+
+export interface RollupResult {
+  avgIntake: number;
+  dotColor: string;
+  dayCount: number;
+}
+
+/**
+ * Computes average daily intake vs average daily target over a rolling window.
+ * Excludes today (incomplete) and days with no food entries.
+ * Returns null if fewer than 2 eligible days.
+ */
+export function computeCalorieRollup(
+  foodTotals: { date: string; totalCalories: number }[],
+  windowDays: number,
+  baseTarget: number,
+  usesBurns: boolean,
+  burnByDate: Map<string, number>,
+): RollupResult | null {
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const cutoff = format(subDays(new Date(), windowDays), 'yyyy-MM-dd');
+
+  const eligible = foodTotals.filter(
+    d => d.date >= cutoff && d.date < today
+  );
+
+  if (eligible.length < 2) return null;
+
+  let totalIntake = 0;
+  let totalTarget = 0;
+
+  for (const day of eligible) {
+    totalIntake += day.totalCalories;
+    const dayTarget = usesBurns
+      ? getExerciseAdjustedTarget(baseTarget, burnByDate.get(day.date) ?? 0)
+      : baseTarget;
+    totalTarget += dayTarget;
+  }
+
+  const avgIntake = Math.round(totalIntake / eligible.length);
+  const avgTarget = totalTarget / eligible.length;
+
+  return {
+    avgIntake,
+    dotColor: getRollupDotColor(avgIntake, avgTarget),
+    dayCount: eligible.length,
+  };
 }

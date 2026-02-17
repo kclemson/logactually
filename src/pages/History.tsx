@@ -22,6 +22,7 @@ import { isCardioExercise } from '@/lib/exercise-metadata';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getTargetDotColor, getEffectiveDailyTarget, getExerciseAdjustedTarget, usesActualExerciseBurns } from '@/lib/calorie-target';
 import { useDailyCalorieBurn } from '@/hooks/useDailyCalorieBurn';
+import { CalorieTargetRollup } from '@/components/CalorieTargetRollup';
 
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { setStoredDate } from '@/lib/selected-date';
@@ -222,6 +223,11 @@ const History = () => {
           <ChevronRight className="h-5 w-5" />
         </Button>
       </div>
+
+      {/* Rolling calorie target summary */}
+      {settings.calorieTargetEnabled && isSameMonth(currentMonth, new Date()) && (
+        <CalorieTargetRollup settings={settings} burnByDate={burnByDate} usesBurns={usesBurns} />
+      )}
 
       {/* Week day headers */}
       <div className="grid grid-cols-7 gap-1.5">
