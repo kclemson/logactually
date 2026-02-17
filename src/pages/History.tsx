@@ -178,8 +178,9 @@ const History = () => {
 
   // Build calendar grid
   const calendarDays = useMemo(() => {
-    const start = startOfWeek(monthStart, { weekStartsOn: 0 });
-    const end = endOfWeek(monthEnd, { weekStartsOn: 0 });
+    const wso = settings.weekStartDay ?? 0;
+    const start = startOfWeek(monthStart, { weekStartsOn: wso });
+    const end = endOfWeek(monthEnd, { weekStartsOn: wso });
     return eachDayOfInterval({ start, end });
   }, [monthStart, monthEnd]);
 
@@ -235,7 +236,9 @@ const History = () => {
   const goToPreviousMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
   const goToNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
 
-  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const allWeekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const wsd = settings.weekStartDay ?? 0;
+  const weekDays = [...allWeekDays.slice(wsd), ...allWeekDays.slice(0, wsd)];
 
   const targetComponents = useMemo(() => getCalorieTargetComponents(settings), [settings]);
 

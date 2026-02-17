@@ -109,6 +109,7 @@ const baseSettings: UserSettings = {
   age: 30,
   bodyComposition: 'male',
   defaultIntensity: null,
+  weekStartDay: 0,
 };
 
 describe('getEffectiveDailyTarget', () => {

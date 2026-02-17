@@ -602,6 +602,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
         onGoToToday={dateNav.goToToday}
         datesWithData={datesWithWeights}
         highlightClassName="text-purple-600 dark:text-purple-400 font-semibold"
+        weekStartDay={settings.weekStartDay}
       />
 
       {/* Weight Items Table */}

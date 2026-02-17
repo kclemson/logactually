@@ -726,6 +726,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
         onGoToToday={dateNav.goToToday}
         datesWithData={datesWithFood}
         highlightClassName="text-blue-600 dark:text-blue-400 font-semibold"
+        weekStartDay={settings.weekStartDay}
       />
 
       <section>

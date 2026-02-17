@@ -134,6 +134,19 @@ export function PreferencesSection({ settings, updateSettings }: PreferencesSect
             </button>
           </div>
 
+          {/* Calorie Burn Estimates */}
+          {showWeights && (
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">Show estimated calorie burn</p>
+              <button
+                onClick={() => setCalorieBurnDialogOpen(true)}
+                className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors"
+              >
+                {settings.calorieBurnEnabled ? 'Edit' : 'Set up'}
+              </button>
+            </div>
+          )}
+
           {/* Weight Units */}
           {showWeights && (
             <div className="flex items-center justify-between">
@@ -153,18 +166,22 @@ export function PreferencesSection({ settings, updateSettings }: PreferencesSect
             </div>
           )}
 
-          {/* Calorie Burn Estimates */}
-          {showWeights && (
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">Show estimated calorie burn</p>
-              <button
-                onClick={() => setCalorieBurnDialogOpen(true)}
-                className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors"
-              >
-                {settings.calorieBurnEnabled ? 'Edit' : 'Set up'}
-              </button>
-            </div>
-          )}
+          {/* First day of week */}
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">First day of week</p>
+            <Select value={String(settings.weekStartDay)} onValueChange={(v) => updateSettings({ weekStartDay: Number(v) as UserSettings['weekStartDay'] })}>
+              <SelectTrigger className="w-[130px] h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, i) => (
+                  <SelectItem key={i} value={String(i)}>
+                    {day}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </CollapsibleSection>
 

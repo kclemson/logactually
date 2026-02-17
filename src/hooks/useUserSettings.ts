@@ -26,6 +26,7 @@ export interface UserSettings {
   age: number | null;
   bodyComposition: 'female' | 'male' | null;
   defaultIntensity: number | null;
+  weekStartDay: 0 | 1 | 2 | 3 | 4 | 5 | 6;
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
@@ -48,6 +49,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   age: null,
   bodyComposition: null,
   defaultIntensity: null,
+  weekStartDay: 0,
 };
 
 export function useUserSettings() {
