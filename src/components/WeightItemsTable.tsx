@@ -165,6 +165,16 @@ export function WeightItemsTable({
     };
   }, [items, weightUnit]);
 
+  // When every item on the day is cardio, hide the Sets/Reps/Weight headers & totals
+  const allCardio = useMemo(() => {
+    if (items.length === 0) return false;
+    return items.every(item => {
+      const hasDuration = (item.duration_minutes ?? 0) > 0;
+      const hasDistance = (item.distance_miles ?? 0) > 0;
+      return item.weight_lbs === 0 && (hasDuration || hasDistance || isCardioExercise(item.exercise_key));
+    });
+  }, [items]);
+
   const hasEntryDeletion = entryBoundaries && onDeleteEntry;
   const showEntryDividers = entryBoundaries && entryBoundaries.length > 0;
 
@@ -210,14 +220,20 @@ export function WeightItemsTable({
           </Tooltip>
         )}
       </span>
-      <span className="px-1 text-heading text-center">{totals.sets}</span>
-      <span className="px-1 text-heading text-center">{totals.reps}</span>
-      <span 
-        className="px-1 text-heading text-center text-xs"
-        title="Training volume – the total weight lifted (sets × reps × weight)"
-      >
-        {Math.round(totals.volume).toLocaleString()}
-      </span>
+      {allCardio ? (
+        <span className="col-span-3"></span>
+      ) : (
+        <>
+          <span className="px-1 text-heading text-center">{totals.sets}</span>
+          <span className="px-1 text-heading text-center">{totals.reps}</span>
+          <span 
+            className="px-1 text-heading text-center text-xs"
+            title="Training volume – the total weight lifted (sets × reps × weight)"
+          >
+            {Math.round(totals.volume).toLocaleString()}
+          </span>
+        </>
+      )}
       {hasDeleteColumn && (
         onDeleteAll ? (
           <DeleteAllDialog itemLabel="exercises" onConfirm={onDeleteAll} />
@@ -246,9 +262,15 @@ export function WeightItemsTable({
         <div className={cn('grid gap-0.5 text-muted-foreground items-center text-xs', gridCols)}>
           {selectable && <span></span>}
           <span className={cn("px-1", showEntryDividers && "pl-4")}></span>
-          <span className="px-1 text-center">Sets</span>
-          <span className="px-1 text-center">Reps</span>
-          <span className="px-1 text-center">{getWeightUnitLabel(weightUnit)}</span>
+          {allCardio ? (
+            <span className="col-span-3"></span>
+          ) : (
+            <>
+              <span className="px-1 text-center">Sets</span>
+              <span className="px-1 text-center">Reps</span>
+              <span className="px-1 text-center">{getWeightUnitLabel(weightUnit)}</span>
+            </>
+          )}
           {hasDeleteColumn && <span></span>}
         </div>
       )}
@@ -258,9 +280,15 @@ export function WeightItemsTable({
         <div className={cn('grid gap-0.5 items-center text-muted-foreground', compact ? 'text-[10px]' : 'text-[10px]', gridCols)}>
           {selectable && <span></span>}
           <span></span>
-          <span className="px-1 text-center">Sets</span>
-          <span className="px-1 text-center">Reps</span>
-          <span className="px-1 text-center">{getWeightUnitLabel(weightUnit)}</span>
+          {allCardio ? (
+            <span className="col-span-3"></span>
+          ) : (
+            <>
+              <span className="px-1 text-center">Sets</span>
+              <span className="px-1 text-center">Reps</span>
+              <span className="px-1 text-center">{getWeightUnitLabel(weightUnit)}</span>
+            </>
+          )}
           {hasDeleteColumn && <span></span>}
         </div>
       )}
