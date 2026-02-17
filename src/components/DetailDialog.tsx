@@ -17,6 +17,7 @@ export interface FieldConfig {
   unit?: string;
   readOnly?: boolean;
   options?: { value: string; label: string }[];
+  optgroups?: { label: string; options: { value: string; label: string }[] }[];
   min?: number;
   max?: number;
   step?: number;
@@ -105,9 +106,17 @@ export function DetailDialog({
   const displayValue = (field: FieldConfig) => {
     const val = values[field.key];
     if (val === null || val === undefined || val === '') return '—';
-    if (field.type === 'select' && field.options) {
-      const opt = field.options.find(o => o.value === String(val));
-      return opt ? opt.label : String(val);
+    if (field.type === 'select') {
+      if (field.optgroups) {
+        for (const group of field.optgroups) {
+          const opt = group.options.find(o => o.value === String(val));
+          if (opt) return opt.label;
+        }
+      }
+      if (field.options) {
+        const opt = field.options.find(o => o.value === String(val));
+        return opt ? opt.label : String(val);
+      }
     }
     if (field.unit) return `${val} ${field.unit}`;
     return String(val);
@@ -142,9 +151,19 @@ export function DetailDialog({
                           className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
                           <option value="">—</option>
-                          {field.options?.map(opt => (
-                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                          ))}
+                          {field.optgroups ? (
+                            field.optgroups.map(group => (
+                              <optgroup key={group.label} label={group.label}>
+                                {group.options.map(opt => (
+                                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                ))}
+                              </optgroup>
+                            ))
+                          ) : (
+                            field.options?.map(opt => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))
+                          )}
                         </select>
                       ) : (
                         <Input
@@ -216,15 +235,19 @@ export function buildFoodDetailFields(item: Record<string, any>): FieldConfig[] 
   ];
 }
 
-import { EXERCISE_MUSCLE_GROUPS, EXERCISE_SUBTYPE_DISPLAY, isCardioExercise, KNOWN_METADATA_KEYS } from '@/lib/exercise-metadata';
+import { EXERCISE_MUSCLE_GROUPS, EXERCISE_SUBTYPE_DISPLAY, isCardioExercise, KNOWN_METADATA_KEYS, EXERCISE_GROUPS, getExerciseDisplayName } from '@/lib/exercise-metadata';
 
-function buildExerciseKeyOptions(): { value: string; label: string }[] {
-  const opts = Object.keys(EXERCISE_MUSCLE_GROUPS).map(key => ({
-    value: key,
-    label: key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+function buildExerciseKeyOptgroups(): { label: string; options: { value: string; label: string }[] }[] {
+  const groups = EXERCISE_GROUPS.map(group => ({
+    label: group.label,
+    options: group.keys.map(key => ({
+      value: key,
+      label: getExerciseDisplayName(key),
+    })),
   }));
-  opts.push({ value: 'other', label: 'Other' });
-  return opts;
+  // Add "Other" to the last group
+  groups[groups.length - 1].options.push({ value: 'other', label: 'Other' });
+  return groups;
 }
 
 function buildSubtypeOptions(exerciseKey: string): { value: string; label: string }[] | undefined {
@@ -249,7 +272,7 @@ export function buildExerciseDetailFields(item: Record<string, any>): FieldConfi
 
   const fields: FieldConfig[] = [
     { key: 'description', label: 'Name', type: 'text', section: 'Basic' },
-    { key: 'exercise_key', label: 'Exercise Type', type: 'select', options: buildExerciseKeyOptions(), section: 'Basic' },
+    { key: 'exercise_key', label: 'Exercise type', type: 'select', optgroups: buildExerciseKeyOptgroups(), section: 'Basic' },
   ];
 
   if (subtypeOptions) {

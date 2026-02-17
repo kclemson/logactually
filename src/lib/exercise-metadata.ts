@@ -102,6 +102,107 @@ export const EXERCISE_MUSCLE_GROUPS: Record<string, ExerciseMuscles> = {
   functional_strength: { primary: 'Full Body' },
 };
 
+// Human-friendly display names (sentence case, natural phrasing)
+export const EXERCISE_DISPLAY_NAMES: Record<string, string> = {
+  // Upper body – push
+  bench_press: 'Bench press',
+  incline_bench_press: 'Incline bench press',
+  decline_bench_press: 'Decline bench press',
+  dumbbell_press: 'Dumbbell press',
+  chest_fly: 'Chest fly',
+  shoulder_press: 'Shoulder press',
+  lateral_raise: 'Lateral raise',
+  front_raise: 'Front raise',
+  tricep_pushdown: 'Tricep pushdown',
+  tricep_extension: 'Tricep extension',
+  dips: 'Dips',
+  // Upper body – pull
+  lat_pulldown: 'Lat pulldown',
+  pull_up: 'Pull-up',
+  seated_row: 'Seated row',
+  bent_over_row: 'Bent-over row',
+  dumbbell_row: 'Dumbbell row',
+  t_bar_row: 'T-bar row',
+  face_pull: 'Face pull',
+  rear_delt_fly: 'Rear delt fly',
+  bicep_curl: 'Bicep curl',
+  hammer_curl: 'Hammer curl',
+  preacher_curl: 'Preacher curl',
+  cable_curl: 'Cable curl',
+  diverging_low_row: 'Diverging low row',
+  shrugs: 'Shrugs',
+  // Lower body
+  squat: 'Squat',
+  front_squat: 'Front squat',
+  goblet_squat: 'Goblet squat',
+  leg_press: 'Leg press',
+  hack_squat: 'Hack squat',
+  leg_extension: 'Leg extension',
+  leg_curl: 'Leg curl',
+  seated_leg_curl: 'Seated leg curl',
+  romanian_deadlift: 'Romanian deadlift',
+  hip_thrust: 'Hip thrust',
+  calf_raise: 'Calf raise',
+  seated_calf_raise: 'Seated calf raise',
+  lunge: 'Lunge',
+  bulgarian_split_squat: 'Bulgarian split squat',
+  step_up: 'Step-up',
+  // Compound
+  deadlift: 'Deadlift',
+  sumo_deadlift: 'Sumo deadlift',
+  trap_bar_deadlift: 'Trap bar deadlift',
+  clean: 'Clean',
+  snatch: 'Snatch',
+  kettlebell_swing: 'Kettlebell swing',
+  // Core
+  cable_crunch: 'Cable crunch',
+  hanging_leg_raise: 'Hanging leg raise',
+  ab_wheel: 'Ab wheel',
+  plank: 'Plank',
+  russian_twist: 'Russian twist',
+  sit_up: 'Sit-up',
+  crunch: 'Crunch',
+  // Machines
+  chest_press_machine: 'Chest press (machine)',
+  shoulder_press_machine: 'Shoulder press (machine)',
+  pec_deck: 'Pec deck',
+  cable_crossover: 'Cable crossover',
+  smith_machine_squat: 'Squat (Smith machine)',
+  smith_machine_bench: 'Bench press (Smith machine)',
+  hip_abduction: 'Hip abduction',
+  hip_adduction: 'Hip adduction',
+  glute_kickback: 'Glute kickback',
+  assisted_dip_machine: 'Assisted dips (machine)',
+  assisted_pullup_machine: 'Assisted pull-up (machine)',
+  // Cardio
+  walk_run: 'Walk/run',
+  cycling: 'Cycling',
+  elliptical: 'Elliptical',
+  rowing: 'Rowing',
+  stair_climber: 'Stair climber',
+  swimming: 'Swimming',
+  jump_rope: 'Jump rope',
+  // Other
+  functional_strength: 'Functional strength',
+};
+
+// Ordered groups for dropdown rendering
+export const EXERCISE_GROUPS: { label: string; keys: string[] }[] = [
+  { label: 'Upper body – push', keys: ['bench_press', 'incline_bench_press', 'decline_bench_press', 'dumbbell_press', 'chest_fly', 'shoulder_press', 'lateral_raise', 'front_raise', 'tricep_pushdown', 'tricep_extension', 'dips'] },
+  { label: 'Upper body – pull', keys: ['lat_pulldown', 'pull_up', 'seated_row', 'bent_over_row', 'dumbbell_row', 't_bar_row', 'face_pull', 'rear_delt_fly', 'bicep_curl', 'hammer_curl', 'preacher_curl', 'cable_curl', 'diverging_low_row', 'shrugs'] },
+  { label: 'Lower body', keys: ['squat', 'front_squat', 'goblet_squat', 'leg_press', 'hack_squat', 'leg_extension', 'leg_curl', 'seated_leg_curl', 'romanian_deadlift', 'hip_thrust', 'calf_raise', 'seated_calf_raise', 'lunge', 'bulgarian_split_squat', 'step_up'] },
+  { label: 'Compound', keys: ['deadlift', 'sumo_deadlift', 'trap_bar_deadlift', 'clean', 'snatch', 'kettlebell_swing'] },
+  { label: 'Core', keys: ['cable_crunch', 'hanging_leg_raise', 'ab_wheel', 'plank', 'russian_twist', 'sit_up', 'crunch'] },
+  { label: 'Machines', keys: ['chest_press_machine', 'shoulder_press_machine', 'pec_deck', 'cable_crossover', 'smith_machine_squat', 'smith_machine_bench', 'hip_abduction', 'hip_adduction', 'glute_kickback', 'assisted_dip_machine', 'assisted_pullup_machine'] },
+  { label: 'Cardio', keys: ['walk_run', 'cycling', 'elliptical', 'rowing', 'stair_climber', 'swimming', 'jump_rope'] },
+  { label: 'Other', keys: ['functional_strength'] },
+];
+
+// Helper to get display name with fallback
+export function getExerciseDisplayName(key: string): string {
+  return EXERCISE_DISPLAY_NAMES[key] || key.replace(/_/g, ' ');
+}
+
 // Subtype display names: maps exercise_subtype values to user-friendly labels
 export const EXERCISE_SUBTYPE_DISPLAY: Record<string, string> = {
   walking: 'Walking',
