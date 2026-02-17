@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils';
 import { isCardioExercise } from '@/lib/exercise-metadata';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useHasHover } from '@/hooks/use-has-hover';
-import { getTargetDotColor, getEffectiveDailyTarget, getExerciseAdjustedTarget, usesActualExerciseBurns, getCalorieTargetComponents } from '@/lib/calorie-target';
+import { getTargetDotColor, getEffectiveDailyTarget, getExerciseAdjustedTarget, usesActualExerciseBurns, getCalorieTargetComponents, computeWeekRollup } from '@/lib/calorie-target';
 import { useDailyCalorieBurn } from '@/hooks/useDailyCalorieBurn';
 import { CalorieTargetRollup } from '@/components/CalorieTargetRollup';
 import { CalorieTargetTooltipContent } from '@/components/CalorieTargetTooltipContent';
@@ -253,6 +253,17 @@ const History = () => {
     const intake = Math.round(summary.totalCalories);
     const dayLabel = format(day, 'EEE, MMM d');
 
+    // Compute week rollup for this day
+    const wso = (settings.weekStartDay ?? 0) as 0 | 1 | 2 | 3 | 4 | 5 | 6;
+    const ws = startOfWeek(day, { weekStartsOn: wso });
+    const we = endOfWeek(day, { weekStartsOn: wso });
+    const weekStartStr = format(ws, 'yyyy-MM-dd');
+    const weekEndStr = format(we, 'yyyy-MM-dd');
+
+    const foodTotals = daySummaries.map(s => ({ date: s.date, totalCalories: s.totalCalories }));
+    const weekRollup = computeWeekRollup(foodTotals, weekStartStr, weekEndStr, baseTarget, usesBurns, burnByDate);
+    const weekLabel = weekRollup ? `Week of ${format(ws, 'MMM d')}-${format(we, 'd')}` : undefined;
+
     return (
       <CalorieTargetTooltipContent
         label={dayLabel}
@@ -260,6 +271,8 @@ const History = () => {
         target={target}
         burn={burn}
         targetComponents={targetComponents}
+        weekLabel={weekLabel}
+        weekRollup={weekRollup}
       />
     );
   };

@@ -284,3 +284,52 @@ export function computeCalorieRollup(
     dayCount: eligible.length,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Week-scoped rollup (for calendar day tooltips)
+// ---------------------------------------------------------------------------
+
+/**
+ * Like computeCalorieRollup but scoped to a specific week date range
+ * instead of a trailing window from today.
+ */
+export function computeWeekRollup(
+  foodTotals: { date: string; totalCalories: number }[],
+  weekStart: string,
+  weekEnd: string,
+  baseTarget: number,
+  usesBurns: boolean,
+  burnByDate: Map<string, number>,
+): RollupResult | null {
+  const today = format(new Date(), 'yyyy-MM-dd');
+
+  const eligible = foodTotals.filter(
+    d => d.date >= weekStart && d.date <= weekEnd && d.date < today
+  );
+
+  if (eligible.length < 2) return null;
+
+  let totalIntake = 0;
+  let totalTarget = 0;
+  let totalBurn = 0;
+
+  for (const day of eligible) {
+    totalIntake += day.totalCalories;
+    const burn = usesBurns ? (burnByDate.get(day.date) ?? 0) : 0;
+    totalBurn += burn;
+    const dayTarget = usesBurns
+      ? getExerciseAdjustedTarget(baseTarget, burn)
+      : baseTarget;
+    totalTarget += dayTarget;
+  }
+
+  const avgIntake = Math.round(totalIntake / eligible.length);
+  const avgTarget = totalTarget / eligible.length;
+
+  return {
+    avgIntake,
+    avgBurn: usesBurns ? Math.round(totalBurn / eligible.length) : 0,
+    dotColor: getRollupDotColor(avgIntake, avgTarget),
+    dayCount: eligible.length,
+  };
+}
