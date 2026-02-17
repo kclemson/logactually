@@ -277,9 +277,8 @@ const History = () => {
                 )}
               </>
             )}
-          </div>
-          <div className="border-t border-primary-foreground/20 pt-1 pl-2 tabular-nums">
-            {target.toLocaleString()} {isExerciseAdjusted ? 'adjusted daily calorie target' : 'daily calorie target'}
+            <div className="text-right border-t border-primary-foreground/20 pt-0.5">= {target.toLocaleString()}</div>
+            <div className="text-[9px] italic opacity-60 border-t border-primary-foreground/20 pt-0.5">{isExerciseAdjusted ? 'adjusted daily calorie target' : 'daily calorie target'}</div>
           </div>
         </div>
       );
