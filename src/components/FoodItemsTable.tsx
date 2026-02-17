@@ -367,7 +367,7 @@ export function FoodItemsTable({
                       onSave={(newName) => onUpdateGroupName?.(boundary.entryId, newName)}
                       readOnly={isReadOnly}
                       onReadOnlyAttempt={triggerOverlay}
-                      className={cn("pl-1 pr-0 py-1 line-clamp-1 shrink min-w-0", compact && "text-sm")}
+                      className={cn("pl-1 pr-0 py-1 truncate shrink min-w-0", compact && "text-sm")}
                       title={groupName}
                     >
                       {(() => {
@@ -534,7 +534,7 @@ export function FoodItemsTable({
                       onSave={(newName) => onUpdateGroupName?.(boundary.entryId, newName)}
                       readOnly={isReadOnly}
                       onReadOnlyAttempt={triggerOverlay}
-                      className={cn("pl-1 pr-0 py-1 font-semibold line-clamp-1 shrink min-w-0", compact && "text-sm")}
+                      className={cn("pl-1 pr-0 py-1 font-semibold truncate shrink min-w-0", compact && "text-sm")}
                       title={groupName}
                     >
                       {(() => {
