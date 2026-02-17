@@ -57,7 +57,10 @@ export function useDailyCalorieBurn(days: number, options?: { force?: boolean })
           exercisesByDate[point.date] = new Set();
         }
 
-        exercisesByDate[point.date].add(exercise.exercise_key);
+        const compositeKey = exercise.exercise_subtype
+          ? `${exercise.exercise_key}::${exercise.exercise_subtype}`
+          : exercise.exercise_key;
+        exercisesByDate[point.date].add(compositeKey);
 
         if (result.type === 'exact') {
           byDate[point.date].low += result.value;
@@ -78,7 +81,8 @@ export function useDailyCalorieBurn(days: number, options?: { force?: boolean })
         let cardioCount = 0;
         let strengthCount = 0;
         keys.forEach(k => {
-          if (isCardioExercise(k)) cardioCount++;
+          const baseKey = k.includes('::') ? k.split('::')[0] : k;
+          if (isCardioExercise(baseKey)) cardioCount++;
           else strengthCount++;
         });
         return {

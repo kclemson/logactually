@@ -2,6 +2,7 @@ import { useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LabelList } from "recharts";
 import { Card, CardContent, CardHeader, ChartTitle, ChartSubtitle } from "@/components/ui/card";
 import { useHasHover } from "@/hooks/use-has-hover";
+import { cn } from "@/lib/utils";
 
 export interface CalorieBurnChartData {
   rawDate: string;
@@ -122,10 +123,10 @@ export const CalorieBurnChart = ({
   };
 
   return (
-    <Card className="border-0 shadow-none relative">
+    <Card className={cn("border-0 shadow-none relative", isTouchDevice && activeBarIndex !== null && "z-50")}>
       {isTouchDevice && activeBarIndex !== null && (
         <div
-          className="fixed inset-0 z-10"
+          className="fixed inset-0 z-30"
           onClick={() => setActiveBarIndex(null)}
         />
       )}
