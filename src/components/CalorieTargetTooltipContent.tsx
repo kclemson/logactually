@@ -1,4 +1,4 @@
-import { getTargetDotColor, getRollupDotColor, type CalorieTargetComponents, type RollupResult } from '@/lib/calorie-target';
+import { getTargetDotColor, DAILY_GREEN_MAX, DAILY_AMBER_MAX, ROLLUP_GREEN_MAX, ROLLUP_AMBER_MAX, type CalorieTargetComponents, type RollupResult } from '@/lib/calorie-target';
 
 interface CalorieTargetTooltipContentProps {
   label: string;
@@ -8,6 +8,29 @@ interface CalorieTargetTooltipContentProps {
   targetComponents: CalorieTargetComponents | null;
   weekLabel?: string;
   weekRollup?: RollupResult | null;
+}
+
+/** Inline 4-column legend row */
+function DailyLegend() {
+  return (
+    <div className="text-[10px] tabular-nums grid grid-cols-[auto_auto_auto_auto] gap-x-2 items-center">
+      <div>daily:</div>
+      <div><span className="text-green-400">●</span> ≤{DAILY_GREEN_MAX}%</div>
+      <div><span className="text-amber-400">●</span> ≤{DAILY_AMBER_MAX}%</div>
+      <div><span className="text-rose-400">●</span> &gt;{DAILY_AMBER_MAX}%</div>
+    </div>
+  );
+}
+
+function WeeklyLegend() {
+  return (
+    <div className="text-[10px] tabular-nums grid grid-cols-[auto_auto_auto_auto] gap-x-2 items-center">
+      <div>weekly:</div>
+      <div><span className="text-green-400">●</span> {ROLLUP_GREEN_MAX === 0 ? 'under' : `≤${ROLLUP_GREEN_MAX}%`}</div>
+      <div><span className="text-amber-400">●</span> ≤{ROLLUP_AMBER_MAX}%</div>
+      <div><span className="text-rose-400">●</span> &gt;{ROLLUP_AMBER_MAX}%</div>
+    </div>
+  );
 }
 
 export function CalorieTargetTooltipContent({
@@ -23,26 +46,13 @@ export function CalorieTargetTooltipContent({
 
   return (
     <div className="space-y-1">
-      {/* Dot legend */}
-      <div className="text-[10px] tabular-nums grid grid-cols-[auto_auto_auto_auto] gap-x-2 items-center">
-        <div>daily:</div>
-        <div><span className="text-green-400">●</span> ≤2.5%</div>
-        <div><span className="text-amber-400">●</span> ≤10%</div>
-        <div><span className="text-rose-400">●</span> &gt;10%</div>
-        {weekRollup && weekLabel && (
-          <>
-            <div>weekly:</div>
-            <div><span className="text-green-400">●</span> under</div>
-            <div><span className="text-amber-400">●</span> ≤5%</div>
-            <div><span className="text-rose-400">●</span> &gt;5%</div>
-          </>
-        )}
-      </div>
+      {/* Daily legend */}
+      <DailyLegend />
 
       {/* Day header with intake and dot */}
       {label && (
         <div className="opacity-75">
-          {label}: <span className="text-blue-400">{intake.toLocaleString()}</span> cal <span className={dotColor}>●</span>
+          {label}: <span className="text-blue-400">{intake.toLocaleString()}</span> cal <span className={`opacity-100 ${dotColor}`}>●</span>
         </div>
       )}
 
@@ -68,8 +78,9 @@ export function CalorieTargetTooltipContent({
         return (
         <>
           <div className="border-t border-muted-foreground/30 my-1" />
+          <WeeklyLegend />
           <div className="opacity-75">
-            {weekLabel}: <span className="text-blue-400">{weekRollup.avgIntake.toLocaleString()}</span> avg <span className={weekRollup.dotColor}>●</span>
+            {weekLabel}: <span className="text-blue-400">{weekRollup.avgIntake.toLocaleString()}</span> avg <span className={`opacity-100 ${weekRollup.dotColor}`}>●</span>
           </div>
           {targetComponents ? (
             <TargetEquation targetComponents={targetComponents} target={weeklyTarget} burn={weekRollup.avgBurn} isWeekly />
