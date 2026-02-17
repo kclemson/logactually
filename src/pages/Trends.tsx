@@ -417,9 +417,9 @@ const Trends = () => {
                 {calorieBurnChartData.length > 0 && (() => {
                   const bmr = computeAbsoluteBMR(settings);
                   const sedentaryTDEE = bmr != null ? Math.round(bmr * ACTIVITY_MULTIPLIERS.sedentary) : null;
-                  const subtitle = sedentaryTDEE != null
-                    ? `Total daily energy expenditure: ~${sedentaryTDEE.toLocaleString()}`
-                    : "Set bio in Settings for precision";
+                    const subtitle = sedentaryTDEE != null
+                      ? `Daily expenditure (excl. exercise): ~${sedentaryTDEE.toLocaleString()}`
+                      : "Set bio in Settings for precision";
                   return (
                     <CalorieBurnChart
                       title="Estimated Daily Calorie Burn"
