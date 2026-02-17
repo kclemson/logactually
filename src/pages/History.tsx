@@ -276,6 +276,11 @@ const History = () => {
     return (
       <div className="space-y-1">
         <div className="font-medium">{dayLabel}</div>
+        <div className="space-y-0.5">
+          <div><span className="text-green-400">●</span> within 2.5% of target</div>
+          <div><span className="text-amber-400">●</span> up to 10% over</div>
+          <div><span className="text-rose-400">●</span> more than 10% over</div>
+        </div>
         <div>
           {intake.toLocaleString()} / {target.toLocaleString()} cal target
           {usesBurns && burn > 0 && (
