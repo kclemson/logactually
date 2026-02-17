@@ -1,15 +1,13 @@
 
-
 # Update calorie burn chart subtitle
 
 ## Change
 One line change in `src/pages/Trends.tsx` (line 421):
 
-**From:** `Total daily energy expenditure: ~1,497`
-**To:** `Daily expenditure (excl. exercise): ~1,497`
+**From:** `Daily expenditure (excl. exercise): ~1,497`
+**To:** `TDEE (excluding exercise): ~1,497`
 
-This makes it immediately clear that the subtitle number does NOT include exercise calories, removing the potential confusion for users unfamiliar with TDEE terminology.
+Shorter label fits on one line on mobile, and the tooltip already explains what TDEE means via the "show the math" equation.
 
 ## File modified
-- `src/pages/Trends.tsx` -- subtitle string update only
-
+- `src/pages/Trends.tsx` -- subtitle string only
