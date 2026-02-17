@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
-import { DetailDialog, buildFoodDetailFields } from '@/components/DetailDialog';
+import { DetailDialog, buildFoodDetailFields, FOOD_HIDE_WHEN_ZERO } from '@/components/DetailDialog';
 import { useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { format, isToday, parseISO } from 'date-fns';
@@ -80,7 +80,11 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   const [saveSuggestionItems, setSaveSuggestionItems] = useState<FoodItem[]>([]);
 
   // Detail dialog state
-  const [detailDialogItem, setDetailDialogItem] = useState<{ index: number; entryId: string } | null>(null);
+  const [detailDialogItem, setDetailDialogItem] = useState<
+    | { mode: 'single'; index: number; entryId: string }
+    | { mode: 'group'; startIndex: number; endIndex: number; entryId: string }
+    | null
+  >(null);
   
   // Date is stable for this component instance - derived from props, no state needed
   const dateStr = initialDate;
@@ -467,8 +471,12 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     });
   };
 
-  const handleShowDetails = useCallback((entryId: string, itemIndex: number) => {
-    setDetailDialogItem({ index: itemIndex, entryId });
+  const handleShowDetails = useCallback((entryId: string, startIndex: number, endIndex?: number) => {
+    if (endIndex !== undefined && endIndex > startIndex) {
+      setDetailDialogItem({ mode: 'group', startIndex, endIndex, entryId });
+    } else {
+      setDetailDialogItem({ mode: 'single', index: startIndex, entryId });
+    }
   }, []);
 
   // Handle saving the meal - receives selected items directly from dialog
@@ -607,9 +615,15 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   }, [updateItemBatch, findEntryForIndex, getItemsForEntry, saveEntry]);
 
   const handleDetailSave = useCallback((updates: Record<string, any>) => {
-    if (!detailDialogItem) return;
+    if (!detailDialogItem || detailDialogItem.mode !== 'single') return;
     handleItemUpdateBatch(detailDialogItem.index, updates as Partial<FoodItem>);
     setDetailDialogItem(null);
+  }, [detailDialogItem, handleItemUpdateBatch]);
+
+  const handleDetailSaveItem = useCallback((itemIndex: number, updates: Record<string, any>) => {
+    if (!detailDialogItem || detailDialogItem.mode !== 'group') return;
+    const globalIndex = detailDialogItem.startIndex + itemIndex;
+    handleItemUpdateBatch(globalIndex, updates as Partial<FoodItem>);
   }, [detailDialogItem, handleItemUpdateBatch]);
 
   // Auto-save handler for item removal (called on delete)
@@ -838,6 +852,28 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
 
       {/* Detail Dialog for viewing/editing individual food items */}
       {detailDialogItem && (() => {
+        if (detailDialogItem.mode === 'group') {
+          const groupItems = displayItems.slice(detailDialogItem.startIndex, detailDialogItem.endIndex + 1);
+          if (groupItems.length === 0) return null;
+          const entry = entries.find(e => e.id === detailDialogItem.entryId);
+          const groupTitle = entry?.group_name || entry?.raw_input || groupItems[0].description;
+          return (
+            <DetailDialog
+              open={true}
+              onOpenChange={() => setDetailDialogItem(null)}
+              title={groupTitle}
+              fields={buildFoodDetailFields(groupItems[0])}
+              values={groupItems[0]}
+              onSave={handleDetailSave}
+              items={groupItems}
+              onSaveItem={handleDetailSaveItem}
+              buildFields={buildFoodDetailFields}
+              hideWhenZero={FOOD_HIDE_WHEN_ZERO}
+              readOnly={isReadOnly}
+            />
+          );
+        }
+        // Single item mode
         const item = displayItems[detailDialogItem.index];
         if (!item) return null;
         return (
@@ -848,6 +884,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
             fields={buildFoodDetailFields(item)}
             values={item}
             onSave={handleDetailSave}
+            hideWhenZero={FOOD_HIDE_WHEN_ZERO}
             readOnly={isReadOnly}
           />
         );
