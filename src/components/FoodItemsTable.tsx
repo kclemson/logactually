@@ -221,7 +221,7 @@ export function FoodItemsTable({
                     onPointerDownOutside={(e) => e.preventDefault()}
                   >
                     <CalorieTargetTooltipContent
-                      label="Total"
+                      label=""
                       intake={Math.round(totals.calories)}
                       target={dailyCalorieTarget}
                       burn={dailyBurn}
