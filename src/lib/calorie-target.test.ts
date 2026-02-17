@@ -325,10 +325,19 @@ describe('describeCalorieTarget', () => {
     expect(result).not.toContain('exercise');
   });
 
-  it('returns body stats + logged description', () => {
+  it('returns body stats + logged description with formula', () => {
     const s = { ...baseSettings, calorieTargetMode: 'body_stats' as const, activityLevel: 'logged' as const, dailyDeficit: 500 };
     const result = describeCalorieTarget(s);
-    expect(result).toContain('cal/day + exercise (from TDEE)');
+    expect(result).toContain('+ exercise - 500');
+    expect(result).toContain('cal/day');
+    expect(result).not.toContain('from TDEE');
+  });
+
+  it('returns body stats + logged description without deficit when 0', () => {
+    const s = { ...baseSettings, calorieTargetMode: 'body_stats' as const, activityLevel: 'logged' as const, dailyDeficit: 0 };
+    const result = describeCalorieTarget(s);
+    expect(result).toContain('+ exercise cal/day');
+    expect(result).not.toContain(' - ');
   });
 
   it('returns null when body stats lacks biometrics', () => {
