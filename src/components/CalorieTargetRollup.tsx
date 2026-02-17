@@ -29,39 +29,36 @@ export function CalorieTargetRollup({ settings, burnByDate, usesBurns }: Calorie
 
   const isExerciseAdjusted = components?.mode === 'exercise_adjusted';
 
-  const renderEquationBlock = (label: string, burnLabel: string, avgBurn: number) => {
+  const renderEquationBlock = (periodLabel: string, avgBurn: number) => {
     const total = isExerciseAdjusted
       ? (components!.baseTarget ?? 0) + avgBurn
       : components!.tdee + avgBurn - components!.deficit;
 
     return (
-      <div className="space-y-0.5">
-        <div>{label}:</div>
-        <div className="grid grid-cols-[auto_1fr] gap-x-2 pl-2 opacity-75 tabular-nums">
-          {isExerciseAdjusted ? (
-            <>
-              <div className="text-right">{components!.baseTarget!.toLocaleString()}</div>
-              <div className="text-[9px] italic opacity-60">(daily calorie target)</div>
-              <div className="text-right">+ {avgBurn.toLocaleString()}</div>
-              <div className="text-[9px] italic opacity-60">({burnLabel})</div>
-            </>
-          ) : (
-            <>
-              <div className="text-right">{components!.tdee.toLocaleString()}</div>
-              <div className="text-[9px] italic opacity-60">(total daily energy expenditure)</div>
-              <div className="text-right">+ {avgBurn.toLocaleString()}</div>
-              <div className="text-[9px] italic opacity-60">({burnLabel})</div>
-              {components!.deficit > 0 && (
-                <>
-                  <div className="text-right">- {components!.deficit.toLocaleString()}</div>
-                  <div className="text-[9px] italic opacity-60">(deficit configured in settings)</div>
-                </>
-              )}
-            </>
-          )}
-          <div className="text-right border-t border-muted-foreground/30 pt-0.5">= {Math.round(total).toLocaleString()}</div>
-          <div className="text-[9px] italic opacity-60 border-t border-muted-foreground/30 pt-0.5">avg target</div>
-        </div>
+      <div className="grid grid-cols-[auto_1fr] gap-x-2 pl-2 opacity-75 tabular-nums">
+        {isExerciseAdjusted ? (
+          <>
+            <div className="text-right">{components!.baseTarget!.toLocaleString()}</div>
+            <div className="text-[9px] italic opacity-60">(daily calorie target)</div>
+            <div className="text-right">+ {avgBurn.toLocaleString()}</div>
+            <div className="text-[9px] italic opacity-60">(avg calories burned {periodLabel})</div>
+          </>
+        ) : (
+          <>
+            <div className="text-right">{components!.tdee.toLocaleString()}</div>
+            <div className="text-[9px] italic opacity-60">(total daily energy expenditure)</div>
+            <div className="text-right">+ {avgBurn.toLocaleString()}</div>
+            <div className="text-[9px] italic opacity-60">(avg calories burned {periodLabel})</div>
+            {components!.deficit > 0 && (
+              <>
+                <div className="text-right">- {components!.deficit.toLocaleString()}</div>
+                <div className="text-[9px] italic opacity-60">(deficit configured in settings)</div>
+              </>
+            )}
+          </>
+        )}
+        <div className="text-right border-t border-muted-foreground/30 pt-0.5">= {Math.round(total).toLocaleString()}</div>
+        <div className="text-[9px] italic opacity-60 border-t border-muted-foreground/30 pt-0.5">avg target {periodLabel}</div>
       </div>
     );
   };
@@ -105,8 +102,8 @@ export function CalorieTargetRollup({ settings, burnByDate, usesBurns }: Calorie
             </div>
             {components ? (
               <div className="space-y-2">
-                {r7 && renderEquationBlock('7-day average calorie target', 'avg calories burned last 7 days', r7.avgBurn)}
-                {r30 && renderEquationBlock('30-day average calorie target', 'avg calories burned last 30 days', r30.avgBurn)}
+                {r7 && renderEquationBlock('last 7 days', r7.avgBurn)}
+                {r30 && renderEquationBlock('last 30 days', r30.avgBurn)}
               </div>
             ) : (
               targetDescription && <div>{targetDescription}</div>
