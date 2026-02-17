@@ -63,8 +63,8 @@ export function CalorieTargetTooltipContent({
           )}
           {(isExerciseAdjusted || !isMultiplier || targetComponents.deficit > 0) && (
             <>
-              <div className="text-right border-t border-primary-foreground/20 pt-0.5">= {target.toLocaleString()}</div>
-              <div className="text-[9px] italic opacity-60 border-t border-primary-foreground/20 pt-0.5">{isExerciseAdjusted ? 'adjusted daily calorie target' : 'daily calorie target'}</div>
+              <div className="text-right border-t border-muted-foreground/30 pt-0.5">= {target.toLocaleString()}</div>
+              <div className="text-[9px] italic opacity-60 border-t border-muted-foreground/30 pt-0.5">{isExerciseAdjusted ? 'adjusted daily calorie target' : 'daily calorie target'}</div>
             </>
           )}
         </div>
