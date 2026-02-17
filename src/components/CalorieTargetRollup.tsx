@@ -27,18 +27,31 @@ export function CalorieTargetRollup({ settings, burnByDate, usesBurns }: Calorie
   const components = getCalorieTargetComponents(settings);
   const targetDescription = !components ? describeCalorieTarget(settings) : null;
 
+  const isExerciseAdjusted = components?.mode === 'exercise_adjusted';
+
   const renderEquationBlock = (label: string, burnLabel: string, avgBurn: number) => (
     <div className="space-y-0.5">
       <div>{label}:</div>
       <div className="grid grid-cols-[auto_1fr] gap-x-2 pl-2 opacity-75 tabular-nums">
-        <div className="text-right">{components!.tdee.toLocaleString()}</div>
-        <div className="text-[9px] italic opacity-60">(total daily energy expenditure)</div>
-        <div className="text-right">+ {avgBurn.toLocaleString()}</div>
-        <div className="text-[9px] italic opacity-60">({burnLabel})</div>
-        {components!.deficit > 0 && (
+        {isExerciseAdjusted ? (
           <>
-            <div className="text-right">- {components!.deficit.toLocaleString()}</div>
-            <div className="text-[9px] italic opacity-60">(deficit configured in settings)</div>
+            <div className="text-right">{components!.baseTarget!.toLocaleString()}</div>
+            <div className="text-[9px] italic opacity-60">(daily calorie target)</div>
+            <div className="text-right">+ {avgBurn.toLocaleString()}</div>
+            <div className="text-[9px] italic opacity-60">({burnLabel})</div>
+          </>
+        ) : (
+          <>
+            <div className="text-right">{components!.tdee.toLocaleString()}</div>
+            <div className="text-[9px] italic opacity-60">(total daily energy expenditure)</div>
+            <div className="text-right">+ {avgBurn.toLocaleString()}</div>
+            <div className="text-[9px] italic opacity-60">({burnLabel})</div>
+            {components!.deficit > 0 && (
+              <>
+                <div className="text-right">- {components!.deficit.toLocaleString()}</div>
+                <div className="text-[9px] italic opacity-60">(deficit configured in settings)</div>
+              </>
+            )}
           </>
         )}
       </div>
