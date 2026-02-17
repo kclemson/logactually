@@ -42,43 +42,45 @@ export function EntryExpandedPanel({
 
   return (
     <div className={cn('grid gap-0.5', gridCols)}>
-      <div className="col-span-full pl-6 pt-2 pb-1 space-y-1.5">
-        {extraContent}
+      <div className="col-span-full pl-6 pr-4 pt-2 pb-1 flex items-end justify-between gap-2">
+        <div className="space-y-1.5">
+          {extraContent}
 
-        {/* "Logged as" line -- hidden when from a saved item or no raw input */}
-        {!isFromSaved && rawInput && (
-          <p className="text-xs text-muted-foreground italic">
-            Logged as: {rawInput}
-          </p>
-        )}
+          {/* "Logged as" line -- hidden when from a saved item or no raw input */}
+          {!isFromSaved && rawInput && (
+            <p className="text-xs text-muted-foreground italic">
+              Logged as: {rawInput}
+            </p>
+          )}
 
-        {isFromSaved ? (
-          <p className="text-xs text-muted-foreground italic">
-            From saved {typeLabel}:{' '}
-            {name ? (
-              <Link
-                to="/settings"
-                className="text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                {name}
-              </Link>
-            ) : (
-              <span>(deleted)</span>
-            )}
-          </p>
-        ) : onSaveAs && (
-          <button
-            onClick={onSaveAs}
-            className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-          >
-            Save as {typeLabel}
-          </button>
-        )}
+          {isFromSaved ? (
+            <p className="text-xs text-muted-foreground italic">
+              From saved {typeLabel}:{' '}
+              {name ? (
+                <Link
+                  to="/settings"
+                  className="text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  {name}
+                </Link>
+              ) : (
+                <span>(deleted)</span>
+              )}
+            </p>
+          ) : onSaveAs && (
+            <button
+              onClick={onSaveAs}
+              className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              Save as {typeLabel}
+            </button>
+          )}
+        </div>
 
         {onShowDetails && (
           <button
             onClick={onShowDetails}
-            className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+            className="text-xs text-blue-600 dark:text-blue-400 hover:underline shrink-0"
           >
             Details
           </button>
