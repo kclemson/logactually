@@ -1,55 +1,51 @@
 
 
-# Right-justify the "Details" link in the expanded panel
+# Move "Edit" button from header to footer
 
 ## Problem
 
-The "Details" link blends in with the other left-aligned content (raw input, save-as link), making it easy to miss.
+The "Edit" button sits in the top-right corner directly next to the dialog's X close button. On mobile this is a fat-finger hazard -- users intending to edit will accidentally close the dialog. Beyond the proximity issue, the header isn't the best place for this action: users naturally read the content first, then decide to edit, so the action belongs at the bottom of the flow.
 
-## Fix
+## Solution
 
-Wrap the existing left-aligned content and the "Details" button in a flex container with `justify-between`, so the left content stays left and "Details" floats to the bottom-right of the panel.
+Move the Edit button to a sticky footer bar at the bottom of the dialog. This means:
 
-### File: `src/components/EntryExpandedPanel.tsx`
+- **View mode**: footer shows a single "Edit" button (left-aligned or full-width)
+- **Edit mode**: footer shows "Cancel" and "Save" buttons (same spot, same footer)
+- **Header**: only contains the title and the X close button (standard Radix dialog pattern)
 
-Change the inner `div` (line 45) from a simple `space-y-1.5` column to a flex layout with two children:
+This puts the primary action in the thumb zone on mobile, eliminates the proximity issue with X, and creates a consistent footer area that's always the "action zone" regardless of mode.
 
-1. A left `div` containing `extraContent`, "Logged as", and "Save as" (the existing content minus Details)
-2. The "Details" button, self-aligned to the bottom-right
+## Technical details
+
+### File: `src/components/DetailDialog.tsx`
+
+**Header (lines 119-127)** -- remove the Edit button entirely:
 
 ```tsx
-<div className="col-span-full pl-6 pr-4 pt-2 pb-1 flex items-end justify-between gap-2">
-  <div className="space-y-1.5">
-    {extraContent}
-    {/* "Logged as" line */}
-    {!isFromSaved && rawInput && (
-      <p className="text-xs text-muted-foreground italic">
-        Logged as: {rawInput}
-      </p>
-    )}
-    {isFromSaved ? (
-      <p className="text-xs text-muted-foreground italic">
-        From saved {typeLabel}: ...
-      </p>
-    ) : onSaveAs && (
-      <button ...>Save as {typeLabel}</button>
-    )}
-  </div>
-
-  {onShowDetails && (
-    <button
-      onClick={onShowDetails}
-      className="text-xs text-blue-600 dark:text-blue-400 hover:underline shrink-0"
-    >
-      Details
-    </button>
-  )}
-</div>
+<DialogHeader className="px-4 pt-4 pb-2 flex-shrink-0">
+  <DialogTitle className="text-base">{title}</DialogTitle>
+</DialogHeader>
 ```
 
-Key changes:
-- Parent becomes `flex items-end justify-between` so Details anchors bottom-right
-- Added `pr-4` for right padding so the link doesn't hug the edge
-- Added `shrink-0` on the Details button so it never gets squeezed
-- No logic changes, just layout
+**Footer (currently only renders in edit mode, around line 155)** -- render in both modes:
+
+```tsx
+{!readOnly && (
+  <DialogFooter className="px-4 py-3 border-t flex-shrink-0">
+    {editing ? (
+      <>
+        <Button variant="outline" size="sm" onClick={cancelEdit}>Cancel</Button>
+        <Button size="sm" onClick={handleSave}>Save</Button>
+      </>
+    ) : (
+      <Button variant="outline" size="sm" onClick={enterEditMode} className="gap-1">
+        <Pencil className="h-3 w-3" /> Edit
+      </Button>
+    )}
+  </DialogFooter>
+)}
+```
+
+No logic changes -- just moving the Edit entry point from header to footer so it's always in the same action zone as Save/Cancel.
 
