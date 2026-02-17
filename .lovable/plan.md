@@ -1,36 +1,32 @@
 
 
-# Fix Estimated Exercise Calorie Burn tooltip width and spacing
+# Remove redundant "Delete this group" text link from expanded panel
 
-## Problem
+## Summary
 
-The `BurnTooltip` in `CalorieBurnChart.tsx` is a standalone tooltip component (not using `CompactChartTooltip`), so it missed the `w-max` fix. The exercise count string (e.g., "15 exercises (4 cardio, 11 strength)") is long and wraps awkwardly, and the tooltip feels cramped at the edges.
+Now that the grouped entry UI has a delete icon on the group header row (with its own confirmation dialog), the text-based "Delete this group (N items)" link in the expanded details panel is redundant. This removes that link while keeping the group header delete icon and its confirmation dialog intact.
 
 ## Changes
 
-**`src/components/trends/CalorieBurnChart.tsx`** -- line 55
+### 1. `src/components/EntryExpandedPanel.tsx`
+- Remove the `DeleteGroupDialog` import
+- Remove the `items` and `onDeleteEntry` props from the interface
+- Remove the `DeleteGroupDialog` rendering block (lines 84-89)
+- Since those were the only reason for the `flex items-center justify-between` wrapper, simplify the layout: the saved-item info / "Save as" button no longer needs the justify-between wrapper
+- Update the JSDoc comment
 
-1. Add `w-max` to the tooltip container so it sizes to its content (same fix as `CompactChartTooltip`)
-2. Increase horizontal padding from `px-2` to `px-3` to add breathing room at the edges
-3. Shrink the exercise count line from `text-[10px]` to `text-[9px]` since it's supplementary info and the longest line
+### 2. `src/components/FoodItemsTable.tsx`
+- Stop passing `items` and `onDeleteEntry` to `EntryExpandedPanel`
 
-Change:
-```tsx
-<div className="rounded-md border border-border/50 bg-white dark:bg-slate-800 px-2 py-1 shadow-md">
-```
-To:
-```tsx
-<div className="rounded-md border border-border/50 bg-white dark:bg-slate-800 px-3 py-1 shadow-md w-max">
-```
+### 3. `src/components/WeightItemsTable.tsx`
+- Remove the unused `DeleteGroupDialog` import (line 30)
+- Stop passing `items` and `onDeleteEntry` to `EntryExpandedPanel`
 
-And on line 61, change:
-```tsx
-<p className="text-[10px] text-muted-foreground">{exerciseText}</p>
-```
-To:
-```tsx
-<p className="text-[9px] text-muted-foreground">{exerciseText}</p>
-```
+### 4. `src/components/DeleteGroupDialog.tsx`
+- Keep the file -- it may still be imported directly elsewhere or useful in the future. But if it's now fully unused after these changes, it can be deleted.
 
-Two class tweaks in one file.
+## What stays
 
+- The trash icon on group header rows in both Food and Weight tables
+- The confirmation AlertDialog triggered by that trash icon
+- All other expanded panel content ("Logged as", "From saved meal/routine", "Save as" button)
