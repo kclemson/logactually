@@ -1,123 +1,77 @@
 
 
-# Add multi-item mode to DetailDialog + styling fixes
+# Inline Collapsible Multi-Item Mode in DetailDialog
 
 ## What changes
 
-### 1. DetailDialog gains a multi-item list/drill-down mode
+### DetailDialog: replace drill-down with inline collapsible sections
 
-Currently `DetailDialog` accepts a single `values` object. For grouped food entries, clicking "Details" only shows the first item -- confusing when the group has multiple items.
+The current multi-item mode navigates away to a list, then drills into a separate view. Instead, multi-item mode will show all items as collapsible sections within the same dialog. Each section header shows the item's `description` -- the exact same text shown in the main table. No custom summary formatting, no divergence.
 
-The fix: add optional `items` and `onSaveItem` props alongside the existing single-item props. When `items` is provided with more than one entry, the dialog initially renders a **summary list** showing each item's name, portion, and calories. Tapping an item drills into the existing single-item detail/edit view for that specific item. A back arrow in the header returns to the list.
+- Expanding a section reveals the read-only field grid (reusing existing view-mode markup)
+- Each expanded section has an "Edit" button that switches just that section to edit mode inline
+- Save returns that section to read-only; other sections remain unaffected
+- Single-item mode is completely unchanged
 
-Internal state: `selectedIndex: number | null` -- `null` means "show list", a number means "show single item at that index".
+### WeightLog gets multi-item support
 
-### 2. Soften the bold value styling
-
-Remove `font-medium` from the read-only value spans (line 190) so values render at normal weight. The right-alignment and foreground color already differentiate them from labels.
-
-### 3. Hide zero-value secondary nutrition fields in view mode
-
-Fields like fiber, sugar, saturated fat, sodium, cholesterol are often 0. In view mode, filter them out when their value is 0/null/undefined. Edit mode still shows all fields so users can set values.
+Exercise entries from routines or comma-separated input produce multiple items sharing the same `entry_id`. These should use the same multi-item collapsible pattern, using the same `onShowDetails` signature update as food.
 
 ---
 
 ## Technical details
 
-### File: `src/components/DetailDialog.tsx`
+### `src/components/DetailDialog.tsx`
 
-**Props change:**
+**State changes:**
+- Replace `selectedIndex: number | null` with `expandedIndices: Set<number>` (which items are open, default: first item) and `editingIndex: number | null` (which item is in edit mode)
+- Reset both on dialog close
+
+**Multi-item rendering** (replaces the current list view at lines 180-200):
+
+```text
+items.map((item, idx) => {
+  // Collapsible header: just item.description + chevron
+  <button onClick={toggleExpanded(idx)}>
+    <span>{item.description}</span>
+    <ChevronDown rotated={!expanded} />
+  </button>
+
+  if expanded:
+    if editingIndex === idx:
+      // Reuse existing edit-mode grid (lines 210-256)
+      + Save/Cancel buttons inline
+    else:
+      // Reuse existing view-mode grid (lines 258-271)
+      + Edit button (unless readOnly)
+})
+```
+
+**Footer:** In multi-item mode, no global Edit button -- each section has its own. Footer is hidden entirely.
+
+**Key functions:**
+- `toggleExpanded(idx)`: add/remove from `expandedIndices` set; if collapsing the item being edited, cancel edit
+- `enterItemEdit(idx)`: set `editingIndex`, populate `draft` from `items[idx]`
+- `cancelItemEdit()`: clear `editingIndex` and `draft`
+- `saveItemEdit()`: compute diff, call `onSaveItem(editingIndex, updates)`, clear edit state (stay in dialog)
+
+**Removed:** `ChevronLeft`, `ChevronRight` imports (no longer needed for navigation). Add `ChevronDown` import instead.
+
+### `src/components/WeightItemsTable.tsx`
+
+Update `onShowDetails` prop type and call to pass boundary range:
 
 ```typescript
-export interface DetailDialogProps {
-  // ... existing props unchanged
-  
-  // NEW: multi-item mode (optional)
-  items?: Record<string, any>[];
-  onSaveItem?: (itemIndex: number, updates: Record<string, any>) => void;
-  buildFields?: (item: Record<string, any>) => FieldConfig[];
-  /** Fields to hide in view mode when value is 0/null */
-  hideWhenZero?: Set<string>;
-}
-```
-
-When `items` is provided with length > 1, the dialog uses multi-item mode. When length === 1 or `items` is not provided, it behaves exactly as today (single-item mode using `values`/`fields`/`onSave`).
-
-**New internal state:**
-
-```typescript
-const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-```
-
-Reset to `null` when dialog closes (alongside existing `editing`/`draft` resets).
-
-**List view rendering** (when `selectedIndex === null` and multi-item mode):
-
-- Title shows the group name (passed via existing `title` prop)
-- Body renders a compact list of items, each as a tappable row showing:
-  - Description (left)
-  - Calories (right)
-  - A subtle chevron or tap affordance
-- Tapping a row sets `selectedIndex` to that item's index
-- Footer: no Edit button (editing happens at item level)
-
-**Drill-down view** (when `selectedIndex !== null`):
-
-- Header shows a back button (ChevronLeft) + item name
-- Body/footer render exactly as current single-item view
-- `values` becomes `items[selectedIndex]`, `fields` becomes `buildFields(items[selectedIndex])`
-- On save, calls `onSaveItem(selectedIndex, updates)` instead of `onSave(updates)`
-- After save, returns to list view (`setSelectedIndex(null)`)
-
-**Styling fix** (line 190):
-
-```tsx
-// Before:
-<span className="text-sm font-medium text-right">
-
-// After:
-<span className="text-sm text-right">
-```
-
-**Zero-value hiding** in the view-mode loop:
-
-```tsx
-const FOOD_HIDE_WHEN_ZERO = new Set(['fiber', 'sugar', 'saturated_fat', 'sodium', 'cholesterol']);
-
-// In view-mode section rendering, filter:
-{sectionFields
-  .filter(field => {
-    if (!hideWhenZero?.has(field.key)) return true;
-    const val = values[field.key];
-    return val !== 0 && val !== null && val !== undefined;
-  })
-  .map(field => (...))}
-```
-
-### File: `src/components/FoodItemsTable.tsx`
-
-**Change `onShowDetails` call** (around line 1003-1008):
-
-Instead of passing `firstIdx`, pass the boundary's start and end indices so the parent can extract all items:
-
-```typescript
-onShowDetails={onShowDetails && currentEntryId
-  ? () => {
-      const boundary = entryBoundaries?.find(b => b.entryId === currentEntryId);
-      onShowDetails(currentEntryId!, boundary?.startIndex ?? index, boundary?.endIndex);
-    }
-  : undefined}
-```
-
-Update `onShowDetails` prop type to include optional `endIndex`:
-
-```typescript
+// Prop type change (line 88):
 onShowDetails?: (entryId: string, startIndex: number, endIndex?: number) => void;
+
+// Call site change (lines 799-804):
+onShowDetails(currentEntryId, boundary?.startIndex ?? index, boundary?.endIndex);
 ```
 
-### File: `src/pages/FoodLog.tsx`
+### `src/pages/WeightLog.tsx`
 
-**Update `handleShowDetails`** to detect multi-item vs single-item:
+**State change** (line 74):
 
 ```typescript
 const [detailDialogItem, setDetailDialogItem] = useState<
@@ -125,22 +79,23 @@ const [detailDialogItem, setDetailDialogItem] = useState<
   | { mode: 'group'; startIndex: number; endIndex: number; entryId: string }
   | null
 >(null);
-
-const handleShowDetails = useCallback((entryId: string, startIndex: number, endIndex?: number) => {
-  if (endIndex !== undefined && endIndex > startIndex) {
-    setDetailDialogItem({ mode: 'group', startIndex, endIndex, entryId });
-  } else {
-    setDetailDialogItem({ mode: 'single', index: startIndex, entryId });
-  }
-}, []);
 ```
 
-**Update DetailDialog rendering** (around line 840):
+**handleShowDetails** (line 345): detect multi vs single from boundary range
 
-- Single mode: same as today
-- Group mode: pass `items` array (slice of `displayItems`), `buildFields={buildFoodDetailFields}`, `onSaveItem` callback, and `hideWhenZero={FOOD_HIDE_WHEN_ZERO}`
+**handleDetailSaveItem** (new): for group mode, process per-item updates using existing `processExerciseSaveUpdates` + `flattenExerciseValues` pipeline, then call `updateSet.mutate`
 
-### File: `src/pages/WeightLog.tsx`
+**DetailDialog rendering** (lines 730-745): for group mode, pass `items` (slice of `displayItems` mapped through `flattenExerciseValues`), `buildFields={buildExerciseDetailFields}`, `onSaveItem={handleDetailSaveItem}`
 
-No changes needed -- exercise entries already pass single items. The multi-item mode is opt-in via the `items` prop.
+### `src/pages/FoodLog.tsx`
+
+No changes needed beyond what was already implemented in the previous round -- it already passes `items`, `buildFields`, and `onSaveItem`. It will automatically pick up the new collapsible rendering from DetailDialog.
+
+## Files changed
+
+| File | Change |
+|------|--------|
+| `src/components/DetailDialog.tsx` | Replace list/drill-down with inline collapsible sections per item; remove summaryForItem concept |
+| `src/components/WeightItemsTable.tsx` | Pass boundary range in onShowDetails call |
+| `src/pages/WeightLog.tsx` | Add multi-item support matching FoodLog pattern |
 
