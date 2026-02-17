@@ -1,52 +1,32 @@
 
-
-# Group Portion Scaling — Reuse `scalePortion` for Display
+# Fix: Make Group Portion Scaling Feel Instant (Optimistic Update)
 
 ## Problem
-The group header currently hardcodes "(1 portion)". After scaling, it should show the cumulative result (e.g., "(0.5 portions)", "(2 portions)") using the same `scalePortion()` function that individual items already use for natural pluralization.
+When you scale a group's portion (e.g., "Done" on the stepper), there's a noticeable delay before the "(1.5 portions)" label updates. This is because the multiplier is persisted to the server via `updateEntry.mutate()`, and the UI waits for the network round-trip + query refetch before showing the new value.
 
-## Approach
+Individual item scaling feels instant because it uses `useEditableItems` with local `pendingEdits` state -- the UI updates immediately in memory, then saves in the background.
 
-### 1. Database migration
-Add `group_portion_multiplier REAL DEFAULT 1.0` to `food_entries`. This stores the cumulative multiplier so the label persists after save/reload.
+## Solution
+Add optimistic local state for the group portion multiplier, so the label updates immediately when "Done" is tapped, while the server save happens in the background.
 
-### 2. `src/types/food.ts`
-Add `group_portion_multiplier: number | null` to the `FoodEntry` interface.
+## Technical Details
 
-### 3. `src/hooks/useFoodEntries.ts`
-Include `group_portion_multiplier` in the `createEntry` mutation (default 1.0).
+### `src/pages/FoodLog.tsx`
 
-### 4. `src/components/FoodItemsTable.tsx`
+1. Add a local `optimisticMultipliers` state (`Map<string, number>`) alongside the existing memoized `entryPortionMultipliers`.
 
-**Display label**: Replace the hardcoded `(1 portion)` with a call to `scalePortion("1 portion", cumulativeMultiplier)`. This reuses the existing pluralization logic:
-- multiplier 1.0 displays "(1 portion)"
-- multiplier 0.5 displays "(0.5 portions)"
-- multiplier 2.0 displays "(2 portions)"
+2. When building the map passed to `FoodItemsTable`, merge the server-derived values with any optimistic overrides (optimistic takes priority).
 
-This applies in both locations (expanded group header ~line 378 and collapsed group header ~line 816).
+3. In the `onUpdateEntryPortionMultiplier` callback:
+   - Immediately set the optimistic value in local state (instant UI update).
+   - Then call `updateEntry.mutate(...)` as before.
+   - On successful mutation + query invalidation, clear the optimistic entry (server data now has the correct value).
 
-**New prop**: `entryPortionMultipliers?: Map<string, number>` to look up the stored cumulative multiplier per entry.
+This mirrors the pattern used by `useEditableItems` where local pending state overlays server data for instant feedback.
 
-**Stepper "Done" handler**: When the user hits "Done":
-1. Scale all sub-items by the stepper multiplier (same as today).
-2. Compute the new cumulative multiplier: `(existingMultiplier) * stepperMultiplier`.
-3. Call a new `onUpdateEntryPortionMultiplier(entryId, newCumulative)` callback to persist it.
-4. Reset stepper to 1.0 (as today).
-
-**Preview text**: During active scaling, the preview already shows `({Math.round(groupCalories * groupPortionMultiplier)} cal)`. Add the scaled portion label too: `(scalePortion("1 portion", cumulative * stepper), X cal)` for consistency with individual items.
-
-### 5. `src/pages/FoodLog.tsx`
-
-- Build `entryPortionMultipliers` map from entries data, pass to `FoodItemsTable`.
-- Add `handleUpdateEntryPortionMultiplier` handler that calls `updateEntry` with the new `group_portion_multiplier` value.
-
-### Files summary
-
+### Files changed
 | File | Change |
 |------|--------|
-| Database migration | Add `group_portion_multiplier REAL DEFAULT 1.0` to `food_entries` |
-| `src/types/food.ts` | Add `group_portion_multiplier` to `FoodEntry` |
-| `src/hooks/useFoodEntries.ts` | Include `group_portion_multiplier` in create mutation |
-| `src/pages/FoodLog.tsx` | Build multiplier map + add update handler, pass both to table |
-| `src/components/FoodItemsTable.tsx` | Use `scalePortion("1 portion", cumulative)` for label; persist cumulative on Done; new props for multiplier map and update callback |
+| `src/pages/FoodLog.tsx` | Add `optimisticMultipliers` state, merge into the map passed to `FoodItemsTable`, set optimistic value before calling mutate, clear on settle |
 
+No database or type changes needed -- this is purely a UI responsiveness fix.
