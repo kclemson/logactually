@@ -1,20 +1,20 @@
 
 
-# Fix calendar calorie row alignment on mobile
+# Revert clipping fix and remove "cal" suffix
 
 ## Problem
 
-The calorie count row (e.g. "1,583cal●") in each calendar day cell overflows horizontally. The text appears left-padded while the colored dot on the right spills past the cell edge. This is because the combined width of the calorie text plus the dot exceeds the narrow cell width on mobile, and there's no overflow control.
+The `whitespace-nowrap overflow-hidden` fix clips off the colored dot on most days. A simpler approach: remove the "cal" text to free up horizontal space naturally.
 
 ## Changes
 
 **File: `src/pages/History.tsx`**
 
-1. Add `whitespace-nowrap overflow-hidden w-full text-center` to the calorie row `<span>` (around line 357) so the content stays on one line, clips if too wide, and is centered within the cell.
+1. **Revert the overflow fix** (line 358): Change back from `"text-[9px] sm:text-[10px] w-full text-center whitespace-nowrap overflow-hidden"` to `"text-[10px]"` (original styling).
 
-2. Remove the `ml-0.5` margin on the dot `<span>` (line 372) to save horizontal space -- change to `ml-px` (1px) or remove entirely.
+2. **Remove "cal" from the display string** (line 366): Change `${Math.round(summary.totalCalories).toLocaleString()}cal` to just `${Math.round(summary.totalCalories).toLocaleString()}` -- the number alone is enough context, especially with the tooltip available.
 
-3. Optionally reduce the calorie text size from `text-[10px]` to `text-[9px]` on mobile to give more breathing room, though the overflow fix alone may suffice.
+3. **Revert dot font size** (line 372): Change `text-[9px] sm:text-[10px]` back to `text-[10px]`.
 
-These are purely styling tweaks -- no logic changes.
+These are the only changes needed -- just two lines reverted and one string shortened.
 
