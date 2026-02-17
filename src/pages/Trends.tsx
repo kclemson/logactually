@@ -11,7 +11,8 @@ import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { useWeightTrends, ExerciseTrend } from "@/hooks/useWeightTrends";
 
 import { useUserSettings } from "@/hooks/useUserSettings";
-import { getEffectiveDailyTarget } from "@/lib/calorie-target";
+import { getEffectiveDailyTarget, ACTIVITY_MULTIPLIERS } from "@/lib/calorie-target";
+import { computeAbsoluteBMR } from "@/lib/calorie-burn";
 import { useMergeExercises } from "@/hooks/useMergeExercises";
 import { DuplicateExercisePrompt, type DuplicateGroup } from "@/components/DuplicateExercisePrompt";
 
@@ -413,15 +414,22 @@ const Trends = () => {
                     onNavigate={(date) => navigate(`/weights?date=${date}`)}
                   />
                 )}
-                {calorieBurnChartData.length > 0 && (
-                  <CalorieBurnChart
-                    title="Estimated Calorie Burn"
-                    subtitle={settings.bodyWeightLbs ? "Daily estimate" : "Set bio in Settings for precision"}
-                    chartData={calorieBurnChartData}
-                    color={CHART_COLORS.calorieBurn}
-                    onNavigate={(date) => navigate(`/weights?date=${date}`)}
-                  />
-                )}
+                {calorieBurnChartData.length > 0 && (() => {
+                  const bmr = computeAbsoluteBMR(settings);
+                  const sedentaryTDEE = bmr != null ? Math.round(bmr * ACTIVITY_MULTIPLIERS.sedentary) : null;
+                  const baseSubtitle = settings.bodyWeightLbs ? "Daily estimate" : "Set bio in Settings for precision";
+                  const subtitle = sedentaryTDEE != null ? `${baseSubtitle} · TDEE: ~${sedentaryTDEE.toLocaleString()}` : baseSubtitle;
+                  return (
+                    <CalorieBurnChart
+                      title="Estimated Calorie Burn"
+                      subtitle={subtitle}
+                      chartData={calorieBurnChartData}
+                      color={CHART_COLORS.calorieBurn}
+                      onNavigate={(date) => navigate(`/weights?date=${date}`)}
+                      sedentaryTDEE={sedentaryTDEE}
+                    />
+                  );
+                })()}
                 {visibleExercises.map((exercise) => (
                   <ExerciseChart 
                     key={exercise.exercise_key} 

@@ -21,6 +21,7 @@ interface CalorieBurnChartProps {
   chartData: CalorieBurnChartData[];
   color: string;
   onNavigate: (date: string) => void;
+  sedentaryTDEE?: number | null;
 }
 
 const BurnTooltip = ({
@@ -31,6 +32,7 @@ const BurnTooltip = ({
   onGoToDay,
   rawDate,
   color,
+  sedentaryTDEE,
 }: any) => {
   if (!active || !payload?.length) return null;
 
@@ -57,6 +59,16 @@ const BurnTooltip = ({
       {exerciseText && (
         <p className="text-[10px] text-muted-foreground">{exerciseText}</p>
       )}
+      {sedentaryTDEE != null && midpoint > 0 && (
+        <div className="grid grid-cols-[auto_1fr] gap-x-2 tabular-nums text-[10px] mt-1 pt-1 border-t border-border/30 opacity-75">
+          <div className="text-right">{sedentaryTDEE.toLocaleString()}</div>
+          <div className="text-[9px] italic opacity-60">(total daily energy expenditure)</div>
+          <div className="text-right">+ {midpoint.toLocaleString()}</div>
+          <div className="text-[9px] italic opacity-60">(exercise burn estimate)</div>
+          <div className="text-right border-t border-border/30 pt-0.5 font-medium">= {(sedentaryTDEE + midpoint).toLocaleString()}</div>
+          <div className="text-[9px] italic opacity-60 border-t border-border/30 pt-0.5">(est. total incl. exercise)</div>
+        </div>
+      )}
       {isTouchDevice && onGoToDay && rawDate && (
         <button
           onClick={(e) => {
@@ -78,6 +90,7 @@ export const CalorieBurnChart = ({
   chartData,
   color,
   onNavigate,
+  sedentaryTDEE,
 }: CalorieBurnChartProps) => {
   const isTouchDevice = !useHasHover();
   const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
@@ -158,6 +171,7 @@ export const CalorieBurnChart = ({
                       isTouchDevice={isTouchDevice}
                       onGoToDay={handleGoToDay}
                       color={color}
+                      sedentaryTDEE={sedentaryTDEE}
                       rawDate={
                         activeBarIndex !== null
                           ? chartData[activeBarIndex]?.rawDate
