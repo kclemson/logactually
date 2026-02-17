@@ -1,61 +1,42 @@
 
 
-# Add tap-to-toggle tooltip on mobile for Food Log calorie total
+# Coordinate tooltip dismissal between rollup and calendar day cells
 
 ## Problem
 
-The calorie total tooltip in the Food Log's TotalsRow only works on hover (desktop). On mobile/touch devices there's no way to see it since there's no tap handler or controlled open state.
+On mobile in the Calendar view, tapping a calendar day while the rollup tooltip is open (or vice versa) leaves both tooltips visible simultaneously. Each tooltip manages its own state independently with no cross-communication.
 
-## Fix
+## Solution
 
-**File: `src/components/FoodItemsTable.tsx`**
+Lift the rollup tooltip state up to the History page so that any tap interaction can close all tooltips:
 
-Apply the same tap-to-toggle pattern used by `CalorieTargetRollup` and other touch-friendly tooltips:
+1. **History.tsx** -- pass a `dismissTooltip` callback and controlled open state down to `CalorieTargetRollup`
+2. **CalorieTargetRollup.tsx** -- accept optional external tooltip control props
+3. **History.tsx** -- when a day cell is tapped, also close the rollup tooltip; when the rollup is tapped, also close any active day tooltip
 
-1. Import `useHasHover` and add `useState` for `tooltipOpen`
-2. On the `Tooltip`, set `open={hasHover ? undefined : tooltipOpen}` so touch devices use controlled state while desktop uses native hover
-3. On the `TooltipTrigger` content span, add `tabIndex={0}`, `role="button"`, and an `onClick` that toggles `tooltipOpen` when `!hasHover`
-4. On `TooltipContent`, add `onPointerDownOutside={(e) => e.preventDefault()}` to prevent flicker (matching existing pattern)
+## Technical details
 
-### Before (lines ~207-224):
+### CalorieTargetRollup.tsx
+
+Add optional props for external tooltip control:
+
 ```tsx
-<TooltipProvider delayDuration={150}>
-  <Tooltip>
-    <TooltipTrigger asChild>
-      {calorieContent}
-    </TooltipTrigger>
-    <TooltipContent side="bottom" sideOffset={5}>
-      ...
-    </TooltipContent>
-  </Tooltip>
-</TooltipProvider>
+interface CalorieTargetRollupProps {
+  settings: UserSettings;
+  burnByDate: Map<string, number>;
+  usesBurns: boolean;
+  tooltipOpen?: boolean;
+  onTooltipToggle?: () => void;
+}
 ```
 
-### After:
-```tsx
-<TooltipProvider delayDuration={150}>
-  <Tooltip open={hasHover ? undefined : tooltipOpen}>
-    <TooltipTrigger asChild>
-      <span
-        className={cn("px-1 text-center inline-flex items-center justify-center", compact ? "text-xs" : "text-heading")}
-        tabIndex={0}
-        role="button"
-        onClick={hasHover ? undefined : () => setTooltipOpen(o => !o)}
-      >
-        {Math.round(totals.calories)}
-        <span className={...}>...</span>
-      </span>
-    </TooltipTrigger>
-    <TooltipContent
-      side="bottom"
-      sideOffset={5}
-      onPointerDownOutside={(e) => e.preventDefault()}
-    >
-      ...
-    </TooltipContent>
-  </Tooltip>
-</TooltipProvider>
-```
+When these props are provided, use them instead of local state. When not provided, fall back to local `useState` (backward compatible).
 
-The `hasHover` and `tooltipOpen` state will be added inside the `TotalsRow` component. This matches the exact pattern used in `CalorieTargetRollup` and the exercise log tooltips.
+### History.tsx
+
+- Add `rollupTooltipOpen` state alongside the existing `activeDayIndex`
+- Create a helper that clears both: setting `activeDayIndex` to null and `rollupTooltipOpen` to false
+- In `handleDayClick`: close rollup tooltip before toggling day tooltip
+- Pass `tooltipOpen` and `onTooltipToggle` to `CalorieTargetRollup`, where the toggle clears `activeDayIndex` before toggling `rollupTooltipOpen`
+- Update the fixed dismiss overlay to also close the rollup tooltip
 
