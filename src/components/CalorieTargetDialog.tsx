@@ -213,8 +213,10 @@ export function CalorieTargetDialog({
                     value={settings.calorieTargetMode}
                     onValueChange={(val) => updateSettings({ calorieTargetMode: val as CalorieTargetMode })}
                   >
-                    <SelectTrigger className="w-[280px] h-auto py-1.5 text-xs">
-                      <SelectValue />
+                    <SelectTrigger className="w-[280px] h-8 text-xs">
+                      <SelectValue>
+                        {TARGET_MODE_OPTIONS.find(o => o.value === settings.calorieTargetMode)?.label}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {TARGET_MODE_OPTIONS.map(({ value, label, description }) => (
