@@ -1,69 +1,56 @@
 
 
-# Fix: Atomic Group Portion Scaling via Dedicated Hook
+# Fix: Stale Pending Edits Override Group Scaling
 
-## Overview
+## Problem
 
-Extract the group portion scaling logic into a new hook (`useGroupPortionScale`) that performs a single atomic database save -- fixing both the missing child portion text updates and the flicker.
+When the user edits a child item's calories inline (e.g., 200 to 300) and then scales the parent group (e.g., 1.5x), the child item's calories should become 450 but instead stay at 300.
 
-## Why a Hook (Not a Utility)
+## Root Cause
 
-A pure utility can't help here because the operation needs access to React Query's `updateEntry` mutation, `queryClient` for invalidation, and optimistic state management. A custom hook is the right pattern -- it encapsulates the mutation, optimistic state, and derived maps, keeping FoodLog.tsx focused on orchestration.
+The `useEditableItems` hook stores inline edits in a `pendingEdits` map (keyed by item UID). These pending edits are never automatically cleared after a successful save. The flow:
 
-## Root Cause Recap
+1. User edits child calories: `pendingEdits` stores `{calories: 300}` for that item's UID
+2. Save fires, DB now has 300, query refetches with 300
+3. `displayItems` = query data (300) + pending edit (300) = 300 (looks correct)
+4. User scales group by 1.5x: `scaleGroupPortion` reads `displayItems` (300), scales to 450, saves
+5. Query refetches with 450
+6. `displayItems` = query data (450) + **stale pending edit (300)** = **300** -- bug!
 
-1. **Missing portion text**: The "Done" button loops N times calling `onUpdateItemBatch` per item. Each call triggers `handleItemUpdateBatch` which reads `displayItems` (stale during the loop) and fires a separate `updateEntry.mutate()`. These race -- intermediate saves overwrite final ones, so some items' `portion` fields never get persisted.
+The pending edit from step 1 is never cleared, so it permanently overrides any subsequent changes to that item's calories from other sources (like group scaling).
 
-2. **Flicker**: N+1 separate mutations (N item updates + 1 multiplier update) each trigger query invalidation and refetch. Old server data briefly appears between invalidations.
+## Fix
+
+In `useGroupPortionScale.scaleGroupPortion`, after building the scaled items, clear all pending edits for items in that entry. This requires passing a `clearPendingForItem` function from `useEditableItems` into the hook.
+
+### 1. `src/hooks/useGroupPortionScale.ts`
+
+- Add `clearPendingForItems: (uids: string[]) => void` to the options interface
+- In `scaleGroupPortion`, call `clearPendingForItems` with all item UIDs before firing the mutation
+
+### 2. `src/pages/FoodLog.tsx`
+
+- Destructure `clearPendingForItem` from `useEditableFoodItems`
+- Create a small wrapper `clearPendingForItems` that calls `clearPendingForItem` for each UID
+- Pass it to `useGroupPortionScale`
+
+### 3. `src/hooks/useEditableItems.ts`
+
+No changes needed -- `clearPendingForItem` already exists and does exactly what we need.
 
 ## Technical Details
 
-### New file: `src/hooks/useGroupPortionScale.ts`
+```text
+useEditableFoodItems (existing)
+  --> clearPendingForItem(uid)  // already exists, clears pendingEdits for one item
 
-Encapsulates:
-- `optimisticMultipliers` state (moved from FoodLog)
-- `optimisticGroupNames` state (moved from FoodLog)
-- Derived `entryPortionMultipliers` map (moved from FoodLog)
-- Derived `entryGroupNames` map (moved from FoodLog)
-- `scaleGroupPortion(entryId, multiplier)` -- the atomic handler:
-  1. Gets all items for the entry via a passed-in getter
-  2. Applies `scaleItemByMultiplier` to every item in one pass (this includes portion text scaling)
-  3. Computes new cumulative multiplier
-  4. Sets optimistic multiplier state
-  5. Calls `updateEntry.mutate()` ONCE with both updated `food_items` AND `group_portion_multiplier`
-  6. On success: awaits query invalidation, then clears optimistic state
-- `updateGroupName(entryId, newName)` -- the existing inline-edit handler, moved here
-
-### Modified: `src/components/FoodItemsTable.tsx`
-
-Replace both "Done" button implementations (collapsed ~line 463, expanded ~line 601):
-
-**Before:**
+useGroupPortionScale (updated)
+  --> receives clearPendingForItems callback
+  --> scaleGroupPortion() calls it before mutating, clearing stale edits
 ```
-for (let i = boundary.startIndex; i <= boundary.endIndex; i++) {
-  onUpdateItemBatch?.(i, scaleItemByMultiplier(items[i], groupPortionMultiplier));
-}
-onUpdateEntryPortionMultiplier?.(boundary.entryId, existing * groupPortionMultiplier);
-```
-
-**After:**
-```
-onScaleGroupPortion?.(boundary.entryId, groupPortionMultiplier);
-```
-
-Replace `onUpdateEntryPortionMultiplier` prop with `onScaleGroupPortion` prop.
-
-### Modified: `src/pages/FoodLog.tsx`
-
-- Import and call `useGroupPortionScale`, passing `entries`, `updateEntry`, `queryClient`, and `getItemsForEntry`
-- Remove ~60 lines of inline state and handlers (optimistic multipliers/names, derived maps)
-- Pass `onScaleGroupPortion` and `onUpdateGroupName` from the hook to `FoodItemsTable`
-
-## File Summary
 
 | File | Change |
 |------|--------|
-| `src/hooks/useGroupPortionScale.ts` | **New** -- hook with atomic scale + optimistic state |
-| `src/pages/FoodLog.tsx` | Remove optimistic state/maps/handlers, use new hook instead |
-| `src/components/FoodItemsTable.tsx` | Replace `onUpdateEntryPortionMultiplier` prop with `onScaleGroupPortion`; simplify "Done" button to single call |
+| `src/hooks/useGroupPortionScale.ts` | Add `clearPendingForItems` to options; call it in `scaleGroupPortion` before the mutation |
+| `src/pages/FoodLog.tsx` | Destructure `clearPendingForItem` from `useEditableFoodItems`; create wrapper; pass to hook |
 
