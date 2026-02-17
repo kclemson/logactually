@@ -355,14 +355,14 @@ export function FoodItemsTable({
                   {selectable && <span></span>}
                   <div className="flex min-w-0">
                     {showEntryDividers && (
-                      <div className="w-3 shrink-0 relative flex items-center justify-center self-stretch">
+                      <div className="w-6 shrink-0 relative flex items-center justify-center self-stretch overflow-hidden">
                         <EntryChevron
                           expanded={false}
                           onToggle={() => onToggleEntryExpand?.(boundary.entryId)}
                         />
                       </div>
                     )}
-                    <div className={cn("flex-1 min-w-0 overflow-hidden max-h-[1.5rem] pl-1 py-1", compact && "text-sm")}>
+                    <div className={cn("flex-1 min-w-0 overflow-hidden max-h-[3rem] rounded pl-1 py-1 focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg", compact && "text-sm")}>
                       <DescriptionCell
                         value={groupName}
                         onSave={(newName) => onUpdateGroupName?.(boundary.entryId, newName)}
@@ -523,14 +523,14 @@ export function FoodItemsTable({
                   {selectable && <span></span>}
                   <div className="flex min-w-0">
                     {showEntryDividers && (
-                      <div className="w-3 shrink-0 relative flex items-center justify-center self-stretch">
+                      <div className="w-6 shrink-0 relative flex items-center justify-center self-stretch overflow-hidden">
                         <EntryChevron
                           expanded={true}
                           onToggle={() => onToggleEntryExpand?.(boundary.entryId)}
                         />
                       </div>
                     )}
-                    <div className={cn("flex-1 min-w-0 overflow-hidden max-h-[1.5rem] pl-1 py-1 font-semibold", compact && "text-sm")}>
+                    <div className={cn("flex-1 min-w-0 overflow-hidden max-h-[3rem] rounded pl-1 py-1 font-semibold focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg", compact && "text-sm")}>
                       <DescriptionCell
                         value={groupName}
                         onSave={(newName) => onUpdateGroupName?.(boundary.entryId, newName)}
@@ -678,7 +678,7 @@ export function FoodItemsTable({
                 <div className="flex min-w-0">
                   {/* Always reserve chevron space when showing entry dividers */}
                   {showEntryDividers && !isGroupSubItem && (
-                    <div className="w-3 shrink-0 relative flex items-center justify-center self-stretch">
+                    <div className="w-6 shrink-0 relative flex items-center justify-center self-stretch overflow-hidden">
                       {isLastInEntry ? (
                         <EntryChevron
                           expanded={!!isCurrentExpanded}
@@ -721,7 +721,7 @@ export function FoodItemsTable({
                 <div className="flex items-baseline min-w-0">
                   {/* Always reserve chevron space when showing entry dividers */}
                   {showEntryDividers && !isGroupSubItem && (
-                    <div className="w-3 shrink-0 relative flex items-center justify-center self-stretch">
+                    <div className="w-6 shrink-0 relative flex items-center justify-center self-stretch overflow-hidden">
                       {isLastInEntry ? (
                         <EntryChevron
                           expanded={!!isCurrentExpanded}
