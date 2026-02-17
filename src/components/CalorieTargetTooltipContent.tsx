@@ -25,26 +25,18 @@ export function CalorieTargetTooltipContent({
     <div className="space-y-1">
       {/* Dot legend */}
       <div className="text-[10px] tabular-nums space-y-px">
-        <div className="grid grid-cols-[auto_1fr_1fr] gap-x-2">
-          <div />
-          <div className="opacity-60">daily</div>
-          {weekRollup && weekLabel && <div className="opacity-60">weekly</div>}
+        <div>
+          daily: <span className="text-green-400">●</span> ≤2.5%{' '}
+          <span className="text-amber-400">●</span> ≤10%{' '}
+          <span className="text-rose-400">●</span> &gt;10%
         </div>
-        <div className="grid grid-cols-[auto_1fr_1fr] gap-x-2">
-          <span className="text-green-400">●</span>
-          <div>≤2.5% over</div>
-          {weekRollup && weekLabel && <div>at/under target</div>}
-        </div>
-        <div className="grid grid-cols-[auto_1fr_1fr] gap-x-2">
-          <span className="text-amber-400">●</span>
-          <div>≤10% over</div>
-          {weekRollup && weekLabel && <div>≤5% over</div>}
-        </div>
-        <div className="grid grid-cols-[auto_1fr_1fr] gap-x-2">
-          <span className="text-rose-400">●</span>
-          <div>&gt;10% over</div>
-          {weekRollup && weekLabel && <div>&gt;5% over</div>}
-        </div>
+        {weekRollup && weekLabel && (
+          <div>
+            weekly: <span className="text-green-400">●</span> under{' '}
+            <span className="text-amber-400">●</span> ≤5%{' '}
+            <span className="text-rose-400">●</span> &gt;5%
+          </div>
+        )}
       </div>
 
       {/* Day header with intake and dot */}
