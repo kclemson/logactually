@@ -1,54 +1,43 @@
 
 
-# Fix: Match Group Header DescriptionCell Pattern to Individual Items
+# Fix: Group Header Inline Editing - Match Working Individual Item Pattern Exactly
+
+## Problem
+Clicking on group header text (e.g., "Stuffed turkey dinner with sides") selects text instead of placing an editing cursor. Individual item descriptions work fine with the exact same `DescriptionCell` component.
 
 ## Root Cause
-Individual item descriptions work because overflow control is on a **wrapper div**, not on the `contentEditable` span itself. Group headers broke because `truncate` (and before that `line-clamp-1`) was applied directly to the `DescriptionCell` span via its `className` prop, which conflicts with `contentEditable`.
+Two issues working together:
 
-## How Individual Items Work (the correct pattern)
-```
-<div class="flex-1 min-w-0 overflow-hidden max-h-[3rem] ...">  <-- overflow on wrapper
-  <DescriptionCell value={...} />                               <-- no className, no truncate
-</div>
-```
+1. **EntryChevron tap target bleeds into text area**: The button uses `absolute inset-0 w-[44px] -left-3`, extending ~20px past its 12px container into the description text. This steals clicks from the beginning of the text.
 
-The span wraps naturally, the wrapper clips overflow, and `contentEditable` works perfectly.
+2. **Wrapper div differs from the working individual item pattern**: Group headers use `max-h-[1.5rem]` (24px) which, combined with `py-1` padding (8px), leaves only 16px for the contentEditable span whose line-height is 24px -- the span overflows its container. Individual items use `max-h-[3rem]` and include `rounded` and `focus-within:` classes. The tight constraint plus `overflow-hidden` may cause browser-specific issues with contentEditable cursor placement.
 
 ## Fix
-Apply the same pattern to both group header locations: move overflow control to a wrapper div and remove `truncate`/`shrink`/`min-w-0` from the `DescriptionCell` className.
+
+### 1. `src/components/EntryChevron.tsx`
+Constrain the button to its container so it can never overlap adjacent elements:
+- Remove `inset-0 w-[44px] -left-3`
+- Use `w-full h-full` so the button fills only its parent container
+- The parent container controls the tap target size
+
+### 2. `src/components/FoodItemsTable.tsx` (chevron containers)
+Widen chevron containers from `w-3` (12px) to `w-6` (24px) and add `overflow-hidden` to physically prevent any child from escaping. This gives a reasonable 24px tap target. Apply to all 6 chevron container locations (2 group headers + 2 individual item branches + 2 in WeightItemsTable).
+
+### 3. `src/components/FoodItemsTable.tsx` (group header wrappers)
+Make both group header description wrappers (collapsed line ~365, expanded line ~533) identical to the working individual item wrapper:
+- Change `max-h-[1.5rem]` to `max-h-[3rem]`
+- Add `rounded`
+- Add `focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg`
+- Keep `font-semibold` on the expanded header wrapper to distinguish it visually
+
+### 4. `src/components/WeightItemsTable.tsx` (chevron containers)
+Apply the same chevron container changes (widen + overflow-hidden) for consistency.
 
 ## Technical Details
 
-### `src/components/FoodItemsTable.tsx` -- two locations (collapsed ~line 365, expanded ~line 532)
-
-**Before:**
-```
-<DescriptionCell
-  className="pl-1 pr-0 py-1 truncate shrink min-w-0"
-  ...
-/>
-```
-
-**After:**
-```
-<div class="flex-1 min-w-0 overflow-hidden max-h-[1.5rem] pl-1 py-1">
-  <DescriptionCell
-    value={groupName}
-    ...
-  />
-</div>
-```
-
-- `max-h-[1.5rem]` keeps it single-line (group headers should stay compact), matching the truncation intent without breaking `contentEditable`
-- `flex-1 min-w-0` lets the wrapper shrink in flex layout, keeping the portion button visible
-- The `DescriptionCell` itself gets no overflow classes -- just like individual items
-
-### Flicker fix -- `src/pages/FoodLog.tsx`
-
-Change both `onUpdateGroupName` and `onUpdateEntryPortionMultiplier` handlers: replace `onSettled` with `onSuccess` that awaits query invalidation before clearing optimistic state. This prevents the old server value from briefly showing between the optimistic clear and the refetch.
-
 | File | Change |
 |------|--------|
-| `src/components/FoodItemsTable.tsx` | Wrap group header `DescriptionCell` in overflow div (same pattern as individual items), remove `truncate` from span |
-| `src/pages/FoodLog.tsx` | Fix flicker: await invalidation before clearing optimistic state |
+| `src/components/EntryChevron.tsx` | Replace `absolute inset-0 w-[44px] -left-3` with `w-full h-full` |
+| `src/components/FoodItemsTable.tsx` | Widen all 4 chevron containers from `w-3` to `w-6`, add `overflow-hidden`; update both group header wrappers to match individual item pattern (`max-h-[3rem]`, `rounded`, `focus-within:` classes) |
+| `src/components/WeightItemsTable.tsx` | Widen 2 chevron containers from `w-4`/`w-3` to `w-6`, add `overflow-hidden` |
 
