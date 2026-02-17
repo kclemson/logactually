@@ -25,6 +25,7 @@ import { detectHistoryReference, MIN_SIMILARITY_REQUIRED } from '@/lib/history-p
 import { detectRepeatedFoodEntry, isDismissed, dismissSuggestion, shouldShowOptOutLink, FoodSaveSuggestion } from '@/lib/repeated-entry-detection';
 import { FoodItem, SavedMeal, calculateTotals } from '@/types/food';
 import { getStoredDate, setStoredDate } from '@/lib/selected-date';
+import { useGroupPortionScale } from '@/hooks/useGroupPortionScale';
 import { getEffectiveDailyTarget, getExerciseAdjustedTarget, usesActualExerciseBurns, getCalorieTargetComponents } from '@/lib/calorie-target';
 import { useDailyCalorieBurn } from '@/hooks/useDailyCalorieBurn';
 
@@ -189,43 +190,6 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     return map;
   }, [entries, savedMeals]);
 
-  // Optimistic multipliers for instant UI update on group portion scaling
-  const [optimisticMultipliers, setOptimisticMultipliers] = useState<Map<string, number>>(new Map());
-
-  // Optimistic group names for instant UI update on inline editing
-  const [optimisticGroupNames, setOptimisticGroupNames] = useState<Map<string, string>>(new Map());
-
-  // Build map of entryId -> group name for multi-item entries (for collapsed display)
-  // Optimistic names take priority over server-derived values
-  const entryGroupNames = useMemo(() => {
-    const map = new Map<string, string>();
-    entries.forEach(entry => {
-      if (entry.group_name && entry.food_items.length >= 2) {
-        map.set(entry.id, entry.group_name);
-      }
-    });
-    optimisticGroupNames.forEach((val, key) => map.set(key, val));
-    return map;
-  }, [entries, optimisticGroupNames]);
-  // Build map of entryId -> cumulative portion multiplier for group scaling display
-  // Optimistic values take priority over server-derived values
-  const entryPortionMultipliers = useMemo(() => {
-    const map = new Map<string, number>();
-    entries.forEach(entry => {
-      if (entry.group_portion_multiplier != null && entry.group_portion_multiplier !== 1.0) {
-        map.set(entry.id, entry.group_portion_multiplier);
-      }
-    });
-    // Merge optimistic overrides (takes priority)
-    optimisticMultipliers.forEach((val, key) => {
-      if (val === 1.0) {
-        map.delete(key);
-      } else {
-        map.set(key, val);
-      }
-    });
-    return map;
-  }, [entries, optimisticMultipliers]);
 
   const handleToggleEntryExpand = (entryId: string) => {
     setExpandedEntryIds(prev => {
@@ -562,6 +526,13 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     return displayItems.filter(item => item.entryId === entryId);
   }, [displayItems]);
 
+  // Group portion scaling hook (atomic saves + optimistic state)
+  const { entryGroupNames, entryPortionMultipliers, scaleGroupPortion, updateGroupName } = useGroupPortionScale({
+    entries,
+    updateEntry,
+    getItemsForEntry,
+  });
+
   // Save a single entry to the database
   const saveEntry = useCallback((entryId: string, items: FoodItem[]) => {
     // Sanitize numeric values
@@ -771,49 +742,9 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
             entryMealNames={entryMealNames}
             entrySourceMealIds={entrySourceMealIds}
             entryGroupNames={entryGroupNames}
-            onUpdateGroupName={(entryId, newName) => {
-              setOptimisticGroupNames(prev => {
-                const next = new Map(prev);
-                next.set(entryId, newName);
-                return next;
-              });
-              updateEntry.mutate(
-                { id: entryId, group_name: newName } as any,
-                {
-                  onSuccess: async () => {
-                    await queryClient.invalidateQueries({ queryKey: ['food-entries'] });
-                    setOptimisticGroupNames(prev => {
-                      const next = new Map(prev);
-                      next.delete(entryId);
-                      return next;
-                    });
-                  },
-                }
-              );
-            }}
+            onUpdateGroupName={updateGroupName}
             entryPortionMultipliers={entryPortionMultipliers}
-            onUpdateEntryPortionMultiplier={(entryId, newMultiplier) => {
-              // Instant UI update
-              setOptimisticMultipliers(prev => {
-                const next = new Map(prev);
-                next.set(entryId, newMultiplier);
-                return next;
-              });
-              // Persist in background, clear optimistic on settle
-              updateEntry.mutate(
-                { id: entryId, group_portion_multiplier: newMultiplier } as any,
-                {
-                  onSuccess: async () => {
-                    await queryClient.invalidateQueries({ queryKey: ['food-entries'] });
-                    setOptimisticMultipliers(prev => {
-                      const next = new Map(prev);
-                      next.delete(entryId);
-                      return next;
-                    });
-                  },
-                }
-              );
-            }}
+            onScaleGroupPortion={scaleGroupPortion}
             dailyCalorieTarget={(() => {
               const base = getEffectiveDailyTarget(settings);
               if (base == null) return undefined;
