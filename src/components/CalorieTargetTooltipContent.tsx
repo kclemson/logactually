@@ -48,14 +48,22 @@ export function CalorieTargetTooltipContent({
       )}
 
       {/* Weekly section */}
-      {weekRollup && weekLabel && (
+      {weekRollup && weekLabel && (() => {
+        const weeklyTarget = targetComponents
+          ? targetComponents.mode === 'exercise_adjusted'
+            ? Math.round(targetComponents.baseTarget! + weekRollup.avgBurn)
+            : targetComponents.mode === 'body_stats_logged'
+              ? Math.round(targetComponents.tdee + weekRollup.avgBurn - targetComponents.deficit)
+              : target
+          : target;
+        return (
         <>
           <div className="border-t border-muted-foreground/30 my-1" />
           <div className="opacity-75">
             {weekLabel}: <span className="text-blue-400">{weekRollup.avgIntake.toLocaleString()}</span> avg <span className={weekRollup.dotColor}>●</span>
           </div>
           {targetComponents ? (
-            <TargetEquation targetComponents={targetComponents} target={target} burn={weekRollup.avgBurn} isWeekly />
+            <TargetEquation targetComponents={targetComponents} target={weeklyTarget} burn={weekRollup.avgBurn} isWeekly />
           ) : (
             <div className="grid grid-cols-[auto_1fr] gap-x-2 pl-2 opacity-75 tabular-nums">
               <div className="text-right">{target.toLocaleString()}</div>
@@ -63,7 +71,8 @@ export function CalorieTargetTooltipContent({
             </div>
           )}
         </>
-      )}
+        );
+      })()}
     </div>
   );
 }
