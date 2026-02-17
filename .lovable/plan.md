@@ -1,41 +1,46 @@
 
+# Reuse calendar tooltip on Food Log total row
 
-# Simplify Populate Demo Data dialog to all-checkbox approach
+## Goal
 
-## Current problem
+When hovering the calorie value in the Food Log's Total row, show the exact same tooltip content currently shown on hover of a calendar day cell in the History page.
 
-The dialog has three action buttons ("Saved Only", "Custom Logs Only", "Populate All") that are really just shortcuts for specific checkbox combinations. This is confusing -- the checkboxes already exist but get overridden by the button you click.
+## Approach
 
-## New design
+### 1. Extract shared tooltip content into a reusable component
 
-Remove the shortcut buttons entirely. Every data type gets its own checkbox. The footer simplifies to just "Cancel" and "Populate". The user checks exactly what they want and clicks one button.
+Create `src/components/CalorieTargetTooltipContent.tsx` that renders the tooltip body currently built by `buildDayTooltip` in `History.tsx`.
 
-### Checkbox layout
+Props:
+- `label` (string) -- e.g. "Wed, Feb 12" or "Total"
+- `intake` (number) -- total calories consumed
+- `target` (number) -- the effective calorie target for the day
+- `burn` (number) -- exercise burn for the day (0 when not applicable)
+- `targetComponents` (from `getCalorieTargetComponents`) -- determines which equation layout to show
 
-All options in one section:
+The component renders the dot-color legend, the equation grid, and the total line -- identical to the current `buildDayTooltip` output.
 
-- Generate Food (existing)
-- Generate Exercise (existing)
-- Generate Custom Logs (existing)
-- Generate Saved Meals (new checkbox, replaces numeric input)
-- Generate Saved Routines (new checkbox, replaces numeric input)
+### 2. Update History.tsx to use the shared component
 
-When "Generate Saved Meals" is checked, show the count input inline. Same for routines. When unchecked, count is sent as 0.
+Replace the inline `buildDayTooltip` JSX with a call to `CalorieTargetTooltipContent`, passing the same values it currently computes.
 
-### Footer
+### 3. Add tooltip to TotalsRow in FoodItemsTable
 
-Just two buttons:
-- Cancel (ghost)
-- Populate (primary, disabled when nothing is checked)
+- Add two new props to `FoodItemsTable`: `dailyBurn` (number) and `calorieTargetComponents` (from calorie-target.ts)
+- In `TotalsRow`, wrap the calorie number + dot in a Radix `Tooltip` that renders `CalorieTargetTooltipContent`
+- Only show when `showCalorieTargetDot` is true and `dailyCalorieTarget` is set
+
+### 4. Pass the new props from FoodLog.tsx
+
+Pass `dailyBurn={dailyBurnForSelectedDay}` and `calorieTargetComponents={getCalorieTargetComponents(settings)}` to the main `FoodItemsTable` instance (not the SaveMealDialog one).
 
 ## Technical details
 
-**File: `src/components/PopulateDemoDataDialog.tsx`**
+**New file:** `src/components/CalorieTargetTooltipContent.tsx`
+- Pure presentational component, no hooks
+- Imports `CalorieTargetComponents` type from `calorie-target.ts`
 
-1. Add two new boolean state variables: `generateSavedMeals` (default true) and `generateSavedRoutines` (default true)
-2. Move saved meals/routines into the Options checkbox section as two more checkboxes, each with a conditional inline count input
-3. Remove `handleRegenerateSavedOnly` and `handleCustomLogsOnly` functions
-4. Remove the "Saved Only" and "Custom Logs Only" buttons from the footer
-5. Update `handleSubmit` to send `generateSavedMeals ? savedMealsCount : 0` and `generateSavedRoutines ? savedRoutinesCount : 0`
-6. Optionally disable the "Populate" button when all five checkboxes are unchecked
-
+**Modified files:**
+- `src/pages/History.tsx` -- replace `buildDayTooltip` body with `CalorieTargetTooltipContent`
+- `src/components/FoodItemsTable.tsx` -- add tooltip around calorie total, accept new props
+- `src/pages/FoodLog.tsx` -- pass `dailyBurn` and `calorieTargetComponents` props
