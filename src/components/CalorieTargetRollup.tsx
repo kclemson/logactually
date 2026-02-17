@@ -29,7 +29,26 @@ export function CalorieTargetRollup({ settings, burnByDate, usesBurns }: Calorie
 
   const isExerciseAdjusted = components?.mode === 'exercise_adjusted';
 
+  const isMultiplier = components?.mode === 'body_stats_multiplier';
+
   const renderEquationBlock = (periodLabel: string, avgBurn: number) => {
+    if (isMultiplier) {
+      return (
+        <div className="grid grid-cols-[auto_1fr] gap-x-2 pl-2 opacity-75 tabular-nums">
+          <div className="text-right">{components!.tdee.toLocaleString()}</div>
+          <div className="text-[9px] italic opacity-60">(total daily energy expenditure)</div>
+          {components!.deficit > 0 && (
+            <>
+              <div className="text-right">- {components!.deficit.toLocaleString()}</div>
+              <div className="text-[9px] italic opacity-60">(deficit configured in settings)</div>
+              <div className="text-right border-t border-muted-foreground/30 pt-0.5">= {baseTarget!.toLocaleString()}</div>
+              <div className="text-[9px] italic opacity-60 border-t border-muted-foreground/30 pt-0.5">daily calorie target</div>
+            </>
+          )}
+        </div>
+      );
+    }
+
     const total = isExerciseAdjusted
       ? (components!.baseTarget ?? 0) + avgBurn
       : components!.tdee + avgBurn - components!.deficit;
@@ -102,8 +121,13 @@ export function CalorieTargetRollup({ settings, burnByDate, usesBurns }: Calorie
             </div>
             {components ? (
               <div className="space-y-2">
-                {r7 && renderEquationBlock('last 7 days', r7.avgBurn)}
-                {r30 && renderEquationBlock('last 30 days', r30.avgBurn)}
+                {isMultiplier
+                  ? renderEquationBlock('', 0)
+                  : <>
+                      {r7 && renderEquationBlock('last 7 days', r7.avgBurn)}
+                      {r30 && renderEquationBlock('last 30 days', r30.avgBurn)}
+                    </>
+                }
               </div>
             ) : (
               <div className="grid grid-cols-[auto_1fr] gap-x-2 pl-2 opacity-75 tabular-nums">
