@@ -1,63 +1,41 @@
 
-# Generate short group names for multi-item food entries
 
-## Problem
-
-When logging multiple food items in one input (e.g., "1.6oz of gouda, 4 slices of salami, and 130 calories of crackers with macros 4.5g fat, 22g"), the group header shows the entire raw input verbatim. The photo analysis flow already generates a short `summary` field for this purpose, but the text-based analysis does not.
-
-## Solution
-
-Add a `summary` field to the text-based `analyze-food` edge function response (matching what `analyze-food-photo` already does), and use it as the `group_name` on the client side instead of the raw input.
+# Move unit indicators into field labels and add colons in read-only mode
 
 ## Changes
 
-### 1. Update prompt templates to request a `summary` field
+All changes are in `src/components/DetailDialog.tsx`.
 
-**`supabase/functions/_shared/prompts.ts`**
+### 1. Labels in read-only mode get colons and unit suffixes
 
-Add to both prompt templates (default and experimental), in the JSON response format section:
+Every label in `FieldViewGrid` will end with a colon (matching edit mode), and fields with units will show them in the label:
 
-```
-"summary": "Short 2-4 word description of the overall meal/snack"
-```
+- `Distance:` becomes `Distance (mi):` or `Distance (km):`
+- `Weight:` becomes `Weight (lbs):` or `Weight (kg):`
+- `Duration:` becomes `Duration (min):`
+- `Cal Burned:` becomes `Cal Burned (cal):`
+- `Effort:` becomes `Effort (/10):`
 
-This goes alongside the existing `food_items` array in the response format example. Only needed when there are 2+ items.
+The unit suffix comes from either `unitToggle` (active unit) or the static `unit` property.
 
-### 2. Parse and return `summary` from the edge function
+### 2. Remove UnitToggle and standalone unit text from read-only mode
 
-**`supabase/functions/analyze-food/index.ts`**
+In `FieldViewGrid`, remove the `UnitToggle` component and the static unit `<span>` after the value. The unit context is now fully in the label. The value displays as just the number.
 
-- Update the parsed type to include `summary?: string`
-- Pass `parsed.summary` through to the response `AnalyzeResponse` interface
-- Add `summary` field to the response object
+### 3. Labels in edit mode also get unit suffixes
 
-### 3. Use `summary` as group name on the client
+In `FieldEditGrid`, the label already has a colon. Add the same unit suffix logic so labels read `Distance (mi):` and update dynamically when the user clicks the unit toggle buttons.
 
-**`src/hooks/useAnalyzeFood.ts`**
+### 4. Static `unit` fields: strip unit from displayValue
 
-- Add `summary` to the `AnalyzeResult` interface
-
-**`src/pages/FoodLog.tsx`** (line 297)
-
-- When creating a multi-item entry, prefer `result.summary` over raw input text for the `group_name`:
-
-```
-const groupName = result.food_items.length >= 2
-  ? (result.summary || text)
-  : null;
-```
-
-This is a graceful fallback -- if the AI doesn't return a summary for some reason, the raw input is still used.
-
-## Result
-
-A log like "1.6oz of gouda, 4 slices of salami, and 130 calories of crackers..." would show a group header like "Cheese & Crackers" or "Snack Plate" instead of the full sentence.
+Currently `displayValue` appends ` ${field.unit}` to the value for fields with a static `unit` property (like duration showing "39.05 min"). Since the unit is now in the label, remove this suffix from `displayValue` so the value is just the number.
 
 ## Technical details
 
-| File | Change |
-|------|--------|
-| `supabase/functions/_shared/prompts.ts` | Add `summary` field to both prompt response formats |
-| `supabase/functions/analyze-food/index.ts` | Parse and return `summary` in response |
-| `src/hooks/useAnalyzeFood.ts` | Add `summary` to `AnalyzeResult` type |
-| `src/pages/FoodLog.tsx` | Use `result.summary` as `group_name` for multi-item entries |
+| Location | Change |
+|----------|--------|
+| `displayValue` helper (line 76) | Remove the `if (field.unit) return \`\${val} \${field.unit}\`` line so values render without unit suffixes |
+| `FieldViewGrid` label (line 143) | Add colon and unit suffix: `{field.label}{unitSuffix}:` where unitSuffix is ` (${activeUnit})` for unitToggle fields or ` (${field.unit})` for static unit fields |
+| `FieldViewGrid` after value (lines 147-151) | Remove the `UnitToggle` component and static unit `<span>` -- no unit indicators after the value in read-only mode |
+| `FieldEditGrid` label (line 182) | Add unit suffix before the colon: `{field.label}{unitSuffix}:` using the same logic |
+
