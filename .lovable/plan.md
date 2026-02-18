@@ -1,103 +1,89 @@
 
 
-## Pre-aggregate daily food and exercise totals in generate-chart
+## Add "Verify accuracy" to AI charts via piggybacked daily totals
 
-### Problem
+### Approach
 
-The AI receives 1,700+ individual food item lines and must sum them to produce daily totals. It consistently fabricates the arithmetic. The same risk exists for exercise data.
+Instead of a separate edge function, return the already-computed daily totals alongside the chartSpec from generate-chart. The client performs the comparison locally. This avoids duplicating aggregation logic and eliminates a second API call.
 
-### Solution
+### Scope of validation
 
-Compute daily summaries server-side in the edge function and prepend them to the data context. Keep item-level data for granular queries. Add one prompt instruction telling the AI to use the pre-computed totals.
+Validation works for **daily time-series charts** where the `dataKey` maps to a known food macro or exercise aggregate. For categorical, derived, or unrecognized chart types, the button shows "Validation not available for this chart type." This covers roughly 60-70% of common chart requests.
 
 ### Changes
 
 **`supabase/functions/generate-chart/index.ts`**
 
-#### 1. Add daily food totals block (after building `foodContext`, before exercise)
-
-After iterating food items into `foodContext`, aggregate daily totals:
+Include the pre-computed daily totals in the response payload:
 
 ```typescript
-const dailyFoodTotals = new Map<string, { cal: number; protein: number; carbs: number; fat: number; fiber: number; sugar: number; sat_fat: number; sodium: number; chol: number }>();
-for (const e of foodEntries) {
-  const items = e.food_items as any[];
-  if (!Array.isArray(items)) continue;
-  const t = dailyFoodTotals.get(e.eaten_date) || { cal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, sat_fat: 0, sodium: 0, chol: 0 };
-  for (const item of items) {
-    t.cal += item.calories || 0;
-    t.protein += item.protein || 0;
-    t.carbs += item.carbs || 0;
-    t.fat += item.fat || 0;
-    t.fiber += item.fiber || 0;
-    t.sugar += item.sugar || 0;
-    t.sat_fat += item.saturated_fat || 0;
-    t.sodium += item.sodium || 0;
-    t.chol += item.cholesterol || 0;
-  }
-  dailyFoodTotals.set(e.eaten_date, t);
-}
+return new Response(JSON.stringify({
+  chartSpec,
+  dailyTotals: {
+    food: Object.fromEntries(dailyFoodTotals),    // { "2026-01-22": { cal: 3144, protein: 95, ... }, ... }
+    exercise: Object.fromEntries(dailyExTotals),   // serialized without Set (convert exercises to count)
+  },
+}), { ... });
 ```
 
-Build a summary string from the map:
+Serialize exercise `Set<string>` to `exercises: t.exercises.size` before returning.
+
+**`src/hooks/useGenerateChart.ts`**
+
+Update return type to include `dailyTotals` alongside `chartSpec`. Store both in the mutation result.
+
+**`src/components/CustomChartDialog.tsx`**
+
+- Store `dailyTotals` from the generate-chart response alongside `currentSpec`
+- Add a "Verify accuracy" button (next to "Show debug JSON")
+- On click, run client-side comparison:
+  1. Check if chart has `rawDate` fields in data and a recognized `dataKey`
+  2. Map `dataKey` to the corresponding totals field using a lookup table:
+     - `calories|cal|total_calories` maps to food `.cal`
+     - `protein` maps to food `.protein`
+     - `carbs` maps to food `.carbs`
+     - `fat` maps to food `.fat`
+     - `fiber` maps to food `.fiber`
+     - `sugar` maps to food `.sugar`
+     - `sodium` maps to food `.sodium`
+     - `cholesterol|chol` maps to food `.chol`
+     - `sat_fat|saturated_fat` maps to food `.sat_fat`
+     - `sets|logged_sets` maps to exercise `.sets`
+     - `duration|duration_min` maps to exercise `.duration`
+     - `distance` maps to exercise `.distance`
+     - `cal_burned` maps to exercise `.cal_burned`
+  3. For each data point, compare AI value vs actual value
+  4. Display results inline
+
+- If `dataKey` doesn't match any known field, or chart has no `rawDate`, show: "Verification isn't available for this chart type"
+
+**Verification results UI** (below chart, compact):
 
 ```
-Daily food totals (pre-computed, authoritative):
-2026-01-22: cal=3144, protein=95, carbs=199, fat=78, fiber=23, sugar=33, sat_fat=19, sodium=2456, chol=105
-...
+Accuracy: 27/28 match (96%)        [green tint]
+Mismatches:
+  Feb 14: AI=2188, actual=2244 (delta: -56)
 ```
 
-#### 2. Add daily exercise totals block (after building `exerciseContext`)
-
-Aggregate per day: total sets logged, total duration, total distance, total calories burned, unique exercise count.
-
-```typescript
-const dailyExTotals = new Map<string, { sets: number; duration: number; distance: number; cal_burned: number; exercises: Set<string> }>();
-for (const s of exerciseSets) {
-  const t = dailyExTotals.get(s.logged_date) || { sets: 0, duration: 0, distance: 0, cal_burned: 0, exercises: new Set() };
-  t.sets += 1;
-  t.duration += s.duration_minutes || 0;
-  t.distance += s.distance_miles || 0;
-  const meta = s.exercise_metadata as any;
-  t.cal_burned += meta?.calories_burned || 0;
-  t.exercises.add(s.exercise_key);
-  dailyExTotals.set(s.logged_date, t);
-}
-```
-
-Build a summary string:
-
-```
-Daily exercise totals (pre-computed, authoritative):
-2026-01-22: logged_sets=5, duration_min=45, distance_mi=3.2, cal_burned=320, unique_exercises=3
-...
-```
-
-#### 3. Update context assembly
-
-Place daily summaries before item-level data:
-
-```typescript
-const dataContext = [
-  foodDailySummary,   // new
-  foodContext,        // existing item-level
-  exerciseDailySummary, // new
-  exerciseContext,    // existing item-level
-  customContext,
-].filter(Boolean).join("\n\n");
-```
-
-#### 4. Add prompt instruction
-
-Add to the DATA INTEGRITY section of `SYSTEM_PROMPT`:
-
-```
-- DAILY TOTALS sections are pre-computed and authoritative. For any query involving daily calorie/macro/exercise totals, use these values directly. Do NOT attempt to re-sum individual items for daily aggregation.
-```
+Color coding: green (>95%), yellow (>80%), red (below 80%). Threshold for "match": values within 1% or delta less than 5.
 
 ### Files changed
 
 | File | Change |
 |------|--------|
-| `supabase/functions/generate-chart/index.ts` | Add ~40 lines of server-side daily aggregation for food and exercise; prepend summaries to context; add prompt instruction to use pre-computed totals |
+| `supabase/functions/generate-chart/index.ts` | Include `dailyTotals` (food + exercise) in response JSON; serialize exercise Set to count |
+| `src/hooks/useGenerateChart.ts` | Update return type to include dailyTotals; store in mutation result |
+| `src/components/CustomChartDialog.tsx` | Store dailyTotals; add "Verify accuracy" button; client-side comparison logic with dataKey mapping table; inline results display |
 
+### What this does NOT validate
+
+- Categorical charts (by hour, by day of week, by group)
+- Derived metrics (ratios, percentages, averages of averages)
+- Charts mixing food and exercise data
+- Custom log charts (could be added later with a type-name lookup)
+
+These cases gracefully degrade to a "not available" message.
+
+### Future extensibility
+
+The dataKey mapping table is a simple object literal. Adding new metrics (e.g., from custom logs) means adding one line to the table. No schema or edge function changes needed.
