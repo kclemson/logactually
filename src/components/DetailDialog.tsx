@@ -535,17 +535,17 @@ export const EXERCISE_HIDE_WHEN_EMPTY = new Set(
 
 export function buildFoodDetailFields(item: Record<string, any>): FieldConfig[] {
   return [
-    { key: 'description', label: 'Name', type: 'text', section: 'Basic' },
-    { key: 'portion', label: 'Portion', type: 'text', section: 'Basic', maxWidth: 'sm' },
-    { key: 'calories', label: 'Calories', type: 'number', unit: 'cal', min: 0, section: 'Nutrition' },
-    { key: 'protein', label: 'Protein', type: 'number', unit: 'g', min: 0, section: 'Nutrition' },
-    { key: 'carbs', label: 'Carbs', type: 'number', unit: 'g', min: 0, section: 'Nutrition' },
-    { key: 'fiber', label: 'Fiber', type: 'number', unit: 'g', min: 0, section: 'Nutrition' },
-    { key: 'sugar', label: 'Sugar', type: 'number', unit: 'g', min: 0, section: 'Nutrition' },
-    { key: 'fat', label: 'Fat', type: 'number', unit: 'g', min: 0, section: 'Nutrition' },
-    { key: 'saturated_fat', label: 'Saturated Fat', type: 'number', unit: 'g', min: 0, section: 'Nutrition' },
-    { key: 'sodium', label: 'Sodium', type: 'number', unit: 'mg', min: 0, section: 'Nutrition' },
-    { key: 'cholesterol', label: 'Cholesterol', type: 'number', unit: 'mg', min: 0, section: 'Nutrition' },
+    { key: 'description', label: 'Name', type: 'text' },
+    { key: 'portion', label: 'Portion', type: 'text', maxWidth: 'sm' },
+    { key: 'calories', label: 'Calories', type: 'number', unit: 'cal', min: 0 },
+    { key: 'protein', label: 'Protein', type: 'number', unit: 'g', min: 0 },
+    { key: 'carbs', label: 'Carbs', type: 'number', unit: 'g', min: 0 },
+    { key: 'fiber', label: 'Fiber', type: 'number', unit: 'g', min: 0 },
+    { key: 'sugar', label: 'Sugar', type: 'number', unit: 'g', min: 0 },
+    { key: 'fat', label: 'Fat', type: 'number', unit: 'g', min: 0 },
+    { key: 'saturated_fat', label: 'Saturated Fat', type: 'number', unit: 'g', min: 0 },
+    { key: 'sodium', label: 'Sodium', type: 'number', unit: 'mg', min: 0 },
+    { key: 'cholesterol', label: 'Cholesterol', type: 'number', unit: 'mg', min: 0 },
   ];
 }
 
