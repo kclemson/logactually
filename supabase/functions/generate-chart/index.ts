@@ -74,7 +74,28 @@ Rules:
 - For time-of-day analysis, use created_at timestamps, not date fields
 - Preserve numeric precision: 1 decimal for averages, whole numbers for counts/calories
 - When modifying a previous chart, change only what was asked
-- If data is insufficient, return the best chart you can and explain in aiNote`;
+- If data is insufficient, return the best chart you can and explain in aiNote
+
+VERIFICATION METADATA — you MUST include a "verification" field in your JSON response so the client can cross-check your computed values against known daily totals.
+
+"verification" must be one of:
+
+1. An object with "type": "daily" — use when each data point corresponds to exactly one date's total.
+   Required fields: "source" ("food" or "exercise"), "field" (the exact key name in daily totals).
+   Example: {"type": "daily", "source": "food", "field": "cal"}
+   The client will look up dailyTotals[source][rawDate][field] for each data point.
+
+2. An object with "type": "aggregate" — use when data points aggregate across multiple dates (e.g. "workout vs rest days", "by day of week", "weekdays vs weekends").
+   Required fields: "source", "field", "method" ("sum", "average", "count", "max", or "min"), "breakdown" (array of {label, dates}).
+   Each breakdown entry's "label" must exactly match the corresponding data point's xAxisField value.
+   Each "dates" array lists every yyyy-MM-dd date that contributed to that bucket.
+   Example: {"type": "aggregate", "source": "food", "field": "cal", "method": "average", "breakdown": [{"label": "Workout Days", "dates": ["2026-02-01", "2026-02-03"]}, {"label": "Rest Days", "dates": ["2026-02-02", "2026-02-04"]}]}
+
+3. null — use when the chart's values cannot be verified against daily totals (ratios, percentages, counts of distinct items, multi-field derived metrics).
+
+Field names must exactly match daily totals keys:
+- Food: cal, protein, carbs, fat, fiber, sugar, sat_fat, sodium, chol
+- Exercise: sets, duration, distance, cal_burned, unique_exercises`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -372,6 +393,7 @@ serve(async (req) => {
       referenceLine: args.referenceLineValue != null
         ? { value: args.referenceLineValue, label: args.referenceLineLabel }
         : undefined,
+      verification: args.verification !== undefined ? args.verification : undefined,
     };
 
     // Serialize dailyTotals for client-side verification

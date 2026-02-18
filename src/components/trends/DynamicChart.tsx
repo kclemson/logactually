@@ -21,6 +21,13 @@ export interface ChartSpec {
   valueFormat?: "integer" | "decimal1" | "duration_mmss" | "none";
   referenceLine?: { value: number; label?: string };
   dataSource?: "food" | "exercise" | "custom" | "mixed";
+  verification?: {
+    type: "daily" | "aggregate";
+    source: "food" | "exercise";
+    field: string;
+    method?: "sum" | "average" | "count" | "max" | "min";
+    breakdown?: Array<{ label: string; dates: string[] }>;
+  } | null;
 }
 
 function formatValue(value: number, format?: string): string {
