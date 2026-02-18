@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
@@ -42,6 +42,15 @@ export function EntryExpandedPanel({
 }: EntryExpandedPanelProps) {
   const { type, name, isFromSaved } = savedItemInfo;
   const typeLabel = type === 'meal' ? 'meal' : 'routine';
+  const [copied, setCopied] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  const handleCopyClick = () => {
+    onCopyToToday?.();
+    setCopied(true);
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <div className={cn('grid gap-0.5', gridCols)}>
@@ -82,12 +91,18 @@ export function EntryExpandedPanel({
 
         <div className="flex items-center gap-4 shrink-0">
           {onCopyToToday && (
-            <button
-              onClick={onCopyToToday}
-              className="text-xs text-blue-600 dark:text-blue-400 py-1 hover:underline"
-            >
-              Copy to today
-            </button>
+            copied ? (
+              <span className="text-xs text-green-600 dark:text-green-400 py-1">
+                Copied!
+              </span>
+            ) : (
+              <button
+                onClick={handleCopyClick}
+                className="text-xs text-blue-600 dark:text-blue-400 py-1 hover:underline"
+              >
+                Copy to today
+              </button>
+            )
           )}
           {onShowDetails && (
             <button
