@@ -872,7 +872,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
               buildFields={buildFoodDetailFields}
               hideWhenZero={FOOD_HIDE_WHEN_ZERO}
               readOnly={isReadOnly}
-              labelClassName="min-w-[4rem]"
+               labelClassName="min-w-[3.5rem] sm:min-w-[4rem]"
             />
           );
         }
@@ -889,7 +889,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
             onSave={handleDetailSave}
             hideWhenZero={FOOD_HIDE_WHEN_ZERO}
             readOnly={isReadOnly}
-            labelClassName="min-w-[4rem]"
+            labelClassName="min-w-[3.5rem] sm:min-w-[4rem]"
           />
         );
       })()}
