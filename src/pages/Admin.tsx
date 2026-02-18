@@ -415,7 +415,7 @@ export default function Admin() {
                   >
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
                       <span className="text-muted-foreground font-mono">#{f.feedback_id}</span>
-                      <span className="text-muted-foreground">{format(parseISO(f.created_at), "MMM d, yyyy")}</span>
+                      <span className="text-muted-foreground">{format(parseISO(f.created_at), "MMM d")}</span>
                       <span className="text-muted-foreground">User #{f.user_number}</span>
                       {!f.response && (
                         <span className="text-foreground">Active</span>
@@ -535,7 +535,7 @@ export default function Admin() {
                   >
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
                       <span className="text-muted-foreground font-mono">#{f.feedback_id}</span>
-                      <span className="text-muted-foreground">{format(parseISO(f.created_at), "MMM d, yyyy")}</span>
+                      <span className="text-muted-foreground">{format(parseISO(f.created_at), "MMM d")}</span>
                       <span className="text-muted-foreground">User #{f.user_number}</span>
                       {f.resolved_reason === 'fixed' ? (
                         <span className="text-green-600 dark:text-green-400">✓ Fixed</span>
