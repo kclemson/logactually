@@ -1,19 +1,19 @@
 
 
-# Add changelog entry for "Copy to today" feature
+# Fix expanded panel layout — stop action links from constraining text
+
+## Problem
+The current layout uses `flex items-end justify-between` to put left-side text and right-side action links on the same row. This forces long text (raw input, saved routine names) to share horizontal space with the action links, causing it to wrap earlier than it should.
+
+## Fix
+Change from a side-by-side layout to a vertical stack. Text content flows at full width, and action links sit on their own line below, right-aligned.
 
 ## Changes
 
-### 1. Copy screenshot to `public/changelog/`
-- Copy `user-uploads://copy_to_today.png` to `public/changelog/copy-to-today.png`
+### `src/components/EntryExpandedPanel.tsx`
+- Replace the outer `flex items-end justify-between gap-2` div with a vertical `space-y-1.5` container.
+- Let `extraContent`, "Logged as", and "From saved" text flow at full width without a constraining wrapper.
+- Move all action links ("Copy to today", "Details", and "Save as meal/routine") into a single `flex justify-end gap-4` row at the bottom.
 
-### 2. `src/pages/Changelog.tsx`
-- Add new entry at the top of `CHANGELOG_ENTRIES` (after the existing Feb-18 detail dialog entry):
-  ```
-  { date: "Feb-18", text: "Added 'Copy to today' — expand any past food or exercise entry and tap the link to instantly duplicate it to today's log. Shows a brief inline confirmation without interrupting your browsing.", image: "copy-to-today.png" }
-  ```
-- No change to `LAST_UPDATED` (already `"Feb-18-26"`)
-
-### 3. No changes needed to `AboutSection.tsx`
-- Already shows "last updated Feb-18"
+One file, layout-only change. No logic changes.
 
