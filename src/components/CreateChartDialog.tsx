@@ -210,9 +210,11 @@ function CreateChartDialogInner({
                 {showDebug ? "Hide debug JSON" : "Show debug JSON"}
               </Button>
               {showDebug && (
-                <pre className="whitespace-pre-wrap break-all text-[10px] max-h-[200px] overflow-auto bg-muted/50 rounded p-2">
-                  {JSON.stringify(currentSpec, null, 2)}
-                </pre>
+              <Textarea
+                readOnly
+                value={JSON.stringify(currentSpec, null, 2)}
+                className="text-[10px] font-mono bg-muted/50 rounded p-2 min-h-[100px] resize-y"
+              />
               )}
             </div>
           )}
