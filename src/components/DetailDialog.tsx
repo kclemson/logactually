@@ -295,7 +295,7 @@ function FieldViewGrid({
       ))}
       {/* Two-column layout */}
       {(layout.left.length > 0 || layout.right.length > 0) && (
-        <div className="grid grid-cols-2 gap-x-4">
+        <div className="grid grid-cols-2 gap-x-2">
           <div className="flex flex-col gap-y-1">
             {layout.left.map(field => (
               <FieldViewItem key={field.key} field={field} {...sharedProps} />
@@ -336,7 +336,7 @@ function FieldEditGrid({
       ))}
       {/* Two-column layout */}
       {(layout.left.length > 0 || layout.right.length > 0) && (
-        <div className="grid grid-cols-2 gap-x-4">
+        <div className="grid grid-cols-2 gap-x-2">
           <div className="flex flex-col gap-y-1">
             {layout.left.map(field => (
               <FieldEditItem key={field.key} field={field} {...sharedProps} />
