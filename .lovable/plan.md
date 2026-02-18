@@ -1,112 +1,45 @@
 
+## Fix Pinned Chats UI Issues
 
-## Pinned Chats for Ask AI
+Seven issues to address across two files.
 
-### What the user sees
+### Changes
 
-1. **Pin icon + count badge in dialog header** -- A small `Pin` icon appears in the header area (near the existing refresh button position). When pinned chats exist, a count badge shows (e.g., "3"). Tapping it switches to the pinned chats view.
+**File: `src/components/AskTrendsAIDialog.tsx`**
 
-2. **Pin button on AI responses** -- After the AI answers, a pin icon appears next to the "Ask another question" button. Tapping it shows "Pinned!" text briefly (~1.5s), then switches to a filled/active pin state. Same transient feedback pattern as "Copied" elsewhere.
+1. **Move pin icon out of response header, only show when pinCount > 0** -- Remove the pin icon button from the header area entirely when there are 0 pinned chats. When pinCount >= 1, show it in the header alongside the refresh button.
 
-3. **Pinned chats view** -- Shows all pinned chats (food and exercise combined), newest first. Each item shows:
-   - Timestamp: `MMM d h:mm a` format
-   - Mode badge: "Food" or "Exercise"
-   - Full question text (no truncation, wraps naturally across lines)
-   - Expand/collapse chevron for the AI answer (inline, no navigation)
-   - Unpin button (trash or X icon) per item
-   - "Back" button to return to the ask view
+2. **Move pin icon to the "ask" view only (not the response view header)** -- The user's feedback says the entrypoint should be on the "ask AI" dialog, not on the AI response. The current code already only shows it in the `view === "ask"` branch, but it shows on the response too (since `data?.answer` doesn't hide the header icons). Fix: only show the pin badge icon when in the pre-response state OR when there's a response (it's fine in both -- the user's complaint is about it being on the response dialog header which is actually fine since it's still the ask dialog). Re-reading: the user says "the entrypoint for viewing pinned chats is on the 'ask AI' dialog, not the AI response" -- meaning the pin icon in the header should NOT show when a response is displayed. Only show it on the initial ask screen.
 
-4. **Empty state** -- If no pinned chats exist, show a brief message like "No pinned chats yet. Pin an AI response to save it here."
+3. **Style the Pin button to match "Ask another question"** -- Change from gray muted styling to use `variant="outline"` Button styling so it looks equally clickable. Use `text-foreground` instead of `text-muted-foreground`.
 
-### Visual layout
+4. **Remove the temporary "Pinned!" feedback** -- Since the button text changes from "Pin" to "Pinned", that's sufficient feedback. Remove the `pinFeedback` state and `setTimeout` logic entirely.
 
-```text
-Ask view (with response):
-+------------------------------------------+
-| Sparkles  Ask AI about food trends  [Pin 3] [X] |
-+------------------------------------------+
-| "What patterns do you see?"              |
-|                                          |
-| [AI response text...]                    |
-|                                          |
-| [Pin icon]  [Ask another question]       |
-+------------------------------------------+
+5. **Fix header icon spacing and alignment** -- Increase gap between refresh and pin icons, ensure vertical alignment with the X close button by adjusting positioning.
 
-Pinned chats view:
-+------------------------------------------+
-| Pin  Pinned chats              [<- Back] [X] |
-+------------------------------------------+
-| Feb 18 2:30 PM  -  Food          [Unpin] |
-| "What patterns do you notice in how I    |
-|  eat on higher-calorie vs lower-calorie  |
-|  days?"                             [v]  |
-|------------------------------------------|
-| Feb 15 9:15 AM  -  Exercise      [Unpin] |
-| "Am I neglecting any movement            |
-|  patterns?"                         [v]  |
-+------------------------------------------+
-```
+**File: `src/components/PinnedChatsView.tsx`**
+
+6. **Fix Back button overlapping with X close** -- The "Back" button is positioned where it conflicts with the dialog's built-in X close button. Move it to the left side or adjust positioning so they don't overlap.
+
+7. **Replace X unpin with Trash icon + confirm popover** -- Use the existing `DeleteConfirmPopover` component pattern (Trash2 icon with a confirmation popover) instead of a plain X icon for unpinning.
 
 ### Technical Details
 
-#### 1. Database: `pinned_chats` table
+#### `AskTrendsAIDialog.tsx`
 
-New table with RLS following existing patterns:
+- Remove `pinFeedback` state and `setTimeout` logic
+- Header icons container: only render pin icon when `pinCount > 0` AND when not showing a response (`!data?.answer && !isPending`)
+- Pin badge: soften the badge styling -- use smaller, more subtle colors (e.g., `bg-muted text-muted-foreground` or `bg-primary/20 text-primary` instead of solid `bg-primary text-primary-foreground`)
+- Increase gap in the icons container from `gap-1` to `gap-2`
+- Fix vertical alignment: adjust `top-4` and `right-12` positioning to properly align with the dialog close X
+- Pin button on response: style as `variant="outline"` Button with `size="sm"` to match "Ask another question", with `text-foreground` for icon and text
 
-```sql
-CREATE TABLE public.pinned_chats (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  question text NOT NULL,
-  answer text NOT NULL,
-  mode text NOT NULL CHECK (mode IN ('food', 'exercise')),
-  created_at timestamptz NOT NULL DEFAULT now()
-);
+#### `PinnedChatsView.tsx`
 
-ALTER TABLE public.pinned_chats ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view own pinned chats"
-  ON public.pinned_chats FOR SELECT
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can insert own pinned chats"
-  ON public.pinned_chats FOR INSERT
-  WITH CHECK (auth.uid() = user_id AND NOT is_read_only_user(auth.uid()));
-
-CREATE POLICY "Users can delete own pinned chats"
-  ON public.pinned_chats FOR DELETE
-  USING (auth.uid() = user_id AND NOT is_read_only_user(auth.uid()));
-```
-
-No UPDATE policy needed -- pins are immutable (create or delete only).
-
-#### 2. New hook: `src/hooks/usePinnedChats.ts`
-
-- `usePinnedChats()` returns:
-  - `pinnedChats`: array ordered by `created_at DESC`
-  - `pinCount`: number for the badge
-  - `pinMutation`: insert (question, answer, mode)
-  - `unpinMutation`: delete by id
-- Uses React Query with `['pinned-chats']` query key
-- Optimistic updates for instant UI feedback on pin/unpin
-
-#### 3. Update `src/components/AskTrendsAIDialog.tsx`
-
-- Add `view` state: `'ask' | 'pinned'`
-- **Header**: Add pin icon button with count badge, positioned similar to the refresh icon. Only shows when in ask view. In pinned view, header shows "Pinned chats" with a back arrow.
-- **Response view**: Add `Pin` icon button in the same row as "Ask another question". On click: call `pinMutation`, show "Pinned!" for 1.5s, then show filled pin. If already pinned (check by matching question+answer in pinned list), show filled pin immediately.
-- **Pinned view**: List of pinned chats with:
-  - `format(createdAt, 'MMM d h:mm a')` using date-fns
-  - Mode badge (small pill: "Food" / "Exercise")
-  - Question text displayed in full (text wraps, no truncation)
-  - Chevron to expand/collapse the answer inline
-  - Unpin button (small icon) per item
-  - Empty state message when no pins exist
-
-### Files to create
-- `src/hooks/usePinnedChats.ts`
+- Move "Back" button to the left or make it a text link that doesn't overlap with the dialog X (which is at `right-4 top-4`)
+- Replace X unpin button with `DeleteConfirmPopover` from existing component. This requires adding `openPopoverId` / `setOpenPopoverId` state to manage which popover is open
+- Pass appropriate label ("Unpin chat") and description ("This will remove the pinned chat") to the confirm popover
 
 ### Files to modify
-- `src/components/AskTrendsAIDialog.tsx` -- pin button on responses, header badge, pinned view
-- Database migration for `pinned_chats` table
-
+- `src/components/AskTrendsAIDialog.tsx` -- header icons, pin button styling, remove pinFeedback
+- `src/components/PinnedChatsView.tsx` -- fix back button overlap, replace X with trash + confirm
