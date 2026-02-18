@@ -1,53 +1,35 @@
 
 
-# Compact, left-hugging inputs for exercise detail fields
+# Align exercise detail inputs into clean columns
 
-## Concept
+## Problem
 
-Instead of inputs stretching to fill available space (`flex-1`), make them a fixed small width (like the biometrics dialog). The label takes only the space it needs, and the input sits right next to it -- no push-right, no justify-between. The layout naturally aligns because all cells in a given grid column start at the same x-position.
+Currently each grid cell uses `flex gap-2`, which means the input's x-position depends on its specific label's text width. "Distance:" is shorter than "Exercise type:", so the Distance input starts further left. There's no vertical alignment of inputs within a column.
 
-## Changes
+## Fix (two changes)
 
-**File: `src/components/DetailDialog.tsx`**
+### 1. Consistent label width via `labelClassName` prop
 
-### Edit mode inputs (line 225)
+Add a `labelClassName` prop that flows from DetailDialog down to FieldViewGrid and FieldEditGrid. For exercise dialogs, WeightLog.tsx passes `labelClassName="min-w-[5.5rem]"` -- wide enough for the longest label ("Exercise type:"). This forces all labels in the grid to occupy at least that width, so every input's left edge starts at the same x-position within its column.
 
-Change numeric `Input` from `flex-1 min-w-0` to a fixed width:
+Food dialogs don't pass `labelClassName`, so they're unaffected.
 
-```
-// Before
-className="h-6 py-0 px-1.5 text-sm flex-1 min-w-0"
+### 2. Shrink numeric inputs from `w-16` to `w-12`
 
-// After
-className="h-6 py-0 px-1.5 text-sm w-16 text-center"
-```
+`w-16` (64px) is wider than needed for values that are at most 3-4 characters. `w-12` (48px) fits "1.19", "171", "108" comfortably and looks much tighter.
 
-This gives every numeric input the same ~4-character width, matching the biometrics pattern.
+## Technical changes
 
-### Select dropdowns (line 196)
+**`src/components/DetailDialog.tsx`**
 
-Keep `flex-1` for selects since dropdown options need room:
+- Add `labelClassName?: string` to `DetailDialogProps` interface
+- Pass it through to `FieldViewGrid` and `FieldEditGrid` (both accept it as a new optional prop)
+- Apply it to the label `<span>` via `cn("text-xs text-muted-foreground shrink-0", labelClassName)`
+- Change numeric input width from `w-16` to `w-12`
 
-```
-// No change -- selects stay flex-1
-```
+**`src/pages/WeightLog.tsx`**
 
-### Text inputs (Name field)
+- Add `labelClassName="min-w-[5.5rem]"` to both exercise DetailDialog usages (lines 774 and 796 area)
 
-The Name field already spans `col-span-2` -- it should also stay `flex-1` since it's a full-width text field. We need to differentiate: only `type === 'number'` inputs get the fixed width.
-
-Updated logic (line 214-226):
-
-```tsx
-<Input
-  type={field.type}
-  ...
-  className={cn(
-    "h-6 py-0 px-1.5 text-sm",
-    field.type === 'number' ? "w-16 text-center" : "flex-1 min-w-0"
-  )}
-/>
-```
-
-That's it -- one line change (swapping the className to be conditional on field type). Labels stay left, inputs sit snugly next to them at a compact fixed width, and the grid columns handle vertical alignment naturally.
+Four small edits total: prop threading + label class + input width + caller prop.
 
