@@ -1,14 +1,19 @@
 
 
-# Fix action links not spreading to full width on short entries
+# Remove rounded corners from changelog screenshots
 
 ## Problem
-The container holding "Save as meal", "Copy to today", and "Details" doesn't stretch to the full panel width. It only takes the natural width of its content. For entries with long text, it happens to fill the space, but for short entries (like "Signature edamame"), the container is narrow and `justify-between` has no room to separate the left and right actions.
+The changelog page applies `rounded` corners to screenshots via CSS. Since the user uploads square-cornered screenshots (sometimes with white outlines for contrast), the rounding clips those edges.
 
 ## Fix
 
-### `src/components/EntryExpandedPanel.tsx`
-Add `w-full` to the inner `div` on line 58 so it always stretches to fill the parent flex container. This ensures `justify-between` on the actions row works regardless of text length.
+### `src/pages/Changelog.tsx`
+Remove the `rounded` class from three places:
 
-Single class addition, one line change.
+1. **Lightbox image** (line ~134): Remove `rounded` from the `<img>` inside the lightbox overlay.
+2. **Lightbox container** (line ~127): Remove `rounded-lg` from the lightbox wrapper `<div>` so it doesn't add rounded padding around a square image.
+
+The inline thumbnail images in the list don't appear to have `rounded` classes, so no change needed there.
+
+One file, CSS-only change. No logic changes.
 
