@@ -81,7 +81,7 @@ export function useScanBarcode() {
   const createFoodItemFromScan = (result: LookupResult): Omit<FoodItem, 'uid' | 'entryId'> => {
     return {
       description: result.description,
-      portion: result.portion,
+      portion: result.portion || '1 serving',
       calories: result.calories,
       protein: result.protein,
       carbs: result.carbs,
