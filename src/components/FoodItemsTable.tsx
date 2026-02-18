@@ -80,6 +80,8 @@ interface FoodItemsTableProps {
   onUpdateGroupName?: (entryId: string, newName: string) => void;
   /** Callback when user clicks "Details" on an entry's expanded panel */
   onShowDetails?: (entryId: string, startIndex: number, endIndex?: number) => void;
+  /** Callback to copy an entry to today's date */
+  onCopyEntryToToday?: (entryId: string) => void;
 }
 
 export function FoodItemsTable({
@@ -118,6 +120,7 @@ export function FoodItemsTable({
   calorieTargetComponents,
   onUpdateGroupName,
   onShowDetails,
+  onCopyEntryToToday,
 }: FoodItemsTableProps) {
   // Read-only mode blocks saves
   const { isReadOnly, triggerOverlay } = useReadOnlyContext();
@@ -999,6 +1002,9 @@ export function FoodItemsTable({
                       ? () => onSaveAsMeal(currentEntryId!, currentRawInput ?? null, entryItems)
                       : undefined}
                     gridCols={gridCols}
+                    onCopyToToday={onCopyEntryToToday && currentEntryId
+                      ? () => onCopyEntryToToday(currentEntryId!)
+                      : undefined}
                     onShowDetails={onShowDetails && currentEntryId
                       ? () => {
                           const boundary = entryBoundaries?.find(b => b.entryId === currentEntryId);

@@ -91,6 +91,8 @@ interface WeightItemsTableProps {
   onUpdateCalorieBurn?: (id: string, calories: number) => void;
   /** Distance unit preference for display (mi or km) */
   distanceUnit?: DistanceUnit;
+  /** Callback to copy an entry to today's date */
+  onCopyEntryToToday?: (entryId: string) => void;
 }
 
 /**
@@ -162,6 +164,7 @@ export function WeightItemsTable({
   onShowDetails,
   onUpdateCalorieBurn,
   distanceUnit = 'mi',
+  onCopyEntryToToday,
 }: WeightItemsTableProps) {
   const { isReadOnly, triggerOverlay } = useReadOnlyContext();
   const hasHover = useHasHover();
@@ -794,6 +797,9 @@ export function WeightItemsTable({
                     } : undefined}
                     gridCols={gridCols}
                     extraContent={calorieBurnContent}
+                    onCopyToToday={onCopyEntryToToday && currentEntryId
+                      ? () => onCopyEntryToToday(currentEntryId)
+                      : undefined}
                     onShowDetails={onShowDetails && currentEntryId
                       ? () => {
                           const boundary = entryBoundaries?.find(b => b.entryId === currentEntryId);
