@@ -1,14 +1,23 @@
 
 
-# Use compact date format in admin feedback header
+# Show decimal precision on Body Weight trend chart labels
 
-## Change
+## Problem
+The Body Weight chart labels always round to integers (e.g., "185" instead of "185.2") because the shared bar chart component (`FoodChart`) hardcodes `Math.round(value)` in its label renderer.
 
-In `src/pages/Admin.tsx`, change the date format from `"MMM d, yyyy"` to `"MMM d"` (dropping the year and comma) in both the active and resolved feedback sections.
+## Why FoodChart is involved
+Despite the name, `FoodChart` is a generic reusable bar chart. `CustomLogTrendChart` delegates to it for all single-series numeric charts including Body Weight (line 78). The label rendering logic lives inside `FoodChart`, so a small extension there is unavoidable.
 
-### Lines to update
-- **Line 418**: `format(parseISO(f.created_at), "MMM d, yyyy")` → `format(parseISO(f.created_at), "MMM d")`
-- **Line 538**: `format(parseISO(f.created_at), "MMM d, yyyy")` → `format(parseISO(f.created_at), "MMM d")`
+## Changes
 
-This keeps the header row more compact so the feedback ID, date, user number, status, and action links all fit on one line.
+### 1. `src/components/trends/FoodChart.tsx`
+- Add one optional prop: `labelFormatter?: (value: number) => string`
+- Pass it into `createFoodLabelRenderer`; when provided, use it instead of `Math.round(value)`
+- No existing callers are affected (they don't pass the prop, so behavior is unchanged)
 
+### 2. `src/components/trends/CustomLogTrendChart.tsx`
+- For the single-series numeric branch (line 76-86), check if any data point has a fractional part
+- If yes, pass `labelFormatter={(v) => v.toFixed(1)}` to `FoodChart`
+- If all values are integers, don't pass it (keeps current rounding behavior)
+
+No other files change. All existing food/macro/exercise charts remain untouched.
