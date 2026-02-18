@@ -484,7 +484,9 @@ export function DetailDialog({
               {items.map((item, idx) => {
                 const isExpanded = expandedIndices.has(idx);
                 const isEditing = editingIndex === idx;
-                const itemFields = buildFields ? buildFields(item) : fields;
+                // When editing, rebuild fields using draft values so category changes update layout immediately
+                const fieldSource = (isEditing && buildFields) ? { ...item, ...draft } : item;
+                const itemFields = buildFields ? buildFields(fieldSource) : fields;
                 const itemSections = groupFieldsBySections(itemFields);
 
                 return (
@@ -622,8 +624,9 @@ function buildSubtypeOptions(exerciseKey: string): { value: string; label: strin
 
 export function buildExerciseDetailFields(item: Record<string, any>): FieldConfig[] {
   const exerciseKey = item.exercise_key || '';
-  const isCardio = isCardioExercise(exerciseKey);
-  const subtypeOptions = buildSubtypeOptions(exerciseKey);
+  // Allow draft category override via virtual _exercise_category field
+  const category: string = item._exercise_category
+    || (isCardioExercise(exerciseKey) ? 'cardio' : (EXERCISE_MUSCLE_GROUPS[exerciseKey] ? 'strength' : 'other'));
 
   const fields: FieldConfig[] = [
     {
@@ -633,17 +636,39 @@ export function buildExerciseDetailFields(item: Record<string, any>): FieldConfi
         options: [
           { value: 'strength', label: 'Strength' },
           { value: 'cardio', label: 'Cardio' },
+          { value: 'other', label: 'Other' },
         ],
       },
     },
-    { key: 'exercise_key', label: 'Exercise type', type: 'select', optgroups: buildExerciseKeyOptgroups() },
   ];
 
+  if (category === 'other') {
+    // Other: name only + universal metadata (effort, cal burned, heart rate)
+    const otherMetaKeys = ['effort', 'calories_burned', 'heart_rate'];
+    for (const metaKey of otherMetaKeys) {
+      const mk = KNOWN_METADATA_KEYS.find(m => m.key === metaKey);
+      if (!mk) continue;
+      fields.push({
+        key: `_meta_${mk.key}`,
+        label: mk.label,
+        type: 'number',
+        unit: mk.unit,
+        min: mk.min,
+        max: mk.max,
+      });
+    }
+    return fields;
+  }
+
+  // Strength & Cardio: include exercise type + subtype
+  fields.push({ key: 'exercise_key', label: 'Exercise type', type: 'select', optgroups: buildExerciseKeyOptgroups() });
+
+  const subtypeOptions = buildSubtypeOptions(exerciseKey);
   if (subtypeOptions) {
     fields.push({ key: 'exercise_subtype', label: 'Subtype', type: 'select', options: subtypeOptions });
   }
 
-  if (isCardio) {
+  if (category === 'cardio') {
     // Wider fields on left (odd positions), narrower on right
     fields.push(
       { key: 'distance_miles', label: 'Distance', type: 'number', unitToggle: { units: ['mi', 'km'], storageUnit: 'mi', convert: convertDistance }, min: 0, step: 0.01 },
@@ -693,7 +718,9 @@ export function buildExerciseDetailFields(item: Record<string, any>): FieldConfi
 
 export function flattenExerciseValues(item: Record<string, any>): Record<string, any> {
   const flat: Record<string, any> = { ...item };
-  flat._exercise_category = isCardioExercise(item.exercise_key) ? 'cardio' : 'strength';
+  flat._exercise_category = isCardioExercise(item.exercise_key)
+    ? 'cardio'
+    : (EXERCISE_MUSCLE_GROUPS[item.exercise_key] ? 'strength' : 'other');
   const metadata = item.exercise_metadata || {};
   for (const mk of KNOWN_METADATA_KEYS) {
     flat[`_meta_${mk.key}`] = metadata[mk.key] ?? null;
