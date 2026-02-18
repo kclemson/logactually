@@ -69,7 +69,7 @@ DATA INTEGRITY:
 
 Rules:
 - Use short, readable labels for the x-axis (e.g., "6am", "Mon", "Jan 5")
-- Choose a color hex code that fits the data type (blue for calories, green for protein, teal for custom logs, purple for exercise)
+- Use these exact colors when the chart's primary metric matches: calories "#2563EB", protein "#115E83", carbs "#00B4D8", fat "#90E0EF", exercise/training "#7C3AED". For anything else, choose a reasonable color hex code.
 - For time-of-day analysis, use created_at timestamps, not date fields
 - Preserve numeric precision: 1 decimal for averages, whole numbers for counts/calories
 - When modifying a previous chart, change only what was asked
