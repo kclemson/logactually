@@ -126,7 +126,7 @@ export function CalorieTargetRollup({ settings, burnByDate, usesBurns, tooltipOp
         <TooltipContent
           side="bottom"
           sideOffset={5}
-          onPointerDownOutside={(e) => e.preventDefault()}
+          onPointerDownOutside={() => onTooltipToggle?.()}
         >
           <div className="space-y-1.5">
             {isMultiplier ? (

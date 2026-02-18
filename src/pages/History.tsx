@@ -324,13 +324,6 @@ const History = () => {
         ))}
       </div>
 
-      {/* Mobile overlay to dismiss active tooltip */}
-      {!hasHover && (activeDayIndex != null || rollupTooltipOpen) && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={dismissAllTooltips}
-        />
-      )}
 
       {/* Calendar Grid */}
       <TooltipProvider delayDuration={150}>
@@ -442,7 +435,7 @@ const History = () => {
                     <TooltipTrigger asChild>
                       {cellContent}
                     </TooltipTrigger>
-                    <TooltipContent side="bottom" sideOffset={5} onPointerDownOutside={(e) => e.preventDefault()}>
+                    <TooltipContent side="bottom" sideOffset={5}>
                       {tooltipContent}
                     </TooltipContent>
                   </Tooltip>
@@ -456,7 +449,7 @@ const History = () => {
                     <TooltipTrigger asChild>
                       {cellContent}
                     </TooltipTrigger>
-                    <TooltipContent side="bottom" sideOffset={5} onPointerDownOutside={(e) => e.preventDefault()}>
+                    <TooltipContent side="bottom" sideOffset={5} onPointerDownOutside={() => setActiveDayIndex(null)}>
                       {tooltipContent}
                       <button
                         className="mt-1.5 text-primary-foreground/80 underline underline-offset-2 text-xs"

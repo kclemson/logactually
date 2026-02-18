@@ -243,7 +243,7 @@ export function WeightItemsTable({
                 role="button"
               >{totalCalorieBurnDisplay}</span>
             </TooltipTrigger>
-            <TooltipContent sideOffset={5} onPointerDownOutside={(e) => e.preventDefault()}>Refine this estimate with your weight, height, and age in Settings.</TooltipContent>
+            <TooltipContent sideOffset={5}>Refine this estimate with your weight, height, and age in Settings.</TooltipContent>
           </Tooltip>
         )}
       </span>
