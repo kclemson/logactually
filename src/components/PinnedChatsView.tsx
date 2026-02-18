@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { format } from "date-fns";
-import { ChevronDown, ChevronRight, Pin } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronRight, Pin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DeleteConfirmPopover } from "@/components/DeleteConfirmPopover";
 import type { PinnedChat } from "@/hooks/usePinnedChats";
@@ -14,18 +14,27 @@ interface PinnedChatsViewProps {
 export function PinnedChatsView({ pinnedChats, onUnpin, onBack }: PinnedChatsViewProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const handleToggle = (id: string) => {
+    const next = expandedId === id ? null : id;
+    setExpandedId(next);
+    if (next) {
+      setTimeout(() => {
+        cardRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }, 50);
+    }
+  };
 
   const header = (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-1.5">
-        <Button variant="ghost" size="sm" onClick={onBack} className="h-7 px-2 text-xs">
-          ← Back
-        </Button>
-        <span className="text-sm font-medium flex items-center gap-1.5">
-          <Pin className="h-4 w-4" />
-          Pinned chats
-        </span>
-      </div>
+    <div className="flex items-center gap-2">
+      <Button variant="ghost" size="icon" onClick={onBack} className="h-7 w-7 shrink-0">
+        <ArrowLeft className="h-4 w-4" />
+      </Button>
+      <span className="text-sm font-medium flex items-center gap-1.5">
+        <Pin className="h-4 w-4" />
+        Pinned chats
+      </span>
     </div>
   );
 
@@ -48,7 +57,7 @@ export function PinnedChatsView({ pinnedChats, onUnpin, onBack }: PinnedChatsVie
         {pinnedChats.map((chat) => {
           const isExpanded = expandedId === chat.id;
           return (
-            <div key={chat.id} className="rounded-md border border-border bg-muted/30 p-2.5">
+            <div key={chat.id} ref={(el) => { cardRefs.current[chat.id] = el; }} className="rounded-md border border-border bg-muted/30 p-2.5">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-1">
@@ -72,11 +81,11 @@ export function PinnedChatsView({ pinnedChats, onUnpin, onBack }: PinnedChatsVie
               </div>
 
               <button
-                onClick={() => setExpandedId(isExpanded ? null : chat.id)}
+                onClick={() => handleToggle(chat.id)}
                 className="flex items-center gap-1 mt-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
               >
                 {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                {isExpanded ? "Hide answer" : "Show answer"}
+                {isExpanded ? "Hide response" : "Show response"}
               </button>
 
               {isExpanded && (

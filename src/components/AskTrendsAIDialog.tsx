@@ -179,7 +179,7 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
             <div className="space-y-3 mt-2">
               {/* Prompt chips (only show before a response) */}
               {!data?.answer && !isPending && (
-                <div className="flex flex-wrap gap-1.5 items-start h-[10.5rem] overflow-hidden">
+                <div className="flex flex-wrap gap-1.5 items-start min-h-[10.5rem]">
                   {chips.map((chip) => (
                     <button
                       key={chip}
@@ -196,7 +196,7 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
               )}
 
               {/* Input row */}
-              {!data?.answer && (
+              {!data?.answer && !isPending && (
                 <div className="space-y-2">
                   <Textarea
                     value={input}
@@ -208,7 +208,6 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
                       }
                     }}
                     placeholder="Ask a question..."
-                    disabled={isPending}
                     className="min-h-[60px] max-h-[120px] resize-none text-sm"
                     maxLength={500}
                   />
@@ -216,10 +215,10 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
                     <Button
                       size="sm"
                       onClick={() => handleSubmit(input)}
-                      disabled={!input.trim() || isPending}
+                      disabled={!input.trim()}
                       className="h-9"
                     >
-                      {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Ask"}
+                      Ask
                     </Button>
                   </div>
                 </div>
@@ -243,9 +242,14 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
 
               {/* Loading */}
               {isPending && (
-                <div className="flex items-center gap-2 py-4 justify-center text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm">Analyzing your data...</span>
+                <div className="space-y-3">
+                  {submittedQuestion && <p className="text-xs text-muted-foreground italic">"{submittedQuestion}"</p>}
+                  <div className="flex justify-end">
+                    <Button size="sm" disabled className="h-9">
+                      <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+                      Analyzing...
+                    </Button>
+                  </div>
                 </div>
               )}
 
@@ -288,7 +292,7 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
                       size="sm"
                       onClick={handlePin}
                       disabled={isAlreadyPinned}
-                      className="gap-1"
+                      className="gap-1 min-w-[5.5rem]"
                     >
                       <Pin className="h-3.5 w-3.5" />
                       {isAlreadyPinned ? "Pinned" : "Pin"}
