@@ -22,12 +22,13 @@ import { cn } from '@/lib/utils';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { type WeightUnit, type DistanceUnit, formatWeight, parseWeightToLbs, getWeightUnitLabel, formatDurationMmSs, convertDistance, convertSpeed, type SpeedUnit } from '@/lib/weight-units';
 import { isCardioExercise } from '@/lib/exercise-metadata';
-import { estimateCalorieBurn, formatCalorieBurnValue, type CalorieBurnSettings, type ExerciseInput } from '@/lib/calorie-burn';
+import { type CalorieBurnSettings } from '@/lib/calorie-burn';
 import { useHasHover } from '@/hooks/use-has-hover';
 import { type EntryBoundary, isFirstInBoundary, isLastInBoundary, isEntryNew, getEntryHighlightClasses, hasAnyEditedFields, formatEditedFields } from '@/lib/entry-boundaries';
 import { EntryChevron } from '@/components/EntryChevron';
 import { DeleteAllDialog } from '@/components/DeleteAllDialog';
 import { EntryExpandedPanel } from '@/components/EntryExpandedPanel';
+import { CalorieBurnInline } from '@/components/CalorieBurnInline';
 import { useInlineEdit } from '@/hooks/useInlineEdit';
 
 type EditableFieldKey = 'description' | 'sets' | 'reps' | 'weight_lbs';
@@ -86,6 +87,8 @@ interface WeightItemsTableProps {
   onUpdateGroupName?: (entryId: string, newName: string) => void;
   /** Callback when user clicks "Details" on an entry's expanded panel */
   onShowDetails?: (entryId: string, startIndex: number, endIndex?: number) => void;
+  /** Callback when user overrides calorie burn on a specific exercise row */
+  onUpdateCalorieBurn?: (id: string, calories: number) => void;
   /** Distance unit preference for display (mi or km) */
   distanceUnit?: DistanceUnit;
 }
@@ -157,6 +160,7 @@ export function WeightItemsTable({
   entryGroupNames,
   onUpdateGroupName,
   onShowDetails,
+  onUpdateCalorieBurn,
   distanceUnit = 'mi',
 }: WeightItemsTableProps) {
   const { isReadOnly, triggerOverlay } = useReadOnlyContext();
@@ -769,30 +773,13 @@ export function WeightItemsTable({
                 const entryExercises = items.filter(i => i.entryId === currentEntryId);
 
                 // Calorie burn estimates as extraContent
-                const calorieBurnContent = calorieBurnSettings?.calorieBurnEnabled ? (() => {
-                  const parts = entryExercises.map(ex => {
-                    const result = estimateCalorieBurn({
-                      exercise_key: ex.exercise_key,
-                      exercise_subtype: ex.exercise_subtype,
-                      sets: ex.sets,
-                      reps: ex.reps,
-                      weight_lbs: ex.weight_lbs,
-                      duration_minutes: ex.duration_minutes,
-                      distance_miles: ex.distance_miles,
-                      exercise_metadata: ex.exercise_metadata,
-                    }, calorieBurnSettings);
-                    return { name: ex.description, display: formatCalorieBurnValue(result) };
-                  }).filter(p => p.display);
-                  if (parts.length === 0) return null;
-                  const detail = parts.length === 1
-                    ? parts[0].display
-                    : parts.map(p => `${p.display} (${p.name})`).join(', ');
-                  return (
-                    <p className="text-xs text-muted-foreground italic">
-                      Estimated calories burned: {detail}
-                    </p>
-                  );
-                })() : undefined;
+                const calorieBurnContent = calorieBurnSettings?.calorieBurnEnabled ? (
+                  <CalorieBurnInline
+                    exercises={entryExercises}
+                    settings={calorieBurnSettings}
+                    onSave={onUpdateCalorieBurn}
+                  />
+                ) : undefined;
 
                 return (
                   <EntryExpandedPanel

@@ -354,6 +354,14 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
     }
   }, []);
 
+  // Handle inline calorie burn override from expanded panel
+  const handleUpdateCalorieBurn = useCallback((id: string, calories: number) => {
+    const item = displayItems.find(i => i.id === id);
+    if (!item) return;
+    const newMetadata = { ...(item.exercise_metadata ?? {}), calories_burned: calories };
+    updateSet.mutate({ id, updates: { exercise_metadata: newMetadata } });
+  }, [displayItems, updateSet]);
+
   const handleDetailSave = useCallback((updates: Record<string, any>) => {
     if (!detailDialogItem || detailDialogItem.mode !== 'single') return;
     const item = displayItems[detailDialogItem.index];
@@ -696,6 +704,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
               return value ? `(${value} cal)` : undefined;
             })() : undefined}
             onShowDetails={handleShowDetails}
+            onUpdateCalorieBurn={handleUpdateCalorieBurn}
           />
         </>
       )}
