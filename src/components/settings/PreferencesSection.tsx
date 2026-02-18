@@ -23,13 +23,13 @@ const themeOptions = [
 ] as const;
 
 const weightUnitOptions: { value: WeightUnit; label: string }[] = [
-  { value: 'lbs', label: 'Lbs' },
-  { value: 'kg', label: 'Kg' },
+  { value: 'lbs', label: 'Pounds (lbs)' },
+  { value: 'kg', label: 'Kilograms (kg)' },
 ];
 
 const distanceUnitOptions: { value: DistanceUnit; label: string }[] = [
-  { value: 'mi', label: 'Mi' },
-  { value: 'km', label: 'Km' },
+  { value: 'mi', label: 'Miles (mi)' },
+  { value: 'km', label: 'Kilometers (km)' },
 ];
 
 export function PreferencesSection({ settings, updateSettings }: PreferencesSectionProps) {
@@ -157,7 +157,7 @@ export function PreferencesSection({ settings, updateSettings }: PreferencesSect
             <div className="flex items-center justify-between">
               <p className="text-xs text-muted-foreground">Weight Units</p>
               <Select value={settings.weightUnit} onValueChange={(v) => handleWeightUnitChange(v as WeightUnit)}>
-                <SelectTrigger className="w-[100px] h-9">
+                <SelectTrigger className="w-[150px] h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -176,7 +176,7 @@ export function PreferencesSection({ settings, updateSettings }: PreferencesSect
             <div className="flex items-center justify-between">
               <p className="text-xs text-muted-foreground">Distance Units</p>
               <Select value={settings.distanceUnit} onValueChange={(v) => updateSettings({ distanceUnit: v as DistanceUnit })}>
-                <SelectTrigger className="w-[100px] h-9">
+                <SelectTrigger className="w-[150px] h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

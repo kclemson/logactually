@@ -29,6 +29,8 @@ export interface FieldConfig {
   step?: number;
   section?: string;
   maxWidth?: 'sm';
+  /** Render this field to the right on the same row */
+  pairedField?: FieldConfig;
 }
 
 export interface DetailDialogProps {
@@ -85,7 +87,7 @@ function displayValue(field: FieldConfig, activeValues: Record<string, any>, act
 function UnitToggle({ field, activeUnit, onToggle }: { field: FieldConfig; activeUnit: string; onToggle: (unit: string) => void }) {
   if (!field.unitToggle) return null;
   return (
-    <span className="flex items-center gap-0.5 ml-1 shrink-0">
+    <span className="flex items-center gap-0.5 shrink-0">
       {field.unitToggle.units.map(u => (
         <button
           key={u}
@@ -143,6 +145,7 @@ function FieldViewGrid({
           <div className={cn("grid gap-x-4 gap-y-1", gridClassName)}>
             {sectionFields
               .filter(field => {
+                if (field.key === '_exercise_category') return false;
                 if (!hideWhenZero?.has(field.key)) return true;
                 const val = activeValues[field.key];
                 return val !== 0 && val !== null && val !== undefined && val !== '';
@@ -152,9 +155,14 @@ function FieldViewGrid({
                 <span className={cn("text-xs text-muted-foreground shrink-0", labelClassName)}>
                   {field.label}:
                 </span>
-                <span className="text-sm min-w-0 truncate">
+                <span className="text-sm min-w-0 truncate pl-2">
                   {displayValue(field, activeValues, activeUnits?.[field.key])}
                 </span>
+                {field.pairedField && (
+                  <span className="text-xs text-muted-foreground shrink-0 ml-auto">
+                    {displayValue(field.pairedField, activeValues)}
+                  </span>
+                )}
                 {field.unit && !field.unitToggle && (
                   <span className="text-xs text-muted-foreground shrink-0">{field.unit}</span>
                 )}
@@ -189,7 +197,21 @@ function FieldEditGrid({
       {sections.map(([sectionName, sectionFields], sectionIdx) => (
         <div key={sectionName || sectionIdx}>
           <div className={cn("grid gap-x-4 gap-y-1", gridClassName)}>
-            {sectionFields.map(field => (
+            {sectionFields.filter(f => f.key !== '_exercise_category').map(field => {
+              // Dynamically filter exercise_key optgroups based on draft category
+              const effectiveField = field.key === 'exercise_key' && field.optgroups && draft._exercise_category
+                ? {
+                    ...field,
+                    optgroups: field.optgroups.filter(g => {
+                      if (g.label === 'Other') return true;
+                      return draft._exercise_category === 'cardio'
+                        ? g.label === 'Cardio'
+                        : g.label !== 'Cardio';
+                    }),
+                  }
+                : field;
+
+              return (
               <div key={field.key} className={cn("flex items-center gap-2 min-w-0", field.type === 'text' && 'col-span-2')}>
                 <span className={cn("text-xs text-muted-foreground shrink-0", labelClassName)}>
                   {field.label}:
@@ -198,13 +220,13 @@ function FieldEditGrid({
                   <span className="text-sm text-muted-foreground">{displayValue(field, draft, activeUnits?.[field.key])}</span>
                 ) : field.type === 'select' ? (
                   <select
-                    value={String(draft[field.key] ?? '')}
-                    onChange={e => updateDraft(field.key, e.target.value)}
+                    value={String(draft[effectiveField.key] ?? '')}
+                    onChange={e => updateDraft(effectiveField.key, e.target.value)}
                     className="flex h-6 flex-1 min-w-0 rounded-md border border-input bg-background px-1.5 py-0 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <option value="">—</option>
-                    {field.optgroups ? (
-                      field.optgroups.map(group => (
+                    {effectiveField.optgroups ? (
+                      effectiveField.optgroups.map(group => (
                         <optgroup key={group.label} label={group.label}>
                           {group.options.map(opt => (
                             <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -212,7 +234,7 @@ function FieldEditGrid({
                         </optgroup>
                       ))
                     ) : (
-                      field.options?.map(opt => (
+                      effectiveField.options?.map(opt => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                       ))
                     )}
@@ -231,6 +253,24 @@ function FieldEditGrid({
                       step={field.step}
                       className={cn("h-6 py-0 px-1.5 text-sm", field.type === 'number' ? "w-12 text-center" : cn("flex-1 min-w-0", field.maxWidth === 'sm' && "max-w-[12rem]"))}
                     />
+                    {/* Paired field (e.g. category dropdown next to Name) */}
+                    {field.pairedField && (
+                      <select
+                        value={String(draft[field.pairedField.key] ?? '')}
+                        onChange={e => {
+                          updateDraft(field.pairedField!.key, e.target.value);
+                          // When category changes, clear exercise_key since old value may not exist in new category
+                          if (field.pairedField!.key === '_exercise_category') {
+                            updateDraft('exercise_key', '');
+                          }
+                        }}
+                        className="flex h-6 w-[90px] shrink-0 rounded-md border border-input bg-background px-1 py-0 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        {field.pairedField.options?.map(opt => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    )}
                     {field.unitToggle && (
                       <UnitToggle field={field} activeUnit={activeUnits?.[field.key] || field.unitToggle.storageUnit} onToggle={(u) => onToggleUnit?.(field.key, u)} />
                     )}
@@ -240,7 +280,8 @@ function FieldEditGrid({
                   </>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ))}
@@ -584,7 +625,16 @@ export function buildExerciseDetailFields(item: Record<string, any>): FieldConfi
   const subtypeOptions = buildSubtypeOptions(exerciseKey);
 
   const fields: FieldConfig[] = [
-    { key: 'description', label: 'Name', type: 'text' },
+    {
+      key: 'description', label: 'Name', type: 'text',
+      pairedField: {
+        key: '_exercise_category', label: 'Category', type: 'select',
+        options: [
+          { value: 'strength', label: 'Strength' },
+          { value: 'cardio', label: 'Cardio' },
+        ],
+      },
+    },
     { key: 'exercise_key', label: 'Exercise type', type: 'select', optgroups: buildExerciseKeyOptgroups() },
   ];
 
@@ -642,6 +692,7 @@ export function buildExerciseDetailFields(item: Record<string, any>): FieldConfi
 
 export function flattenExerciseValues(item: Record<string, any>): Record<string, any> {
   const flat: Record<string, any> = { ...item };
+  flat._exercise_category = isCardioExercise(item.exercise_key) ? 'cardio' : 'strength';
   const metadata = item.exercise_metadata || {};
   for (const mk of KNOWN_METADATA_KEYS) {
     flat[`_meta_${mk.key}`] = metadata[mk.key] ?? null;
@@ -658,10 +709,13 @@ export function processExerciseSaveUpdates(
   let hasMetaChanges = false;
 
   for (const [key, value] of Object.entries(updates)) {
-    if (key.startsWith('_meta_')) {
-      const metaKey = key.slice(6);
-      metaChanges[metaKey] = value === '' || value === null ? null : Number(value);
-      hasMetaChanges = true;
+    if (key.startsWith('_')) {
+      if (key.startsWith('_meta_')) {
+        const metaKey = key.slice(6);
+        metaChanges[metaKey] = value === '' || value === null ? null : Number(value);
+        hasMetaChanges = true;
+      }
+      // Skip other virtual fields like _exercise_category
     } else {
       regularUpdates[key] = value;
     }
