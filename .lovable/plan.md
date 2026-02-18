@@ -1,89 +1,92 @@
 
 
-## Add "Verify accuracy" to AI charts via piggybacked daily totals
+## Make chart verification robust against non-time-series charts
 
-### Approach
+### Problem
 
-Instead of a separate edge function, return the already-computed daily totals alongside the chartSpec from generate-chart. The client performs the comparison locally. This avoids duplicating aggregation logic and eliminates a second API call.
+The verification logic blindly treats every data point's `rawDate` as a lookup key into daily totals. This produces false 0% accuracy results for categorical and aggregated charts where `rawDate` is just a provenance marker, not a verification key.
 
-### Scope of validation
+### Root cause
 
-Validation works for **daily time-series charts** where the `dataKey` maps to a known food macro or exercise aggregate. For categorical, derived, or unrecognized chart types, the button shows "Validation not available for this chart type." This covers roughly 60-70% of common chart requests.
+There are three chart classes, but verification only works for one:
 
-### Changes
+| Chart class | Example | rawDate meaning | Verifiable? |
+|---|---|---|---|
+| Daily time-series | "Daily calories over time" | The actual date this value represents | Yes |
+| Categorical / aggregated | "Workout days vs rest days", "by hour", "by day of week" | Arbitrary representative date | No |
+| Mixed data source | "Calories on workout vs rest days" | N/A | No (crosses food + exercise) |
 
-**`supabase/functions/generate-chart/index.ts`**
+### Solution
 
-Include the pre-computed daily totals in the response payload:
+Add detection heuristics to `verifyChartData` in `src/lib/chart-verification.ts` to identify non-time-series charts and return an informative "unavailable" status instead of a misleading accuracy score.
+
+### Detection heuristics (applied in order)
+
+1. **Mixed data source**: If `spec.dataSource === "mixed"`, return unavailable ("Cross-domain charts can't be verified against single-source totals")
+
+2. **Too few points for the date range**: If `data.length < 5` and the unique rawDates don't span at least `data.length` distinct dates, it's likely categorical. This catches "workout vs rest" (2 points), "by day of week" (7 points with possibly duplicate rawDates), etc.
+
+3. **Duplicate rawDates**: If any rawDate appears more than once in the data array, it's not a 1:1 time-series. Return unavailable.
+
+4. **Non-date x-axis field**: If the xAxis field name doesn't suggest dates (doesn't contain "date" case-insensitive), treat as categorical. This catches `dayType`, `hour`, `weekday`, `exerciseName`, etc.
+
+### Changes to `src/lib/chart-verification.ts`
+
+Add the detection logic at the top of `verifyChartData`, before the existing per-point comparison loop:
 
 ```typescript
-return new Response(JSON.stringify({
-  chartSpec,
-  dailyTotals: {
-    food: Object.fromEntries(dailyFoodTotals),    // { "2026-01-22": { cal: 3144, protein: 95, ... }, ... }
-    exercise: Object.fromEntries(dailyExTotals),   // serialized without Set (convert exercises to count)
-  },
-}), { ... });
+export function verifyChartData(
+  spec: ChartSpec,
+  dailyTotals: DailyTotals
+): VerificationResult {
+  const { data, dataKey } = spec;
+
+  // 1. Mixed data source — can't verify cross-domain
+  if (spec.dataSource === "mixed") {
+    return { status: "unavailable", reason: "Verification isn't available for charts combining food and exercise data" };
+  }
+
+  // 2. No rawDate fields
+  const hasRawDate = data.length > 0 && data.some((d) => d.rawDate);
+  if (!hasRawDate) {
+    return { status: "unavailable", reason: "Verification isn't available for this chart type (no date-based data)" };
+  }
+
+  // 3. Duplicate rawDates — indicates aggregated/categorical data
+  const rawDates = data.map((d) => d.rawDate as string).filter(Boolean);
+  const uniqueDates = new Set(rawDates);
+  if (uniqueDates.size < rawDates.length) {
+    return { status: "unavailable", reason: "Verification isn't available for aggregated charts (multiple points share the same date)" };
+  }
+
+  // 4. Non-date x-axis field — categorical chart
+  const xField = spec.xAxis.field.toLowerCase();
+  if (!xField.includes("date")) {
+    return { status: "unavailable", reason: "Verification isn't available for categorical charts" };
+  }
+
+  // ... existing dataKey mapping and per-point comparison logic unchanged ...
+}
 ```
 
-Serialize exercise `Set<string>` to `exercises: t.exercises.size` before returning.
+### Why this set of heuristics
 
-**`src/hooks/useGenerateChart.ts`**
-
-Update return type to include `dailyTotals` alongside `chartSpec`. Store both in the mutation result.
-
-**`src/components/CustomChartDialog.tsx`**
-
-- Store `dailyTotals` from the generate-chart response alongside `currentSpec`
-- Add a "Verify accuracy" button (next to "Show debug JSON")
-- On click, run client-side comparison:
-  1. Check if chart has `rawDate` fields in data and a recognized `dataKey`
-  2. Map `dataKey` to the corresponding totals field using a lookup table:
-     - `calories|cal|total_calories` maps to food `.cal`
-     - `protein` maps to food `.protein`
-     - `carbs` maps to food `.carbs`
-     - `fat` maps to food `.fat`
-     - `fiber` maps to food `.fiber`
-     - `sugar` maps to food `.sugar`
-     - `sodium` maps to food `.sodium`
-     - `cholesterol|chol` maps to food `.chol`
-     - `sat_fat|saturated_fat` maps to food `.sat_fat`
-     - `sets|logged_sets` maps to exercise `.sets`
-     - `duration|duration_min` maps to exercise `.duration`
-     - `distance` maps to exercise `.distance`
-     - `cal_burned` maps to exercise `.cal_burned`
-  3. For each data point, compare AI value vs actual value
-  4. Display results inline
-
-- If `dataKey` doesn't match any known field, or chart has no `rawDate`, show: "Verification isn't available for this chart type"
-
-**Verification results UI** (below chart, compact):
-
-```
-Accuracy: 27/28 match (96%)        [green tint]
-Mismatches:
-  Feb 14: AI=2188, actual=2244 (delta: -56)
-```
-
-Color coding: green (>95%), yellow (>80%), red (below 80%). Threshold for "match": values within 1% or delta less than 5.
+- **Mixed source** catches the exact failure shown (workout vs rest days uses both food and exercise data)
+- **Duplicate rawDates** is a structural impossibility for valid time-series data
+- **Non-date x-axis** catches "by hour", "by day of week", "by exercise name", etc. where the AI uses field names like `dayType`, `hour`, `weekday`
+- These are conservative checks: they only decline verification, never produce false positives
+- No changes needed to the edge function or prompt — purely client-side defensive logic
 
 ### Files changed
 
 | File | Change |
-|------|--------|
-| `supabase/functions/generate-chart/index.ts` | Include `dailyTotals` (food + exercise) in response JSON; serialize exercise Set to count |
-| `src/hooks/useGenerateChart.ts` | Update return type to include dailyTotals; store in mutation result |
-| `src/components/CustomChartDialog.tsx` | Store dailyTotals; add "Verify accuracy" button; client-side comparison logic with dataKey mapping table; inline results display |
+|---|---|
+| `src/lib/chart-verification.ts` | Add three guard clauses at top of `verifyChartData` to detect and gracefully handle categorical, aggregated, and mixed-source charts |
 
-### What this does NOT validate
+### What this does NOT change
 
-- Categorical charts (by hour, by day of week, by group)
-- Derived metrics (ratios, percentages, averages of averages)
-- Charts mixing food and exercise data
-- Custom log charts (could be added later with a type-name lookup)
+- Time-series charts continue to be verified exactly as before
+- No edge function changes needed
+- No prompt changes needed
+- The `rawDate` requirement in the prompt stays (useful for provenance and "go to day" navigation)
 
-These cases gracefully degrade to a "not available" message.
-
-### Future extensibility
-
-The dataKey mapping table is a simple object literal. Adding new metrics (e.g., from custom logs) means adding one line to the table. No schema or edge function changes needed.
