@@ -14,7 +14,7 @@ import { LogEntryInput } from '@/components/LogEntryInput';
 import { CustomLogEntryRow } from '@/components/CustomLogEntryRow';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { getStoredDate, setStoredDate } from '@/lib/selected-date';
-import { LOG_TEMPLATES, getTemplateUnit } from '@/lib/log-templates';
+import { LOG_TEMPLATES, MEASUREMENT_TEMPLATES, getTemplateUnit } from '@/lib/log-templates';
 import { useUserSettings } from '@/hooks/useUserSettings';
 
 // Wrapper: extracts date from URL, forces remount via key
@@ -80,7 +80,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
           {!isLoading && sortedLogTypes.length === 0 ? (
             <div className="flex flex-col items-center gap-3 w-full max-w-sm mx-auto">
               <div className="grid grid-cols-2 gap-2 w-full">
-                {LOG_TEMPLATES.map((t) => (
+                {LOG_TEMPLATES.filter(t => !t.group).map((t) => (
                   <button
                     key={t.name}
                     disabled={createType.isPending}
@@ -95,6 +95,14 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                     <span className="font-medium">{t.name}</span>
                   </button>
                 ))}
+                {/* Body Measurement group button */}
+                <button
+                  disabled={createType.isPending}
+                  onClick={() => setTemplatePickerOpen(true)}
+                  className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-accent transition-colors disabled:opacity-50 text-left"
+                >
+                  <span className="font-medium">Body Measurement</span>
+                </button>
               </div>
               <button
                 onClick={() => setCreateTypeOpen(true)}
@@ -245,6 +253,24 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
               setSelectedTypeId(newType.id);
             },
           });
+        }}
+        onSelectTemplates={(items) => {
+          let lastId: string | null = null;
+          const createNext = (index: number) => {
+            if (index >= items.length) {
+              setTemplatePickerOpen(false);
+              if (lastId) setSelectedTypeId(lastId);
+              return;
+            }
+            const p = items[index];
+            createType.mutate({ name: p.name, value_type: p.value_type as any, unit: p.unit }, {
+              onSuccess: (newType) => {
+                lastId = newType.id;
+                createNext(index + 1);
+              },
+            });
+          };
+          createNext(0);
         }}
         onCreateCustom={() => {
           setTemplatePickerOpen(false);
