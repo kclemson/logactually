@@ -72,7 +72,7 @@ export function FeedbackForm() {
   };
 
   const handleReply = (item: { id: string; message: string }, isReopen: boolean) => async () => {
-    const updatedMessage = `${item.message}\n---\nFollow-up on ${format(new Date(), "MMM d HH:mm")}:\n${followUp.trim()}`;
+    const updatedMessage = `${item.message}\n---\nFollow-up on ${format(new Date(), "MMM d h:mm a")}:\n${followUp.trim()}`;
     const updatePayload: any = { message: updatedMessage };
     if (isReopen) {
       updatePayload.resolved_at = null;

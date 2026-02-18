@@ -23,6 +23,7 @@ import { AppleHealthExplorer } from "@/components/AppleHealthExplorer";
 export default function Admin() {
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
+  const [replyMode, setReplyMode] = useState<'edit' | 'new'>('new');
   const [showPopulateDialog, setShowPopulateDialog] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [expandedFeedbackIds, setExpandedFeedbackIds] = useState<Set<string>>(new Set());
@@ -86,15 +87,17 @@ export default function Admin() {
 
   const pct = (value: number) => (stats && stats.total_users > 0 ? Math.round((value / stats.total_users) * 100) : 0);
 
-  const handleStartReply = (feedbackId: string, existingResponse: string | null) => {
+  const handleStartReply = (feedbackId: string, existingResponse: string | null, mode: 'edit' | 'new') => {
     setReplyingToId(feedbackId);
-    setReplyText(existingResponse ?? "");
+    setReplyMode(mode);
+    setReplyText(mode === 'edit' ? (existingResponse ?? "") : "");
     setExpandedFeedbackIds(prev => new Set(prev).add(feedbackId));
   };
 
   const handleCancelReply = () => {
     setReplyingToId(null);
     setReplyText("");
+    setReplyMode('new');
   };
 
   const toggleFeedbackExpand = (id: string) => {
@@ -109,13 +112,21 @@ export default function Admin() {
     requestAnimationFrame(() => window.scrollTo(0, scrollY));
   };
 
-  const handleSendReply = async (feedbackId: string) => {
+  const handleSendReply = async (feedbackId: string, existingResponse: string | null) => {
     if (!replyText.trim()) return;
 
+    let finalResponse: string;
+    if (replyMode === 'new' && existingResponse) {
+      finalResponse = `${existingResponse}\n---\nFollow-up on ${format(new Date(), "MMM d h:mm a")}:\n${replyText.trim()}`;
+    } else {
+      finalResponse = replyText.trim();
+    }
+
     try {
-      await respondToFeedback.mutateAsync({ feedbackId, response: replyText.trim() });
+      await respondToFeedback.mutateAsync({ feedbackId, response: finalResponse });
       setReplyingToId(null);
       setReplyText("");
+      setReplyMode('new');
     } catch (error) {
       console.error("Failed to send reply:", error);
     }
@@ -418,12 +429,29 @@ export default function Admin() {
                       )} />
                       {replyingToId !== f.id && (
                         <div className="flex items-center gap-2 w-full md:w-auto md:ml-auto">
-                          <button
-                            className="text-[hsl(217_91%_60%)] underline"
-                            onClick={(e) => { e.stopPropagation(); handleStartReply(f.id, f.response); }}
-                          >
-                            {f.response ? "Edit Reply" : "Reply"}
-                          </button>
+                          {f.response ? (
+                            <>
+                              <button
+                                className="text-[hsl(217_91%_60%)] underline"
+                                onClick={(e) => { e.stopPropagation(); handleStartReply(f.id, f.response, 'edit'); }}
+                              >
+                                Edit Reply
+                              </button>
+                              <button
+                                className="text-[hsl(217_91%_60%)] underline"
+                                onClick={(e) => { e.stopPropagation(); handleStartReply(f.id, f.response, 'new'); }}
+                              >
+                                New Reply
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              className="text-[hsl(217_91%_60%)] underline"
+                              onClick={(e) => { e.stopPropagation(); handleStartReply(f.id, f.response, 'edit'); }}
+                            >
+                              Reply
+                            </button>
+                          )}
                           <button
                             className="text-green-600 dark:text-green-400 underline"
                             onClick={(e) => { e.stopPropagation(); handleResolve(f.id, true); }}
@@ -449,7 +477,7 @@ export default function Admin() {
                       <FeedbackMessageBody
                         message={f.message}
                         createdAt={f.created_at}
-                        response={replyingToId !== f.id ? f.response : null}
+                        response={replyingToId === f.id && replyMode === 'edit' ? null : f.response}
                         respondedAt={f.responded_at}
                       />
 
@@ -458,7 +486,7 @@ export default function Admin() {
                           <Textarea
                             value={replyText}
                             onChange={(e) => setReplyText(e.target.value)}
-                            placeholder="Write a response..."
+                            placeholder={replyMode === 'edit' ? "Edit your response..." : "Add a new reply..."}
                             className="min-h-[60px] text-xs"
                             maxLength={5000}
                           />
@@ -466,7 +494,7 @@ export default function Admin() {
                             <Button
                               size="sm"
                               className="h-6 text-xs px-2"
-                              onClick={() => handleSendReply(f.id)}
+                              onClick={() => handleSendReply(f.id, f.response)}
                               disabled={!replyText.trim() || respondToFeedback.isPending}
                             >
                               {respondToFeedback.isPending ? "Sending..." : "Send"}
