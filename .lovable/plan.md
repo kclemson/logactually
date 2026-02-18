@@ -1,18 +1,40 @@
 
 
-# Ensure portion always has a fallback for barcode scans
+# Match admin reply format to end-user follow-up pattern (with 12-hour clock)
 
-## Problem
-The edge function already defaults to `'1 serving'` for both the Open Food Facts and AI paths. However, the client hook `useScanBarcode.ts` treats `portion` as optional and passes it through without a fallback in `createFoodItemFromScan`. If the value is ever missing or empty, the portion scaling UI has nothing to display.
+## What changes
 
-## Fix
+### 1. `src/pages/Admin.tsx` — Add "New Reply" button + append logic
 
-### `src/hooks/useScanBarcode.ts`
-In the `createFoodItemFromScan` function, add a fallback so `portion` is always set:
+- Add `replyMode` state: `'edit' | 'new'` (default `'new'`).
+- `handleStartReply` accepts a `mode` parameter:
+  - `'edit'`: pre-fills textarea with existing response (current behavior)
+  - `'new'`: empty textarea
+- `handleSendReply` checks `replyMode`:
+  - `'edit'`: replaces response as today
+  - `'new'`: appends using the exact same format as end-user follow-ups:
+    ```
+    {existingResponse}
+    ---
+    Follow-up on Feb 18 2:45 PM:
+    {newText}
+    ```
+- Button row when a response exists: show both **"Edit Reply"** and **"New Reply"** links. When no response exists, show just **"Reply"** (works as edit/replace, since there's nothing to append to).
+- Show existing response in expanded view even when in `'new'` reply mode (only hide in `'edit'` mode, matching current behavior).
 
-```
-portion: result.portion || '1 serving'
-```
+### 2. `src/pages/Admin.tsx` — 12-hour timestamp format
 
-This is a single-line change (around line 75) that acts as a safety net on the client side, complementing the server-side defaults already in place.
+Use `format(new Date(), "MMM d h:mm a")` instead of 24-hour format for the append separator.
+
+### 3. `src/components/FeedbackForm.tsx` — 12-hour clock fix (line 75)
+
+Change the end-user follow-up format from `"MMM d HH:mm"` (24h) to `"MMM d h:mm a"` (12h) so both sides are consistent:
+
+Before: `Follow-up on Feb 17 09:32:`
+After: `Follow-up on Feb 17 9:32 AM:`
+
+### No other files need changes
+
+- `FeedbackAdminRespond.ts` already accepts a full response string — no changes.
+- `FeedbackMessageBody.tsx` renders with `whitespace-pre-wrap` — the `---` separators display naturally.
 
