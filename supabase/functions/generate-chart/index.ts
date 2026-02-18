@@ -17,64 +17,38 @@ You have access to:
 Your job:
 1. Determine the right aggregation and grouping for the user's request
 2. Compute the data from the raw logs provided
-3. Return a chart specification using the generate_chart tool
+3. Return a JSON chart specification
+
+You MUST respond with ONLY a valid JSON object (no markdown, no code fences, no explanation outside the JSON). The JSON object must have this structure:
+
+{
+  "chartType": "bar" or "line",
+  "title": "Chart title",
+  "subtitle": "Optional subtitle or null",
+  "aiNote": "Optional methodology note or null",
+  "xAxisField": "the key name used in each data item for x-axis labels",
+  "xAxisLabel": "X axis display label",
+  "yAxisLabel": "Y axis display label",
+  "dataKey": "the key name used in each data item for the numeric value",
+  "color": "#2563EB",
+  "data": [
+    {"date": "Feb 12", "calories": 1850},
+    {"date": "Feb 13", "calories": 2100}
+  ],
+  "valueFormat": "integer" or "decimal1" or "duration_mmss" or null
+}
+
+In the example above, xAxisField="date" and dataKey="calories". Your actual field names will vary.
+
+CRITICAL: The "data" array MUST contain fully populated objects with real computed values. Each object MUST have a key matching xAxisField (string label) and a key matching dataKey (number). NEVER return empty objects.
 
 Rules:
-- The data array must contain the actual computed values, not raw log entries
-- Each item in the data array must have a value for the xAxis field and the dataKey field
 - Use short, readable labels for the x-axis (e.g., "6am", "Mon", "Jan 5")
-- Choose a color hex code that fits the data type (blue shades for calories, green for protein, teal for custom logs, purple for exercise)
-- For time-of-day analysis, use the created_at timestamps, not the date fields
-- Preserve numeric precision as appropriate: use 1 decimal place for weights and averages, whole numbers for counts and calories, mm:ss format description for durations in the title/subtitle
-- When the user asks to modify the previous chart, change only what they asked for. Keep everything else the same.
-- If the data is insufficient for the request, still return the best chart you can and explain any limitations or assumptions in the aiNote field`;
-
-const TOOL_DEFINITION = {
-  type: "function",
-  function: {
-    name: "generate_chart",
-    description: "Generate a chart specification from the user's data",
-    parameters: {
-      type: "object",
-      properties: {
-        chartType: { type: "string", enum: ["bar", "line"] },
-        title: { type: "string" },
-        subtitle: { type: "string" },
-        aiNote: {
-          type: "string",
-          description: "Brief explanation of methodology, assumptions, or data limitations",
-        },
-        xAxisField: { type: "string", description: "Field name in each data item for x-axis labels" },
-        xAxisLabel: { type: "string" },
-        yAxisLabel: { type: "string" },
-        dataKey: { type: "string", description: "Field name in each data item for the plotted numeric value" },
-        color: { type: "string", description: "Hex color code, e.g. #2563EB" },
-        data: {
-          type: "array",
-          description: "Array of data points. Each object MUST contain a key matching xAxisField (the label) and a key matching dataKey (the numeric value). Example: if xAxisField='time' and dataKey='avg_cal', each item must be like {\"time\": \"6am\", \"avg_cal\": 120}.",
-          items: { type: "object", additionalProperties: true },
-        },
-        valueFormat: {
-          type: "string",
-          enum: ["integer", "decimal1", "duration_mmss", "none"],
-          description: "How to format numeric labels on the chart",
-        },
-        referenceLineValue: { type: "number" },
-        referenceLineLabel: { type: "string" },
-      },
-      required: [
-        "chartType",
-        "title",
-        "xAxisField",
-        "xAxisLabel",
-        "yAxisLabel",
-        "dataKey",
-        "color",
-        "data",
-      ],
-    },
-  },
-};
+- Choose a color hex code that fits the data type (blue for calories, green for protein, teal for custom logs, purple for exercise)
+- For time-of-day analysis, use created_at timestamps, not date fields
+- Preserve numeric precision: 1 decimal for averages, whole numbers for counts/calories
+- When modifying a previous chart, change only what was asked
+- If data is insufficient, return the best chart you can and explain in aiNote`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -248,8 +222,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: aiMessages,
-        tools: [TOOL_DEFINITION],
-        tool_choice: { type: "function", function: { name: "generate_chart" } },
+        response_format: { type: "json_object" },
         temperature: 0.3,
       }),
     });
@@ -274,21 +247,21 @@ serve(async (req) => {
 
     const aiData = await aiResponse.json();
 
-    // Extract tool call result
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall || toolCall.function.name !== "generate_chart") {
-      console.error("Unexpected AI response:", JSON.stringify(aiData));
-      throw new Error("AI did not return a chart specification");
+    // Extract JSON from the response content
+    const content = aiData.choices?.[0]?.message?.content;
+    if (!content) {
+      console.error("Unexpected AI response:", JSON.stringify(aiData).slice(0, 2000));
+      throw new Error("AI did not return content");
     }
 
     let args: any;
     try {
-      args = typeof toolCall.function.arguments === "string"
-        ? JSON.parse(toolCall.function.arguments)
-        : toolCall.function.arguments;
+      // Strip markdown code fences if present
+      const cleaned = content.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
+      args = JSON.parse(cleaned);
     } catch {
-      console.error("Failed to parse tool args:", toolCall.function.arguments);
-      throw new Error("AI returned invalid chart data");
+      console.error("Failed to parse AI JSON:", content.slice(0, 2000));
+      throw new Error("AI returned invalid JSON");
     }
 
     console.log("generate_chart args:", JSON.stringify(args).slice(0, 2000));
