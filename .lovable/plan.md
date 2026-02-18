@@ -1,56 +1,38 @@
 
+## Write edge function tests for `generate-chart`
 
-## Fix: Empty data objects in generated charts
+### Goal
+Create an automated test suite that calls the deployed `generate-chart` edge function with real prompts and validates the response structure, catching the "empty data" bug and other structural issues before manual testing.
 
-### Problem
-The AI model returns a chart spec where the `data` array contains empty objects `{}`. The chart title, axes, and color are correct, but no actual data points are populated. This means the model understood the request but failed to fill in the data values.
+### Test file
+**`supabase/functions/generate-chart/index_test.ts`**
 
-### Root Cause
-The tool definition for `data` is very loosely typed:
-```json
-{ "type": "array", "items": { "type": "object", "additionalProperties": true } }
-```
+### Test cases
 
-The model has no schema-level guidance on what fields each data item needs. The system prompt mentions it, but that's not enough for reliable structured output.
+1. **Valid chart response structure** -- Send a simple prompt ("daily calories last 7 days"), assert:
+   - Response is 200 with `chartSpec` present
+   - `chartSpec.chartType` is "bar" or "line"
+   - `chartSpec.title` is a non-empty string
+   - `chartSpec.xAxis.field` and `chartSpec.dataKey` are non-empty strings
+   - `chartSpec.data` is a non-empty array
+   - Every item in `chartSpec.data` has a key matching `xAxis.field` and `dataKey` (catches the empty `{}` bug)
+   - `chartSpec.color` is a valid hex color
 
-### Fixes
+2. **Data values are numeric** -- Assert every data point's `dataKey` value is a number (not null, not string, not undefined)
 
-**1. Add logging of raw AI tool call arguments** (diagnostic)
-In `supabase/functions/generate-chart/index.ts`, add a `console.log` after parsing the tool call arguments so we can see exactly what the model returned:
-```typescript
-console.log("generate_chart args:", JSON.stringify(args).slice(0, 2000));
-```
+3. **Rejects empty messages** -- Send `messages: []`, expect an error response
 
-**2. Improve the tool definition to guide the model**
-Update the `data` items description to explicitly state the required structure:
-```json
-"data": {
-  "type": "array",
-  "description": "Array of data points. Each object MUST contain a key matching xAxisField (the label) and a key matching dataKey (the numeric value). Example: if xAxisField='time' and dataKey='avg_cal', each item must be like {\"time\": \"6am\", \"avg_cal\": 120}.",
-  "items": { "type": "object", "additionalProperties": true }
-}
-```
+4. **Handles unknown request gracefully** -- Send a nonsensical prompt, assert we still get either a valid chart or a meaningful error (not a 500)
 
-**3. Add server-side validation and filtering**
-After mapping to `chartSpec`, filter out any empty data items and log a warning:
-```typescript
-const validData = args.data.filter((d: any) =>
-  d && Object.keys(d).length > 0 && d[args.xAxisField] !== undefined && d[args.dataKey] !== undefined
-);
-if (validData.length < args.data.length) {
-  console.warn(`Filtered ${args.data.length - validData.length} empty/invalid data items`);
-}
-// use validData in chartSpec
-```
+### Technical details
 
-If all items are empty after filtering, return an error message rather than an empty chart.
+- Uses `Deno.test()` with `import "https://deno.land/std@0.224.0/dotenv/load.ts"` to load env vars
+- Calls the deployed function via `fetch` with the user's auth token from a test sign-in using `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`
+- Since this calls the real AI, tests use a 60s timeout
+- All response bodies are consumed to prevent Deno resource leaks
+- A shared helper function validates the `ChartSpec` shape to keep tests DRY
 
-### Files to modify
-| File | Change |
-|------|--------|
-| `supabase/functions/generate-chart/index.ts` | Add args logging, improve tool data schema description, add data validation |
-
-### Expected outcome
-- Better model guidance via the tool schema should prevent empty data in most cases
-- Server-side validation catches and reports the issue when it does happen
-- Logging lets us diagnose the raw model output for future debugging
+### After writing the tests
+- Run them with the Deno test runner
+- Inspect failures to identify and fix root causes in the edge function
+- Iterate until all tests pass
