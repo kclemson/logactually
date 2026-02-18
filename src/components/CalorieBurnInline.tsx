@@ -59,12 +59,12 @@ export function CalorieBurnInline({ exercises, settings, onSave }: CalorieBurnIn
 
   return (
     <div className="space-y-1">
-      <p className="text-xs text-muted-foreground italic">Calories burned:</p>
+      {nonEmpty.length > 1 && <p className="text-xs text-muted-foreground italic">Calories burned:</p>}
       {nonEmpty.map(r => (
         <CalorieBurnInput
           key={r.id}
           id={r.id}
-          name={nonEmpty.length > 1 ? r.name : undefined}
+          name={nonEmpty.length > 1 ? r.name : 'Calories burned'}
           result={r.result}
           onCommit={(id, val) => {
             onSave?.(id, val);
