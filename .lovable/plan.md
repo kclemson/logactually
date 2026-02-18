@@ -1,24 +1,52 @@
 
 
-# Fix exercise detail layout properly with CSS Grid best practices
+# Strip units from labels, show them as input suffixes instead
 
-## Root cause
+## Problem
 
-Every label has `min-w-[6rem]` (96px). With two columns, that's 192px of non-negotiable label width before inputs, gaps, or unit toggles get any space. The `fr`-based grid ratios are meaningless when the content's minimum width exceeds the container -- the grid overflows and the browser compensates by expanding the left column disproportionately.
+Every label carries its unit in parentheses: "Distance (mi):", "Cal Burned (cal):", "Heart Rate (bpm):", "Incline (%):", "Cadence (rpm):". These bloat label width by 30-50% and are the primary reason the left column is too wide. For fields with unit toggles (Distance, Weight), the unit is shown twice -- in the label AND as toggle buttons.
 
 ## Solution
 
-Remove `min-w-[6rem]` from all labels in both `FieldViewGrid` and `FieldEditGrid`. Labels are short text ("Effort", "Speed", "Cal Burned") that don't need a forced minimum -- `shrink-0` already prevents them from compressing. Without the minimum, CSS Grid's `fr` units will actually control column proportions as intended.
+1. **Remove unit text from labels entirely.** Labels become just: "Distance:", "Cal Burned:", "Heart Rate:", "Incline:", "Cadence:", "Duration:", "Speed:".
 
-Also reduce `gap-x-6` (24px) to `gap-x-4` (16px) -- 24px between columns is generous for a mobile dialog and reclaims space for content.
+2. **For fields with unit toggles** (Distance, Weight): the toggle buttons (mi/km, lbs/kg) already communicate the unit -- no additional suffix needed.
+
+3. **For plain-unit fields** (Duration, Cal Burned, Effort, Speed, Heart Rate, Incline, Cadence): show the unit as a small text suffix AFTER the input/value, not in the label. This keeps the information visible but moves it out of the width-critical label column.
 
 ## Changes
 
 **`src/components/DetailDialog.tsx`**
 
-1. Line 138: `gap-x-6` to `gap-x-4`
-2. Line 147: Remove `min-w-[6rem]` from the view-mode label span
-3. Line 181: `gap-x-6` to `gap-x-4`
-4. Line 184: Remove `min-w-[6rem]` from the edit-mode label span
+### Label rendering (lines 147-148 and 184-185)
 
-Four small edits, all in the same file. The `gridClassName` prop and `grid-cols-[6fr_5fr]` ratio from WeightLog.tsx will now actually work as intended.
+Currently both grids render labels as:
+```
+{field.label}{field.unitToggle ? ` (${unit})` : field.unit ? ` (${field.unit})` : ''}:
+```
+
+Change to just:
+```
+{field.label}:
+```
+
+### View mode value (line 150-152)
+
+After the value span, add a unit suffix span:
+```
+<span className="text-sm">{displayValue(...)}</span>
+{field.unit && !field.unitToggle && (
+  <span className="text-xs text-muted-foreground shrink-0">{field.unit}</span>
+)}
+```
+
+### Edit mode value (line 222-227)
+
+After the Input (and after the UnitToggle for toggle fields), add the same suffix for plain-unit fields:
+```
+{field.unit && !field.unitToggle && (
+  <span className="text-xs text-muted-foreground shrink-0">{field.unit}</span>
+)}
+```
+
+This is 4 small edits in a single file. Labels shrink dramatically, the grid ratio works properly, and units remain visible as compact suffixes.
