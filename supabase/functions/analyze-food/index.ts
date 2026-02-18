@@ -45,6 +45,7 @@ interface FoodItem {
 
 interface AnalyzeResponse {
   food_items: FoodItem[];
+  summary?: string;
   total_calories: number;
   total_protein: number;
   total_carbs: number;
@@ -154,7 +155,7 @@ serve(async (req) => {
     console.log('AI response content:', content);
 
     // Parse the JSON response
-    let parsed: { food_items: ParsedFoodItem[] };
+    let parsed: { food_items: ParsedFoodItem[]; summary?: string };
     try {
       // Remove any potential markdown code blocks and extract JSON
       let cleanContent = content.replace(/```json\n?|\n?```/g, '').trim();
@@ -228,6 +229,7 @@ serve(async (req) => {
 
     const result: AnalyzeResponse = {
       food_items: validItems,
+      ...(parsed.summary && { summary: parsed.summary }),
       total_calories: Math.round(totals.calories),
       total_protein: Math.round(totals.protein),
       total_carbs: Math.round(totals.carbs),

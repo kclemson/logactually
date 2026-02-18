@@ -54,6 +54,7 @@ Be reasonable with portion sizes. If no portion is specified, use typical servin
 
 Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
 {
+  "summary": "Short 2-4 word meal/snack label (only when 2+ items)",
   "food_items": [
     ${FOOD_ITEM_JSON_EXAMPLE}
   ]
@@ -82,6 +83,7 @@ Be reasonable with portion sizes. If no portion is specified, use typical servin
 
 Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
 {
+  "summary": "Short 2-4 word meal/snack label (only when 2+ items)",
   "food_items": [
     ${FOOD_ITEM_JSON_EXAMPLE}
   ]
