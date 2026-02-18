@@ -2,11 +2,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
-import type { WeightUnit } from '@/lib/weight-units';
+import type { WeightUnit, DistanceUnit } from '@/lib/weight-units';
 
 export interface UserSettings {
   theme: 'light' | 'dark' | 'system';
   weightUnit: WeightUnit;
+  distanceUnit: DistanceUnit;
   showWeights: boolean;
   showCustomLogs: boolean;
   suggestMealSaves: boolean;
@@ -32,6 +33,7 @@ export interface UserSettings {
 const DEFAULT_SETTINGS: UserSettings = {
   theme: 'system',
   weightUnit: 'lbs',
+  distanceUnit: 'mi',
   showWeights: true,
   showCustomLogs: false,
   suggestMealSaves: true,

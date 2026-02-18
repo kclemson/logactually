@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTheme } from 'next-themes';
 import { Moon, Sun, Monitor, Settings2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { WeightUnit } from '@/lib/weight-units';
+import type { WeightUnit, DistanceUnit } from '@/lib/weight-units';
 import { CollapsibleSection } from '@/components/CollapsibleSection';
 import { CalorieBurnDialog } from '@/components/CalorieBurnDialog';
 import { CalorieTargetDialog } from '@/components/CalorieTargetDialog';
@@ -25,6 +25,11 @@ const themeOptions = [
 const weightUnitOptions: { value: WeightUnit; label: string }[] = [
   { value: 'lbs', label: 'Lbs' },
   { value: 'kg', label: 'Kg' },
+];
+
+const distanceUnitOptions: { value: DistanceUnit; label: string }[] = [
+  { value: 'mi', label: 'Mi' },
+  { value: 'km', label: 'Km' },
 ];
 
 export function PreferencesSection({ settings, updateSettings }: PreferencesSectionProps) {
@@ -157,6 +162,25 @@ export function PreferencesSection({ settings, updateSettings }: PreferencesSect
                 </SelectTrigger>
                 <SelectContent>
                   {weightUnitOptions.map(({ value, label }) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Distance Units */}
+          {showWeights && (
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">Distance Units</p>
+              <Select value={settings.distanceUnit} onValueChange={(v) => updateSettings({ distanceUnit: v as DistanceUnit })}>
+                <SelectTrigger className="w-[100px] h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {distanceUnitOptions.map(({ value, label }) => (
                     <SelectItem key={value} value={value}>
                       {label}
                     </SelectItem>
