@@ -15,6 +15,7 @@ interface AskTrendsAIDialogProps {
   mode: Mode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialView?: "ask" | "pinned";
 }
 
 const SHARED_PROMPTS = [
@@ -76,14 +77,14 @@ function pickRandom<T>(arr: T[], count: number): T[] {
   return shuffled.slice(0, count);
 }
 
-export function AskTrendsAIDialog({ mode, open, onOpenChange }: AskTrendsAIDialogProps) {
+export function AskTrendsAIDialog({ mode, open, onOpenChange, initialView = "ask" }: AskTrendsAIDialogProps) {
   // Conditional rendering resets state on close
   if (!open) return null;
 
-  return <AskTrendsAIDialogInner mode={mode} onOpenChange={onOpenChange} />;
+  return <AskTrendsAIDialogInner mode={mode} onOpenChange={onOpenChange} initialView={initialView} />;
 }
 
-function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChange: (open: boolean) => void }) {
+function AskTrendsAIDialogInner({ mode, onOpenChange, initialView }: { mode: Mode; onOpenChange: (open: boolean) => void; initialView: "ask" | "pinned" }) {
   const { settings } = useUserSettings();
   const { mutate, isPending, data, error, reset } = useAskTrendsAI();
   const { pinnedChats, pinCount, pinMutation, unpinMutation } = usePinnedChats();
@@ -91,7 +92,7 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
   const [input, setInput] = useState("");
   const [submittedQuestion, setSubmittedQuestion] = useState("");
   const [includeProfile, setIncludeProfile] = useState(true);
-  const [view, setView] = useState<"ask" | "pinned">("ask");
+  const [view, setView] = useState<"ask" | "pinned">(initialView);
 
   const profileSummary = useMemo(() => formatProfileStatsSummary(settings), [settings]);
 
