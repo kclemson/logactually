@@ -155,11 +155,11 @@ function FieldViewGrid({
                 <span className={cn("text-xs text-muted-foreground shrink-0", labelClassName)}>
                   {field.label}:
                 </span>
-                <span className="text-sm min-w-0 truncate pl-2">
+                <span className="text-sm min-w-0 truncate pl-2 flex-1">
                   {displayValue(field, activeValues, activeUnits?.[field.key])}
                 </span>
                 {field.pairedField && (
-                  <span className="text-sm shrink-0 w-[7.5rem] pl-2">
+                  <span className="text-sm shrink-0 w-[7.5rem] text-right">
                     {displayValue(field.pairedField, activeValues)}
                   </span>
                 )}
@@ -222,7 +222,7 @@ function FieldEditGrid({
                   <select
                     value={String(draft[effectiveField.key] ?? '')}
                     onChange={e => updateDraft(effectiveField.key, e.target.value)}
-                    className="flex h-6 flex-1 min-w-0 rounded-md border border-input bg-background px-1.5 py-0 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex h-6 w-[7.5rem] min-w-0 rounded-md border border-input bg-background px-1.5 py-0 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <option value="">—</option>
                     {effectiveField.optgroups ? (
@@ -252,7 +252,7 @@ function FieldEditGrid({
                       max={field.max}
                       step={field.step}
                       autoComplete="off"
-                      className={cn("h-6 py-0 px-1.5 text-sm", field.type === 'number' ? "w-12 text-center" : cn("flex-1 min-w-0", field.maxWidth === 'sm' && "max-w-[12rem]"))}
+                      className={cn("h-6 py-0 px-1.5 text-sm", field.type === 'number' ? "w-12" : cn("flex-1 min-w-0", field.maxWidth === 'sm' && "max-w-[12rem]"))}
                     />
                     {/* Paired field (e.g. category dropdown next to Name) */}
                     {field.pairedField && (
@@ -472,7 +472,7 @@ export function DetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="left-2 right-2 top-[5%] translate-x-0 translate-y-0 w-auto max-w-[calc(100vw-16px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md max-h-[90dvh] max-h-[90vh] flex flex-col p-0 gap-0 rounded-lg [&>button:last-child]:hidden">
+      <DialogContent className="left-2 right-2 top-[5%] translate-x-0 translate-y-0 w-auto max-w-[calc(100vw-16px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md max-h-[90dvh] max-h-[90vh] flex flex-col p-0 gap-0 rounded-lg">
         <DialogHeader className="px-4 pt-4 pb-2 flex-shrink-0">
           <DialogTitle className={cn("text-base", !isMultiItem && "sr-only")}>{title}</DialogTitle>
         </DialogHeader>
