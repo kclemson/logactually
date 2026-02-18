@@ -103,12 +103,12 @@ export default function Changelog() {
                     loading="lazy"
                     src={`/changelog/${entry.image}`}
                     alt={`Screenshot for ${entry.date} update`}
-                    className="mt-2 ml-[52px] max-h-[200px] max-w-[280px] w-auto object-contain cursor-pointer"
+                    className="mt-2 mx-auto block max-h-[200px] max-w-[280px] w-auto object-contain cursor-pointer"
                     onClick={() => setLightboxSrc(`/changelog/${entry.image}`)}
                   />
                 )}
                 {entry.images && (
-                  <div className="flex flex-wrap gap-2 mt-2 ml-[52px]">
+                  <div className="flex flex-wrap gap-2 mt-2 justify-center">
                     {entry.images.map((img, i) => (
                       <img
                         key={i}
