@@ -1,8 +1,8 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, BarChart3 } from "lucide-react";
+import { Loader2, BarChart3, RefreshCw } from "lucide-react";
 import { useGenerateChart } from "@/hooks/useGenerateChart";
 import { useSavedCharts } from "@/hooks/useSavedCharts";
 import { DynamicChart, type ChartSpec } from "@/components/trends/DynamicChart";
@@ -72,10 +72,26 @@ function CustomChartDialogInner({
   const generateChart = useGenerateChart();
   const { saveMutation, updateMutation } = useSavedCharts();
 
-  const visibleChips = useMemo(() => {
-    const shuffled = [...ALL_CHIPS].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, 6);
+  const seen = useRef<Set<string>>(new Set());
+
+  const pickFresh = useCallback(() => {
+    let available = ALL_CHIPS.filter((c) => !seen.current.has(c));
+    if (available.length < 6) {
+      seen.current.clear();
+      available = [...ALL_CHIPS];
+    }
+    const picked = [...available].sort(() => Math.random() - 0.5).slice(0, 6);
+    picked.forEach((c) => seen.current.add(c));
+    return picked;
   }, []);
+
+  const [visibleChips, setVisibleChips] = useState(() => {
+    const picked = [...ALL_CHIPS].sort(() => Math.random() - 0.5).slice(0, 6);
+    picked.forEach((c) => seen.current.add(c));
+    return picked;
+  });
+
+  const refreshChips = () => setVisibleChips(pickFresh());
 
   const handleSubmit = async (question: string) => {
     if (!question.trim() || generateChart.isPending) return;
@@ -143,6 +159,15 @@ function CustomChartDialogInner({
         <DialogTitle className="text-sm font-medium flex items-center gap-1.5">
           <BarChart3 className="h-4 w-4" />
           {isEditing ? "Edit Chart" : "Create Chart"}
+          {!currentSpec && !generateChart.isPending && messages.length === 0 && (
+            <button
+              onClick={refreshChips}
+              className="absolute right-12 top-3.5 p-1.5 rounded-full border border-border bg-muted/50 hover:bg-muted active:scale-75 transition-all duration-150"
+              aria-label="Refresh suggestions"
+            >
+              <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />
+            </button>
+          )}
         </DialogTitle>
 
         <div className="space-y-3 mt-2">

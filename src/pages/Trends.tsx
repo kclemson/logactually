@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, ChartTitle, ChartSubtitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { UtensilsCrossed, Dumbbell, ClipboardList, Pin, Plus, BarChart3, Pencil } from "lucide-react";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { useWeightTrends, ExerciseTrend } from "@/hooks/useWeightTrends";
@@ -306,24 +307,23 @@ const Trends = () => {
   return (
     <div className="space-y-6 -mx-2">
       <div className="flex items-center justify-center gap-2">
-        {periods.map(({ label, days }) => (
-          <Button
-            key={days}
-            variant={selectedPeriod === days ? "default" : "outline"}
-            size="sm"
-            onClick={() => {
-              localStorage.setItem("trends-period", String(days));
-              setSelectedPeriod(days);
-            }}
-          >
-            {label}
-          </Button>
-        ))}
+        <Select value={String(selectedPeriod)} onValueChange={(v) => {
+          localStorage.setItem("trends-period", v);
+          setSelectedPeriod(Number(v));
+        }}>
+          <SelectTrigger className="h-9 w-auto min-w-[100px] text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {periods.map(({ label, days }) => (
+              <SelectItem key={days} value={String(days)}>{label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Button
-          variant="outline"
           size="sm"
           onClick={() => setCreateChartOpen(true)}
-          className="gap-1"
+          className="gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
         >
           <Plus className="h-3.5 w-3.5" />
           Chart
