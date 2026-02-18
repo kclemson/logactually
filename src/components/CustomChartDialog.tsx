@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,13 +14,34 @@ interface CustomChartDialogProps {
   initialChart?: { id: string; question: string; chartSpec: ChartSpec };
 }
 
-const EXAMPLE_CHIPS = [
-  "Calories consumed by hour of day, averaged over last 30 days",
-  "Which days of the week do I eat the most?",
-  "Protein on workout days vs rest days",
-  "How often do I exercise each day of the week?",
-  "Average fiber intake per day over time",
-  "My sodium intake trend over the past month",
+const ALL_CHIPS = [
+  // Food timing & patterns
+  "Average calories by hour of day",
+  "Which day of the week do I eat the most?",
+  "How many meals do I log per day on average?",
+  // Nutrient trends
+  "Daily fiber intake over time",
+  "Sodium intake trend",
+  "Average sugar per day",
+  "Fat as percentage of total calories over time",
+  "Protein to calorie ratio over time",
+  // High/low analysis
+  "My highest calorie days",
+  "Days where I exceeded 2000 calories",
+  // Exercise
+  "Exercise frequency by day of week",
+  "Total exercise duration per week",
+  "Which exercises do I do most often?",
+  "How many days per week did I exercise?",
+  // Cross-domain
+  "Average calories on workout days vs rest days",
+  "Average protein on workout days vs rest days",
+  "Do I eat more on days I exercise?",
+  // Weekday/weekend
+  "Average carbs on weekdays vs weekends",
+  "Calorie comparison: weekdays vs weekends",
+  // Volume/strength
+  "Training volume trend over time",
 ];
 
 export function CustomChartDialog({ open, onOpenChange, initialChart, period }: CustomChartDialogProps) {
@@ -50,6 +71,11 @@ function CustomChartDialogInner({
 
   const generateChart = useGenerateChart();
   const { saveMutation, updateMutation } = useSavedCharts();
+
+  const visibleChips = useMemo(() => {
+    const shuffled = [...ALL_CHIPS].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 6);
+  }, []);
 
   const handleSubmit = async (question: string) => {
     if (!question.trim() || generateChart.isPending) return;
@@ -122,7 +148,7 @@ function CustomChartDialogInner({
         <div className="space-y-3 mt-2">
           {!currentSpec && !generateChart.isPending && messages.length === 0 && (
             <div className="flex flex-wrap gap-1.5 items-start">
-              {EXAMPLE_CHIPS.map((chip) => (
+              {visibleChips.map((chip) => (
                 <button
                   key={chip}
                   onClick={() => {
@@ -194,8 +220,10 @@ function CustomChartDialogInner({
               {lastQuestion && (
                 <p className="text-xs text-muted-foreground italic">"{lastQuestion}"</p>
               )}
-              <div className="border border-border rounded-md overflow-hidden">
-                <DynamicChart spec={currentSpec} />
+              <div className="flex justify-center">
+                <div className="w-[60%] min-w-[220px] border border-border rounded-md overflow-hidden">
+                  <DynamicChart spec={currentSpec} />
+                </div>
               </div>
 
               <div className="flex gap-2">
