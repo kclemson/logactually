@@ -332,10 +332,14 @@ const Trends = () => {
       {savedCharts.length > 0 && (
         <CollapsibleSection title="My Charts" icon={BarChart3} iconClassName="text-emerald-500 dark:text-emerald-400" defaultOpen={true} storageKey="trends-my-charts">
           <div className="grid grid-cols-2 gap-2">
-            {savedCharts.map((chart) => (
+            {savedCharts.map((chart) => {
+              const routeMap: Record<string, string> = { food: "/", exercise: "/weights", custom: "/other" };
+              const route = chart.chart_spec.dataSource ? routeMap[chart.chart_spec.dataSource] : undefined;
+              return (
               <DynamicChart
                 key={chart.id}
                 spec={chart.chart_spec}
+                onNavigate={route ? (date) => navigate(`${route}?date=${date}`) : undefined}
                 headerAction={
                   <DeleteConfirmPopover
                     id={chart.id}
@@ -347,7 +351,8 @@ const Trends = () => {
                   />
                 }
               />
-            ))}
+              );
+            })}
           </div>
         </CollapsibleSection>
       )}

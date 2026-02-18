@@ -26,21 +26,24 @@ You MUST respond with ONLY a valid JSON object (no markdown, no code fences, no 
   "title": "Chart title",
   "subtitle": "Optional subtitle or null",
   "aiNote": "Optional methodology note or null",
+  "dataSource": "food" or "exercise" or "custom" or "mixed",
   "xAxisField": "the key name used in each data item for x-axis labels",
   "xAxisLabel": "X axis display label",
   "yAxisLabel": "Y axis display label",
   "dataKey": "the key name used in each data item for the numeric value",
   "color": "#2563EB",
   "data": [
-    {"date": "Feb 12", "calories": 1850},
-    {"date": "Feb 13", "calories": 2100}
+    {"rawDate": "2025-02-12", "date": "Feb 12", "calories": 1850},
+    {"rawDate": "2025-02-13", "date": "Feb 13", "calories": 2100}
   ],
   "valueFormat": "integer" or "decimal1" or "duration_mmss" or null
 }
 
 In the example above, xAxisField="date" and dataKey="calories". Your actual field names will vary.
 
-CRITICAL: The "data" array MUST contain fully populated objects with real computed values. Each object MUST have a key matching xAxisField (string label) and a key matching dataKey (number). NEVER return empty objects.
+CRITICAL: The "data" array MUST contain fully populated objects with real computed values. Each object MUST have a key matching xAxisField (string label) and a key matching dataKey (number). Every object in "data" MUST include a "rawDate" field containing the date in "yyyy-MM-dd" format (e.g. "2025-02-12"). NEVER return empty objects.
+
+"dataSource" indicates which log the chart primarily uses: "food" for food/nutrition data, "exercise" for exercise/weight data, "custom" for custom log data, or "mixed" if combining multiple sources.
 
 Rules:
 - Use short, readable labels for the x-axis (e.g., "6am", "Mon", "Jan 5")
@@ -293,6 +296,7 @@ serve(async (req) => {
       data: validData,
       dataKey: args.dataKey,
       valueFormat: args.valueFormat || undefined,
+      dataSource: ["food", "exercise", "custom", "mixed"].includes(args.dataSource) ? args.dataSource : undefined,
       referenceLine: args.referenceLineValue != null
         ? { value: args.referenceLineValue, label: args.referenceLineLabel }
         : undefined,
