@@ -776,6 +776,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
               defaultUnits={{
                 distance_miles: settings.distanceUnit || 'mi',
                 weight_lbs: settings.weightUnit,
+                _meta_speed_mph: (settings.distanceUnit || 'mi') === 'km' ? 'km/h' : 'mph',
               }}
             />
           );
@@ -799,6 +800,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
             defaultUnits={{
               distance_miles: settings.distanceUnit || 'mi',
               weight_lbs: settings.weightUnit,
+              _meta_speed_mph: (settings.distanceUnit || 'mi') === 'km' ? 'km/h' : 'mph',
             }}
           />
         );

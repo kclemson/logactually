@@ -1,5 +1,6 @@
 export type WeightUnit = 'lbs' | 'kg';
 export type DistanceUnit = 'mi' | 'km';
+export type SpeedUnit = 'mph' | 'km/h';
 
 const LBS_TO_KG = 0.453592;
 const KG_TO_LBS = 2.20462;
@@ -36,6 +37,11 @@ export function convertDistance(value: number, from: DistanceUnit, to: DistanceU
 
 export function getDistanceUnitLabel(unit: DistanceUnit): string {
   return unit === 'km' ? 'Km' : 'Mi';
+}
+
+export function convertSpeed(value: number, from: SpeedUnit, to: SpeedUnit): number {
+  if (from === to) return value;
+  return from === 'mph' ? value * MI_TO_KM : value * KM_TO_MI;
 }
 
 export function formatDurationMmSs(decimalMinutes: number): string {

@@ -117,14 +117,15 @@ function displayValue(field: FieldConfig, activeValues: Record<string, any>, act
 function UnitToggle({ field, activeUnit, onToggle }: { field: FieldConfig; activeUnit: string; onToggle: (unit: string) => void }) {
   if (!field.unitToggle) return null;
   return (
-    <span className="flex items-center gap-0.5 shrink-0">
-      {field.unitToggle.units.map(u => (
+    <span className="flex items-center shrink-0">
+      {field.unitToggle.units.map((u, i) => (
         <button
           key={u}
           type="button"
           onClick={() => onToggle(u)}
           className={cn(
-            "text-xs px-1.5 py-0.5 rounded transition-colors",
+            "text-xs py-0.5 rounded transition-colors",
+            i === 0 ? "pl-0 pr-1" : "px-1",
             u === activeUnit
               ? "bg-primary/10 text-foreground font-medium"
               : "text-muted-foreground hover:text-foreground"
@@ -165,9 +166,12 @@ function FieldViewItem({
       <span className={cn("text-xs text-muted-foreground shrink-0", labelClassName)}>
         {field.label}:
       </span>
-      <span className="text-sm min-w-0 truncate pl-2 flex-1">
+      <span className="text-sm min-w-0 truncate pl-2">
         {displayValue(field, activeValues, activeUnits?.[field.key])}
       </span>
+      {field.unitToggle && (
+        <UnitToggle field={field} activeUnit={activeUnits?.[field.key] || field.unitToggle.storageUnit} onToggle={(u) => onToggleUnit?.(field.key, u)} />
+      )}
       {field.unit && !field.unitToggle && (
         <span className="text-xs text-muted-foreground shrink-0">{field.unit}</span>
       )}
@@ -284,7 +288,7 @@ function FieldViewGrid({
 }) {
   const sharedProps = { activeValues, hideWhenZero, activeUnits, onToggleUnit, labelClassName };
   return (
-    <div>
+    <div className="flex flex-col gap-y-1">
       {/* Full-width fields (e.g. Name) */}
       {layout.fullWidth.map(field => (
         <FieldViewItem key={field.key} field={field} {...sharedProps} />
@@ -325,7 +329,7 @@ function FieldEditGrid({
 }) {
   const sharedProps = { draft, updateDraft, activeUnits, onToggleUnit, labelClassName };
   return (
-    <div>
+    <div className="flex flex-col gap-y-1">
       {/* Full-width fields */}
       {layout.fullWidth.map(field => (
         <FieldEditItem key={field.key} field={field} {...sharedProps} />
@@ -627,7 +631,7 @@ export function DetailDialog({
 // ============================================================================
 
 import { EXERCISE_MUSCLE_GROUPS, EXERCISE_SUBTYPE_DISPLAY, isCardioExercise, KNOWN_METADATA_KEYS, EXERCISE_GROUPS, getExerciseDisplayName } from '@/lib/exercise-metadata';
-import { convertWeight, convertDistance } from '@/lib/weight-units';
+import { convertWeight, convertDistance, convertSpeed } from '@/lib/weight-units';
 
 export const FOOD_HIDE_WHEN_ZERO = new Set(['portion', 'fiber', 'sugar', 'saturated_fat', 'sodium', 'cholesterol']);
 
@@ -731,7 +735,7 @@ export function buildExerciseDetailFields(item: Record<string, any>): FieldLayou
       calBurned,
       heartRate,
       effort,
-      metaField('speed_mph')!,
+      { key: '_meta_speed_mph', label: 'Speed', type: 'number', unitToggle: { units: ['mph', 'km/h'], storageUnit: 'mph', convert: convertSpeed }, min: 0.1 },
     ];
     const right: FieldConfig[] = [
       categoryField,
