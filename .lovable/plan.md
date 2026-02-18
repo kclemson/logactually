@@ -1,96 +1,81 @@
 
 
-# DetailDialog UX refinements
+# DetailDialog UX Polish -- 8 Refinements
 
-Six changes, all within `src/components/DetailDialog.tsx` (plus minor field config updates in the same file).
+All changes target `src/components/DetailDialog.tsx` plus a small update to `src/pages/WeightLog.tsx`.
 
-## 1. Multi-item mode: don't expand first item by default
+## 1. Increase column gap
 
-Change the default `expandedIndices` from `new Set([0])` to `new Set()` (empty). Also update the reset in `handleOpenChange` to use empty set.
+Change `gap-x-3` to `gap-x-6` in both `FieldViewGrid` (line 95) and `FieldEditGrid` (line 129). More breathing room between the two columns.
 
-## 2. Edit mode: inline label + input on the same row
+## 2. Spell out "Saturated Fat"
 
-Replace the current stacked layout (label above, input below) with a horizontal row: label on the left with a colon, input on the right. This applies to both number and text fields in `FieldEditGrid`.
+In `buildFoodDetailFields` (line 417), change the label from `'Sat Fat'` to `'Saturated Fat'`.
 
-Current structure per field:
-```text
-Label (unit)
-[  input  ]
-```
+## 3. Auto-collapse other items when entering edit mode
 
-New structure:
-```text
-Label:    [  input  ]
-```
+In `enterItemEdit` (line 266), set `expandedIndices` to `new Set([idx])` so only the item being edited stays open. This avoids the awkward Cancel/Save in the middle with more Edit buttons below.
 
-For the 2-column grid of number fields, each cell becomes a flex row with `label: input` side by side. Text fields (full-width) use the same pattern. Select fields get the same treatment.
+## 4. Hide portion when null/blank in read-only view
 
-## 3. Single-item mode: hide the dialog title header
+Add `'portion'` to `FOOD_HIDE_WHEN_ZERO` (line 401). The existing filter logic already handles null/empty/zero, so this is a one-word addition.
 
-When in single-item mode, the `DialogHeader` with the title is redundant (the "Name" field shows the same value). Conditionally render the header only in multi-item mode.
+## 5. Remove the X close button
 
-For single-item mode, still render a minimal header area for the close button spacing, but omit the `DialogTitle` text. Use a `DialogTitle` with `sr-only` class (for accessibility, Radix requires it) or visually hide it.
+Add `[&>button:last-child]:hidden` to the `DialogContent` className (line 304) to hide the built-in Radix close button. Users close via overlay tap; in edit mode via Cancel/Save.
 
-## 4. Read-only values: left-aligned instead of right-aligned
+## 6. Remove border-t from footer entirely
 
-In `FieldViewGrid`, change the value `<span>` from `text-right` to left-aligned. Remove `justify-between` from the row and instead use a fixed-width label column so values line up. The simplest approach: keep the flex row but remove `justify-between`, add a gap, and let the value sit naturally after the label.
+Remove `border-t` from the `DialogFooter` className (line 379) in all modes -- no separator above Edit, Cancel, or Save buttons.
 
-## 5. Exercise read-only: hide null metadata fields
+## 7. Deduplicate Name field in group mode + indent expanded content
 
-Extend the `hideWhenZero` concept to also hide fields where the value is null/undefined/dash. Currently `hideWhenZero` only checks for `0, null, undefined`. For exercise metadata fields, the values are null when not set. 
+Two sub-changes:
+- In multi-item expanded view mode, filter out the `description` field from the field list so it isn't shown twice (the collapsible header already displays the name). In edit mode, keep it so the user can rename.
+- Add `pl-4` left padding to the expanded content div (line 338) to visually indent it under the header, creating a clear parent-child relationship.
 
-Add a new prop `hideWhenEmpty?: Set<string>` or simply broaden the existing filter in `FieldViewGrid` to also hide fields in `hideWhenZero` when value is empty string. Actually, the current filter already hides null/undefined -- the issue is that exercise metadata fields aren't in `hideWhenZero`. 
-
-Solution: export `EXERCISE_HIDE_WHEN_EMPTY` set containing metadata field keys, and pass it as `hideWhenZero` from WeightLog. The existing filter logic already handles null/undefined.
-
-## 6. Remove section headers, add separator line after "basic" fields
-
-Remove section header rendering entirely from both `FieldViewGrid` and `FieldEditGrid`. Instead, render a thin `<hr>` between the first section and subsequent sections (i.e., after what was the "Basic" group).
+## 8. (Covered above -- screenshots confirmed current state)
 
 ---
 
 ## Technical details
 
-### `FieldViewGrid` changes (lines 81-115)
+### `FieldViewGrid` (line 95)
+- `gap-x-3` becomes `gap-x-6`
 
-- Remove section header `<h4>` rendering
-- Add `<hr className="border-border/50 my-2" />` between first and second section group
-- Change row from `flex justify-between` to `flex gap-2` with label taking fixed min-width
-- Value span: remove `text-right`
-- Extend filter: for fields in `hideWhenZero`, also treat `''` as empty (already handles 0/null/undefined)
+### `FieldEditGrid` (line 129)
+- `gap-x-3` becomes `gap-x-6`
 
-### `FieldEditGrid` changes (lines 117-183)
+### `enterItemEdit` (lines 266-269)
+Add: `setExpandedIndices(new Set([idx]));`
 
-- Remove section header `<h4>` rendering  
-- Add `<hr>` separator between first and second section group
-- Change each field from stacked (label block above, input below) to inline row: `flex items-center gap-2` with label as inline element, input flex-1
-- Label gets a colon suffix
-- For select fields, same inline layout
+### Multi-item expanded content (line 338)
+- Add `pl-4` to the `<div className="pb-2">` wrapper
+- In read-only branch (line 349): filter `description` out of `itemSections` before passing to `FieldViewGrid`
 
-### Dialog header (lines 309-311)
+Implementation: compute a filtered sections list:
+```typescript
+const viewSections = itemSections.map(([name, fields]) => [
+  name,
+  fields.filter(f => f.key !== 'description'),
+] as [string, FieldConfig[]]).filter(([, fields]) => fields.length > 0);
+```
 
-- In single-item mode: render `DialogTitle` with `className="sr-only"` (visually hidden but accessible)
-- In multi-item mode: render title normally as today
+### DialogContent (line 304)
+Add `[&>button:last-child]:hidden` to className
 
-### Default expanded state (line 207)
+### DialogFooter (line 379)
+Change `"px-4 py-3 border-t flex-shrink-0"` to `"px-4 py-3 flex-shrink-0"`
 
-- Change `new Set([0])` to `new Set()`
-- Change reset on line 216 to `new Set()`
+### buildFoodDetailFields (line 417)
+Change `'Sat Fat'` to `'Saturated Fat'`
 
-### Exercise field configs (lines 478-491)
-
-- Create and export `EXERCISE_HIDE_WHEN_EMPTY` set with all metadata keys: `new Set(KNOWN_METADATA_KEYS.map(mk => \`_meta_\${mk.key}\`))`
-- Pass from WeightLog as `hideWhenZero` prop
-
-### Food/Exercise section labels (lines 408-420, 456-491)
-
-- Remove `section` property from field configs entirely, OR keep them for grouping logic but just don't render headers
-- Keep section grouping so the `<hr>` separator knows where to split -- first section vs rest
+### FOOD_HIDE_WHEN_ZERO (line 401)
+Add `'portion'` to the set
 
 ## Files changed
 
 | File | Change |
 |------|--------|
-| `src/components/DetailDialog.tsx` | All 6 changes: default collapsed, inline edit layout, hidden single-item title, left-aligned values, hide empty metadata, remove section headers + add separator |
-| `src/pages/WeightLog.tsx` | Pass `hideWhenZero={EXERCISE_HIDE_WHEN_EMPTY}` to DetailDialog for exercise entries |
+| `src/components/DetailDialog.tsx` | All 7 functional changes: column gap, saturated fat label, auto-collapse on edit, hide portion when empty, hide X button, remove border-t, deduplicate name + indent |
 
