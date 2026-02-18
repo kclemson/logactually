@@ -22,6 +22,7 @@ type ChangelogEntry = {
 
 // prettier-ignore
 const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+{ date: "Feb-17", text: "Added a 'First day of week' preference in Settings — choose Sunday or Monday, and it'll be reflected in the Calendar view on the History page and the date picker on the Food, Exercise, and Custom log pages.", image: "first-day-of-week.png" },
 { date: "Feb-17", text: "Updated grouping UI for food & exercise logs - log a picture of food or a saved meal with multiple items in it, and it'll show up as a single collapsed row by default. Food groups also support portion scaling — adjust the multiplier on the group header and all child items scale proportionally.", image: "grouped-entries.png" },
 { date: "Feb-17", text: "Tweaked UX of exercise log so that if a given day only has cardio and no strength training logged, the sets/reps/lbs will be hidden.", image: "cardio-only-columns.png" },
 { date: "Feb-16", text: "Added rolling 7-day and 30-day average calorie summaries to the Calendar view, with color-coded status dots showing whether you're on track relative to your daily target. Works across all calorie target modes — fixed, exercise-adjusted, and estimated burn rate. Also added tooltips on the Food Log and Calendar pages that break down the math behind your target.", image: "calorie-rolling.png" },
