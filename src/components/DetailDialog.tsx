@@ -222,7 +222,7 @@ function FieldEditGrid({
                       min={field.min}
                       max={field.max}
                       step={field.step}
-                      className="h-6 py-0 px-1.5 text-sm flex-1 min-w-0"
+                      className={cn("h-6 py-0 px-1.5 text-sm", field.type === 'number' ? "w-16 text-center" : "flex-1 min-w-0")}
                     />
                     {field.unitToggle && (
                       <UnitToggle field={field} activeUnit={activeUnits?.[field.key] || field.unitToggle.storageUnit} onToggle={(u) => onToggleUnit?.(field.key, u)} />
