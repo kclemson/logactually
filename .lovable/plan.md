@@ -1,28 +1,21 @@
 
 
-# Fix Detail Dialog spacing so Distance values aren't truncated
+# Reclaim horizontal space in Detail Dialog edit mode
 
 ## Problem
-The Distance value and unit toggle get clipped on mobile because the label column and inter-column gap consume too much space. The fix applies universally (not mobile-specific).
+On mobile edit mode, fields like Distance are still cramped. Two targeted fixes:
 
 ## Changes
 
-### 1. `src/components/DetailDialog.tsx` — reduce grid gap
-Change `gap-x-4` to `gap-x-2` in both the view grid (line 298) and edit grid (line 339). This recovers 8px of horizontal space.
+### 1. Tighten label-to-input gap (`src/components/DetailDialog.tsx`)
+In both `FieldViewItem` (line 165) and `FieldEditItem` (line 211), reduce `gap-2` (8px) to `gap-1.5` (6px) on the flex container. This saves 2px per gap instance, roughly 4-6px per row across label, value, and unit elements.
 
-### 2. `src/pages/WeightLog.tsx` — shrink label min-width
-Change `min-w-[5rem]` to `min-w-[4.5rem]` on lines 778 and 802.
-
-### 3. `src/pages/FoodLog.tsx` — shrink label min-width
-Change `min-w-[5rem]` to `min-w-[4.5rem]` on lines 875 and 892.
-
-Together these recover roughly 24px of horizontal space, which is more than enough for the Distance value + unit toggle to render without truncation.
+### 2. Shrink dropdown font size (`src/components/DetailDialog.tsx`)
+The `<select>` element (line 226) currently uses `text-sm` (14px). Safari's auto-zoom only triggers on `<input>` fields below 16px, not `<select>`. Change to `text-xs` (12px) on the select, which saves a few more pixels of rendered text width for Category/Exercise type/Subtype values like "Walk/ru..." that currently clip.
 
 ## Files changed
 
 | File | What |
 |------|------|
-| `src/components/DetailDialog.tsx` | `gap-x-4` to `gap-x-2` (2 places) |
-| `src/pages/WeightLog.tsx` | `min-w-[5rem]` to `min-w-[4.5rem]` (2 places) |
-| `src/pages/FoodLog.tsx` | `min-w-[5rem]` to `min-w-[4.5rem]` (2 places) |
+| `src/components/DetailDialog.tsx` | `gap-2` to `gap-1.5` in FieldViewItem and FieldEditItem; `text-sm` to `text-xs` on select element |
 
