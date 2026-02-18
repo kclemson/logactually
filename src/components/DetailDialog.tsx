@@ -28,6 +28,7 @@ export interface FieldConfig {
   max?: number;
   step?: number;
   section?: string;
+  maxWidth?: 'sm';
 }
 
 export interface DetailDialogProps {
@@ -228,7 +229,7 @@ function FieldEditGrid({
                       min={field.min}
                       max={field.max}
                       step={field.step}
-                      className={cn("h-6 py-0 px-1.5 text-sm", field.type === 'number' ? "w-12 text-center" : "flex-1 min-w-0")}
+                      className={cn("h-6 py-0 px-1.5 text-sm", field.type === 'number' ? "w-12 text-center" : cn("flex-1 min-w-0", field.maxWidth === 'sm' && "max-w-[12rem]"))}
                     />
                     {field.unitToggle && (
                       <UnitToggle field={field} activeUnit={activeUnits?.[field.key] || field.unitToggle.storageUnit} onToggle={(u) => onToggleUnit?.(field.key, u)} />
@@ -535,7 +536,7 @@ export const EXERCISE_HIDE_WHEN_EMPTY = new Set(
 export function buildFoodDetailFields(item: Record<string, any>): FieldConfig[] {
   return [
     { key: 'description', label: 'Name', type: 'text', section: 'Basic' },
-    { key: 'portion', label: 'Portion', type: 'text', section: 'Basic' },
+    { key: 'portion', label: 'Portion', type: 'text', section: 'Basic', maxWidth: 'sm' },
     { key: 'calories', label: 'Calories', type: 'number', unit: 'cal', min: 0, section: 'Nutrition' },
     { key: 'protein', label: 'Protein', type: 'number', unit: 'g', min: 0, section: 'Nutrition' },
     { key: 'carbs', label: 'Carbs', type: 'number', unit: 'g', min: 0, section: 'Nutrition' },
