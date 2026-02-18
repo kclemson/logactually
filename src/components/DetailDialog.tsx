@@ -42,6 +42,8 @@ export interface DetailDialogProps {
   defaultUnits?: Record<string, string>;
   /** Custom grid column class for field grids (default: "grid-cols-2") */
   gridClassName?: string;
+  /** Custom class for field labels, e.g. min-w-[5.5rem] for consistent column alignment */
+  labelClassName?: string;
 
   // Multi-item mode (optional)
   items?: Record<string, any>[];
@@ -123,6 +125,7 @@ function FieldViewGrid({
   activeUnits,
   onToggleUnit,
   gridClassName = "grid-cols-2",
+  labelClassName,
 }: {
   sections: [string, FieldConfig[]][];
   activeValues: Record<string, any>;
@@ -130,6 +133,7 @@ function FieldViewGrid({
   activeUnits?: Record<string, string>;
   onToggleUnit?: (key: string, unit: string) => void;
   gridClassName?: string;
+  labelClassName?: string;
 }) {
   return (
     <>
@@ -144,7 +148,7 @@ function FieldViewGrid({
               })
               .map(field => (
               <div key={field.key} className={cn("flex items-center gap-2 py-0.5 min-w-0", field.type === 'text' && 'col-span-2')}>
-                <span className="text-xs text-muted-foreground shrink-0">
+                <span className={cn("text-xs text-muted-foreground shrink-0", labelClassName)}>
                   {field.label}:
                 </span>
                 <span className="text-sm min-w-0 truncate">
@@ -169,6 +173,7 @@ function FieldEditGrid({
   activeUnits,
   onToggleUnit,
   gridClassName = "grid-cols-2",
+  labelClassName,
 }: {
   sections: [string, FieldConfig[]][];
   draft: Record<string, any>;
@@ -176,6 +181,7 @@ function FieldEditGrid({
   activeUnits?: Record<string, string>;
   onToggleUnit?: (key: string, unit: string) => void;
   gridClassName?: string;
+  labelClassName?: string;
 }) {
   return (
     <>
@@ -184,7 +190,7 @@ function FieldEditGrid({
           <div className={cn("grid gap-x-4 gap-y-1", gridClassName)}>
             {sectionFields.map(field => (
               <div key={field.key} className={cn("flex items-center gap-2 min-w-0", field.type === 'text' && 'col-span-2')}>
-                <span className="text-xs text-muted-foreground shrink-0">
+                <span className={cn("text-xs text-muted-foreground shrink-0", labelClassName)}>
                   {field.label}:
                 </span>
                 {field.readOnly ? (
@@ -222,7 +228,7 @@ function FieldEditGrid({
                       min={field.min}
                       max={field.max}
                       step={field.step}
-                      className={cn("h-6 py-0 px-1.5 text-sm", field.type === 'number' ? "w-16 text-center" : "flex-1 min-w-0")}
+                      className={cn("h-6 py-0 px-1.5 text-sm", field.type === 'number' ? "w-12 text-center" : "flex-1 min-w-0")}
                     />
                     {field.unitToggle && (
                       <UnitToggle field={field} activeUnit={activeUnits?.[field.key] || field.unitToggle.storageUnit} onToggle={(u) => onToggleUnit?.(field.key, u)} />
@@ -255,6 +261,7 @@ export function DetailDialog({
   onSaveItem,
   buildFields,
   hideWhenZero,
+  labelClassName,
 }: DetailDialogProps) {
   // Single-item mode state
   const [editing, setEditing] = useState(false);
@@ -459,7 +466,7 @@ export function DetailDialog({
                       <div className="pb-2 pl-4">
                         {isEditing ? (
                           <>
-                            <FieldEditGrid sections={itemSections} draft={draft} updateDraft={updateDraft} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} gridClassName={gridClassName} />
+                            <FieldEditGrid sections={itemSections} draft={draft} updateDraft={updateDraft} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} gridClassName={gridClassName} labelClassName={labelClassName} />
                             <div className="flex justify-end gap-2 mt-2">
                               <Button variant="outline" size="sm" onClick={cancelItemEdit}>Cancel</Button>
                               <Button size="sm" onClick={saveItemEdit}>Save</Button>
@@ -467,7 +474,7 @@ export function DetailDialog({
                           </>
                         ) : (
                           <>
-                            <FieldViewGrid sections={itemSections.map(([name, fields]) => [name, fields.filter(f => f.key !== 'description')] as [string, FieldConfig[]]).filter(([, fields]) => fields.length > 0)} activeValues={item} hideWhenZero={hideWhenZero} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} gridClassName={gridClassName} />
+                            <FieldViewGrid sections={itemSections.map(([name, fields]) => [name, fields.filter(f => f.key !== 'description')] as [string, FieldConfig[]]).filter(([, fields]) => fields.length > 0)} activeValues={item} hideWhenZero={hideWhenZero} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} gridClassName={gridClassName} labelClassName={labelClassName} />
                             {!readOnly && (
                               <div className="flex justify-end mt-1">
                                 <Button variant="outline" size="sm" onClick={() => enterItemEdit(idx)} className="gap-1">
@@ -487,9 +494,9 @@ export function DetailDialog({
             /* Single-item detail view */
             <>
               {editing ? (
-                <FieldEditGrid sections={sections} draft={draft} updateDraft={updateDraft} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} gridClassName={gridClassName} />
+                <FieldEditGrid sections={sections} draft={draft} updateDraft={updateDraft} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} gridClassName={gridClassName} labelClassName={labelClassName} />
               ) : (
-                <FieldViewGrid sections={sections} activeValues={values} hideWhenZero={hideWhenZero} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} gridClassName={gridClassName} />
+                <FieldViewGrid sections={sections} activeValues={values} hideWhenZero={hideWhenZero} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} gridClassName={gridClassName} labelClassName={labelClassName} />
               )}
             </>
           )}
