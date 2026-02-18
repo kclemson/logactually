@@ -238,7 +238,7 @@ export function FoodItemsTable({
                   <TooltipContent
                     side="bottom"
                     sideOffset={5}
-                    onPointerDownOutside={(e) => e.preventDefault()}
+                    onPointerDownOutside={() => setTooltipOpen(false)}
                   >
                     <CalorieTargetTooltipContent
                       label=""
