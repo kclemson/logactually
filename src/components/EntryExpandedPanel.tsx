@@ -81,37 +81,41 @@ export function EntryExpandedPanel({
             </p>
           )}
 
-          <div className="flex justify-end gap-4">
-            {!isFromSaved && onSaveAs && (
-              <button
-                onClick={onSaveAs}
-                className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                Save as {typeLabel}
-              </button>
-            )}
-            {onCopyToToday && (
-              copied ? (
-                <span className="text-xs text-green-600 dark:text-green-400 py-1">
-                  Copied!
-                </span>
-              ) : (
+          <div className="flex justify-between items-center">
+            <div>
+              {!isFromSaved && onSaveAs && (
                 <button
-                  onClick={handleCopyClick}
+                  onClick={onSaveAs}
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  Save as {typeLabel}
+                </button>
+              )}
+            </div>
+            <div className="flex gap-4">
+              {onCopyToToday && (
+                copied ? (
+                  <span className="text-xs text-green-600 dark:text-green-400 py-1">
+                    Copied!
+                  </span>
+                ) : (
+                  <button
+                    onClick={handleCopyClick}
+                    className="text-xs text-blue-600 dark:text-blue-400 py-1 hover:underline"
+                  >
+                    Copy to today
+                  </button>
+                )
+              )}
+              {onShowDetails && (
+                <button
+                  onClick={onShowDetails}
                   className="text-xs text-blue-600 dark:text-blue-400 py-1 hover:underline"
                 >
-                  Copy to today
+                  Details
                 </button>
-              )
-            )}
-            {onShowDetails && (
-              <button
-                onClick={onShowDetails}
-                className="text-xs text-blue-600 dark:text-blue-400 py-1 hover:underline"
-              >
-                Details
-              </button>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>
