@@ -40,6 +40,8 @@ export interface DetailDialogProps {
   readOnly?: boolean;
   /** Default display units for unit-toggle fields, e.g. { distance_miles: 'km', weight_lbs: 'lbs' } */
   defaultUnits?: Record<string, string>;
+  /** Custom grid column class for field grids (default: "grid-cols-2") */
+  gridClassName?: string;
 
   // Multi-item mode (optional)
   items?: Record<string, any>[];
@@ -120,18 +122,20 @@ function FieldViewGrid({
   hideWhenZero,
   activeUnits,
   onToggleUnit,
+  gridClassName = "grid-cols-2",
 }: {
   sections: [string, FieldConfig[]][];
   activeValues: Record<string, any>;
   hideWhenZero?: Set<string>;
   activeUnits?: Record<string, string>;
   onToggleUnit?: (key: string, unit: string) => void;
+  gridClassName?: string;
 }) {
   return (
     <>
       {sections.map(([sectionName, sectionFields], sectionIdx) => (
         <div key={sectionName || sectionIdx}>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-0.5">
+          <div className={cn("grid gap-x-6 gap-y-1", gridClassName)}>
             {sectionFields
               .filter(field => {
                 if (!hideWhenZero?.has(field.key)) return true;
@@ -161,18 +165,20 @@ function FieldEditGrid({
   updateDraft,
   activeUnits,
   onToggleUnit,
+  gridClassName = "grid-cols-2",
 }: {
   sections: [string, FieldConfig[]][];
   draft: Record<string, any>;
   updateDraft: (key: string, value: any) => void;
   activeUnits?: Record<string, string>;
   onToggleUnit?: (key: string, unit: string) => void;
+  gridClassName?: string;
 }) {
   return (
     <>
       {sections.map(([sectionName, sectionFields], sectionIdx) => (
         <div key={sectionName || sectionIdx}>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-0.5">
+          <div className={cn("grid gap-x-6 gap-y-1", gridClassName)}>
             {sectionFields.map(field => (
               <div key={field.key} className={cn("flex items-center gap-2", field.type === 'text' && 'col-span-2')}>
                 <span className="text-xs text-muted-foreground shrink-0 min-w-[6rem]">
@@ -238,6 +244,7 @@ export function DetailDialog({
   onSave,
   readOnly = false,
   defaultUnits,
+  gridClassName,
   items,
   onSaveItem,
   buildFields,
@@ -446,7 +453,7 @@ export function DetailDialog({
                       <div className="pb-2 pl-4">
                         {isEditing ? (
                           <>
-                            <FieldEditGrid sections={itemSections} draft={draft} updateDraft={updateDraft} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} />
+                            <FieldEditGrid sections={itemSections} draft={draft} updateDraft={updateDraft} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} gridClassName={gridClassName} />
                             <div className="flex justify-end gap-2 mt-2">
                               <Button variant="outline" size="sm" onClick={cancelItemEdit}>Cancel</Button>
                               <Button size="sm" onClick={saveItemEdit}>Save</Button>
@@ -454,7 +461,7 @@ export function DetailDialog({
                           </>
                         ) : (
                           <>
-                            <FieldViewGrid sections={itemSections.map(([name, fields]) => [name, fields.filter(f => f.key !== 'description')] as [string, FieldConfig[]]).filter(([, fields]) => fields.length > 0)} activeValues={item} hideWhenZero={hideWhenZero} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} />
+                            <FieldViewGrid sections={itemSections.map(([name, fields]) => [name, fields.filter(f => f.key !== 'description')] as [string, FieldConfig[]]).filter(([, fields]) => fields.length > 0)} activeValues={item} hideWhenZero={hideWhenZero} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} gridClassName={gridClassName} />
                             {!readOnly && (
                               <div className="flex justify-end mt-1">
                                 <Button variant="outline" size="sm" onClick={() => enterItemEdit(idx)} className="gap-1">
@@ -474,9 +481,9 @@ export function DetailDialog({
             /* Single-item detail view */
             <>
               {editing ? (
-                <FieldEditGrid sections={sections} draft={draft} updateDraft={updateDraft} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} />
+                <FieldEditGrid sections={sections} draft={draft} updateDraft={updateDraft} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} gridClassName={gridClassName} />
               ) : (
-                <FieldViewGrid sections={sections} activeValues={values} hideWhenZero={hideWhenZero} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} />
+                <FieldViewGrid sections={sections} activeValues={values} hideWhenZero={hideWhenZero} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} gridClassName={gridClassName} />
               )}
             </>
           )}
@@ -563,40 +570,57 @@ export function buildExerciseDetailFields(item: Record<string, any>): FieldConfi
   const subtypeOptions = buildSubtypeOptions(exerciseKey);
 
   const fields: FieldConfig[] = [
-    { key: 'description', label: 'Name', type: 'text', section: 'Basic' },
-    { key: 'exercise_key', label: 'Exercise type', type: 'select', optgroups: buildExerciseKeyOptgroups(), section: 'Basic' },
+    { key: 'description', label: 'Name', type: 'text' },
+    { key: 'exercise_key', label: 'Exercise type', type: 'select', optgroups: buildExerciseKeyOptgroups() },
   ];
 
   if (subtypeOptions) {
-    fields.push({ key: 'exercise_subtype', label: 'Subtype', type: 'select', options: subtypeOptions, section: 'Basic' });
+    fields.push({ key: 'exercise_subtype', label: 'Subtype', type: 'select', options: subtypeOptions });
   }
 
   if (isCardio) {
+    // Wider fields on left (odd positions), narrower on right
     fields.push(
-      { key: 'duration_minutes', label: 'Duration', type: 'number', unit: 'min', min: 0, step: 0.5, section: 'Performance' },
-      { key: 'distance_miles', label: 'Distance', type: 'number', unitToggle: { units: ['mi', 'km'], storageUnit: 'mi', convert: convertDistance }, min: 0, step: 0.01, section: 'Performance' },
+      { key: 'distance_miles', label: 'Distance', type: 'number', unitToggle: { units: ['mi', 'km'], storageUnit: 'mi', convert: convertDistance }, min: 0, step: 0.01 },
+      { key: 'duration_minutes', label: 'Duration', type: 'number', unit: 'min', min: 0, step: 0.5 },
     );
+
+    // Explicitly ordered metadata pairs: wider-label left, narrower right
+    const cardioMetaOrder = ['calories_burned', 'effort', 'speed_mph', 'heart_rate', 'incline_pct', 'cadence_rpm'];
+    for (const metaKey of cardioMetaOrder) {
+      const mk = KNOWN_METADATA_KEYS.find(m => m.key === metaKey);
+      if (!mk) continue;
+      if (mk.appliesTo !== 'both' && mk.appliesTo !== 'cardio') continue;
+      fields.push({
+        key: `_meta_${mk.key}`,
+        label: mk.label,
+        type: 'number',
+        unit: mk.unit,
+        min: mk.min,
+        max: mk.max,
+      });
+    }
   } else {
     fields.push(
-      { key: 'sets', label: 'Sets', type: 'number', min: 0, section: 'Performance' },
-      { key: 'reps', label: 'Reps', type: 'number', min: 0, section: 'Performance' },
-      { key: 'weight_lbs', label: 'Weight', type: 'number', unitToggle: { units: ['lbs', 'kg'], storageUnit: 'lbs', convert: convertWeight }, min: 0, section: 'Performance' },
+      { key: 'sets', label: 'Sets', type: 'number', min: 0 },
+      { key: 'reps', label: 'Reps', type: 'number', min: 0 },
+      { key: 'weight_lbs', label: 'Weight', type: 'number', unitToggle: { units: ['lbs', 'kg'], storageUnit: 'lbs', convert: convertWeight }, min: 0 },
     );
-  }
 
-  const metadataKeys = KNOWN_METADATA_KEYS.filter(
-    mk => mk.appliesTo === 'both' || mk.appliesTo === (isCardio ? 'cardio' : 'strength')
-  );
-  for (const mk of metadataKeys) {
-    fields.push({
-      key: `_meta_${mk.key}`,
-      label: mk.label,
-      type: 'number',
-      unit: mk.unit,
-      min: mk.min,
-      max: mk.max,
-      section: 'Metadata',
-    });
+    // Strength metadata (effort, calories_burned, heart_rate)
+    const strengthMetaKeys = KNOWN_METADATA_KEYS.filter(
+      mk => mk.appliesTo === 'both' || mk.appliesTo === 'strength'
+    );
+    for (const mk of strengthMetaKeys) {
+      fields.push({
+        key: `_meta_${mk.key}`,
+        label: mk.label,
+        type: 'number',
+        unit: mk.unit,
+        min: mk.min,
+        max: mk.max,
+      });
+    }
   }
 
   return fields;
