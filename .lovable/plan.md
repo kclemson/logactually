@@ -1,146 +1,124 @@
 
 
-## AI-declared verification metadata for chart accuracy checking
+## Unified Create Chart dialog with inline result flow
 
-### Problem
+### Summary
 
-The client-side verifier currently guesses whether and how to validate a chart using heuristics (duplicate dates, x-axis field names, key mapping tables). This fails for categorical/aggregated charts (~30-40% of prompts), even though the AI knows exactly what data it used and how it computed each value.
+Restructure the dialog so the input area (chips + textarea) and the result area coexist in a single scrollable view. After a chart is generated, the textarea hides and the result appears below the chips. A "Refine" button re-reveals the textarea for follow-up adjustments.
 
-### Core idea
+### Dialog states
 
-Have the AI return a `verification` object in its JSON response that explicitly declares how to check its work. The client uses this declaration to verify against the piggybacked daily totals. No more guessing.
+**Initial (no chart):**
+```text
+[icon] Create Chart                    [refresh] [X]
 
-### New schema field: `verification`
+[chip] [chip] [chip]
+[chip] [chip] [chip]
 
-Add to the prompt's JSON schema specification:
-
-```json
-"verification": {
-  "type": "daily" | "aggregate" | "custom" | null,
-  "source": "food" | "exercise",
-  "field": "cal",
-  "method": "sum" | "average" | "count" | "max" | "min",
-  "breakdown": [...]
-}
+[textarea: "Describe the chart..."]
+                                        [Create]
 ```
 
-**Three verification types:**
+**Loading:**
+```text
+[icon] Create Chart                              [X]
 
-| Type | When AI uses it | How client verifies |
-|---|---|---|
-| `daily` | One data point per date, value is a daily total | Look up `dailyTotals[source][rawDate][field]`, compare directly |
-| `aggregate` | Categorical buckets that aggregate across multiple dates | AI provides `breakdown` array listing which dates went into each bucket; client sums/averages those dates from daily totals and compares |
-| `null` | Derived metrics the AI can't map to a single field (ratios, percentages, counts of items) | Client shows "Verification not available" |
-
-### Type: `daily` (simplest case)
-
-AI returns:
-```json
-"verification": { "type": "daily", "source": "food", "field": "cal" }
+"Average calories by hour of day"
+                          [spinner] Generating...
 ```
 
-Client logic: for each data point, compare `point[dataKey]` against `dailyTotals.food[point.rawDate].cal`. This replaces the current `FOOD_KEY_MAP` / `EXERCISE_KEY_MAP` lookup guessing.
+**Result showing:**
+```text
+[icon] Create Chart                    [refresh] [X]
 
-### Type: `aggregate` (the big unlock)
+[chip] [chip] [chip]
+[chip] [chip] [chip]
 
-AI returns:
-```json
-"verification": {
-  "type": "aggregate",
-  "source": "food",
-  "field": "cal",
-  "method": "average",
-  "breakdown": [
-    { "label": "Workout Days", "dates": ["2026-02-01", "2026-02-03"] },
-    { "label": "Rest Days", "dates": ["2026-02-02", "2026-02-04"] }
-  ]
-}
+"Average calories by hour of day"
+[============ chart ============]
+
+[Save to Trends]  [Refine]
+[Verify accuracy] [Show debug JSON]
 ```
 
-Client logic: for each bucket in `breakdown`, look up `dailyTotals.food[date].cal` for each listed date, apply `method` (average/sum), compare against the data point whose label matches `breakdown.label`. This makes "workout vs rest days," "weekdays vs weekends," and "by day of week" charts all verifiable.
+**Refining (after clicking Refine):**
+```text
+[icon] Create Chart                    [refresh] [X]
 
-### Type: `null` (graceful decline)
+[chip] [chip] [chip]
+[chip] [chip] [chip]
 
-For charts the AI knows it can't map cleanly (ratios, percentages, multi-field derived values), it returns `"verification": null`. Client shows "Verification not available for this chart type."
+"Average calories by hour of day"
+[============ chart ============]
 
-### Changes
+[textarea: "Refine this chart..."]
+                      [Cancel] [Refine]
 
-**`supabase/functions/generate-chart/index.ts`** (prompt update)
-
-Add to the JSON schema section:
-
-```
-"verification": {
-  "type": "daily" or "aggregate" or null,
-  "source": "food" or "exercise" (which dailyTotals to check against),
-  "field": "cal" or "protein" or "sets" etc (the exact key name in the daily totals),
-  "method": "sum" or "average" or "count" or "max" or "min" (for aggregate only),
-  "breakdown": [
-    {"label": "data point label", "dates": ["yyyy-MM-dd", ...]}
-  ] (for aggregate only — lists which dates contributed to each bucket)
-}
-
-Set verification to null if the chart uses derived metrics (ratios, percentages, counts of distinct items) that cannot be verified against daily totals.
-For "daily" type: source and field are required. Each data point's rawDate maps directly to dailyTotals[source][rawDate][field].
-For "aggregate" type: source, field, method, and breakdown are all required. Each breakdown entry's label must match a data point's xAxisField value.
-Field names must exactly match the daily totals keys: food uses cal, protein, carbs, fat, fiber, sugar, sat_fat, sodium, chol. Exercise uses sets, duration, distance, cal_burned, unique_exercises.
+[Verify accuracy] [Show debug JSON]
 ```
 
-**`src/lib/chart-verification.ts`** (verification logic rewrite)
+### State changes
 
-Replace the heuristic-based approach with declaration-driven logic:
+Add a `refining` boolean state:
+- `false` (default): chips visible, textarea hidden when a chart exists, submissions start fresh requests
+- `true`: textarea visible below chart, submissions carry conversation history for refinement
+- Reset to `false` after successful generation, after start-over, and when clicking Cancel
 
-1. If `spec.verification` is present and non-null, use it exclusively
-2. If `spec.verification` is `null`, return unavailable with a reason
-3. If `spec.verification` is missing entirely (backward compatibility with old cached charts), fall back to the existing heuristic-based approach (keep current `FOOD_KEY_MAP` / `EXERCISE_KEY_MAP` logic as a fallback)
+### Submission logic
 
-New logic for `type: "daily"`:
-- Look up `dailyTotals[verification.source][rawDate][verification.field]` for each point
-- Compare with same tolerance as today (delta less than 5 or less than 1%)
+Two paths depending on context:
 
-New logic for `type: "aggregate"`:
-- For each entry in `breakdown`, collect `dailyTotals[source][date][field]` for all listed dates
-- Apply `method`: sum them, average them, count them, etc.
-- Compare the computed value against the matching data point
-- If a breakdown label doesn't match any data point, skip it
+1. **New request** (chip click or textarea submit when `refining === false` and a chart exists): Atomically clear messages/currentSpec/dailyTotals/verification/editingIdRef, then submit the question as a fresh single-message conversation. No flash of empty state -- go straight to loading.
 
-**`src/components/trends/DynamicChart.tsx`** (type update)
+2. **Refinement** (textarea submit when `refining === true`): Existing behavior -- append to conversation history, keep currentSpec context so the AI can modify it.
 
-Add `verification` to `ChartSpec` interface:
-```typescript
-verification?: {
-  type: "daily" | "aggregate" | null;
-  source?: "food" | "exercise";
-  field?: string;
-  method?: "sum" | "average" | "count" | "max" | "min";
-  breakdown?: Array<{ label: string; dates: string[] }>;
-} | null;
-```
+3. **First request** (no chart exists yet): Existing behavior -- submit as first message.
 
-**`src/components/CustomChartDialog.tsx`**
+### Chip behavior
 
-No changes needed — the existing `verifyChartData(currentSpec, dailyTotals)` call will automatically use the new declaration-driven path when the AI includes `verification` in its response.
+- Chips are visible whenever `!generateChart.isPending` (both initial state AND after result)
+- Clicking a chip always triggers a **new request** (never refinement), regardless of whether a chart is showing
+- Refresh button visible whenever chips are visible
 
-### Backward compatibility
+### Button layout in result section
 
-Charts saved before this change won't have a `verification` field. The existing heuristic fallback (current `FOOD_KEY_MAP` / `EXERCISE_KEY_MAP` approach) handles these. Over time, as charts are regenerated, more will include the declaration.
+- **Save to Trends** / **Save Changes**: primary action, saves and closes dialog
+- **Refine**: sets `refining = true`, scrolls/focuses textarea
+- Remove the old "Start over" button -- chips already serve that purpose (clicking one starts fresh)
 
-### Expected coverage improvement
+### Edge cases
 
-| Chart type | Before | After |
-|---|---|---|
-| Daily time-series (calories, protein, etc.) | Verifiable | Verifiable (more reliably via AI declaration) |
-| Categorical: workout vs rest, weekday vs weekend | Not verifiable | Verifiable via `aggregate` with `breakdown` |
-| By day of week, by hour | Not verifiable | Verifiable via `aggregate` with `breakdown` |
-| Derived: ratios, percentages | Not verifiable | Explicitly marked `null` (clear messaging) |
-| Custom log charts | Not verifiable | Potentially verifiable if AI maps correctly |
+- **Edit mode** (`initialChart`): Opens with chart showing and chips visible. "Refine" works for follow-up edits. Clicking a chip clears `editingIdRef` and starts a new unrelated chart.
+- **Error state**: Error message shows below where the chart would be. Chips and textarea remain visible above so user can retry or try something different.
+- **Loading transition from result**: When a chip is clicked while a chart is showing, immediately clear the chart and show the loading state. No intermediate "empty" flash.
 
-Estimated coverage: 75-85% of common chart prompts become verifiable, up from ~50-60%.
+### Technical details
+
+**File: `src/components/CustomChartDialog.tsx`**
+
+1. Add `const [refining, setRefining] = useState(false)`
+2. Add `handleNewRequest(question)` function that atomically resets state and submits:
+   - Clear `messages`, `currentSpec`, `dailyTotals`, `verification`, `showDebug`
+   - Set `editingIdRef.current = null`, reset `generateChart`
+   - Set `lastQuestion` and call `generateChart.mutateAsync` with a single-message array
+3. Restructure JSX render order:
+   - **Chips section**: render when `!generateChart.isPending` (remove the `messages.length === 0` gate)
+   - **Textarea section**: render when `!generateChart.isPending && (!currentSpec || refining)`
+     - When `refining`: placeholder = "Refine this chart...", buttons = Cancel + Refine
+     - When no chart: placeholder = "Describe the chart...", button = Create
+   - **Loading section**: render when `generateChart.isPending` (unchanged)
+   - **Error section**: unchanged
+   - **Result section**: render when `currentSpec && !generateChart.isPending`
+     - Question label, chart preview, Save + Refine buttons, verify/debug buttons
+4. Chip `onClick`: call `handleNewRequest(chip)` (always fresh, never refinement)
+5. Textarea submit: if `refining`, use existing `handleSubmit`; if not and chart exists, use `handleNewRequest`; if no chart, use `handleSubmit`
+6. After successful generation in both paths: set `refining = false`
+7. Refresh button: visible whenever `!generateChart.isPending`
+8. Remove "Start over" button from result section (replaced by chip clicks and "New Chart" is implicit)
 
 ### Files changed
 
 | File | Change |
 |---|---|
-| `supabase/functions/generate-chart/index.ts` | Add `verification` field to prompt schema with instructions for daily, aggregate, and null types |
-| `src/components/trends/DynamicChart.tsx` | Add `verification` to `ChartSpec` interface |
-| `src/lib/chart-verification.ts` | Add declaration-driven verification for daily and aggregate types; keep existing heuristics as fallback for old charts |
+| `src/components/CustomChartDialog.tsx` | Restructure layout, add `refining` state, add `handleNewRequest`, show chips after result, hide textarea after result unless refining |
+
