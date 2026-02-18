@@ -749,7 +749,6 @@ export function FoodItemsTable({
                       value={item.description}
                       onSave={(desc) => {
                         onUpdateItem?.(index, 'description', desc);
-                        if (item.portion) onUpdateItem?.(index, 'portion', '');
                       }}
                       title={getItemTooltip(item)}
                     >
