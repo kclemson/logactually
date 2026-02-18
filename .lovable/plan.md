@@ -1,21 +1,36 @@
 
 
-# Reclaim horizontal space in Detail Dialog edit mode
+# Tighten view-mode spacing and verify select font size
 
 ## Problem
-On mobile edit mode, fields like Distance are still cramped. Two targeted fixes:
+Two issues:
+1. In view-only mode, there is excess space between labels and values due to `pl-2` padding on the value span and oversized label min-widths.
+2. The `text-xs` change on select dropdowns from the previous edit may not be visually apparent yet (it was applied in the code).
 
 ## Changes
 
-### 1. Tighten label-to-input gap (`src/components/DetailDialog.tsx`)
-In both `FieldViewItem` (line 165) and `FieldEditItem` (line 211), reduce `gap-2` (8px) to `gap-1.5` (6px) on the flex container. This saves 2px per gap instance, roughly 4-6px per row across label, value, and unit elements.
+### 1. Remove `pl-2` from view-mode value span (`src/components/DetailDialog.tsx`, line 169)
+Change:
+```
+<span className="text-sm min-w-0 truncate pl-2">
+```
+to:
+```
+<span className="text-sm min-w-0 truncate">
+```
+The container already has `gap-1.5` providing spacing, so `pl-2` is redundant and wastes 8px.
 
-### 2. Shrink dropdown font size (`src/components/DetailDialog.tsx`)
-The `<select>` element (line 226) currently uses `text-sm` (14px). Safari's auto-zoom only triggers on `<input>` fields below 16px, not `<select>`. Change to `text-xs` (12px) on the select, which saves a few more pixels of rendered text width for Category/Exercise type/Subtype values like "Walk/ru..." that currently clip.
+### 2. Reduce label min-width from `4.5rem` to `4rem`
+In both `src/pages/WeightLog.tsx` (lines 778, 802) and `src/pages/FoodLog.tsx` (lines 875, 892), change `min-w-[4.5rem]` to `min-w-[4rem]`. This recovers another ~8px per label.
+
+### Select font size
+The `text-xs` change on `<select>` elements was already applied in the previous edit (line 226). It should be active — if it's not visible in the preview, it may need a refresh. No additional code change needed here.
 
 ## Files changed
 
 | File | What |
 |------|------|
-| `src/components/DetailDialog.tsx` | `gap-2` to `gap-1.5` in FieldViewItem and FieldEditItem; `text-sm` to `text-xs` on select element |
+| `src/components/DetailDialog.tsx` | Remove `pl-2` from view-mode value span (line 169) |
+| `src/pages/WeightLog.tsx` | `min-w-[4.5rem]` to `min-w-[4rem]` (2 places) |
+| `src/pages/FoodLog.tsx` | `min-w-[4.5rem]` to `min-w-[4rem]` (2 places) |
 
