@@ -9,6 +9,7 @@ import Settings from './Settings';
 let mockSettings = {
   theme: 'system' as const,
   weightUnit: 'lbs' as const,
+  distanceUnit: 'mi' as const,
   showWeights: true,
   showCustomLogs: true,
   suggestMealSaves: true,
@@ -129,6 +130,7 @@ describe('Settings smoke test', () => {
     mockSettings = {
       theme: 'system',
       weightUnit: 'lbs',
+      distanceUnit: 'mi',
       showWeights: true,
       showCustomLogs: true,
       suggestMealSaves: true,

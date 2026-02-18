@@ -771,6 +771,10 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
               buildFields={buildExerciseDetailFields}
               readOnly={isReadOnly}
               hideWhenZero={EXERCISE_HIDE_WHEN_EMPTY}
+              defaultUnits={{
+                distance_miles: settings.distanceUnit || 'mi',
+                weight_lbs: settings.weightUnit,
+              }}
             />
           );
         }
@@ -788,6 +792,10 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
             onSave={handleDetailSave}
             readOnly={isReadOnly}
             hideWhenZero={EXERCISE_HIDE_WHEN_EMPTY}
+            defaultUnits={{
+              distance_miles: settings.distanceUnit || 'mi',
+              weight_lbs: settings.weightUnit,
+            }}
           />
         );
       })()}

@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { Pencil, ChevronDown } from 'lucide-react';
 
@@ -10,11 +9,18 @@ import { Pencil, ChevronDown } from 'lucide-react';
 // Types
 // ============================================================================
 
+export interface UnitToggleConfig {
+  units: string[];
+  storageUnit: string;
+  convert: (value: number, from: string, to: string) => number;
+}
+
 export interface FieldConfig {
   key: string;
   label: string;
   type: 'text' | 'number' | 'select';
   unit?: string;
+  unitToggle?: UnitToggleConfig;
   readOnly?: boolean;
   options?: { value: string; label: string }[];
   optgroups?: { label: string; options: { value: string; label: string }[] }[];
@@ -32,6 +38,8 @@ export interface DetailDialogProps {
   values: Record<string, any>;
   onSave: (updates: Record<string, any>) => void;
   readOnly?: boolean;
+  /** Default display units for unit-toggle fields, e.g. { distance_miles: 'km', weight_lbs: 'lbs' } */
+  defaultUnits?: Record<string, string>;
 
   // Multi-item mode (optional)
   items?: Record<string, any>[];
@@ -45,7 +53,7 @@ export interface DetailDialogProps {
 // Helpers
 // ============================================================================
 
-function displayValue(field: FieldConfig, activeValues: Record<string, any>): string {
+function displayValue(field: FieldConfig, activeValues: Record<string, any>, activeUnit?: string): string {
   const val = activeValues[field.key];
   if (val === null || val === undefined || val === '') return '—';
   if (field.type === 'select') {
@@ -60,8 +68,36 @@ function displayValue(field: FieldConfig, activeValues: Record<string, any>): st
       return opt ? opt.label : String(val);
     }
   }
+  // Unit toggle: convert value for display
+  if (field.unitToggle && activeUnit && activeUnit !== field.unitToggle.storageUnit) {
+    const converted = field.unitToggle.convert(Number(val), field.unitToggle.storageUnit, activeUnit);
+    return String(Number(converted.toFixed(2)));
+  }
   if (field.unit) return `${val} ${field.unit}`;
   return String(val);
+}
+
+function UnitToggle({ field, activeUnit, onToggle }: { field: FieldConfig; activeUnit: string; onToggle: (unit: string) => void }) {
+  if (!field.unitToggle) return null;
+  return (
+    <span className="flex items-center gap-0.5 ml-1 shrink-0">
+      {field.unitToggle.units.map(u => (
+        <button
+          key={u}
+          type="button"
+          onClick={() => onToggle(u)}
+          className={cn(
+            "text-xs px-1.5 py-0.5 rounded transition-colors",
+            u === activeUnit
+              ? "bg-primary/10 text-foreground font-medium"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          {u}
+        </button>
+      ))}
+    </span>
+  );
 }
 
 function groupFieldsBySections(fields: FieldConfig[]): [string, FieldConfig[]][] {
@@ -82,16 +118,19 @@ function FieldViewGrid({
   sections,
   activeValues,
   hideWhenZero,
+  activeUnits,
+  onToggleUnit,
 }: {
   sections: [string, FieldConfig[]][];
   activeValues: Record<string, any>;
   hideWhenZero?: Set<string>;
+  activeUnits?: Record<string, string>;
+  onToggleUnit?: (key: string, unit: string) => void;
 }) {
   return (
     <>
       {sections.map(([sectionName, sectionFields], sectionIdx) => (
         <div key={sectionName || sectionIdx}>
-          {sectionIdx > 0 && <hr className="border-border/50 my-2" />}
           <div className="grid grid-cols-2 gap-x-6 gap-y-0.5">
             {sectionFields
               .filter(field => {
@@ -102,7 +141,14 @@ function FieldViewGrid({
               .map(field => (
               <div key={field.key} className={cn("flex items-center gap-2 py-0.5", field.type === 'text' && 'col-span-2')}>
                 <span className="text-xs text-muted-foreground min-w-[5rem] shrink-0">{field.label}</span>
-                <span className="text-sm">{displayValue(field, activeValues)}</span>
+                <span className="text-sm">
+                  {displayValue(field, activeValues, activeUnits?.[field.key])}
+                </span>
+                {field.unitToggle ? (
+                  <UnitToggle field={field} activeUnit={activeUnits?.[field.key] || field.unitToggle.storageUnit} onToggle={(u) => onToggleUnit?.(field.key, u)} />
+                ) : field.unit ? (
+                  <span className="text-xs text-muted-foreground">{field.unit}</span>
+                ) : null}
               </div>
             ))}
           </div>
@@ -116,24 +162,27 @@ function FieldEditGrid({
   sections,
   draft,
   updateDraft,
+  activeUnits,
+  onToggleUnit,
 }: {
   sections: [string, FieldConfig[]][];
   draft: Record<string, any>;
   updateDraft: (key: string, value: any) => void;
+  activeUnits?: Record<string, string>;
+  onToggleUnit?: (key: string, unit: string) => void;
 }) {
   return (
     <>
       {sections.map(([sectionName, sectionFields], sectionIdx) => (
         <div key={sectionName || sectionIdx}>
-          {sectionIdx > 0 && <hr className="border-border/50 my-2" />}
           <div className="grid grid-cols-2 gap-x-6 gap-y-0.5">
             {sectionFields.map(field => (
               <div key={field.key} className={cn("flex items-center gap-2", field.type === 'text' && 'col-span-2')}>
-                <Label className="text-xs text-muted-foreground shrink-0 min-w-[5rem]">
+                <span className="text-xs text-muted-foreground shrink-0 min-w-[5rem]">
                   {field.label}:
-                </Label>
+                </span>
                 {field.readOnly ? (
-                  <span className="text-sm text-muted-foreground">{displayValue(field, draft)}</span>
+                  <span className="text-sm text-muted-foreground">{displayValue(field, draft, activeUnits?.[field.key])}</span>
                 ) : field.type === 'select' ? (
                   <select
                     value={String(draft[field.key] ?? '')}
@@ -156,18 +205,23 @@ function FieldEditGrid({
                     )}
                   </select>
                 ) : (
-                  <Input
-                    type={field.type}
-                    value={draft[field.key] ?? ''}
-                    onChange={e => {
-                      const v = field.type === 'number' ? (e.target.value === '' ? '' : Number(e.target.value)) : e.target.value;
-                      updateDraft(field.key, v);
-                    }}
-                    min={field.min}
-                    max={field.max}
-                    step={field.step}
-                    className="h-6 py-0 px-1.5 text-sm flex-1 min-w-0"
-                  />
+                  <>
+                    <Input
+                      type={field.type}
+                      value={draft[field.key] ?? ''}
+                      onChange={e => {
+                        const v = field.type === 'number' ? (e.target.value === '' ? '' : Number(e.target.value)) : e.target.value;
+                        updateDraft(field.key, v);
+                      }}
+                      min={field.min}
+                      max={field.max}
+                      step={field.step}
+                      className="h-6 py-0 px-1.5 text-sm flex-1 min-w-0"
+                    />
+                    {field.unitToggle && (
+                      <UnitToggle field={field} activeUnit={activeUnits?.[field.key] || field.unitToggle.storageUnit} onToggle={(u) => onToggleUnit?.(field.key, u)} />
+                    )}
+                  </>
                 )}
               </div>
             ))}
@@ -178,10 +232,6 @@ function FieldEditGrid({
   );
 }
 
-// ============================================================================
-// Component
-// ============================================================================
-
 export function DetailDialog({
   open,
   onOpenChange,
@@ -190,6 +240,7 @@ export function DetailDialog({
   values,
   onSave,
   readOnly = false,
+  defaultUnits,
   items,
   onSaveItem,
   buildFields,
@@ -203,7 +254,29 @@ export function DetailDialog({
   const [expandedIndices, setExpandedIndices] = useState<Set<number>>(new Set());
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
+  // Per-field active display unit (initialized from defaultUnits)
+  const [activeUnits, setActiveUnits] = useState<Record<string, string>>(() => defaultUnits || {});
+
   const isMultiItem = items && items.length > 1;
+
+  const handleToggleUnit = (fieldKey: string, newUnit: string) => {
+    // In edit mode, convert the draft value when toggling units
+    if (editing || editingIndex !== null) {
+      const allFields = editingIndex !== null && items && buildFields
+        ? buildFields(items[editingIndex])
+        : fields;
+      const field = allFields.find(f => f.key === fieldKey);
+      if (field?.unitToggle) {
+        const oldUnit = activeUnits[fieldKey] || field.unitToggle.storageUnit;
+        const currentVal = draft[fieldKey];
+        if (currentVal !== '' && currentVal !== null && currentVal !== undefined) {
+          const converted = field.unitToggle.convert(Number(currentVal), oldUnit, newUnit);
+          setDraft(prev => ({ ...prev, [fieldKey]: Number(converted.toFixed(2)) }));
+        }
+      }
+    }
+    setActiveUnits(prev => ({ ...prev, [fieldKey]: newUnit }));
+  };
 
   // Reset state when dialog opens/closes
   const handleOpenChange = (next: boolean) => {
@@ -212,13 +285,24 @@ export function DetailDialog({
       setDraft({});
       setExpandedIndices(new Set());
       setEditingIndex(null);
+      setActiveUnits(defaultUnits || {});
     }
     onOpenChange(next);
   };
 
   // ---- Single-item mode handlers ----
   const enterEditMode = () => {
-    setDraft({ ...values });
+    // Convert storage values to display units for editing
+    const d = { ...values };
+    for (const field of fields) {
+      if (field.unitToggle) {
+        const displayUnit = activeUnits[field.key] || field.unitToggle.storageUnit;
+        if (displayUnit !== field.unitToggle.storageUnit && d[field.key] != null && d[field.key] !== '') {
+          d[field.key] = Number(field.unitToggle.convert(Number(d[field.key]), field.unitToggle.storageUnit, displayUnit).toFixed(2));
+        }
+      }
+    }
+    setDraft(d);
     setEditing(true);
   };
 
@@ -231,10 +315,19 @@ export function DetailDialog({
     const updates: Record<string, any> = {};
     for (const field of fields) {
       if (field.readOnly) continue;
-      const original = values[field.key];
       const edited = draft[field.key];
-      if (edited !== undefined && edited !== original) {
-        updates[field.key] = edited;
+      if (edited === undefined) continue;
+      // Convert back to storage unit if needed
+      let saveVal = edited;
+      if (field.unitToggle) {
+        const displayUnit = activeUnits[field.key] || field.unitToggle.storageUnit;
+        if (displayUnit !== field.unitToggle.storageUnit && saveVal !== '' && saveVal !== null) {
+          saveVal = Number(field.unitToggle.convert(Number(saveVal), displayUnit, field.unitToggle.storageUnit).toFixed(4));
+        }
+      }
+      const original = values[field.key];
+      if (saveVal !== original) {
+        updates[field.key] = saveVal;
       }
     }
     if (Object.keys(updates).length > 0) {
@@ -251,7 +344,6 @@ export function DetailDialog({
       const next = new Set(prev);
       if (next.has(idx)) {
         next.delete(idx);
-        // If collapsing the item being edited, cancel edit
         if (editingIndex === idx) {
           setEditingIndex(null);
           setDraft({});
@@ -264,7 +356,17 @@ export function DetailDialog({
   };
 
   const enterItemEdit = (idx: number) => {
-    setDraft({ ...items![idx] });
+    const itemFields = buildFields ? buildFields(items![idx]) : fields;
+    const d = { ...items![idx] };
+    for (const field of itemFields) {
+      if (field.unitToggle) {
+        const displayUnit = activeUnits[field.key] || field.unitToggle.storageUnit;
+        if (displayUnit !== field.unitToggle.storageUnit && d[field.key] != null && d[field.key] !== '') {
+          d[field.key] = Number(field.unitToggle.convert(Number(d[field.key]), field.unitToggle.storageUnit, displayUnit).toFixed(2));
+        }
+      }
+    }
+    setDraft(d);
     setEditingIndex(idx);
     setExpandedIndices(new Set([idx]));
   };
@@ -280,10 +382,18 @@ export function DetailDialog({
     const updates: Record<string, any> = {};
     for (const field of itemFields) {
       if (field.readOnly) continue;
-      const original = items[editingIndex][field.key];
       const edited = draft[field.key];
-      if (edited !== undefined && edited !== original) {
-        updates[field.key] = edited;
+      if (edited === undefined) continue;
+      let saveVal = edited;
+      if (field.unitToggle) {
+        const displayUnit = activeUnits[field.key] || field.unitToggle.storageUnit;
+        if (displayUnit !== field.unitToggle.storageUnit && saveVal !== '' && saveVal !== null) {
+          saveVal = Number(field.unitToggle.convert(Number(saveVal), displayUnit, field.unitToggle.storageUnit).toFixed(4));
+        }
+      }
+      const original = items[editingIndex][field.key];
+      if (saveVal !== original) {
+        updates[field.key] = saveVal;
       }
     }
     if (Object.keys(updates).length > 0) {
@@ -339,7 +449,7 @@ export function DetailDialog({
                       <div className="pb-2 pl-4">
                         {isEditing ? (
                           <>
-                            <FieldEditGrid sections={itemSections} draft={draft} updateDraft={updateDraft} />
+                            <FieldEditGrid sections={itemSections} draft={draft} updateDraft={updateDraft} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} />
                             <div className="flex justify-end gap-2 mt-2">
                               <Button variant="outline" size="sm" onClick={cancelItemEdit}>Cancel</Button>
                               <Button size="sm" onClick={saveItemEdit}>Save</Button>
@@ -347,7 +457,7 @@ export function DetailDialog({
                           </>
                         ) : (
                           <>
-                            <FieldViewGrid sections={itemSections.map(([name, fields]) => [name, fields.filter(f => f.key !== 'description')] as [string, FieldConfig[]]).filter(([, fields]) => fields.length > 0)} activeValues={item} hideWhenZero={hideWhenZero} />
+                            <FieldViewGrid sections={itemSections.map(([name, fields]) => [name, fields.filter(f => f.key !== 'description')] as [string, FieldConfig[]]).filter(([, fields]) => fields.length > 0)} activeValues={item} hideWhenZero={hideWhenZero} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} />
                             {!readOnly && (
                               <div className="flex justify-end mt-1">
                                 <Button variant="outline" size="sm" onClick={() => enterItemEdit(idx)} className="gap-1">
@@ -367,9 +477,9 @@ export function DetailDialog({
             /* Single-item detail view */
             <>
               {editing ? (
-                <FieldEditGrid sections={sections} draft={draft} updateDraft={updateDraft} />
+                <FieldEditGrid sections={sections} draft={draft} updateDraft={updateDraft} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} />
               ) : (
-                <FieldViewGrid sections={sections} activeValues={values} hideWhenZero={hideWhenZero} />
+                <FieldViewGrid sections={sections} activeValues={values} hideWhenZero={hideWhenZero} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} />
               )}
             </>
           )}
@@ -422,6 +532,7 @@ export function buildFoodDetailFields(item: Record<string, any>): FieldConfig[] 
 }
 
 import { EXERCISE_MUSCLE_GROUPS, EXERCISE_SUBTYPE_DISPLAY, isCardioExercise, KNOWN_METADATA_KEYS, EXERCISE_GROUPS, getExerciseDisplayName } from '@/lib/exercise-metadata';
+import { convertWeight, convertDistance } from '@/lib/weight-units';
 
 function buildExerciseKeyOptgroups(): { label: string; options: { value: string; label: string }[] }[] {
   const groups = EXERCISE_GROUPS.map(group => ({
@@ -466,13 +577,13 @@ export function buildExerciseDetailFields(item: Record<string, any>): FieldConfi
   if (isCardio) {
     fields.push(
       { key: 'duration_minutes', label: 'Duration', type: 'number', unit: 'min', min: 0, step: 0.5, section: 'Performance' },
-      { key: 'distance_miles', label: 'Distance', type: 'number', unit: 'mi', min: 0, step: 0.01, section: 'Performance' },
+      { key: 'distance_miles', label: 'Distance', type: 'number', unitToggle: { units: ['mi', 'km'], storageUnit: 'mi', convert: convertDistance }, min: 0, step: 0.01, section: 'Performance' },
     );
   } else {
     fields.push(
       { key: 'sets', label: 'Sets', type: 'number', min: 0, section: 'Performance' },
       { key: 'reps', label: 'Reps', type: 'number', min: 0, section: 'Performance' },
-      { key: 'weight_lbs', label: 'Weight', type: 'number', unit: 'lbs', min: 0, section: 'Performance' },
+      { key: 'weight_lbs', label: 'Weight', type: 'number', unitToggle: { units: ['lbs', 'kg'], storageUnit: 'lbs', convert: convertWeight }, min: 0, section: 'Performance' },
     );
   }
 

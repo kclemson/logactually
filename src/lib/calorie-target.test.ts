@@ -92,6 +92,7 @@ describe('getExerciseAdjustedTarget', () => {
 const baseSettings: UserSettings = {
   theme: 'system',
   weightUnit: 'lbs',
+  distanceUnit: 'mi',
   showWeights: true,
   showCustomLogs: false,
   suggestMealSaves: true,
