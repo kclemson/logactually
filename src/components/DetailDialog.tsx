@@ -73,7 +73,7 @@ function displayValue(field: FieldConfig, activeValues: Record<string, any>, act
     const converted = field.unitToggle.convert(Number(val), field.unitToggle.storageUnit, activeUnit);
     return String(Number(converted.toFixed(2)));
   }
-  if (field.unit) return `${val} ${field.unit}`;
+  if (field.unit) return String(val);
   return String(val);
 }
 
@@ -140,15 +140,12 @@ function FieldViewGrid({
               })
               .map(field => (
               <div key={field.key} className={cn("flex items-center gap-2 py-0.5", field.type === 'text' && 'col-span-2')}>
-                <span className="text-xs text-muted-foreground min-w-[5rem] shrink-0">{field.label}</span>
+                <span className="text-xs text-muted-foreground min-w-[5rem] shrink-0">
+                  {field.label}{field.unitToggle ? ` (${activeUnits?.[field.key] || field.unitToggle.storageUnit})` : field.unit ? ` (${field.unit})` : ''}:
+                </span>
                 <span className="text-sm">
                   {displayValue(field, activeValues, activeUnits?.[field.key])}
                 </span>
-                {field.unitToggle ? (
-                  <UnitToggle field={field} activeUnit={activeUnits?.[field.key] || field.unitToggle.storageUnit} onToggle={(u) => onToggleUnit?.(field.key, u)} />
-                ) : field.unit ? (
-                  <span className="text-xs text-muted-foreground">{field.unit}</span>
-                ) : null}
               </div>
             ))}
           </div>
@@ -179,7 +176,7 @@ function FieldEditGrid({
             {sectionFields.map(field => (
               <div key={field.key} className={cn("flex items-center gap-2", field.type === 'text' && 'col-span-2')}>
                 <span className="text-xs text-muted-foreground shrink-0 min-w-[5rem]">
-                  {field.label}:
+                  {field.label}{field.unitToggle ? ` (${activeUnits?.[field.key] || field.unitToggle.storageUnit})` : field.unit ? ` (${field.unit})` : ''}:
                 </span>
                 {field.readOnly ? (
                   <span className="text-sm text-muted-foreground">{displayValue(field, draft, activeUnits?.[field.key])}</span>
