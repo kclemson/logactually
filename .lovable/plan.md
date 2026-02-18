@@ -1,32 +1,28 @@
 
 
-# CSV export with both unit conversions + edit-mode disclaimer
+# Fix Detail Dialog spacing so Distance values aren't truncated
 
-## 1. Exercise CSV: add Speed (km/h) column
+## Problem
+The Distance value and unit toggle get clipped on mobile because the label column and inter-column gap consume too much space. The fix applies universally (not mobile-specific).
 
-The exercise CSV already includes both `Weight (lbs)` and `Weight (kg)`. We just need to add a `Speed (km/h)` column alongside the existing `Speed (mph)`.
+## Changes
 
-### `src/lib/csv-export.ts`
-- Add `Speed (km/h)` column after `Speed (mph)` in the headers array
-- Compute the km/h value from `speed_mph` using the `MI_TO_KM` constant (already defined in the file as `LBS_TO_KG`; we add `MI_TO_KM = 1.60934`)
-- Each row gets the extra converted speed value
+### 1. `src/components/DetailDialog.tsx` — reduce grid gap
+Change `gap-x-4` to `gap-x-2` in both the view grid (line 298) and edit grid (line 339). This recovers 8px of horizontal space.
 
-No changes needed to `useExportData`, `ImportExportSection`, or `Settings.tsx` since we're just always including both columns (no user preference threading required).
+### 2. `src/pages/WeightLog.tsx` — shrink label min-width
+Change `min-w-[5rem]` to `min-w-[4.5rem]` on lines 778 and 802.
 
-## 2. Edit-mode disclaimer in DetailDialog
+### 3. `src/pages/FoodLog.tsx` — shrink label min-width
+Change `min-w-[5rem]` to `min-w-[4.5rem]` on lines 875 and 892.
 
-### `src/components/DetailDialog.tsx` (around line 612)
-- Add a subtle italic note above the Cancel/Save buttons when in edit mode:
-  ```
-  <p className="text-[10px] italic text-muted-foreground/70 text-center w-full">
-    Values aren't validated — please double-check your edits.
-  </p>
-  ```
+Together these recover roughly 24px of horizontal space, which is more than enough for the Distance value + unit toggle to render without truncation.
 
 ## Files changed
 
 | File | What |
 |------|------|
-| `src/lib/csv-export.ts` | Add `Speed (km/h)` header and converted value column |
-| `src/components/DetailDialog.tsx` | Add subtle disclaimer text in edit-mode footer |
+| `src/components/DetailDialog.tsx` | `gap-x-4` to `gap-x-2` (2 places) |
+| `src/pages/WeightLog.tsx` | `min-w-[5rem]` to `min-w-[4.5rem]` (2 places) |
+| `src/pages/FoodLog.tsx` | `min-w-[5rem]` to `min-w-[4.5rem]` (2 places) |
 
