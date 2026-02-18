@@ -22,7 +22,7 @@ type ChangelogEntry = {
 
 // prettier-ignore
 const CHANGELOG_ENTRIES: ChangelogEntry[] = [
-{ date: "Feb-18", text: "Added the ability to pin AI responses on the Trends page for later reference. Pinned chats are accessible from the pin icon next to 'Ask AI', with the count shown as a badge.", image: "pinned-chats.png" },
+{ date: "Feb-18", text: "Added the ability to pin AI responses from "Ask AI" to refer to later.", image: "pinned-chats.png" },
 { date: "Feb-18", text: "Added 'Copy to today' — expand any past food or exercise entry and tap the link to copy it to today's log.", image: "copy-to-today.png" },
 { date: "Feb-18", text: "Added a details viewer/editor for logged food and exercise items.", image: "detailed-dialog.png" },
 { date: "Feb-17", text: "Added a 'First day of week' preference in Settings — choose Sunday or Monday, and it'll be reflected in the Calendar view on the History page and the date picker on the Food, Exercise, and Custom log pages.", image: "first-day-of-week.png" },
