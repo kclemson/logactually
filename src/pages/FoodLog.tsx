@@ -294,7 +294,9 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       }
 
       // Proceed with creating entry
-      const groupName = result.food_items.length >= 2 ? text : null;
+      const groupName = result.food_items.length >= 2
+        ? (result.summary || text)
+        : null;
       createEntryFromItems(result.food_items, text, undefined, groupName);
     }
   };
