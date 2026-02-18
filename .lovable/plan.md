@@ -1,23 +1,47 @@
 
 
-# Show decimal precision on Body Weight trend chart labels
+# Data Migration: Convert text_numeric Body Measurements to individual numeric log types
 
-## Problem
-The Body Weight chart labels always round to integers (e.g., "185" instead of "185.2") because the shared bar chart component (`FoodChart`) hardcodes `Math.round(value)` in its label renderer.
+## Step 1: Create new numeric log types for User #10 (sister, `b85f020e-...`)
 
-## Why FoodChart is involved
-Despite the name, `FoodChart` is a generic reusable bar chart. `CustomLogTrendChart` delegates to it for all single-series numeric charts including Body Weight (line 78). The label rendering logic lives inside `FoodChart`, so a small extension there is unavoidable.
+Create 5 new `numeric` log types with `unit = 'in'`:
+- Calf
+- Upper Calf
+- Mid Thigh
+- Waist
+- Hips
 
-## Changes
+## Step 2: Create new numeric log types for User #12 (demo, `f65d7de9-...`)
 
-### 1. `src/components/trends/FoodChart.tsx`
-- Add one optional prop: `labelFormatter?: (value: number) => string`
-- Pass it into `createFoodLabelRenderer`; when provided, use it instead of `Math.round(value)`
-- No existing callers are affected (they don't pass the prop, so behavior is unchanged)
+Create 2 new `numeric` log types with `unit = 'in'`:
+- Chest
+- Waist
 
-### 2. `src/components/trends/CustomLogTrendChart.tsx`
-- For the single-series numeric branch (line 76-86), check if any data point has a fractional part
-- If yes, pass `labelFormatter={(v) => v.toFixed(1)}` to `FoodChart`
-- If all values are integers, don't pass it (keeps current rounding behavior)
+## Step 3: Reassign entries for User #10
 
-No other files change. All existing food/macro/exercise charts remain untouched.
+For each of the 5 entries, update `log_type_id` to point to the matching new type (matched by `text_value`), then set `text_value = NULL`.
+
+## Step 4: Reassign entries for User #12
+
+For each of the 29 entries, update `log_type_id` to point to the matching new type (matched by `text_value`), then set `text_value = NULL`.
+
+## Step 5: Delete old Body Measurements log types
+
+Delete the original `text_numeric` "Body Measurements" types for all three users:
+- User #10: `b85f020e-...` type
+- User #12: `f65d7de9-...` type
+- User #1: `3e4be559-...` type (empty, no entries)
+
+## Step 6: Code changes (same approved plan)
+
+1. **`src/lib/log-templates.ts`** -- Replace single "Body Measurements" template with 6 individual numeric templates (Waist, Hips, Chest, Bicep, Thigh, Neck).
+2. **`src/components/CreateLogTypeDialog.tsx`** -- Remove `text_numeric` from `VALUE_TYPE_OPTIONS`.
+3. **`src/pages/OtherLog.tsx`** -- Remove `'text_numeric'` from `handleCreateType` type annotation.
+
+## Technical notes
+
+- All SQL operations use the data insert tool (not migration tool) since these are data changes, not schema changes.
+- The operations will be run sequentially: create types first, then reassign entries using the new type IDs, then delete old types.
+- RLS is bypassed by the insert tool (service role), so no auth issues.
+- Existing `text_numeric` rendering code stays in place for safety.
+
