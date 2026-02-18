@@ -92,7 +92,6 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
   const [submittedQuestion, setSubmittedQuestion] = useState("");
   const [includeProfile, setIncludeProfile] = useState(true);
   const [view, setView] = useState<"ask" | "pinned">("ask");
-  const [pinFeedback, setPinFeedback] = useState(false);
 
   const profileSummary = useMemo(() => formatProfileStatsSummary(settings), [settings]);
 
@@ -135,10 +134,8 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
     : false;
 
   const handlePin = () => {
-    if (!data?.answer || isAlreadyPinned || pinFeedback) return;
+    if (!data?.answer || isAlreadyPinned) return;
     pinMutation.mutate({ question: submittedQuestion, answer: data.answer, mode });
-    setPinFeedback(true);
-    setTimeout(() => setPinFeedback(false), 1500);
   };
 
   const title = mode === "food" ? "Ask AI about your food trends" : "Ask AI about your exercise trends";
@@ -154,29 +151,29 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
             <DialogTitle className="text-sm font-medium flex items-center gap-1.5">
               <Sparkles className="h-4 w-4" />
               {title}
-              <div className="flex items-center gap-1 absolute right-12 top-4">
-                {!data?.answer && !isPending && (
+              {!data?.answer && !isPending && (
+                <div className="flex items-center gap-2 absolute right-12 top-3.5">
                   <button
                     onClick={refreshChips}
-                    className="p-1 rounded-full border border-border bg-muted/50 hover:bg-muted active:scale-75 transition-all duration-150"
+                    className="p-1.5 rounded-full border border-border bg-muted/50 hover:bg-muted active:scale-75 transition-all duration-150"
                     aria-label="Refresh suggestions"
                   >
                     <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />
                   </button>
-                )}
-                <button
-                  onClick={() => setView("pinned")}
-                  className="relative p-1 rounded-full border border-border bg-muted/50 hover:bg-muted active:scale-75 transition-all duration-150"
-                  aria-label="View pinned chats"
-                >
-                  <Pin className="h-3.5 w-3.5 text-muted-foreground" />
                   {pinCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-medium px-1">
-                      {pinCount}
-                    </span>
+                    <button
+                      onClick={() => setView("pinned")}
+                      className="relative p-1.5 rounded-full border border-border bg-muted/50 hover:bg-muted active:scale-75 transition-all duration-150"
+                      aria-label="View pinned chats"
+                    >
+                      <Pin className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 flex items-center justify-center rounded-full bg-muted border border-border text-muted-foreground text-[10px] font-medium px-1">
+                        {pinCount}
+                      </span>
+                    </button>
                   )}
-                </button>
-              </div>
+                </div>
+              )}
             </DialogTitle>
 
             <div className="space-y-3 mt-2">
@@ -286,19 +283,16 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
                     }}
                   />
                   <div className="flex gap-2">
-                    <button
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={handlePin}
                       disabled={isAlreadyPinned}
-                      className={`flex items-center gap-1 px-2 py-1.5 rounded-md border text-xs transition-colors ${
-                        isAlreadyPinned || pinFeedback
-                          ? "border-primary/30 text-primary bg-primary/10"
-                          : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
-                      }`}
-                      aria-label="Pin this chat"
+                      className="gap-1"
                     >
                       <Pin className="h-3.5 w-3.5" />
-                      {pinFeedback ? "Pinned!" : isAlreadyPinned ? "Pinned" : "Pin"}
-                    </button>
+                      {isAlreadyPinned ? "Pinned" : "Pin"}
+                    </Button>
                     <Button variant="outline" size="sm" onClick={handleAskAnother} className="flex-1">
                       Ask another question
                     </Button>

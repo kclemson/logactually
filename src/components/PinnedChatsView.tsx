@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { ChevronDown, ChevronRight, Pin, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Pin } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DeleteConfirmPopover } from "@/components/DeleteConfirmPopover";
 import type { PinnedChat } from "@/hooks/usePinnedChats";
 
 interface PinnedChatsViewProps {
@@ -12,19 +13,26 @@ interface PinnedChatsViewProps {
 
 export function PinnedChatsView({ pinnedChats, onUnpin, onBack }: PinnedChatsViewProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
+
+  const header = (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-1.5">
+        <Button variant="ghost" size="sm" onClick={onBack} className="h-7 px-2 text-xs">
+          ← Back
+        </Button>
+        <span className="text-sm font-medium flex items-center gap-1.5">
+          <Pin className="h-4 w-4" />
+          Pinned chats
+        </span>
+      </div>
+    </div>
+  );
 
   if (pinnedChats.length === 0) {
     return (
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5 text-sm font-medium">
-            <Pin className="h-4 w-4" />
-            Pinned chats
-          </div>
-          <Button variant="ghost" size="sm" onClick={onBack} className="h-7 px-2 text-xs">
-            ← Back
-          </Button>
-        </div>
+        {header}
         <p className="text-xs text-muted-foreground text-center py-8">
           No pinned chats yet. Pin an AI response to save it here.
         </p>
@@ -34,15 +42,7 @@ export function PinnedChatsView({ pinnedChats, onUnpin, onBack }: PinnedChatsVie
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 text-sm font-medium">
-          <Pin className="h-4 w-4" />
-          Pinned chats
-        </div>
-        <Button variant="ghost" size="sm" onClick={onBack} className="h-7 px-2 text-xs">
-          ← Back
-        </Button>
-      </div>
+      {header}
 
       <div className="space-y-2 max-h-[60vh] overflow-y-auto">
         {pinnedChats.map((chat) => {
@@ -61,13 +61,14 @@ export function PinnedChatsView({ pinnedChats, onUnpin, onBack }: PinnedChatsVie
                   </div>
                   <p className="text-xs text-foreground leading-snug">{chat.question}</p>
                 </div>
-                <button
-                  onClick={() => onUnpin(chat.id)}
-                  className="shrink-0 p-1 rounded hover:bg-muted transition-colors"
-                  aria-label="Unpin"
-                >
-                  <X className="h-3.5 w-3.5 text-muted-foreground" />
-                </button>
+                <DeleteConfirmPopover
+                  id={chat.id}
+                  label="Unpin chat"
+                  description="This will remove the pinned chat."
+                  onDelete={() => onUnpin(chat.id)}
+                  openPopoverId={openPopoverId}
+                  setOpenPopoverId={setOpenPopoverId}
+                />
               </div>
 
               <button
