@@ -145,11 +145,14 @@ function FieldViewGrid({
               .map(field => (
               <div key={field.key} className={cn("flex items-center gap-2 py-0.5", field.type === 'text' && 'col-span-2')}>
                 <span className="text-xs text-muted-foreground shrink-0">
-                  {field.label}{field.unitToggle ? ` (${activeUnits?.[field.key] || field.unitToggle.storageUnit})` : field.unit ? ` (${field.unit})` : ''}:
+                  {field.label}:
                 </span>
                 <span className="text-sm">
                   {displayValue(field, activeValues, activeUnits?.[field.key])}
                 </span>
+                {field.unit && !field.unitToggle && (
+                  <span className="text-xs text-muted-foreground shrink-0">{field.unit}</span>
+                )}
               </div>
             ))}
           </div>
@@ -182,7 +185,7 @@ function FieldEditGrid({
             {sectionFields.map(field => (
               <div key={field.key} className={cn("flex items-center gap-2", field.type === 'text' && 'col-span-2')}>
                 <span className="text-xs text-muted-foreground shrink-0">
-                  {field.label}{field.unitToggle ? ` (${activeUnits?.[field.key] || field.unitToggle.storageUnit})` : field.unit ? ` (${field.unit})` : ''}:
+                  {field.label}:
                 </span>
                 {field.readOnly ? (
                   <span className="text-sm text-muted-foreground">{displayValue(field, draft, activeUnits?.[field.key])}</span>
@@ -223,6 +226,9 @@ function FieldEditGrid({
                     />
                     {field.unitToggle && (
                       <UnitToggle field={field} activeUnit={activeUnits?.[field.key] || field.unitToggle.storageUnit} onToggle={(u) => onToggleUnit?.(field.key, u)} />
+                    )}
+                    {field.unit && !field.unitToggle && (
+                      <span className="text-xs text-muted-foreground shrink-0">{field.unit}</span>
                     )}
                   </>
                 )}
