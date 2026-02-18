@@ -63,6 +63,7 @@ COMPARING GROUPS (e.g. "workout days vs rest days"):
 - Use only the data provided to determine group membership
 
 DATA INTEGRITY:
+- DAILY TOTALS sections are pre-computed and authoritative. For any query involving daily calorie/macro/exercise totals, use these values directly. Do NOT attempt to re-sum individual items for daily aggregation.
 - Never fabricate or interpolate values. Only return values directly computable from the provided logs.
 - If a bucket has no data, omit it or use zero. Do not invent values.
 - All numeric values in the data array must be non-negative.
@@ -178,6 +179,34 @@ serve(async (req) => {
       foodContext = `Food items (${lines.length} items over ${days} days):\n${lines.join("\n")}`;
     }
 
+    // Pre-aggregate daily food totals
+    let foodDailySummary = "";
+    const dailyFoodTotals = new Map<string, { cal: number; protein: number; carbs: number; fat: number; fiber: number; sugar: number; sat_fat: number; sodium: number; chol: number }>();
+    for (const e of foodEntries) {
+      const items = e.food_items as any[];
+      if (!Array.isArray(items)) continue;
+      const t = dailyFoodTotals.get(e.eaten_date) || { cal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, sat_fat: 0, sodium: 0, chol: 0 };
+      for (const item of items) {
+        t.cal += item.calories || 0;
+        t.protein += item.protein || 0;
+        t.carbs += item.carbs || 0;
+        t.fat += item.fat || 0;
+        t.fiber += item.fiber || 0;
+        t.sugar += item.sugar || 0;
+        t.sat_fat += item.saturated_fat || 0;
+        t.sodium += item.sodium || 0;
+        t.chol += item.cholesterol || 0;
+      }
+      dailyFoodTotals.set(e.eaten_date, t);
+    }
+    if (dailyFoodTotals.size > 0) {
+      const lines: string[] = [];
+      for (const [date, t] of [...dailyFoodTotals.entries()].sort()) {
+        lines.push(`${date}: cal=${Math.round(t.cal)}, protein=${Math.round(t.protein)}, carbs=${Math.round(t.carbs)}, fat=${Math.round(t.fat)}, fiber=${Math.round(t.fiber)}, sugar=${Math.round(t.sugar)}, sat_fat=${Math.round(t.sat_fat)}, sodium=${Math.round(t.sodium)}, chol=${Math.round(t.chol)}`);
+      }
+      foodDailySummary = `Daily food totals (pre-computed, authoritative):\n${lines.join("\n")}`;
+    }
+
     // Build exercise context
     let exerciseContext = "";
     const exerciseSets = exerciseResult.data || [];
@@ -205,6 +234,27 @@ serve(async (req) => {
       exerciseContext = `Exercise log (${exerciseSets.length} sets over ${days} days):\n${lines.join("\n")}`;
     }
 
+    // Pre-aggregate daily exercise totals
+    let exerciseDailySummary = "";
+    const dailyExTotals = new Map<string, { sets: number; duration: number; distance: number; cal_burned: number; exercises: Set<string> }>();
+    for (const s of exerciseSets) {
+      const t = dailyExTotals.get(s.logged_date) || { sets: 0, duration: 0, distance: 0, cal_burned: 0, exercises: new Set<string>() };
+      t.sets += 1;
+      t.duration += s.duration_minutes || 0;
+      t.distance += s.distance_miles || 0;
+      const meta = s.exercise_metadata as any;
+      t.cal_burned += meta?.calories_burned || 0;
+      t.exercises.add(s.exercise_key);
+      dailyExTotals.set(s.logged_date, t);
+    }
+    if (dailyExTotals.size > 0) {
+      const lines: string[] = [];
+      for (const [date, t] of [...dailyExTotals.entries()].sort()) {
+        lines.push(`${date}: logged_sets=${t.sets}, duration_min=${Math.round(t.duration)}, distance_mi=${Math.round(t.distance * 10) / 10}, cal_burned=${Math.round(t.cal_burned)}, unique_exercises=${t.exercises.size}`);
+      }
+      exerciseDailySummary = `Daily exercise totals (pre-computed, authoritative):\n${lines.join("\n")}`;
+    }
+
     // Build custom log context
     let customContext = "";
     const customEntries = customLogResult.data || [];
@@ -223,7 +273,7 @@ serve(async (req) => {
       customContext = `Custom logs (${customEntries.length} entries):\n${lines.join("\n")}`;
     }
 
-    const dataContext = [foodContext, exerciseContext, customContext].filter(Boolean).join("\n\n");
+    const dataContext = [foodDailySummary, foodContext, exerciseDailySummary, exerciseContext, customContext].filter(Boolean).join("\n\n");
 
     // Build AI messages
     const aiMessages = [
