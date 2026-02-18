@@ -18,6 +18,16 @@ interface OpenFoodFactsProduct {
     carbohydrates_100g?: number;
     fat_serving?: number;
     fat_100g?: number;
+    fiber_serving?: number;
+    fiber_100g?: number;
+    sugars_serving?: number;
+    sugars_100g?: number;
+    'saturated-fat_serving'?: number;
+    'saturated-fat_100g'?: number;
+    sodium_serving?: number;
+    sodium_100g?: number;
+    cholesterol_serving?: number;
+    cholesterol_100g?: number;
   };
 }
 
@@ -112,6 +122,22 @@ serve(async (req) => {
           const fat = Math.round(
             nutriments.fat_serving ?? nutriments.fat_100g ?? 0
           );
+          const fiber = Math.round(
+            nutriments.fiber_serving ?? nutriments.fiber_100g ?? 0
+          );
+          const sugar = Math.round(
+            nutriments.sugars_serving ?? nutriments.sugars_100g ?? 0
+          );
+          const saturated_fat = Math.round(
+            nutriments['saturated-fat_serving'] ?? nutriments['saturated-fat_100g'] ?? 0
+          );
+          // OFF stores sodium in grams; our app uses milligrams
+          const sodium = Math.round(
+            (nutriments.sodium_serving ?? nutriments.sodium_100g ?? 0) * 1000
+          );
+          const cholesterol = Math.round(
+            nutriments.cholesterol_serving ?? nutriments.cholesterol_100g ?? 0
+          );
 
           console.log('Found product in Open Food Facts:', productName);
 
@@ -123,6 +149,11 @@ serve(async (req) => {
               protein,
               carbs,
               fat,
+              fiber,
+              sugar,
+              saturated_fat,
+              sodium,
+              cholesterol,
               source: 'openfoodfacts',
             }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -162,7 +193,9 @@ I need the product name and nutritional information for one typical serving.
 
 IMPORTANT: Respond ONLY with valid JSON, no markdown formatting, no code blocks.
 Use this exact format:
-{"name": "Product Name", "serving": "simple quantity-unit format like '1 bag' or '36 pretzels' -- never combine multiple units or add parenthetical context", "calories": 0, "protein": 0, "carbs": 0, "fat": 0}
+{"name": "Product Name", "serving": "simple quantity-unit format like '1 bag' or '36 pretzels' -- never combine multiple units or add parenthetical context", "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "fiber": 0, "sugar": 0, "saturated_fat": 0, "sodium": 0, "cholesterol": 0}
+
+sodium and cholesterol should be in milligrams. All other values in grams.
 
 If you cannot identify the product, respond with:
 {"unknown": true}`
@@ -227,6 +260,11 @@ If you cannot identify the product, respond with:
           protein: Math.round(parsed.protein || 0),
           carbs: Math.round(parsed.carbs || 0),
           fat: Math.round(parsed.fat || 0),
+          fiber: Math.round(parsed.fiber || 0),
+          sugar: Math.round(parsed.sugar || 0),
+          saturated_fat: Math.round(parsed.saturated_fat || 0),
+          sodium: Math.round(parsed.sodium || 0),
+          cholesterol: Math.round(parsed.cholesterol || 0),
           source: 'ai',
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

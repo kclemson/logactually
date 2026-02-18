@@ -9,6 +9,11 @@ interface LookupResult {
   protein: number;
   carbs: number;
   fat: number;
+  fiber?: number;
+  sugar?: number;
+  saturated_fat?: number;
+  sodium?: number;
+  cholesterol?: number;
   source: 'openfoodfacts' | 'ai';
 }
 
@@ -54,6 +59,11 @@ export function useScanBarcode() {
           protein: data.protein,
           carbs: data.carbs,
           fat: data.fat,
+          fiber: data.fiber,
+          sugar: data.sugar,
+          saturated_fat: data.saturated_fat,
+          sodium: data.sodium,
+          cholesterol: data.cholesterol,
           source: data.source,
         },
       };
@@ -76,6 +86,11 @@ export function useScanBarcode() {
       protein: result.protein,
       carbs: result.carbs,
       fat: result.fat,
+      fiber: result.fiber,
+      sugar: result.sugar,
+      saturated_fat: result.saturated_fat,
+      sodium: result.sodium,
+      cholesterol: result.cholesterol,
     };
   };
 
