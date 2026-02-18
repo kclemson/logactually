@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, ChartTitle, ChartSubtitle } from "@/comp
 import { CompactChartTooltip } from "@/components/trends/CompactChartTooltip";
 import { useHasHover } from "@/hooks/use-has-hover";
 import { getMuscleGroupDisplayWithTooltip, hasDistanceTracking } from "@/lib/exercise-metadata";
-import { formatDurationMmSs } from "@/lib/weight-units";
+import { formatDurationMmSs, convertDistance, convertSpeed, type DistanceUnit, type SpeedUnit } from "@/lib/weight-units";
 import { type ExerciseTrend } from "@/hooks/useWeightTrends";
 import { type WeightUnit } from "@/lib/weight-units";
 import { getExerciseLabelInterval } from "@/lib/chart-label-interval";
@@ -27,9 +27,13 @@ interface ExerciseChartProps {
   exercise: ExerciseTrend;
   unit: WeightUnit;
   onBarClick: (date: string) => void;
+  distanceUnit?: DistanceUnit;
 }
 
-export const ExerciseChart = ({ exercise, unit, onBarClick }: ExerciseChartProps) => {
+export const ExerciseChart = ({ exercise, unit, onBarClick, distanceUnit = 'mi' }: ExerciseChartProps) => {
+  const speedUnit: SpeedUnit = distanceUnit === 'km' ? 'km/h' : 'mph';
+  const distLabel = distanceUnit === 'km' ? 'km' : 'mi';
+  const speedLabel = speedUnit;
   const isTouchDevice = !useHasHover();
   const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
   
@@ -90,19 +94,21 @@ export const ExerciseChart = ({ exercise, unit, onBarClick }: ExerciseChartProps
 
     return sourceData.map((d, index) => {
       const displayWeight = unit === "kg" ? Math.round(d.weight * LBS_TO_KG) : d.weight;
-      const mph = d.distance_miles && d.duration_minutes 
-        ? Number((d.distance_miles / (d.duration_minutes / 60)).toFixed(1))
+      const rawMph = d.distance_miles && d.duration_minutes 
+        ? d.distance_miles / (d.duration_minutes / 60)
         : null;
+      const displaySpeed = rawMph != null ? Number(convertSpeed(rawMph, 'mph', speedUnit).toFixed(1)) : null;
+      const displayDistance = d.distance_miles != null ? convertDistance(d.distance_miles, 'mi', distanceUnit) : null;
       const pace = d.distance_miles && d.duration_minutes
-        ? Number((d.duration_minutes / d.distance_miles).toFixed(1))
+        ? Number((d.duration_minutes / convertDistance(d.distance_miles, 'mi', distanceUnit)).toFixed(1))
         : null;
       
       const distanceFromEnd = dataLength - 1 - index;
       
       const cardioLabel = cardioMode === 'mph' 
-        ? `${mph}` 
+        ? `${displaySpeed}` 
         : cardioMode === 'distance'
-          ? `${parseFloat(Number(d.distance_miles || 0).toFixed(2))}`
+          ? `${parseFloat(Number(displayDistance || 0).toFixed(2))}`
           : isWalking
             ? formatWalkingDuration(Number(d.duration_minutes || 0))
             : `${parseFloat(Number(d.duration_minutes || 0).toFixed(1))}`;
@@ -112,7 +118,8 @@ export const ExerciseChart = ({ exercise, unit, onBarClick }: ExerciseChartProps
         rawDate: d.date,
         weight: displayWeight,
         dateLabel: format(new Date(`${d.date}T12:00:00`), "MMM d"),
-        mph,
+        mph: displaySpeed,
+        displayDistance,
         pace,
         label: isCardio ? cardioLabel : 
           d.repsPerSet !== undefined 
@@ -121,7 +128,7 @@ export const ExerciseChart = ({ exercise, unit, onBarClick }: ExerciseChartProps
         showLabel: distanceFromEnd % labelInterval === 0,
       };
     });
-  }, [exercise.weightData, unit, isCardio, cardioMode]);
+  }, [exercise.weightData, unit, isCardio, cardioMode, distanceUnit, speedUnit]);
 
   const maxWeightDisplay = unit === "kg" ? Math.round(exercise.maxWeight * LBS_TO_KG) : exercise.maxWeight;
 
@@ -209,7 +216,7 @@ export const ExerciseChart = ({ exercise, unit, onBarClick }: ExerciseChartProps
             <ChartTitle className="truncate">{exercise.description}</ChartTitle>
             <ChartSubtitle>
               {supportsSpeedToggle ? (
-                <>Cardio · {cardioMode} <span className="opacity-50">▾</span></>
+                <>Cardio · {cardioMode === 'mph' ? speedLabel : cardioMode === 'distance' ? distLabel : cardioMode} <span className="opacity-50">▾</span></>
               ) : isCardio ? (
                 <>Cardio</>
               ) : (
@@ -260,17 +267,18 @@ export const ExerciseChart = ({ exercise, unit, onBarClick }: ExerciseChartProps
                           const mph = entry.payload.mph;
                           const paceDecimal = entry.payload.pace;
                           
-                          if (distance && mph && paceDecimal) {
+                          const displayDist = entry.payload.displayDistance;
+                          if (displayDist && mph && paceDecimal) {
                             const paceFormatted = formatDurationMmSs(paceDecimal);
                             return [
-                              `${paceFormatted} /mi`,
-                              `${mph} mph`,
-                              `${Number(distance).toFixed(2)} mi in ${duration}`
+                              `${paceFormatted} /${distLabel}`,
+                              `${mph} ${speedLabel}`,
+                              `${Number(displayDist).toFixed(2)} ${distLabel} in ${duration}`
                             ];
                           }
                           
-                          if (distance) {
-                            return [duration, `${Number(distance).toFixed(2)} mi`];
+                          if (displayDist) {
+                            return [duration, `${Number(displayDist).toFixed(2)} ${distLabel}`];
                           }
                           return duration;
                         }
@@ -285,7 +293,7 @@ export const ExerciseChart = ({ exercise, unit, onBarClick }: ExerciseChartProps
                   cursor={{ fill: "hsl(var(--muted)/0.3)" }}
                 />
                 <Bar 
-                  dataKey={isCardio ? (cardioMode === 'mph' ? "mph" : cardioMode === 'distance' ? "distance_miles" : "duration_minutes") : "weight"}
+                  dataKey={isCardio ? (cardioMode === 'mph' ? "mph" : cardioMode === 'distance' ? "displayDistance" : "duration_minutes") : "weight"}
                   fill="hsl(262 83% 58%)" 
                   radius={[2, 2, 0, 0]}
                   onClick={(data, index) => handleBarClick(data, index)}

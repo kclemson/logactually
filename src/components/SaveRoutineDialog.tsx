@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import { WeightSet } from '@/types/weight';
-import { type WeightUnit, formatDurationMmSs } from '@/lib/weight-units';
+import { type WeightUnit, type DistanceUnit, formatDurationMmSs, convertDistance, convertSpeed, type SpeedUnit } from '@/lib/weight-units';
 import { WeightItemsTable } from '@/components/WeightItemsTable';
 
 const INITIAL_VISIBLE_COUNT = 5;
@@ -34,6 +34,8 @@ interface SaveRoutineDialogProps {
   otherEntries?: OtherWeightEntry[];
   /** Weight unit preference for display (lbs or kg) */
   weightUnit?: WeightUnit;
+  /** Distance unit preference for display (mi or km) */
+  distanceUnit?: DistanceUnit;
 }
 
 /**
@@ -41,16 +43,18 @@ interface SaveRoutineDialogProps {
  * Cardio: "Rowing Machine (15 min)"
  * Weights: "Lat Pulldown (3x10 @ 65 lbs)"
  */
-function formatExerciseSummary(exercise: WeightSet, includeSpace = true): string {
+function formatExerciseSummary(exercise: WeightSet, includeSpace = true, distanceUnit: DistanceUnit = 'mi'): string {
   const isCardio = exercise.weight_lbs === 0 && 
     ((exercise.duration_minutes ?? 0) > 0 || (exercise.distance_miles ?? 0) > 0);
   if (isCardio) {
     const duration = exercise.duration_minutes ?? 0;
     const distance = exercise.distance_miles ?? 0;
+    const du = distanceUnit;
+    const displayDist = du === 'km' ? convertDistance(distance, 'mi', 'km') : distance;
     if (duration > 0 && distance > 0) {
-      return `${exercise.description} (${formatDurationMmSs(duration)}, ${distance.toFixed(1)} mi)`;
+      return `${exercise.description} (${formatDurationMmSs(duration)}, ${displayDist.toFixed(1)} ${du})`;
     } else if (distance > 0) {
-      return `${exercise.description} (${distance.toFixed(1)} mi)`;
+      return `${exercise.description} (${displayDist.toFixed(1)} ${du})`;
     } else {
       return `${exercise.description} (${formatDurationMmSs(duration)})`;
     }
@@ -76,6 +80,7 @@ export function SaveRoutineDialog({
   isSaving,
   otherEntries,
   weightUnit = 'lbs',
+  distanceUnit = 'mi',
 }: SaveRoutineDialogProps) {
   // State is fresh on each mount since dialog unmounts when closed
   const [name, setName] = useState(() => getDefaultName(exerciseSets));
