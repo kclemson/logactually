@@ -1,27 +1,28 @@
 
 
-# Fix right-edge clipping in food detail dialog
+# Fix DetailDialog right-edge clipping on mobile
 
 ## Problem
 
-The unit text ("mg", "g") on the right column's fields is clipped off the right edge of the dialog on mobile. The root cause is that the label minimum width (`min-w-[5.5rem]` = 88px) is wider than needed -- there's visible dead space between the longest label text and the input box.
+The dialog uses `mx-4` to create horizontal margins, but this doesn't work correctly with the base DialogContent's `fixed left-[50%] w-full translate-x-[-50%]` positioning. The margin shifts the left edge inward, but `w-full` (100vw) still extends to the right edge of the viewport, causing the right side to clip off-screen.
 
 ## Fix
 
-Reduce `labelClassName` from `min-w-[5.5rem]` to `min-w-[5rem]` (80px) in both `DetailDialog` usages in `FoodLog.tsx`. This reclaims 16px total (8px per column), which is enough to keep the right column's unit labels on-screen. "Saturated Fat:" (the longest label) still fits comfortably at 80px.
+Replace the `mx-4` approach with explicit `left` and `right` positioning on mobile, matching the pattern already used by `SaveMealDialog`. This uses `left-2 right-2 translate-x-0 translate-y-0 w-auto` on mobile, then reverts to centered positioning on desktop.
 
 ## Technical details
 
-**File: `src/pages/FoodLog.tsx`** -- two occurrences (around lines 875 and 892)
+**File: `src/components/DetailDialog.tsx`** -- line 433, the `DialogContent` className
 
 Change:
 ```
-labelClassName="min-w-[5.5rem]"
+"top-[5%] translate-y-0 max-h-[90dvh] max-h-[90vh] flex flex-col p-0 gap-0 mx-4 rounded-lg sm:max-w-md [&>button:last-child]:hidden"
 ```
 To:
 ```
-labelClassName="min-w-[5rem]"
+"left-2 right-2 top-[5%] translate-x-0 translate-y-0 w-auto max-w-[calc(100vw-16px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md max-h-[90dvh] max-h-[90vh] flex flex-col p-0 gap-0 rounded-lg [&>button:last-child]:hidden"
 ```
 
-Two-line change in one file.
+This mirrors the `SaveMealDialog` pattern: on mobile, the dialog is pinned 8px from each edge with `w-auto`; on desktop (`sm:`), it reverts to the standard centered approach.
 
+One line change in one file.
