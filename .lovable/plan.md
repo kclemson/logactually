@@ -1,47 +1,45 @@
 
 
-# Data Migration: Convert text_numeric Body Measurements to individual numeric log types
+## Consolidate Measurement Templates into "Body Measurement" Group with Checkbox Picker
 
-## Step 1: Create new numeric log types for User #10 (sister, `b85f020e-...`)
+### What changes for the user
 
-Create 5 new `numeric` log types with `unit = 'in'`:
-- Calf
-- Upper Calf
-- Mid Thigh
-- Waist
-- Hips
+Instead of seeing 6 separate measurement rows (Waist, Hips, Chest, Bicep, Thigh, Neck) in the template picker, users will see a single **"Body Measurement"** row. Clicking it expands an inline checkbox list where they pick which measurements they want, then click "Add selected" to create them all at once. Each created type will include "Measurement" in its name (e.g. "Waist Measurement") so it looks clearer in charts.
 
-## Step 2: Create new numeric log types for User #12 (demo, `f65d7de9-...`)
+### UX Flow
 
-Create 2 new `numeric` log types with `unit = 'in'`:
-- Chest
-- Waist
+1. User opens "Add a Log Type" picker
+2. They see: Body Weight, **Body Measurement**, Body Fat %, Blood Pressure, Sleep, Water Intake, Mood, Journal, Create your own
+3. Clicking "Body Measurement" expands a checkbox list: Waist, Hips, Chest, Bicep, Thigh, Neck (with unit shown, e.g. "in" or "cm")
+4. Measurements already added are checked and disabled
+5. User checks the ones they want, clicks "Add selected"
+6. All selected types are created, dialog closes
+7. If ALL 6 are already added, the "Body Measurement" row shows "Already added" and is disabled
 
-## Step 3: Reassign entries for User #10
+### Technical Details
 
-For each of the 5 entries, update `log_type_id` to point to the matching new type (matched by `text_value`), then set `text_value = NULL`.
+#### 1. `src/lib/log-templates.ts`
 
-## Step 4: Reassign entries for User #12
+- Add `group?: string` field to the `LogTemplate` interface
+- Add `displayName?: string` field (for showing short name in checkbox, e.g. "Waist", while the created type name is "Waist Measurement")
+- Rename the 6 measurement templates to include "Measurement": "Waist Measurement", "Hips Measurement", etc.
+- Tag each with `group: 'measurement'` and `displayName` set to the short name (e.g. "Waist")
+- Export a helper `MEASUREMENT_TEMPLATES` that filters `LOG_TEMPLATES` by `group === 'measurement'`
 
-For each of the 29 entries, update `log_type_id` to point to the matching new type (matched by `text_value`), then set `text_value = NULL`.
+#### 2. `src/components/LogTemplatePickerDialog.tsx`
 
-## Step 5: Delete old Body Measurements log types
+- Add new prop: `onSelectTemplates: (params: { name: string; value_type: string; unit: string | null }[]) => void` for batch creation
+- Add local state: `measurementExpanded` (boolean), `selectedMeasurements` (Set of template names)
+- Split rendering into two groups:
+  - **Non-measurement templates**: rendered as individual clickable rows (same as today)
+  - **Body Measurement group row**: single row with Ruler icon; clicking toggles `measurementExpanded`
+- When expanded, show checkboxes for each measurement sub-type using `displayName` and unit
+- Already-added measurements are pre-checked and disabled
+- "Add selected" button at the bottom of the expanded section calls `onSelectTemplates` with all newly-checked items
+- If all 6 measurements are already added, the group row is disabled with "Already added" label
 
-Delete the original `text_numeric` "Body Measurements" types for all three users:
-- User #10: `b85f020e-...` type
-- User #12: `f65d7de9-...` type
-- User #1: `3e4be559-...` type (empty, no entries)
+#### 3. `src/pages/OtherLog.tsx`
 
-## Step 6: Code changes (same approved plan)
-
-1. **`src/lib/log-templates.ts`** -- Replace single "Body Measurements" template with 6 individual numeric templates (Waist, Hips, Chest, Bicep, Thigh, Neck).
-2. **`src/components/CreateLogTypeDialog.tsx`** -- Remove `text_numeric` from `VALUE_TYPE_OPTIONS`.
-3. **`src/pages/OtherLog.tsx`** -- Remove `'text_numeric'` from `handleCreateType` type annotation.
-
-## Technical notes
-
-- All SQL operations use the data insert tool (not migration tool) since these are data changes, not schema changes.
-- The operations will be run sequentially: create types first, then reassign entries using the new type IDs, then delete old types.
-- RLS is bypassed by the insert tool (service role), so no auth issues.
-- Existing `text_numeric` rendering code stays in place for safety.
+- Pass `onSelectTemplates` to `LogTemplatePickerDialog` that chains `createType.mutate` calls sequentially for each selected measurement, closing the dialog after the last one succeeds
+- Update the empty-state grid (shown when no log types exist yet) to also consolidate the 6 measurement buttons into a single "Body Measurement" button that opens the template picker dialog instead of individually creating types
 
