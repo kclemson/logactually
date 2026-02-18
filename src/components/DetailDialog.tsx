@@ -89,22 +89,20 @@ function FieldViewGrid({
 }) {
   return (
     <>
-      {sections.map(([sectionName, sectionFields]) => (
-        <div key={sectionName} className="mb-3">
-          {sectionName && (
-            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 mt-1">{sectionName}</h4>
-          )}
+      {sections.map(([sectionName, sectionFields], sectionIdx) => (
+        <div key={sectionName || sectionIdx}>
+          {sectionIdx > 0 && <hr className="border-border/50 my-2" />}
           <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
             {sectionFields
               .filter(field => {
                 if (!hideWhenZero?.has(field.key)) return true;
                 const val = activeValues[field.key];
-                return val !== 0 && val !== null && val !== undefined;
+                return val !== 0 && val !== null && val !== undefined && val !== '';
               })
               .map(field => (
-              <div key={field.key} className={cn("flex justify-between py-0.5", field.type === 'text' && 'col-span-2')}>
-                <span className="text-xs text-muted-foreground">{field.label}</span>
-                <span className="text-sm text-right">{displayValue(field, activeValues)}</span>
+              <div key={field.key} className={cn("flex gap-2 py-0.5", field.type === 'text' && 'col-span-2')}>
+                <span className="text-xs text-muted-foreground min-w-[5rem] shrink-0">{field.label}</span>
+                <span className="text-sm">{displayValue(field, activeValues)}</span>
               </div>
             ))}
           </div>
@@ -125,16 +123,14 @@ function FieldEditGrid({
 }) {
   return (
     <>
-      {sections.map(([sectionName, sectionFields]) => (
-        <div key={sectionName} className="mb-3">
-          {sectionName && (
-            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 mt-1">{sectionName}</h4>
-          )}
-          <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+      {sections.map(([sectionName, sectionFields], sectionIdx) => (
+        <div key={sectionName || sectionIdx}>
+          {sectionIdx > 0 && <hr className="border-border/50 my-2" />}
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
             {sectionFields.map(field => (
-              <div key={field.key} className={cn(field.type === 'text' && 'col-span-2')}>
-                <Label className="text-xs text-muted-foreground mb-0.5 block">
-                  {field.label}{field.unit ? ` (${field.unit})` : ''}
+              <div key={field.key} className={cn("flex items-center gap-2", field.type === 'text' && 'col-span-2')}>
+                <Label className="text-xs text-muted-foreground shrink-0 min-w-[5rem]">
+                  {field.label}:
                 </Label>
                 {field.readOnly ? (
                   <span className="text-sm text-muted-foreground">{displayValue(field, draft)}</span>
@@ -142,7 +138,7 @@ function FieldEditGrid({
                   <select
                     value={String(draft[field.key] ?? '')}
                     onChange={e => updateDraft(field.key, e.target.value)}
-                    className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex h-8 flex-1 min-w-0 rounded-md border border-input bg-background px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <option value="">—</option>
                     {field.optgroups ? (
@@ -170,7 +166,7 @@ function FieldEditGrid({
                     min={field.min}
                     max={field.max}
                     step={field.step}
-                    className="h-8 text-sm"
+                    className="h-8 text-sm flex-1 min-w-0"
                   />
                 )}
               </div>
@@ -204,7 +200,7 @@ export function DetailDialog({
   const [draft, setDraft] = useState<Record<string, any>>({});
 
   // Multi-item mode state
-  const [expandedIndices, setExpandedIndices] = useState<Set<number>>(new Set([0]));
+  const [expandedIndices, setExpandedIndices] = useState<Set<number>>(new Set());
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   const isMultiItem = items && items.length > 1;
@@ -214,7 +210,7 @@ export function DetailDialog({
     if (!next) {
       setEditing(false);
       setDraft({});
-      setExpandedIndices(new Set([0]));
+      setExpandedIndices(new Set());
       setEditingIndex(null);
     }
     onOpenChange(next);
@@ -307,7 +303,7 @@ export function DetailDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="top-[5%] translate-y-0 max-h-[90dvh] max-h-[90vh] flex flex-col p-0 gap-0 sm:max-w-md">
         <DialogHeader className="px-4 pt-4 pb-2 flex-shrink-0">
-          <DialogTitle className="text-base">{title}</DialogTitle>
+          <DialogTitle className={cn("text-base", !isMultiItem && "sr-only")}>{title}</DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-4 pb-2">
@@ -403,6 +399,10 @@ export function DetailDialog({
 // ============================================================================
 
 export const FOOD_HIDE_WHEN_ZERO = new Set(['fiber', 'sugar', 'saturated_fat', 'sodium', 'cholesterol']);
+
+export const EXERCISE_HIDE_WHEN_EMPTY = new Set(
+  KNOWN_METADATA_KEYS.map(mk => `_meta_${mk.key}`)
+);
 
 export function buildFoodDetailFields(item: Record<string, any>): FieldConfig[] {
   return [

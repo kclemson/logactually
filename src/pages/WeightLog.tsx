@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
-import { DetailDialog, buildExerciseDetailFields, flattenExerciseValues, processExerciseSaveUpdates } from '@/components/DetailDialog';
+import { DetailDialog, buildExerciseDetailFields, flattenExerciseValues, processExerciseSaveUpdates, EXERCISE_HIDE_WHEN_EMPTY } from '@/components/DetailDialog';
 import { isMultiItemEntry } from '@/lib/entry-boundaries';
 import { useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
@@ -770,6 +770,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
               onSaveItem={handleDetailSaveItem}
               buildFields={buildExerciseDetailFields}
               readOnly={isReadOnly}
+              hideWhenZero={EXERCISE_HIDE_WHEN_EMPTY}
             />
           );
         }
@@ -786,6 +787,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
             values={flatValues}
             onSave={handleDetailSave}
             readOnly={isReadOnly}
+            hideWhenZero={EXERCISE_HIDE_WHEN_EMPTY}
           />
         );
       })()}
