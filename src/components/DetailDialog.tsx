@@ -668,7 +668,7 @@ export function buildFoodDetailFields(item: Record<string, any>): FieldConfig[] 
     { key: 'sugar', label: 'Sugar', type: 'number', unit: 'g', min: 0 },
     { key: 'fat', label: 'Fat', type: 'number', unit: 'g', min: 0 },
     { key: 'cholesterol', label: 'Cholesterol', type: 'number', unit: 'mg', min: 0 },
-    { key: 'saturated_fat', label: 'Saturated Fat', type: 'number', unit: 'g', min: 0 },
+    { key: 'saturated_fat', label: 'Sat. Fat', type: 'number', unit: 'g', min: 0 },
   ];
 }
 
