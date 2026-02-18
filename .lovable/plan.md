@@ -1,48 +1,77 @@
 
 
-# Remove pairedField, make Category a normal grid field
+# Explicit two-column layout for exercise detail fields
+
+## What stays the same (all existing styling preserved)
+
+Every per-field rendering detail is untouched:
+- `w-12` for number inputs
+- `w-[7.5rem]` for select dropdowns
+- `min-w-[5rem]` label widths via `labelClassName`
+- `pl-2` padding on view-mode values
+- `mi/km` and `lbs/kg` unit toggles (UnitToggle component)
+- `autoComplete="off"` on all inputs
+- `h-6` compact input heights
+- `flex-1 min-w-0` for text inputs
+- `hideWhenZero` filtering logic
+
+None of these are touched because they live inside the per-field rendering loop, which stays identical.
 
 ## What changes
 
-The `pairedField` concept is removed entirely. Category becomes a regular `type: 'select'` field on its own grid row, naturally aligning with every other right-column field (like Subtype).
-
-## Technical changes (all in `src/components/DetailDialog.tsx`)
-
-### 1. Remove `pairedField` from `FieldConfig` type (~line 32-33)
-
-Delete the `pairedField?: FieldConfig` property from the interface.
-
-### 2. `buildExerciseDetailFields` (~lines 631-642)
-
-Split into two separate fields:
+### 1. New `FieldLayout` type (~line 18)
 
 ```typescript
-{ key: 'description', label: 'Name', type: 'text' },
-{
-  key: '_exercise_category', label: 'Category', type: 'select',
-  options: [
-    { value: 'strength', label: 'Strength' },
-    { value: 'cardio', label: 'Cardio' },
-    { value: 'other', label: 'Other' },
-  ],
-},
+interface FieldLayout {
+  fullWidth: FieldConfig[];  // Name (spans both columns)
+  left: FieldConfig[];       // Metrics column
+  right: FieldConfig[];      // Classification column
+}
 ```
 
-### 3. `FieldViewGrid` (~lines 147-165)
+### 2. `DetailDialogProps` accepts `FieldLayout | FieldConfig[]`
 
-- Remove the filter that hides `_exercise_category` (line 148).
-- Remove the `pairedField` rendering block (lines 161-165).
-- For `type: 'select'` fields in view mode, display the matching option label instead of the raw value (e.g. "Cardio" not "cardio").
+The `fields` prop and `buildFields` callback accept either format. A helper normalizes flat arrays into `FieldLayout` with all fields in the left column (backward compatible for food fields).
 
-### 4. `FieldEditGrid` (~lines 200, 257-274)
+### 3. `FieldViewGrid` and `FieldEditGrid` rendering structure
 
-- Remove the filter that hides `_exercise_category` (around line 200 if present).
-- Remove the entire `pairedField` rendering block (lines 257-274).
-- In the existing select `onChange` handler (line 224), add: when the field key is `_exercise_category`, also clear `exercise_key`.
+Replace the single auto-flow grid with:
 
-### Result
+```
+[full-width fields — col-span-2 as today]
+<div class="grid grid-cols-2 gap-x-4">
+  <div class="flex flex-col gap-y-1">
+    {left.map(field => EXACT SAME per-field rendering)}
+  </div>
+  <div class="flex flex-col gap-y-1">
+    {right.map(field => EXACT SAME per-field rendering)}
+  </div>
+</div>
+```
 
-- Category gets its own row in the same grid column as Subtype -- perfect vertical alignment in both view and edit modes.
-- Name becomes a clean full-width text field.
-- ~40 lines of special-case code removed.
+The inner field rendering (label + input/value + unit toggle) is extracted into a shared helper so there is zero duplication and zero risk of styling drift between columns.
+
+### 4. `buildExerciseDetailFields` returns `FieldLayout`
+
+**Cardio:**
+- fullWidth: Name
+- left: Duration, Distance, Cal Burned, Heart Rate, Effort, Speed
+- right: Category, Exercise type, Subtype, Incline, Cadence
+
+**Strength:**
+- fullWidth: Name
+- left: Sets, Reps, Weight, Cal Burned, Heart Rate, Effort
+- right: Category, Exercise type, Subtype
+
+**Other:**
+- fullWidth: Name
+- left: Cal Burned, Heart Rate, Effort
+- right: Category
+
+### 5. `buildFoodDetailFields` (if it exists) stays as flat array
+
+The normalization helper wraps it into a `FieldLayout` automatically, so food dialogs render exactly as they do today with no changes needed.
+
+## Files changed
+- `src/components/DetailDialog.tsx` only
 
