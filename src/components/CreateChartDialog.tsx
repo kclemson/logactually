@@ -38,7 +38,7 @@ function CreateChartDialogInner({
   const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
   const [currentSpec, setCurrentSpec] = useState<ChartSpec | null>(null);
   const [lastQuestion, setLastQuestion] = useState("");
-  const [showDebug, setShowDebug] = useState(false);
+  const [showDebug, setShowDebug] = useState(true);
 
   const generateChart = useGenerateChart();
   const { saveMutation } = useSavedCharts();
@@ -213,7 +213,7 @@ function CreateChartDialogInner({
               <Textarea
                 readOnly
                 value={JSON.stringify(currentSpec, null, 2)}
-                className="text-[10px] font-mono bg-muted/50 rounded p-2 min-h-[100px] resize-y"
+                className="text-[10px] font-mono bg-muted/50 rounded p-2 min-h-[300px] resize-y"
               />
               )}
             </div>
