@@ -95,17 +95,17 @@ export function useCustomLogTrends(days: number) {
             valueType: type.value_type,
             series: [
               {
-                label: 'High',
-                data: typeEntries.map((e: any) => ({
-                  date: e.logged_date,
-                  value: Number(e.numeric_value),
-                })),
-              },
-              {
-                label: 'Low',
+                label: 'Diastolic',
                 data: typeEntries.map((e: any) => ({
                   date: e.logged_date,
                   value: Number(e.numeric_value_2),
+                })),
+              },
+              {
+                label: 'Systolic',
+                data: typeEntries.map((e: any) => ({
+                  date: e.logged_date,
+                  value: Number(e.numeric_value),
                 })),
               },
             ],
