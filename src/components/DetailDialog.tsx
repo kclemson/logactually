@@ -100,7 +100,7 @@ function FieldViewGrid({
                 return val !== 0 && val !== null && val !== undefined && val !== '';
               })
               .map(field => (
-              <div key={field.key} className={cn("flex gap-2 py-0.5", field.type === 'text' && 'col-span-2')}>
+              <div key={field.key} className={cn("flex items-center gap-2 py-0.5", field.type === 'text' && 'col-span-2')}>
                 <span className="text-xs text-muted-foreground min-w-[5rem] shrink-0">{field.label}</span>
                 <span className="text-sm">{displayValue(field, activeValues)}</span>
               </div>
@@ -126,7 +126,7 @@ function FieldEditGrid({
       {sections.map(([sectionName, sectionFields], sectionIdx) => (
         <div key={sectionName || sectionIdx}>
           {sectionIdx > 0 && <hr className="border-border/50 my-2" />}
-          <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-0.5">
             {sectionFields.map(field => (
               <div key={field.key} className={cn("flex items-center gap-2", field.type === 'text' && 'col-span-2')}>
                 <Label className="text-xs text-muted-foreground shrink-0 min-w-[5rem]">
@@ -138,7 +138,7 @@ function FieldEditGrid({
                   <select
                     value={String(draft[field.key] ?? '')}
                     onChange={e => updateDraft(field.key, e.target.value)}
-                    className="flex h-8 flex-1 min-w-0 rounded-md border border-input bg-background px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex h-6 flex-1 min-w-0 rounded-md border border-input bg-background px-1.5 py-0 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <option value="">—</option>
                     {field.optgroups ? (
@@ -166,7 +166,7 @@ function FieldEditGrid({
                     min={field.min}
                     max={field.max}
                     step={field.step}
-                    className="h-8 text-sm flex-1 min-w-0"
+                    className="h-6 py-0 px-1.5 text-sm flex-1 min-w-0"
                   />
                 )}
               </div>
