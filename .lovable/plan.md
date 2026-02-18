@@ -1,46 +1,85 @@
 
 
-# Fix: capture side-effect draft keys in handleSave
+# Fix category change: proper close-on-save with working exercise_key values
 
-## Problem
+## Root Cause (two bugs, one function)
 
-`handleSave` only iterates `fieldsFlat` to build the `updates` object. When `applyCategoryChange` injects `exercise_key` into the draft (a real DB column not present in the current field layout), it's never extracted, so an empty update is sent and the async save path never triggers.
+`applyCategoryChange` returns `{ exercise_key: '' }` for both strength and cardio. This causes two failures:
 
-## Approach
+1. **Cardio to Strength**: Save succeeds (`exercise_key: '' != 'walk_run'`), but on refetch `flattenExerciseValues` classifies `''` as "other" since it's not in `EXERCISE_MUSCLE_GROUPS` and not cardio. The item ends up showing as "Other" instead of "Strength".
 
-Add a second pass in `handleSave` after the `fieldsFlat` loop that sweeps the draft for any non-virtual keys (`exercise_key`, etc.) that were injected by side-effect handlers but aren't represented by a field in the layout. This is a DetailDialog-internal concern (it's about how the dialog collects updates from its own draft state), so it belongs in `handleSave` rather than in a shared utility.
+2. **Other to Strength**: If the item already has `exercise_key: ''`, the sidecar sweep sees no diff (new value `''` === old value `''`), so nothing is saved at all -- a complete no-op.
 
-## Change
+## Solution
 
-### `src/components/DetailDialog.tsx` — `handleSave` (after the `fieldsFlat` loop, around line 460)
+Two changes:
 
-Insert a sweep of the draft for "sidecar" real-column keys:
+### 1. Replace the broken async approach with simple close-on-save
+
+Remove all async/loading-mask complexity from `DetailDialog` and `WeightLog`. Just save and close the dialog. When the user reopens it, fresh data from the refetched query will drive the correct field layout. One extra tap to reopen, but rock-solid reliable.
+
+### 2. Fix the category-to-exercise_key mapping
+
+The category is derived from `exercise_key` via `flattenExerciseValues`. For category changes to persist correctly, we need `exercise_key` values that survive the round-trip through that derivation:
+
+- **Strength**: use a known strength key. Since `EXERCISE_MUSCLE_GROUPS['functional_strength']` exists and has `primary: 'Full Body'` (not cardio), changing to strength will set `exercise_key: 'functional_strength'` as a sensible default -- the user can then edit the specific exercise type.
+- **Cardio**: use `'walk_run'` as the default cardio key (most common).
+- **Other**: use `'other'` (already works, not in any registry so classifies as "other").
+
+Update `applyCategoryChange`:
 
 ```typescript
-// After the fieldsFlat iteration (line 460):
-
-// Capture real-column keys injected into draft by side-effect handlers
-// (e.g. applyCategoryChange sets exercise_key when _exercise_category changes)
-for (const [key, val] of Object.entries(draft)) {
-  if (key.startsWith('_')) continue;        // skip virtual/internal fields
-  if (updates[key] !== undefined) continue;  // already captured from fieldsFlat
-  if (val !== values[key]) {
-    updates[key] = val;
+export function applyCategoryChange(
+  newCategory: 'strength' | 'cardio' | 'other'
+): { exercise_key: string } {
+  switch (newCategory) {
+    case 'strength': return { exercise_key: 'functional_strength' };
+    case 'cardio':   return { exercise_key: 'walk_run' };
+    case 'other':    return { exercise_key: 'other' };
   }
 }
 ```
 
-No other files need changes. The WeightLog async path and `processExerciseSaveUpdates` are already wired correctly — they just never received the `exercise_key` update because it was dropped here.
+This guarantees:
+- Strength default: `EXERCISE_MUSCLE_GROUPS['functional_strength']` exists, not cardio, so classified as "strength"
+- Cardio default: `isCardioExercise('walk_run')` returns true, so classified as "cardio"
+- Other: `'other'` is not in any registry, so classified as "other"
 
-## Why not a shared utility
+And since these are all different from each other, the sidecar sweep will always detect a diff when switching categories.
 
-- The draft, values, fieldsFlat, and `_`-prefix convention are all internal to DetailDialog
-- `processExerciseSaveUpdates` (the shared function) already handles the output correctly
-- Extracting this into a shared function would require passing 4 pieces of DetailDialog-internal state as arguments, adding complexity without reuse benefit
+## Changes
+
+### `src/lib/exercise-metadata.ts`
+
+Update `applyCategoryChange` to return category-appropriate default exercise keys instead of `''`.
+
+### `src/components/DetailDialog.tsx`
+
+- Remove `saving` state and `Loader2` loading overlay
+- Revert `handleSave` to synchronous (call `onSave(updates)`, then close dialog)
+- Revert `onSave` prop type back to `(updates) => void`
+- Keep the sidecar draft sweep (still needed to capture `exercise_key` when it's not in `fieldsFlat`)
+
+### `src/pages/WeightLog.tsx`
+
+- Revert `handleDetailSave` to synchronous
+- Always use `updateSet.mutate(...)` and `setDetailDialogItem(null)` (close dialog)
+- Remove `isCategoryChange` branching and `mutateAsync` usage
+
+## UX flow after fix
+
+1. User opens "Other" exercise, taps Edit, changes Category to "Strength"
+2. `applyCategoryChange` sets `exercise_key = 'functional_strength'` in draft
+3. User taps Save
+4. Dialog closes immediately
+5. Mutation fires, query refetches in background
+6. User taps the exercise again -- dialog opens with Strength layout, Exercise Type defaults to "Functional strength", user can change it
 
 ## Files changed
 
 | File | What |
 |------|------|
-| `src/components/DetailDialog.tsx` | Add draft sidecar sweep in `handleSave` after the `fieldsFlat` loop |
+| `src/lib/exercise-metadata.ts` | Fix `applyCategoryChange` to return correct default keys per category |
+| `src/components/DetailDialog.tsx` | Remove async/loading state, revert to sync save-and-close |
+| `src/pages/WeightLog.tsx` | Revert to sync save, always close dialog |
 
