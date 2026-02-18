@@ -29,8 +29,6 @@ export interface FieldConfig {
   step?: number;
   section?: string;
   maxWidth?: 'sm';
-  /** Render this field to the right on the same row */
-  pairedField?: FieldConfig;
 }
 
 export interface DetailDialogProps {
@@ -145,7 +143,6 @@ function FieldViewGrid({
           <div className={cn("grid gap-x-4 gap-y-1", gridClassName)}>
             {sectionFields
               .filter(field => {
-                if (field.key === '_exercise_category') return false;
                 if (!hideWhenZero?.has(field.key)) return true;
                 const val = activeValues[field.key];
                 return val !== 0 && val !== null && val !== undefined && val !== '';
@@ -158,11 +155,6 @@ function FieldViewGrid({
                 <span className="text-sm min-w-0 truncate pl-2 flex-1">
                   {displayValue(field, activeValues, activeUnits?.[field.key])}
                 </span>
-                {field.pairedField && (
-                  <span className="text-sm shrink-0 w-[7.5rem] text-left pl-2">
-                    {displayValue(field.pairedField, activeValues)}
-                  </span>
-                )}
                 {field.unit && !field.unitToggle && (
                   <span className="text-xs text-muted-foreground shrink-0">{field.unit}</span>
                 )}
@@ -197,7 +189,7 @@ function FieldEditGrid({
       {sections.map(([sectionName, sectionFields], sectionIdx) => (
         <div key={sectionName || sectionIdx}>
           <div className={cn("grid gap-x-4 gap-y-1", gridClassName)}>
-            {sectionFields.filter(f => f.key !== '_exercise_category').map(field => {
+            {sectionFields.map(field => {
               // Dynamically filter exercise_key optgroups based on draft category
               const effectiveField = field.key === 'exercise_key' && field.optgroups && draft._exercise_category
                 ? {
@@ -221,7 +213,12 @@ function FieldEditGrid({
                 ) : field.type === 'select' ? (
                   <select
                     value={String(draft[effectiveField.key] ?? '')}
-                    onChange={e => updateDraft(effectiveField.key, e.target.value)}
+                    onChange={e => {
+                      updateDraft(effectiveField.key, e.target.value);
+                      if (effectiveField.key === '_exercise_category') {
+                        updateDraft('exercise_key', '');
+                      }
+                    }}
                     className="flex h-6 w-[7.5rem] min-w-0 rounded-md border border-input bg-background px-1.5 py-0 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <option value="">—</option>
@@ -254,24 +251,6 @@ function FieldEditGrid({
                       autoComplete="off"
                       className={cn("h-6 py-0 px-1.5 text-sm", field.type === 'number' ? "w-12" : cn("flex-1 min-w-0", field.maxWidth === 'sm' && "max-w-[12rem]"))}
                     />
-                    {/* Paired field (e.g. category dropdown next to Name) */}
-                    {field.pairedField && (
-                      <select
-                        value={String(draft[field.pairedField.key] ?? '')}
-                        onChange={e => {
-                          updateDraft(field.pairedField!.key, e.target.value);
-                          // When category changes, clear exercise_key since old value may not exist in new category
-                          if (field.pairedField!.key === '_exercise_category') {
-                            updateDraft('exercise_key', '');
-                          }
-                        }}
-                        className="flex h-6 w-[7.5rem] shrink-0 rounded-md border border-input bg-background px-1.5 py-0 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        {field.pairedField.options?.map(opt => (
-                          <option key={opt.value} value={opt.value}>{opt.label}</option>
-                        ))}
-                      </select>
-                    )}
                     {field.unitToggle && (
                       <UnitToggle field={field} activeUnit={activeUnits?.[field.key] || field.unitToggle.storageUnit} onToggle={(u) => onToggleUnit?.(field.key, u)} />
                     )}
@@ -629,16 +608,14 @@ export function buildExerciseDetailFields(item: Record<string, any>): FieldConfi
     || (isCardioExercise(exerciseKey) ? 'cardio' : (EXERCISE_MUSCLE_GROUPS[exerciseKey] ? 'strength' : 'other'));
 
   const fields: FieldConfig[] = [
+    { key: 'description', label: 'Name', type: 'text' },
     {
-      key: 'description', label: 'Name', type: 'text',
-      pairedField: {
-        key: '_exercise_category', label: 'Category', type: 'select',
-        options: [
-          { value: 'strength', label: 'Strength' },
-          { value: 'cardio', label: 'Cardio' },
-          { value: 'other', label: 'Other' },
-        ],
-      },
+      key: '_exercise_category', label: 'Category', type: 'select',
+      options: [
+        { value: 'strength', label: 'Strength' },
+        { value: 'cardio', label: 'Cardio' },
+        { value: 'other', label: 'Other' },
+      ],
     },
   ];
 
