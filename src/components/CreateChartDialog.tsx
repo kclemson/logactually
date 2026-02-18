@@ -38,6 +38,7 @@ function CreateChartDialogInner({
   const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
   const [currentSpec, setCurrentSpec] = useState<ChartSpec | null>(null);
   const [lastQuestion, setLastQuestion] = useState("");
+  const [showDebug, setShowDebug] = useState(false);
 
   const generateChart = useGenerateChart();
   const { saveMutation } = useSavedCharts();
@@ -176,6 +177,9 @@ function CreateChartDialogInner({
           {/* Chart preview */}
           {currentSpec && !generateChart.isPending && (
             <div className="space-y-3">
+              {lastQuestion && (
+                <p className="text-xs text-muted-foreground italic">"{lastQuestion}"</p>
+              )}
               <div className="border border-border rounded-md overflow-hidden">
                 <DynamicChart spec={currentSpec} />
               </div>
@@ -196,6 +200,20 @@ function CreateChartDialogInner({
                   Start over
                 </Button>
               </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDebug((v) => !v)}
+                className="text-xs text-muted-foreground h-7 px-2"
+              >
+                {showDebug ? "Hide debug JSON" : "Show debug JSON"}
+              </Button>
+              {showDebug && (
+                <pre className="whitespace-pre-wrap break-all text-[10px] max-h-[200px] overflow-auto bg-muted/50 rounded p-2">
+                  {JSON.stringify(currentSpec, null, 2)}
+                </pre>
+              )}
             </div>
           )}
         </div>
