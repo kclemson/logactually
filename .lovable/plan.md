@@ -1,95 +1,72 @@
 
 
-# Fix 5 layout/behavior issues in the exercise detail dialog
+# Propagate distance unit preference across all UI
 
-All changes in two files: `src/components/DetailDialog.tsx` and `src/lib/weight-units.ts`.
+## Locations found
 
----
+You identified the three main ones. Here's the complete audit:
 
-## Issue 1: View-mode units are right-aligned (should be left-aligned next to the value)
+### 1. WeightItemsTable gray italic cardio label (your #1)
+**File**: `src/components/WeightItemsTable.tsx`, lines 586-590
+- Hardcoded `mi` in distance display and `mph` in speed calculation
+- Also line 674: weight column shows `mi` for distance-only cardio items
+- **Fix**: Add `distanceUnit` prop, use `convertDistance`/`convertSpeed` to display in user's preferred unit with correct labels
 
-**Root cause**: In `FieldViewItem` (line 168), the value span has `flex-1` which stretches it to fill available space, pushing the unit to the far right.
+### 2. ExerciseChart trend toggle labels and data (your #2)
+**File**: `src/components/trends/ExerciseChart.tsx`
+- The toggle header shows literal `time | mph | distance` text (line ~230)
+- Chart bar labels show raw `mph` values and raw `distance_miles` values
+- Data computation (lines 93-98) calculates mph/pace in miles only
+- **Fix**: Add `distanceUnit` prop, convert all displayed values and labels. Toggle modes become `time | speed | distance` with labels showing `km/h` or `mph` and `km` or `mi` as appropriate
 
-**Fix**: Remove `flex-1` from the value span so the unit sits immediately after the value text, left-aligned.
+### 3. ExerciseChart tooltip (your #3)
+**File**: `src/components/trends/ExerciseChart.tsx`, lines 263-268
+- Hardcoded `/mi` for pace, `mph` for speed, `mi in` for distance
+- **Fix**: Use the distance unit to show `/km` or `/mi`, `km/h` or `mph`, `km` or `mi`
 
-```
-// Before
-<span className="text-sm min-w-0 truncate pl-2 flex-1">
+### 4. CalorieBurnDialog exercise summary (you didn't mention this one)
+**File**: `src/components/CalorieBurnDialog.tsx`, line 59
+- Shows `X.X mi` hardcoded
+- **Fix**: Convert and label based on distance unit
 
-// After
-<span className="text-sm min-w-0 truncate pl-2">
-```
+### 5. SaveRoutineDialog exercise summary (you didn't mention this one)
+**File**: `src/components/SaveRoutineDialog.tsx`, line 51-53
+- Shows `X.X mi` hardcoded when formatting exercise summaries
+- **Fix**: Convert and label based on distance unit
 
----
+### 6. CSV export (minor, probably leave as-is)
+**File**: `src/lib/csv-export.ts`, line 125
+- Exports `speed_mph` raw value -- this is fine since the column header already says "mph" and CSV should use a canonical unit
 
-## Issue 2: "mi km" toggle starts further right than other units
+Regarding formatting: **km/h** is the internationally recognized standard (used in SI). We already use it in the detail dialog speed toggle, so all new changes will use `km/h` consistently.
 
-**Root cause**: The UnitToggle buttons have `px-1.5` padding, adding ~6px of invisible space before the first letter. Static unit labels (like "min", "cal") have no such padding -- they're just text.
+## Technical approach
 
-**Fix**: Remove left padding from the first toggle button. Easiest approach: the first button gets `pl-0` instead of `px-1.5`, using conditional styling (`pl-0 pr-1.5` for first, `px-1.5` for rest). Alternatively, wrap the toggle in a container with negative left margin to compensate. The cleanest fix is to just use `px-1` on all toggle buttons to tighten them up, plus remove the `gap-0.5` from the container so the buttons sit flush.
+### Props threading
+- `ExerciseChart`: add `distanceUnit` prop, passed from `Trends.tsx` via `settings.distanceUnit`
+- `WeightItemsTable`: add `distanceUnit` prop, passed from `WeightLog.tsx` via `settings.distanceUnit`
+- `CalorieBurnDialog`: already receives `weightUnit`; add `distanceUnit` similarly
+- `SaveRoutineDialog`: add `distanceUnit` prop
 
----
+### Conversion logic
+Reuse existing helpers from `src/lib/weight-units.ts`:
+- `convertDistance(value, 'mi', distanceUnit)` for distances
+- `convertSpeed(value, 'mph', speedUnit)` for speeds
+- Pace: `convertDistance(1, 'mi', distanceUnit)` gives the per-unit denominator, then `duration / distanceInPreferredUnit` gives pace in min/preferred-unit
 
-## Issue 3: Name row too close to the first grid row
+### ExerciseChart specifics
+- `CardioViewMode` type stays `'time' | 'mph' | 'distance'` internally (these are mode identifiers, not display labels)
+- Display labels in the header subtitle change: `mph` becomes `km/h` when distance unit is km; `distance` label stays as-is
+- Bar data computation: convert `distance_miles` to km when needed, compute speed in km/h when needed
+- Tooltip: pace shows `/km` or `/mi`, speed shows `km/h` or `mph`, distance shows `km` or `mi`
 
-**Root cause**: `FieldViewGrid` and `FieldEditGrid` render fullWidth fields and then the grid div with no vertical spacing between them. The fullWidth `FieldViewItem` has `py-0.5` but the grid columns use `gap-y-1` internally -- there's no gap between the two sections.
+## Files changed
 
-**Fix**: Add a consistent `gap-y-1` (or `space-y-1`) to the parent container in both `FieldViewGrid` and `FieldEditGrid`, so the full-width section and the two-column grid section have the same vertical rhythm as rows within the columns.
-
----
-
-## Issue 4: Distance field doesn't show "km" in view mode
-
-**Root cause**: `FieldViewItem` (lines 171-173) only renders the static `field.unit` text, and skips it when `field.unitToggle` is present. But it never renders the `UnitToggle` component itself in view mode -- that only exists in `FieldEditItem`. So unitToggle fields show no unit indicator at all in view mode.
-
-**Fix**: In `FieldViewItem`, render the `UnitToggle` component for fields that have `unitToggle`, just like `FieldEditItem` does. This lets the user see and toggle between mi/km (and lbs/kg) even in view mode, with the displayed value converting accordingly.
-
----
-
-## Issue 5: Speed needs mph/km/h toggle (like Distance has mi/km)
-
-**Root cause**: Speed is defined as a plain metadata field via `metaField('speed_mph')` which just gets a static "mph" unit label. It needs a proper `unitToggle` to convert between mph and km/h based on the user's distance preference.
-
-**Fix** (two parts):
-
-### 5a. Add `convertSpeed` to `src/lib/weight-units.ts`
-
-```typescript
-export type SpeedUnit = 'mph' | 'km/h';
-
-export function convertSpeed(value: number, from: SpeedUnit, to: SpeedUnit): number {
-  if (from === to) return value;
-  return from === 'mph' ? value * 1.60934 : value * 0.621371;
-}
-```
-
-### 5b. Replace the speed metadata field with a unitToggle field
-
-In `buildExerciseDetailFields`, instead of using `metaField('speed_mph')`, define speed as:
-
-```typescript
-{
-  key: '_meta_speed_mph',
-  label: 'Speed',
-  type: 'number',
-  unitToggle: { units: ['mph', 'km/h'], storageUnit: 'mph', convert: convertSpeed },
-  min: 0.1,
-}
-```
-
-The `defaultUnits` passed from the caller already maps based on the user's distance preference, so this will show km/h by default for users who prefer km, while still storing as mph.
-
-### 5c. Pass default speed unit from caller
-
-Wherever `defaultUnits` is constructed for exercise details, add a mapping: if the user's distance unit is 'km', set `_meta_speed_mph: 'km/h'`, otherwise `'mph'`.
-
----
-
-## Summary of file changes
-
-| File | What |
-|------|------|
-| `src/components/DetailDialog.tsx` | Fix 1: remove `flex-1` from view value span. Fix 2: tighten UnitToggle padding. Fix 3: add vertical gap between sections. Fix 4: render UnitToggle in view mode. Fix 5b: replace speed metaField with unitToggle field. |
-| `src/lib/weight-units.ts` | Fix 5a: add `convertSpeed` function and `SpeedUnit` type. |
-| Caller file (WeightLog or similar) | Fix 5c: add `_meta_speed_mph` to `defaultUnits` based on user's distance preference. |
-
+| File | Change |
+|------|--------|
+| `src/components/trends/ExerciseChart.tsx` | Add `distanceUnit` prop; convert all displayed distances, speeds, paces |
+| `src/pages/Trends.tsx` | Pass `distanceUnit={settings.distanceUnit}` to ExerciseChart |
+| `src/components/WeightItemsTable.tsx` | Add `distanceUnit` prop; convert cardio label distances and speeds |
+| `src/pages/WeightLog.tsx` | Pass `distanceUnit` to WeightItemsTable instances |
+| `src/components/CalorieBurnDialog.tsx` | Add `distanceUnit` prop; convert distance display |
+| `src/components/SaveRoutineDialog.tsx` | Add `distanceUnit` prop; convert distance display |
