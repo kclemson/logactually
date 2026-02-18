@@ -210,7 +210,8 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   };
 
   // Helper to create and save entry from food items
-  const createEntryFromItems = useCallback(async (items: FoodItem[], rawInput: string | null, sourceMealId?: string, groupName?: string | null) => {
+  const createEntryFromItems = useCallback(async (items: FoodItem[], rawInput: string | null, sourceMealId?: string, groupName?: string | null, targetDate?: string) => {
+    const effectiveDate = targetDate || dateStr;
     const entryId = crypto.randomUUID();
     const itemsWithUids = items.map(item => ({
       ...item,
@@ -223,7 +224,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     try {
       await createEntry.mutateAsync({
         id: entryId,
-        eaten_date: dateStr,
+        eaten_date: effectiveDate,
         raw_input: rawInput,
         food_items: itemsWithUids,
         total_calories: Math.round(totals.calories),
@@ -235,9 +236,9 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       });
       
       // Wait for cache to update so entry is in DOM
-      await queryClient.invalidateQueries({ queryKey: ['food-entries', dateStr] });
+      await queryClient.invalidateQueries({ queryKey: ['food-entries', effectiveDate] });
       // Also invalidate the month's date cache so calendar highlighting updates
-      await queryClient.invalidateQueries({ queryKey: ['food-dates', format(selectedDate, 'yyyy-MM')] });
+      await queryClient.invalidateQueries({ queryKey: ['food-dates', format(parseISO(effectiveDate), 'yyyy-MM')] });
       
       markEntryAsNew(entryId);
       foodInputRef.current?.clear();
@@ -254,6 +255,20 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       // Error already logged by mutation's onError
     }
   }, [createEntry, dateStr, queryClient, markEntryAsNew, isReadOnly, settings.suggestMealSaves, recentEntries]);
+
+  // Copy an entry to today's date
+  const handleCopyEntryToToday = useCallback((entryId: string) => {
+    const entry = entries.find(e => e.id === entryId);
+    if (!entry) return;
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    createEntryFromItems(
+      entry.food_items,
+      entry.raw_input,
+      undefined,            // no source_meal_id
+      entry.group_name ?? null,
+      todayStr,
+    );
+  }, [entries, createEntryFromItems]);
 
   const handleSubmit = async (text: string) => {
     // 1. Check for history reference patterns BEFORE AI call (skip for demo mode)
@@ -804,6 +819,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
               });
             }}
             onShowDetails={handleShowDetails}
+            onCopyEntryToToday={!isTodaySelected && !isReadOnly ? handleCopyEntryToToday : undefined}
           />
         )}
 

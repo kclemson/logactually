@@ -21,6 +21,8 @@ interface EntryExpandedPanelProps {
   gridCols: string;
   /** Optional content rendered before the standard panel (e.g. calorie burn estimates) */
   extraContent?: ReactNode;
+  /** Callback to copy this entry to today's date */
+  onCopyToToday?: () => void;
   /** Callback to open the detail dialog for this entry */
   onShowDetails?: () => void;
 }
@@ -35,6 +37,7 @@ export function EntryExpandedPanel({
   onSaveAs,
   gridCols,
   extraContent,
+  onCopyToToday,
   onShowDetails,
 }: EntryExpandedPanelProps) {
   const { type, name, isFromSaved } = savedItemInfo;
@@ -77,14 +80,24 @@ export function EntryExpandedPanel({
           )}
         </div>
 
-        {onShowDetails && (
-          <button
-            onClick={onShowDetails}
-            className="text-xs text-blue-600 dark:text-blue-400 hover:underline shrink-0"
-          >
-            Details
-          </button>
-        )}
+        <div className="flex items-center gap-4 shrink-0">
+          {onCopyToToday && (
+            <button
+              onClick={onCopyToToday}
+              className="text-xs text-blue-600 dark:text-blue-400 py-1 hover:underline"
+            >
+              Copy to today
+            </button>
+          )}
+          {onShowDetails && (
+            <button
+              onClick={onShowDetails}
+              className="text-xs text-blue-600 dark:text-blue-400 py-1 hover:underline"
+            >
+              Details
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -289,6 +289,48 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
     }
   }, [createEntry, dateStr, queryClient, markEntryAsNew, isReadOnly, settings.suggestRoutineSaves, recentWeightEntries]);
 
+  // Copy an entry to today's date
+  const handleCopyEntryToToday = useCallback(async (entryId: string) => {
+    const entrySets = weightSets.filter(s => s.entryId === entryId);
+    if (entrySets.length === 0) return;
+
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const newEntryId = crypto.randomUUID();
+    const firstSet = entrySets[0];
+
+    // Determine group_name (carry over from source)
+    const groupName = firstSet.groupName ?? null;
+
+    const setsToCreate = entrySets.map(set => ({
+      exercise_key: set.exercise_key,
+      exercise_subtype: set.exercise_subtype,
+      description: set.description,
+      sets: set.sets,
+      reps: set.reps,
+      weight_lbs: set.weight_lbs,
+      duration_minutes: set.duration_minutes,
+      distance_miles: set.distance_miles,
+      exercise_metadata: set.exercise_metadata,
+      entryId: newEntryId,
+    }));
+
+    try {
+      await createEntry.mutateAsync({
+        entry_id: newEntryId,
+        logged_date: todayStr,
+        raw_input: firstSet.rawInput,
+        source_routine_id: undefined,  // standalone copy
+        group_name: groupName,
+        weight_sets: setsToCreate,
+      });
+
+      await queryClient.invalidateQueries({ queryKey: ['weight-sets', todayStr] });
+      await queryClient.invalidateQueries({ queryKey: ['weight-dates', format(new Date(), 'yyyy-MM')] });
+    } catch {
+      // Error already logged by mutation's onError
+    }
+  }, [weightSets, createEntry, queryClient]);
+
   const handleSubmit = async (text: string) => {
     const result = await analyzeWeights(text);
     if (result) {
@@ -705,6 +747,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
             })() : undefined}
             onShowDetails={handleShowDetails}
             onUpdateCalorieBurn={handleUpdateCalorieBurn}
+            onCopyEntryToToday={!isTodaySelected && !isReadOnly ? handleCopyEntryToToday : undefined}
           />
         </>
       )}
