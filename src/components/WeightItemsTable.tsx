@@ -598,11 +598,6 @@ export function WeightItemsTable({
                     const displayDist = du === 'km' ? convertDistance(dist, 'mi', 'km') : dist;
                     if (dist > 0) parts.push(`${displayDist.toFixed(2)} ${du}`);
                     if (dur > 0) parts.push(formatDurationMmSs(dur));
-                    if (dist > 0 && dur > 0) {
-                      const mph = dist / (dur / 60);
-                      const displaySpeed = su === 'km/h' ? convertSpeed(mph, 'mph', 'km/h') : mph;
-                      parts.push(`${displaySpeed.toFixed(1)} ${su}`);
-                    }
 
                     const label = parts.length > 0 ? parts.join(', ') : 'cardio';
 
