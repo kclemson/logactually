@@ -11,7 +11,12 @@ export interface LogTemplate {
 
 export const LOG_TEMPLATES: LogTemplate[] = [
   { name: 'Body Weight',       valueType: 'numeric',        unitImperial: 'lbs', unitMetric: 'kg',  icon: 'Scale' },
-  { name: 'Body Measurements', valueType: 'text_numeric',   unitImperial: 'in',  unitMetric: 'cm',  icon: 'Ruler' },
+  { name: 'Waist',             valueType: 'numeric',        unitImperial: 'in',  unitMetric: 'cm',  icon: 'Ruler' },
+  { name: 'Hips',              valueType: 'numeric',        unitImperial: 'in',  unitMetric: 'cm',  icon: 'Ruler' },
+  { name: 'Chest',             valueType: 'numeric',        unitImperial: 'in',  unitMetric: 'cm',  icon: 'Ruler' },
+  { name: 'Bicep',             valueType: 'numeric',        unitImperial: 'in',  unitMetric: 'cm',  icon: 'Ruler' },
+  { name: 'Thigh',             valueType: 'numeric',        unitImperial: 'in',  unitMetric: 'cm',  icon: 'Ruler' },
+  { name: 'Neck',              valueType: 'numeric',        unitImperial: 'in',  unitMetric: 'cm',  icon: 'Ruler' },
   { name: 'Body Fat %',        valueType: 'numeric',        unitImperial: '%',   unitMetric: '%',   icon: 'Percent' },
   { name: 'Blood Pressure',    valueType: 'dual_numeric',   unitImperial: 'mmHg', unitMetric: 'mmHg', icon: 'HeartPulse' },
   { name: 'Sleep',             valueType: 'numeric',        unitImperial: 'hrs', unitMetric: 'hrs', icon: 'Moon' },

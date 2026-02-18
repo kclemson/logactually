@@ -62,7 +62,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   const selectedType = logTypes.find((t) => t.id === effectiveTypeId);
 
 
-  const handleCreateType = (name: string, valueType: 'numeric' | 'text_numeric' | 'text', unit?: string) => {
+  const handleCreateType = (name: string, valueType: 'numeric' | 'text' | 'dual_numeric', unit?: string) => {
     createType.mutate({ name, value_type: valueType, unit: unit || null }, {
       onSuccess: (newType) => {
         setCreateTypeOpen(false);
