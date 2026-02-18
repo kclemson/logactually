@@ -159,7 +159,7 @@ function FieldViewGrid({
                   {displayValue(field, activeValues, activeUnits?.[field.key])}
                 </span>
                 {field.pairedField && (
-                  <span className="text-xs text-muted-foreground shrink-0 ml-auto">
+                  <span className="text-sm shrink-0 w-[7.5rem] pl-2">
                     {displayValue(field.pairedField, activeValues)}
                   </span>
                 )}
@@ -264,7 +264,7 @@ function FieldEditGrid({
                             updateDraft('exercise_key', '');
                           }
                         }}
-                        className="flex h-6 w-[90px] shrink-0 rounded-md border border-input bg-background px-1 py-0 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="flex h-6 w-[7.5rem] shrink-0 rounded-md border border-input bg-background px-1 py-0 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         {field.pairedField.options?.map(opt => (
                           <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -476,7 +476,7 @@ export function DetailDialog({
           <DialogTitle className={cn("text-base", !isMultiItem && "sr-only")}>{title}</DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-4 pb-2">
+        <div className="flex-1 overflow-y-auto px-4 py-2">
           {isMultiItem ? (
             /* Multi-item collapsible sections */
             <div className="space-y-0">
