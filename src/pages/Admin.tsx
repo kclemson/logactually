@@ -180,7 +180,7 @@ export default function Admin() {
             <button
               onClick={handleToggleDemoLock}
               disabled={toggling || demoLocked === undefined}
-              className="inline-flex items-center gap-0.5 text-[10px] ml-1 px-1 py-0 rounded border border-border hover:bg-muted disabled:opacity-50"
+              className={cn("inline-flex items-center gap-0.5 text-[10px] ml-1 px-1 py-0 rounded border border-border hover:bg-muted disabled:opacity-50", !demoLocked && "text-destructive border-destructive hover:bg-destructive/10")}
               title={demoLocked ? "Demo is locked (read-only). Click to unlock." : "Demo is unlocked (writable). Click to lock."}
             >
               {demoLocked ? <Lock className="h-2.5 w-2.5" /> : <LockOpen className="h-2.5 w-2.5" />}
