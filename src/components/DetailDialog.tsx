@@ -251,6 +251,7 @@ function FieldEditGrid({
                       min={field.min}
                       max={field.max}
                       step={field.step}
+                      autoComplete="off"
                       className={cn("h-6 py-0 px-1.5 text-sm", field.type === 'number' ? "w-12 text-center" : cn("flex-1 min-w-0", field.maxWidth === 'sm' && "max-w-[12rem]"))}
                     />
                     {/* Paired field (e.g. category dropdown next to Name) */}
