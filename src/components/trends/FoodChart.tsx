@@ -42,7 +42,8 @@ const createFoodLabelRenderer = (
   chartData: Array<{ showLabel: boolean; showLabelFullWidth?: boolean }>,
   color: string,
   yOffsetPx: number = 4,
-  useFullWidthLabels: boolean = false
+  useFullWidthLabels: boolean = false,
+  labelFormatter?: (value: number) => string,
 ) => (props: any) => {
   const { x, y, width, value, index } = props;
   
@@ -60,7 +61,7 @@ const createFoodLabelRenderer = (
       fontSize={7}
       fontWeight={500}
     >
-      {Math.round(value)}
+      {labelFormatter ? labelFormatter(value) : Math.round(value)}
     </text>
   );
 };
@@ -84,6 +85,7 @@ interface FoodChartProps {
   referenceLine?: { value: number; color?: string };
   subtitle?: string;
   formatter?: (value: any, name: string, entry?: any, index?: number, payload?: any) => string | string[];
+  labelFormatter?: (value: number) => string;
 }
 
 export const FoodChart = ({
@@ -97,6 +99,7 @@ export const FoodChart = ({
   referenceLine,
   subtitle,
   formatter,
+  labelFormatter,
 }: FoodChartProps) => {
   const isTouchDevice = !useHasHover();
   const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
@@ -189,7 +192,8 @@ export const FoodChart = ({
                       chartData, 
                       color, 
                       getFoodLabelOffsetPx(chartData.length), 
-                      useFullWidthLabels
+                      useFullWidthLabels,
+                      labelFormatter,
                     )} 
                   />
                 </Bar>

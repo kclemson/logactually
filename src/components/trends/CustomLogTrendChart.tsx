@@ -49,6 +49,12 @@ export const CustomLogTrendChart = ({ trend, onNavigate, days }: CustomLogTrendC
     });
   }, [trend, days]);
 
+  const labelFormatter = useMemo(() => {
+    if (trend.series.length !== 1) return undefined;
+    const hasDecimals = trend.series[0].data.some(d => d.value % 1 !== 0);
+    return hasDecimals ? (v: number) => v.toFixed(1) : undefined;
+  }, [trend]);
+
   if (trend.valueType === 'text' || trend.valueType === 'text_multiline') {
     return (
       <StackedMacroChart
@@ -82,6 +88,7 @@ export const CustomLogTrendChart = ({ trend, onNavigate, days }: CustomLogTrendC
         color={TEAL_PALETTE[0]}
         onNavigate={onNavigate}
         useFullWidthLabels
+        labelFormatter={labelFormatter}
       />
     );
   }
