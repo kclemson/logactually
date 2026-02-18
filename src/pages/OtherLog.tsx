@@ -40,7 +40,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   const selectedDate = parseISO(initialDate);
   const isTodaySelected = isToday(selectedDate);
 
-  const { logTypes, createType, recentUsage } = useCustomLogTypes();
+  const { logTypes, isLoading, createType, recentUsage } = useCustomLogTypes();
   const { entries, createEntry, updateEntry, deleteEntry } = useCustomLogEntries(dateStr);
   const { data: datesWithData = [] } = useCustomLogDatesWithData(dateNav.calendarMonth);
   const { isReadOnly } = useReadOnlyContext();
@@ -77,7 +77,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
       <section className="min-h-[148px] flex flex-col justify-center space-y-3">
         {!isReadOnly && (
           <div className="flex items-center justify-center gap-2">
-          {sortedLogTypes.length === 0 ? (
+          {!isLoading && sortedLogTypes.length === 0 ? (
             <div className="flex flex-col items-center gap-3 w-full max-w-sm mx-auto">
               <div className="grid grid-cols-2 gap-2 w-full">
                 {LOG_TEMPLATES.map((t) => (
