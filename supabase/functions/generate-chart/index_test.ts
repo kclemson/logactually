@@ -14,7 +14,7 @@ async function getAuthToken(): Promise<string> {
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const { data, error } = await supabase.auth.signInWithPassword({
     email: "demo@logactually.com",
-    password: "demo1234",
+    password: "demodemo",
   });
   if (error || !data.session) {
     throw new Error(`Auth failed: ${error?.message ?? "no session"}`);
