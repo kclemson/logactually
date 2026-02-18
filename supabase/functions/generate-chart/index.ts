@@ -51,6 +51,7 @@ const TOOL_DEFINITION = {
         color: { type: "string", description: "Hex color code, e.g. #2563EB" },
         data: {
           type: "array",
+          description: "Array of data points. Each object MUST contain a key matching xAxisField (the label) and a key matching dataKey (the numeric value). Example: if xAxisField='time' and dataKey='avg_cal', each item must be like {\"time\": \"6am\", \"avg_cal\": 120}.",
           items: { type: "object", additionalProperties: true },
         },
         valueFormat: {
@@ -290,6 +291,23 @@ serve(async (req) => {
       throw new Error("AI returned invalid chart data");
     }
 
+    console.log("generate_chart args:", JSON.stringify(args).slice(0, 2000));
+
+    // Validate and filter data items
+    const rawData = Array.isArray(args.data) ? args.data : [];
+    const validData = rawData.filter((d: any) =>
+      d && Object.keys(d).length > 0 && d[args.xAxisField] !== undefined && d[args.dataKey] !== undefined
+    );
+    if (validData.length < rawData.length) {
+      console.warn(`Filtered ${rawData.length - validData.length} empty/invalid data items out of ${rawData.length}`);
+    }
+    if (validData.length === 0) {
+      return new Response(
+        JSON.stringify({ error: "The AI generated a chart structure but produced no valid data points. Please try rephrasing your request." }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Map to ChartSpec
     const chartSpec = {
       chartType: args.chartType,
@@ -299,7 +317,7 @@ serve(async (req) => {
       xAxis: { field: args.xAxisField, label: args.xAxisLabel },
       yAxis: { label: args.yAxisLabel },
       color: args.color,
-      data: args.data,
+      data: validData,
       dataKey: args.dataKey,
       valueFormat: args.valueFormat || undefined,
       referenceLine: args.referenceLineValue != null
