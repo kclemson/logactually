@@ -2,10 +2,11 @@ import { useState, useRef, useCallback } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, BarChart3, RefreshCw } from "lucide-react";
-import { useGenerateChart } from "@/hooks/useGenerateChart";
+import { Loader2, BarChart3, RefreshCw, ShieldCheck } from "lucide-react";
+import { useGenerateChart, type DailyTotals } from "@/hooks/useGenerateChart";
 import { useSavedCharts } from "@/hooks/useSavedCharts";
 import { DynamicChart, type ChartSpec } from "@/components/trends/DynamicChart";
+import { verifyChartData, type VerificationResult } from "@/lib/chart-verification";
 
 interface CustomChartDialogProps {
   open: boolean;
@@ -63,6 +64,8 @@ function CustomChartDialogInner({
     initialChart ? [{ role: "user", content: initialChart.question }] : []
   );
   const [currentSpec, setCurrentSpec] = useState<ChartSpec | null>(initialChart?.chartSpec ?? null);
+  const [dailyTotals, setDailyTotals] = useState<DailyTotals | null>(null);
+  const [verification, setVerification] = useState<VerificationResult | null>(null);
   const [lastQuestion, setLastQuestion] = useState(initialChart?.question ?? "");
   const [showDebug, setShowDebug] = useState(false);
 
@@ -112,12 +115,13 @@ function CustomChartDialogInner({
     setInput("");
 
     try {
-      const spec = await generateChart.mutateAsync({
+      const result = await generateChart.mutateAsync({
         messages: newMessages,
         period,
       });
-      setCurrentSpec(spec);
-    } catch (err) {
+      setCurrentSpec(result.chartSpec);
+      setDailyTotals(result.dailyTotals);
+      } catch (err) {
       console.error("[generate-chart] mutation error:", err);
     }
   };
@@ -125,6 +129,8 @@ function CustomChartDialogInner({
   const handleStartOver = () => {
     setMessages([]);
     setCurrentSpec(null);
+    setDailyTotals(null);
+    setVerification(null);
     setLastQuestion("");
     setInput("");
     editingIdRef.current = null;
@@ -268,14 +274,64 @@ function CustomChartDialogInner({
                 </Button>
               </div>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowDebug((v) => !v)}
-                className="text-xs text-muted-foreground h-7 px-2"
-              >
-                {showDebug ? "Hide debug JSON" : "Show debug JSON"}
-              </Button>
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowDebug((v) => !v)}
+                  className="text-xs text-muted-foreground h-7 px-2"
+                >
+                  {showDebug ? "Hide debug JSON" : "Show debug JSON"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (currentSpec && dailyTotals) {
+                      setVerification(verifyChartData(currentSpec, dailyTotals));
+                    } else {
+                      setVerification({ status: "unavailable", reason: "No daily totals available (try regenerating the chart)" });
+                    }
+                  }}
+                  className="text-xs text-muted-foreground h-7 px-2"
+                >
+                  <ShieldCheck className="h-3 w-3 mr-1" />
+                  Verify accuracy
+                </Button>
+              </div>
+
+              {verification && (
+                <div className={`text-xs p-2 rounded-md border ${
+                  verification.status === "unavailable"
+                    ? "bg-muted/50 text-muted-foreground"
+                    : verification.accuracy! > 95
+                    ? "bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-400"
+                    : verification.accuracy! > 80
+                    ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-700 dark:text-yellow-400"
+                    : "bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-400"
+                }`}>
+                  {verification.status === "unavailable" ? (
+                    <p>{verification.reason}</p>
+                  ) : (
+                    <div className="space-y-1">
+                      <p className="font-medium">
+                        Accuracy: {verification.matched}/{verification.total} match ({verification.accuracy}%)
+                      </p>
+                      {verification.mismatches && verification.mismatches.length > 0 && (
+                        <div className="space-y-0.5 mt-1">
+                          <p className="text-[10px] font-medium opacity-70">Mismatches:</p>
+                          {verification.mismatches.map((m) => (
+                            <p key={m.date} className="text-[10px] font-mono">
+                              {m.date}: AI={m.ai}, actual={m.actual} (Δ{m.delta > 0 ? "+" : ""}{m.delta})
+                            </p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {showDebug && (
               <Textarea
                 readOnly
