@@ -96,31 +96,31 @@ export default function Changelog() {
               <li key={index} className="text-sm">
                 <div className="flex gap-2">
                   <span className="text-muted-foreground shrink-0">{entry.date}:</span>
-                  <div className="flex flex-col items-center">
-                    <span className="text-foreground self-start">{entry.text}</span>
-                    {entry.image && (
-                      <img
-                        src={`/changelog/${entry.image}`}
-                        alt={`Screenshot for ${entry.date} update`}
-                        className="mt-2 max-h-[200px] max-w-[280px] w-auto object-contain cursor-pointer"
-                        onClick={() => setLightboxSrc(`/changelog/${entry.image}`)}
-                      />
-                    )}
-                    {entry.images && (
-                      <div className="flex flex-wrap gap-2 mt-2 justify-center">
-                        {entry.images.map((img, i) => (
-                          <img
-                            key={i}
-                            src={`/changelog/${img}`}
-                            alt={`Screenshot ${i + 1} for ${entry.date} update`}
-                            className="max-h-[200px] max-w-[280px] w-auto object-contain cursor-pointer"
-                            onClick={() => setLightboxSrc(`/changelog/${img}`)}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  <span className="text-foreground">{entry.text}</span>
                 </div>
+                {entry.image && (
+                  <img
+                    loading="lazy"
+                    src={`/changelog/${entry.image}`}
+                    alt={`Screenshot for ${entry.date} update`}
+                    className="mt-2 ml-[52px] max-h-[200px] max-w-[280px] w-auto object-contain cursor-pointer"
+                    onClick={() => setLightboxSrc(`/changelog/${entry.image}`)}
+                  />
+                )}
+                {entry.images && (
+                  <div className="flex flex-wrap gap-2 mt-2 ml-[52px]">
+                    {entry.images.map((img, i) => (
+                      <img
+                        key={i}
+                        loading="lazy"
+                        src={`/changelog/${img}`}
+                        alt={`Screenshot ${i + 1} for ${entry.date} update`}
+                        className="max-h-[200px] max-w-[280px] w-auto object-contain cursor-pointer"
+                        onClick={() => setLightboxSrc(`/changelog/${img}`)}
+                      />
+                    ))}
+                  </div>
+                )}
               </li>
             ))}
           </ul>
