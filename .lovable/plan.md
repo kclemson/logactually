@@ -1,12 +1,17 @@
 
-# Remove semibold font from expanded group header
+
+# Remove speed from cardio list view labels
 
 ## Problem
-In `FoodItemsTable.tsx`, the expanded group header (line 550) has `font-semibold` on the description cell wrapper, but the collapsed group header (line 371) does not. When toggling between collapsed and expanded states, the text weight jumps from normal to semibold, causing a visible flicker/layout shift.
+Cardio exercises in the weight log list view currently show distance, time, **and** speed (e.g., "1.50 mi, 18:05, 5.0 mph"). The speed value makes the label long and creates a visual impression of trying to align with the Sets/Reps/Lbs columns. The user wants only distance + time shown.
 
 ## Fix
 
-### `src/components/FoodItemsTable.tsx`
-Remove `font-semibold` from the expanded group header's description wrapper on line 550. This makes it consistent with the collapsed header (line 371) and the WeightItemsTable headers, which all use normal font weight.
+### `src/components/WeightItemsTable.tsx`
+Remove lines 601-604 which calculate and append the speed value to the cardio label. The label will then show only distance and duration (e.g., "1.50 mi, 18:05").
 
-Single class removal, one line change.
+Before: `1.50 mi, 18:05, 5.0 mph`
+After: `1.50 mi, 18:05`
+
+Four lines removed, no other changes needed.
+
