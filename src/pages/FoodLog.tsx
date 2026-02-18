@@ -210,7 +210,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   };
 
   // Helper to create and save entry from food items
-  const createEntryFromItems = useCallback(async (items: FoodItem[], rawInput: string | null, sourceMealId?: string, groupName?: string | null, targetDate?: string) => {
+  const createEntryFromItems = useCallback(async (items: FoodItem[], rawInput: string | null, sourceMealId?: string, groupName?: string | null, targetDate?: string, skipSuggestionCheck?: boolean) => {
     const effectiveDate = targetDate || dateStr;
     const entryId = crypto.randomUUID();
     const itemsWithUids = items.map(item => ({
@@ -244,7 +244,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       foodInputRef.current?.clear();
       
       // Check for repeated patterns (skip demo mode and saved meal entries)
-      if (!isReadOnly && settings.suggestMealSaves && recentEntries && !sourceMealId) {
+      if (!isReadOnly && settings.suggestMealSaves && recentEntries && !sourceMealId && !skipSuggestionCheck) {
         const suggestion = detectRepeatedFoodEntry(items, recentEntries);
         if (suggestion && !isDismissed(suggestion.signatureHash)) {
           setSaveSuggestion(suggestion);
@@ -267,6 +267,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       undefined,            // no source_meal_id
       entry.group_name ?? null,
       todayStr,
+      true,                 // skip save-suggestion check for copies
     );
   }, [entries, createEntryFromItems]);
 
