@@ -1,45 +1,62 @@
 
-## Fix Pinned Chats UI Issues
 
-Seven issues to address across two files.
+## Ask AI Dialog Polish -- 7 Fixes
 
-### Changes
+### 1. Suggestion chips clipping -- use min-height instead of fixed height
 
-**File: `src/components/AskTrendsAIDialog.tsx`**
+The current `h-[10.5rem]` is a fixed height that clips chips when they wrap to more/fewer lines. Change to `min-h-[10.5rem]` so the container grows to fit all 4 chips without clipping, while still reserving minimum space to prevent layout shift.
 
-1. **Move pin icon out of response header, only show when pinCount > 0** -- Remove the pin icon button from the header area entirely when there are 0 pinned chats. When pinCount >= 1, show it in the header alongside the refresh button.
+### 2. Two spinning icons during loading -- merge into single "Analyzing..." button
 
-2. **Move pin icon to the "ask" view only (not the response view header)** -- The user's feedback says the entrypoint should be on the "ask AI" dialog, not on the AI response. The current code already only shows it in the `view === "ask"` branch, but it shows on the response too (since `data?.answer` doesn't hide the header icons). Fix: only show the pin badge icon when in the pre-response state OR when there's a response (it's fine in both -- the user's complaint is about it being on the response dialog header which is actually fine since it's still the ask dialog). Re-reading: the user says "the entrypoint for viewing pinned chats is on the 'ask AI' dialog, not the AI response" -- meaning the pin icon in the header should NOT show when a response is displayed. Only show it on the initial ask screen.
+Currently: the Ask button shows a spinner AND there's a separate "Analyzing your data..." message below. Fix: when `isPending`, hide the textarea and show the submitted question in the same italic style as the response view. Replace the Ask button with a disabled "Analyzing..." button (with spinner inside it). Remove the separate loading indicator below.
 
-3. **Style the Pin button to match "Ask another question"** -- Change from gray muted styling to use `variant="outline"` Button styling so it looks equally clickable. Use `text-foreground` instead of `text-muted-foreground`.
+### 3. Question styling during loading -- match response view
 
-4. **Remove the temporary "Pinned!" feedback** -- Since the button text changes from "Pin" to "Pinned", that's sufficient feedback. Remove the `pinFeedback` state and `setTimeout` logic entirely.
+During loading, show the submitted question as `text-xs text-muted-foreground italic` (same as the response view), not inside the full-size textarea. This means when `isPending`, we hide the textarea and show the question text inline instead.
 
-5. **Fix header icon spacing and alignment** -- Increase gap between refresh and pin icons, ensure vertical alignment with the X close button by adjusting positioning.
+### 4. Pin button width stability -- use fixed min-width
 
-**File: `src/components/PinnedChatsView.tsx`**
+The "Pin" button changes to "Pinned" which is wider, causing the adjacent button to resize. Fix: set `min-w-[5.5rem]` on the Pin button so it's always wide enough for "Pinned" text and doesn't change width.
 
-6. **Fix Back button overlapping with X close** -- The "Back" button is positioned where it conflicts with the dialog's built-in X close button. Move it to the left side or adjust positioning so they don't overlap.
+### 5. Scroll to expanded pinned chat
 
-7. **Replace X unpin with Trash icon + confirm popover** -- Use the existing `DeleteConfirmPopover` component pattern (Trash2 icon with a confirmation popover) instead of a plain X icon for unpinning.
+When user expands a pinned chat near the bottom, scroll it into view. Use a ref callback with `scrollIntoView({ behavior: 'smooth', block: 'nearest' })` on the expanded content container after it renders.
+
+### 6. "Show/Hide answer" to "Show/Hide response"
+
+Replace the word "answer" with "response" in the expand/collapse toggle text.
+
+### 7. Pinned chats header -- use standard back-arrow pattern
+
+The current layout has "Back" button + Pin icon + "Pinned chats" text all crammed together. Better pattern: use the Pin icon as a decorative element in the title, and make the back button a simple left-arrow icon button (no text). Layout: `[<-] Pin Pinned chats` where `<-` is a small icon-only button, keeping it clean and standard.
+
+Actually, a cleaner approach: make the header just show "Pinned chats" with the Pin icon as the dialog title (like the ask view uses Sparkles + title), and put the Back button as a ghost button below or as a simple text link. Looking at the screenshot, the issue is "Back" text + icon + title all on one line. The standard pattern is: icon-only back arrow on the left, then centered or left-aligned title. Let's use: a small `ArrowLeft` icon button on the far left, then `Pin icon + "Pinned chats"` as the title text. This gives a clean navigation feel without the text "Back" taking up space awkwardly.
+
+---
 
 ### Technical Details
 
-#### `AskTrendsAIDialog.tsx`
+#### File: `src/components/AskTrendsAIDialog.tsx`
 
-- Remove `pinFeedback` state and `setTimeout` logic
-- Header icons container: only render pin icon when `pinCount > 0` AND when not showing a response (`!data?.answer && !isPending`)
-- Pin badge: soften the badge styling -- use smaller, more subtle colors (e.g., `bg-muted text-muted-foreground` or `bg-primary/20 text-primary` instead of solid `bg-primary text-primary-foreground`)
-- Increase gap in the icons container from `gap-1` to `gap-2`
-- Fix vertical alignment: adjust `top-4` and `right-12` positioning to properly align with the dialog close X
-- Pin button on response: style as `variant="outline"` Button with `size="sm"` to match "Ask another question", with `text-foreground` for icon and text
+**Chips container (line 182)**: Change `h-[10.5rem]` to `min-h-[10.5rem]`.
 
-#### `PinnedChatsView.tsx`
+**Loading state (lines 198-250)**: Restructure the input/loading section:
+- When `isPending`: hide textarea, show submitted question as `<p className="text-xs text-muted-foreground italic">`, show a disabled button with `<Loader2 className="h-4 w-4 animate-spin mr-1.5" /> Analyzing...`
+- Remove the separate loading indicator block (lines 245-250)
 
-- Move "Back" button to the left or make it a text link that doesn't overlap with the dialog X (which is at `right-4 top-4`)
-- Replace X unpin button with `DeleteConfirmPopover` from existing component. This requires adding `openPopoverId` / `setOpenPopoverId` state to manage which popover is open
-- Pass appropriate label ("Unpin chat") and description ("This will remove the pinned chat") to the confirm popover
+**Pin button (lines 286-295)**: Add `min-w-[5.5rem]` to the Button className.
+
+#### File: `src/components/PinnedChatsView.tsx`
+
+**Header (lines 18-30)**: Replace the Back button + title layout:
+- Use `ArrowLeft` icon from lucide-react as an icon-only ghost button
+- Then `Pin` icon + "Pinned chats" as the title span
+- Layout: `flex items-center gap-2`
+
+**Expand/collapse text (line 79)**: Change "Hide answer"/"Show answer" to "Hide response"/"Show response".
+
+**Scroll on expand (line 75)**: Add a ref to the card div, and after expanding, call `scrollIntoView({ behavior: 'smooth', block: 'nearest' })` on the card element. Use a callback ref or a small timeout to ensure the expanded content has rendered.
 
 ### Files to modify
-- `src/components/AskTrendsAIDialog.tsx` -- header icons, pin button styling, remove pinFeedback
-- `src/components/PinnedChatsView.tsx` -- fix back button overlap, replace X with trash + confirm
+- `src/components/AskTrendsAIDialog.tsx`
+- `src/components/PinnedChatsView.tsx`
