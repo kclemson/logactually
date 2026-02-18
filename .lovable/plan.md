@@ -1,24 +1,17 @@
 
 
-## Fix: Include exercise_key and exercise_subtype in chart generation context
+## Change debug JSON from `pre` to resizable `textarea`
 
-### Problem
-The `generate-chart` edge function queries `exercise_key` and `exercise_subtype` from the database (line 132) but never includes them in the text context sent to the AI model. Only `description` (the display name) is sent. This means the AI cannot distinguish between subtypes like walking vs running under `walk_run`, and cannot reliably group exercises by their canonical key.
+**File**: `src/components/CreateChartDialog.tsx`
 
-### Fix
-In `supabase/functions/generate-chart/index.ts`, line 188, add `exercise_key` and `exercise_subtype` to the parts array:
+Replace the `<pre>` block (lines 212-216) with a `<Textarea>` (already imported) that is `readOnly`, uses the same small font styling, and has `resize` enabled so you can drag it to fit a screenshot.
 
-```typescript
-const parts = [`date=${s.logged_date}`, `key=${s.exercise_key}`, `name="${s.description}"`];
-if (s.exercise_subtype) parts.push(`subtype=${s.exercise_subtype}`);
-```
+### Technical details
 
-This also addresses the "stuck at generating" bug investigation -- while we're in this file, we should also fix the duplicate key warning and add the diagnostic logging from the previous approved plan.
+- Swap `<pre>` for `<Textarea readOnly>` with `value={JSON.stringify(currentSpec, null, 2)}`
+- Classes: `text-[10px] font-mono bg-muted/50 rounded p-2 min-h-[100px] resize-y`
+- Remove `max-h` constraint so you can resize freely
+- No new imports needed (`Textarea` is already imported)
 
-### Files to modify
-- `supabase/functions/generate-chart/index.ts` -- add `key=` and `subtype=` to exercise context lines
-- `src/pages/Trends.tsx` -- fix duplicate `walk_run` React key (use composite key with index)
-- `src/hooks/useGenerateChart.ts` -- add diagnostic console.log and guard for missing chartSpec
-- `src/components/CreateChartDialog.tsx` -- add console.error in catch block
+Single-line change in one file.
 
-### All changes are small, single-line additions.
