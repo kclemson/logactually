@@ -547,7 +547,7 @@ export function FoodItemsTable({
                         />
                       </div>
                     )}
-                    <div className={cn("flex-1 min-w-0 overflow-hidden max-h-[3rem] rounded pl-1 py-1 font-semibold focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg", compact && "text-sm")}>
+                    <div className={cn("flex-1 min-w-0 overflow-hidden max-h-[3rem] rounded pl-1 py-1 focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg", compact && "text-sm")}>
                       <DescriptionCell
                         value={groupName}
                         onSave={(newName) => onUpdateGroupName?.(boundary.entryId, newName)}
