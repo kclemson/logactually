@@ -1,53 +1,49 @@
 
 
-# Extract full nutrition data from barcode lookups
+# Tappable calorie burn override from the expanded panel
 
-## Problem
+## What changes
 
-The `lookup-upc` edge function only extracts calories, protein, carbs, and fat from Open Food Facts, even though the API provides sodium, fiber, sugar, saturated fat, and cholesterol. The AI fallback prompt also only requests the basic four. The client hook (`useScanBarcode`) similarly only passes those four fields through, so scanned items always show 0 for the right-column nutrients.
+When calorie burn estimates are shown in the expanded exercise panel ("Estimated calories burned: ~80-150"), tapping on that line reveals an inline input for each exercise, letting the user type an exact calorie burn number. This gets saved to `exercise_metadata.calories_burned`, which the system already treats as an authoritative override (skipping the estimation logic entirely).
 
-## Changes
+## UX flow
 
-### 1. `supabase/functions/lookup-upc/index.ts`
+1. User expands an exercise entry via the chevron
+2. Sees "Estimated calories burned: ~80-150 cal"
+3. Taps the calorie burn line
+4. The text is replaced by one input per exercise in the entry, pre-filled with the midpoint of the range (or the existing override if one was already set)
+5. User types a number and presses Enter or taps away
+6. The value is saved to `exercise_metadata.calories_burned` on that exercise's database row
+7. The line reverts to text, now showing the exact number instead of a range
 
-**Expand the `nutriments` interface** to include the missing fields:
-- `fiber_serving` / `fiber_100g`
-- `sugars_serving` / `sugars_100g`
-- `saturated-fat_serving` / `saturated-fat_100g`
-- `sodium_serving` / `sodium_100g`
-- `cholesterol_serving` / `cholesterol_100g`
+For single-exercise entries: one input. For multi-exercise entries: one labeled input per exercise.
 
-**Extract them** using the same per-serving-then-per-100g pattern already used for the basic four. Note: OFF stores sodium in grams but our app uses milligrams, so multiply by 1000. Same for cholesterol (OFF uses mg already, but worth confirming at extraction time).
+Tapping "Estimated calories burned" again (or tapping elsewhere) collapses back to the display text.
 
-**Add them to the JSON response** alongside the existing fields.
+## Technical approach
 
-**Update the AI fallback prompt** to request `fiber`, `sugar`, `saturated_fat`, `sodium` (mg), and `cholesterol` (mg) in addition to the existing fields.
+### `src/components/WeightItemsTable.tsx`
 
-**Parse the expanded AI response** and include those fields in the returned JSON.
+- Extract the calorie burn content into a new small component `CalorieBurnInline` rendered inside the expanded panel's `extraContent`
+- Add local state `editingCalorieBurn` (boolean) to toggle between display and edit mode
+- In edit mode, render one small input per exercise in the entry, each showing the current `exercise_metadata.calories_burned` value (or the estimated midpoint as placeholder)
+- On commit (Enter/blur), call a new callback prop `onUpdateCalorieBurn(itemIndex, calorieValue)` which the parent page provides
 
-### 2. `src/hooks/useScanBarcode.ts`
+### `src/pages/WeightLog.tsx`
 
-**Expand the `LookupResult` interface** to include the new optional fields: `fiber`, `sugar`, `saturated_fat`, `sodium`, `cholesterol`.
+- Add `handleUpdateCalorieBurn(index: number, value: number)` callback
+- This merges `{ calories_burned: value }` into the item's existing `exercise_metadata` and calls `updateSet.mutate`
+- Pass this callback down to `WeightItemsTable`
 
-**Pass them through** in both `lookupUpc` (response mapping) and `createFoodItemFromScan` (FoodItem creation).
+### No other files change
 
-### 3. No other files need changes
-
-`FoodItem` already has `fiber`, `sugar`, `saturated_fat`, `sodium`, and `cholesterol` as optional fields. The `DetailDialog` food field layout already displays them. Once the scan result includes these values, they'll appear automatically.
-
-## Technical details
-
-Open Food Facts nutriment key names (note the hyphens, not underscores):
-- `fiber_serving` / `fiber_100g`
-- `sugars_serving` / `sugars_100g` (note: plural "sugars")
-- `saturated-fat_serving` / `saturated-fat_100g` (hyphenated)
-- `sodium_serving` / `sodium_100g` (in grams -- multiply by 1000 for mg)
-- `cholesterol_serving` / `cholesterol_100g` (in mg)
+- `calorie-burn.ts` already handles `exercise_metadata.calories_burned` as an authoritative override (returns `{ type: 'exact', value }`)
+- The display formatting already handles exact values vs ranges
+- `processExerciseSaveUpdates` in DetailDialog already handles metadata merging, but we'll do a simpler direct merge here since we're only touching one key
 
 ## Files changed
 
 | File | What |
 |------|------|
-| `supabase/functions/lookup-upc/index.ts` | Extract and return fiber, sugar, saturated_fat, sodium, cholesterol from OFF + AI |
-| `src/hooks/useScanBarcode.ts` | Pass new fields through LookupResult and createFoodItemFromScan |
-
+| `src/components/WeightItemsTable.tsx` | Make calorie burn line tappable, show inline input(s) in edit mode, call new callback on save |
+| `src/pages/WeightLog.tsx` | Add `handleUpdateCalorieBurn` callback that merges calories_burned into exercise_metadata and persists |
