@@ -1,41 +1,91 @@
 
-## Add strongly-typed navigation to AI-generated charts
 
-### Approach
-Extend the `ChartSpec` schema so the AI explicitly declares two things:
-1. **`dataSource`** -- which log the chart is based on: `"food"`, `"exercise"`, `"custom"`, or `"mixed"`
-2. **`rawDate`** -- a `yyyy-MM-dd` date string in every data point (already the convention used by all built-in charts)
+## Click-to-edit saved charts, edit mode for deletes, and rename dialog
 
-This removes any need for heuristic date-pattern matching or keyword sniffing on titles.
+### Summary
 
-### Changes
+Three changes bundled together:
 
-**1. `src/components/trends/DynamicChart.tsx`** -- Update the `ChartSpec` interface:
-- Add `dataSource?: "food" | "exercise" | "custom" | "mixed"` (optional so existing saved charts without it still render fine)
+1. **Rename `CreateChartDialog` to `CustomChartDialog`** -- reflects that it now handles both creation and editing
+2. **Click a saved chart to open the refinement dialog** -- pre-populated with the original prompt, chart, and AI note
+3. **Edit mode toggle for delete icons** -- a single pencil icon in the "My Charts" header toggles delete icon visibility on each chart
 
-**2. `supabase/functions/generate-chart/index.ts`** -- Update the system prompt and output mapping:
-- Add `dataSource` to the JSON schema instructions: `"dataSource": "food" or "exercise" or "custom" or "mixed"`
-- Require every item in the `data` array to include a `"rawDate": "yyyy-MM-dd"` field
-- Map `dataSource` through to the returned `chartSpec`
+---
 
-**3. `src/pages/Trends.tsx`** -- Wire up `onNavigate` on saved charts:
-- Simple route map: `food` -> `/`, `exercise` -> `/weights`, `custom` -> `/other`, `mixed`/undefined -> no navigation
-- Pass `onNavigate` to `DynamicChart` using `rawDate` from the clicked data point (already how `useChartInteraction` works -- it reads `data.rawDate`)
+### Changes by file
 
-**4. `src/components/trends/DynamicChart.tsx`** -- Ensure `rawDate` is forwarded:
-- When building `chartData`, preserve the `rawDate` field from each data item (it's already spread via `...d`, so this works automatically)
-- The `CompactChartTooltip`'s `rawDate` prop currently reads `chartData[index]?.[xAxis.field]` -- update it to read `chartData[index]?.rawDate` instead, matching the built-in chart convention
+**1. Rename: `src/components/CreateChartDialog.tsx` -> `src/components/CustomChartDialog.tsx`**
+
+- Rename the file
+- Rename the exported components: `CreateChartDialog` -> `CustomChartDialog`, `CreateChartDialogInner` -> `CustomChartDialogInner`
+- Add optional `initialChart` prop: `{ id: string; question: string; chartSpec: ChartSpec }`
+- When `initialChart` is provided:
+  - Initialize `currentSpec`, `lastQuestion`, and `messages` from the saved chart
+  - Dialog title shows "Edit Chart" instead of "Create Chart"
+  - "Save to Trends" button calls `updateMutation` (overwrite existing) instead of `saveMutation`
+- "Start over" clears all state; subsequent save creates a new chart via `saveMutation`
+- Interface becomes:
+  ```typescript
+  interface CustomChartDialogProps {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    period: number;
+    initialChart?: { id: string; question: string; chartSpec: ChartSpec };
+  }
+  ```
+
+**2. `src/hooks/useSavedCharts.ts`** -- Add `updateMutation`
+
+```typescript
+const updateMutation = useMutation({
+  mutationFn: async ({ id, question, chartSpec }) => {
+    const { error } = await supabase
+      .from("saved_charts")
+      .update({ question, chart_spec: chartSpec })
+      .eq("id", id);
+    if (error) throw error;
+  },
+  onSuccess: () => queryClient.invalidateQueries({ queryKey: ["saved-charts"] }),
+});
+```
+
+Return `updateMutation` alongside the existing exports.
+
+**3. Database migration** -- Add UPDATE RLS policy
+
+```sql
+CREATE POLICY "Users can update own saved charts"
+ON public.saved_charts FOR UPDATE
+USING (auth.uid() = user_id AND NOT is_read_only_user(auth.uid()));
+```
+
+**4. `src/pages/Trends.tsx`** -- Wire up editing and edit mode
+
+- Update import: `CreateChartDialog` -> `CustomChartDialog`
+- Add state:
+  - `editingChart: { id: string; question: string; chartSpec: ChartSpec } | null`
+  - `isEditMode: boolean` (default false)
+- "My Charts" section header gets a pencil icon button that toggles `isEditMode`
+- Each saved chart becomes clickable (opens `CustomChartDialog` with `initialChart` set)
+- `DeleteConfirmPopover` only renders when `isEditMode` is true
+- Remove direct `onNavigate` from saved charts (navigation happens via the chart inside the dialog instead)
+- Render `CustomChartDialog` with `initialChart` when `editingChart` is set; on close, clear `editingChart`
+
+---
+
+### UX flow
+
+1. **Default view**: Saved charts render cleanly, no delete icons visible
+2. **Tap pencil icon** in "My Charts" header: Delete icons appear on each chart
+3. **Tap a chart**: Opens the dialog showing the original prompt, rendered chart, AI note, and a refine input
+4. **Refine**: Type a follow-up (e.g. "make it a line chart"), hit Refine -- generates updated chart
+5. **Save**: Overwrites the existing saved chart
+6. **Start over**: Clears state; saving after this creates a new chart
+7. **Close dialog**: Discards unsaved changes
 
 ### What stays the same
-- Existing saved charts without `dataSource`/`rawDate` continue to render normally (just without click-to-navigate)
-- Built-in charts are untouched
-- The `useChartInteraction` hook already calls `onNavigate(data.rawDate)` -- no changes needed there
 
-### Technical detail: system prompt addition
-```
-"dataSource": "food" or "exercise" or "custom" or "mixed"
-```
-And in the data array rule:
-```
-Every object in "data" MUST include a "rawDate" field containing the date in "yyyy-MM-dd" format.
-```
+- Built-in charts are untouched
+- The `DynamicChart` component and `useChartInteraction` hook are unchanged
+- Existing saved charts without `dataSource`/`rawDate` still render (just without click-to-navigate inside the dialog)
+
