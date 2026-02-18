@@ -1,12 +1,15 @@
 
-## Make demo unlock button red
 
-Add a conditional red style to the toggle button when the demo account is unlocked (writable).
+## Add Changelog Entry for Pinned Chats
 
-### Change
+### Changes
 
-**`src/pages/Admin.tsx` (line 183)** -- add conditional class:
-- When unlocked: red text and red border (`text-destructive border-destructive`)
-- When locked: keep current neutral styling
+1. **Copy the uploaded screenshot** to `public/changelog/pinned-chats.png`
 
-This is a one-line className change using the existing `cn()` utility and the `demoLocked` state.
+2. **`src/pages/Changelog.tsx`** -- Add a new entry at the top of `CHANGELOG_ENTRIES`:
+   ```
+   { date: "Feb-18", text: "Added the ability to pin AI responses on the Trends page for later reference. Pinned chats are accessible from the pin icon next to 'Ask AI', with the count shown as a badge.", image: "pinned-chats.png" }
+   ```
+
+3. **`src/pages/Changelog.tsx`** -- Update `LAST_UPDATED` from `"Feb-18-26"` to remain the same since it's already Feb-18 (no change needed).
+
