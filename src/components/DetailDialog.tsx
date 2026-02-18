@@ -166,7 +166,7 @@ function FieldViewItem({
       <span className={cn("text-xs text-muted-foreground shrink-0", labelClassName)}>
         {field.label}:
       </span>
-      <span className="text-sm min-w-0 truncate pl-2">
+      <span className="text-sm min-w-0 truncate">
         {displayValue(field, activeValues, activeUnits?.[field.key])}
       </span>
       {field.unitToggle && (
