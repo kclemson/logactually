@@ -538,14 +538,14 @@ export function buildFoodDetailFields(item: Record<string, any>): FieldConfig[] 
     { key: 'description', label: 'Name', type: 'text', maxWidth: 'sm' },
     { key: 'portion', label: 'Portion', type: 'text', maxWidth: 'sm' },
     { key: 'calories', label: 'Calories', type: 'number', unit: 'cal', min: 0 },
+    { key: 'sodium', label: 'Sodium', type: 'number', unit: 'mg', min: 0 },
     { key: 'protein', label: 'Protein', type: 'number', unit: 'g', min: 0 },
-    { key: 'carbs', label: 'Carbs', type: 'number', unit: 'g', min: 0 },
     { key: 'fiber', label: 'Fiber', type: 'number', unit: 'g', min: 0 },
+    { key: 'carbs', label: 'Carbs', type: 'number', unit: 'g', min: 0 },
     { key: 'sugar', label: 'Sugar', type: 'number', unit: 'g', min: 0 },
     { key: 'fat', label: 'Fat', type: 'number', unit: 'g', min: 0 },
-    { key: 'saturated_fat', label: 'Saturated Fat', type: 'number', unit: 'g', min: 0 },
-    { key: 'sodium', label: 'Sodium', type: 'number', unit: 'mg', min: 0 },
     { key: 'cholesterol', label: 'Cholesterol', type: 'number', unit: 'mg', min: 0 },
+    { key: 'saturated_fat', label: 'Saturated Fat', type: 'number', unit: 'g', min: 0 },
   ];
 }
 
