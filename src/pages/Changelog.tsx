@@ -140,7 +140,7 @@ export default function Changelog() {
           onClick={() => setLightboxSrc(null)}
         >
           <div
-            className="relative max-w-3xl w-auto mx-4 bg-background rounded-lg p-2"
+            className="relative max-w-3xl w-auto mx-4 bg-background p-2"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -150,7 +150,7 @@ export default function Changelog() {
             >
               <X className="h-5 w-5" />
             </button>
-            <img src={lightboxSrc} alt="Enlarged screenshot" className="max-h-[85vh] w-auto object-contain rounded" />
+            <img src={lightboxSrc} alt="Enlarged screenshot" className="max-h-[85vh] w-auto object-contain" />
           </div>
         </div>
       )}
