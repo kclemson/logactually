@@ -45,6 +45,28 @@ CRITICAL: The "data" array MUST contain fully populated objects with real comput
 
 "dataSource" indicates which log the chart primarily uses: "food" for food/nutrition data, "exercise" for exercise/weight data, "custom" for custom log data, or "mixed" if combining multiple sources.
 
+AGGREGATION MODES — choose the right one based on what the user is asking:
+
+1. TIME-SERIES (default): One data point per date. Use when the user asks about trends "over time", "per day", "last N days", etc. The x-axis shows calendar dates.
+
+2. CATEGORICAL: One data point per category bucket, aggregated across the entire period. Use when the user asks to group "by" a non-date dimension. The x-axis shows category labels, NOT dates. The data array must have exactly one entry per bucket.
+
+For categorical charts, set rawDate to the most recent date that contributed data to that bucket.
+
+Common categorical patterns:
+- "by hour of day" → 24 buckets max, labeled "12am"–"11pm", aggregate using created_at timestamps
+- "by day of week" → 7 buckets, ordered by weekday name
+
+COMPARING GROUPS (e.g. "workout days vs rest days"):
+- The result is categorical with one bucket per group
+- Always explain in aiNote exactly how you defined each group
+- Use only the data provided to determine group membership
+
+DATA INTEGRITY:
+- Never fabricate or interpolate values. Only return values directly computable from the provided logs.
+- If a bucket has no data, omit it or use zero. Do not invent values.
+- All numeric values in the data array must be non-negative.
+
 Rules:
 - Use short, readable labels for the x-axis (e.g., "6am", "Mon", "Jan 5")
 - Choose a color hex code that fits the data type (blue for calories, green for protein, teal for custom logs, purple for exercise)

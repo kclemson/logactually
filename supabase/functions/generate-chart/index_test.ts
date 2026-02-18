@@ -99,6 +99,21 @@ function assertValidChartSpec(spec: unknown): ChartSpec {
   return cs;
 }
 
+/** Assert all data values for the dataKey are numeric and non-negative */
+function assertNonNegativeNumericValues(cs: ChartSpec) {
+  for (let i = 0; i < cs.data.length; i++) {
+    const val = cs.data[i][cs.dataKey];
+    if (typeof val !== "number") {
+      throw new Error(
+        `data[${i}].${cs.dataKey} should be a number, got ${typeof val}: ${JSON.stringify(val)}`,
+      );
+    }
+    if (val < 0) {
+      throw new Error(`data[${i}].${cs.dataKey} is negative: ${val}`);
+    }
+  }
+}
+
 // ---- Tests ----
 
 let token: string;
@@ -160,6 +175,7 @@ Deno.test({
       period: 7,
     });
     assertExists(data.error, "should return an error for empty messages");
+    await Promise.resolve(); // consume
   },
   sanitizeResources: false,
   sanitizeOps: false,
@@ -180,6 +196,113 @@ Deno.test({
       assertValidChartSpec(data.chartSpec);
     } else {
       assertExists(data.error, "should have either chartSpec or error");
+    }
+  },
+  sanitizeResources: false,
+  sanitizeOps: false,
+});
+
+// ---- Hallucination detection tests ----
+
+Deno.test({
+  name: "hour-of-day chart has at most 24 data points (categorical)",
+  fn: async () => {
+    const { status, data } = await callGenerateChart(token, {
+      messages: [{ role: "user", content: "Average calories by hour of day" }],
+      period: 30,
+    });
+    assertEquals(status, 200);
+    if (data.error) throw new Error(`Unexpected error: ${data.error}`);
+    const cs = assertValidChartSpec(data.chartSpec);
+    assertNonNegativeNumericValues(cs);
+    if (cs.data.length > 24) {
+      throw new Error(
+        `Hour-of-day chart should have at most 24 data points, got ${cs.data.length}`,
+      );
+    }
+  },
+  sanitizeResources: false,
+  sanitizeOps: false,
+});
+
+Deno.test({
+  name: "day-of-week chart has at most 7 data points (categorical)",
+  fn: async () => {
+    const { status, data } = await callGenerateChart(token, {
+      messages: [{ role: "user", content: "Calories by day of week" }],
+      period: 30,
+    });
+    assertEquals(status, 200);
+    if (data.error) throw new Error(`Unexpected error: ${data.error}`);
+    const cs = assertValidChartSpec(data.chartSpec);
+    assertNonNegativeNumericValues(cs);
+    if (cs.data.length > 7) {
+      throw new Error(
+        `Day-of-week chart should have at most 7 data points, got ${cs.data.length}`,
+      );
+    }
+  },
+  sanitizeResources: false,
+  sanitizeOps: false,
+});
+
+Deno.test({
+  name: "daily calories last 7 days has at most 7 data points (time-series)",
+  fn: async () => {
+    const { status, data } = await callGenerateChart(token, {
+      messages: [{ role: "user", content: "Daily calories last 7 days" }],
+      period: 7,
+    });
+    assertEquals(status, 200);
+    if (data.error) throw new Error(`Unexpected error: ${data.error}`);
+    const cs = assertValidChartSpec(data.chartSpec);
+    assertNonNegativeNumericValues(cs);
+    if (cs.data.length > 7) {
+      throw new Error(
+        `7-day time-series should have at most 7 data points, got ${cs.data.length}`,
+      );
+    }
+  },
+  sanitizeResources: false,
+  sanitizeOps: false,
+});
+
+Deno.test({
+  name: "workout vs rest days is categorical with at most 3 buckets",
+  fn: async () => {
+    const { status, data } = await callGenerateChart(token, {
+      messages: [{ role: "user", content: "Average protein on workout days vs rest days" }],
+      period: 30,
+    });
+    assertEquals(status, 200);
+    if (data.error) throw new Error(`Unexpected error: ${data.error}`);
+    const cs = assertValidChartSpec(data.chartSpec);
+    assertNonNegativeNumericValues(cs);
+    if (cs.data.length > 3) {
+      throw new Error(
+        `Workout vs rest comparison should have at most 3 buckets, got ${cs.data.length}`,
+      );
+    }
+  },
+  sanitizeResources: false,
+  sanitizeOps: false,
+});
+
+Deno.test({
+  name: "exercise frequency by day of week has at most 7 data points",
+  fn: async () => {
+    const { status, data } = await callGenerateChart(token, {
+      messages: [{ role: "user", content: "Exercise frequency by day of week" }],
+      period: 30,
+    });
+    assertEquals(status, 200);
+    if (data.error) throw new Error(`Unexpected error: ${data.error}`);
+    const cs = assertValidChartSpec(data.chartSpec);
+    assertNonNegativeNumericValues(cs);
+    if (cs.data.length > 7) {
+      throw new Error(
+        `Day-of-week exercise chart should have at most 7 data points, got ${cs.data.length}`,
+      );
     }
   },
   sanitizeResources: false,

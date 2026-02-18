@@ -349,7 +349,7 @@ const Trends = () => {
                 onClick={() => setEditingChart({ id: chart.id, question: chart.question, chartSpec: chart.chart_spec })}
               >
                 <DynamicChart
-                  spec={chart.chart_spec}
+                  spec={{ ...chart.chart_spec, aiNote: undefined }}
                   headerAction={
                     isEditMode ? (
                       <div onClick={(e) => e.stopPropagation()}>
