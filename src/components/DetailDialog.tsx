@@ -159,7 +159,7 @@ function FieldViewGrid({
                   {displayValue(field, activeValues, activeUnits?.[field.key])}
                 </span>
                 {field.pairedField && (
-                  <span className="text-sm shrink-0 w-[7.5rem] text-right">
+                  <span className="text-sm shrink-0 w-[7.5rem] text-left pl-2">
                     {displayValue(field.pairedField, activeValues)}
                   </span>
                 )}
@@ -265,7 +265,7 @@ function FieldEditGrid({
                             updateDraft('exercise_key', '');
                           }
                         }}
-                        className="flex h-6 w-[7.5rem] shrink-0 rounded-md border border-input bg-background px-1 py-0 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="flex h-6 w-[7.5rem] shrink-0 rounded-md border border-input bg-background px-1.5 py-0 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         {field.pairedField.options?.map(opt => (
                           <option key={opt.value} value={opt.value}>{opt.label}</option>
