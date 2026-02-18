@@ -210,6 +210,33 @@ export type Database = {
         }
         Relationships: []
       }
+      pinned_chats: {
+        Row: {
+          answer: string
+          created_at: string
+          id: string
+          mode: string
+          question: string
+          user_id: string
+        }
+        Insert: {
+          answer: string
+          created_at?: string
+          id?: string
+          mode: string
+          question: string
+          user_id: string
+        }
+        Update: {
+          answer?: string
+          created_at?: string
+          id?: string
+          mode?: string
+          question?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
