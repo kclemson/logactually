@@ -7,12 +7,12 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, ChartTitle, ChartSubtitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { UtensilsCrossed, Dumbbell, ClipboardList, Pin, Plus, BarChart3 } from "lucide-react";
+import { UtensilsCrossed, Dumbbell, ClipboardList, Pin, Plus, BarChart3, Pencil } from "lucide-react";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { useWeightTrends, ExerciseTrend } from "@/hooks/useWeightTrends";
-import { CreateChartDialog } from "@/components/CreateChartDialog";
+import { CustomChartDialog } from "@/components/CustomChartDialog";
 import { useSavedCharts } from "@/hooks/useSavedCharts";
-import { DynamicChart } from "@/components/trends/DynamicChart";
+import { DynamicChart, type ChartSpec } from "@/components/trends/DynamicChart";
 import { DeleteConfirmPopover } from "@/components/DeleteConfirmPopover";
 
 import { useUserSettings } from "@/hooks/useUserSettings";
@@ -71,6 +71,8 @@ const Trends = () => {
   const [exerciseInitialView, setExerciseInitialView] = useState<"ask" | "pinned">("ask");
   const { pinCount } = usePinnedChats();
   const [createChartOpen, setCreateChartOpen] = useState(false);
+  const [editingChart, setEditingChart] = useState<{ id: string; question: string; chartSpec: ChartSpec } | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
   const { savedCharts, deleteMutation } = useSavedCharts();
   const [deletePopoverId, setDeletePopoverId] = useState<string | null>(null);
   const handleExerciseBarClick = useCallback((date: string) => {
@@ -330,29 +332,41 @@ const Trends = () => {
 
       {/* My Charts Section */}
       {savedCharts.length > 0 && (
-        <CollapsibleSection title="My Charts" icon={BarChart3} iconClassName="text-emerald-500 dark:text-emerald-400" defaultOpen={true} storageKey="trends-my-charts">
+        <CollapsibleSection title="My Charts" icon={BarChart3} iconClassName="text-emerald-500 dark:text-emerald-400" defaultOpen={true} storageKey="trends-my-charts" headerAction={
+          <button
+            onClick={(e) => { e.stopPropagation(); setIsEditMode((v) => !v); }}
+            className={`p-0.5 rounded transition-colors ${isEditMode ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+            aria-label="Toggle edit mode"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+        }>
           <div className="grid grid-cols-2 gap-2">
-            {savedCharts.map((chart) => {
-              const routeMap: Record<string, string> = { food: "/", exercise: "/weights", custom: "/other" };
-              const route = chart.chart_spec.dataSource ? routeMap[chart.chart_spec.dataSource] : undefined;
-              return (
-              <DynamicChart
+            {savedCharts.map((chart) => (
+              <div
                 key={chart.id}
-                spec={chart.chart_spec}
-                onNavigate={route ? (date) => navigate(`${route}?date=${date}`) : undefined}
-                headerAction={
-                  <DeleteConfirmPopover
-                    id={chart.id}
-                    label="Delete chart?"
-                    description="This chart will be permanently removed."
-                    onDelete={() => deleteMutation.mutate(chart.id)}
-                    openPopoverId={deletePopoverId}
-                    setOpenPopoverId={setDeletePopoverId}
-                  />
-                }
-              />
-              );
-            })}
+                className="cursor-pointer"
+                onClick={() => setEditingChart({ id: chart.id, question: chart.question, chartSpec: chart.chart_spec })}
+              >
+                <DynamicChart
+                  spec={chart.chart_spec}
+                  headerAction={
+                    isEditMode ? (
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <DeleteConfirmPopover
+                          id={chart.id}
+                          label="Delete chart?"
+                          description="This chart will be permanently removed."
+                          onDelete={() => deleteMutation.mutate(chart.id)}
+                          openPopoverId={deletePopoverId}
+                          setOpenPopoverId={setDeletePopoverId}
+                        />
+                      </div>
+                    ) : undefined
+                  }
+                />
+              </div>
+            ))}
           </div>
         </CollapsibleSection>
       )}
@@ -591,7 +605,13 @@ const Trends = () => {
       )}
       <AskTrendsAIDialog mode="food" open={foodAIOpen} onOpenChange={setFoodAIOpen} initialView={foodInitialView} />
       <AskTrendsAIDialog mode="exercise" open={exerciseAIOpen} onOpenChange={setExerciseAIOpen} initialView={exerciseInitialView} />
-      <CreateChartDialog open={createChartOpen} onOpenChange={setCreateChartOpen} period={selectedPeriod} />
+      <CustomChartDialog open={createChartOpen} onOpenChange={setCreateChartOpen} period={selectedPeriod} />
+      <CustomChartDialog
+        open={!!editingChart}
+        onOpenChange={(open) => { if (!open) setEditingChart(null); }}
+        period={selectedPeriod}
+        initialChart={editingChart ?? undefined}
+      />
     </div>
   );
 };

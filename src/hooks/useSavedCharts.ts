@@ -46,6 +46,20 @@ export function useSavedCharts() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, question, chartSpec }: { id: string; question: string; chartSpec: ChartSpec }) => {
+      const { error } = await supabase
+        .from("saved_charts" as any)
+        .update({ question, chart_spec: chartSpec as any } as any)
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["saved-charts"] });
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -64,6 +78,7 @@ export function useSavedCharts() {
     savedCharts: query.data || [],
     isLoading: query.isLoading,
     saveMutation,
+    updateMutation,
     deleteMutation,
   };
 }

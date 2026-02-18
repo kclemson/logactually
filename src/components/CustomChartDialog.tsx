@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,10 +7,11 @@ import { useGenerateChart } from "@/hooks/useGenerateChart";
 import { useSavedCharts } from "@/hooks/useSavedCharts";
 import { DynamicChart, type ChartSpec } from "@/components/trends/DynamicChart";
 
-interface CreateChartDialogProps {
+interface CustomChartDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   period: number;
+  initialChart?: { id: string; question: string; chartSpec: ChartSpec };
 }
 
 const EXAMPLE_CHIPS = [
@@ -22,26 +23,33 @@ const EXAMPLE_CHIPS = [
   "My sodium intake trend over the past month",
 ];
 
-export function CreateChartDialog({ open, onOpenChange, period }: CreateChartDialogProps) {
+export function CustomChartDialog({ open, onOpenChange, initialChart, period }: CustomChartDialogProps) {
   if (!open) return null;
-  return <CreateChartDialogInner onOpenChange={onOpenChange} period={period} />;
+  return <CustomChartDialogInner onOpenChange={onOpenChange} period={period} initialChart={initialChart} />;
 }
 
-function CreateChartDialogInner({
+function CustomChartDialogInner({
   onOpenChange,
   period,
+  initialChart,
 }: {
   onOpenChange: (open: boolean) => void;
   period: number;
+  initialChart?: { id: string; question: string; chartSpec: ChartSpec };
 }) {
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
-  const [currentSpec, setCurrentSpec] = useState<ChartSpec | null>(null);
-  const [lastQuestion, setLastQuestion] = useState("");
+  const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>(
+    initialChart ? [{ role: "user", content: initialChart.question }] : []
+  );
+  const [currentSpec, setCurrentSpec] = useState<ChartSpec | null>(initialChart?.chartSpec ?? null);
+  const [lastQuestion, setLastQuestion] = useState(initialChart?.question ?? "");
   const [showDebug, setShowDebug] = useState(false);
 
+  // Track whether we're editing an existing chart or creating new
+  const editingIdRef = useRef<string | null>(initialChart?.id ?? null);
+
   const generateChart = useGenerateChart();
-  const { saveMutation } = useSavedCharts();
+  const { saveMutation, updateMutation } = useSavedCharts();
 
   const handleSubmit = async (question: string) => {
     if (!question.trim() || generateChart.isPending) return;
@@ -49,7 +57,6 @@ function CreateChartDialogInner({
     const userMsg = { role: "user" as const, content: question.trim() };
     const newMessages = [...messages, userMsg];
 
-    // If refining, include prior spec as assistant message
     if (currentSpec) {
       const assistantMsg = {
         role: "assistant" as const,
@@ -78,16 +85,28 @@ function CreateChartDialogInner({
     setCurrentSpec(null);
     setLastQuestion("");
     setInput("");
+    editingIdRef.current = null;
     generateChart.reset();
   };
 
   const handleSave = () => {
     if (!currentSpec || !lastQuestion) return;
-    saveMutation.mutate(
-      { question: lastQuestion, chartSpec: currentSpec },
-      { onSuccess: () => onOpenChange(false) }
-    );
+
+    if (editingIdRef.current) {
+      updateMutation.mutate(
+        { id: editingIdRef.current, question: lastQuestion, chartSpec: currentSpec },
+        { onSuccess: () => onOpenChange(false) }
+      );
+    } else {
+      saveMutation.mutate(
+        { question: lastQuestion, chartSpec: currentSpec },
+        { onSuccess: () => onOpenChange(false) }
+      );
+    }
   };
+
+  const isSaving = saveMutation.isPending || updateMutation.isPending;
+  const isEditing = !!initialChart;
 
   return (
     <Dialog open onOpenChange={onOpenChange}>
@@ -97,11 +116,10 @@ function CreateChartDialogInner({
       >
         <DialogTitle className="text-sm font-medium flex items-center gap-1.5">
           <BarChart3 className="h-4 w-4" />
-          Create Chart
+          {isEditing ? "Edit Chart" : "Create Chart"}
         </DialogTitle>
 
         <div className="space-y-3 mt-2">
-          {/* Example chips (only before first chart) */}
           {!currentSpec && !generateChart.isPending && messages.length === 0 && (
             <div className="flex flex-wrap gap-1.5 items-start">
               {EXAMPLE_CHIPS.map((chip) => (
@@ -119,7 +137,6 @@ function CreateChartDialogInner({
             </div>
           )}
 
-          {/* Input area */}
           {!generateChart.isPending && (
             <div className="space-y-2">
               <Textarea
@@ -152,7 +169,6 @@ function CreateChartDialogInner({
             </div>
           )}
 
-          {/* Loading */}
           {generateChart.isPending && (
             <div className="space-y-3">
               {lastQuestion && (
@@ -167,14 +183,12 @@ function CreateChartDialogInner({
             </div>
           )}
 
-          {/* Error */}
           {generateChart.error && (
             <div className="text-sm text-destructive p-3 rounded-md bg-destructive/10">
               {generateChart.error.message || "Something went wrong. Please try again."}
             </div>
           )}
 
-          {/* Chart preview */}
           {currentSpec && !generateChart.isPending && (
             <div className="space-y-3">
               {lastQuestion && (
@@ -188,13 +202,13 @@ function CreateChartDialogInner({
                 <Button
                   size="sm"
                   onClick={handleSave}
-                  disabled={saveMutation.isPending}
+                  disabled={isSaving}
                   className="flex-1"
                 >
-                  {saveMutation.isPending ? (
+                  {isSaving ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
                   ) : null}
-                  Save to Trends
+                  {editingIdRef.current ? "Save Changes" : "Save to Trends"}
                 </Button>
                 <Button variant="outline" size="sm" onClick={handleStartOver}>
                   Start over
