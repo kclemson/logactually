@@ -3,7 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { Pencil, ChevronDown } from 'lucide-react';
+import { Pencil, ChevronDown, Loader2 } from 'lucide-react';
+import { applyCategoryChange } from '@/lib/exercise-metadata';
 
 // ============================================================================
 // Types
@@ -43,7 +44,7 @@ export interface DetailDialogProps {
   title: string;
   fields: FieldConfig[] | FieldLayout;
   values: Record<string, any>;
-  onSave: (updates: Record<string, any>) => void;
+  onSave: (updates: Record<string, any>) => void | Promise<void>;
   readOnly?: boolean;
   defaultUnits?: Record<string, string>;
   gridClassName?: string;
@@ -218,10 +219,13 @@ function FieldEditItem({
         <select
           value={String(draft[effectiveField.key] ?? '')}
           onChange={e => {
-            updateDraft(effectiveField.key, e.target.value);
             if (effectiveField.key === '_exercise_category') {
-              updateDraft('exercise_key', '');
+              const patch = applyCategoryChange(e.target.value as any);
+              updateDraft('_exercise_category', e.target.value);
+              updateDraft('exercise_key', patch.exercise_key);
+              return;
             }
+            updateDraft(effectiveField.key, e.target.value);
           }}
           className="flex h-6 w-[7.5rem] min-w-0 rounded-md border border-input bg-background px-1.5 py-0 text-xs sm:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
@@ -372,6 +376,7 @@ export function DetailDialog({
   // Single-item mode state
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Record<string, any>>({});
+  const [saving, setSaving] = useState(false);
 
   // Multi-item mode state
   const [expandedIndices, setExpandedIndices] = useState<Set<number>>(new Set());
@@ -435,7 +440,7 @@ export function DetailDialog({
     setDraft({});
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const updates: Record<string, any> = {};
     for (const field of fieldsFlat) {
       if (field.readOnly) continue;
@@ -454,7 +459,19 @@ export function DetailDialog({
       }
     }
     if (Object.keys(updates).length > 0) {
-      onSave(updates);
+      const result = onSave(updates);
+      if (result && typeof (result as any).then === 'function') {
+        setSaving(true);
+        try {
+          await result;
+        } finally {
+          setSaving(false);
+        }
+        // After async save (e.g. category change), exit edit mode but keep dialog open
+        setEditing(false);
+        setDraft({});
+        return;
+      }
     }
     setEditing(false);
     setDraft({});
@@ -597,13 +614,18 @@ export function DetailDialog({
               })}
             </div>
           ) : (
-            <>
+            <div className="relative">
+              {saving && (
+                <div className="absolute inset-0 bg-background/60 flex items-center justify-center z-10 rounded-lg">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              )}
               {editing ? (
                 <FieldEditGrid layout={fieldsLayout} draft={draft} updateDraft={updateDraft} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} labelClassName={labelClassName} />
               ) : (
                 <FieldViewGrid layout={fieldsLayout} activeValues={values} hideWhenZero={hideWhenZero} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} labelClassName={labelClassName} />
               )}
-            </>
+            </div>
           )}
         </div>
 
@@ -800,16 +822,9 @@ export function processExerciseSaveUpdates(
         metaChanges[metaKey] = value === '' || value === null ? null : Number(value);
         hasMetaChanges = true;
       }
-      // _exercise_category is a virtual field — map it to exercise_key
-      if (key === '_exercise_category') {
-        const newCat = value;
-        if (newCat === 'other') {
-          regularUpdates.exercise_key = 'other';
-        } else if (!regularUpdates.exercise_key) {
-          // Switching to strength/cardio without a new exercise_key selected
-          regularUpdates.exercise_key = '';
-        }
-      }
+      // Other virtual fields (like _exercise_category) are handled via
+      // applyCategoryChange in FieldEditItem and produce real keys (exercise_key)
+      // in the draft, so they arrive here as regular updates.
     } else {
       regularUpdates[key] = value;
     }
