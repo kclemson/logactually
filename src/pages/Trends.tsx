@@ -1,12 +1,13 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { AskTrendsAIDialog } from "@/components/AskTrendsAIDialog";
+import { usePinnedChats } from "@/hooks/usePinnedChats";
 import { useNavigate } from "react-router-dom";
 import { format, subDays, startOfDay, eachDayOfInterval } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, ChartTitle, ChartSubtitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { UtensilsCrossed, Dumbbell, ClipboardList } from "lucide-react";
+import { UtensilsCrossed, Dumbbell, ClipboardList, Pin } from "lucide-react";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { useWeightTrends, ExerciseTrend } from "@/hooks/useWeightTrends";
 
@@ -62,7 +63,9 @@ const Trends = () => {
   const mergeMutation = useMergeExercises();
   const [foodAIOpen, setFoodAIOpen] = useState(false);
   const [exerciseAIOpen, setExerciseAIOpen] = useState(false);
-
+  const [foodInitialView, setFoodInitialView] = useState<"ask" | "pinned">("ask");
+  const [exerciseInitialView, setExerciseInitialView] = useState<"ask" | "pinned">("ask");
+  const { pinCount } = usePinnedChats();
   const handleExerciseBarClick = useCallback((date: string) => {
     navigate(`/weights?date=${date}`);
   }, [navigate]);
@@ -310,7 +313,19 @@ const Trends = () => {
       </div>
 
       {/* Food Trends Section */}
-      <CollapsibleSection title="Food Trends" icon={UtensilsCrossed} defaultOpen={true} storageKey="trends-food" iconClassName="text-blue-500 dark:text-blue-400" headerAction={<button onClick={() => setFoodAIOpen(true)} className="text-xs text-primary hover:underline flex items-center gap-1">Ask AI</button>}>
+      <CollapsibleSection title="Food Trends" icon={UtensilsCrossed} defaultOpen={true} storageKey="trends-food" iconClassName="text-blue-500 dark:text-blue-400" headerAction={
+        <span className="flex items-center gap-1.5 text-xs">
+          <button onClick={() => { setFoodInitialView("ask"); setFoodAIOpen(true); }} className="text-primary hover:underline">Ask AI</button>
+          {pinCount > 0 && (
+            <>
+              <span className="text-muted-foreground">·</span>
+              <button onClick={() => { setFoodInitialView("pinned"); setFoodAIOpen(true); }} className="text-primary hover:underline flex items-center gap-0.5">
+                <Pin className="h-3 w-3" />{pinCount}
+              </button>
+            </>
+          )}
+        </span>
+      }>
         {isLoading ? (
           <div className="flex justify-center py-8">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -435,7 +450,19 @@ const Trends = () => {
 
       {/* Weight Trends Section */}
       {showWeights && (
-        <CollapsibleSection title="Exercise Trends" icon={Dumbbell} iconClassName="text-[hsl(262_83%_58%)]" defaultOpen={true} storageKey="trends-weights" headerAction={<button onClick={() => setExerciseAIOpen(true)} className="text-xs text-primary hover:underline flex items-center gap-1">Ask AI</button>}>
+        <CollapsibleSection title="Exercise Trends" icon={Dumbbell} iconClassName="text-[hsl(262_83%_58%)]" defaultOpen={true} storageKey="trends-weights" headerAction={
+          <span className="flex items-center gap-1.5 text-xs">
+            <button onClick={() => { setExerciseInitialView("ask"); setExerciseAIOpen(true); }} className="text-primary hover:underline">Ask AI</button>
+            {pinCount > 0 && (
+              <>
+                <span className="text-muted-foreground">·</span>
+                <button onClick={() => { setExerciseInitialView("pinned"); setExerciseAIOpen(true); }} className="text-primary hover:underline flex items-center gap-0.5">
+                  <Pin className="h-3 w-3" />{pinCount}
+                </button>
+              </>
+            )}
+          </span>
+        }>
           {weightLoading ? (
             <div className="flex justify-center py-8">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -517,8 +544,8 @@ const Trends = () => {
           </div>
         </CollapsibleSection>
       )}
-      <AskTrendsAIDialog mode="food" open={foodAIOpen} onOpenChange={setFoodAIOpen} />
-      <AskTrendsAIDialog mode="exercise" open={exerciseAIOpen} onOpenChange={setExerciseAIOpen} />
+      <AskTrendsAIDialog mode="food" open={foodAIOpen} onOpenChange={setFoodAIOpen} initialView={foodInitialView} />
+      <AskTrendsAIDialog mode="exercise" open={exerciseAIOpen} onOpenChange={setExerciseAIOpen} initialView={exerciseInitialView} />
     </div>
   );
 };
