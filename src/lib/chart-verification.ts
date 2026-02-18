@@ -36,10 +36,28 @@ export function verifyChartData(
 ): VerificationResult {
   const { data, dataKey } = spec;
 
-  // Check if data has rawDate fields
+  // 1. Mixed data source — can't verify cross-domain
+  if ((spec as any).dataSource === "mixed") {
+    return { status: "unavailable", reason: "Verification isn't available for charts combining food and exercise data" };
+  }
+
+  // 2. No rawDate fields
   const hasRawDate = data.length > 0 && data.some((d) => d.rawDate);
   if (!hasRawDate) {
     return { status: "unavailable", reason: "Verification isn't available for this chart type (no date-based data)" };
+  }
+
+  // 3. Duplicate rawDates — indicates aggregated/categorical data
+  const rawDates = data.map((d) => d.rawDate as string).filter(Boolean);
+  const uniqueDates = new Set(rawDates);
+  if (uniqueDates.size < rawDates.length) {
+    return { status: "unavailable", reason: "Verification isn't available for aggregated charts (multiple points share the same date)" };
+  }
+
+  // 4. Non-date x-axis field — categorical chart
+  const xField = spec.xAxis.field.toLowerCase();
+  if (!xField.includes("date")) {
+    return { status: "unavailable", reason: "Verification isn't available for categorical charts" };
   }
 
   // Determine which totals source and field to use
