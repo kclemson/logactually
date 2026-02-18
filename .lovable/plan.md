@@ -1,19 +1,25 @@
 
 
-# Suppress save-suggestion prompt after "Copy to today"
+# Add inline "Copied!" feedback to Copy to today
 
-## Problem
-When you tap "Copy to today" on a past food entry, it calls `createEntryFromItems` which runs the repeated-entry detection check. If the copied meal has been logged before, you immediately see a "Save as meal?" prompt on today's page -- confusing since you just explicitly copied something.
+## Approach
+After a successful copy, briefly replace the "Copy to today" link text with a green "Copied!" label for 2 seconds, then revert. No toast, no navigation, no dismiss required.
 
-## Scope
-This only affects **FoodLog.tsx**. The WeightLog copy handler already bypasses the suggestion check because it calls `createEntry.mutateAsync` directly instead of going through the shared helper.
+No auto-navigation to today -- the user may want to copy multiple entries from the same past day.
 
-## Change
+## Changes
 
-### `src/pages/FoodLog.tsx`
+### 1. `src/components/EntryExpandedPanel.tsx`
+- Add local `copied` state (`useState(false)`).
+- On click: call `onCopyToToday()`, set `copied` to `true`, `setTimeout` to reset after 2 seconds.
+- Render: when `copied` is true, show a green "Copied!" span (with `text-green-600 dark:text-green-400`) instead of the clickable "Copy to today" link.
 
-1. Add an optional `skipSuggestionCheck?: boolean` parameter to `createEntryFromItems` (after `targetDate`).
-2. Guard the repeated-entry detection block (line 247) with `&& !skipSuggestionCheck`.
-3. In `handleCopyEntryToToday`, pass `true` for `skipSuggestionCheck`.
+### 2. `src/pages/FoodLog.tsx`
+- Make `handleCopyEntryToToday` return a promise (it currently calls `createEntryFromItems` without `await` -- add `await` so callers can chain).
+- Alternatively, the feedback is fire-and-forget since `EntryExpandedPanel` just needs to show the label immediately on click; the entry will appear on today regardless. No change strictly required, but adding `await` is cleaner.
 
-That's it -- one file, three small edits.
+### 3. `src/pages/WeightLog.tsx`
+- Already returns a promise (`async` function). No change needed.
+
+Total: one file gets meaningful changes (`EntryExpandedPanel.tsx`), one gets a minor cleanup (`FoodLog.tsx`).
+
