@@ -1,17 +1,18 @@
 
 
-# Remove speed from cardio list view labels
+# Ensure portion always has a fallback for barcode scans
 
 ## Problem
-Cardio exercises in the weight log list view currently show distance, time, **and** speed (e.g., "1.50 mi, 18:05, 5.0 mph"). The speed value makes the label long and creates a visual impression of trying to align with the Sets/Reps/Lbs columns. The user wants only distance + time shown.
+The edge function already defaults to `'1 serving'` for both the Open Food Facts and AI paths. However, the client hook `useScanBarcode.ts` treats `portion` as optional and passes it through without a fallback in `createFoodItemFromScan`. If the value is ever missing or empty, the portion scaling UI has nothing to display.
 
 ## Fix
 
-### `src/components/WeightItemsTable.tsx`
-Remove lines 601-604 which calculate and append the speed value to the cardio label. The label will then show only distance and duration (e.g., "1.50 mi, 18:05").
+### `src/hooks/useScanBarcode.ts`
+In the `createFoodItemFromScan` function, add a fallback so `portion` is always set:
 
-Before: `1.50 mi, 18:05, 5.0 mph`
-After: `1.50 mi, 18:05`
+```
+portion: result.portion || '1 serving'
+```
 
-Four lines removed, no other changes needed.
+This is a single-line change (around line 75) that acts as a safety net on the client side, complementing the server-side defaults already in place.
 
