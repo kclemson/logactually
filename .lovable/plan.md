@@ -1,15 +1,41 @@
 
 
-## Add Changelog Entry for Pinned Chats
+## Fix Changelog Image Alignment
 
-### Changes
+### Problem
+Images are nested inside the same flex child as the text. Since that child's width depends on text length (whether it wraps or not), `items-center` causes images to shift horizontally per entry. Even switching to `items-start` would still leave images indented by the date label width.
 
-1. **Copy the uploaded screenshot** to `public/changelog/pinned-chats.png`
+### Solution
+Restructure each entry so the image renders **outside** the date+text flex row, at the full width of the list item. This guarantees all images share the same left edge regardless of text length.
 
-2. **`src/pages/Changelog.tsx`** -- Add a new entry at the top of `CHANGELOG_ENTRIES`:
-   ```
-   { date: "Feb-18", text: "Added the ability to pin AI responses on the Trends page for later reference. Pinned chats are accessible from the pin icon next to 'Ask AI', with the count shown as a badge.", image: "pinned-chats.png" }
-   ```
+### Technical Change
 
-3. **`src/pages/Changelog.tsx`** -- Update `LAST_UPDATED` from `"Feb-18-26"` to remain the same since it's already Feb-18 (no change needed).
+**`src/pages/Changelog.tsx` (lines 96-124)**
 
+Current structure:
+```
+<li>
+  <div class="flex gap-2">        <!-- date + text side by side -->
+    <span>date</span>
+    <div class="flex-col">         <!-- text AND image together -->
+      <span>text</span>
+      <img />                      <!-- image position depends on text width -->
+    </div>
+  </div>
+</li>
+```
+
+New structure:
+```
+<li>
+  <div class="flex gap-2">        <!-- date + text side by side -->
+    <span>date</span>
+    <span>text</span>
+  </div>
+  <img class="mt-2 ml-[52px]" />  <!-- image outside the flex row, fixed indent -->
+</li>
+```
+
+The `ml-[52px]` (or similar value matching the date label width + gap) will align all images to the same left edge. Add `loading="lazy"` to images as well to reduce the "text loads then images pop in" effect.
+
+For entries with multiple images, the wrapper div also moves outside the flex row with the same left margin.
