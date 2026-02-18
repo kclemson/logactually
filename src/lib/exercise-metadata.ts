@@ -270,6 +270,13 @@ export function getExerciseMuscles(exerciseKey: string): ExerciseMuscles | null 
   return EXERCISE_MUSCLE_GROUPS[exerciseKey] || null;
 }
 
+// Map a category selection to the correct exercise_key value for persistence
+export function applyCategoryChange(
+  newCategory: 'strength' | 'cardio' | 'other'
+): { exercise_key: string } {
+  return { exercise_key: newCategory === 'other' ? 'other' : '' };
+}
+
 // Check if an exercise tracks distance (mph toggle supported)
 export function hasDistanceTracking(exerciseKey: string): boolean {
   return ['walk_run', 'cycling'].includes(exerciseKey);
