@@ -1,23 +1,24 @@
 
 
-## Add Debug Panel and User Query Display to Create Chart Dialog
+## Fix: Include exercise_key and exercise_subtype in chart generation context
 
-Two small UI additions to `CreateChartDialog.tsx`:
+### Problem
+The `generate-chart` edge function queries `exercise_key` and `exercise_subtype` from the database (line 132) but never includes them in the text context sent to the AI model. Only `description` (the display name) is sent. This means the AI cannot distinguish between subtypes like walking vs running under `walk_run`, and cannot reliably group exercises by their canonical key.
 
-### 1. Show user's original query above the chart
-When a chart is rendered (and during loading), display the user's question in italics above the chart preview -- similar to the Ask AI dialog pattern. This is already partially done during loading state but not shown once the chart renders.
+### Fix
+In `supabase/functions/generate-chart/index.ts`, line 188, add `exercise_key` and `exercise_subtype` to the parts array:
 
-### 2. Add a collapsible debug JSON panel (temporary)
-Below the chart and action buttons, add a toggle button ("Show debug JSON") that expands to show the raw `currentSpec` as formatted JSON in a scrollable `pre` block. This makes it easy to copy/paste the spec into bug reports.
+```typescript
+const parts = [`date=${s.logged_date}`, `key=${s.exercise_key}`, `name="${s.description}"`];
+if (s.exercise_subtype) parts.push(`subtype=${s.exercise_subtype}`);
+```
 
-### Changes (single file)
+This also addresses the "stuck at generating" bug investigation -- while we're in this file, we should also fix the duplicate key warning and add the diagnostic logging from the previous approved plan.
 
-**`src/components/CreateChartDialog.tsx`**
-- Add a `showDebug` boolean state
-- In the chart preview section, add the user's query (`lastQuestion`) as italic text above the chart (same `text-xs text-muted-foreground italic` style already used in the loading state)
-- Below the Save/Start over buttons, add a small "Debug JSON" toggle button (muted, text-xs) that reveals a `pre` block with `JSON.stringify(currentSpec, null, 2)` in a max-height scrollable container
+### Files to modify
+- `supabase/functions/generate-chart/index.ts` -- add `key=` and `subtype=` to exercise context lines
+- `src/pages/Trends.tsx` -- fix duplicate `walk_run` React key (use composite key with index)
+- `src/hooks/useGenerateChart.ts` -- add diagnostic console.log and guard for missing chartSpec
+- `src/components/CreateChartDialog.tsx` -- add console.error in catch block
 
-### Technical details
-- The debug toggle is a simple `outline` variant button with `text-xs`
-- The JSON block uses `whitespace-pre-wrap break-all text-[10px] max-h-[200px] overflow-auto bg-muted/50 rounded p-2`
-- No new dependencies needed
+### All changes are small, single-line additions.
