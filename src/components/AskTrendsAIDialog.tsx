@@ -65,6 +65,7 @@ const EXERCISE_PROMPTS = [
   "How could I improve my exercise variety?",
   "If I wanted to maintain my results with less effort, what would you keep and what would you cut?",
   "What tradeoffs am I making between performance, recovery, and body composition?",
+  "Is there anything you see in how I'm exercising that increases my injury risk?",
   "Where am I pushing hard without seeing proportional return?",
 ];
 
@@ -94,19 +95,19 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
   const seen = useRef<Set<string>>(new Set());
 
   const pickFresh = useCallback(() => {
-    let available = pool.filter(p => !seen.current.has(p));
+    let available = pool.filter((p) => !seen.current.has(p));
     if (available.length < 4) {
       seen.current.clear();
       available = pool;
     }
     const picked = pickRandom(available, 4);
-    picked.forEach(p => seen.current.add(p));
+    picked.forEach((p) => seen.current.add(p));
     return picked;
   }, [pool]);
 
   const [chips, setChips] = useState(() => {
     const picked = pickRandom(pool, 4);
-    picked.forEach(p => seen.current.add(p));
+    picked.forEach((p) => seen.current.add(p));
     return picked;
   });
   const refreshChips = () => setChips(pickFresh());
