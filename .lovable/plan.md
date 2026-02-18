@@ -1,91 +1,119 @@
 
 
-## Click-to-edit saved charts, edit mode for deletes, and rename dialog
+## Custom Charts: prompt refinement, UI polish, expanded chips, and test automation
 
-### Summary
+### 1. Hide AI note on Trends grid
 
-Three changes bundled together:
+**`src/pages/Trends.tsx`** -- Strip `aiNote` from spec before passing to `DynamicChart` in the saved charts grid. The note remains visible inside the `CustomChartDialog` when the user clicks to view/edit.
 
-1. **Rename `CreateChartDialog` to `CustomChartDialog`** -- reflects that it now handles both creation and editing
-2. **Click a saved chart to open the refinement dialog** -- pre-populated with the original prompt, chart, and AI note
-3. **Edit mode toggle for delete icons** -- a single pencil icon in the "My Charts" header toggles delete icon visibility on each chart
+### 2. Constrain chart width in dialog
+
+**`src/components/CustomChartDialog.tsx`** -- Wrap the `DynamicChart` in a centered container at ~60% width so it renders at a comfortable aspect ratio instead of stretching edge-to-edge across the dialog.
+
+### 3. System prompt: teach the concept, not the examples
+
+The core insight is that the AI needs to understand the difference between two aggregation modes:
+
+- **Temporal (time-series)**: one data point per date -- the default. X-axis shows dates.
+- **Categorical**: one data point per category bucket (hour, weekday, exercise name, etc.). X-axis shows the category. Values are aggregated across the full period.
+
+Rather than listing every possible category with its expected labels, we define the concept once and add a small "common patterns" reference that maps request language to aggregation mode. This avoids example poisoning while still being precise where it matters.
+
+**Proposed prompt additions to `supabase/functions/generate-chart/index.ts`:**
+
+```
+AGGREGATION MODES:
+
+There are exactly two aggregation modes. Choose the right one based on what the user is asking:
+
+1. TIME-SERIES (default): One data point per date. Use when the user asks about trends "over time", "per day", "last N days", etc. The x-axis shows calendar dates.
+
+2. CATEGORICAL: One data point per category bucket, aggregated across the entire period. Use when the user asks to group "by" a non-date dimension (e.g. "by hour of day", "by day of week", "by exercise", "by meal"). The x-axis shows category labels, NOT dates. The data array must have exactly one entry per bucket.
+
+For categorical charts, use rawDate of the most recent date that contributed data to that bucket.
+
+COMMON CATEGORICAL PATTERNS:
+- "by hour of day" -> 24 buckets (use labels like "12am", "1am", ... "11pm"), aggregate using created_at timestamps
+- "by day of week" -> 7 buckets, ordered Sun-Sat or Mon-Sun depending on locale
+- "by exercise" / "by food" -> one bucket per unique item
+
+COMPARING GROUPS (e.g. "workout days vs rest days"):
+- The result is categorical with one bucket per group
+- Always explain in aiNote exactly how you defined each group
+- Use only the data provided to determine group membership
+
+ANTI-HALLUCINATION:
+- Never fabricate or interpolate values. Only return values directly computable from the provided logs.
+- If a bucket has no data, omit it or use zero. Do not invent values.
+- All numeric values in the data array must be non-negative.
+```
+
+This is ~20 lines, teaches the concept cleanly, and only gets specific on the two most common categorical patterns (hour-of-day, day-of-week) because date handling genuinely benefits from precision. Everything else follows from the general rule.
+
+### 4. Expand suggestion chips to ~20
+
+**`src/components/CustomChartDialog.tsx`** -- Replace the 6 hardcoded chips with a pool of ~20. Randomly select 6 on each dialog mount using `useMemo`.
+
+Proposed pool (organized by theme, but displayed randomly):
+
+**Food timing and patterns:**
+1. "Average calories by hour of day"
+2. "Which day of the week do I eat the most?"
+3. "How many meals do I log per day on average?"
+
+**Nutrient trends:**
+4. "Daily fiber intake over time"
+5. "Sodium intake trend"
+6. "Average sugar per day"
+7. "Fat as percentage of total calories over time"
+8. "Protein to calorie ratio over time"
+
+**High/low analysis:**
+9. "My highest calorie days"
+10. "Days where I exceeded 2000 calories"
+
+**Exercise:**
+11. "Exercise frequency by day of week"
+12. "Total exercise duration per week"
+13. "Which exercises do I do most often?"
+14. "How many days per week did I exercise?"
+
+**Cross-domain:**
+15. "Average calories on workout days vs rest days"
+16. "Average protein on workout days vs rest days"
+17. "Do I eat more on days I exercise?"
+
+**Weekday/weekend:**
+18. "Average carbs on weekdays vs weekends"
+19. "Calorie comparison: weekdays vs weekends"
+
+**Volume/strength:**
+20. "Training volume trend over time"
+
+### 5. Test automation for hallucination detection
+
+**`supabase/functions/generate-chart/index_test.ts`** -- Add structural validation tests. These are non-deterministic (LLM output varies), so they assert on structural invariants, not exact values.
+
+New test cases:
+
+| Prompt | Key assertion |
+|--------|---------------|
+| "Average calories by hour of day" | `data.length <= 24`; all values numeric and non-negative |
+| "Calories by day of week" | `data.length <= 7`; values numeric |
+| "Daily calories last 7 days" | `data.length <= 7`; rawDate values within last 7 days |
+| "Average protein on workout vs rest days" | `data.length <= 3` (at most 2 real groups + possible "overall"); dataSource is "mixed" |
+| "Exercise frequency by day of week" | `data.length <= 7`; dataSource is "exercise" |
+
+Each test reuses the existing `assertValidChartSpec` helper and adds per-case assertions. The tests will be deployed and run against real data from the demo account.
 
 ---
 
-### Changes by file
+### Summary of files changed
 
-**1. Rename: `src/components/CreateChartDialog.tsx` -> `src/components/CustomChartDialog.tsx`**
-
-- Rename the file
-- Rename the exported components: `CreateChartDialog` -> `CustomChartDialog`, `CreateChartDialogInner` -> `CustomChartDialogInner`
-- Add optional `initialChart` prop: `{ id: string; question: string; chartSpec: ChartSpec }`
-- When `initialChart` is provided:
-  - Initialize `currentSpec`, `lastQuestion`, and `messages` from the saved chart
-  - Dialog title shows "Edit Chart" instead of "Create Chart"
-  - "Save to Trends" button calls `updateMutation` (overwrite existing) instead of `saveMutation`
-- "Start over" clears all state; subsequent save creates a new chart via `saveMutation`
-- Interface becomes:
-  ```typescript
-  interface CustomChartDialogProps {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    period: number;
-    initialChart?: { id: string; question: string; chartSpec: ChartSpec };
-  }
-  ```
-
-**2. `src/hooks/useSavedCharts.ts`** -- Add `updateMutation`
-
-```typescript
-const updateMutation = useMutation({
-  mutationFn: async ({ id, question, chartSpec }) => {
-    const { error } = await supabase
-      .from("saved_charts")
-      .update({ question, chart_spec: chartSpec })
-      .eq("id", id);
-    if (error) throw error;
-  },
-  onSuccess: () => queryClient.invalidateQueries({ queryKey: ["saved-charts"] }),
-});
-```
-
-Return `updateMutation` alongside the existing exports.
-
-**3. Database migration** -- Add UPDATE RLS policy
-
-```sql
-CREATE POLICY "Users can update own saved charts"
-ON public.saved_charts FOR UPDATE
-USING (auth.uid() = user_id AND NOT is_read_only_user(auth.uid()));
-```
-
-**4. `src/pages/Trends.tsx`** -- Wire up editing and edit mode
-
-- Update import: `CreateChartDialog` -> `CustomChartDialog`
-- Add state:
-  - `editingChart: { id: string; question: string; chartSpec: ChartSpec } | null`
-  - `isEditMode: boolean` (default false)
-- "My Charts" section header gets a pencil icon button that toggles `isEditMode`
-- Each saved chart becomes clickable (opens `CustomChartDialog` with `initialChart` set)
-- `DeleteConfirmPopover` only renders when `isEditMode` is true
-- Remove direct `onNavigate` from saved charts (navigation happens via the chart inside the dialog instead)
-- Render `CustomChartDialog` with `initialChart` when `editingChart` is set; on close, clear `editingChart`
-
----
-
-### UX flow
-
-1. **Default view**: Saved charts render cleanly, no delete icons visible
-2. **Tap pencil icon** in "My Charts" header: Delete icons appear on each chart
-3. **Tap a chart**: Opens the dialog showing the original prompt, rendered chart, AI note, and a refine input
-4. **Refine**: Type a follow-up (e.g. "make it a line chart"), hit Refine -- generates updated chart
-5. **Save**: Overwrites the existing saved chart
-6. **Start over**: Clears state; saving after this creates a new chart
-7. **Close dialog**: Discards unsaved changes
-
-### What stays the same
-
-- Built-in charts are untouched
-- The `DynamicChart` component and `useChartInteraction` hook are unchanged
-- Existing saved charts without `dataSource`/`rawDate` still render (just without click-to-navigate inside the dialog)
+| File | Change |
+|------|--------|
+| `src/pages/Trends.tsx` | Strip `aiNote` from saved chart specs in grid view |
+| `src/components/CustomChartDialog.tsx` | 60% width chart container; expand to ~20 chips with random selection of 6 |
+| `supabase/functions/generate-chart/index.ts` | Add aggregation mode framework and anti-hallucination rules to system prompt |
+| `supabase/functions/generate-chart/index_test.ts` | Add 5 content-aware validation tests |
 
