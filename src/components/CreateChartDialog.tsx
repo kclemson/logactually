@@ -38,7 +38,7 @@ function CreateChartDialogInner({
   const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
   const [currentSpec, setCurrentSpec] = useState<ChartSpec | null>(null);
   const [lastQuestion, setLastQuestion] = useState("");
-  const [showDebug, setShowDebug] = useState(true);
+  const [showDebug, setShowDebug] = useState(false);
 
   const generateChart = useGenerateChart();
   const { saveMutation } = useSavedCharts();
