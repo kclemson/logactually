@@ -2,10 +2,12 @@ import { useState, useMemo, useRef, useCallback } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Sparkles, RefreshCw } from "lucide-react";
+import { Loader2, Sparkles, RefreshCw, Pin } from "lucide-react";
 import { useAskTrendsAI } from "@/hooks/useAskTrendsAI";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { formatProfileStatsSummary } from "@/lib/calorie-burn";
+import { usePinnedChats } from "@/hooks/usePinnedChats";
+import { PinnedChatsView } from "@/components/PinnedChatsView";
 
 type Mode = "food" | "exercise";
 
@@ -84,10 +86,13 @@ export function AskTrendsAIDialog({ mode, open, onOpenChange }: AskTrendsAIDialo
 function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChange: (open: boolean) => void }) {
   const { settings } = useUserSettings();
   const { mutate, isPending, data, error, reset } = useAskTrendsAI();
+  const { pinnedChats, pinCount, pinMutation, unpinMutation } = usePinnedChats();
 
   const [input, setInput] = useState("");
   const [submittedQuestion, setSubmittedQuestion] = useState("");
   const [includeProfile, setIncludeProfile] = useState(true);
+  const [view, setView] = useState<"ask" | "pinned">("ask");
+  const [pinFeedback, setPinFeedback] = useState(false);
 
   const profileSummary = useMemo(() => formatProfileStatsSummary(settings), [settings]);
 
@@ -125,6 +130,17 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
     setSubmittedQuestion("");
   };
 
+  const isAlreadyPinned = data?.answer
+    ? pinnedChats.some((c) => c.question === submittedQuestion && c.answer === data.answer)
+    : false;
+
+  const handlePin = () => {
+    if (!data?.answer || isAlreadyPinned || pinFeedback) return;
+    pinMutation.mutate({ question: submittedQuestion, answer: data.answer, mode });
+    setPinFeedback(true);
+    setTimeout(() => setPinFeedback(false), 1500);
+  };
+
   const title = mode === "food" ? "Ask AI about your food trends" : "Ask AI about your exercise trends";
 
   return (
@@ -133,133 +149,174 @@ function AskTrendsAIDialogInner({ mode, onOpenChange }: { mode: Mode; onOpenChan
         className="left-2 right-2 top-[5%] translate-y-0 translate-x-0 w-auto max-w-[calc(100vw-16px)] max-h-[85vh] max-h-[85dvh] overflow-y-auto p-3 sm:left-[50%] sm:right-auto sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:w-full sm:max-w-md border-border/50 focus-visible:ring-0 focus-visible:ring-offset-0"
         onInteractOutside={(e) => e.preventDefault()}
       >
-        <DialogTitle className="text-sm font-medium flex items-center gap-1.5">
-          <Sparkles className="h-4 w-4" />
-          {title}
-          {!data?.answer && !isPending && (
-            <button
-              onClick={refreshChips}
-              className="absolute right-12 top-4 p-1 rounded-full border border-border bg-muted/50 hover:bg-muted active:scale-75 transition-all duration-150"
-              aria-label="Refresh suggestions"
-            >
-              <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />
-            </button>
-          )}
-        </DialogTitle>
-
-        <div className="space-y-3 mt-2">
-          {/* Prompt chips (only show before a response) */}
-          {!data?.answer && !isPending && (
-            <div className="flex flex-wrap gap-1.5 items-start h-[10.5rem] overflow-hidden">
-              {chips.map((chip) => (
+        {view === "ask" ? (
+          <>
+            <DialogTitle className="text-sm font-medium flex items-center gap-1.5">
+              <Sparkles className="h-4 w-4" />
+              {title}
+              <div className="flex items-center gap-1 absolute right-12 top-4">
+                {!data?.answer && !isPending && (
+                  <button
+                    onClick={refreshChips}
+                    className="p-1 rounded-full border border-border bg-muted/50 hover:bg-muted active:scale-75 transition-all duration-150"
+                    aria-label="Refresh suggestions"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />
+                  </button>
+                )}
                 <button
-                  key={chip}
-                  onClick={() => {
-                    setInput(chip);
-                    handleSubmit(chip);
-                  }}
-                  className="text-xs px-2.5 py-1 rounded-full border border-border bg-muted/50 text-foreground hover:bg-muted transition-colors text-left"
+                  onClick={() => setView("pinned")}
+                  className="relative p-1 rounded-full border border-border bg-muted/50 hover:bg-muted active:scale-75 transition-all duration-150"
+                  aria-label="View pinned chats"
                 >
-                  {chip}
+                  <Pin className="h-3.5 w-3.5 text-muted-foreground" />
+                  {pinCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-medium px-1">
+                      {pinCount}
+                    </span>
+                  )}
                 </button>
-              ))}
-            </div>
-          )}
-
-          {/* Input row */}
-          {!data?.answer && (
-            <div className="space-y-2">
-              <Textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmit(input);
-                  }
-                }}
-                placeholder="Ask a question..."
-                disabled={isPending}
-                className="min-h-[60px] max-h-[120px] resize-none text-sm"
-                maxLength={500}
-              />
-              <div className="flex justify-end">
-                <Button
-                  size="sm"
-                  onClick={() => handleSubmit(input)}
-                  disabled={!input.trim() || isPending}
-                  className="h-9"
-                >
-                  {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Ask"}
-                </Button>
               </div>
-            </div>
-          )}
+            </DialogTitle>
 
-          {/* Profile stats checkbox */}
-          {!data?.answer && !isPending && profileSummary && (
-            <label className="flex items-start gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={includeProfile}
-                onChange={(e) => setIncludeProfile(e.target.checked)}
-                className="mt-0.5 rounded border-border"
-              />
-              <span className="text-xs text-muted-foreground leading-tight">
-                Include my personal stats for a more personalized answer
-                <br />({profileSummary})
-              </span>
-            </label>
-          )}
+            <div className="space-y-3 mt-2">
+              {/* Prompt chips (only show before a response) */}
+              {!data?.answer && !isPending && (
+                <div className="flex flex-wrap gap-1.5 items-start h-[10.5rem] overflow-hidden">
+                  {chips.map((chip) => (
+                    <button
+                      key={chip}
+                      onClick={() => {
+                        setInput(chip);
+                        handleSubmit(chip);
+                      }}
+                      className="text-xs px-2.5 py-1 rounded-full border border-border bg-muted/50 text-foreground hover:bg-muted transition-colors text-left"
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
+              )}
 
-          {/* Loading */}
-          {isPending && (
-            <div className="flex items-center gap-2 py-4 justify-center text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-sm">Analyzing your data...</span>
-            </div>
-          )}
+              {/* Input row */}
+              {!data?.answer && (
+                <div className="space-y-2">
+                  <Textarea
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSubmit(input);
+                      }
+                    }}
+                    placeholder="Ask a question..."
+                    disabled={isPending}
+                    className="min-h-[60px] max-h-[120px] resize-none text-sm"
+                    maxLength={500}
+                  />
+                  <div className="flex justify-end">
+                    <Button
+                      size="sm"
+                      onClick={() => handleSubmit(input)}
+                      disabled={!input.trim() || isPending}
+                      className="h-9"
+                    >
+                      {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Ask"}
+                    </Button>
+                  </div>
+                </div>
+              )}
 
-          {/* Error */}
-          {error && (
-            <div className="text-sm text-destructive p-3 rounded-md bg-destructive/10">
-              {error.message || "Something went wrong. Please try again."}
-            </div>
-          )}
+              {/* Profile stats checkbox */}
+              {!data?.answer && !isPending && profileSummary && (
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={includeProfile}
+                    onChange={(e) => setIncludeProfile(e.target.checked)}
+                    className="mt-0.5 rounded border-border"
+                  />
+                  <span className="text-xs text-muted-foreground leading-tight">
+                    Include my personal stats for a more personalized answer
+                    <br />({profileSummary})
+                  </span>
+                </label>
+              )}
 
-          {/* Response */}
-          {data?.answer && (
-            <div className="space-y-3">
-              {submittedQuestion && <p className="text-xs text-muted-foreground italic">"{submittedQuestion}"</p>}
-              <div
-                className="text-xs text-foreground whitespace-pre-wrap leading-snug p-2 rounded-md bg-muted/50 max-h-[50vh] overflow-y-auto [&_strong]:font-semibold"
-                dangerouslySetInnerHTML={{
-                  __html: (() => {
-                    const escaped = data.answer
-                      .replace(/&/g, "&amp;")
-                      .replace(/</g, "&lt;")
-                      .replace(/>/g, "&gt;")
-                      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-                    // Convert lines starting with * or - into <ul><li> blocks
-                    return escaped.replace(/((?:^|\n)(?:[*\-] .+(?:\n|$))+)/g, (block) => {
-                      const items = block
-                        .trim()
-                        .split("\n")
-                        .map((line) => line.replace(/^[*\-] /, "").trim())
-                        .filter(Boolean)
-                        .map((item) => `<li>${item}</li>`)
-                        .join("");
-                      return `\n<ul class="list-disc ml-4 my-1">${items}</ul>\n`;
-                    });
-                  })(),
-                }}
-              />
-              <Button variant="outline" size="sm" onClick={handleAskAnother} className="w-full">
-                Ask another question
-              </Button>
+              {/* Loading */}
+              {isPending && (
+                <div className="flex items-center gap-2 py-4 justify-center text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm">Analyzing your data...</span>
+                </div>
+              )}
+
+              {/* Error */}
+              {error && (
+                <div className="text-sm text-destructive p-3 rounded-md bg-destructive/10">
+                  {error.message || "Something went wrong. Please try again."}
+                </div>
+              )}
+
+              {/* Response */}
+              {data?.answer && (
+                <div className="space-y-3">
+                  {submittedQuestion && <p className="text-xs text-muted-foreground italic">"{submittedQuestion}"</p>}
+                  <div
+                    className="text-xs text-foreground whitespace-pre-wrap leading-snug p-2 rounded-md bg-muted/50 max-h-[50vh] overflow-y-auto [&_strong]:font-semibold"
+                    dangerouslySetInnerHTML={{
+                      __html: (() => {
+                        const escaped = data.answer
+                          .replace(/&/g, "&amp;")
+                          .replace(/</g, "&lt;")
+                          .replace(/>/g, "&gt;")
+                          .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+                        return escaped.replace(/((?:^|\n)(?:[*\-] .+(?:\n|$))+)/g, (block) => {
+                          const items = block
+                            .trim()
+                            .split("\n")
+                            .map((line) => line.replace(/^[*\-] /, "").trim())
+                            .filter(Boolean)
+                            .map((item) => `<li>${item}</li>`)
+                            .join("");
+                          return `\n<ul class="list-disc ml-4 my-1">${items}</ul>\n`;
+                        });
+                      })(),
+                    }}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handlePin}
+                      disabled={isAlreadyPinned}
+                      className={`flex items-center gap-1 px-2 py-1.5 rounded-md border text-xs transition-colors ${
+                        isAlreadyPinned || pinFeedback
+                          ? "border-primary/30 text-primary bg-primary/10"
+                          : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+                      }`}
+                      aria-label="Pin this chat"
+                    >
+                      <Pin className="h-3.5 w-3.5" />
+                      {pinFeedback ? "Pinned!" : isAlreadyPinned ? "Pinned" : "Pin"}
+                    </button>
+                    <Button variant="outline" size="sm" onClick={handleAskAnother} className="flex-1">
+                      Ask another question
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </>
+        ) : (
+          <>
+            <DialogTitle className="sr-only">Pinned chats</DialogTitle>
+            <PinnedChatsView
+              pinnedChats={pinnedChats}
+              onUnpin={(id) => unpinMutation.mutate(id)}
+              onBack={() => setView("ask")}
+            />
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
