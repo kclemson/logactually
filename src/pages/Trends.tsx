@@ -548,9 +548,9 @@ const Trends = () => {
                     />
                   );
                 })()}
-                {visibleExercises.map((exercise) => (
+                {visibleExercises.map((exercise, index) => (
                   <ExerciseChart 
-                    key={exercise.exercise_key} 
+                    key={`${exercise.exercise_key}-${exercise.exercise_subtype ?? index}`} 
                     exercise={exercise} 
                     unit={settings.weightUnit}
                     onBarClick={handleExerciseBarClick}

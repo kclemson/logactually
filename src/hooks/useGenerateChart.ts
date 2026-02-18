@@ -16,6 +16,8 @@ export function useGenerateChart() {
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
+      console.log("[generate-chart] response:", { data, error });
+      if (!data?.chartSpec) throw new Error("No chart specification returned");
 
       return data.chartSpec as ChartSpec;
     },
