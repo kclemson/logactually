@@ -55,7 +55,7 @@ export function EntryExpandedPanel({
   return (
     <div className={cn('grid gap-0.5', gridCols)}>
       <div className="col-span-full pl-6 pr-4 pt-2 pb-1 flex items-end justify-between gap-2">
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 w-full">
           {extraContent}
 
           {/* "Logged as" line -- hidden when from a saved item or no raw input */}
