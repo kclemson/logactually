@@ -135,7 +135,7 @@ function FieldViewGrid({
     <>
       {sections.map(([sectionName, sectionFields], sectionIdx) => (
         <div key={sectionName || sectionIdx}>
-          <div className={cn("grid gap-x-6 gap-y-1", gridClassName)}>
+          <div className={cn("grid gap-x-4 gap-y-1", gridClassName)}>
             {sectionFields
               .filter(field => {
                 if (!hideWhenZero?.has(field.key)) return true;
@@ -144,7 +144,7 @@ function FieldViewGrid({
               })
               .map(field => (
               <div key={field.key} className={cn("flex items-center gap-2 py-0.5", field.type === 'text' && 'col-span-2')}>
-                <span className="text-xs text-muted-foreground min-w-[6rem] shrink-0">
+                <span className="text-xs text-muted-foreground shrink-0">
                   {field.label}{field.unitToggle ? ` (${activeUnits?.[field.key] || field.unitToggle.storageUnit})` : field.unit ? ` (${field.unit})` : ''}:
                 </span>
                 <span className="text-sm">
@@ -178,10 +178,10 @@ function FieldEditGrid({
     <>
       {sections.map(([sectionName, sectionFields], sectionIdx) => (
         <div key={sectionName || sectionIdx}>
-          <div className={cn("grid gap-x-6 gap-y-1", gridClassName)}>
+          <div className={cn("grid gap-x-4 gap-y-1", gridClassName)}>
             {sectionFields.map(field => (
               <div key={field.key} className={cn("flex items-center gap-2", field.type === 'text' && 'col-span-2')}>
-                <span className="text-xs text-muted-foreground shrink-0 min-w-[6rem]">
+                <span className="text-xs text-muted-foreground shrink-0">
                   {field.label}{field.unitToggle ? ` (${activeUnits?.[field.key] || field.unitToggle.storageUnit})` : field.unit ? ` (${field.unit})` : ''}:
                 </span>
                 {field.readOnly ? (
