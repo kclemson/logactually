@@ -1,28 +1,27 @@
 
 
-# Fix DetailDialog right-edge clipping on mobile
+# Reduce exercise detail dialog label width
 
 ## Problem
 
-The dialog uses `mx-4` to create horizontal margins, but this doesn't work correctly with the base DialogContent's `fixed left-[50%] w-full translate-x-[-50%]` positioning. The margin shifts the left edge inward, but `w-full` (100vw) still extends to the right edge of the viewport, causing the right side to clip off-screen.
+In the exercise detail dialog (edit mode), there's excessive space between label text and input fields. The `min-w-[5.5rem]` (88px) label width is wider than needed -- labels like "Speed:", "Incline:", and "Effort:" are much shorter, and even the longest labels ("Cal Burned:", "Heart Rate:") have visible dead space before their inputs.
 
 ## Fix
 
-Replace the `mx-4` approach with explicit `left` and `right` positioning on mobile, matching the pattern already used by `SaveMealDialog`. This uses `left-2 right-2 translate-x-0 translate-y-0 w-auto` on mobile, then reverts to centered positioning on desktop.
+Reduce `labelClassName` from `min-w-[5.5rem]` to `min-w-[5rem]` (80px) in both `DetailDialog` usages in `WeightLog.tsx`. This reclaims 16px total (8px per column), tightening the gap between labels and inputs while still fitting all label text comfortably.
 
 ## Technical details
 
-**File: `src/components/DetailDialog.tsx`** -- line 433, the `DialogContent` className
+**File: `src/pages/WeightLog.tsx`** -- two occurrences (lines 775 and 798)
 
 Change:
 ```
-"top-[5%] translate-y-0 max-h-[90dvh] max-h-[90vh] flex flex-col p-0 gap-0 mx-4 rounded-lg sm:max-w-md [&>button:last-child]:hidden"
+labelClassName="min-w-[5.5rem]"
 ```
 To:
 ```
-"left-2 right-2 top-[5%] translate-x-0 translate-y-0 w-auto max-w-[calc(100vw-16px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md max-h-[90dvh] max-h-[90vh] flex flex-col p-0 gap-0 rounded-lg [&>button:last-child]:hidden"
+labelClassName="min-w-[5rem]"
 ```
 
-This mirrors the `SaveMealDialog` pattern: on mobile, the dialog is pinned 8px from each edge with `w-auto`; on desktop (`sm:`), it reverts to the standard centered approach.
+Two-line change in one file.
 
-One line change in one file.
