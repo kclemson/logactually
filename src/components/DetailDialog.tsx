@@ -458,6 +458,15 @@ export function DetailDialog({
         updates[field.key] = saveVal;
       }
     }
+    // Capture real-column keys injected into draft by side-effect handlers
+    // (e.g. applyCategoryChange sets exercise_key when _exercise_category changes)
+    for (const [key, val] of Object.entries(draft)) {
+      if (key.startsWith('_')) continue;
+      if (updates[key] !== undefined) continue;
+      if (val !== values[key]) {
+        updates[key] = val;
+      }
+    }
     if (Object.keys(updates).length > 0) {
       const result = onSave(updates);
       if (result && typeof (result as any).then === 'function') {
