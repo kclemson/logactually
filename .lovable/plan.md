@@ -1,52 +1,53 @@
 
 
-# Strip units from labels, show them as input suffixes instead
+# Fix: Add `min-w-0` to grid cells (the standard CSS Grid overflow fix)
 
-## Problem
+## Root cause
 
-Every label carries its unit in parentheses: "Distance (mi):", "Cal Burned (cal):", "Heart Rate (bpm):", "Incline (%):", "Cadence (rpm):". These bloat label width by 30-50% and are the primary reason the left column is too wide. For fields with unit toggles (Distance, Weight), the unit is shown twice -- in the label AND as toggle buttons.
+CSS Grid items have `min-width: auto` by default. This means each grid cell's minimum width equals its content's intrinsic minimum width (label text + gap + value text). The `fr`-based column ratios are overridden whenever content is wider than the ratio allows -- the grid expands to fit, causing overflow.
 
-## Solution
+This is a well-known CSS Grid pitfall documented everywhere (CSS Tricks, MDN, etc.). The fix is one class.
 
-1. **Remove unit text from labels entirely.** Labels become just: "Distance:", "Cal Burned:", "Heart Rate:", "Incline:", "Cadence:", "Duration:", "Speed:".
+## Fix
 
-2. **For fields with unit toggles** (Distance, Weight): the toggle buttons (mi/km, lbs/kg) already communicate the unit -- no additional suffix needed.
+Add `min-w-0` to each grid cell `div` in both `FieldViewGrid` and `FieldEditGrid`. This tells CSS Grid "this cell CAN shrink below its content width," allowing `fr` units to actually control column proportions.
 
-3. **For plain-unit fields** (Duration, Cal Burned, Effort, Speed, Heart Rate, Incline, Cadence): show the unit as a small text suffix AFTER the input/value, not in the label. This keeps the information visible but moves it out of the width-critical label column.
+Also add `min-w-0 truncate` to value spans in view mode so that long text (e.g., "Incline bench press") gets truncated with an ellipsis rather than forcing the column wider.
 
-## Changes
+**File: `src/components/DetailDialog.tsx`**
 
-**`src/components/DetailDialog.tsx`**
+### Change 1: FieldViewGrid cell div (line 146)
 
-### Label rendering (lines 147-148 and 184-185)
-
-Currently both grids render labels as:
 ```
-{field.label}{field.unitToggle ? ` (${unit})` : field.unit ? ` (${field.unit})` : ''}:
-```
+// Before
+<div key={field.key} className={cn("flex items-center gap-2 py-0.5", field.type === 'text' && 'col-span-2')}>
 
-Change to just:
-```
-{field.label}:
+// After
+<div key={field.key} className={cn("flex items-center gap-2 py-0.5 min-w-0", field.type === 'text' && 'col-span-2')}>
 ```
 
-### View mode value (line 150-152)
+### Change 2: FieldViewGrid value span (line 150)
 
-After the value span, add a unit suffix span:
 ```
-<span className="text-sm">{displayValue(...)}</span>
-{field.unit && !field.unitToggle && (
-  <span className="text-xs text-muted-foreground shrink-0">{field.unit}</span>
-)}
-```
+// Before
+<span className="text-sm">
 
-### Edit mode value (line 222-227)
-
-After the Input (and after the UnitToggle for toggle fields), add the same suffix for plain-unit fields:
-```
-{field.unit && !field.unitToggle && (
-  <span className="text-xs text-muted-foreground shrink-0">{field.unit}</span>
-)}
+// After
+<span className="text-sm min-w-0 truncate">
 ```
 
-This is 4 small edits in a single file. Labels shrink dramatically, the grid ratio works properly, and units remain visible as compact suffixes.
+### Change 3: FieldEditGrid cell div (line 186)
+
+```
+// Before
+<div key={field.key} className={cn("flex items-center gap-2", field.type === 'text' && 'col-span-2')}>
+
+// After
+<div key={field.key} className={cn("flex items-center gap-2 min-w-0", field.type === 'text' && 'col-span-2')}>
+```
+
+### Change 4: Revert gridClassName to `grid-cols-2` in WeightLog.tsx (lines 774, 796)
+
+With `min-w-0` in place, the `fr` units will actually work. But equal columns (`grid-cols-2`) is the right default -- all cells have the same structure (label + value), so equal widths make sense. The `6fr_5fr` hack was compensating for the overflow, not solving it.
+
+That's it. Four small edits across two files. This is the standard, industry-practice fix for CSS Grid content overflow.
