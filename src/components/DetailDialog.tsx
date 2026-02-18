@@ -611,6 +611,9 @@ export function DetailDialog({
           <DialogFooter className="px-4 py-3 flex-shrink-0">
             {editing ? (
               <>
+                <p className="text-[10px] italic text-muted-foreground/70 text-center w-full">
+                  Values aren't validated — please double-check your edits.
+                </p>
                 <Button variant="outline" size="sm" onClick={cancelEdit}>Cancel</Button>
                 <Button size="sm" onClick={handleSave}>Save</Button>
               </>
