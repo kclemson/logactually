@@ -608,10 +608,10 @@ export function DetailDialog({
         </div>
 
         {!readOnly && !isMultiItem && (
-          <DialogFooter className="px-4 py-3 flex-shrink-0">
+          <DialogFooter className="px-4 py-3 flex-shrink-0 gap-2">
             {editing ? (
               <>
-                <p className="text-[10px] italic text-muted-foreground/70 text-center w-full">
+                <p className="text-[10px] italic text-muted-foreground/70 w-full sm:w-auto sm:mr-auto sm:self-end sm:mb-0.5">
                   Values aren't validated — please double-check your edits.
                 </p>
                 <Button variant="outline" size="sm" onClick={cancelEdit}>Cancel</Button>
@@ -799,6 +799,16 @@ export function processExerciseSaveUpdates(
         const metaKey = key.slice(6);
         metaChanges[metaKey] = value === '' || value === null ? null : Number(value);
         hasMetaChanges = true;
+      }
+      // _exercise_category is a virtual field — map it to exercise_key
+      if (key === '_exercise_category') {
+        const newCat = value;
+        if (newCat === 'other') {
+          regularUpdates.exercise_key = 'other';
+        } else if (!regularUpdates.exercise_key) {
+          // Switching to strength/cardio without a new exercise_key selected
+          regularUpdates.exercise_key = '';
+        }
       }
     } else {
       regularUpdates[key] = value;

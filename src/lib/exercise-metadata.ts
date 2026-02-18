@@ -291,7 +291,7 @@ export interface MetadataKeyConfig {
 
 export const KNOWN_METADATA_KEYS: MetadataKeyConfig[] = [
   { key: 'effort', label: 'Effort', unit: '/10', appliesTo: 'both', min: 1, max: 10 },
-  { key: 'calories_burned', label: 'Cal Burned', unit: 'cal', appliesTo: 'both', min: 1 },
+  { key: 'calories_burned', label: 'Burned', unit: 'cal', appliesTo: 'both', min: 1 },
   { key: 'heart_rate', label: 'Heart Rate', unit: 'bpm', appliesTo: 'both', min: 30, max: 250 },
   { key: 'incline_pct', label: 'Incline', unit: '%', appliesTo: 'cardio', min: 0, max: 30 },
   { key: 'cadence_rpm', label: 'Cadence', unit: 'rpm', appliesTo: 'cardio', min: 1 },
