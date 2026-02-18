@@ -1,19 +1,17 @@
 
 
-# Fix expanded panel layout — stop action links from constraining text
+# Fix "Save as routine/meal" alignment
 
 ## Problem
-The current layout uses `flex items-end justify-between` to put left-side text and right-side action links on the same row. This forces long text (raw input, saved routine names) to share horizontal space with the action links, causing it to wrap earlier than it should.
+After the vertical stack refactor, "Save as routine" ended up centered with the right-aligned action links. The user wants it left-aligned, while "Copy to today" and "Details" stay right-aligned.
 
 ## Fix
-Change from a side-by-side layout to a vertical stack. Text content flows at full width, and action links sit on their own line below, right-aligned.
-
-## Changes
 
 ### `src/components/EntryExpandedPanel.tsx`
-- Replace the outer `flex items-end justify-between gap-2` div with a vertical `space-y-1.5` container.
-- Let `extraContent`, "Logged as", and "From saved" text flow at full width without a constraining wrapper.
-- Move all action links ("Copy to today", "Details", and "Save as meal/routine") into a single `flex justify-end gap-4` row at the bottom.
+- Split the single `flex justify-end gap-4` row into a `flex justify-between` row.
+- Left side: "Save as routine/meal" (only shown when `!isFromSaved && onSaveAs`).
+- Right side: "Copy to today" and "Details" grouped together in a nested `flex gap-4`.
+- When there's no "Save as" link, the right-side links still align right via `justify-between` (or use `ml-auto` on the right group).
 
-One file, layout-only change. No logic changes.
+Result: "Save as routine" stays left, "Copy to today" and "Details" stay right, all on the same line.
 
