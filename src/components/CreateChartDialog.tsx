@@ -68,8 +68,8 @@ function CreateChartDialogInner({
         period,
       });
       setCurrentSpec(spec);
-    } catch {
-      // Error handled by mutation state
+    } catch (err) {
+      console.error("[generate-chart] mutation error:", err);
     }
   };
 

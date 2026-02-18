@@ -185,7 +185,8 @@ serve(async (req) => {
       exerciseContext = "No exercise data for this period.";
     } else {
       const lines = exerciseSets.map((s: any) => {
-        const parts = [`date=${s.logged_date}`, `name="${s.description}"`];
+      const parts = [`date=${s.logged_date}`, `key=${s.exercise_key}`, `name="${s.description}"`];
+      if (s.exercise_subtype) parts.push(`subtype=${s.exercise_subtype}`);
         if (s.sets > 0 && s.reps > 0) parts.push(`${s.sets}x${s.reps}`);
         if (s.weight_lbs > 0) parts.push(`${s.weight_lbs}lbs`);
         if (s.duration_minutes) parts.push(`${s.duration_minutes}min`);
