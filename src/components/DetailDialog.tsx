@@ -535,7 +535,7 @@ export const EXERCISE_HIDE_WHEN_EMPTY = new Set(
 
 export function buildFoodDetailFields(item: Record<string, any>): FieldConfig[] {
   return [
-    { key: 'description', label: 'Name', type: 'text' },
+    { key: 'description', label: 'Name', type: 'text', maxWidth: 'sm' },
     { key: 'portion', label: 'Portion', type: 'text', maxWidth: 'sm' },
     { key: 'calories', label: 'Calories', type: 'number', unit: 'cal', min: 0 },
     { key: 'protein', label: 'Protein', type: 'number', unit: 'g', min: 0 },
