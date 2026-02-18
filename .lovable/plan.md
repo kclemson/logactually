@@ -1,26 +1,27 @@
 
 
-# Constrain Name field width to match Portion
+# Fix right-edge clipping in food detail dialog
 
 ## Problem
 
-The Name input stretches edge-to-edge across the dialog, far wider than needed. The Portion field below it is already constrained to `max-w-[12rem]`, and the numeric fields below that are even narrower. The Name field should have a similar natural boundary.
+The unit text ("mg", "g") on the right column's fields is clipped off the right edge of the dialog on mobile. The root cause is that the label minimum width (`min-w-[5.5rem]` = 88px) is wider than needed -- there's visible dead space between the longest label text and the input box.
 
 ## Fix
 
-Add `maxWidth: 'sm'` to the Name field in `buildFoodDetailFields`, same as Portion already has. This applies the existing `max-w-[12rem]` constraint, aligning the Name input's right edge with the Portion input's right edge and creating a visually consistent left column.
+Reduce `labelClassName` from `min-w-[5.5rem]` to `min-w-[5rem]` (80px) in both `DetailDialog` usages in `FoodLog.tsx`. This reclaims 16px total (8px per column), which is enough to keep the right column's unit labels on-screen. "Saturated Fat:" (the longest label) still fits comfortably at 80px.
 
 ## Technical details
 
-**File: `src/components/DetailDialog.tsx`** -- `buildFoodDetailFields` (line 537)
+**File: `src/pages/FoodLog.tsx`** -- two occurrences (around lines 875 and 892)
 
-```tsx
-// Before
-{ key: 'description', label: 'Name', type: 'text' },
-
-// After
-{ key: 'description', label: 'Name', type: 'text', maxWidth: 'sm' },
+Change:
+```
+labelClassName="min-w-[5.5rem]"
+```
+To:
+```
+labelClassName="min-w-[5rem]"
 ```
 
-One line, one property addition.
+Two-line change in one file.
 
