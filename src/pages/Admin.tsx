@@ -6,8 +6,10 @@ import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useAdminFeedback, useRespondToFeedback, useResolveFeedback } from "@/hooks/feedback";
 import { useHasHover } from "@/hooks/use-has-hover";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, isToday } from "date-fns";
-import { MessageSquare, FileSearch, ChevronDown } from "lucide-react";
+import { MessageSquare, FileSearch, ChevronDown, Lock, LockOpen } from "lucide-react";
 import { truncate } from "@/lib/feedback-utils";
 import { FeedbackMessageBody } from "@/components/FeedbackMessageBody";
 import { cn } from "@/lib/utils";
@@ -61,6 +63,35 @@ export default function Admin() {
   const { data: demoLoginsTotal } = useLoginCount("demo", null);
   const { data: demoLogins24h } = useLoginCount("demo", 24);
   const { data: demoLogins7d } = useLoginCount("demo", 168);
+
+  const queryClient = useQueryClient();
+  const { data: demoLocked } = useQuery({
+    queryKey: ['demoReadOnly'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('is_read_only')
+        .eq('is_read_only', true)
+        .limit(1)
+        .maybeSingle();
+      return data?.is_read_only ?? true;
+    },
+    staleTime: 60_000,
+  });
+  const [toggling, setToggling] = useState(false);
+
+  const handleToggleDemoLock = async () => {
+    setToggling(true);
+    try {
+      const { data, error } = await supabase.rpc('toggle_demo_read_only' as any);
+      if (error) throw error;
+      queryClient.setQueryData(['demoReadOnly'], data);
+    } catch (e) {
+      console.error('Failed to toggle demo lock:', e);
+    } finally {
+      setToggling(false);
+    }
+  };
 
   // Render nothing while checking admin status - no spinner, no flash
   if (isAdminLoading) {
@@ -144,7 +175,18 @@ export default function Admin() {
 
         {/* Second column */}
         <div className="space-y-0">
-          <p>Demo logins: {demoLoginsTotal ?? 0}</p>
+          <p className="flex items-center gap-1.5">
+            Demo logins: {demoLoginsTotal ?? 0}
+            <button
+              onClick={handleToggleDemoLock}
+              disabled={toggling || demoLocked === undefined}
+              className="inline-flex items-center gap-0.5 text-[10px] ml-1 px-1 py-0 rounded border border-border hover:bg-muted disabled:opacity-50"
+              title={demoLocked ? "Demo is locked (read-only). Click to unlock." : "Demo is unlocked (writable). Click to lock."}
+            >
+              {demoLocked ? <Lock className="h-2.5 w-2.5" /> : <LockOpen className="h-2.5 w-2.5" />}
+              {demoLocked ? "Locked" : "Unlocked"}
+            </button>
+          </p>
           <p>Last 24h: <span className={(demoLogins24h ?? 0) > 0 ? "text-green-500" : ""}>{demoLogins24h ?? 0}</span></p>
           <p>Last 7d: {demoLogins7d ?? 0}</p>
         </div>

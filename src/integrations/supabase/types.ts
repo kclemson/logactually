@@ -515,6 +515,7 @@ export type Database = {
       }
       increment_login_count: { Args: { user_id: string }; Returns: undefined }
       is_read_only_user: { Args: { _user_id: string }; Returns: boolean }
+      toggle_demo_read_only: { Args: never; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
