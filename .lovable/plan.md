@@ -1,19 +1,19 @@
 
 
-# Add changelog entry for Detail Dialog feature
+# Suppress save-suggestion prompt after "Copy to today"
 
-## Changes
+## Problem
+When you tap "Copy to today" on a past food entry, it calls `createEntryFromItems` which runs the repeated-entry detection check. If the copied meal has been logged before, you immediately see a "Save as meal?" prompt on today's page -- confusing since you just explicitly copied something.
 
-### 1. Copy screenshot to `public/changelog/`
-- Copy `user-uploads://detailed_dialog_view.png` to `public/changelog/detailed-dialog.png`
+## Scope
+This only affects **FoodLog.tsx**. The WeightLog copy handler already bypasses the suggestion check because it calls `createEntry.mutateAsync` directly instead of going through the shared helper.
 
-### 2. `src/pages/Changelog.tsx`
-- Add new entry at the top of `CHANGELOG_ENTRIES`:
-  ```
-  { date: "Feb-18", text: "Added a detail view for logged food and exercise items — tap 'Details' in the expanded panel to see all fields at a glance, or switch to edit mode to update values directly. Uses a two-column layout on wider screens with dropdowns for category fields.", image: "detailed-dialog.png" }
-  ```
-- Update `LAST_UPDATED` from `"Feb-17-26"` to `"Feb-18-26"`
+## Change
 
-### 3. `src/components/settings/AboutSection.tsx`
-- Update the changelog link text from `"Changelog (last updated Feb-17)"` to `"Changelog (last updated Feb-18)"`
+### `src/pages/FoodLog.tsx`
 
+1. Add an optional `skipSuggestionCheck?: boolean` parameter to `createEntryFromItems` (after `targetDate`).
+2. Guard the repeated-entry detection block (line 247) with `&& !skipSuggestionCheck`.
+3. In `handleCopyEntryToToday`, pass `true` for `skipSuggestionCheck`.
+
+That's it -- one file, three small edits.
