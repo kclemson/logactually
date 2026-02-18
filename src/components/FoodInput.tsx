@@ -16,10 +16,12 @@ const PLACEHOLDER_EXAMPLES = [
   "Describe what you ate, such as: grande oat milk latte from Starbucks and most of a banana",
   "Describe what you ate, such as: Chipotle bowl with chicken and extra guac",
   "Describe what you ate, such as: blueberry muffin but only the top part",
-  "Describe what you ate, such as: lean cuisine alfredo noodles and an apple with around 2Tb of peanut butter",
   "Describe what you ate, such as: protein bar (the kirkland ones from costco)",
   "Describe what you ate, such as: leftover Domino's, two and a half slices of pepperoni",
   "Describe what you ate, such as: a slice of banana bread from this recipe but without the nuts: https://natashaskitchen.com/banana-bread-recipe-video/",
+  "Describe what you ate, such as: In-N-Out double double animal style and half a chocolate shake",
+  "Describe what you ate, such as: two cups of coffee with a splash of oat milk",
+  "Describe what you ate, such as: a few bites of brownie batter while baking, maybe 150 calories worth",
 ];
 
 interface FoodInputProps {

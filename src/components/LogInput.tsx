@@ -22,30 +22,36 @@ const FOOD_PLACEHOLDER_EXAMPLES = [
   "Describe what you ate, such as: grande oat milk latte from Starbucks and most of a banana",
   "Describe what you ate, such as: Chipotle bowl with chicken and extra guac",
   "Describe what you ate, such as: blueberry muffin but only the top part",
-  "Describe what you ate, such as: lean cuisine alfredo noodles and an apple with around 2Tb of peanut butter",
   "Describe what you ate, such as: protein bar (the kirkland ones from costco)",
   "Describe what you ate, such as: leftover Domino's, two and a half slices of pepperoni",
-  "Describe what you ate, such as: a slice of banana bread from this recipe: https://natashaskitchen.com/banana-bread-recipe-video/",
+  "Describe what you ate, such as: a slice of banana bread from this recipe but without the nuts: https://natashaskitchen.com/banana-bread-recipe-video/",
+  "Describe what you ate, such as: In-N-Out double double animal style and half a chocolate shake",
+  "Describe what you ate, such as: two cups of coffee with a splash of oat milk",
+  "Describe what you ate, such as: a few bites of brownie batter while baking, maybe 150 calories worth",
 ];
 
 const WEIGHTS_PLACEHOLDER_EXAMPLES_LBS = [
-  "Describe your workout: 3 sets of 10 reps lat pulldown at 100 lbs",
   "Describe your workout: bench press 4x8 at 135",
   "Describe your workout: squats 5x5 at 185 lbs, then leg press 3x12 at 200",
-  "Describe your workout: bicep curls 3x12 at 25 lbs",
-  "Describe your workout: chest fly machine 3x10, then shoulder press 3x8",
+  "Describe your workout: ran 2 miles in 18 minutes, avg heart rate 145bpm",
+  "Describe your workout: 45 min bike ride, moderate pace, about 8 miles",
+  "Describe your workout: swam laps for 30 minutes, felt like a hard effort",
+  "Describe your workout: walked the dog for 40 minutes, 1.2 miles, 108 avg HR",
+  "Describe your workout: 20 min on the stairmaster at level 7, burned about 200 cal",
+  "Describe your workout: gardening for 30 minutes, just pruning so not too heavy",
   "Describe your workout: leg extensions and hamstring curls, 3 sets each",
-  "Describe your workout: cable rows 4x10 at 80 lbs",
 ];
 
 const WEIGHTS_PLACEHOLDER_EXAMPLES_KG = [
-  "Describe your workout: 3 sets of 10 reps lat pulldown at 45 kg",
   "Describe your workout: bench press 4x8 at 60 kg",
   "Describe your workout: squats 5x5 at 85 kg, then leg press 3x12 at 90 kg",
-  "Describe your workout: bicep curls 3x12 at 12 kg",
-  "Describe your workout: chest fly machine 3x10, then shoulder press 3x8",
+  "Describe your workout: ran 3k in 18 minutes, avg heart rate 145bpm",
+  "Describe your workout: 45 min bike ride, moderate pace, about 13 km",
+  "Describe your workout: swam laps for 30 minutes, felt like a hard effort",
+  "Describe your workout: walked the dog for 40 minutes, 3 km, 112 avg HR",
+  "Describe your workout: 20 min on the stairmaster at level 7, burned about 200 cal",
+  "Describe your workout: gardening for 30 minutes, just pruning so not too heavy",
   "Describe your workout: leg extensions and hamstring curls, 3 sets each",
-  "Describe your workout: cable rows 4x10 at 35 kg",
 ];
 
 interface LogModeConfig {
