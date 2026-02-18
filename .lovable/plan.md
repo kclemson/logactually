@@ -1,50 +1,30 @@
 
 
-# Minimize layout shift by shrinking edit-mode inputs to match read-only row height
+# Add horizontal margin to DetailDialog on mobile
 
-## Goal
+The dialog currently stretches to the full screen width on mobile because it uses `w-full` with no margin. Adding a small horizontal inset will give it breathing room from the screen edges.
 
-Keep the compact read-only layout as-is. Instead, reduce the height and spacing of edit-mode inputs so fields stay in the same position when toggling between view and edit.
+## Change
 
-## What changes
-
-All changes in `src/components/DetailDialog.tsx`:
-
-### 1. Shrink edit-mode inputs from h-8 to h-6
-
-The `Input` elements in `FieldEditGrid` currently use `className="h-8 text-sm flex-1 min-w-0"`. Change to `h-6 py-0 px-1.5 text-sm flex-1 min-w-0` -- this makes each input 24px tall (matching the ~24px read-only rows) by removing the internal vertical padding.
-
-### 2. Shrink edit-mode selects from h-8 to h-6
-
-The `<select>` elements use `h-8 ... px-2 py-1`. Change to `h-6 py-0 px-1.5` to match.
-
-### 3. Reduce edit grid row gap from gap-y-1.5 to gap-y-0.5
-
-This matches the read-only grid's `gap-y-0.5`, so the spacing between rows is identical in both modes.
-
-### 4. Match read-only row height explicitly
-
-Add `items-center` to the read-only row div (it already has `flex gap-2 py-0.5`) so vertical alignment matches the edit rows.
-
-## Result
-
-Fields that appear in both modes will occupy the same vertical position. The only layout shifts will come from fields that are hidden in read-only mode (via `hideWhenZero`) appearing when entering edit mode -- which is unavoidable and expected.
+In `src/components/DetailDialog.tsx`, add `mx-4` (16px margin on each side) to the `DialogContent` className. This only visually matters on mobile since `sm:max-w-md` already constrains the width on larger screens.
 
 ## Technical details
 
-**FieldEditGrid grid container (line 129):**
-`gap-y-1.5` becomes `gap-y-0.5`
+**`src/components/DetailDialog.tsx` (line 305):**
 
-**FieldEditGrid select (line 141):**
-`h-8` becomes `h-6`, `px-2 py-1` becomes `px-1.5 py-0`
+Add `mx-4 rounded-lg` to the `DialogContent` className:
 
-**FieldEditGrid Input (around line 160, the Input element):**
-`h-8` becomes `h-6`, add `py-0 px-1.5`
+```tsx
+// Before:
+<DialogContent className="top-[5%] translate-y-0 max-h-[90dvh] max-h-[90vh] flex flex-col p-0 gap-0 sm:max-w-md [&>button:last-child]:hidden">
 
-**FieldViewGrid row div (line 103):**
-Add `items-center` to match edit-mode alignment
+// After:
+<DialogContent className="top-[5%] translate-y-0 max-h-[90dvh] max-h-[90vh] flex flex-col p-0 gap-0 mx-4 rounded-lg sm:max-w-md [&>button:last-child]:hidden">
+```
+
+The `rounded-lg` is added because without it the sharp corners look odd once there's visible space around the dialog. On `sm:` and up the dialog is already rounded via the base component's `sm:rounded-lg`.
 
 | File | Change |
 |------|--------|
-| `src/components/DetailDialog.tsx` | Shrink edit inputs/selects to h-6, reduce edit gap-y to 0.5, add items-center to view rows |
+| `src/components/DetailDialog.tsx` | Add `mx-4 rounded-lg` to DialogContent for mobile breathing room |
 
