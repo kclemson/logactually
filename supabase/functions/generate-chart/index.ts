@@ -374,7 +374,20 @@ serve(async (req) => {
         : undefined,
     };
 
-    return new Response(JSON.stringify({ chartSpec }), {
+    // Serialize dailyTotals for client-side verification
+    const serializedFoodTotals: Record<string, any> = {};
+    for (const [date, t] of dailyFoodTotals.entries()) {
+      serializedFoodTotals[date] = { cal: Math.round(t.cal), protein: Math.round(t.protein), carbs: Math.round(t.carbs), fat: Math.round(t.fat), fiber: Math.round(t.fiber), sugar: Math.round(t.sugar), sat_fat: Math.round(t.sat_fat), sodium: Math.round(t.sodium), chol: Math.round(t.chol) };
+    }
+    const serializedExTotals: Record<string, any> = {};
+    for (const [date, t] of dailyExTotals.entries()) {
+      serializedExTotals[date] = { sets: t.sets, duration: Math.round(t.duration), distance: Math.round(t.distance * 10) / 10, cal_burned: Math.round(t.cal_burned), unique_exercises: t.exercises.size };
+    }
+
+    return new Response(JSON.stringify({
+      chartSpec,
+      dailyTotals: { food: serializedFoodTotals, exercise: serializedExTotals },
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error: unknown) {

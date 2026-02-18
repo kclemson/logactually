@@ -7,9 +7,19 @@ interface GenerateChartParams {
   period: number;
 }
 
+export interface DailyTotals {
+  food: Record<string, { cal: number; protein: number; carbs: number; fat: number; fiber: number; sugar: number; sat_fat: number; sodium: number; chol: number }>;
+  exercise: Record<string, { sets: number; duration: number; distance: number; cal_burned: number; unique_exercises: number }>;
+}
+
+export interface GenerateChartResult {
+  chartSpec: ChartSpec;
+  dailyTotals: DailyTotals;
+}
+
 export function useGenerateChart() {
   return useMutation({
-    mutationFn: async ({ messages, period }: GenerateChartParams): Promise<ChartSpec> => {
+    mutationFn: async ({ messages, period }: GenerateChartParams): Promise<GenerateChartResult> => {
       const { data, error } = await supabase.functions.invoke("generate-chart", {
         body: { messages, period },
       });
@@ -19,7 +29,10 @@ export function useGenerateChart() {
       console.log("[generate-chart] response:", { data, error });
       if (!data?.chartSpec) throw new Error("No chart specification returned");
 
-      return data.chartSpec as ChartSpec;
+      return {
+        chartSpec: data.chartSpec as ChartSpec,
+        dailyTotals: data.dailyTotals ?? { food: {}, exercise: {} },
+      };
     },
   });
 }
