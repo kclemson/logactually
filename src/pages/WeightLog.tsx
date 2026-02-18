@@ -775,7 +775,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
               readOnly={isReadOnly}
               hideWhenZero={EXERCISE_HIDE_WHEN_EMPTY}
               gridClassName="grid-cols-2"
-              labelClassName="min-w-[4rem]"
+              labelClassName="min-w-[3.5rem] sm:min-w-[4rem]"
               defaultUnits={{
                 distance_miles: settings.distanceUnit || 'mi',
                 weight_lbs: settings.weightUnit,
@@ -799,7 +799,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
             readOnly={isReadOnly}
             hideWhenZero={EXERCISE_HIDE_WHEN_EMPTY}
             gridClassName="grid-cols-2"
-            labelClassName="min-w-[4rem]"
+            labelClassName="min-w-[3.5rem] sm:min-w-[4rem]"
             defaultUnits={{
               distance_miles: settings.distanceUnit || 'mi',
               weight_lbs: settings.weightUnit,

@@ -163,10 +163,10 @@ function FieldViewItem({
   }
   return (
     <div className={cn("flex items-center gap-1.5 py-0.5 min-w-0", field.type === 'text' && 'col-span-2')}>
-      <span className={cn("text-xs text-muted-foreground shrink-0", labelClassName)}>
+      <span className={cn("text-[11px] sm:text-xs text-muted-foreground shrink-0", labelClassName)}>
         {field.label}:
       </span>
-      <span className="text-sm min-w-0 truncate">
+      <span className="text-sm min-w-0 truncate min-w-[2rem]">
         {displayValue(field, activeValues, activeUnits?.[field.key])}
       </span>
       {field.unitToggle && (
@@ -209,7 +209,7 @@ function FieldEditItem({
 
   return (
     <div className={cn("flex items-center gap-1.5 min-w-0", field.type === 'text' && 'col-span-2')}>
-      <span className={cn("text-xs text-muted-foreground shrink-0", labelClassName)}>
+      <span className={cn("text-[11px] sm:text-xs text-muted-foreground shrink-0", labelClassName)}>
         {field.label}:
       </span>
       {field.readOnly ? (
@@ -223,7 +223,7 @@ function FieldEditItem({
               updateDraft('exercise_key', '');
             }
           }}
-          className="flex h-6 w-[7.5rem] min-w-0 rounded-md border border-input bg-background px-1.5 py-0 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex h-6 w-[7.5rem] min-w-0 rounded-md border border-input bg-background px-1.5 py-0 text-xs sm:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <option value="">—</option>
           {effectiveField.optgroups ? (
@@ -717,7 +717,7 @@ export function buildExerciseDetailFields(item: Record<string, any>): FieldLayou
   };
 
   const exerciseTypeField: FieldConfig = {
-    key: 'exercise_key', label: 'Exercise type', type: 'select',
+    key: 'exercise_key', label: 'Type', type: 'select',
     optgroups: buildExerciseKeyOptgroups(),
   };
 
