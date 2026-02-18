@@ -50,7 +50,7 @@ export function LogEntryInput({ valueType, onSubmit, onCancel, isLoading, label,
         <Input
           value={textValue}
           onChange={(e) => setTextValue(e.target.value)}
-          placeholder={valueType === 'text_numeric' ? 'Label (e.g. Waist)' : 'Enter text...'}
+          placeholder={valueType === 'text_numeric' ? 'Label' : 'Enter text...'}
           className="h-8 text-sm flex-1"
           autoFocus
         />
