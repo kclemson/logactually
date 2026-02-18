@@ -1,23 +1,40 @@
 
 
-# Add breathing room around the X close button in DetailDialog
+# Align category value/dropdown with Subtype value/dropdown
 
 ## Problem
 
-The X close button sits at `right-4 top-4` (from the base `dialog.tsx` component), but the DetailDialog uses `p-0` on its content wrapper, so the button crowds into the first row of content (the Name field).
+The "Cardio/Strength/Other" text and dropdown are slightly misaligned with the "Walking" Subtype value/dropdown below them. Two causes:
+
+1. **View mode** (line 162): The paired field span uses `text-right`, pushing the text to the right edge instead of left-aligning with the Subtype value below.
+2. **Edit mode** (line 268): The paired field select uses `px-1 text-xs` while the Subtype select (line 225) uses `px-1.5 text-sm`, causing a slight horizontal offset.
 
 ## Fix
 
-Increase the top padding on the `DialogHeader` from `pt-4` to `pt-6`. This pushes the content down slightly, giving the X button (which is absolutely positioned at `top-4`) visual breathing room above the first field row without needing to touch the shared dialog component.
+### 1. View mode: left-align the paired field value
 
-### Technical detail
-
-**`src/components/DetailDialog.tsx` line 476:**
+**Line 162** -- change:
 ```
-DialogHeader className="px-4 pt-4 pb-2 ..."
-                            ^^^^
-Change to:          "px-4 pt-6 pb-2 ..."
+w-[7.5rem] text-right
 ```
+to:
+```
+w-[7.5rem] text-left pl-2
+```
+The `pl-2` matches the `pl-2` already used on read-only values (line 158) for consistent alignment with edit-mode inputs.
 
-This adds 8px of extra space above the header content, so the X button no longer feels jammed against the Name label.
+### 2. Edit mode: match paired field select styling to regular selects
+
+**Line 268** -- change:
+```
+px-1 py-0 text-xs
+```
+to:
+```
+px-1.5 py-0 text-sm
+```
+This matches the regular select styling on line 225, so both dropdowns render text at the same size and internal padding, ensuring their text baselines and left edges align.
+
+### Files changed
+- `src/components/DetailDialog.tsx` (2 small class changes)
 
