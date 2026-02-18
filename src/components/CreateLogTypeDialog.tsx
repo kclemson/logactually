@@ -12,19 +12,18 @@ interface CreateLogTypeDialogProps {
   existingNames?: string[];
 }
 
-const VALUE_TYPE_OPTIONS: { value: 'numeric' | 'dual_numeric' | 'text'; label: string; description: string }[] = [
+const VALUE_TYPE_OPTIONS: { value: 'numeric' | 'text'; label: string; description: string }[] = [
   { value: 'numeric', label: 'Numeric', description: 'A single number (e.g. body weight)' },
-  { value: 'dual_numeric', label: 'Dual Numeric', description: 'Two numbers with / between them (e.g. for blood pressure)' },
   { value: 'text', label: 'Text only', description: 'Free-form text' },
 ];
 
 export function CreateLogTypeDialog({ open, onOpenChange, onSubmit, isLoading, existingNames = [] }: CreateLogTypeDialogProps) {
   const [name, setName] = useState('');
-  const [valueType, setValueType] = useState<'numeric' | 'dual_numeric' | 'text'>('numeric');
+  const [valueType, setValueType] = useState<'numeric' | 'text'>('numeric');
   const [unit, setUnit] = useState('');
   const [textMultiline, setTextMultiline] = useState(false);
 
-  const showUnit = valueType === 'numeric' || valueType === 'dual_numeric';
+  const showUnit = valueType === 'numeric';
   const isDuplicate = name.trim() !== '' && existingNames.some(n => n.toLowerCase() === name.trim().toLowerCase());
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -76,13 +75,13 @@ export function CreateLogTypeDialog({ open, onOpenChange, onSubmit, isLoading, e
                     </div>
                   </label>
                   {/* Inline unit input for numeric types when selected */}
-                  {(opt.value === 'numeric' || opt.value === 'dual_numeric') && valueType === opt.value && (
+                  {opt.value === 'numeric' && valueType === opt.value && (
                     <div className="ml-6 mt-1 mb-1 flex items-center gap-2">
                       <span className="text-xs text-muted-foreground shrink-0">Unit</span>
                       <Input
                         value={unit}
                         onChange={(e) => setUnit(e.target.value)}
-                        placeholder={valueType === 'dual_numeric' ? "e.g. mmHg" : "e.g. lbs, inches, etc"}
+                        placeholder="e.g. lbs, inches, etc"
                         className="h-7 text-xs"
                       />
                     </div>

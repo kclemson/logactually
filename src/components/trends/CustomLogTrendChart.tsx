@@ -45,6 +45,12 @@ export const CustomLogTrendChart = ({ trend, onNavigate, days }: CustomLogTrendC
         point[s.label] = match ? match.value : 0;
         if (match?.textLabel) point.textPreview = match.textLabel;
       });
+      // For dual_numeric (BP), add a "120/80" label on visible label points
+      if (trend.valueType === 'dual_numeric' && point.showLabelFullWidth) {
+        const sys = point['Systolic'] || 0;
+        const dia = point['Diastolic'] || 0;
+        if (sys > 0 || dia > 0) point.bpLabel = `${Math.round(sys)}/${Math.round(dia)}`;
+      }
       return point;
     });
   }, [trend, days]);
@@ -108,7 +114,8 @@ export const CustomLogTrendChart = ({ trend, onNavigate, days }: CustomLogTrendC
       bars={bars}
       onNavigate={onNavigate}
       formatter={(value, name) => `${name}: ${value}`}
-      grouped
+      labelDataKey="bpLabel"
+      labelColor={TEAL_PALETTE[0]}
       height="h-24"
     />
   );
