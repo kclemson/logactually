@@ -303,6 +303,33 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_charts: {
+        Row: {
+          chart_spec: Json
+          created_at: string
+          id: string
+          question: string
+          sort_order: number
+          user_id: string
+        }
+        Insert: {
+          chart_spec: Json
+          created_at?: string
+          id?: string
+          question: string
+          sort_order?: number
+          user_id: string
+        }
+        Update: {
+          chart_spec?: Json
+          created_at?: string
+          id?: string
+          question?: string
+          sort_order?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       saved_meals: {
         Row: {
           created_at: string | null

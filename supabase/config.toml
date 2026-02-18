@@ -33,3 +33,6 @@ verify_jwt = false
 
 [functions.ask-trends-ai]
 verify_jwt = false
+
+[functions.generate-chart]
+verify_jwt = false

@@ -7,9 +7,13 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, ChartTitle, ChartSubtitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { UtensilsCrossed, Dumbbell, ClipboardList, Pin } from "lucide-react";
+import { UtensilsCrossed, Dumbbell, ClipboardList, Pin, Plus, BarChart3 } from "lucide-react";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { useWeightTrends, ExerciseTrend } from "@/hooks/useWeightTrends";
+import { CreateChartDialog } from "@/components/CreateChartDialog";
+import { useSavedCharts } from "@/hooks/useSavedCharts";
+import { DynamicChart } from "@/components/trends/DynamicChart";
+import { DeleteConfirmPopover } from "@/components/DeleteConfirmPopover";
 
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { getEffectiveDailyTarget, ACTIVITY_MULTIPLIERS } from "@/lib/calorie-target";
@@ -66,6 +70,9 @@ const Trends = () => {
   const [foodInitialView, setFoodInitialView] = useState<"ask" | "pinned">("ask");
   const [exerciseInitialView, setExerciseInitialView] = useState<"ask" | "pinned">("ask");
   const { pinCount } = usePinnedChats();
+  const [createChartOpen, setCreateChartOpen] = useState(false);
+  const { savedCharts, deleteMutation } = useSavedCharts();
+  const [deletePopoverId, setDeletePopoverId] = useState<string | null>(null);
   const handleExerciseBarClick = useCallback((date: string) => {
     navigate(`/weights?date=${date}`);
   }, [navigate]);
@@ -310,7 +317,40 @@ const Trends = () => {
             {label}
           </Button>
         ))}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setCreateChartOpen(true)}
+          className="gap-1"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Chart
+        </Button>
       </div>
+
+      {/* My Charts Section */}
+      {savedCharts.length > 0 && (
+        <CollapsibleSection title="My Charts" icon={BarChart3} iconClassName="text-emerald-500 dark:text-emerald-400" defaultOpen={true} storageKey="trends-my-charts">
+          <div className="grid grid-cols-2 gap-2">
+            {savedCharts.map((chart) => (
+              <DynamicChart
+                key={chart.id}
+                spec={chart.chart_spec}
+                headerAction={
+                  <DeleteConfirmPopover
+                    id={chart.id}
+                    label="Delete chart?"
+                    description="This chart will be permanently removed."
+                    onDelete={() => deleteMutation.mutate(chart.id)}
+                    openPopoverId={deletePopoverId}
+                    setOpenPopoverId={setDeletePopoverId}
+                  />
+                }
+              />
+            ))}
+          </div>
+        </CollapsibleSection>
+      )}
 
       {/* Food Trends Section */}
       <CollapsibleSection title="Food Trends" icon={UtensilsCrossed} defaultOpen={true} storageKey="trends-food" iconClassName="text-blue-500 dark:text-blue-400" headerAction={
@@ -546,6 +586,7 @@ const Trends = () => {
       )}
       <AskTrendsAIDialog mode="food" open={foodAIOpen} onOpenChange={setFoodAIOpen} initialView={foodInitialView} />
       <AskTrendsAIDialog mode="exercise" open={exerciseAIOpen} onOpenChange={setExerciseAIOpen} initialView={exerciseInitialView} />
+      <CreateChartDialog open={createChartOpen} onOpenChange={setCreateChartOpen} period={selectedPeriod} />
     </div>
   );
 };
