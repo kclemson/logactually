@@ -430,7 +430,7 @@ export function DetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="top-[5%] translate-y-0 max-h-[90dvh] max-h-[90vh] flex flex-col p-0 gap-0 mx-4 rounded-lg sm:max-w-md [&>button:last-child]:hidden">
+      <DialogContent className="left-2 right-2 top-[5%] translate-x-0 translate-y-0 w-auto max-w-[calc(100vw-16px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md max-h-[90dvh] max-h-[90vh] flex flex-col p-0 gap-0 rounded-lg [&>button:last-child]:hidden">
         <DialogHeader className="px-4 pt-4 pb-2 flex-shrink-0">
           <DialogTitle className={cn("text-base", !isMultiItem && "sr-only")}>{title}</DialogTitle>
         </DialogHeader>
