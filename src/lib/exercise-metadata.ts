@@ -274,7 +274,11 @@ export function getExerciseMuscles(exerciseKey: string): ExerciseMuscles | null 
 export function applyCategoryChange(
   newCategory: 'strength' | 'cardio' | 'other'
 ): { exercise_key: string } {
-  return { exercise_key: newCategory === 'other' ? 'other' : '' };
+  switch (newCategory) {
+    case 'strength': return { exercise_key: 'functional_strength' };
+    case 'cardio':   return { exercise_key: 'walk_run' };
+    case 'other':    return { exercise_key: 'other' };
+  }
 }
 
 // Check if an exercise tracks distance (mph toggle supported)

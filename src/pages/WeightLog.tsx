@@ -354,7 +354,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
     }
   }, []);
 
-  const handleDetailSave = useCallback(async (updates: Record<string, any>) => {
+  const handleDetailSave = useCallback((updates: Record<string, any>) => {
     if (!detailDialogItem || detailDialogItem.mode !== 'single') return;
     const item = displayItems[detailDialogItem.index];
     if (!item) return;
@@ -365,21 +365,11 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
       allUpdates.exercise_metadata = newMetadata;
     }
 
-    if (Object.keys(allUpdates).length === 0) return;
-
-    const isCategoryChange = 'exercise_key' in allUpdates
-      && allUpdates.exercise_key !== item.exercise_key;
-
-    if (isCategoryChange) {
-      // Async path: save, wait for refetch, keep dialog open
-      await updateSet.mutateAsync({ id: item.id, updates: allUpdates });
-      await queryClient.invalidateQueries({ queryKey: ['weight-sets', dateStr] });
-      // Dialog stays open; DetailDialog exits edit mode; fresh data triggers re-render
-    } else {
+    if (Object.keys(allUpdates).length > 0) {
       updateSet.mutate({ id: item.id, updates: allUpdates });
-      setDetailDialogItem(null);
     }
-  }, [detailDialogItem, displayItems, updateSet, queryClient, dateStr]);
+    setDetailDialogItem(null);
+  }, [detailDialogItem, displayItems, updateSet]);
 
   const handleDetailSaveItem = useCallback((itemIndex: number, updates: Record<string, any>) => {
     if (!detailDialogItem || detailDialogItem.mode !== 'group') return;
