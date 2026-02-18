@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { Pencil, ChevronDown, Loader2 } from 'lucide-react';
+import { Pencil, ChevronDown } from 'lucide-react';
 import { applyCategoryChange } from '@/lib/exercise-metadata';
 
 // ============================================================================
@@ -44,7 +44,7 @@ export interface DetailDialogProps {
   title: string;
   fields: FieldConfig[] | FieldLayout;
   values: Record<string, any>;
-  onSave: (updates: Record<string, any>) => void | Promise<void>;
+  onSave: (updates: Record<string, any>) => void;
   readOnly?: boolean;
   defaultUnits?: Record<string, string>;
   gridClassName?: string;
@@ -376,7 +376,7 @@ export function DetailDialog({
   // Single-item mode state
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Record<string, any>>({});
-  const [saving, setSaving] = useState(false);
+  
 
   // Multi-item mode state
   const [expandedIndices, setExpandedIndices] = useState<Set<number>>(new Set());
@@ -440,7 +440,7 @@ export function DetailDialog({
     setDraft({});
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     const updates: Record<string, any> = {};
     for (const field of fieldsFlat) {
       if (field.readOnly) continue;
@@ -468,19 +468,7 @@ export function DetailDialog({
       }
     }
     if (Object.keys(updates).length > 0) {
-      const result = onSave(updates);
-      if (result && typeof (result as any).then === 'function') {
-        setSaving(true);
-        try {
-          await result;
-        } finally {
-          setSaving(false);
-        }
-        // After async save (e.g. category change), exit edit mode but keep dialog open
-        setEditing(false);
-        setDraft({});
-        return;
-      }
+      onSave(updates);
     }
     setEditing(false);
     setDraft({});
@@ -623,12 +611,7 @@ export function DetailDialog({
               })}
             </div>
           ) : (
-            <div className="relative">
-              {saving && (
-                <div className="absolute inset-0 bg-background/60 flex items-center justify-center z-10 rounded-lg">
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                </div>
-              )}
+            <div>
               {editing ? (
                 <FieldEditGrid layout={fieldsLayout} draft={draft} updateDraft={updateDraft} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} labelClassName={labelClassName} />
               ) : (
