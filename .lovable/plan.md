@@ -1,17 +1,14 @@
 
 
-# Fix "Save as routine/meal" alignment
+# Fix action links not spreading to full width on short entries
 
 ## Problem
-After the vertical stack refactor, "Save as routine" ended up centered with the right-aligned action links. The user wants it left-aligned, while "Copy to today" and "Details" stay right-aligned.
+The container holding "Save as meal", "Copy to today", and "Details" doesn't stretch to the full panel width. It only takes the natural width of its content. For entries with long text, it happens to fill the space, but for short entries (like "Signature edamame"), the container is narrow and `justify-between` has no room to separate the left and right actions.
 
 ## Fix
 
 ### `src/components/EntryExpandedPanel.tsx`
-- Split the single `flex justify-end gap-4` row into a `flex justify-between` row.
-- Left side: "Save as routine/meal" (only shown when `!isFromSaved && onSaveAs`).
-- Right side: "Copy to today" and "Details" grouped together in a nested `flex gap-4`.
-- When there's no "Save as" link, the right-side links still align right via `justify-between` (or use `ml-auto` on the right group).
+Add `w-full` to the inner `div` on line 58 so it always stretches to fill the parent flex container. This ensures `justify-between` on the actions row works regardless of text length.
 
-Result: "Save as routine" stays left, "Copy to today" and "Details" stay right, all on the same line.
+Single class addition, one line change.
 
