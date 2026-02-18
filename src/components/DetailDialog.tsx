@@ -31,27 +31,60 @@ export interface FieldConfig {
   maxWidth?: 'sm';
 }
 
+export interface FieldLayout {
+  fullWidth: FieldConfig[];  // e.g. Name — spans both columns
+  left: FieldConfig[];       // Metrics column
+  right: FieldConfig[];      // Classification column
+}
+
 export interface DetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
-  fields: FieldConfig[];
+  fields: FieldConfig[] | FieldLayout;
   values: Record<string, any>;
   onSave: (updates: Record<string, any>) => void;
   readOnly?: boolean;
-  /** Default display units for unit-toggle fields, e.g. { distance_miles: 'km', weight_lbs: 'lbs' } */
   defaultUnits?: Record<string, string>;
-  /** Custom grid column class for field grids (default: "grid-cols-2") */
   gridClassName?: string;
-  /** Custom class for field labels, e.g. min-w-[5.5rem] for consistent column alignment */
   labelClassName?: string;
-
-  // Multi-item mode (optional)
   items?: Record<string, any>[];
   onSaveItem?: (itemIndex: number, updates: Record<string, any>) => void;
-  buildFields?: (item: Record<string, any>) => FieldConfig[];
-  /** Fields to hide in view mode when value is 0/null */
+  buildFields?: (item: Record<string, any>) => FieldConfig[] | FieldLayout;
   hideWhenZero?: Set<string>;
+}
+
+// ============================================================================
+// Layout helpers
+// ============================================================================
+
+function isFieldLayout(f: FieldConfig[] | FieldLayout): f is FieldLayout {
+  return !Array.isArray(f) && 'fullWidth' in f;
+}
+
+/** Normalize a flat field array into a FieldLayout for consistent rendering.
+ *  Text fields go fullWidth; remaining fields auto-flow left/right (preserving
+ *  the existing interleaved order used by food detail fields). */
+function normalizeToLayout(f: FieldConfig[] | FieldLayout): FieldLayout {
+  if (isFieldLayout(f)) return f;
+  const fullWidth: FieldConfig[] = [];
+  const rest: FieldConfig[] = [];
+  for (const field of f) {
+    if (field.type === 'text') fullWidth.push(field);
+    else rest.push(field);
+  }
+  const left: FieldConfig[] = [];
+  const right: FieldConfig[] = [];
+  rest.forEach((field, i) => {
+    if (i % 2 === 0) left.push(field);
+    else right.push(field);
+  });
+  return { fullWidth, left, right };
+}
+
+/** Get all fields from a layout as a flat array (for iteration in save/edit logic). */
+function allFieldsFlat(layout: FieldLayout): FieldConfig[] {
+  return [...layout.fullWidth, ...layout.left, ...layout.right];
 }
 
 // ============================================================================
@@ -73,7 +106,6 @@ function displayValue(field: FieldConfig, activeValues: Record<string, any>, act
       return opt ? opt.label : String(val);
     }
   }
-  // Unit toggle: convert value for display
   if (field.unitToggle && activeUnit && activeUnit !== field.unitToggle.storageUnit) {
     const converted = field.unitToggle.convert(Number(val), field.unitToggle.storageUnit, activeUnit);
     return String(Number(converted.toFixed(2)));
@@ -105,167 +137,215 @@ function UnitToggle({ field, activeUnit, onToggle }: { field: FieldConfig; activ
   );
 }
 
-function groupFieldsBySections(fields: FieldConfig[]): [string, FieldConfig[]][] {
-  const sectionMap = new Map<string, FieldConfig[]>();
-  for (const field of fields) {
-    const section = field.section || '';
-    if (!sectionMap.has(section)) sectionMap.set(section, []);
-    sectionMap.get(section)!.push(field);
-  }
-  return Array.from(sectionMap.entries());
-}
-
 // ============================================================================
-// Sub-components for field rendering
+// Shared per-field renderers (extracted so both columns use identical markup)
 // ============================================================================
 
-function FieldViewGrid({
-  sections,
+function FieldViewItem({
+  field,
   activeValues,
   hideWhenZero,
   activeUnits,
   onToggleUnit,
-  gridClassName = "grid-cols-2",
   labelClassName,
 }: {
-  sections: [string, FieldConfig[]][];
+  field: FieldConfig;
   activeValues: Record<string, any>;
   hideWhenZero?: Set<string>;
   activeUnits?: Record<string, string>;
   onToggleUnit?: (key: string, unit: string) => void;
-  gridClassName?: string;
   labelClassName?: string;
 }) {
+  if (hideWhenZero?.has(field.key)) {
+    const val = activeValues[field.key];
+    if (val === 0 || val === null || val === undefined || val === '') return null;
+  }
   return (
-    <>
-      {sections.map(([sectionName, sectionFields], sectionIdx) => (
-        <div key={sectionName || sectionIdx}>
-          <div className={cn("grid gap-x-4 gap-y-1", gridClassName)}>
-            {sectionFields
-              .filter(field => {
-                if (!hideWhenZero?.has(field.key)) return true;
-                const val = activeValues[field.key];
-                return val !== 0 && val !== null && val !== undefined && val !== '';
-              })
-              .map(field => (
-              <div key={field.key} className={cn("flex items-center gap-2 py-0.5 min-w-0", field.type === 'text' && 'col-span-2')}>
-                <span className={cn("text-xs text-muted-foreground shrink-0", labelClassName)}>
-                  {field.label}:
-                </span>
-                <span className="text-sm min-w-0 truncate pl-2 flex-1">
-                  {displayValue(field, activeValues, activeUnits?.[field.key])}
-                </span>
-                {field.unit && !field.unitToggle && (
-                  <span className="text-xs text-muted-foreground shrink-0">{field.unit}</span>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-    </>
+    <div className={cn("flex items-center gap-2 py-0.5 min-w-0", field.type === 'text' && 'col-span-2')}>
+      <span className={cn("text-xs text-muted-foreground shrink-0", labelClassName)}>
+        {field.label}:
+      </span>
+      <span className="text-sm min-w-0 truncate pl-2 flex-1">
+        {displayValue(field, activeValues, activeUnits?.[field.key])}
+      </span>
+      {field.unit && !field.unitToggle && (
+        <span className="text-xs text-muted-foreground shrink-0">{field.unit}</span>
+      )}
+    </div>
   );
 }
 
-function FieldEditGrid({
-  sections,
+function FieldEditItem({
+  field,
   draft,
   updateDraft,
   activeUnits,
   onToggleUnit,
-  gridClassName = "grid-cols-2",
   labelClassName,
 }: {
-  sections: [string, FieldConfig[]][];
+  field: FieldConfig;
   draft: Record<string, any>;
   updateDraft: (key: string, value: any) => void;
   activeUnits?: Record<string, string>;
   onToggleUnit?: (key: string, unit: string) => void;
-  gridClassName?: string;
   labelClassName?: string;
 }) {
-  return (
-    <>
-      {sections.map(([sectionName, sectionFields], sectionIdx) => (
-        <div key={sectionName || sectionIdx}>
-          <div className={cn("grid gap-x-4 gap-y-1", gridClassName)}>
-            {sectionFields.map(field => {
-              // Dynamically filter exercise_key optgroups based on draft category
-              const effectiveField = field.key === 'exercise_key' && field.optgroups && draft._exercise_category
-                ? {
-                    ...field,
-                    optgroups: field.optgroups.filter(g => {
-                      if (g.label === 'Other') return true;
-                      return draft._exercise_category === 'cardio'
-                        ? g.label === 'Cardio'
-                        : g.label !== 'Cardio';
-                    }),
-                  }
-                : field;
+  // Dynamically filter exercise_key optgroups based on draft category
+  const effectiveField = field.key === 'exercise_key' && field.optgroups && draft._exercise_category
+    ? {
+        ...field,
+        optgroups: field.optgroups.filter(g => {
+          if (g.label === 'Other') return true;
+          return draft._exercise_category === 'cardio'
+            ? g.label === 'Cardio'
+            : g.label !== 'Cardio';
+        }),
+      }
+    : field;
 
-              return (
-              <div key={field.key} className={cn("flex items-center gap-2 min-w-0", field.type === 'text' && 'col-span-2')}>
-                <span className={cn("text-xs text-muted-foreground shrink-0", labelClassName)}>
-                  {field.label}:
-                </span>
-                {field.readOnly ? (
-                  <span className="text-sm text-muted-foreground">{displayValue(field, draft, activeUnits?.[field.key])}</span>
-                ) : field.type === 'select' ? (
-                  <select
-                    value={String(draft[effectiveField.key] ?? '')}
-                    onChange={e => {
-                      updateDraft(effectiveField.key, e.target.value);
-                      if (effectiveField.key === '_exercise_category') {
-                        updateDraft('exercise_key', '');
-                      }
-                    }}
-                    className="flex h-6 w-[7.5rem] min-w-0 rounded-md border border-input bg-background px-1.5 py-0 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <option value="">—</option>
-                    {effectiveField.optgroups ? (
-                      effectiveField.optgroups.map(group => (
-                        <optgroup key={group.label} label={group.label}>
-                          {group.options.map(opt => (
-                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                          ))}
-                        </optgroup>
-                      ))
-                    ) : (
-                      effectiveField.options?.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))
-                    )}
-                  </select>
-                ) : (
-                  <>
-                    <Input
-                      type={field.type}
-                      value={draft[field.key] ?? ''}
-                      onChange={e => {
-                        const v = field.type === 'number' ? (e.target.value === '' ? '' : Number(e.target.value)) : e.target.value;
-                        updateDraft(field.key, v);
-                      }}
-                      min={field.min}
-                      max={field.max}
-                      step={field.step}
-                      autoComplete="off"
-                      className={cn("h-6 py-0 px-1.5 text-sm", field.type === 'number' ? "w-12" : cn("flex-1 min-w-0", field.maxWidth === 'sm' && "max-w-[12rem]"))}
-                    />
-                    {field.unitToggle && (
-                      <UnitToggle field={field} activeUnit={activeUnits?.[field.key] || field.unitToggle.storageUnit} onToggle={(u) => onToggleUnit?.(field.key, u)} />
-                    )}
-                    {field.unit && !field.unitToggle && (
-                      <span className="text-xs text-muted-foreground shrink-0">{field.unit}</span>
-                    )}
-                  </>
-                )}
-              </div>
-              );
-            })}
+  return (
+    <div className={cn("flex items-center gap-2 min-w-0", field.type === 'text' && 'col-span-2')}>
+      <span className={cn("text-xs text-muted-foreground shrink-0", labelClassName)}>
+        {field.label}:
+      </span>
+      {field.readOnly ? (
+        <span className="text-sm text-muted-foreground">{displayValue(field, draft, activeUnits?.[field.key])}</span>
+      ) : field.type === 'select' ? (
+        <select
+          value={String(draft[effectiveField.key] ?? '')}
+          onChange={e => {
+            updateDraft(effectiveField.key, e.target.value);
+            if (effectiveField.key === '_exercise_category') {
+              updateDraft('exercise_key', '');
+            }
+          }}
+          className="flex h-6 w-[7.5rem] min-w-0 rounded-md border border-input bg-background px-1.5 py-0 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <option value="">—</option>
+          {effectiveField.optgroups ? (
+            effectiveField.optgroups.map(group => (
+              <optgroup key={group.label} label={group.label}>
+                {group.options.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </optgroup>
+            ))
+          ) : (
+            effectiveField.options?.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))
+          )}
+        </select>
+      ) : (
+        <>
+          <Input
+            type={field.type}
+            value={draft[field.key] ?? ''}
+            onChange={e => {
+              const v = field.type === 'number' ? (e.target.value === '' ? '' : Number(e.target.value)) : e.target.value;
+              updateDraft(field.key, v);
+            }}
+            min={field.min}
+            max={field.max}
+            step={field.step}
+            autoComplete="off"
+            className={cn("h-6 py-0 px-1.5 text-sm", field.type === 'number' ? "w-12" : cn("flex-1 min-w-0", field.maxWidth === 'sm' && "max-w-[12rem]"))}
+          />
+          {field.unitToggle && (
+            <UnitToggle field={field} activeUnit={activeUnits?.[field.key] || field.unitToggle.storageUnit} onToggle={(u) => onToggleUnit?.(field.key, u)} />
+          )}
+          {field.unit && !field.unitToggle && (
+            <span className="text-xs text-muted-foreground shrink-0">{field.unit}</span>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// Layout-based grid components
+// ============================================================================
+
+function FieldViewGrid({
+  layout,
+  activeValues,
+  hideWhenZero,
+  activeUnits,
+  onToggleUnit,
+  labelClassName,
+}: {
+  layout: FieldLayout;
+  activeValues: Record<string, any>;
+  hideWhenZero?: Set<string>;
+  activeUnits?: Record<string, string>;
+  onToggleUnit?: (key: string, unit: string) => void;
+  labelClassName?: string;
+}) {
+  const sharedProps = { activeValues, hideWhenZero, activeUnits, onToggleUnit, labelClassName };
+  return (
+    <div>
+      {/* Full-width fields (e.g. Name) */}
+      {layout.fullWidth.map(field => (
+        <FieldViewItem key={field.key} field={field} {...sharedProps} />
+      ))}
+      {/* Two-column layout */}
+      {(layout.left.length > 0 || layout.right.length > 0) && (
+        <div className="grid grid-cols-2 gap-x-4">
+          <div className="flex flex-col gap-y-1">
+            {layout.left.map(field => (
+              <FieldViewItem key={field.key} field={field} {...sharedProps} />
+            ))}
+          </div>
+          <div className="flex flex-col gap-y-1">
+            {layout.right.map(field => (
+              <FieldViewItem key={field.key} field={field} {...sharedProps} />
+            ))}
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+function FieldEditGrid({
+  layout,
+  draft,
+  updateDraft,
+  activeUnits,
+  onToggleUnit,
+  labelClassName,
+}: {
+  layout: FieldLayout;
+  draft: Record<string, any>;
+  updateDraft: (key: string, value: any) => void;
+  activeUnits?: Record<string, string>;
+  onToggleUnit?: (key: string, unit: string) => void;
+  labelClassName?: string;
+}) {
+  const sharedProps = { draft, updateDraft, activeUnits, onToggleUnit, labelClassName };
+  return (
+    <div>
+      {/* Full-width fields */}
+      {layout.fullWidth.map(field => (
+        <FieldEditItem key={field.key} field={field} {...sharedProps} />
       ))}
-    </>
+      {/* Two-column layout */}
+      {(layout.left.length > 0 || layout.right.length > 0) && (
+        <div className="grid grid-cols-2 gap-x-4">
+          <div className="flex flex-col gap-y-1">
+            {layout.left.map(field => (
+              <FieldEditItem key={field.key} field={field} {...sharedProps} />
+            ))}
+          </div>
+          <div className="flex flex-col gap-y-1">
+            {layout.right.map(field => (
+              <FieldEditItem key={field.key} field={field} {...sharedProps} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -298,12 +378,15 @@ export function DetailDialog({
 
   const isMultiItem = items && items.length > 1;
 
+  // Normalize fields prop to layout
+  const fieldsLayout = useMemo(() => normalizeToLayout(fields), [fields]);
+  const fieldsFlat = useMemo(() => allFieldsFlat(fieldsLayout), [fieldsLayout]);
+
   const handleToggleUnit = (fieldKey: string, newUnit: string) => {
-    // In edit mode, convert the draft value when toggling units
     if (editing || editingIndex !== null) {
       const allFields = editingIndex !== null && items && buildFields
-        ? buildFields(items[editingIndex])
-        : fields;
+        ? allFieldsFlat(normalizeToLayout(buildFields(items[editingIndex])))
+        : fieldsFlat;
       const field = allFields.find(f => f.key === fieldKey);
       if (field?.unitToggle) {
         const oldUnit = activeUnits[fieldKey] || field.unitToggle.storageUnit;
@@ -317,7 +400,6 @@ export function DetailDialog({
     setActiveUnits(prev => ({ ...prev, [fieldKey]: newUnit }));
   };
 
-  // Reset state when dialog opens/closes
   const handleOpenChange = (next: boolean) => {
     if (!next) {
       setEditing(false);
@@ -331,9 +413,8 @@ export function DetailDialog({
 
   // ---- Single-item mode handlers ----
   const enterEditMode = () => {
-    // Convert storage values to display units for editing
     const d = { ...values };
-    for (const field of fields) {
+    for (const field of fieldsFlat) {
       if (field.unitToggle) {
         const displayUnit = activeUnits[field.key] || field.unitToggle.storageUnit;
         if (displayUnit !== field.unitToggle.storageUnit && d[field.key] != null && d[field.key] !== '') {
@@ -352,11 +433,10 @@ export function DetailDialog({
 
   const handleSave = () => {
     const updates: Record<string, any> = {};
-    for (const field of fields) {
+    for (const field of fieldsFlat) {
       if (field.readOnly) continue;
       const edited = draft[field.key];
       if (edited === undefined) continue;
-      // Convert back to storage unit if needed
       let saveVal = edited;
       if (field.unitToggle) {
         const displayUnit = activeUnits[field.key] || field.unitToggle.storageUnit;
@@ -395,9 +475,9 @@ export function DetailDialog({
   };
 
   const enterItemEdit = (idx: number) => {
-    const itemFields = buildFields ? buildFields(items![idx]) : fields;
+    const itemFieldsFlat = buildFields ? allFieldsFlat(normalizeToLayout(buildFields(items![idx]))) : fieldsFlat;
     const d = { ...items![idx] };
-    for (const field of itemFields) {
+    for (const field of itemFieldsFlat) {
       if (field.unitToggle) {
         const displayUnit = activeUnits[field.key] || field.unitToggle.storageUnit;
         if (displayUnit !== field.unitToggle.storageUnit && d[field.key] != null && d[field.key] !== '') {
@@ -417,9 +497,9 @@ export function DetailDialog({
 
   const saveItemEdit = () => {
     if (editingIndex === null || !items || !buildFields || !onSaveItem) return;
-    const itemFields = buildFields(items[editingIndex]);
+    const itemFieldsFlat = allFieldsFlat(normalizeToLayout(buildFields(items[editingIndex])));
     const updates: Record<string, any> = {};
-    for (const field of itemFields) {
+    for (const field of itemFieldsFlat) {
       if (field.readOnly) continue;
       const edited = draft[field.key];
       if (edited === undefined) continue;
@@ -446,9 +526,6 @@ export function DetailDialog({
     setDraft(prev => ({ ...prev, [key]: value }));
   };
 
-  // Group fields by section (for single-item mode)
-  const sections = useMemo(() => groupFieldsBySections(fields), [fields]);
-
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="left-2 right-2 top-[5%] translate-x-0 translate-y-0 w-auto max-w-[calc(100vw-16px)] sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md max-h-[90dvh] max-h-[90vh] flex flex-col p-0 gap-0 rounded-lg">
@@ -458,19 +535,21 @@ export function DetailDialog({
 
         <div className="flex-1 overflow-y-auto px-4 py-2">
           {isMultiItem ? (
-            /* Multi-item collapsible sections */
             <div className="space-y-0">
               {items.map((item, idx) => {
                 const isExpanded = expandedIndices.has(idx);
                 const isEditing = editingIndex === idx;
-                // When editing, rebuild fields using draft values so category changes update layout immediately
                 const fieldSource = (isEditing && buildFields) ? { ...item, ...draft } : item;
-                const itemFields = buildFields ? buildFields(fieldSource) : fields;
-                const itemSections = groupFieldsBySections(itemFields);
+                const itemLayout = normalizeToLayout(buildFields ? buildFields(fieldSource) : fields);
+                // For view mode, filter out description from left/right (shown in header)
+                const viewLayout: FieldLayout = {
+                  fullWidth: itemLayout.fullWidth.filter(f => f.key !== 'description'),
+                  left: itemLayout.left.filter(f => f.key !== 'description'),
+                  right: itemLayout.right.filter(f => f.key !== 'description'),
+                };
 
                 return (
                   <div key={idx} className={cn("border-b last:border-b-0 border-border/50")}>
-                    {/* Collapsible header */}
                     <button
                       type="button"
                       onClick={() => toggleExpanded(idx)}
@@ -485,12 +564,11 @@ export function DetailDialog({
                       />
                     </button>
 
-                    {/* Expanded content */}
                     {isExpanded && (
                       <div className="pb-2 pl-4">
                         {isEditing ? (
                           <>
-                            <FieldEditGrid sections={itemSections} draft={draft} updateDraft={updateDraft} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} gridClassName={gridClassName} labelClassName={labelClassName} />
+                            <FieldEditGrid layout={itemLayout} draft={draft} updateDraft={updateDraft} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} labelClassName={labelClassName} />
                             <div className="flex justify-end gap-2 mt-2">
                               <Button variant="outline" size="sm" onClick={cancelItemEdit}>Cancel</Button>
                               <Button size="sm" onClick={saveItemEdit}>Save</Button>
@@ -498,7 +576,7 @@ export function DetailDialog({
                           </>
                         ) : (
                           <>
-                            <FieldViewGrid sections={itemSections.map(([name, fields]) => [name, fields.filter(f => f.key !== 'description')] as [string, FieldConfig[]]).filter(([, fields]) => fields.length > 0)} activeValues={item} hideWhenZero={hideWhenZero} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} gridClassName={gridClassName} labelClassName={labelClassName} />
+                            <FieldViewGrid layout={viewLayout} activeValues={item} hideWhenZero={hideWhenZero} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} labelClassName={labelClassName} />
                             {!readOnly && (
                               <div className="flex justify-end mt-1">
                                 <Button variant="outline" size="sm" onClick={() => enterItemEdit(idx)} className="gap-1">
@@ -515,18 +593,16 @@ export function DetailDialog({
               })}
             </div>
           ) : (
-            /* Single-item detail view */
             <>
               {editing ? (
-                <FieldEditGrid sections={sections} draft={draft} updateDraft={updateDraft} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} gridClassName={gridClassName} labelClassName={labelClassName} />
+                <FieldEditGrid layout={fieldsLayout} draft={draft} updateDraft={updateDraft} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} labelClassName={labelClassName} />
               ) : (
-                <FieldViewGrid sections={sections} activeValues={values} hideWhenZero={hideWhenZero} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} gridClassName={gridClassName} labelClassName={labelClassName} />
+                <FieldViewGrid layout={fieldsLayout} activeValues={values} hideWhenZero={hideWhenZero} activeUnits={activeUnits} onToggleUnit={handleToggleUnit} labelClassName={labelClassName} />
               )}
             </>
           )}
         </div>
 
-        {/* Footer: only for single-item mode */}
         {!readOnly && !isMultiItem && (
           <DialogFooter className="px-4 py-3 flex-shrink-0">
             {editing ? (
@@ -550,6 +626,9 @@ export function DetailDialog({
 // Field config builders
 // ============================================================================
 
+import { EXERCISE_MUSCLE_GROUPS, EXERCISE_SUBTYPE_DISPLAY, isCardioExercise, KNOWN_METADATA_KEYS, EXERCISE_GROUPS, getExerciseDisplayName } from '@/lib/exercise-metadata';
+import { convertWeight, convertDistance } from '@/lib/weight-units';
+
 export const FOOD_HIDE_WHEN_ZERO = new Set(['portion', 'fiber', 'sugar', 'saturated_fat', 'sodium', 'cholesterol']);
 
 export const EXERCISE_HIDE_WHEN_EMPTY = new Set(
@@ -571,9 +650,6 @@ export function buildFoodDetailFields(item: Record<string, any>): FieldConfig[] 
     { key: 'saturated_fat', label: 'Saturated Fat', type: 'number', unit: 'g', min: 0 },
   ];
 }
-
-import { EXERCISE_MUSCLE_GROUPS, EXERCISE_SUBTYPE_DISPLAY, isCardioExercise, KNOWN_METADATA_KEYS, EXERCISE_GROUPS, getExerciseDisplayName } from '@/lib/exercise-metadata';
-import { convertWeight, convertDistance } from '@/lib/weight-units';
 
 function buildExerciseKeyOptgroups(): { label: string; options: { value: string; label: string }[] }[] {
   const groups = EXERCISE_GROUPS.map(group => ({
@@ -601,96 +677,93 @@ function buildSubtypeOptions(exerciseKey: string): { value: string; label: strin
   }));
 }
 
-export function buildExerciseDetailFields(item: Record<string, any>): FieldConfig[] {
+/** Helper to build a metadata FieldConfig */
+function metaField(metaKey: string): FieldConfig | null {
+  const mk = KNOWN_METADATA_KEYS.find(m => m.key === metaKey);
+  if (!mk) return null;
+  return {
+    key: `_meta_${mk.key}`,
+    label: mk.label,
+    type: 'number',
+    unit: mk.unit,
+    min: mk.min,
+    max: mk.max,
+  };
+}
+
+export function buildExerciseDetailFields(item: Record<string, any>): FieldLayout {
   const exerciseKey = item.exercise_key || '';
-  // Allow draft category override via virtual _exercise_category field
   const category: string = item._exercise_category
     || (isCardioExercise(exerciseKey) ? 'cardio' : (EXERCISE_MUSCLE_GROUPS[exerciseKey] ? 'strength' : 'other'));
 
-  const fields: FieldConfig[] = [
+  const fullWidth: FieldConfig[] = [
     { key: 'description', label: 'Name', type: 'text' },
-    {
-      key: '_exercise_category', label: 'Category', type: 'select',
-      options: [
-        { value: 'strength', label: 'Strength' },
-        { value: 'cardio', label: 'Cardio' },
-        { value: 'other', label: 'Other' },
-      ],
-    },
   ];
 
-  if (category === 'other') {
-    // Other: name only + universal metadata (effort, cal burned, heart rate)
-    const otherMetaKeys = ['effort', 'calories_burned', 'heart_rate'];
-    for (const metaKey of otherMetaKeys) {
-      const mk = KNOWN_METADATA_KEYS.find(m => m.key === metaKey);
-      if (!mk) continue;
-      fields.push({
-        key: `_meta_${mk.key}`,
-        label: mk.label,
-        type: 'number',
-        unit: mk.unit,
-        min: mk.min,
-        max: mk.max,
-      });
-    }
-    return fields;
-  }
+  const categoryField: FieldConfig = {
+    key: '_exercise_category', label: 'Category', type: 'select',
+    options: [
+      { value: 'strength', label: 'Strength' },
+      { value: 'cardio', label: 'Cardio' },
+      { value: 'other', label: 'Other' },
+    ],
+  };
 
-  // Strength & Cardio: include exercise type + subtype
-  fields.push({ key: 'exercise_key', label: 'Exercise type', type: 'select', optgroups: buildExerciseKeyOptgroups() });
+  const exerciseTypeField: FieldConfig = {
+    key: 'exercise_key', label: 'Exercise type', type: 'select',
+    optgroups: buildExerciseKeyOptgroups(),
+  };
 
   const subtypeOptions = buildSubtypeOptions(exerciseKey);
-  if (subtypeOptions) {
-    fields.push({ key: 'exercise_subtype', label: 'Subtype', type: 'select', options: subtypeOptions });
-  }
+  const subtypeField: FieldConfig | null = subtypeOptions
+    ? { key: 'exercise_subtype', label: 'Subtype', type: 'select', options: subtypeOptions }
+    : null;
+
+  // Common metadata fields (always on left column)
+  const calBurned = metaField('calories_burned')!;
+  const heartRate = metaField('heart_rate')!;
+  const effort = metaField('effort')!;
 
   if (category === 'cardio') {
-    // Wider fields on left (odd positions), narrower on right
-    fields.push(
-      { key: 'distance_miles', label: 'Distance', type: 'number', unitToggle: { units: ['mi', 'km'], storageUnit: 'mi', convert: convertDistance }, min: 0, step: 0.01 },
+    const left: FieldConfig[] = [
       { key: 'duration_minutes', label: 'Duration', type: 'number', unit: 'min', min: 0, step: 0.5 },
-    );
+      { key: 'distance_miles', label: 'Distance', type: 'number', unitToggle: { units: ['mi', 'km'], storageUnit: 'mi', convert: convertDistance }, min: 0, step: 0.01 },
+      calBurned,
+      heartRate,
+      effort,
+      metaField('speed_mph')!,
+    ];
+    const right: FieldConfig[] = [
+      categoryField,
+      exerciseTypeField,
+      ...(subtypeField ? [subtypeField] : []),
+      metaField('incline_pct')!,
+      metaField('cadence_rpm')!,
+    ];
+    return { fullWidth, left, right };
+  }
 
-    // Explicitly ordered metadata pairs: wider-label left, narrower right
-    const cardioMetaOrder = ['calories_burned', 'effort', 'speed_mph', 'heart_rate', 'incline_pct', 'cadence_rpm'];
-    for (const metaKey of cardioMetaOrder) {
-      const mk = KNOWN_METADATA_KEYS.find(m => m.key === metaKey);
-      if (!mk) continue;
-      if (mk.appliesTo !== 'both' && mk.appliesTo !== 'cardio') continue;
-      fields.push({
-        key: `_meta_${mk.key}`,
-        label: mk.label,
-        type: 'number',
-        unit: mk.unit,
-        min: mk.min,
-        max: mk.max,
-      });
-    }
-  } else {
-    fields.push(
+  if (category === 'strength') {
+    const left: FieldConfig[] = [
       { key: 'sets', label: 'Sets', type: 'number', min: 0 },
       { key: 'reps', label: 'Reps', type: 'number', min: 0 },
       { key: 'weight_lbs', label: 'Weight', type: 'number', unitToggle: { units: ['lbs', 'kg'], storageUnit: 'lbs', convert: convertWeight }, min: 0 },
-    );
-
-    // Strength metadata (effort, calories_burned, heart_rate)
-    const strengthMetaKeys = KNOWN_METADATA_KEYS.filter(
-      mk => mk.appliesTo === 'both' || mk.appliesTo === 'strength'
-    );
-    for (const mk of strengthMetaKeys) {
-      fields.push({
-        key: `_meta_${mk.key}`,
-        label: mk.label,
-        type: 'number',
-        unit: mk.unit,
-        min: mk.min,
-        max: mk.max,
-      });
-    }
+      calBurned,
+      heartRate,
+      effort,
+    ];
+    const right: FieldConfig[] = [
+      categoryField,
+      exerciseTypeField,
+      ...(subtypeField ? [subtypeField] : []),
+    ];
+    return { fullWidth, left, right };
   }
 
-  return fields;
+  // Other
+  const left: FieldConfig[] = [calBurned, heartRate, effort];
+  const right: FieldConfig[] = [categoryField];
+  return { fullWidth, left, right };
 }
 
 export function flattenExerciseValues(item: Record<string, any>): Record<string, any> {
@@ -720,7 +793,6 @@ export function processExerciseSaveUpdates(
         metaChanges[metaKey] = value === '' || value === null ? null : Number(value);
         hasMetaChanges = true;
       }
-      // Skip other virtual fields like _exercise_category
     } else {
       regularUpdates[key] = value;
     }
