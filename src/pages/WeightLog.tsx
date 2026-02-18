@@ -624,7 +624,8 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
                   showHeader={!!matchingRoutineForSuggestion}
                   showTotals={false}
                   diffs={props.diffs}
-                  weightUnit={settings.weightUnit}
+            weightUnit={settings.weightUnit}
+                  distanceUnit={settings.distanceUnit}
                 />
               )}
               matchingRoutine={matchingRoutineForSuggestion ? {
@@ -677,6 +678,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
             entrySourceRoutineIds={entrySourceRoutineIds}
             entryGroupNames={entryGroupNames}
             onUpdateGroupName={handleUpdateGroupName}
+            distanceUnit={settings.distanceUnit}
             calorieBurnSettings={settings.calorieBurnEnabled ? settings as CalorieBurnSettings : undefined}
             totalCalorieBurnDisplay={settings.calorieBurnEnabled ? (() => {
               const exercises: ExerciseInput[] = displayItems.map(item => ({
@@ -738,6 +740,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
           isSaving={saveRoutineMutation.isPending}
           otherEntries={otherEntriesForRoutineDialog}
           weightUnit={settings.weightUnit}
+          distanceUnit={settings.distanceUnit}
         />
       )}
 

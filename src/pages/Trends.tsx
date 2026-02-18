@@ -487,6 +487,7 @@ const Trends = () => {
                     exercise={exercise} 
                     unit={settings.weightUnit}
                     onBarClick={handleExerciseBarClick}
+                    distanceUnit={settings.distanceUnit}
                   />
                 ))}
               </div>

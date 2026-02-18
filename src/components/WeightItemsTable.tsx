@@ -20,7 +20,7 @@ import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/comp
 import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
-import { type WeightUnit, formatWeight, parseWeightToLbs, getWeightUnitLabel, formatDurationMmSs } from '@/lib/weight-units';
+import { type WeightUnit, type DistanceUnit, formatWeight, parseWeightToLbs, getWeightUnitLabel, formatDurationMmSs, convertDistance, convertSpeed, type SpeedUnit } from '@/lib/weight-units';
 import { isCardioExercise } from '@/lib/exercise-metadata';
 import { estimateCalorieBurn, formatCalorieBurnValue, type CalorieBurnSettings, type ExerciseInput } from '@/lib/calorie-burn';
 import { useHasHover } from '@/hooks/use-has-hover';
@@ -86,6 +86,8 @@ interface WeightItemsTableProps {
   onUpdateGroupName?: (entryId: string, newName: string) => void;
   /** Callback when user clicks "Details" on an entry's expanded panel */
   onShowDetails?: (entryId: string, startIndex: number, endIndex?: number) => void;
+  /** Distance unit preference for display (mi or km) */
+  distanceUnit?: DistanceUnit;
 }
 
 /**
@@ -155,6 +157,7 @@ export function WeightItemsTable({
   entryGroupNames,
   onUpdateGroupName,
   onShowDetails,
+  distanceUnit = 'mi',
 }: WeightItemsTableProps) {
   const { isReadOnly, triggerOverlay } = useReadOnlyContext();
   const hasHover = useHasHover();
@@ -583,11 +586,15 @@ export function WeightItemsTable({
                     const dist = item.distance_miles ?? 0;
                     const dur = item.duration_minutes ?? 0;
 
-                    if (dist > 0) parts.push(`${dist.toFixed(2)} mi`);
+                    const du = distanceUnit ?? 'mi';
+                    const su: SpeedUnit = du === 'km' ? 'km/h' : 'mph';
+                    const displayDist = du === 'km' ? convertDistance(dist, 'mi', 'km') : dist;
+                    if (dist > 0) parts.push(`${displayDist.toFixed(2)} ${du}`);
                     if (dur > 0) parts.push(formatDurationMmSs(dur));
                     if (dist > 0 && dur > 0) {
                       const mph = dist / (dur / 60);
-                      parts.push(`${mph.toFixed(1)} mph`);
+                      const displaySpeed = su === 'km/h' ? convertSpeed(mph, 'mph', 'km/h') : mph;
+                      parts.push(`${displaySpeed.toFixed(1)} ${su}`);
                     }
 
                     const label = parts.length > 0 ? parts.join(', ') : 'cardio';
@@ -671,7 +678,11 @@ export function WeightItemsTable({
                             const dist = item.distance_miles ?? 0;
                             if (item.weight_lbs === 0 && (dur > 0 || dist > 0 || isCardioExercise(item.exercise_key))) {
                               if (dur > 0) return `${Number(dur).toFixed(1)} min`;
-                              if (dist > 0) return `${Number(dist).toFixed(2)} mi`;
+                              if (dist > 0) {
+                                const du = distanceUnit ?? 'mi';
+                                const displayDist = du === 'km' ? convertDistance(dist, 'mi', 'km') : dist;
+                                return `${Number(displayDist).toFixed(2)} ${du}`;
+                              }
                               return 'cardio';
                             }
                             return formatWeight(item.weight_lbs, weightUnit, weightUnit === 'kg' ? 1 : 0);

@@ -12,7 +12,8 @@ import {
   type ExerciseInput,
   type CalorieBurnSettings,
 } from '@/lib/calorie-burn';
-import type { WeightUnit } from '@/lib/weight-units';
+import type { WeightUnit, DistanceUnit } from '@/lib/weight-units';
+import { convertDistance } from '@/lib/weight-units';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -43,7 +44,7 @@ const SAMPLE_STRENGTH: ExerciseInput[] = [
   { exercise_key: 'bench_press', sets: 3, reps: 10, weight_lbs: 135 },
 ];
 
-function exerciseLabel(ex: ExerciseInput, weightUnit: WeightUnit): string {
+function exerciseLabel(ex: ExerciseInput, weightUnit: WeightUnit, distanceUnit: DistanceUnit = 'mi'): string {
   const subtypeName = getSubtypeDisplayName(ex.exercise_subtype);
   const name = 'description' in ex && (ex as any).description
     ? (ex as any).description
@@ -56,7 +57,8 @@ function exerciseLabel(ex: ExerciseInput, weightUnit: WeightUnit): string {
     details.push(`${ex.duration_minutes} min`);
   }
   if (ex.distance_miles && ex.distance_miles > 0) {
-    details.push(`${ex.distance_miles.toFixed(1)} mi`);
+    const displayDist = distanceUnit === 'km' ? convertDistance(ex.distance_miles, 'mi', 'km') : ex.distance_miles;
+    details.push(`${displayDist.toFixed(1)} ${distanceUnit}`);
   }
   if (ex.sets > 0) {
     let s = `${ex.sets}x${ex.reps}`;
@@ -131,7 +133,7 @@ export function CalorieBurnDialog({
   const previews = useMemo(() => {
     return previewExercises.map((ex) => {
       const result = estimateCalorieBurn(ex, burnSettings);
-      const label = exerciseLabel(ex, settings.weightUnit);
+      const label = exerciseLabel(ex, settings.weightUnit, settings.distanceUnit);
       const value = formatCalorieBurnValue(result);
       return { label, estimate: value ? `${value} cal` : '' };
     });
