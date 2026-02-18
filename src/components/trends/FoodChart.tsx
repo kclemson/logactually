@@ -61,7 +61,7 @@ const createFoodLabelRenderer = (
       fontSize={7}
       fontWeight={500}
     >
-      {labelFormatter ? labelFormatter(value) : Math.round(value)}
+      {typeof value === 'string' ? value : (labelFormatter ? labelFormatter(value) : Math.round(value))}
     </text>
   );
 };
