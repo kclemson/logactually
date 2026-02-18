@@ -92,7 +92,7 @@ function FieldViewGrid({
       {sections.map(([sectionName, sectionFields], sectionIdx) => (
         <div key={sectionName || sectionIdx}>
           {sectionIdx > 0 && <hr className="border-border/50 my-2" />}
-          <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-0.5">
             {sectionFields
               .filter(field => {
                 if (!hideWhenZero?.has(field.key)) return true;
@@ -126,7 +126,7 @@ function FieldEditGrid({
       {sections.map(([sectionName, sectionFields], sectionIdx) => (
         <div key={sectionName || sectionIdx}>
           {sectionIdx > 0 && <hr className="border-border/50 my-2" />}
-          <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
             {sectionFields.map(field => (
               <div key={field.key} className={cn("flex items-center gap-2", field.type === 'text' && 'col-span-2')}>
                 <Label className="text-xs text-muted-foreground shrink-0 min-w-[5rem]">
@@ -266,6 +266,7 @@ export function DetailDialog({
   const enterItemEdit = (idx: number) => {
     setDraft({ ...items![idx] });
     setEditingIndex(idx);
+    setExpandedIndices(new Set([idx]));
   };
 
   const cancelItemEdit = () => {
@@ -301,7 +302,7 @@ export function DetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="top-[5%] translate-y-0 max-h-[90dvh] max-h-[90vh] flex flex-col p-0 gap-0 sm:max-w-md">
+      <DialogContent className="top-[5%] translate-y-0 max-h-[90dvh] max-h-[90vh] flex flex-col p-0 gap-0 sm:max-w-md [&>button:last-child]:hidden">
         <DialogHeader className="px-4 pt-4 pb-2 flex-shrink-0">
           <DialogTitle className={cn("text-base", !isMultiItem && "sr-only")}>{title}</DialogTitle>
         </DialogHeader>
@@ -335,7 +336,7 @@ export function DetailDialog({
 
                     {/* Expanded content */}
                     {isExpanded && (
-                      <div className="pb-2">
+                      <div className="pb-2 pl-4">
                         {isEditing ? (
                           <>
                             <FieldEditGrid sections={itemSections} draft={draft} updateDraft={updateDraft} />
@@ -346,7 +347,7 @@ export function DetailDialog({
                           </>
                         ) : (
                           <>
-                            <FieldViewGrid sections={itemSections} activeValues={item} hideWhenZero={hideWhenZero} />
+                            <FieldViewGrid sections={itemSections.map(([name, fields]) => [name, fields.filter(f => f.key !== 'description')] as [string, FieldConfig[]]).filter(([, fields]) => fields.length > 0)} activeValues={item} hideWhenZero={hideWhenZero} />
                             {!readOnly && (
                               <div className="flex justify-end mt-1">
                                 <Button variant="outline" size="sm" onClick={() => enterItemEdit(idx)} className="gap-1">
@@ -376,7 +377,7 @@ export function DetailDialog({
 
         {/* Footer: only for single-item mode */}
         {!readOnly && !isMultiItem && (
-          <DialogFooter className="px-4 py-3 border-t flex-shrink-0">
+          <DialogFooter className="px-4 py-3 flex-shrink-0">
             {editing ? (
               <>
                 <Button variant="outline" size="sm" onClick={cancelEdit}>Cancel</Button>
@@ -398,7 +399,7 @@ export function DetailDialog({
 // Field config builders
 // ============================================================================
 
-export const FOOD_HIDE_WHEN_ZERO = new Set(['fiber', 'sugar', 'saturated_fat', 'sodium', 'cholesterol']);
+export const FOOD_HIDE_WHEN_ZERO = new Set(['portion', 'fiber', 'sugar', 'saturated_fat', 'sodium', 'cholesterol']);
 
 export const EXERCISE_HIDE_WHEN_EMPTY = new Set(
   KNOWN_METADATA_KEYS.map(mk => `_meta_${mk.key}`)
@@ -414,7 +415,7 @@ export function buildFoodDetailFields(item: Record<string, any>): FieldConfig[] 
     { key: 'fiber', label: 'Fiber', type: 'number', unit: 'g', min: 0, section: 'Nutrition' },
     { key: 'sugar', label: 'Sugar', type: 'number', unit: 'g', min: 0, section: 'Nutrition' },
     { key: 'fat', label: 'Fat', type: 'number', unit: 'g', min: 0, section: 'Nutrition' },
-    { key: 'saturated_fat', label: 'Sat Fat', type: 'number', unit: 'g', min: 0, section: 'Nutrition' },
+    { key: 'saturated_fat', label: 'Saturated Fat', type: 'number', unit: 'g', min: 0, section: 'Nutrition' },
     { key: 'sodium', label: 'Sodium', type: 'number', unit: 'mg', min: 0, section: 'Nutrition' },
     { key: 'cholesterol', label: 'Cholesterol', type: 'number', unit: 'mg', min: 0, section: 'Nutrition' },
   ];
