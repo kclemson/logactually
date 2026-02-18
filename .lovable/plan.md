@@ -1,49 +1,30 @@
 
 
-# Tappable calorie burn override from the expanded panel
+# Put calorie burn label and input on the same row
 
-## What changes
+## Problem
 
-When calorie burn estimates are shown in the expanded exercise panel ("Estimated calories burned: ~80-150"), tapping on that line reveals an inline input for each exercise, letting the user type an exact calorie burn number. This gets saved to `exercise_metadata.calories_burned`, which the system already treats as an authoritative override (skipping the estimation logic entirely).
+When editing mode is active, "Calories burned:" appears as a separate `<p>` tag above the input, wasting vertical space. The user wants label and input on the same line.
 
-## UX flow
+## Change
 
-1. User expands an exercise entry via the chevron
-2. Sees "Estimated calories burned: ~80-150 cal"
-3. Taps the calorie burn line
-4. The text is replaced by one input per exercise in the entry, pre-filled with the midpoint of the range (or the existing override if one was already set)
-5. User types a number and presses Enter or taps away
-6. The value is saved to `exercise_metadata.calories_burned` on that exercise's database row
-7. The line reverts to text, now showing the exact number instead of a range
+### `src/components/CalorieBurnInline.tsx`
 
-For single-exercise entries: one input. For multi-exercise entries: one labeled input per exercise.
+For single-exercise entries (the common case), remove the separate label paragraph and instead pass a `name` of `"Calories burned"` to the `CalorieBurnInput` component so it renders inline using the existing flex row layout.
 
-Tapping "Estimated calories burned" again (or tapping elsewhere) collapses back to the display text.
+For multi-exercise entries, keep the current stacked layout (label per exercise already renders inline).
 
-## Technical approach
+Specifically, in the editing branch (lines 60-77):
 
-### `src/components/WeightItemsTable.tsx`
+- Remove the standalone `<p>` label
+- For single-exercise entries: pass `name="Calories burned"` to `CalorieBurnInput` so the label appears in the same flex row as the input and "cal" suffix
+- For multi-exercise entries: show exercise name labels as before (already inline)
 
-- Extract the calorie burn content into a new small component `CalorieBurnInline` rendered inside the expanded panel's `extraContent`
-- Add local state `editingCalorieBurn` (boolean) to toggle between display and edit mode
-- In edit mode, render one small input per exercise in the entry, each showing the current `exercise_metadata.calories_burned` value (or the estimated midpoint as placeholder)
-- On commit (Enter/blur), call a new callback prop `onUpdateCalorieBurn(itemIndex, calorieValue)` which the parent page provides
-
-### `src/pages/WeightLog.tsx`
-
-- Add `handleUpdateCalorieBurn(index: number, value: number)` callback
-- This merges `{ calories_burned: value }` into the item's existing `exercise_metadata` and calls `updateSet.mutate`
-- Pass this callback down to `WeightItemsTable`
-
-### No other files change
-
-- `calorie-burn.ts` already handles `exercise_metadata.calories_burned` as an authoritative override (returns `{ type: 'exact', value }`)
-- The display formatting already handles exact values vs ranges
-- `processExerciseSaveUpdates` in DetailDialog already handles metadata merging, but we'll do a simpler direct merge here since we're only touching one key
+The result will be a single row: `Calories burned: [__55__] cal`
 
 ## Files changed
 
 | File | What |
 |------|------|
-| `src/components/WeightItemsTable.tsx` | Make calorie burn line tappable, show inline input(s) in edit mode, call new callback on save |
-| `src/pages/WeightLog.tsx` | Add `handleUpdateCalorieBurn` callback that merges calories_burned into exercise_metadata and persists |
+| `src/components/CalorieBurnInline.tsx` | Remove separate label line, pass inline label to CalorieBurnInput for single-exercise case |
+
