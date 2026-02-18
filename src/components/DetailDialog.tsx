@@ -162,7 +162,7 @@ function FieldViewItem({
     if (val === 0 || val === null || val === undefined || val === '') return null;
   }
   return (
-    <div className={cn("flex items-center gap-2 py-0.5 min-w-0", field.type === 'text' && 'col-span-2')}>
+    <div className={cn("flex items-center gap-1.5 py-0.5 min-w-0", field.type === 'text' && 'col-span-2')}>
       <span className={cn("text-xs text-muted-foreground shrink-0", labelClassName)}>
         {field.label}:
       </span>
@@ -208,7 +208,7 @@ function FieldEditItem({
     : field;
 
   return (
-    <div className={cn("flex items-center gap-2 min-w-0", field.type === 'text' && 'col-span-2')}>
+    <div className={cn("flex items-center gap-1.5 min-w-0", field.type === 'text' && 'col-span-2')}>
       <span className={cn("text-xs text-muted-foreground shrink-0", labelClassName)}>
         {field.label}:
       </span>
@@ -223,7 +223,7 @@ function FieldEditItem({
               updateDraft('exercise_key', '');
             }
           }}
-          className="flex h-6 w-[7.5rem] min-w-0 rounded-md border border-input bg-background px-1.5 py-0 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex h-6 w-[7.5rem] min-w-0 rounded-md border border-input bg-background px-1.5 py-0 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <option value="">—</option>
           {effectiveField.optgroups ? (
