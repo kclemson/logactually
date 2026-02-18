@@ -20,6 +20,7 @@ export interface ChartSpec {
   dataKey: string;
   valueFormat?: "integer" | "decimal1" | "duration_mmss" | "none";
   referenceLine?: { value: number; label?: string };
+  dataSource?: "food" | "exercise" | "custom" | "mixed";
 }
 
 function formatValue(value: number, format?: string): string {
@@ -91,7 +92,7 @@ export function DynamicChart({ spec, onNavigate, headerAction }: DynamicChartPro
       onGoToDay={interaction.handleGoToDay}
       rawDate={
         interaction.activeBarIndex !== null
-          ? chartData[interaction.activeBarIndex]?.[xAxis.field]
+          ? ((chartData[interaction.activeBarIndex] as any)?.rawDate ?? chartData[interaction.activeBarIndex]?.[xAxis.field])
           : undefined
       }
     />
