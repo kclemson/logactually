@@ -1,55 +1,139 @@
 
 
-# DetailDialog: 4 fixes + 1 bug investigation
+# Fix category save: async save with loading mask, no dialog flicker
+
+## Approach
+
+Instead of closing and reopening the dialog, we keep it open and let React's natural re-render cycle do the work. When the user changes category:
+
+1. DetailDialog calls `onSave(updates)` which now returns a Promise
+2. DetailDialog shows a loading overlay while awaiting the promise
+3. WeightLog's save handler uses `mutateAsync` + `await invalidateQueries` and does NOT close the dialog
+4. When the promise resolves, DetailDialog exits edit mode
+5. React re-renders with fresh data from the refetched query, and `buildExerciseDetailFields` produces the correct field layout for the new category
+
+No close/reopen, no flicker, no complex reactive layout logic.
 
 ## Changes
 
-### 1. Rename "Cal Burned" to "Burned" (`src/lib/exercise-metadata.ts`, line 294)
-Change the label in `KNOWN_METADATA_KEYS` from `'Cal Burned'` to `'Burned'`. The unit `cal` already provides context.
+### 1. Add `applyCategoryChange` helper (`src/lib/exercise-metadata.ts`)
 
-### 2. Add vertical spacing between Cancel/Save buttons on mobile (`src/components/DetailDialog.tsx`, line 611)
-The `DialogFooter` uses `flex-col-reverse` on mobile (from the shadcn component). The buttons have no gap. Add `gap-2` to the footer:
-```
-<DialogFooter className="px-4 py-3 flex-shrink-0 gap-2">
-```
+Small pure function mapping a category to its base `exercise_key`:
 
-### 3. Fix validation message alignment on desktop (`src/components/DetailDialog.tsx`, line 614)
-Currently the validation `<p>` has `w-full` which forces it onto its own row in `flex-col-reverse`, but on desktop (`sm:flex-row`) it sits alongside buttons with top-alignment. Change to `self-end` so it aligns with button baselines on desktop:
-```
-<p className="text-[10px] italic text-muted-foreground/70 sm:self-end sm:mb-0.5 w-full sm:w-auto sm:mr-auto">
-```
-This left-aligns the text on desktop while pushing buttons to the right, and `self-end` + `mb-0.5` aligns it near the button baseline.
-
-### 4. Category save bug (`src/components/DetailDialog.tsx`, `processExerciseSaveUpdates`)
-**Root cause**: When the user changes `_exercise_category` (e.g., from "other" to "strength"), the `processExerciseSaveUpdates` function silently drops it because all keys starting with `_` that aren't `_meta_*` are discarded (line 796-802). The category never reaches the database.
-
-Additionally, the field layout is computed once from the initial `fields` prop and doesn't re-render when the draft category changes, so the user never sees the Type/Subtype dropdowns for the new category.
-
-**Fix**: In `processExerciseSaveUpdates`, when `_exercise_category` is present in the updates, map it to an actual `exercise_key` change. Specifically:
-- If the new category is `'other'`, set `exercise_key` to `'other'` (or clear it) so `flattenExerciseValues` will derive `'other'` on next load.
-- If switching to `'strength'` or `'cardio'` without a new `exercise_key`, keep the existing `exercise_key` if it matches the new category, otherwise clear it. Since the user can't currently pick a new exercise type (the layout doesn't re-render), we should at minimum persist the category intent by setting `exercise_key` to a sensible default or clearing it.
-
-The minimal viable fix: in `processExerciseSaveUpdates`, detect `_exercise_category` and translate it to an `exercise_key` update:
 ```typescript
-// Handle _exercise_category -> exercise_key mapping
-if ('_exercise_category' in updates) {
-  const newCat = updates._exercise_category;
-  if (newCat === 'other') {
-    regularUpdates.exercise_key = 'other';
-  }
-  // If switching to strength/cardio but no exercise_key was selected,
-  // clear the key so the user can pick one next time
-  if (!regularUpdates.exercise_key && newCat !== 'other') {
-    regularUpdates.exercise_key = '';
-  }
+export function applyCategoryChange(
+  newCategory: 'strength' | 'cardio' | 'other'
+): { exercise_key: string } {
+  return { exercise_key: newCategory === 'other' ? 'other' : '' };
 }
 ```
 
-**Note**: The full fix (dynamically re-rendering field layout when draft category changes) is a larger refactor. This minimal fix ensures the category change persists.
+### 2. Make `onSave` optionally async (`src/components/DetailDialog.tsx`)
+
+- Change `onSave` type from `(updates) => void` to `(updates) => void | Promise<void>`
+- In `handleSave`, await the result if it's a Promise, showing a `saving` loading overlay on the dialog body while waiting
+- On completion, exit edit mode (don't close the dialog -- the caller decides whether to close)
+- Add a small loading mask component (semi-transparent overlay with a spinner) rendered when `saving` is true
+
+```typescript
+const [saving, setSaving] = useState(false);
+
+const handleSave = async () => {
+  // ... existing diff/unit-conversion logic ...
+  if (Object.keys(updates).length > 0) {
+    const result = onSave(updates);
+    if (result && typeof result.then === 'function') {
+      setSaving(true);
+      await result;
+      setSaving(false);
+    }
+  }
+  setEditing(false);
+  setDraft({});
+};
+```
+
+The loading overlay is a simple div over the dialog content:
+
+```tsx
+{saving && (
+  <div className="absolute inset-0 bg-background/60 flex items-center justify-center z-10 rounded-lg">
+    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+  </div>
+)}
+```
+
+### 3. Make category saves async in WeightLog (`src/pages/WeightLog.tsx`)
+
+Split `handleDetailSave` behavior: if the save includes a category change (detected by checking for `exercise_key` in the processed updates from `applyCategoryChange`), use `mutateAsync` and wait for the query to refetch. Don't close the dialog.
+
+```typescript
+const handleDetailSave = useCallback(async (updates: Record<string, any>) => {
+  if (!detailDialogItem || detailDialogItem.mode !== 'single') return;
+  const item = displayItems[detailDialogItem.index];
+  if (!item) return;
+
+  const { regularUpdates, newMetadata } = processExerciseSaveUpdates(updates, item.exercise_metadata ?? null);
+  const allUpdates: Record<string, any> = { ...regularUpdates };
+  if (newMetadata !== (item.exercise_metadata ?? null)) {
+    allUpdates.exercise_metadata = newMetadata;
+  }
+
+  if (Object.keys(allUpdates).length === 0) return;
+
+  const isCategoryChange = 'exercise_key' in allUpdates
+    && allUpdates.exercise_key !== item.exercise_key;
+
+  if (isCategoryChange) {
+    // Async path: save, wait for refetch, keep dialog open
+    await updateSet.mutateAsync({ id: item.id, updates: allUpdates });
+    await queryClient.invalidateQueries({ queryKey: ['weight-sets', date] });
+    // Dialog stays open; DetailDialog exits edit mode; fresh data triggers re-render
+  } else {
+    updateSet.mutate({ id: item.id, updates: allUpdates });
+    setDetailDialogItem(null);
+  }
+}, [detailDialogItem, displayItems, updateSet, queryClient, date]);
+```
+
+This requires importing `useQueryClient` in WeightLog (it likely already has access via the hook).
+
+### 4. Clean up `processExerciseSaveUpdates` (`src/components/DetailDialog.tsx`)
+
+Remove the `_exercise_category` to `exercise_key` mapping block (lines 803-812 from the last diff). Instead, the category select's `onChange` in `FieldEditItem` will call `applyCategoryChange` and merge the result into the draft directly, so `exercise_key` arrives as a regular update.
+
+In `FieldEditItem`, when `_exercise_category` changes:
+
+```typescript
+if (effectiveField.key === '_exercise_category') {
+  const patch = applyCategoryChange(value as any);
+  updateDraft('_exercise_category', value);
+  updateDraft('exercise_key', patch.exercise_key);
+  return;
+}
+```
+
+### 5. Remove stale draft-level exercise_key clearing (line 222-224)
+
+The existing `if (effectiveField.key === '_exercise_category') updateDraft('exercise_key', '')` is replaced by the `applyCategoryChange` call above.
+
+## UX flow
+
+1. User opens an "Other" exercise, taps Edit, changes Category to "Strength"
+2. `applyCategoryChange` sets `exercise_key = ''` in the draft
+3. User taps Save
+4. A subtle loading mask appears over the dialog (spinner)
+5. The mutation saves `exercise_key: ''` to the DB
+6. The query refetches with the updated data
+7. Loading mask disappears, dialog exits edit mode
+8. The dialog re-renders in read-only view with the correct Strength fields (Type dropdown, sets/reps/weight, etc.)
+9. User can tap Edit again to pick an exercise type
 
 ## Files changed
 
 | File | What |
 |------|------|
-| `src/lib/exercise-metadata.ts` | "Cal Burned" to "Burned" |
-| `src/components/DetailDialog.tsx` | Footer gap, validation text alignment, category save fix in `processExerciseSaveUpdates` |
+| `src/lib/exercise-metadata.ts` | Add `applyCategoryChange()` helper |
+| `src/components/DetailDialog.tsx` | Make `handleSave` async with loading state; clean up `_exercise_category` handling in `processExerciseSaveUpdates` and `FieldEditItem` |
+| `src/pages/WeightLog.tsx` | Make `handleDetailSave` async; use `mutateAsync` + `invalidateQueries` for category changes; keep dialog open |
+
