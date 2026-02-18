@@ -1,53 +1,53 @@
 
 
-# Fix: Add `min-w-0` to grid cells (the standard CSS Grid overflow fix)
+# Compact, left-hugging inputs for exercise detail fields
 
-## Root cause
+## Concept
 
-CSS Grid items have `min-width: auto` by default. This means each grid cell's minimum width equals its content's intrinsic minimum width (label text + gap + value text). The `fr`-based column ratios are overridden whenever content is wider than the ratio allows -- the grid expands to fit, causing overflow.
+Instead of inputs stretching to fill available space (`flex-1`), make them a fixed small width (like the biometrics dialog). The label takes only the space it needs, and the input sits right next to it -- no push-right, no justify-between. The layout naturally aligns because all cells in a given grid column start at the same x-position.
 
-This is a well-known CSS Grid pitfall documented everywhere (CSS Tricks, MDN, etc.). The fix is one class.
-
-## Fix
-
-Add `min-w-0` to each grid cell `div` in both `FieldViewGrid` and `FieldEditGrid`. This tells CSS Grid "this cell CAN shrink below its content width," allowing `fr` units to actually control column proportions.
-
-Also add `min-w-0 truncate` to value spans in view mode so that long text (e.g., "Incline bench press") gets truncated with an ellipsis rather than forcing the column wider.
+## Changes
 
 **File: `src/components/DetailDialog.tsx`**
 
-### Change 1: FieldViewGrid cell div (line 146)
+### Edit mode inputs (line 225)
+
+Change numeric `Input` from `flex-1 min-w-0` to a fixed width:
 
 ```
 // Before
-<div key={field.key} className={cn("flex items-center gap-2 py-0.5", field.type === 'text' && 'col-span-2')}>
+className="h-6 py-0 px-1.5 text-sm flex-1 min-w-0"
 
 // After
-<div key={field.key} className={cn("flex items-center gap-2 py-0.5 min-w-0", field.type === 'text' && 'col-span-2')}>
+className="h-6 py-0 px-1.5 text-sm w-16 text-center"
 ```
 
-### Change 2: FieldViewGrid value span (line 150)
+This gives every numeric input the same ~4-character width, matching the biometrics pattern.
+
+### Select dropdowns (line 196)
+
+Keep `flex-1` for selects since dropdown options need room:
 
 ```
-// Before
-<span className="text-sm">
-
-// After
-<span className="text-sm min-w-0 truncate">
+// No change -- selects stay flex-1
 ```
 
-### Change 3: FieldEditGrid cell div (line 186)
+### Text inputs (Name field)
 
+The Name field already spans `col-span-2` -- it should also stay `flex-1` since it's a full-width text field. We need to differentiate: only `type === 'number'` inputs get the fixed width.
+
+Updated logic (line 214-226):
+
+```tsx
+<Input
+  type={field.type}
+  ...
+  className={cn(
+    "h-6 py-0 px-1.5 text-sm",
+    field.type === 'number' ? "w-16 text-center" : "flex-1 min-w-0"
+  )}
+/>
 ```
-// Before
-<div key={field.key} className={cn("flex items-center gap-2", field.type === 'text' && 'col-span-2')}>
 
-// After
-<div key={field.key} className={cn("flex items-center gap-2 min-w-0", field.type === 'text' && 'col-span-2')}>
-```
+That's it -- one line change (swapping the className to be conditional on field type). Labels stay left, inputs sit snugly next to them at a compact fixed width, and the grid columns handle vertical alignment naturally.
 
-### Change 4: Revert gridClassName to `grid-cols-2` in WeightLog.tsx (lines 774, 796)
-
-With `min-w-0` in place, the `fr` units will actually work. But equal columns (`grid-cols-2`) is the right default -- all cells have the same structure (label + value), so equal widths make sense. The `6fr_5fr` hack was compensating for the overflow, not solving it.
-
-That's it. Four small edits across two files. This is the standard, industry-practice fix for CSS Grid content overflow.
