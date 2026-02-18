@@ -22,6 +22,7 @@ type ChangelogEntry = {
 
 // prettier-ignore
 const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+{ date: "Feb-18", text: "Added 'Copy to today' — expand any past food or exercise entry and tap the link to instantly duplicate it to today's log. Shows a brief inline confirmation without interrupting your browsing.", image: "copy-to-today.png" },
 { date: "Feb-18", text: "Added a detail view for logged food and exercise items — tap 'Details' in the expanded panel to see all fields at a glance, or switch to edit mode to update values directly. Uses a two-column layout on wider screens with dropdowns for category fields.", image: "detailed-dialog.png" },
 { date: "Feb-17", text: "Added a 'First day of week' preference in Settings — choose Sunday or Monday, and it'll be reflected in the Calendar view on the History page and the date picker on the Food, Exercise, and Custom log pages.", image: "first-day-of-week.png" },
 { date: "Feb-17", text: "Updated grouping UI for food & exercise logs - log a picture of food or a saved meal with multiple items in it, and it'll show up as a single collapsed row by default. Food groups also support portion scaling — adjust the multiplier on the group header and all child items scale proportionally.", image: "grouped-entries.png" },
