@@ -140,7 +140,7 @@ function FieldViewGrid({
               })
               .map(field => (
               <div key={field.key} className={cn("flex items-center gap-2 py-0.5", field.type === 'text' && 'col-span-2')}>
-                <span className="text-xs text-muted-foreground min-w-[5rem] shrink-0">
+                <span className="text-xs text-muted-foreground min-w-[7.5rem] shrink-0">
                   {field.label}{field.unitToggle ? ` (${activeUnits?.[field.key] || field.unitToggle.storageUnit})` : field.unit ? ` (${field.unit})` : ''}:
                 </span>
                 <span className="text-sm">
@@ -175,7 +175,7 @@ function FieldEditGrid({
           <div className="grid grid-cols-2 gap-x-6 gap-y-0.5">
             {sectionFields.map(field => (
               <div key={field.key} className={cn("flex items-center gap-2", field.type === 'text' && 'col-span-2')}>
-                <span className="text-xs text-muted-foreground shrink-0 min-w-[5rem]">
+                <span className="text-xs text-muted-foreground shrink-0 min-w-[7.5rem]">
                   {field.label}{field.unitToggle ? ` (${activeUnits?.[field.key] || field.unitToggle.storageUnit})` : field.unit ? ` (${field.unit})` : ''}:
                 </span>
                 {field.readOnly ? (
