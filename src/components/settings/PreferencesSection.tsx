@@ -56,7 +56,7 @@ export function PreferencesSection({ settings, updateSettings }: PreferencesSect
           <div className="flex items-center justify-between">
             <p className="text-xs text-muted-foreground">Theme</p>
             <Select value={theme} onValueChange={(v) => handleThemeChange(v as 'light' | 'dark' | 'system')}>
-              <SelectTrigger className="w-[130px] h-9">
+              <SelectTrigger className="w-[150px] h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -194,7 +194,7 @@ export function PreferencesSection({ settings, updateSettings }: PreferencesSect
           <div className="flex items-center justify-between">
             <p className="text-xs text-muted-foreground">First day of week</p>
             <Select value={String(settings.weekStartDay)} onValueChange={(v) => updateSettings({ weekStartDay: Number(v) as UserSettings['weekStartDay'] })}>
-              <SelectTrigger className="w-[130px] h-9">
+              <SelectTrigger className="w-[150px] h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
