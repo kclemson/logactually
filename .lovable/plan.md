@@ -1,37 +1,26 @@
 
 
-# Remove section grouping from food detail fields
+# Constrain Name field width to match Portion
 
 ## Problem
 
-The food fields are split into two sections: "Basic" (Name, Portion) and "Nutrition" (Calories onward). Each section renders in its own grid container, which causes the Calories row to be crammed right below Portion in a new grid block instead of flowing naturally in the two-column layout.
+The Name input stretches edge-to-edge across the dialog, far wider than needed. The Portion field below it is already constrained to `max-w-[12rem]`, and the numeric fields below that are even narrower. The Name field should have a similar natural boundary.
 
 ## Fix
 
-Remove the `section` property from all food fields in `buildFoodDetailFields`. When no section is specified, all fields land in a single unnamed section and render in one continuous grid. Name and Portion still span `col-span-2` (because they're `type: 'text'`), and the numeric fields flow into the two-column grid naturally after them.
+Add `maxWidth: 'sm'` to the Name field in `buildFoodDetailFields`, same as Portion already has. This applies the existing `max-w-[12rem]` constraint, aligning the Name input's right edge with the Portion input's right edge and creating a visually consistent left column.
 
 ## Technical details
 
-**File: `src/components/DetailDialog.tsx`** -- `buildFoodDetailFields` (lines 536-549)
-
-Remove `section: 'Basic'` from the Name and Portion fields, and `section: 'Nutrition'` from all the numeric fields. The result:
+**File: `src/components/DetailDialog.tsx`** -- `buildFoodDetailFields` (line 537)
 
 ```tsx
-export function buildFoodDetailFields(item: Record<string, any>): FieldConfig[] {
-  return [
-    { key: 'description', label: 'Name', type: 'text' },
-    { key: 'portion', label: 'Portion', type: 'text', maxWidth: 'sm' },
-    { key: 'calories', label: 'Calories', type: 'number', unit: 'cal', min: 0 },
-    { key: 'protein', label: 'Protein', type: 'number', unit: 'g', min: 0 },
-    { key: 'carbs', label: 'Carbs', type: 'number', unit: 'g', min: 0 },
-    { key: 'fiber', label: 'Fiber', type: 'number', unit: 'g', min: 0 },
-    { key: 'sugar', label: 'Sugar', type: 'number', unit: 'g', min: 0 },
-    { key: 'fat', label: 'Fat', type: 'number', unit: 'g', min: 0 },
-    { key: 'saturated_fat', label: 'Saturated Fat', type: 'number', unit: 'g', min: 0 },
-    { key: 'sodium', label: 'Sodium', type: 'number', unit: 'mg', min: 0 },
-    { key: 'cholesterol', label: 'Cholesterol', type: 'number', unit: 'mg', min: 0 },
-  ];
-}
+// Before
+{ key: 'description', label: 'Name', type: 'text' },
+
+// After
+{ key: 'description', label: 'Name', type: 'text', maxWidth: 'sm' },
 ```
 
-One file, one function -- just delete the `section` keys. Everything else (grid layout, label alignment, input widths) stays the same.
+One line, one property addition.
+
