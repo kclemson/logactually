@@ -91,7 +91,8 @@ export function MedicationEntryInput({
     ? null
     : (() => {
         const freq = `${dosesPerDay}x/day`;
-        const times = doseTimes && doseTimes.length > 0 ? ` · ${doseTimes.join(', ')}` : '';
+        const nonEmpty = doseTimes?.filter(t => t.trim()) ?? [];
+        const times = nonEmpty.length > 0 ? ` · ${nonEmpty.join(', ')}` : '';
         return `${freq}${times}`;
       })();
 

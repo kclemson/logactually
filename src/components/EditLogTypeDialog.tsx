@@ -179,11 +179,12 @@ export function EditLogTypeDialog({
                       <p className="text-xs text-muted-foreground w-14 shrink-0">
                         Dose {i + 1}
                       </p>
-                      <Input
+                        <Input
                         value={doseTimes[i] ?? ''}
                         onChange={(e) => handleDoseTimeChange(i, e.target.value)}
-                        placeholder="e.g. morning, 8am, with dinner"
-                        className="text-sm"
+                        placeholder="e.g. morning, 8am, with dinner, etc"
+                        className="text-sm placeholder:text-foreground/50 placeholder:italic"
+                        autoComplete="off"
                       />
                     </div>
                   ))}
