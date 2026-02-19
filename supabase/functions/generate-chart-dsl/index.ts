@@ -84,8 +84,8 @@ When the user asks about a SPECIFIC activity that is a subtype (e.g. "running", 
 When the user asks about the GENERAL activity (e.g. "cardio", "walk/run"), use only filter.exerciseKey without exerciseSubtype.
 
 AVAILABLE METRICS:
-- Food source: calories, protein, carbs, fat, fiber, sugar, saturated_fat, sodium, cholesterol, entries (number of food logging sessions)
-- Exercise source: sets, duration_minutes, distance_miles, calories_burned, unique_exercises (distinct exercise types per day), entries (number of exercise sessions logged — each logged group counts separately, not deduplicated by exercise type. Two separate dog walks = 2 entries.)
+- Food source: calories, protein, carbs, fat, fiber, sugar, saturated_fat, sodium, cholesterol, entries (number of food items logged)
+- Exercise source: sets, duration_minutes, distance_miles, calories_burned, unique_exercises (distinct exercise types per day), entries (number of exercise items logged — each logged entry counts separately, not deduplicated by exercise type. Two separate dog walks = 2 entries.)
 
 DERIVED METRICS (food source only, use derivedMetric field):
 - protein_pct, carbs_pct, fat_pct: macro percentage of total calories
