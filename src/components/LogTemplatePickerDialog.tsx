@@ -1,12 +1,17 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { LOG_TEMPLATES, MEASUREMENT_TEMPLATES, getTemplateUnit } from '@/lib/log-templates';
 import { useUserSettings } from '@/hooks/useUserSettings';
-import { Scale, Ruler, Percent, HeartPulse, Moon, Smile, BookOpen, Droplets, Wrench, ChevronDown, ChevronRight, type LucideIcon } from 'lucide-react';
+import { Scale, Ruler, Percent, HeartPulse, Moon, Smile, BookOpen, Droplets, Wrench, ChevronDown, ChevronRight, Pill, type LucideIcon } from 'lucide-react';
 
 const ICON_MAP: Record<string, LucideIcon> = {
-  Scale, Ruler, Percent, HeartPulse, Moon, Smile, BookOpen, Droplets,
+  Scale, Ruler, Percent, HeartPulse, Moon, Smile, BookOpen, Droplets, Pill,
 };
+
+// Templates shown in the primary list (always visible)
+const PRIMARY_NAMES = ['Body Weight', 'Body Fat %', 'Blood Pressure', 'Medication'];
+// Templates hidden under "More options"
+const MORE_NAMES = ['Sleep', 'Water Intake', 'Mood', 'Journal'];
 
 interface LogTemplatePickerDialogProps {
   open: boolean;
@@ -25,8 +30,8 @@ export function LogTemplatePickerDialog({
   const lowerExisting = existingNames.map(n => n.toLowerCase());
   const [measurementExpanded, setMeasurementExpanded] = useState(false);
   const [selectedMeasurements, setSelectedMeasurements] = useState<Set<string>>(new Set());
+  const [moreExpanded, setMoreExpanded] = useState(false);
 
-  const nonGroupTemplates = LOG_TEMPLATES.filter(t => !t.group);
   const allMeasurementsAdded = MEASUREMENT_TEMPLATES.every(t => lowerExisting.includes(t.name.toLowerCase()));
   const newlySelected = [...selectedMeasurements].filter(name => !lowerExisting.includes(name.toLowerCase()));
 
@@ -46,32 +51,30 @@ export function LogTemplatePickerDialog({
     if (onSelectTemplates) {
       onSelectTemplates(items);
     } else {
-      // fallback: create one at a time
       for (const item of items) onSelectTemplate(item);
     }
     setSelectedMeasurements(new Set());
     setMeasurementExpanded(false);
   };
 
-  // Reset state when dialog closes
   const handleOpenChange = (val: boolean) => {
     if (!val) {
       setMeasurementExpanded(false);
       setSelectedMeasurements(new Set());
+      setMoreExpanded(false);
     }
     onOpenChange(val);
   };
 
-  // Insert the measurement group row after Body Weight (index 0 in nonGroupTemplates)
-  const bodyWeightTemplate = nonGroupTemplates.find(t => t.name === 'Body Weight');
-  const otherTemplates = nonGroupTemplates.filter(t => t.name !== 'Body Weight');
+  const bodyWeightTemplate = LOG_TEMPLATES.find(t => t.name === 'Body Weight');
+  const primaryTemplates = LOG_TEMPLATES.filter(t => PRIMARY_NAMES.includes(t.name));
+  const moreTemplates = LOG_TEMPLATES.filter(t => MORE_NAMES.includes(t.name));
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>Add a Log Type</DialogTitle>
-          <DialogDescription>Pick a template to get started quickly.</DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col">
@@ -103,7 +106,6 @@ export function LogTemplatePickerDialog({
             )}
           </button>
 
-          {/* Expanded measurement checkboxes */}
           {measurementExpanded && !allMeasurementsAdded && (
             <div className="pl-10 pr-3 pb-2 space-y-1">
               {MEASUREMENT_TEMPLATES.map(t => {
@@ -140,8 +142,8 @@ export function LogTemplatePickerDialog({
             </div>
           )}
 
-          {/* Other templates */}
-          {otherTemplates.map((t) => {
+          {/* Primary templates: Body Fat %, Blood Pressure, Medication */}
+          {primaryTemplates.map((t) => {
             const unit = getTemplateUnit(t, settings.weightUnit);
             const alreadyAdded = lowerExisting.includes(t.name.toLowerCase());
             return (
@@ -156,13 +158,44 @@ export function LogTemplatePickerDialog({
             );
           })}
 
+          {/* More options expando */}
           <button
-            onClick={onCreateCustom}
-            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm hover:bg-accent transition-colors"
+            onClick={() => setMoreExpanded(prev => !prev)}
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm hover:bg-accent transition-colors text-muted-foreground"
           >
             <Wrench className="h-4 w-4 text-teal-500" />
-            <span className="font-medium">Create your own</span>
+            <span className="font-medium text-foreground">More options</span>
+            {moreExpanded
+              ? <ChevronDown className="h-3 w-3 ml-auto" />
+              : <ChevronRight className="h-3 w-3 ml-auto" />}
           </button>
+
+          {moreExpanded && (
+            <>
+              {moreTemplates.map((t) => {
+                const unit = getTemplateUnit(t, settings.weightUnit);
+                const alreadyAdded = lowerExisting.includes(t.name.toLowerCase());
+                return (
+                  <TemplateRow
+                    key={t.name}
+                    template={t}
+                    unit={unit}
+                    alreadyAdded={alreadyAdded}
+                    isLoading={isLoading}
+                    onSelect={onSelectTemplate}
+                  />
+                );
+              })}
+
+              <button
+                onClick={onCreateCustom}
+                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm hover:bg-accent transition-colors"
+              >
+                <Wrench className="h-4 w-4 text-teal-500" />
+                <span className="font-medium">Create your own</span>
+              </button>
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>

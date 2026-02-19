@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
-export type ValueType = 'numeric' | 'text_numeric' | 'text' | 'text_multiline' | 'dual_numeric';
+export type ValueType = 'numeric' | 'text_numeric' | 'text' | 'text_multiline' | 'dual_numeric' | 'medication';
 
 export interface CustomLogType {
   id: string;
@@ -10,6 +10,7 @@ export interface CustomLogType {
   name: string;
   value_type: ValueType;
   unit: string | null;
+  description: string | null;
   sort_order: number;
   created_at: string;
   updated_at: string;
@@ -73,10 +74,11 @@ export function useCustomLogTypes() {
   });
 
   const updateType = useMutation({
-    mutationFn: async (params: { id: string; name?: string; unit?: string | null }) => {
+    mutationFn: async (params: { id: string; name?: string; unit?: string | null; description?: string | null }) => {
       const updates: Record<string, unknown> = {};
       if (params.name !== undefined) updates.name = params.name;
       if (params.unit !== undefined) updates.unit = params.unit;
+      if (params.description !== undefined) updates.description = params.description;
       const { error } = await supabase
         .from('custom_log_types')
         .update(updates)

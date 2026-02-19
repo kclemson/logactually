@@ -1,5 +1,5 @@
 import { type ReactNode, useState } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DeleteConfirmPopover } from '@/components/DeleteConfirmPopover';
 import { DescriptionCell } from '@/components/DescriptionCell';
@@ -9,6 +9,7 @@ interface SavedItemRowProps {
   name: string;
   onUpdateName: (newName: string) => void;
   onDelete: () => void;
+  onEdit?: () => void;
   deleteConfirmLabel: string;
   deleteConfirmDescription: string;
   openDeletePopoverId: string | null;
@@ -26,6 +27,7 @@ export function SavedItemRow({
   name,
   onUpdateName,
   onDelete,
+  onEdit,
   deleteConfirmLabel,
   deleteConfirmDescription,
   openDeletePopoverId,
@@ -80,6 +82,16 @@ export function SavedItemRow({
 
         {meta && (
           <span className="text-xs text-muted-foreground shrink-0">{meta}</span>
+        )}
+
+        {onEdit && (
+          <button
+            onClick={onEdit}
+            className="p-0.5 text-muted-foreground hover:text-foreground transition-colors shrink-0"
+            aria-label="Edit details"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
         )}
 
         <DeleteConfirmPopover

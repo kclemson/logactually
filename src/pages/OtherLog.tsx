@@ -12,6 +12,7 @@ import { useCustomLogEntriesForType } from '@/hooks/useCustomLogEntriesForType';
 import { CreateLogTypeDialog } from '@/components/CreateLogTypeDialog';
 import { LogTemplatePickerDialog } from '@/components/LogTemplatePickerDialog';
 import { LogEntryInput } from '@/components/LogEntryInput';
+import { MedicationEntryInput } from '@/components/MedicationEntryInput';
 import { CustomLogEntryRow } from '@/components/CustomLogEntryRow';
 import { CustomLogTypeView } from '@/components/CustomLogTypeView';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
@@ -230,33 +231,63 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
 
         {/* Inline input form */}
         {showInput && effectiveTypeId && selectedType && !isReadOnly && (
-          <LogEntryInput
-            valueType={selectedType.value_type}
-            label={selectedType.name}
-            unit={selectedType.unit}
-            onSubmit={(params) => {
-              if (viewMode === 'type') {
-                createTypeEntry.mutate({
-                  log_type_id: selectedType.id,
-                  unit: selectedType.unit || null,
-                  ...params,
-                }, {
-                  onSuccess: () => setShowInput(false),
-                });
-              } else {
-                createEntry.mutate({
-                  log_type_id: selectedType.id,
-                  logged_date: dateStr,
-                  unit: selectedType.unit || null,
-                  ...params,
-                }, {
-                  onSuccess: () => setShowInput(false),
-                });
-              }
-            }}
-            onCancel={() => setShowInput(false)}
-            isLoading={viewMode === 'type' ? createTypeEntry.isPending : createEntry.isPending}
-          />
+          selectedType.value_type === 'medication' ? (
+            <MedicationEntryInput
+              label={selectedType.name}
+              unit={selectedType.unit}
+              description={selectedType.description}
+              onSubmit={(params) => {
+                if (viewMode === 'type') {
+                  createTypeEntry.mutate({
+                    log_type_id: selectedType.id,
+                    unit: selectedType.unit || null,
+                    ...params,
+                  }, {
+                    onSuccess: () => setShowInput(false),
+                  });
+                } else {
+                  createEntry.mutate({
+                    log_type_id: selectedType.id,
+                    logged_date: dateStr,
+                    unit: selectedType.unit || null,
+                    ...params,
+                  }, {
+                    onSuccess: () => setShowInput(false),
+                  });
+                }
+              }}
+              onCancel={() => setShowInput(false)}
+              isLoading={viewMode === 'type' ? createTypeEntry.isPending : createEntry.isPending}
+            />
+          ) : (
+            <LogEntryInput
+              valueType={selectedType.value_type}
+              label={selectedType.name}
+              unit={selectedType.unit}
+              onSubmit={(params) => {
+                if (viewMode === 'type') {
+                  createTypeEntry.mutate({
+                    log_type_id: selectedType.id,
+                    unit: selectedType.unit || null,
+                    ...params,
+                  }, {
+                    onSuccess: () => setShowInput(false),
+                  });
+                } else {
+                  createEntry.mutate({
+                    log_type_id: selectedType.id,
+                    logged_date: dateStr,
+                    unit: selectedType.unit || null,
+                    ...params,
+                  }, {
+                    onSuccess: () => setShowInput(false),
+                  });
+                }
+              }}
+              onCancel={() => setShowInput(false)}
+              isLoading={viewMode === 'type' ? createTypeEntry.isPending : createEntry.isPending}
+            />
+          )
         )}
       </section>
 

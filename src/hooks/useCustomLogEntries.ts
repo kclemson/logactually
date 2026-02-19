@@ -11,6 +11,8 @@ export interface CustomLogEntry {
   numeric_value_2: number | null;
   text_value: string | null;
   unit: string | null;
+  logged_time: string | null;
+  entry_notes: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -42,6 +44,8 @@ export function useCustomLogEntries(dateStr: string) {
       numeric_value_2?: number | null;
       text_value?: string | null;
       unit?: string | null;
+      logged_time?: string | null;
+      entry_notes?: string | null;
     }) => {
       if (!user) throw new Error('No user');
       const { data, error } = await supabase
@@ -64,6 +68,7 @@ export function useCustomLogEntries(dateStr: string) {
       numeric_value?: number | null;
       numeric_value_2?: number | null;
       text_value?: string | null;
+      entry_notes?: string | null;
     }) => {
       const { id, ...updates } = params;
       const { error } = await supabase
