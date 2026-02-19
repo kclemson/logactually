@@ -1,62 +1,54 @@
 
 
-## Add per-exercise-key verification for categorical exercise charts
+## Expand `verifyCategoricalWeekday` to handle "Weekdays vs Weekends" labels
 
-### What this does
-Enables deterministic verification for charts that group data by exercise (e.g., "Average Heart Rate by Exercise", "Total Duration by Exercise"). Currently these fall through to "can't be verified" because we only have daily totals, not per-exercise totals.
+### What changes
+A single function enhancement -- no new functions, no new files.
 
-### How it works
+### Why this fits
+The existing `verifyCategoricalWeekday` already groups all dates into 7 day-of-week buckets and aggregates per bucket. "Weekdays" and "Weekends" are simply labels that map to multiple buckets instead of one. The detection, field resolution, aggregation, and comparison logic are all identical.
 
-**Backend** (`supabase/functions/generate-chart/index.ts`): After the existing daily exercise totals loop, add a second pass over `exerciseSets` that groups by `exercise_key`, accumulating count, total sets, total reps, total duration, total distance, total calories burned, and collecting heart rate + effort values for averaging. Serialize this as `exerciseByKey` alongside the existing `dailyTotals` in the response.
+### Changes -- single file: `src/lib/chart-verification.ts`
 
-**Client type** (`src/hooks/useGenerateChart.ts`): Add optional `exerciseByKey` to the `DailyTotals` interface:
+**1. Expand the `weekdayIndex` helper (or add a sibling) to recognize group labels**
 
-```text
-exerciseByKey?: Record<string, {
-  description: string;
-  count: number;
-  total_sets: number;
-  total_duration: number;
-  avg_duration: number;
-  total_distance: number;
-  avg_heart_rate: number | null;
-  avg_effort: number | null;
-  total_cal_burned: number;
-}>
-```
+Add a new helper `weekdayGroupIndices` that maps group labels to arrays of day indices:
+- "weekdays" / "weekday" -> [1, 2, 3, 4, 5]
+- "weekends" / "weekend" -> [0, 6]
 
-**Client verification** (`src/lib/chart-verification.ts`): Add `verifyCategoricalExercise` function inserted into the chain after weekday verification (step 3, before AI-declared fallback).
+Returns `null` if the label isn't a group label.
 
-Detection: if `dataSource === "exercise"` and x-axis labels are NOT dates or weekdays, treat as exercise-categorical.
+**2. Broaden the detection check at the top of `verifyCategoricalWeekday`**
 
-Label matching: normalize both the chart label and exercise key (lowercase, replace underscores/hyphens with spaces) and compare. Also check against the stored `description`.
+Currently: labels must match individual weekday names via `weekdayIndex()`. 
 
-Field mapping from chart `dataKey` to `exerciseByKey` fields:
-- `heart_rate` / `avg_heart_rate` -> `avg_heart_rate`
-- `duration` / `avg_duration` -> `avg_duration`
-- `effort` / `avg_effort` -> `avg_effort`
-- `count` / `frequency` / `entries` -> `count`
-- `cal_burned` / `calories_burned` / `total_cal_burned` -> `total_cal_burned`
-- `distance` / `total_distance` -> `total_distance`
-- `sets` / `total_sets` -> `total_sets`
+Change: a label passes detection if it matches `weekdayIndex()` OR `weekdayGroupIndices()`. This way a chart with labels ["Weekdays", "Weekends"] passes the 50% threshold just like ["Mon", "Tue", ...] does.
 
-Standard `isClose` tolerance comparison, same as existing paths.
+**3. Adjust the per-data-point loop to handle both cases**
 
-### Verification chain after this change
+Currently each data point maps to one bucket via `weekdayIndex(label)`. Change the logic to:
+- First try `weekdayIndex(label)` -- if non-null, aggregate that single bucket (existing behavior, unchanged)
+- Otherwise try `weekdayGroupIndices(label)` -- if non-null, merge all values from those buckets into one flat array, then aggregate
+
+This is roughly 3 lines of extra logic in the loop.
+
+**4. No changes to the verification chain or function name**
+
+The function stays as `verifyCategoricalWeekday` and its position in the chain is unchanged. No new step needed. The function name already makes sense -- it verifies charts whose categories are based on weekdays, whether individual or grouped.
+
+### Technical detail
 
 ```text
-1. verifyDeterministic           -- date-indexed, known metric
-2. verifyCategoricalWeekday      -- weekday-bucketed, known metric
-3. verifyCategoricalExercise     -- exercise-keyed, known metric  [NEW]
-4. AI-declared daily/aggregate   -- fallback
-5. unavailable
+weekdayGroupIndices("Weekdays")  ->  [1, 2, 3, 4, 5]
+weekdayGroupIndices("Weekends")  ->  [0, 6]
+weekdayGroupIndices("Monday")    ->  null  (handled by weekdayIndex instead)
+
+For a "Weekdays" data point:
+  values = [...buckets[1], ...buckets[2], ...buckets[3], ...buckets[4], ...buckets[5]]
+  expected = aggregate(values)  // e.g. average across all weekday dates
 ```
 
-### Files changed
-
-| File | Change |
-|------|--------|
-| `supabase/functions/generate-chart/index.ts` | Add per-exercise-key aggregation loop + serialize to response |
-| `src/hooks/useGenerateChart.ts` | Add `exerciseByKey` to `DailyTotals` type |
-| `src/lib/chart-verification.ts` | Add `verifyCategoricalExercise` + insert into `verifyChartData` chain |
-
+### Why not a separate function
+- Same detection logic (label shape), same field resolution, same bucketing, same aggregation, same comparison. The only difference is "1 bucket vs N buckets merged" -- a 3-line branch, not a 100-line function.
+- Keeps the verification chain simpler (no extra step to reason about).
+- The concept is the same: "group dates by their day-of-week properties."
