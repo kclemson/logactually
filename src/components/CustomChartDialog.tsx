@@ -115,6 +115,7 @@ function CustomChartDialogInner({
       });
       setCurrentSpec(result.chartSpec);
       setDailyTotals(result.dailyTotals);
+      setVerification(verifyChartData(result.chartSpec, result.dailyTotals));
       setRefining(false);
     } catch (err) {
       console.error("[generate-chart] mutation error:", err);
@@ -147,6 +148,7 @@ function CustomChartDialogInner({
       });
       setCurrentSpec(result.chartSpec);
       setDailyTotals(result.dailyTotals);
+      setVerification(verifyChartData(result.chartSpec, result.dailyTotals));
     } catch (err) {
       console.error("[generate-chart] mutation error:", err);
     }
@@ -184,7 +186,7 @@ function CustomChartDialogInner({
   const hasExistingContent = !!currentSpec || !!lastQuestion;
   const showOverlay = generateChart.isPending && hasExistingContent;
   const showChips = !generateChart.isPending || hasExistingContent;
-  const showTextarea = (!generateChart.isPending || hasExistingContent) && (!currentSpec || refining);
+  const showTextarea = !generateChart.isPending || hasExistingContent;
   const showResult = !!currentSpec;
 
   return (
@@ -249,6 +251,8 @@ function CustomChartDialogInner({
                 placeholder={
                   refining
                     ? "Refine this chart... (e.g. 'make it a line chart')"
+                    : currentSpec
+                    ? "Describe another chart..."
                     : "Describe the chart you'd like to see..."
                 }
                 className="min-h-[60px] max-h-[120px] resize-none text-sm"
@@ -378,7 +382,7 @@ function CustomChartDialogInner({
                   ) : (
                     <div className="space-y-1">
                       <p className="font-medium">
-                        Accuracy: {verification.matched}/{verification.total} match ({verification.accuracy}%)
+                        {verification.matched}/{verification.total} AI values matched your logs ({verification.toleranceLabel || "within 1% or 5 units"})
                       </p>
                       {verification.allComparisons && verification.allComparisons.length > 0 && (
                         <div className="space-y-0.5 mt-1">

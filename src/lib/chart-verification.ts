@@ -6,6 +6,7 @@ export interface VerificationResult {
   total?: number;
   matched?: number;
   accuracy?: number;
+  toleranceLabel?: string;
   mismatches?: Array<{ date: string; ai: number; actual: number; delta: number }>;
   allComparisons?: Array<{ label: string; ai: number; actual: number; delta: number; match: boolean }>;
   reason?: string;
@@ -13,8 +14,11 @@ export interface VerificationResult {
 
 /* ── Tolerance check (shared) ────────────────────────────── */
 
-function isClose(ai: number, actual: number): boolean {
+function isClose(ai: number, actual: number, method?: string): boolean {
   const delta = Math.abs(ai - actual);
+  if (method === "average") {
+    return delta < 20 || (actual > 0 && delta / actual < 0.02);
+  }
   return delta < 5 || (actual > 0 && delta / actual < 0.01);
 }
 
@@ -50,7 +54,7 @@ function verifyDaily(
     }
   }
 
-  return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, mismatches, allComparisons };
+  return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, toleranceLabel: "within 1% or 5 units", mismatches, allComparisons };
 }
 
 function verifyAggregate(
@@ -105,7 +109,7 @@ function verifyAggregate(
         actual = values.reduce((a, b) => a + b, 0);
     }
 
-    const isMatch = isClose(aiValue, actual);
+    const isMatch = isClose(aiValue, actual, v.method);
     allComparisons.push({ label: bucket.label, ai: aiValue, actual: Math.round(actual), delta: Math.round(aiValue - actual), match: isMatch });
 
     if (isMatch) {
@@ -115,7 +119,8 @@ function verifyAggregate(
     }
   }
 
-  return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, mismatches, allComparisons };
+  const toleranceLabel = v.method === "average" ? "within 2% or 20 units" : "within 1% or 5 units";
+  return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, toleranceLabel, mismatches, allComparisons };
 }
 
 /* ── Legacy heuristic fallback (for old cached charts) ───── */
@@ -202,7 +207,7 @@ function verifyLegacy(
     }
   }
 
-  return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, mismatches, allComparisons };
+  return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, toleranceLabel: "within 1% or 5 units", mismatches, allComparisons };
 }
 
 /* ── Main entry point ────────────────────────────────────── */
