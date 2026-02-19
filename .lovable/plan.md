@@ -1,31 +1,52 @@
 
-## Fix: sort by `logged_date` instead of `created_at` in the by-type view
+## Fix: align delete icons vertically with a fixed-width value column
 
-### Root cause
+### The problem
 
-In `src/hooks/useCustomLogEntriesForType.ts`, the query is:
+The value span currently has `min-w-0 truncate max-w-[55%]` — it shrinks to the width of its text content. So:
 
-```ts
-.order('created_at', { ascending: false })
+- `"149.6 lbs"` → ~78px wide → trash icon at ~78px
+- `"149 lbs"` → ~62px wide → trash icon at ~62px
+
+The result is a jagged column of trash icons at different X positions, looking "bedraggled".
+
+### The fix: fixed-width value column
+
+Replace the `min-w-0 truncate max-w-[55%]` with a **fixed width** (`w-32`, 128px) plus `truncate`. Every row's value column is exactly the same width, so every delete icon starts at the same horizontal position:
+
+```
+[date: w-28]  [value: w-32 fixed]  [trash: always at same X]
 ```
 
-This sorts by the database insertion timestamp, not the date the entry represents. A backdated entry (like Jan 1) that was inserted *after* a Feb 13 entry will appear above it.
+128px comfortably fits:
+- `"149.6 lbs"` (typical numeric with unit)
+- `"120 / 80 mmHg"` (dual_numeric)
+- `"text_numeric"` labels up to about 15 chars
 
-### The fix
+For long text/text_multiline entries, the value truncates at 128px and the trash still lines up.
 
-Change the order to `logged_date` descending, with `created_at` as a tiebreaker for same-day entries:
+### Adding `tabular-nums` for numbers
 
-```ts
+For numeric types, `font-variant-numeric: tabular-nums` (Tailwind: `tabular-nums`) makes each digit the same width, so `149` and `149.6` align on the decimal point visually. This is a nice-to-have that pairs well with the fixed column.
+
+Apply it on the value span unconditionally — it has no visible effect on non-numeric text.
+
+### Exact change: one line in `src/components/CustomLogTypeView.tsx`
+
+**Line 93** — value span:
+```tsx
 // Before
-.order('created_at', { ascending: false })
+<span className="text-sm min-w-0 truncate max-w-[55%]">
 
 // After
-.order('logged_date', { ascending: false })
-.order('created_at', { ascending: false })
+<span className="text-sm tabular-nums truncate w-32 shrink-0">
 ```
 
-For `text` / `text_multiline` types where the display date uses `created_at` (time-of-day matters), `logged_date` is still the correct primary sort key — they're always logged to today so `logged_date` will be the same for same-day entries, and `created_at` as tiebreaker handles ordering within a day correctly.
+- `w-32` (128px) — fixed width, aligns all trash icons
+- `shrink-0` — prevents flex from collapsing it below 128px
+- `truncate` — handles overflow for long text values
+- `tabular-nums` — digits align cleanly within the column
 
 ### Only file changed
 
-`src/hooks/useCustomLogEntriesForType.ts` — one line changed in the query.
+`src/components/CustomLogTypeView.tsx` — one line, line 93.
