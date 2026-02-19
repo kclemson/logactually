@@ -8,7 +8,7 @@ interface GenerateChartParams {
 }
 
 export interface DailyTotals {
-  food: Record<string, { cal: number; protein: number; carbs: number; fat: number; fiber: number; sugar: number; sat_fat: number; sodium: number; chol: number }>;
+  food: Record<string, { cal: number; protein: number; carbs: number; fat: number; fiber: number; sugar: number; sat_fat: number; sodium: number; chol: number; entries: number }>;
   exercise: Record<string, { sets: number; duration: number; distance: number; cal_burned: number; unique_exercises: number }>;
 }
 

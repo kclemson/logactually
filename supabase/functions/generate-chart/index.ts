@@ -94,7 +94,7 @@ VERIFICATION METADATA — you MUST include a "verification" field in your JSON r
 3. null — use when the chart's values cannot be verified against daily totals (ratios, percentages, counts of distinct items, multi-field derived metrics).
 
 Field names must exactly match daily totals keys:
-- Food: cal, protein, carbs, fat, fiber, sugar, sat_fat, sodium, chol
+- Food: cal, protein, carbs, fat, fiber, sugar, sat_fat, sodium, chol, entries (entries = number of food log entries/meals for that date)
 - Exercise: sets, duration, distance, cal_burned, unique_exercises`;
 
 serve(async (req) => {
@@ -202,11 +202,12 @@ serve(async (req) => {
 
     // Pre-aggregate daily food totals
     let foodDailySummary = "";
-    const dailyFoodTotals = new Map<string, { cal: number; protein: number; carbs: number; fat: number; fiber: number; sugar: number; sat_fat: number; sodium: number; chol: number }>();
+    const dailyFoodTotals = new Map<string, { cal: number; protein: number; carbs: number; fat: number; fiber: number; sugar: number; sat_fat: number; sodium: number; chol: number; entries: number }>();
     for (const e of foodEntries) {
       const items = e.food_items as any[];
       if (!Array.isArray(items)) continue;
-      const t = dailyFoodTotals.get(e.eaten_date) || { cal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, sat_fat: 0, sodium: 0, chol: 0 };
+      const t = dailyFoodTotals.get(e.eaten_date) || { cal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, sat_fat: 0, sodium: 0, chol: 0, entries: 0 };
+      t.entries += 1;
       for (const item of items) {
         t.cal += item.calories || 0;
         t.protein += item.protein || 0;
@@ -223,7 +224,7 @@ serve(async (req) => {
     if (dailyFoodTotals.size > 0) {
       const lines: string[] = [];
       for (const [date, t] of [...dailyFoodTotals.entries()].sort()) {
-        lines.push(`${date}: cal=${Math.round(t.cal)}, protein=${Math.round(t.protein)}, carbs=${Math.round(t.carbs)}, fat=${Math.round(t.fat)}, fiber=${Math.round(t.fiber)}, sugar=${Math.round(t.sugar)}, sat_fat=${Math.round(t.sat_fat)}, sodium=${Math.round(t.sodium)}, chol=${Math.round(t.chol)}`);
+        lines.push(`${date}: cal=${Math.round(t.cal)}, protein=${Math.round(t.protein)}, carbs=${Math.round(t.carbs)}, fat=${Math.round(t.fat)}, fiber=${Math.round(t.fiber)}, sugar=${Math.round(t.sugar)}, sat_fat=${Math.round(t.sat_fat)}, sodium=${Math.round(t.sodium)}, chol=${Math.round(t.chol)}, entries=${t.entries}`);
       }
       foodDailySummary = `Daily food totals (pre-computed, authoritative):\n${lines.join("\n")}`;
     }
@@ -399,7 +400,7 @@ serve(async (req) => {
     // Serialize dailyTotals for client-side verification
     const serializedFoodTotals: Record<string, any> = {};
     for (const [date, t] of dailyFoodTotals.entries()) {
-      serializedFoodTotals[date] = { cal: Math.round(t.cal), protein: Math.round(t.protein), carbs: Math.round(t.carbs), fat: Math.round(t.fat), fiber: Math.round(t.fiber), sugar: Math.round(t.sugar), sat_fat: Math.round(t.sat_fat), sodium: Math.round(t.sodium), chol: Math.round(t.chol) };
+      serializedFoodTotals[date] = { cal: Math.round(t.cal), protein: Math.round(t.protein), carbs: Math.round(t.carbs), fat: Math.round(t.fat), fiber: Math.round(t.fiber), sugar: Math.round(t.sugar), sat_fat: Math.round(t.sat_fat), sodium: Math.round(t.sodium), chol: Math.round(t.chol), entries: t.entries };
     }
     const serializedExTotals: Record<string, any> = {};
     for (const [date, t] of dailyExTotals.entries()) {

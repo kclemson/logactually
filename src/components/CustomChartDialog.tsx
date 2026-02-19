@@ -16,26 +16,30 @@ interface CustomChartDialogProps {
 }
 
 const ALL_CHIPS = [
-  "Average calories by hour of day",
-  "Which day of the week do I eat the most?",
-  "How many meals do I log per day on average?",
+  // Basics — obvious but useful
   "Daily fiber intake over time",
   "Sodium intake trend",
   "Average sugar per day",
-  "Fat as percentage of total calories over time",
-  "Protein to calorie ratio over time",
   "My highest calorie days",
-  "Days where I exceeded 2000 calories",
-  "Exercise frequency by day of week",
-  "Total exercise duration per week",
-  "Which exercises do I do most often?",
-  "How many days per week did I exercise?",
-  "Average calories on workout days vs rest days",
-  "Average protein on workout days vs rest days",
-  "Do I eat more on days I exercise?",
-  "Average carbs on weekdays vs weekends",
+  // Meal timing & patterns
+  "Average calories by hour of day",
+  "Which day of the week do I eat the most?",
+  "How many meals do I log per day on average?",
+  "Which meals have the most calories?",
+  // Insights — deeper analysis
+  "Weekly calorie average trend",
+  "How consistent is my logging?",
+  "Protein per meal over time",
+  "My most common foods",
   "Calorie comparison: weekdays vs weekends",
-  "Training volume trend over time",
+  // Workout–nutrition correlation
+  "Average calories on workout days vs rest days",
+  "Cardio vs strength training split",
+  // Training insights
+  "Exercise frequency by day of week",
+  "Which exercises do I do most often?",
+  "Average heart rate by exercise",
+  "Rest days between workouts",
 ];
 
 export function CustomChartDialog({ open, onOpenChange, initialChart, period }: CustomChartDialogProps) {
