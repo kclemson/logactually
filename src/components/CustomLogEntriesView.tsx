@@ -100,7 +100,7 @@ function NonMedEntryRow({ entry, valueType, typeUnit, onDelete, onUpdate, isRead
   // text_multiline: time | textarea (col-span-2) | delete
   if (isMultiline) {
     return (
-      <div className="grid grid-cols-[4rem_1fr_auto] items-start gap-x-2 py-1 group border-b border-border/50 last:border-0">
+      <div className="grid grid-cols-[4rem_1fr_auto] items-start gap-x-2 py-1 pl-3 group border-b border-border/50 last:border-0">
         <span className="text-xs text-muted-foreground tabular-nums pt-1">{timeStr}</span>
         <MultilineTextArea
           value={entry.text_value || ''}
@@ -123,7 +123,7 @@ function NonMedEntryRow({ entry, valueType, typeUnit, onDelete, onUpdate, isRead
 
   // All other non-med types: time | value | spacer | actions
   return (
-    <div className="grid grid-cols-[4rem_auto_1fr_auto] items-center gap-x-2 py-1 group border-b border-border/50 last:border-0">
+    <div className="grid grid-cols-[4rem_auto_1fr_auto] items-center gap-x-2 py-1 pl-3 group border-b border-border/50 last:border-0">
       {/* Col 1: time */}
       <span className="text-xs text-muted-foreground tabular-nums">{timeStr}</span>
 
@@ -304,7 +304,7 @@ export function CustomLogEntriesView({
 
                 return (
                   <div key={entry.id} className="border-b border-border/50 last:border-0 group">
-                    <div className="grid grid-cols-[4rem_auto_1fr_auto] items-center gap-x-2 py-1">
+                    <div className="grid grid-cols-[4rem_auto_1fr_auto] items-center gap-x-2 py-1 pl-3">
                       <span className="text-xs text-muted-foreground tabular-nums">
                         {formatTime(entry.dose_time)}
                       </span>
