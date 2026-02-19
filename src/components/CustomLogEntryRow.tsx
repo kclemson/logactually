@@ -119,10 +119,8 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
   // Dual numeric layout: [spacer] [value1 / value2] [unit] [delete]
   if (isDualNumeric) {
     return (
-      <div className="grid grid-cols-[1fr_auto_50px_24px] items-center gap-x-1 py-0.5 group">
-        {/* Col 1: spacer pushes content right */}
-        <span />
-        {/* Col 2: tightly packed value pair */}
+      <div className="grid grid-cols-[auto_50px_1fr_24px] items-center gap-x-1 py-0.5 group">
+        {/* Col 1: tightly packed value pair */}
         <div className="flex items-center">
           <Input
             type="number"
@@ -154,10 +152,12 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
             className={cn("h-7 w-14 text-sm text-center px-1 border-0 bg-transparent", "focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:bg-focus-bg")}
           />
         </div>
-        {/* Col 3: unit label */}
+        {/* Col 2: unit label */}
         {unitLabel ? (
           <span className="text-xs text-muted-foreground">{unitLabel}</span>
         ) : <span />}
+        {/* Col 3: spacer */}
+        <span />
         {/* Col 4: delete button */}
         {!isReadOnly ? (
           <Button variant="ghost" size="icon" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity" onClick={() => onDelete(entry.id)} aria-label="Delete entry">
@@ -196,10 +196,10 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
 
   return (
     <div className={cn(
-      "grid items-center gap-x-1 py-0.5 group",
+      "py-0.5 group",
       isTextOnly
-        ? "grid-cols-[minmax(0,1fr)_24px] justify-items-center"
-        : "grid-cols-[auto_auto_auto_1fr_24px]"
+        ? "grid grid-cols-[minmax(0,1fr)_24px] items-center justify-items-center"
+        : "flex items-center gap-x-1"
     )}>
       {hasText ? (
         <div className={cn(
@@ -217,21 +217,17 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
             )}
           />
         </div>
-      ) : (
-        <span />
-      )}
+      ) : null}
 
       {!isTextOnly && (
         <>
-          {/* Col 2: colon separator */}
-          {valueType === 'text_numeric' ? (
+          {/* Colon separator for text_numeric */}
+          {valueType === 'text_numeric' && (
             <span className="text-sm text-muted-foreground">:</span>
-          ) : (
-            <span />
           )}
 
-          {/* Col 3: numeric input */}
-          {hasNumeric ? (
+          {/* Numeric input */}
+          {hasNumeric && (
             <Input
               type="number"
               inputMode="decimal"
@@ -245,37 +241,34 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
               onBlur={inlineEdit.handleNumericBlur}
               onKeyDown={inlineEdit.handleNumericKeyDown}
               className={cn(
-                "h-7 w-full text-sm text-center px-1 border-0 bg-transparent",
+                "h-7 w-[60px] text-sm text-center px-1 border-0 bg-transparent",
                 "focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:bg-focus-bg"
               )}
             />
-          ) : (
-            <span />
           )}
 
-          {/* Col 4: unit label */}
-          {hasNumeric && unitLabel ? (
+          {/* Unit label */}
+          {hasNumeric && unitLabel && (
             <span className="text-xs text-muted-foreground">{unitLabel}</span>
-          ) : (
-            <span />
           )}
         </>
       )}
 
-      {/* Col 5: delete button */}
+      {/* Delete button — ml-auto pushes it right in flex layout */}
       {!isReadOnly ? (
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity ml-auto"
           onClick={() => onDelete(entry.id)}
           aria-label="Delete entry"
         >
           <Trash2 className="h-3 w-3" />
         </Button>
       ) : (
-        <span />
+        isTextOnly ? <span /> : null
       )}
     </div>
   );
 }
+
