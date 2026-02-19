@@ -1,49 +1,62 @@
 
 
-## Fix aggregate verification for "by day of week" charts
+## Add per-exercise-key verification for categorical exercise charts
 
-### Problem
-When the AI generates an "Average Daily Calories by Day of Week" chart, it correctly averages across all occurrences of each weekday (e.g., all 4 Wednesdays in a 30-day span). But the verification step relies on the AI's self-declared `verification.breakdown.dates` arrays to know which dates belong to each bucket. If the AI only lists a subset of dates (or just the most recent one), the verifier computes the "average" over fewer dates than the AI actually used -- leading to large deltas and a misleading 1/7 accuracy score.
+### What this does
+Enables deterministic verification for charts that group data by exercise (e.g., "Average Heart Rate by Exercise", "Total Duration by Exercise"). Currently these fall through to "can't be verified" because we only have daily totals, not per-exercise totals.
 
-### Solution
-Add a **deterministic categorical verification path** for weekday-bucketed charts. Instead of trusting the AI's breakdown, we group all dates in `dailyTotals` by their actual day of the week, compute the expected aggregate ourselves, and compare.
+### How it works
 
-### Changes
+**Backend** (`supabase/functions/generate-chart/index.ts`): After the existing daily exercise totals loop, add a second pass over `exerciseSets` that groups by `exercise_key`, accumulating count, total sets, total reps, total duration, total distance, total calories burned, and collecting heart rate + effort values for averaging. Serialize this as `exerciseByKey` alongside the existing `dailyTotals` in the response.
 
-**Single file: `src/lib/chart-verification.ts`**
+**Client type** (`src/hooks/useGenerateChart.ts`): Add optional `exerciseByKey` to the `DailyTotals` interface:
 
-1. Add a new function `verifyCategoricalWeekday` that:
-   - Detects weekday labels in the chart data (e.g., "Monday", "Mon", "Wednesday", etc.)
-   - Groups all dates from `dailyTotals` by their weekday
-   - Looks up the field using existing `FOOD_KEY_MAP` / `EXERCISE_KEY_MAP` (or the AI's declared field as fallback)
-   - Uses the AI's declared method ("average", "sum", etc.) or defaults to "average" for weekday charts
-   - Computes expected values per weekday bucket and compares to the AI's data points
-
-2. Insert this as a new step in `verifyChartData`, between the deterministic check and the AI-declared fallback:
-   - After `verifyDeterministic` returns "unavailable"
-   - Before falling through to `verifyDaily` / `verifyAggregate`
-   - Only activates when the data points have weekday-shaped labels
-
-### Technical details
-
-**Weekday detection**: Match data point labels against known weekday names (full and abbreviated: "Monday"/"Mon", "Tuesday"/"Tue", etc.). If most labels match, treat it as a weekday-bucketed chart.
-
-**Date grouping**: For each date in `dailyTotals[source]`, compute `new Date(date).getDay()` and map to the weekday name. Group all dates into 7 buckets.
-
-**Aggregation**: Use the AI's `verification.method` if declared, otherwise default to "average" (the most common intent for "by day of week" questions).
-
-**Field resolution**: Reuse the existing `FOOD_KEY_MAP` / `EXERCISE_KEY_MAP` / `DERIVED_FORMULAS` to find the right field, falling back to the AI's `verification.field`.
-
-**Matching data points to buckets**: Normalize both the chart label and our computed weekday name to the same format (e.g., lowercase full name) for comparison.
-
-```
-verifyChartData flow (updated):
-
-  1. verifyDeterministic  -- date-indexed, known metric
-  2. verifyCategoricalWeekday  [NEW]  -- weekday-bucketed, known metric
-  3. AI-declared daily/aggregate  -- fallback
-  4. unavailable
+```text
+exerciseByKey?: Record<string, {
+  description: string;
+  count: number;
+  total_sets: number;
+  total_duration: number;
+  avg_duration: number;
+  total_distance: number;
+  avg_heart_rate: number | null;
+  avg_effort: number | null;
+  total_cal_burned: number;
+}>
 ```
 
-This approach is higher confidence than `verifyAggregate` because it computes the date groupings from authoritative data rather than trusting the AI's breakdown. It uses "deterministic" as the method label since the computation is fully deterministic.
+**Client verification** (`src/lib/chart-verification.ts`): Add `verifyCategoricalExercise` function inserted into the chain after weekday verification (step 3, before AI-declared fallback).
+
+Detection: if `dataSource === "exercise"` and x-axis labels are NOT dates or weekdays, treat as exercise-categorical.
+
+Label matching: normalize both the chart label and exercise key (lowercase, replace underscores/hyphens with spaces) and compare. Also check against the stored `description`.
+
+Field mapping from chart `dataKey` to `exerciseByKey` fields:
+- `heart_rate` / `avg_heart_rate` -> `avg_heart_rate`
+- `duration` / `avg_duration` -> `avg_duration`
+- `effort` / `avg_effort` -> `avg_effort`
+- `count` / `frequency` / `entries` -> `count`
+- `cal_burned` / `calories_burned` / `total_cal_burned` -> `total_cal_burned`
+- `distance` / `total_distance` -> `total_distance`
+- `sets` / `total_sets` -> `total_sets`
+
+Standard `isClose` tolerance comparison, same as existing paths.
+
+### Verification chain after this change
+
+```text
+1. verifyDeterministic           -- date-indexed, known metric
+2. verifyCategoricalWeekday      -- weekday-bucketed, known metric
+3. verifyCategoricalExercise     -- exercise-keyed, known metric  [NEW]
+4. AI-declared daily/aggregate   -- fallback
+5. unavailable
+```
+
+### Files changed
+
+| File | Change |
+|------|--------|
+| `supabase/functions/generate-chart/index.ts` | Add per-exercise-key aggregation loop + serialize to response |
+| `src/hooks/useGenerateChart.ts` | Add `exerciseByKey` to `DailyTotals` type |
+| `src/lib/chart-verification.ts` | Add `verifyCategoricalExercise` + insert into `verifyChartData` chain |
 
