@@ -10,6 +10,17 @@ interface GenerateChartParams {
 export interface DailyTotals {
   food: Record<string, { cal: number; protein: number; carbs: number; fat: number; fiber: number; sugar: number; sat_fat: number; sodium: number; chol: number; entries: number }>;
   exercise: Record<string, { sets: number; duration: number; distance: number; cal_burned: number; unique_exercises: number }>;
+  exerciseByKey?: Record<string, {
+    description: string;
+    count: number;
+    total_sets: number;
+    total_duration: number;
+    avg_duration: number;
+    total_distance: number;
+    avg_heart_rate: number | null;
+    avg_effort: number | null;
+    total_cal_burned: number;
+  }>;
 }
 
 export interface GenerateChartResult {

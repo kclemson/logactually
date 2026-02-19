@@ -277,6 +277,39 @@ serve(async (req) => {
       exerciseDailySummary = `Daily exercise totals (pre-computed, authoritative):\n${lines.join("\n")}`;
     }
 
+    // Per-exercise-key aggregates for categorical verification
+    const exerciseByKey = new Map<string, {
+      description: string;
+      count: number;
+      total_sets: number;
+      total_reps: number;
+      total_duration: number;
+      total_distance: number;
+      total_cal_burned: number;
+      heart_rates: number[];
+      efforts: number[];
+    }>();
+
+    for (const s of exerciseSets) {
+      const key = s.exercise_key;
+      const existing = exerciseByKey.get(key) || {
+        description: s.description,
+        count: 0, total_sets: 0, total_reps: 0,
+        total_duration: 0, total_distance: 0,
+        total_cal_burned: 0, heart_rates: [], efforts: [],
+      };
+      existing.count++;
+      existing.total_sets += s.sets || 0;
+      existing.total_reps += (s.sets || 0) * (s.reps || 0);
+      existing.total_duration += s.duration_minutes || 0;
+      existing.total_distance += s.distance_miles || 0;
+      const meta = s.exercise_metadata as any;
+      if (meta?.heart_rate) existing.heart_rates.push(meta.heart_rate);
+      if (meta?.effort) existing.efforts.push(meta.effort);
+      existing.total_cal_burned += meta?.calories_burned || 0;
+      exerciseByKey.set(key, existing);
+    }
+
     // Build custom log context
     let customContext = "";
     const customEntries = customLogResult.data || [];
@@ -407,9 +440,28 @@ serve(async (req) => {
       serializedExTotals[date] = { sets: t.sets, duration: Math.round(t.duration), distance: Math.round(t.distance * 10) / 10, cal_burned: Math.round(t.cal_burned), unique_exercises: t.exercises.size };
     }
 
+    const serializedExByKey: Record<string, any> = {};
+    for (const [key, t] of exerciseByKey.entries()) {
+      serializedExByKey[key] = {
+        description: t.description,
+        count: t.count,
+        total_sets: t.total_sets,
+        total_duration: Math.round(t.total_duration),
+        avg_duration: t.count > 0 ? Math.round(t.total_duration / t.count * 10) / 10 : 0,
+        total_distance: Math.round(t.total_distance * 10) / 10,
+        avg_heart_rate: t.heart_rates.length > 0
+          ? Math.round(t.heart_rates.reduce((a, b) => a + b, 0) / t.heart_rates.length)
+          : null,
+        avg_effort: t.efforts.length > 0
+          ? Math.round(t.efforts.reduce((a, b) => a + b, 0) / t.efforts.length * 10) / 10
+          : null,
+        total_cal_burned: Math.round(t.total_cal_burned),
+      };
+    }
+
     return new Response(JSON.stringify({
       chartSpec,
-      dailyTotals: { food: serializedFoodTotals, exercise: serializedExTotals },
+      dailyTotals: { food: serializedFoodTotals, exercise: serializedExTotals, exerciseByKey: serializedExByKey },
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
