@@ -1,27 +1,42 @@
 
 
-## Reword the exercise log description in the generate-chart prompt to reduce strength-training bias
+## Show "matched exactly" when all values have zero delta
 
 ### Problem
-The current system prompt describes the exercise log as:
-
-> "Exercise log: dates, exercise names, sets, reps, weight (lbs), duration (minutes), distance (miles)..."
-
-Leading with "sets, reps, weight" primes the AI to treat "exercise" as synonymous with weight lifting, causing it to exclude cardio and daily activities from charts like "Most Frequent Exercises."
+When 28/28 values match with delta=0 (as in the sodium screenshot), the summary still says "within 1% or 5 units" -- this undersells a perfect result and doesn't distinguish between exact matches and tolerance-based matches.
 
 ### Fix
 
-**Single file: `supabase/functions/generate-chart/index.ts`**
+**Two changes in one file each:**
 
-Replace the exercise log bullet in the `You have access to:` section (line 14) with something like:
+#### 1. `src/lib/chart-verification.ts` -- add an `allExact` flag to `VerificationResult`
 
+- Add `allExact?: boolean` to the `VerificationResult` interface
+- In `verifyDeterministic`, after building `allComparisons`, check if every matched comparison has `delta === 0`. If so, set `allExact: true`.
+- Do the same in `verifyDaily` and `verifyAggregate` for consistency.
+
+#### 2. `src/components/CustomChartDialog.tsx` -- use the flag in the summary line
+
+- Change the summary text from:
+  `"{matched}/{total} AI values matched your logs ({toleranceLabel})"`
+- To conditionally show:
+  - **When `allExact` is true and all matched:** `"{matched}/{total} AI values matched your logs exactly"`
+  - **Otherwise:** keep the current tolerance label
+
+This is a small, surgical change -- one new boolean field computed from existing data, one conditional string in the UI.
+
+### Technical details
+
+In `chart-verification.ts`, after the comparison loop in each verify function, add:
+```typescript
+const allExact = matched === total && allComparisons.every(c => c.delta === 0);
 ```
-- Exercise log: covers all types of physical activity -- strength training, cardio, sports, and everyday activities (e.g. walking, gardening). Fields: dates, exercise names, sets, reps, weight (lbs), duration (minutes), distance (miles), and metadata including heart rate, effort level, and reported calories burned. Not every exercise uses every field; cardio entries typically have duration/distance but no sets/reps/weight.
+Then include `allExact` in the returned object.
+
+In `CustomChartDialog.tsx` line 389, change the summary `<p>` to:
+```tsx
+<p className="font-medium">
+  {verification.matched}/{verification.total} AI values matched your logs{" "}
+  {verification.allExact ? "exactly" : `(${verification.toleranceLabel || "within 1% or 5 units"})`}
+</p>
 ```
-
-Key changes:
-1. Opens with "covers all types of physical activity" and gives examples spanning strength, cardio, and everyday activity
-2. Explicitly notes that not every exercise uses every field, so the AI won't filter out entries missing sets/reps/weight
-3. Keeps the same field list so nothing is lost
-
-No other files affected. The edge function will be redeployed automatically.
