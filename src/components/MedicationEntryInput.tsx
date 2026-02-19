@@ -18,6 +18,8 @@ interface MedicationEntryInputProps {
   initialDose?: number | null;
   initialTime?: string | null;
   initialNotes?: string | null;
+  /** The original dose_time of the entry being edited — used to swap in the live timeValue for display */
+  initialTimeInList?: string | null;
   /** yyyy-MM-dd date being logged for — used to show date in title and fix count label */
   loggedDate?: string;
   onSubmit: (params: {
@@ -58,6 +60,7 @@ export function MedicationEntryInput({
   initialDose,
   initialTime,
   initialNotes,
+  initialTimeInList,
   loggedDate,
   onSubmit,
   onCancel,
@@ -105,6 +108,11 @@ export function MedicationEntryInput({
       })();
 
   // Dose count line — date-aware, with logged times inline
+  // Swap the stored time of the entry being edited with the live timeValue so it updates dynamically
+  const displayTimes = todayLoggedTimes?.map(t =>
+    initialTimeInList && t === initialTimeInList ? timeValue : t
+  ) ?? [];
+
   const doseCountLine = (() => {
     const whenLabel = isLoggedToday ? 'today' : `on ${dateLabel}`;
     let line: string | null = null;
@@ -113,8 +121,8 @@ export function MedicationEntryInput({
     } else if (todayEntryCount > 0) {
       line = `${todayEntryCount} dose${todayEntryCount !== 1 ? 's' : ''} logged ${whenLabel}`;
     }
-    if (line && todayLoggedTimes && todayLoggedTimes.length > 0) {
-      line += `: ${todayLoggedTimes.map(formatLoggedTime).join('  ·  ')}`;
+    if (line && displayTimes.length > 0) {
+      line += `: ${displayTimes.map(formatLoggedTime).join('  ·  ')}`;
     }
     return line;
   })();

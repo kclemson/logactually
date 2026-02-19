@@ -107,7 +107,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
     editingEntry?.log_type_id ?? null
   );
   const editingTodayEntries = editingTypeEntries.filter(
-    (e) => e.logged_date === dateStr && e.id !== editingEntry?.id
+    (e) => e.logged_date === dateStr
   );
 
   // Update mutation for editing medication entries
@@ -410,6 +410,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
               initialNotes={editingEntry.entry_notes}
               todayEntryCount={editingTodayEntries.length}
               todayLoggedTimes={editingTodayEntries.map(e => e.dose_time).filter(Boolean) as string[]}
+              initialTimeInList={editingEntry.dose_time}
               loggedDate={dateStr}
               onSubmit={(params) => {
                 updateMedEntry.mutate({ id: editingEntry.id, numeric_value: params.numeric_value, dose_time: params.dose_time, entry_notes: params.entry_notes });
