@@ -104,7 +104,7 @@ export function EditLogTypeDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-sm" onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>{isMedication ? 'Edit medication' : 'Edit log type'}</DialogTitle>
         </DialogHeader>
