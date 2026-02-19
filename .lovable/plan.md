@@ -1,89 +1,91 @@
 
-# Three Changes to Medication Entry UX
+# Show Timestamps of Today's Logged Doses in MedicationEntryInput
 
-## Overview of changes
+## What we're building
 
-1. Reorder the content in `MedicationEntryInput` so the layout flows: name → schedule → (gap) → description → (gap) → [time] [dose] [unit] [Save] → dose count line → notes textarea
-2. Add conditional colour formatting to the "X of Y doses logged today" line
-3. Convert the inline `MedicationEntryInput` (and `LogEntryInput` for consistency) in the "By Type" view into a modal dialog with a backdrop overlay, instead of pushing the page content down
+Below the "X of Y doses logged today" line, show a small inline list of the actual times each dose was logged — e.g.:
 
----
-
-## Change 1 — Reorder content in `MedicationEntryInput`
-
-**Current order inside the context block:**
-1. description
-2. schedule (e.g. `2x/day · morning, evening`)
-3. dose count ("X of Y doses logged today")
-
-**Target order (per mockup):**
 ```
-Medication name           ← already at top (keep)
-2x/day · morning, evening ← pull schedule UP, out of the muted box
-[blank gap]
-description (in muted box) ← description goes inside the muted box alone
-[blank gap]
-[Time] [Dose] [mg] [Save] ← inputs row (keep)
-X of Y doses logged today  ← dose count moves BELOW the input row
-[Notes textarea]           ← (keep)
+2 of 2 doses logged today
+  · 8:30 AM  · 1:00 PM
 ```
 
-Concretely in `MedicationEntryInput.tsx`:
+This gives the user instant confirmation of when they took each dose without leaving the dialog.
 
-- Move `scheduleSummary` line up to appear just below the name header (outside the muted box), as plain `text-xs text-muted-foreground`
-- The muted box now contains only `description` (if present)
-- After the `[Time] [Dose] [Save]` row, render the `doseCountLine` with conditional colour (see Change 2)
-- Notes textarea stays at the bottom
+## Data flow change
 
----
+Currently, `MedicationEntryInput` only receives `todayEntryCount: number`. We need to also pass the actual `logged_time` strings so we can format and display them.
 
-## Change 2 — Conditional formatting for "X of Y doses logged today"
+### In `OtherLog.tsx`
 
-Logic:
+The `typeEntries` array (from `useCustomLogEntriesForType`) already contains today's entries including `logged_time`. We filter today's entries to compute `todayEntryCount` — we can also pass those filtered entries directly:
 
-| Condition | Style |
-|---|---|
-| `dosesPerDay === 0` (as-needed) and `todayEntryCount > 0` | Neutral muted — just "N doses logged today" |
-| `todayEntryCount === 0` | Neutral muted — no emphasis needed |
-| `todayEntryCount > 0` and `todayEntryCount < dosesPerDay` | Amber/warning — partial, e.g. `text-amber-500` |
-| `todayEntryCount === dosesPerDay` | Green — on track, e.g. `text-green-500 dark:text-green-400` |
-| `todayEntryCount > dosesPerDay` | Red — over limit, e.g. `text-red-500` |
+```tsx
+const todayEntries = typeEntries.filter(e => e.logged_date === format(new Date(), 'yyyy-MM-dd'));
 
-This gives a clear at-a-glance status without feeling alarming (amber is "good progress, not done" and green is "complete").
+<MedicationEntryInput
+  ...
+  todayEntryCount={todayEntries.length}
+  todayLoggedTimes={todayEntries
+    .map(e => e.logged_time)
+    .filter(Boolean) as string[]}
+/>
+```
 
-Implementation: a small helper function `getDoseCountStyle(todayEntryCount, dosesPerDay)` returns a Tailwind class string. Applied to the `doseCountLine` paragraph below the input row.
+### In `MedicationEntryInput.tsx`
 
----
+Add a new optional prop `todayLoggedTimes?: string[]`.
 
-## Change 3 — Convert inline entry form to a dialog with overlay
+The `logged_time` column is a Postgres `time` type stored as `"HH:MM:SS"`. We need to parse and format it into `"h:mm a"` (e.g. `"8:30 AM"`).
 
-**Problem:** When "Log New" is clicked in "By Type" view, `MedicationEntryInput` (or `LogEntryInput`) renders inline, pushing the toolbar row up and the entries list down — cluttering the view.
+A small helper:
 
-**Solution:** Wrap `MedicationEntryInput` and `LogEntryInput` in a simple modal dialog (using the existing `Dialog`/`DialogContent` from `@radix-ui/react-dialog`) so the background is masked and the data entry is focused.
+```ts
+function formatLoggedTime(t: string): string {
+  // t = "HH:MM:SS" or "HH:MM"
+  const [h, m] = t.split(':').map(Number);
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  return format(d, 'h:mm a');
+}
+```
 
-The dialog:
-- No `DialogHeader` (the medication name is already inside `MedicationEntryInput` as a label)
-- `DialogContent` with `className="max-w-sm p-0"` to let `MedicationEntryInput` control its own padding
-- The existing `onCancel` closes the dialog, so no extra close button needed (the `X` inside `MedicationEntryInput` already handles that, and Radix provides an accessible dismiss)
-- For `LogEntryInput` (non-medication types), same wrapping
+Render below the dose count line:
 
-This applies only in "By Type" view mode. In "By Date" view mode, the existing inline behavior is fine (it's already inside the top section with a fixed min-height).
+```tsx
+{todayLoggedTimes && todayLoggedTimes.length > 0 && (
+  <p className="text-xs text-muted-foreground">
+    {todayLoggedTimes.map(formatLoggedTime).join('  ·  ')}
+  </p>
+)}
+```
 
-Actually, re-reading the user's request: "#3: When the user clicks 'log new', it moves the top row of dropdowns/buttons up a row..." — this is specifically about the "By Type" view's "Log New" button triggering inline entry. The fix: instead of `setShowInput(true)` inline, open a `Dialog` with the entry form inside.
+This keeps it visually light — muted gray, same size as the count line — so it reads as supplementary detail rather than a competing element.
 
-**Implementation approach:**
+## Visual result
 
-In `OtherLog.tsx`, add a `showInputDialog` boolean state (separate from `showInput` which controls the By Date inline form). When in `viewMode === 'type'`, clicking "Log New" sets `showInputDialog(true)`. The `Dialog` containing `MedicationEntryInput` or `LogEntryInput` is rendered at the bottom of the page component (outside the section), and `onSubmit`/`onCancel` set `showInputDialog(false)`.
+```
+2 of 2 doses logged today         ← green (completed)
+8:30 AM  ·  1:00 PM               ← muted gray, below
+```
 
-The By Date inline form behaviour is unchanged.
+For 1 of 2 logged:
+```
+1 of 2 doses logged today         ← amber (partial)
+8:30 AM                           ← muted gray
+```
 
----
+For as-needed (no dosesPerDay) with 1 logged:
+```
+1 dose logged today               ← muted gray
+8:30 AM                           ← muted gray
+```
 
 ## Files changed
 
 | File | Change |
 |---|---|
-| `src/components/MedicationEntryInput.tsx` | Reorder layout (schedule up, description in muted box alone, dose count below inputs with colour); add `getDoseCountStyle` helper |
-| `src/pages/OtherLog.tsx` | Add `showInputDialog` state; "Log New" in type view opens Dialog; render Dialog at bottom of component |
+| `src/components/MedicationEntryInput.tsx` | Add `todayLoggedTimes?: string[]` prop; add `formatLoggedTime` helper; render formatted times below the dose count line |
+| `src/pages/OtherLog.tsx` | Derive `todayLoggedTimes` from filtered `typeEntries`; pass as prop to `MedicationEntryInput` in the dialog (and in the By Date inline form) |
 
-No DB changes. No new hooks needed.
+No DB changes. No new hooks needed — `typeEntries` already carries `logged_time`.
