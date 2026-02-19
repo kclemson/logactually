@@ -19,12 +19,12 @@ type TypedClient = SupabaseClient<Database>;
 // ── Constants ───────────────────────────────────────────────
 
 const EMPTY_FOOD: FoodDayTotals = {
-  cal: 0, protein: 0, carbs: 0, fat: 0,
-  fiber: 0, sugar: 0, sat_fat: 0, sodium: 0, chol: 0, entries: 0,
+  calories: 0, protein: 0, carbs: 0, fat: 0,
+  fiber: 0, sugar: 0, saturated_fat: 0, sodium: 0, cholesterol: 0, entries: 0,
 };
 
 const EMPTY_EXERCISE: ExerciseDayTotals = {
-  sets: 0, duration: 0, distance: 0, cal_burned: 0, unique_exercises: 0, entries: 0,
+  sets: 0, duration_minutes: 0, distance_miles: 0, calories_burned: 0, unique_exercises: 0, entries: 0,
 };
 
 // ── Public API ──────────────────────────────────────────────
@@ -63,7 +63,7 @@ async function fetchFoodData(
 
   const food: Record<string, FoodDayTotals> = {};
   const foodByHour: HourlyTotals<FoodDayTotals> | undefined = needsHourly ? {} : undefined;
-  const foodByItem: Record<string, { count: number; totalCal: number; totalProtein: number }> | undefined =
+  const foodByItem: Record<string, { count: number; totalCalories: number; totalProtein: number }> | undefined =
     needsItem ? {} : undefined;
 
   for (const row of data ?? []) {
@@ -73,22 +73,22 @@ async function fetchFoodData(
     // Accumulate entry-level totals from individual items
     const entryTotals: FoodDayTotals = { ...EMPTY_FOOD, entries: 1 };
     for (const item of items) {
-      entryTotals.cal += item.calories || 0;
+      entryTotals.calories += item.calories || 0;
       entryTotals.protein += item.protein || 0;
       entryTotals.carbs += item.carbs || 0;
       entryTotals.fat += item.fat || 0;
       entryTotals.fiber += item.fiber || 0;
       entryTotals.sugar += item.sugar || 0;
-      entryTotals.sat_fat += item.saturated_fat || 0;
+      entryTotals.saturated_fat += item.saturated_fat || 0;
       entryTotals.sodium += item.sodium || 0;
-      entryTotals.chol += item.cholesterol || 0;
+      entryTotals.cholesterol += item.cholesterol || 0;
 
       // Item-level aggregation
       if (foodByItem && item.description) {
         const key = (item.description as string).toLowerCase().trim();
-        const existing = foodByItem[key] ?? { count: 0, totalCal: 0, totalProtein: 0 };
+        const existing = foodByItem[key] ?? { count: 0, totalCalories: 0, totalProtein: 0 };
         existing.count += 1;
-        existing.totalCal += item.calories || 0;
+        existing.totalCalories += item.calories || 0;
         existing.totalProtein += item.protein || 0;
         foodByItem[key] = existing;
       }
@@ -97,15 +97,15 @@ async function fetchFoodData(
     // Daily aggregation
     const date = row.eaten_date;
     const existing = food[date] ?? { ...EMPTY_FOOD };
-    existing.cal += entryTotals.cal;
+    existing.calories += entryTotals.calories;
     existing.protein += entryTotals.protein;
     existing.carbs += entryTotals.carbs;
     existing.fat += entryTotals.fat;
     existing.fiber += entryTotals.fiber;
     existing.sugar += entryTotals.sugar;
-    existing.sat_fat += entryTotals.sat_fat;
+    existing.saturated_fat += entryTotals.saturated_fat;
     existing.sodium += entryTotals.sodium;
-    existing.chol += entryTotals.chol;
+    existing.cholesterol += entryTotals.cholesterol;
     existing.entries += 1;
     food[date] = existing;
 
@@ -149,7 +149,7 @@ async function fetchExerciseData(
 
   const exercise: Record<string, ExerciseDayTotals> = {};
   const exerciseByHour: HourlyTotals<ExerciseDayTotals> | undefined = needsHourly ? {} : undefined;
-  const exerciseByItem: Record<string, { description: string; count: number; totalSets: number; totalDuration: number; totalCalBurned: number }> | undefined =
+  const exerciseByItem: Record<string, { description: string; count: number; totalSets: number; totalDurationMinutes: number; totalCaloriesBurned: number }> | undefined =
     needsItem ? {} : undefined;
   const exerciseByCategory: Record<string, ExerciseDayTotals> | undefined =
     needsCategory ? {} : undefined;
@@ -169,9 +169,9 @@ async function fetchExerciseData(
 
     const setTotals: ExerciseDayTotals = {
       sets: 1,
-      duration: row.duration_minutes ?? 0,
-      distance: row.distance_miles ?? 0,
-      cal_burned: meta?.calories_burned ?? 0,
+      duration_minutes: row.duration_minutes ?? 0,
+      distance_miles: row.distance_miles ?? 0,
+      calories_burned: meta?.calories_burned ?? 0,
       unique_exercises: 0,
       entries: 0,
     };
@@ -179,11 +179,11 @@ async function fetchExerciseData(
     // Item-level aggregation
     if (exerciseByItem) {
       const key = row.exercise_key;
-      const existing = exerciseByItem[key] ?? { description: row.description, count: 0, totalSets: 0, totalDuration: 0, totalCalBurned: 0 };
+      const existing = exerciseByItem[key] ?? { description: row.description, count: 0, totalSets: 0, totalDurationMinutes: 0, totalCaloriesBurned: 0 };
       existing.count += 1;
       existing.totalSets += row.sets ?? 1;
-      existing.totalDuration += row.duration_minutes ?? 0;
-      existing.totalCalBurned += meta?.calories_burned ?? 0;
+      existing.totalDurationMinutes += row.duration_minutes ?? 0;
+      existing.totalCaloriesBurned += meta?.calories_burned ?? 0;
       exerciseByItem[key] = existing;
     }
 
@@ -192,9 +192,9 @@ async function fetchExerciseData(
       const catKey = isCardioExercise(row.exercise_key) ? "Cardio" : "Strength";
       const cat = exerciseByCategory[catKey] ?? { ...EMPTY_EXERCISE };
       cat.sets += 1;
-      cat.duration += row.duration_minutes ?? 0;
-      cat.distance += row.distance_miles ?? 0;
-      cat.cal_burned += meta?.calories_burned ?? 0;
+      cat.duration_minutes += row.duration_minutes ?? 0;
+      cat.distance_miles += row.distance_miles ?? 0;
+      cat.calories_burned += meta?.calories_burned ?? 0;
       cat.unique_exercises = 0; // not meaningful for category
       exerciseByCategory[catKey] = cat;
     }
@@ -202,9 +202,9 @@ async function fetchExerciseData(
     // Daily aggregation
     const existing = exercise[date] ?? { ...EMPTY_EXERCISE };
     existing.sets += 1;
-    existing.duration += setTotals.duration;
-    existing.distance += setTotals.distance;
-    existing.cal_burned += setTotals.cal_burned;
+    existing.duration_minutes += setTotals.duration_minutes;
+    existing.distance_miles += setTotals.distance_miles;
+    existing.calories_burned += setTotals.calories_burned;
     (seenKeys[date] ??= new Set()).add(row.exercise_key);
     existing.unique_exercises = seenKeys[date].size;
     (seenEntries[date] ??= new Set()).add(row.entry_id);

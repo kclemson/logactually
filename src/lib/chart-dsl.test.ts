@@ -4,14 +4,14 @@ import type { ChartDSL, DailyTotals } from "./chart-types";
 
 const makeTotals = (): DailyTotals => ({
   food: {
-    "2026-02-16": { cal: 2000, protein: 150, carbs: 200, fat: 80, fiber: 25, sugar: 40, sat_fat: 20, sodium: 1500, chol: 200, entries: 3 },
-    "2026-02-17": { cal: 1800, protein: 130, carbs: 180, fat: 70, fiber: 20, sugar: 35, sat_fat: 18, sodium: 1200, chol: 180, entries: 2 },
-    "2026-02-18": { cal: 2200, protein: 160, carbs: 220, fat: 90, fiber: 30, sugar: 50, sat_fat: 25, sodium: 1800, chol: 250, entries: 4 },
+    "2026-02-16": { calories: 2000, protein: 150, carbs: 200, fat: 80, fiber: 25, sugar: 40, saturated_fat: 20, sodium: 1500, cholesterol: 200, entries: 3 },
+    "2026-02-17": { calories: 1800, protein: 130, carbs: 180, fat: 70, fiber: 20, sugar: 35, saturated_fat: 18, sodium: 1200, cholesterol: 180, entries: 2 },
+    "2026-02-18": { calories: 2200, protein: 160, carbs: 220, fat: 90, fiber: 30, sugar: 50, saturated_fat: 25, sodium: 1800, cholesterol: 250, entries: 4 },
     // 2026-02-16 = Mon, 17 = Tue, 18 = Wed
   },
   exercise: {
-    "2026-02-16": { sets: 12, duration: 45, distance: 0, cal_burned: 300, unique_exercises: 4, entries: 6 },
-    "2026-02-17": { sets: 0, duration: 30, distance: 3.5, cal_burned: 250, unique_exercises: 1, entries: 1 },
+    "2026-02-16": { sets: 12, duration_minutes: 45, distance_miles: 0, calories_burned: 300, unique_exercises: 4, entries: 6 },
+    "2026-02-17": { sets: 0, duration_minutes: 30, distance_miles: 3.5, calories_burned: 250, unique_exercises: 1, entries: 1 },
   },
 });
 
@@ -21,7 +21,7 @@ describe("executeDSL", () => {
       chartType: "bar",
       title: "Daily Calories",
       source: "food",
-      metric: "cal",
+      metric: "calories",
       groupBy: "date",
       aggregation: "sum",
     };
@@ -38,7 +38,7 @@ describe("executeDSL", () => {
       chartType: "bar",
       title: "Avg Calories by Day",
       source: "food",
-      metric: "cal",
+      metric: "calories",
       groupBy: "dayOfWeek",
       aggregation: "average",
     };
@@ -53,7 +53,7 @@ describe("executeDSL", () => {
       chartType: "bar",
       title: "Weekday vs Weekend",
       source: "food",
-      metric: "cal",
+      metric: "calories",
       groupBy: "weekdayVsWeekend",
       aggregation: "average",
     };
@@ -67,7 +67,7 @@ describe("executeDSL", () => {
       chartType: "line",
       title: "Protein %",
       source: "food",
-      metric: "cal",
+      metric: "calories",
       derivedMetric: "protein_pct",
       groupBy: "date",
       aggregation: "sum",
@@ -95,7 +95,7 @@ describe("executeDSL", () => {
       chartType: "bar",
       title: "Monday Calories",
       source: "food",
-      metric: "cal",
+      metric: "calories",
       groupBy: "date",
       aggregation: "sum",
       filter: { dayOfWeek: [1] },
@@ -110,7 +110,7 @@ describe("executeDSL", () => {
       chartType: "bar",
       title: "Calories by Day",
       source: "food",
-      metric: "cal",
+      metric: "calories",
       groupBy: "dayOfWeek",
       aggregation: "sum",
       sort: "value_desc",
@@ -124,7 +124,7 @@ describe("executeDSL", () => {
       chartType: "area",
       title: "Test",
       source: "food",
-      metric: "cal",
+      metric: "calories",
       groupBy: "date",
       aggregation: "sum",
     };
@@ -137,12 +137,12 @@ describe("executeDSL", () => {
       food: {},
       exercise: {},
       foodByHour: {
-        7:  [{ cal: 400, protein: 20, carbs: 50, fat: 15, fiber: 5, sugar: 10, sat_fat: 5, sodium: 300, chol: 50, entries: 1 }],
+        7:  [{ calories: 400, protein: 20, carbs: 50, fat: 15, fiber: 5, sugar: 10, saturated_fat: 5, sodium: 300, cholesterol: 50, entries: 1 }],
         12: [
-          { cal: 600, protein: 30, carbs: 70, fat: 20, fiber: 8, sugar: 15, sat_fat: 7, sodium: 500, chol: 80, entries: 1 },
-          { cal: 500, protein: 25, carbs: 60, fat: 18, fiber: 6, sugar: 12, sat_fat: 6, sodium: 400, chol: 70, entries: 1 },
+          { calories: 600, protein: 30, carbs: 70, fat: 20, fiber: 8, sugar: 15, saturated_fat: 7, sodium: 500, cholesterol: 80, entries: 1 },
+          { calories: 500, protein: 25, carbs: 60, fat: 18, fiber: 6, sugar: 12, saturated_fat: 6, sodium: 400, cholesterol: 70, entries: 1 },
         ],
-        19: [{ cal: 800, protein: 40, carbs: 90, fat: 30, fiber: 10, sugar: 20, sat_fat: 10, sodium: 700, chol: 100, entries: 1 }],
+        19: [{ calories: 800, protein: 40, carbs: 90, fat: 30, fiber: 10, sugar: 20, saturated_fat: 10, sodium: 700, cholesterol: 100, entries: 1 }],
       },
     };
 
@@ -150,7 +150,7 @@ describe("executeDSL", () => {
       chartType: "bar",
       title: "Calories by Hour",
       source: "food",
-      metric: "cal",
+      metric: "calories",
       groupBy: "hourOfDay",
       aggregation: "sum",
     };
@@ -171,8 +171,8 @@ describe("executeDSL", () => {
       exercise: {},
       foodByHour: {
         12: [
-          { cal: 600, protein: 30, carbs: 70, fat: 20, fiber: 8, sugar: 15, sat_fat: 7, sodium: 500, chol: 80, entries: 1 },
-          { cal: 400, protein: 20, carbs: 50, fat: 15, fiber: 5, sugar: 10, sat_fat: 5, sodium: 300, chol: 50, entries: 1 },
+          { calories: 600, protein: 30, carbs: 70, fat: 20, fiber: 8, sugar: 15, saturated_fat: 7, sodium: 500, cholesterol: 80, entries: 1 },
+          { calories: 400, protein: 20, carbs: 50, fat: 15, fiber: 5, sugar: 10, saturated_fat: 5, sodium: 300, cholesterol: 50, entries: 1 },
         ],
       },
     };
@@ -181,7 +181,7 @@ describe("executeDSL", () => {
       chartType: "bar",
       title: "Avg Calories by Hour",
       source: "food",
-      metric: "cal",
+      metric: "calories",
       groupBy: "hourOfDay",
       aggregation: "average",
     };
@@ -190,5 +190,19 @@ describe("executeDSL", () => {
     expect(result.data).toHaveLength(1);
     expect(result.data[0].label).toBe("12pm");
     expect(result.data[0].value).toBe(500); // (600+400)/2
+  });
+
+  it("handles old metric keys via backward compat map", () => {
+    const dsl: ChartDSL = {
+      chartType: "bar",
+      title: "Daily Calories (old key)",
+      source: "food",
+      metric: "cal", // old key
+      groupBy: "date",
+      aggregation: "sum",
+    };
+    const result = executeDSL(dsl, makeTotals());
+    expect(result.data).toHaveLength(3);
+    expect(result.data[0].value).toBe(2000);
   });
 });

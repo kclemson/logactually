@@ -4,23 +4,23 @@
 // ── Per-day aggregates ──────────────────────────────────────
 
 export interface FoodDayTotals {
-  cal: number;
+  calories: number;
   protein: number;
   carbs: number;
   fat: number;
   fiber: number;
   sugar: number;
-  sat_fat: number;
+  saturated_fat: number;
   sodium: number;
-  chol: number;
+  cholesterol: number;
   entries: number;
 }
 
 export interface ExerciseDayTotals {
   sets: number;
-  duration: number;
-  distance: number;
-  cal_burned: number;
+  duration_minutes: number;
+  distance_miles: number;
+  calories_burned: number;
   unique_exercises: number;
   entries: number;
 }
@@ -38,21 +38,21 @@ export interface DailyTotals {
     description: string;
     count: number;
     total_sets: number;
-    total_duration: number;
-    avg_duration: number;
-    total_distance: number;
+    total_duration_minutes: number;
+    avg_duration_minutes: number;
+    total_distance_miles: number;
     avg_heart_rate: number | null;
     avg_effort: number | null;
-    total_cal_burned: number;
+    total_calories_burned: number;
   }>;
   /** Populated when groupBy === "hourOfDay" and source === "food" */
   foodByHour?: HourlyTotals<FoodDayTotals>;
   /** Populated when groupBy === "hourOfDay" and source === "exercise" */
   exerciseByHour?: HourlyTotals<ExerciseDayTotals>;
   /** Populated when groupBy === "item" and source === "food" */
-  foodByItem?: Record<string, { count: number; totalCal: number; totalProtein: number }>;
+  foodByItem?: Record<string, { count: number; totalCalories: number; totalProtein: number }>;
   /** Populated when groupBy === "item" and source === "exercise" */
-  exerciseByItem?: Record<string, { description: string; count: number; totalSets: number; totalDuration: number; totalCalBurned: number }>;
+  exerciseByItem?: Record<string, { description: string; count: number; totalSets: number; totalDurationMinutes: number; totalCaloriesBurned: number }>;
   /** Populated when groupBy === "category" and source === "exercise" */
   exerciseByCategory?: Record<string, ExerciseDayTotals>;
 }
