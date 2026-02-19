@@ -6,6 +6,7 @@ export interface VerificationResult {
   total?: number;
   matched?: number;
   accuracy?: number;
+  allExact?: boolean;
   toleranceLabel?: string;
   mismatches?: Array<{ date: string; ai: number; actual: number; delta: number }>;
   allComparisons?: Array<{ label: string; ai: number; actual: number; delta: number; match: boolean }>;
@@ -106,8 +107,9 @@ function verifyDaily(
     }
   }
 
+  const allExact = matched === total && allComparisons.every(c => c.delta === 0);
   const dailyToleranceLabel = toleranceMethod === "percentage" ? "within 2% or 2 units" : "within 1% or 5 units";
-  return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, toleranceLabel: dailyToleranceLabel, mismatches, allComparisons, method: "ai_daily" };
+  return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, allExact, toleranceLabel: dailyToleranceLabel, mismatches, allComparisons, method: "ai_daily" };
 }
 
 function verifyAggregate(
@@ -172,8 +174,9 @@ function verifyAggregate(
     }
   }
 
+  const allExact = matched === total && allComparisons.every(c => c.delta === 0);
   const toleranceLabel = v.method === "average" ? "within 2% or 20 units" : "within 1% or 5 units";
-  return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, toleranceLabel, mismatches, allComparisons, method: "ai_aggregate" };
+  return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, allExact, toleranceLabel, mismatches, allComparisons, method: "ai_aggregate" };
 }
 
 /* ── Deterministic verification via known field/formula mappings ── */
@@ -358,8 +361,9 @@ function verifyDeterministic(
     }
   }
 
+  const allExact = matched === total && allComparisons.every(c => c.delta === 0);
   const toleranceLabel = toleranceMethod === "percentage" ? "within 2% or 2 units" : "within 1% or 5 units";
-  return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, toleranceLabel, mismatches, allComparisons, method: "deterministic" };
+  return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, allExact, toleranceLabel, mismatches, allComparisons, method: "deterministic" };
 }
 
 /* ── Main entry point ────────────────────────────────────── */

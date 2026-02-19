@@ -386,7 +386,8 @@ function CustomChartDialogInner({
                   ) : (
                     <div className="space-y-1">
                       <p className="font-medium">
-                        {verification.matched}/{verification.total} AI values matched your logs ({verification.toleranceLabel || "within 1% or 5 units"})
+                        {verification.matched}/{verification.total} AI values matched your logs{" "}
+                        {verification.allExact ? "exactly" : `(${verification.toleranceLabel || "within 1% or 5 units"})`}
                       </p>
                       {verification.method && (
                         <p className="text-[10px] opacity-70">
