@@ -29,6 +29,7 @@ export function AllMedicationsView({
   isLoading,
   onDelete,
   onEdit,
+  onExport,
   isReadOnly,
 }: AllMedicationsViewProps) {
   if (isLoading) {

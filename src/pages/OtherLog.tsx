@@ -68,6 +68,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   const isTodaySelected = isToday(selectedDate);
 
   const { logTypes, isLoading, createType, recentUsage } = useCustomLogTypes();
+  const { exportCustomLog } = useExportData();
   const { entries, createEntry, updateEntry, deleteEntry } = useCustomLogEntries(dateStr);
   const { data: datesWithData = [] } = useCustomLogDatesWithData(dateNav.calendarMonth);
   const { isReadOnly } = useReadOnlyContext();
