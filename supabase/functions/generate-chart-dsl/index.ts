@@ -1,11 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
+import { getWeightExerciseReferenceForPrompt, getCardioExerciseReferenceForPrompt } from "../_shared/exercises.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const weightExercises = getWeightExerciseReferenceForPrompt();
+const cardioExercises = getCardioExerciseReferenceForPrompt();
 
 const SYSTEM_PROMPT = `You are a semantic parser for a health and fitness tracking app. The user will describe a chart they want to see. Your job is to interpret their intent and return a declarative chart schema (DSL). You do NOT compute any data — the client will execute the schema against its own database.
 
@@ -24,6 +27,7 @@ You MUST respond with ONLY a valid JSON object (no markdown, no code fences). Th
 
   "filter": {
     "exerciseKey": "<exercise key or null>",
+    "exerciseSubtype": "<subtype string or null>",
     "dayOfWeek": [0-6] or null,
     "category": "Cardio" | "Strength" or null
   } or null,
@@ -47,12 +51,35 @@ FOOD (table: food_entries):
 EXERCISE (table: weight_sets):
   - logged_date (date): the date the exercise was logged
   - created_at (timestamptz): when logged — use for hourOfDay grouping
-  - exercise_key (text): canonical snake_case identifier (e.g. "bench_press", "walk_run", "cycling")
+  - exercise_key (text): canonical snake_case identifier (see CANONICAL EXERCISES below)
   - description (text): human-friendly exercise name
-  - exercise_subtype (text, nullable): e.g. "running", "walking", "indoor"
+  - exercise_subtype (text, nullable): a more specific variant within an exercise_key (see EXERCISE KEY / SUBTYPE HIERARCHY below)
   - sets (int), reps (int), weight_lbs (numeric)
   - duration_minutes (numeric, nullable), distance_miles (numeric, nullable)
   - exercise_metadata (jsonb, nullable): { heart_rate, effort, calories_burned, cadence_rpm, speed_mph, incline_pct }
+
+CANONICAL EXERCISES:
+
+These are the valid exercise_key values. When the user mentions an exercise, match it to the correct key using the name and aliases listed below. NEVER use an alias or user term as the exerciseKey — always use the canonical key.
+
+Strength exercises:
+${weightExercises}
+
+Cardio exercises:
+${cardioExercises}
+
+EXERCISE KEY / SUBTYPE HIERARCHY:
+
+Some exercise_key values cover multiple activities distinguished by exercise_subtype:
+- "walk_run" covers walking, running, jogging, and hiking. The subtype values are: "walking", "running", "hiking".
+- "cycling" covers indoor and outdoor biking. The subtype values are: "indoor", "outdoor".
+- "swimming" covers pool and open water. The subtype values are: "pool", "open_water".
+
+When the user asks about a SPECIFIC activity that is a subtype (e.g. "running", "walking", "hiking"), set BOTH:
+  filter.exerciseKey = the parent key (e.g. "walk_run")
+  filter.exerciseSubtype = the specific subtype (e.g. "running")
+
+When the user asks about the GENERAL activity (e.g. "cardio", "walk/run"), use only filter.exerciseKey without exerciseSubtype.
 
 AVAILABLE METRICS:
 - Food source: cal, protein, carbs, fat, fiber, sugar, sat_fat, sodium, chol, entries (number of food items logged)
@@ -74,6 +101,7 @@ GROUP BY OPTIONS:
 
 FILTER OPTIONS:
 - exerciseKey: filter exercise data to a specific exercise_key (e.g. "bench_press")
+- exerciseSubtype: filter to a specific subtype within an exercise_key (e.g. "running" within "walk_run"). Must always be used together with exerciseKey.
 - dayOfWeek: array of day numbers (0=Sun, 1=Mon, ..., 6=Sat) to include
 - category: "Cardio" or "Strength" — filter exercises to only cardio or only strength training. Use when the user asks about ONE category broken down by another dimension (e.g. "cardio count by day of week" → filter.category="Cardio" + groupBy="dayOfWeek"). Do NOT confuse with groupBy "category".
 
