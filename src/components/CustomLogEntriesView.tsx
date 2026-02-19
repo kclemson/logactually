@@ -301,7 +301,7 @@ export function CustomLogEntriesView({
                       <span className="text-xs text-muted-foreground tabular-nums">
                         {formatTime(entry.dose_time)}
                       </span>
-                      <span className="text-sm tabular-nums text-foreground whitespace-nowrap">
+                      <span className="text-xs tabular-nums text-muted-foreground whitespace-nowrap">
                         {dose}
                       </span>
                       <span className="text-xs text-muted-foreground italic truncate min-w-0">
@@ -311,7 +311,7 @@ export function CustomLogEntriesView({
                         {!isReadOnly && onEdit && (
                           <Button
                             variant="ghost" size="icon"
-                            className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                            className="h-6 w-6 p-0 text-foreground hover:text-foreground hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                             onClick={() => onEdit(entry)}
                             aria-label="Edit entry"
                           >
