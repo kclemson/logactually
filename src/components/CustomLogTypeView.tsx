@@ -85,12 +85,12 @@ export function CustomLogTypeView({ logType, entries, isLoading, onDelete, isRea
       {entries.map((entry) => (
         <div
           key={entry.id}
-          className="flex items-center justify-between gap-3 py-2 border-b border-border/50 last:border-0 group"
+          className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0 group"
         >
           <span className="text-xs text-muted-foreground shrink-0 w-28">
             {formatEntryDate(entry, logType.value_type)}
           </span>
-          <span className="text-sm flex-1 min-w-0 truncate">
+          <span className="text-sm min-w-0 truncate max-w-[55%]">
             {formatEntryValue(entry, logType.value_type, logType.unit)}
           </span>
           {!isReadOnly && (
