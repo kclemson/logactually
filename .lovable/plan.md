@@ -1,71 +1,51 @@
 
 
-## Two improvements: verifiable meal counts + better suggestion chips
+## Reduce verification fragility: heuristic-first, AI-second
 
-### 1. Make "meals per day" verifiable
+### The problem
 
-Currently the AI returns `verification: null` for meal-count charts because `entries` isn't tracked in daily totals. The edge function already loops through `foodEntries` -- we just need to count rows per date.
+The main realistic failure mode isn't "wrong field mapping" (modern LLMs handle this fine) -- it's the **null cop-out**, where the AI declares `verification: null` on a chart that IS verifiable. The current code trusts that declaration and skips verification entirely.
 
-**`supabase/functions/generate-chart/index.ts`:**
-- Add `entries: 0` to the daily food totals accumulator type
-- Increment `entries` once per `food_entries` row (not per item)
-- Include `entries` in the daily food summary string sent to the AI
-- Include `entries` in the serialized food totals sent to the client
-- Update the system prompt's field list: `Food: cal, protein, carbs, fat, fiber, sugar, sat_fat, sodium, chol, entries`
-- Add a note: `entries = number of food log entries (meals) for that date`
+### The fix
 
-**`src/lib/chart-verification.ts`:**
-- Add to `FOOD_KEY_MAP`: `entries: "entries"`, `meals: "entries"`, `meal_count: "entries"`, `meal_entries: "entries"`
+Flip the priority in `verifyChartData`: try the deterministic heuristic FIRST, and only fall back to the AI's self-declared verification when the heuristic can't help. This is a small reorder of the existing logic, not a new system.
 
-### 2. Improve suggestion chips
+**`src/lib/chart-verification.ts` -- change `verifyChartData`:**
 
-Keep existing useful prompts (fiber, sodium, sugar), remove redundant/low-value ones, and add more insight-driven prompts. The goal is a mix of "obvious useful" basics and "aha moment" analytical questions.
+Current order:
+1. If AI says `null` → give up
+2. If AI declared a verification object → use it
+3. No verification field → legacy heuristic
 
-**`src/components/CustomChartDialog.tsx` -- replace `ALL_CHIPS`:**
+New order:
+1. Try heuristic first (it's deterministic and trustworthy)
+2. If heuristic returns "unavailable", THEN check the AI's declaration
+3. If AI says `null` → give up
 
-Keeping (basics that users will want):
-- "Daily fiber intake over time"
-- "Sodium intake trend"
-- "Average sugar per day"
-- "My highest calorie days"
+This means:
+- A simple "calories per day" chart verifies via heuristic even if the AI incorrectly returns `verification: null`
+- A "workout days vs rest days" aggregate chart still uses the AI's declared breakdown (heuristic can't handle aggregates)
+- The AI's declaration is only consulted when our own logic can't figure it out
 
-Keeping (already good analytical prompts):
-- "Average calories by hour of day"
-- "Which day of the week do I eat the most?"
-- "How many meals do I log per day on average?"
-- "Average calories on workout days vs rest days"
-- "Exercise frequency by day of week"
-- "Which exercises do I do most often?"
-- "Calorie comparison: weekdays vs weekends"
+Additionally, when the AI declares `type: "daily"` and the heuristic also has a mapping, we can cross-check: if the AI's `field` disagrees with the heuristic's mapping, prefer the heuristic (it's deterministic). This is a one-line guard, not architectural complexity.
 
-Removing (redundant or low-value):
-- "Fat as percentage of total calories over time" (too niche for a chip)
-- "Protein to calorie ratio over time" (similar to above)
-- "Days where I exceeded 2000 calories" (too specific a number)
-- "Average protein on workout days vs rest days" (very similar to calorie version)
-- "Do I eat more on days I exercise?" (same as workout vs rest days)
-- "Average carbs on weekdays vs weekends" (similar to calorie weekday/weekend)
-- "Total exercise duration per week" (generic)
-- "How many days per week did I exercise?" (similar to exercise frequency)
-- "Training volume trend over time" (vague)
+### Technical details
 
-Adding (insight-driven):
-- "Weekly calorie average trend" (smoothed view, very popular request)
-- "How consistent is my logging?" (days with entries -- adherence tracking)
-- "Protein per meal over time" (quality-per-meal insight)
-- "Which meals have the most calories?" (identify problem meals)
-- "My most common foods" (self-awareness)
-- "Cardio vs strength training split" (exercise balance)
-- "Average heart rate by exercise" (if they track it)
-- "Rest days between workouts" (recovery insight)
+```text
+verifyChartData(spec, dailyTotals):
+  1. Run verifyLegacy(spec, dailyTotals)
+  2. If result.status === "success" → return it
+  3. If spec.verification?.type === "daily" → return verifyDaily(spec, dailyTotals)
+  4. If spec.verification?.type === "aggregate" → return verifyAggregate(spec, dailyTotals)
+  5. If spec.verification === null → return unavailable with reason
+  6. Return unavailable (no verification possible)
+```
 
-Final list of ~20 chips, balanced between basics and insights.
+For daily cross-check: in `verifyDaily`, look up `spec.dataKey` in `FOOD_KEY_MAP`/`EXERCISE_KEY_MAP`. If a mapping exists and disagrees with `spec.verification.field`, override with the heuristic's field.
 
 ### Files changed
 
 | File | Change |
 |---|---|
-| `supabase/functions/generate-chart/index.ts` | Add `entries` count to daily food totals, summary, serialization, and system prompt |
-| `src/lib/chart-verification.ts` | Add `entries`/`meals`/`meal_count` to FOOD_KEY_MAP |
-| `src/components/CustomChartDialog.tsx` | Replace ALL_CHIPS with curated strategic list |
+| `src/lib/chart-verification.ts` | Reorder `verifyChartData` to try heuristic first; add field cross-check in `verifyDaily` |
 
