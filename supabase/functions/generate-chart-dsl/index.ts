@@ -24,7 +24,8 @@ You MUST respond with ONLY a valid JSON object (no markdown, no code fences). Th
 
   "filter": {
     "exerciseKey": "<exercise key or null>",
-    "dayOfWeek": [0-6] or null
+    "dayOfWeek": [0-6] or null,
+    "category": "Cardio" | "Strength" or null
   } or null,
 
   "compare": {
@@ -54,7 +55,7 @@ EXERCISE (table: weight_sets):
   - exercise_metadata (jsonb, nullable): { heart_rate, effort, calories_burned, cadence_rpm, speed_mph, incline_pct }
 
 AVAILABLE METRICS:
-- Food source: cal, protein, carbs, fat, fiber, sugar, sat_fat, sodium, chol, entries
+- Food source: cal, protein, carbs, fat, fiber, sugar, sat_fat, sodium, chol, entries (number of food items logged)
 - Exercise source: sets, duration, distance, cal_burned, unique_exercises
 
 DERIVED METRICS (food source only, use derivedMetric field):
@@ -74,6 +75,11 @@ GROUP BY OPTIONS:
 FILTER OPTIONS:
 - exerciseKey: filter exercise data to a specific exercise_key (e.g. "bench_press")
 - dayOfWeek: array of day numbers (0=Sun, 1=Mon, ..., 6=Sat) to include
+- category: "Cardio" or "Strength" — filter exercises to only cardio or only strength training. Use when the user asks about ONE category broken down by another dimension (e.g. "cardio count by day of week" → filter.category="Cardio" + groupBy="dayOfWeek"). Do NOT confuse with groupBy "category".
+
+IMPORTANT — groupBy "category" vs filter.category:
+- Use groupBy "category" when the user wants to COMPARE cardio vs strength side by side (produces two bars)
+- Use filter.category + a different groupBy when the user wants ONE category broken down further (e.g. "cardio by day of week")
 
 AGGREGATION SEMANTICS:
 

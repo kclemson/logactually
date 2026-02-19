@@ -42,7 +42,7 @@ export async function fetchChartData(
   if (dsl.source === "food") {
     return fetchFoodData(supabase, startDate, needsHourly, needsItem);
   }
-  return fetchExerciseData(supabase, startDate, needsHourly, dsl.filter?.exerciseKey, needsItem, needsCategory);
+  return fetchExerciseData(supabase, startDate, needsHourly, dsl.filter?.exerciseKey, needsItem, needsCategory, dsl.filter?.category);
 }
 
 // ── Food fetcher ────────────────────────────────────────────
@@ -128,6 +128,7 @@ async function fetchExerciseData(
   exerciseKeyFilter?: string,
   needsItem: boolean = false,
   needsCategory: boolean = false,
+  categoryFilter?: "Cardio" | "Strength",
 ): Promise<DailyTotals> {
   let query = supabase
     .from("weight_sets")
@@ -151,6 +152,13 @@ async function fetchExerciseData(
   const seenKeys: Record<string, Set<string>> = {};
 
   for (const row of data ?? []) {
+    // Category filter: skip rows that don't match
+    if (categoryFilter) {
+      const isCardio = isCardioExercise(row.exercise_key);
+      if (categoryFilter === "Cardio" && !isCardio) continue;
+      if (categoryFilter === "Strength" && isCardio) continue;
+    }
+
     const date = row.logged_date;
     const meta = row.exercise_metadata as Record<string, any> | null;
 
