@@ -90,7 +90,7 @@ export function CustomLogTypeView({ logType, entries, isLoading, onDelete, isRea
           <span className="text-xs text-muted-foreground shrink-0 w-28">
             {formatEntryDate(entry, logType.value_type)}
           </span>
-          <span className="text-sm min-w-0 truncate max-w-[55%]">
+          <span className="text-sm tabular-nums truncate w-32 shrink-0">
             {formatEntryValue(entry, logType.value_type, logType.unit)}
           </span>
           {!isReadOnly && (
