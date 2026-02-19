@@ -27,6 +27,13 @@ function getCurrentTimeValue() {
   return format(new Date(), 'HH:mm');
 }
 
+function getDoseCountStyle(todayEntryCount: number, dosesPerDay: number): string {
+  if (dosesPerDay === 0 || todayEntryCount === 0) return 'text-muted-foreground';
+  if (todayEntryCount < dosesPerDay) return 'text-amber-500';
+  if (todayEntryCount === dosesPerDay) return 'text-green-500 dark:text-green-400';
+  return 'text-red-500';
+}
+
 export function MedicationEntryInput({
   label,
   unit,
@@ -62,7 +69,7 @@ export function MedicationEntryInput({
     if (e.key === 'Escape') onCancel();
   };
 
-  // Build schedule summary line
+  // Schedule summary: e.g. "2x/day · morning, evening"
   const scheduleSummary = dosesPerDay === 0
     ? null
     : (() => {
@@ -71,7 +78,7 @@ export function MedicationEntryInput({
         return `${freq}${times}`;
       })();
 
-  // Build "logged today" line
+  // Dose count line
   const doseCountLine = (() => {
     if (dosesPerDay > 0) {
       return `${todayEntryCount} of ${dosesPerDay} dose${dosesPerDay !== 1 ? 's' : ''} logged today`;
@@ -82,10 +89,9 @@ export function MedicationEntryInput({
     return null;
   })();
 
-  const hasContext = description || scheduleSummary || doseCountLine;
-
   return (
     <div className="space-y-2 rounded-lg border border-border bg-card p-3">
+      {/* Name + cancel */}
       <div className="flex items-center gap-1">
         <span className="text-sm font-medium flex-1 truncate">{label}</span>
         <Button
@@ -99,23 +105,20 @@ export function MedicationEntryInput({
         </Button>
       </div>
 
-      {/* Read-only context block */}
-      {hasContext && (
-        <div className="rounded-md bg-muted/50 px-2.5 py-2 space-y-0.5">
-          {description && (
-            <p className="text-xs text-muted-foreground leading-relaxed">{description}</p>
-          )}
-          {scheduleSummary && (
-            <p className="text-xs text-muted-foreground">{scheduleSummary}</p>
-          )}
-          {doseCountLine && (
-            <p className="text-xs text-muted-foreground">{doseCountLine}</p>
-          )}
+      {/* Schedule line: below name, outside muted box */}
+      {scheduleSummary && (
+        <p className="text-xs text-muted-foreground">{scheduleSummary}</p>
+      )}
+
+      {/* Description: alone in muted box */}
+      {description && (
+        <div className="rounded-md bg-muted/50 px-2.5 py-2">
+          <p className="text-xs text-muted-foreground leading-relaxed">{description}</p>
         </div>
       )}
 
+      {/* Input row */}
       <div className="flex items-center gap-2">
-        {/* Time picker */}
         <input
           type="time"
           value={timeValue}
@@ -126,8 +129,6 @@ export function MedicationEntryInput({
             "focus:outline-none focus:ring-2 focus:ring-ring"
           )}
         />
-
-        {/* Dose amount */}
         <Input
           type="number"
           inputMode="decimal"
@@ -138,12 +139,9 @@ export function MedicationEntryInput({
           className="h-9 w-24 text-sm"
           autoFocus
         />
-
-        {/* Unit label */}
         {unit && (
           <span className="text-sm text-muted-foreground shrink-0">{unit}</span>
         )}
-
         <Button
           size="sm"
           className="h-9 bg-teal-500 hover:bg-teal-600 text-white border-teal-500 ml-auto"
@@ -153,6 +151,13 @@ export function MedicationEntryInput({
           Save
         </Button>
       </div>
+
+      {/* Dose count: below input row, with conditional colour */}
+      {doseCountLine && (
+        <p className={cn("text-xs", getDoseCountStyle(todayEntryCount, dosesPerDay))}>
+          {doseCountLine}
+        </p>
+      )}
 
       {/* Notes */}
       <Textarea

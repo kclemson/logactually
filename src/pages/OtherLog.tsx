@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useSearchParams } from 'react-router-dom';
 import { format, isToday, parseISO } from 'date-fns';
 import { useCustomLogDatesWithData } from '@/hooks/useDatesWithData';
@@ -49,6 +50,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   const [createMedicationOpen, setCreateMedicationOpen] = useState(false);
   const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
   const [showInput, setShowInput] = useState(false);
+  const [showInputDialog, setShowInputDialog] = useState(false);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>(getStoredViewMode);
   const createNewClickedRef = useRef(false);
@@ -183,7 +185,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                       <Button
                         size="sm"
                         className="h-8 bg-teal-500 hover:bg-teal-600 text-white border-teal-500 gap-1"
-                        onClick={() => setShowInput(true)}
+                        onClick={() => setShowInputDialog(true)}
                       >
                         <Plus className="h-3 w-3" />
                         Log New
@@ -231,8 +233,8 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
           </div>
         )}
 
-        {/* Inline input form */}
-        {showInput && effectiveTypeId && selectedType && !isReadOnly && (
+        {/* Inline input form — By Date mode only */}
+        {showInput && viewMode === 'date' && effectiveTypeId && selectedType && !isReadOnly && (
           selectedType.value_type === 'medication' ? (
             <MedicationEntryInput
               label={selectedType.name}
@@ -241,33 +243,19 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
               defaultDose={selectedType.default_dose}
               dosesPerDay={selectedType.doses_per_day}
               doseTimes={selectedType.dose_times}
-              todayEntryCount={
-                viewMode === 'type'
-                  ? typeEntries.filter(e => e.logged_date === dateStr).length
-                  : entries.filter(e => e.log_type_id === selectedType.id).length
-              }
+              todayEntryCount={entries.filter(e => e.log_type_id === selectedType.id).length}
               onSubmit={(params) => {
-                if (viewMode === 'type') {
-                  createTypeEntry.mutate({
-                    log_type_id: selectedType.id,
-                    unit: selectedType.unit || null,
-                    ...params,
-                  }, {
-                    onSuccess: () => setShowInput(false),
-                  });
-                } else {
-                  createEntry.mutate({
-                    log_type_id: selectedType.id,
-                    logged_date: dateStr,
-                    unit: selectedType.unit || null,
-                    ...params,
-                  }, {
-                    onSuccess: () => setShowInput(false),
-                  });
-                }
+                createEntry.mutate({
+                  log_type_id: selectedType.id,
+                  logged_date: dateStr,
+                  unit: selectedType.unit || null,
+                  ...params,
+                }, {
+                  onSuccess: () => setShowInput(false),
+                });
               }}
               onCancel={() => setShowInput(false)}
-              isLoading={viewMode === 'type' ? createTypeEntry.isPending : createEntry.isPending}
+              isLoading={createEntry.isPending}
             />
           ) : (
             <LogEntryInput
@@ -275,27 +263,17 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
               label={selectedType.name}
               unit={selectedType.unit}
               onSubmit={(params) => {
-                if (viewMode === 'type') {
-                  createTypeEntry.mutate({
-                    log_type_id: selectedType.id,
-                    unit: selectedType.unit || null,
-                    ...params,
-                  }, {
-                    onSuccess: () => setShowInput(false),
-                  });
-                } else {
-                  createEntry.mutate({
-                    log_type_id: selectedType.id,
-                    logged_date: dateStr,
-                    unit: selectedType.unit || null,
-                    ...params,
-                  }, {
-                    onSuccess: () => setShowInput(false),
-                  });
-                }
+                createEntry.mutate({
+                  log_type_id: selectedType.id,
+                  logged_date: dateStr,
+                  unit: selectedType.unit || null,
+                  ...params,
+                }, {
+                  onSuccess: () => setShowInput(false),
+                });
               }}
               onCancel={() => setShowInput(false)}
-              isLoading={viewMode === 'type' ? createTypeEntry.isPending : createEntry.isPending}
+              isLoading={createEntry.isPending}
             />
           )
         )}
@@ -374,6 +352,55 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
             )}
           </div>
         </>
+      )}
+
+      {/* By Type: entry form as modal dialog */}
+      {selectedType && !isReadOnly && (
+        <Dialog open={showInputDialog} onOpenChange={(open) => { if (!open) setShowInputDialog(false); }}>
+          <DialogContent className="max-w-sm p-0 gap-0 border-0 bg-transparent shadow-none [&>button]:hidden">
+            {selectedType.value_type === 'medication' ? (
+              <MedicationEntryInput
+                label={selectedType.name}
+                unit={selectedType.unit}
+                description={selectedType.description}
+                defaultDose={selectedType.default_dose}
+                dosesPerDay={selectedType.doses_per_day}
+                doseTimes={selectedType.dose_times}
+                todayEntryCount={typeEntries.filter(e => e.logged_date === format(new Date(), 'yyyy-MM-dd')).length}
+                onSubmit={(params) => {
+                  createTypeEntry.mutate({
+                    log_type_id: selectedType.id,
+                    unit: selectedType.unit || null,
+                    ...params,
+                  }, {
+                    onSuccess: () => setShowInputDialog(false),
+                  });
+                }}
+                onCancel={() => setShowInputDialog(false)}
+                isLoading={createTypeEntry.isPending}
+              />
+            ) : (
+              <div className="rounded-lg border border-border bg-card p-3">
+                <LogEntryInput
+                  valueType={selectedType.value_type}
+                  label={selectedType.name}
+                  unit={selectedType.unit}
+                  onSubmit={(params) => {
+                    createTypeEntry.mutate({
+                      log_type_id: selectedType.id,
+                      unit: selectedType.unit || null,
+                      ...params,
+                    }, {
+                      onSuccess: () => setShowInputDialog(false),
+                    });
+                  }}
+                  onCancel={() => setShowInputDialog(false)}
+                  isLoading={createTypeEntry.isPending}
+                />
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       )}
 
       <CreateLogTypeDialog
