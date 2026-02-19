@@ -1,52 +1,79 @@
 
-## Fix: type-view three-control row on mobile
+## Fix: CustomLogTypeView row layout — tighten date/value/delete spacing
 
-### What's happening
+### The problem
 
-The three-control row in type view:
-- Left Select: `h-8 text-sm w-auto min-w-[130px]` → renders as ~130px+
-- Middle Select: `h-8 text-sm w-auto min-w-[120px]` → renders as ~120px+
-- Right Button: `h-8 ... gap-1` + text "Log Body Weight" → ~140px
+The current layout uses three elements in a `justify-between` flex row:
 
-Total: ~390px+ on a ~375px viewport. The button clips off-screen.
-
-The Settings dropdowns look compact because they have `w-[150px]` fixed widths with the default `px-3` padding — just enough for content.
-
-### Two changes, one file: `src/pages/OtherLog.tsx`
-
-**Change 1: Shorten the button label**
-
-```tsx
-// Before
-<Plus className="h-3 w-3" />
-Log {selectedType.name}
-
-// After
-<Plus className="h-3 w-3" />
-+ Log New
+```
+[date: w-28 fixed]    [value: flex-1 grows to fill ALL remaining space]    [trash: far right]
 ```
 
-This drops the button from ~140px (for "Log Body Weight") to ~80px — a fixed-width label regardless of log type name length.
+The `flex-1` on the value span causes it to stretch across the full remaining width. The value text itself left-algins within that stretch, so visually:
 
-**Change 2: Reduce padding on the two selects in type view**
+- The gap between date text and value text = (112px date column) + (however much of the flex-1 the text doesn't fill) — which on a 600px wide container leaves ~350px of dead space between the columns
+- The delete button is at the far right edge, visually disconnected from its row
 
-Both the view-mode select and the log-type select get `px-2` instead of the default `px-3` on their triggers, and tighter `min-w` values:
+### The fix: drop `flex-1`, let value size to content, put trash right after it
 
-- Left (view mode): `h-8 text-sm px-2 w-auto min-w-[110px]` → down from `min-w-[130px]`
-- Middle (log type): `h-8 text-sm px-2 w-auto min-w-[100px]` → down from `min-w-[120px]`
+Change the row from `justify-between` to a simple left-aligned flex row, with the value span sized to its content and the delete button immediately to its right:
 
-With those changes the three controls total roughly:
-- Left: ~110px
-- Middle: ~100px  
-- Right: ~80px
-- Gaps (2×8px): 16px
-- **Total: ~306px** — well within a 375px viewport
+```jsx
+<div className="flex items-center gap-3 py-2 border-b ...">
+  <span className="text-xs text-muted-foreground shrink-0 w-24">
+    {formatEntryDate(...)}
+  </span>
+  <span className="text-sm shrink-0">
+    {formatEntryValue(...)}
+  </span>
+  {!isReadOnly && (
+    <Button className="shrink-0 ...">
+      <Trash2 />
+    </Button>
+  )}
+</div>
+```
+
+Key changes:
+- Remove `justify-between` from the row div — the row is now left-to-right flow
+- Change value span from `flex-1 min-w-0 truncate` to `shrink-0` — it sizes to content, no growth
+- Delete button sits immediately after the value with the same `gap-3` spacing — visually grouped
+- Date column: `w-28` → `w-24` (96px) — still fits "Yesterday, 2:14 PM" at `text-xs` but slightly tighter. Actually keep `w-28` since "Yesterday, 2:14 PM" is the longest possible string and needs the room.
+
+### Handling long text values
+
+For `text` and `text_multiline` value types the value could be a long string. With `shrink-0` it would overflow. Add `max-w-[60%]` + `truncate` on the value span so long text entries get truncated after 60% of row width, keeping the delete button visible:
+
+```jsx
+<span className="text-sm shrink min-w-0 truncate max-w-[60%]">
+```
+
+Using `shrink` (not `shrink-0` or `flex-1`):
+- Content that fits: span collapses to content width, delete button follows immediately
+- Content that overflows: span shrinks to available space with truncation
+
+Actually the cleanest approach: use `min-w-0` + `shrink` on the value span. This lets it be as wide as its content up to the available space, then truncate. The delete button sits right after whatever width the value occupies.
+
+### Exact changes to `src/components/CustomLogTypeView.tsx`
+
+**Line 88** — row container: remove `justify-between`
+```jsx
+// Before
+className="flex items-center justify-between gap-3 py-2 border-b border-border/50 last:border-0 group"
+// After
+className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0 group"
+```
+
+**Line 93** — value span: remove `flex-1`, keep `min-w-0 truncate`, add explicit max-width
+```jsx
+// Before
+className="text-sm flex-1 min-w-0 truncate"
+// After
+className="text-sm min-w-0 truncate max-w-[55%]"
+```
+
+**Line 97-106** — delete button: remove `shrink-0` (no longer needed since it's not competing with flex-1), keep everything else. The `md:opacity-0 md:group-hover:opacity-100` hover behavior stays.
 
 ### Only file changed
 
-`src/pages/OtherLog.tsx` — lines 148-188 (the type-view controls block):
-- `SelectTrigger` className on the left select: add `px-2`, reduce `min-w-[130px]` → `min-w-[110px]`
-- `SelectTrigger` className on the middle select: add `px-2`, reduce `min-w-[120px]` → `min-w-[100px]`
-- Button text: `Log {selectedType.name}` → `+ Log New` (remove the redundant `<Plus>` icon since the label already has `+`)
-
-No changes to `CustomLogTypeView.tsx`, `select.tsx`, Settings, or any other file.
+`src/components/CustomLogTypeView.tsx` — 3 line changes, no new files.
