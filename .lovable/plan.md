@@ -1,56 +1,46 @@
 
-## Two fixes: show all times, and live-update the edited entry's time
+## Remove DOSE_TIME_DEFAULTS from EditLogTypeDialog — always use empty strings + ghost text
 
-### Fix 1 — Show all doses (including the one being edited) in the count and times list
+### What's wrong
 
-**Current behavior:** `editingTodayEntries` filters out `e.id !== editingEntry?.id`, so when you have 2 Compazine doses and open either one, the other entries array has length 1 → shows "1 of 2 doses logged today" with only 1 timestamp.
+`EditLogTypeDialog.tsx` has a `DOSE_TIME_DEFAULTS` constant (lines 25–32) that pre-fills dose time inputs with real string values like `'6am'`, `'9am'`, `'12pm'` etc. When the user clicks a frequency button (e.g. 6), `handleDosesPerDayChange` pushes these strings into state — so the inputs render with white text as if the user typed those values, not as placeholder ghost text.
 
-**Fix:** In `src/pages/OtherLog.tsx` lines 109–112, remove the `id` exclusion from `editingTodayEntries` — include all entries for that date:
+`CreateMedicationDialog.tsx` already does this correctly with `Array(count).fill('')` — no defaults at all.
 
-```ts
-const editingTodayEntries = editingTypeEntries.filter(
-  (e) => e.logged_date === dateStr
-);
-```
+### Fix
 
-Then update the props passed to the edit dialog (lines 411–412):
+Two changes to `EditLogTypeDialog.tsx`:
 
-```tsx
-todayEntryCount={editingTodayEntries.length}
-todayLoggedTimes={editingTodayEntries.map(e => e.dose_time).filter(Boolean) as string[]}
-```
+**1. Remove `DOSE_TIME_DEFAULTS`** (lines 25–32) — the constant is deleted entirely.
 
-This shows the full "2 of 2 doses logged today: 8:00 AM · 1:00 PM" regardless of which dose is being edited.
-
----
-
-### Fix 2 — Dynamically update the edited entry's time in the status line
-
-**Current behavior:** `todayLoggedTimes` is a static prop array. Changing the time picker updates `timeValue` in local state, but `doseCountLine` is computed from the static prop — so the old time stays in the list until the entry is saved and the query refetches.
-
-**Fix:** In `src/components/MedicationEntryInput.tsx`, the component needs to know which entry in the `todayLoggedTimes` list belongs to the entry being edited, so it can substitute the live `timeValue` for it.
-
-Add one new prop `initialTimeInList?: string | null` — the original `dose_time` value of the entry being edited (i.e., what's currently stored in the DB). When building `doseCountLine`, replace the matching time in `todayLoggedTimes` with the current `timeValue`:
+**2. Simplify `handleDosesPerDayChange`** (lines 54–68) to always use empty strings for new slots, preserving existing user-entered values when trimming up/down:
 
 ```ts
-// Swap the stored time of the entry being edited with the live timeValue
-const displayTimes = todayLoggedTimes?.map(t =>
-  t === initialTimeInList ? timeValue : t
-) ?? [];
+const handleDosesPerDayChange = (count: number) => {
+  setDosesPerDay(count);
+  if (count === 0) {
+    setDoseTimes([]);
+  } else {
+    setDoseTimes(prev => {
+      const next = prev.slice(0, count);
+      while (next.length < count) next.push('');
+      return next;
+    });
+  }
+};
 ```
 
-In `OtherLog.tsx`, pass the extra prop:
-```tsx
-initialTimeInList={editingEntry.dose_time}
-```
+This means:
+- "As needed" → 6: all 6 inputs empty → show ghost placeholder text ✓
+- 2 → 6: inputs 1 & 2 keep whatever the user typed, inputs 3–6 are empty ✓  
+- 6 → 2: inputs 1 & 2 preserved, rest trimmed ✓
 
-**Why `initialTimeInList` and not just `entryId`?** The times list contains raw `HH:mm` strings — there's no ID attached. Using the original stored time as the match key is the natural pivot, and it's already available as `editingEntry.dose_time`. Edge case: if two doses share the exact same `HH:mm`, only the first match will be replaced — this is acceptable, as the user is actively editing one of them.
+The dose time inputs in the edit dialog already have the correct placeholder text (`"e.g. morning, 8am, with dinner, etc"`) and ghost styling (`placeholder:text-foreground/50 placeholder:italic`) — so once the values are empty strings, the ghost text will display correctly with no further changes needed.
 
----
+### Only file to change
 
-### Files to change
+| File | Change |
+|---|---|
+| `src/components/EditLogTypeDialog.tsx` | Delete `DOSE_TIME_DEFAULTS` constant; replace `handleDosesPerDayChange` with the simplified version |
 
-| File | Lines | Change |
-|---|---|---|
-| `src/pages/OtherLog.tsx` | 109–112, 411–413 | Remove `id` exclusion; pass `initialTimeInList` prop |
-| `src/components/MedicationEntryInput.tsx` | prop interface + `doseCountLine` computation | Add `initialTimeInList` prop; swap live time in display list |
+No other files need touching — `CreateMedicationDialog.tsx` is already correct.
