@@ -16,8 +16,8 @@ export interface VerificationResult {
 
 function isClose(ai: number, actual: number, method?: string): boolean {
   const delta = Math.abs(ai - actual);
-  if (method === "average") {
-    return delta < 20 || (actual > 0 && delta / actual < 0.02);
+  if (method === "average" || method === "percentage") {
+    return delta < 2 || (actual > 0 && delta / actual < 0.02);
   }
   return delta < 5 || (actual > 0 && delta / actual < 0.01);
 }
@@ -32,10 +32,14 @@ function verifyDaily(
 
   // Cross-check: if the heuristic knows a mapping for this dataKey, prefer it
   const heuristicField = FOOD_KEY_MAP[spec.dataKey] || EXERCISE_KEY_MAP[spec.dataKey];
-  const field = heuristicField || v.field;
+  const derivedFormula = !heuristicField ? DERIVED_FORMULAS[spec.dataKey] : undefined;
+  const field = heuristicField || (derivedFormula ? null : v.field);
   const source = heuristicField
     ? (FOOD_KEY_MAP[spec.dataKey] ? dailyTotals.food : dailyTotals.exercise)
-    : dailyTotals[v.source];
+    : derivedFormula
+      ? dailyTotals[derivedFormula.source]
+      : dailyTotals[v.source];
+  const toleranceMethod = derivedFormula?.tolerance;
 
   const mismatches: VerificationResult["mismatches"] = [];
   const allComparisons: VerificationResult["allComparisons"] = [];
@@ -49,19 +53,29 @@ function verifyDaily(
 
     const aiValue = Number(point[spec.dataKey]) || 0;
     const record = source[rawDate];
-    const actualValue = record ? Number((record as any)[field]) || 0 : 0;
-    const isMatch = isClose(aiValue, actualValue);
 
-    allComparisons.push({ label: rawDate, ai: aiValue, actual: actualValue, delta: aiValue - actualValue, match: isMatch });
+    let actualValue: number;
+    if (derivedFormula && record) {
+      actualValue = derivedFormula.compute(record);
+    } else if (field && record) {
+      actualValue = Number((record as any)[field]) || 0;
+    } else {
+      actualValue = record ? Number((record as any)[v.field]) || 0 : 0;
+    }
+
+    const isMatch = isClose(aiValue, actualValue, toleranceMethod);
+
+    allComparisons.push({ label: rawDate, ai: aiValue, actual: Math.round(actualValue * 10) / 10, delta: Math.round((aiValue - actualValue) * 10) / 10, match: isMatch });
 
     if (isMatch) {
       matched++;
     } else {
-      mismatches.push({ date: rawDate, ai: aiValue, actual: actualValue, delta: aiValue - actualValue });
+      mismatches.push({ date: rawDate, ai: aiValue, actual: Math.round(actualValue * 10) / 10, delta: Math.round((aiValue - actualValue) * 10) / 10 });
     }
   }
 
-  return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, toleranceLabel: "within 1% or 5 units", mismatches, allComparisons };
+  const dailyToleranceLabel = toleranceMethod === "percentage" ? "within 2% or 2 units" : "within 1% or 5 units";
+  return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, toleranceLabel: dailyToleranceLabel, mismatches, allComparisons };
 }
 
 function verifyAggregate(
@@ -152,6 +166,39 @@ const EXERCISE_KEY_MAP: Record<string, string> = {
   cal_burned: "cal_burned",
 };
 
+/* ── Derived formulas for computable metrics ──────────────── */
+
+interface DerivedFormula {
+  source: "food" | "exercise";
+  compute: (r: any) => number;
+  tolerance: "percentage" | "default";
+}
+
+const safePct = (num: number, den: number) => den > 0 ? (num / den) * 100 : 0;
+const safeDiv = (num: number, den: number) => den > 0 ? num / den : 0;
+
+const DERIVED_FORMULAS: Record<string, DerivedFormula> = {
+  // Macro % of total calories
+  fat_pct:           { source: "food", compute: (r) => safePct(r.fat * 9, r.cal), tolerance: "percentage" },
+  fat_percentage:    { source: "food", compute: (r) => safePct(r.fat * 9, r.cal), tolerance: "percentage" },
+  fat_calories_pct:  { source: "food", compute: (r) => safePct(r.fat * 9, r.cal), tolerance: "percentage" },
+  protein_pct:       { source: "food", compute: (r) => safePct(r.protein * 4, r.cal), tolerance: "percentage" },
+  protein_percentage:{ source: "food", compute: (r) => safePct(r.protein * 4, r.cal), tolerance: "percentage" },
+  carbs_pct:         { source: "food", compute: (r) => safePct(r.carbs * 4, r.cal), tolerance: "percentage" },
+  carbs_percentage:  { source: "food", compute: (r) => safePct(r.carbs * 4, r.cal), tolerance: "percentage" },
+  // Per-meal metrics
+  cal_per_meal:      { source: "food", compute: (r) => safeDiv(r.cal, r.entries), tolerance: "default" },
+  calories_per_meal: { source: "food", compute: (r) => safeDiv(r.cal, r.entries), tolerance: "default" },
+  protein_per_meal:  { source: "food", compute: (r) => safeDiv(r.protein, r.entries), tolerance: "default" },
+  // Calories from macro
+  fat_calories:          { source: "food", compute: (r) => r.fat * 9, tolerance: "default" },
+  calories_from_fat:     { source: "food", compute: (r) => r.fat * 9, tolerance: "default" },
+  protein_calories:      { source: "food", compute: (r) => r.protein * 4, tolerance: "default" },
+  calories_from_protein: { source: "food", compute: (r) => r.protein * 4, tolerance: "default" },
+  carbs_calories:        { source: "food", compute: (r) => r.carbs * 4, tolerance: "default" },
+  calories_from_carbs:   { source: "food", compute: (r) => r.carbs * 4, tolerance: "default" },
+};
+
 function verifyLegacy(
   spec: ChartSpec,
   dailyTotals: DailyTotals,
@@ -182,15 +229,20 @@ function verifyLegacy(
     return { status: "unavailable", reason: "Verification isn't available for categorical charts" };
   }
 
-  // Determine source and field
+  // Determine source and field — check direct maps first, then derived formulas
   const foodField = FOOD_KEY_MAP[dataKey];
   const exerciseField = EXERCISE_KEY_MAP[dataKey];
-  if (!foodField && !exerciseField) {
+  const derivedFormula = DERIVED_FORMULAS[dataKey];
+
+  if (!foodField && !exerciseField && !derivedFormula) {
     return { status: "unavailable", reason: `Verification isn't available for metric "${dataKey}"` };
   }
 
-  const source = foodField ? dailyTotals.food : dailyTotals.exercise;
-  const field = (foodField || exerciseField)!;
+  const source = derivedFormula
+    ? dailyTotals[derivedFormula.source]
+    : foodField ? dailyTotals.food : dailyTotals.exercise;
+  const field = foodField || exerciseField; // null when using derived formula
+  const toleranceMethod = derivedFormula?.tolerance;
 
   const mismatches: VerificationResult["mismatches"] = [];
   const allComparisons: VerificationResult["allComparisons"] = [];
@@ -202,20 +254,30 @@ function verifyLegacy(
     if (!rawDate) continue;
     total++;
     const aiValue = Number(point[dataKey]) || 0;
-    const actualRecord = source[rawDate];
-    const actualValue = actualRecord ? Number((actualRecord as any)[field]) || 0 : 0;
-    const isMatch = isClose(aiValue, actualValue);
+    const record = source[rawDate];
 
-    allComparisons.push({ label: rawDate, ai: aiValue, actual: actualValue, delta: aiValue - actualValue, match: isMatch });
+    let actualValue: number;
+    if (derivedFormula && record) {
+      actualValue = derivedFormula.compute(record);
+    } else if (field && record) {
+      actualValue = Number((record as any)[field]) || 0;
+    } else {
+      actualValue = 0;
+    }
+
+    const isMatch = isClose(aiValue, actualValue, toleranceMethod);
+
+    allComparisons.push({ label: rawDate, ai: aiValue, actual: Math.round(actualValue * 10) / 10, delta: Math.round((aiValue - actualValue) * 10) / 10, match: isMatch });
 
     if (isMatch) {
       matched++;
     } else {
-      mismatches.push({ date: rawDate, ai: aiValue, actual: actualValue, delta: aiValue - actualValue });
+      mismatches.push({ date: rawDate, ai: aiValue, actual: Math.round(actualValue * 10) / 10, delta: Math.round((aiValue - actualValue) * 10) / 10 });
     }
   }
 
-  return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, toleranceLabel: "within 1% or 5 units", mismatches, allComparisons };
+  const toleranceLabel = toleranceMethod === "percentage" ? "within 2% or 2 units" : "within 1% or 5 units";
+  return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, toleranceLabel, mismatches, allComparisons };
 }
 
 /* ── Main entry point ────────────────────────────────────── */
