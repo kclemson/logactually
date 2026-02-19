@@ -70,7 +70,10 @@ export type Database = {
       custom_log_types: {
         Row: {
           created_at: string
+          default_dose: number | null
           description: string | null
+          dose_times: string[] | null
+          doses_per_day: number
           id: string
           name: string
           sort_order: number
@@ -81,7 +84,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          default_dose?: number | null
           description?: string | null
+          dose_times?: string[] | null
+          doses_per_day?: number
           id?: string
           name: string
           sort_order?: number
@@ -92,7 +98,10 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          default_dose?: number | null
           description?: string | null
+          dose_times?: string[] | null
+          doses_per_day?: number
           id?: string
           name?: string
           sort_order?: number

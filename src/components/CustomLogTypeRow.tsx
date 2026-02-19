@@ -8,6 +8,7 @@ interface CustomLogTypeRowProps {
   onRename: (id: string, name: string) => void;
   onUpdateUnit: (id: string, unit: string | null) => void;
   onUpdateDescription: (id: string, description: string | null) => void;
+  onUpdateMedication?: (id: string, params: { description?: string | null; unit?: string | null; default_dose?: number | null; doses_per_day?: number; dose_times?: string[] | null }) => void;
   onDelete: (id: string) => void;
   openDeletePopoverId: string | null;
   setOpenDeletePopoverId: (id: string | null) => void;
@@ -19,6 +20,7 @@ export function CustomLogTypeRow({
   onRename,
   onUpdateUnit,
   onUpdateDescription,
+  onUpdateMedication,
   onDelete,
   openDeletePopoverId,
   setOpenDeletePopoverId,
@@ -26,7 +28,17 @@ export function CustomLogTypeRow({
 }: CustomLogTypeRowProps) {
   const [editOpen, setEditOpen] = useState(false);
 
-  const unitAppend = type.unit ? `(${type.unit})` : null;
+  // Build nameAppend: for medication show "325 mg · 2x/day", for others show "(unit)"
+  const nameAppend = (() => {
+    if (type.value_type === 'medication') {
+      const dosePart = type.default_dose != null && type.unit
+        ? `${type.default_dose} ${type.unit}`
+        : type.unit || null;
+      const freqPart = type.doses_per_day > 0 ? `${type.doses_per_day}x/day` : 'as needed';
+      return dosePart ? `${dosePart} · ${freqPart}` : freqPart;
+    }
+    return type.unit ? `(${type.unit})` : null;
+  })();
 
   return (
     <>
@@ -41,7 +53,7 @@ export function CustomLogTypeRow({
         openDeletePopoverId={openDeletePopoverId}
         setOpenDeletePopoverId={setOpenDeletePopoverId}
         expandable={false}
-        nameAppend={unitAppend}
+        nameAppend={nameAppend}
         existingNames={existingNames}
       />
       {editOpen && (
@@ -49,7 +61,14 @@ export function CustomLogTypeRow({
           logType={type}
           open={editOpen}
           onOpenChange={setEditOpen}
-          onSave={(id, description) => onUpdateDescription(id, description)}
+          onSave={(id, params) => {
+            if (type.value_type === 'medication' && onUpdateMedication) {
+              onUpdateMedication(id, params);
+            } else {
+              onUpdateDescription(id, params.description);
+              if (params.unit !== undefined) onUpdateUnit(id, params.unit);
+            }
+          }}
         />
       )}
     </>

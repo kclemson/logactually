@@ -14,6 +14,9 @@ export interface CustomLogType {
   sort_order: number;
   created_at: string;
   updated_at: string;
+  default_dose: number | null;
+  doses_per_day: number;
+  dose_times: string[] | null;
 }
 
 export function useCustomLogTypes() {
@@ -58,11 +61,20 @@ export function useCustomLogTypes() {
   });
 
   const createType = useMutation({
-    mutationFn: async (params: { name: string; value_type: ValueType; unit?: string | null }) => {
+    mutationFn: async (params: { name: string; value_type: ValueType; unit?: string | null; description?: string | null; default_dose?: number | null; doses_per_day?: number; dose_times?: string[] | null }) => {
       if (!user) throw new Error('No user');
       const { data, error } = await supabase
         .from('custom_log_types')
-        .insert({ user_id: user.id, name: params.name, value_type: params.value_type, unit: params.unit ?? null })
+        .insert({
+          user_id: user.id,
+          name: params.name,
+          value_type: params.value_type,
+          unit: params.unit ?? null,
+          description: params.description ?? null,
+          default_dose: params.default_dose ?? null,
+          doses_per_day: params.doses_per_day ?? 0,
+          dose_times: params.dose_times ?? null,
+        })
         .select()
         .single();
       if (error) throw error;
@@ -74,11 +86,14 @@ export function useCustomLogTypes() {
   });
 
   const updateType = useMutation({
-    mutationFn: async (params: { id: string; name?: string; unit?: string | null; description?: string | null }) => {
+    mutationFn: async (params: { id: string; name?: string; unit?: string | null; description?: string | null; default_dose?: number | null; doses_per_day?: number; dose_times?: string[] | null }) => {
       const updates: Record<string, unknown> = {};
       if (params.name !== undefined) updates.name = params.name;
       if (params.unit !== undefined) updates.unit = params.unit;
       if (params.description !== undefined) updates.description = params.description;
+      if (params.default_dose !== undefined) updates.default_dose = params.default_dose;
+      if (params.doses_per_day !== undefined) updates.doses_per_day = params.doses_per_day;
+      if (params.dose_times !== undefined) updates.dose_times = params.dose_times;
       const { error } = await supabase
         .from('custom_log_types')
         .update(updates)

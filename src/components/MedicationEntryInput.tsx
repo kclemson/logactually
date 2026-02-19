@@ -10,6 +10,10 @@ interface MedicationEntryInputProps {
   label: string;
   unit: string | null;
   description?: string | null;
+  defaultDose?: number | null;
+  dosesPerDay?: number;
+  doseTimes?: string[] | null;
+  todayEntryCount?: number;
   onSubmit: (params: {
     numeric_value: number | null;
     logged_time: string | null;
@@ -27,12 +31,16 @@ export function MedicationEntryInput({
   label,
   unit,
   description,
+  defaultDose,
+  dosesPerDay = 0,
+  doseTimes,
+  todayEntryCount = 0,
   onSubmit,
   onCancel,
   isLoading,
 }: MedicationEntryInputProps) {
   const [timeValue, setTimeValue] = useState(getCurrentTimeValue());
-  const [doseValue, setDoseValue] = useState('');
+  const [doseValue, setDoseValue] = useState(defaultDose != null ? String(defaultDose) : '');
   const [notes, setNotes] = useState('');
 
   const canSubmit = doseValue.trim() !== '' && !isNaN(parseFloat(doseValue));
@@ -54,6 +62,28 @@ export function MedicationEntryInput({
     if (e.key === 'Escape') onCancel();
   };
 
+  // Build schedule summary line
+  const scheduleSummary = dosesPerDay === 0
+    ? null
+    : (() => {
+        const freq = `${dosesPerDay}x/day`;
+        const times = doseTimes && doseTimes.length > 0 ? ` · ${doseTimes.join(', ')}` : '';
+        return `${freq}${times}`;
+      })();
+
+  // Build "logged today" line
+  const doseCountLine = (() => {
+    if (dosesPerDay > 0) {
+      return `${todayEntryCount} of ${dosesPerDay} dose${dosesPerDay !== 1 ? 's' : ''} logged today`;
+    }
+    if (todayEntryCount > 0) {
+      return `${todayEntryCount} dose${todayEntryCount !== 1 ? 's' : ''} logged today`;
+    }
+    return null;
+  })();
+
+  const hasContext = description || scheduleSummary || doseCountLine;
+
   return (
     <div className="space-y-2 rounded-lg border border-border bg-card p-3">
       <div className="flex items-center gap-1">
@@ -69,8 +99,19 @@ export function MedicationEntryInput({
         </Button>
       </div>
 
-      {description && (
-        <p className="text-xs text-muted-foreground leading-relaxed">{description}</p>
+      {/* Read-only context block */}
+      {hasContext && (
+        <div className="rounded-md bg-muted/50 px-2.5 py-2 space-y-0.5">
+          {description && (
+            <p className="text-xs text-muted-foreground leading-relaxed">{description}</p>
+          )}
+          {scheduleSummary && (
+            <p className="text-xs text-muted-foreground">{scheduleSummary}</p>
+          )}
+          {doseCountLine && (
+            <p className="text-xs text-muted-foreground">{doseCountLine}</p>
+          )}
+        </div>
       )}
 
       <div className="flex items-center gap-2">
@@ -115,7 +156,7 @@ export function MedicationEntryInput({
 
       {/* Notes */}
       <Textarea
-        placeholder="Notes (optional)"
+        placeholder="Notes"
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
         onKeyDown={(e) => {
