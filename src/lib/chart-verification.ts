@@ -243,6 +243,12 @@ const DERIVED_FORMULAS: Record<string, DerivedFormula> = {
   net_calories:          { source: "mixed", compute: (f, e) => (f?.cal || 0) - (e?.cal_burned || 0), tolerance: "default" },
   calorie_balance:       { source: "mixed", compute: (f, e) => (f?.cal || 0) - (e?.cal_burned || 0), tolerance: "default" },
   protein_per_set:       { source: "mixed", compute: (f, e) => safeDiv(f?.protein || 0, e?.sets || 0), tolerance: "default" },
+  // Total daily log entries (food items + exercise sets)
+  total_entries:         { source: "mixed", compute: (f, e) => (f?.entries || 0) + (e?.sets || 0), tolerance: "default" },
+  log_count:             { source: "mixed", compute: (f, e) => (f?.entries || 0) + (e?.sets || 0), tolerance: "default" },
+  total_logs:            { source: "mixed", compute: (f, e) => (f?.entries || 0) + (e?.sets || 0), tolerance: "default" },
+  daily_entries:         { source: "mixed", compute: (f, e) => (f?.entries || 0) + (e?.sets || 0), tolerance: "default" },
+  entry_count:           { source: "mixed", compute: (f, e) => (f?.entries || 0) + (e?.sets || 0), tolerance: "default" },
 };
 
 /**
