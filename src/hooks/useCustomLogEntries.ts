@@ -28,6 +28,7 @@ export function useCustomLogEntries(dateStr: string) {
         .from('custom_log_entries')
         .select('*')
         .eq('logged_date', dateStr)
+        .order('dose_time', { ascending: true, nullsFirst: false })
         .order('created_at', { ascending: true });
 
       if (error) throw error;
