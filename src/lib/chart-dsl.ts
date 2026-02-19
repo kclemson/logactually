@@ -5,10 +5,20 @@ import { format, getDay, getISOWeek, getISOWeekYear } from "date-fns";
 // Re-export ChartDSL for backward compat
 export type { ChartDSL } from "./chart-types";
 
+// ── Backward compatibility for saved charts with old metric keys ──
+const METRIC_COMPAT: Record<string, string> = {
+  cal: "calories",
+  sat_fat: "saturated_fat",
+  chol: "cholesterol",
+  duration: "duration_minutes",
+  distance: "distance_miles",
+  cal_burned: "calories_burned",
+};
+
 // ── Known metrics ─────────────────────────────────────────
 
-const FOOD_METRICS = ["cal", "protein", "carbs", "fat", "fiber", "sugar", "sat_fat", "sodium", "chol", "entries"] as const;
-const EXERCISE_METRICS = ["sets", "duration", "distance", "cal_burned", "unique_exercises", "entries"] as const;
+const FOOD_METRICS = ["calories", "protein", "carbs", "fat", "fiber", "sugar", "saturated_fat", "sodium", "cholesterol", "entries"] as const;
+const EXERCISE_METRICS = ["sets", "duration_minutes", "distance_miles", "calories_burned", "unique_exercises", "entries"] as const;
 
 // Derived formulas compute from raw food daily totals
 const DERIVED_FORMULAS: Record<string, (t: Record<string, number>) => number> = {
@@ -25,7 +35,7 @@ const DERIVED_FORMULAS: Record<string, (t: Record<string, number>) => number> = 
     return total > 0 ? Math.round(((t.fat || 0) * 9 / total) * 100) : 0;
   },
   net_carbs: (t) => Math.round((t.carbs || 0) - (t.fiber || 0)),
-  cal_per_meal: (t) => t.entries > 0 ? Math.round((t.cal || 0) / t.entries) : 0,
+  cal_per_meal: (t) => t.entries > 0 ? Math.round((t.calories || 0) / t.entries) : 0,
   protein_per_meal: (t) => t.entries > 0 ? Math.round((t.protein || 0) / t.entries) : 0,
 };
 
@@ -109,6 +119,14 @@ function aggregate(values: number[], method: ChartDSL["aggregation"]): number {
 // ── Main engine ───────────────────────────────────────────
 
 export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
+  // Normalize old metric keys from saved charts
+  if (METRIC_COMPAT[dsl.metric]) {
+    dsl = { ...dsl, metric: METRIC_COMPAT[dsl.metric] };
+  }
+  if (dsl.compare?.metric && METRIC_COMPAT[dsl.compare.metric]) {
+    dsl = { ...dsl, compare: { ...dsl.compare, metric: METRIC_COMPAT[dsl.compare.metric] } };
+  }
+
   // Collect all dates from the relevant source
   const sourceMap = dsl.source === "food" ? dailyTotals.food : dailyTotals.exercise;
   let dates = Object.keys(sourceMap).sort();
@@ -138,7 +156,7 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
         const exDay = dailyTotals.exercise[date];
         const details = dsl.source === "food"
           ? buildDetails([
-              { label: "cal", value: foodDay?.cal },
+              { label: "calories", value: foodDay?.calories },
               { label: "protein", value: foodDay?.protein },
               { label: "carbs", value: foodDay?.carbs },
               { label: "fat", value: foodDay?.fat },
@@ -147,9 +165,9 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
             ], dsl.derivedMetric || dsl.metric)
           : buildDetails([
               { label: "sets", value: exDay?.sets },
-              { label: "duration", value: exDay?.duration },
-              { label: "distance", value: exDay?.distance },
-              { label: "cal burned", value: exDay?.cal_burned },
+              { label: "duration_minutes", value: exDay?.duration_minutes },
+              { label: "distance_miles", value: exDay?.distance_miles },
+              { label: "calories_burned", value: exDay?.calories_burned },
               { label: "entries", value: exDay?.entries },
             ], dsl.metric);
         return {
@@ -248,7 +266,7 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
         for (const [label, item] of entries) {
           const metricValue =
             dsl.metric === "entries" ? item.count :
-            dsl.metric === "cal" ? item.totalCal :
+            dsl.metric === "calories" ? item.totalCalories :
             dsl.metric === "protein" ? item.totalProtein :
             item.count;
           dataPoints.push({
@@ -256,9 +274,9 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
             value: Math.round(dsl.aggregation === "count" ? item.count : metricValue),
             _details: buildDetails([
               { label: "entries", value: item.count },
-              { label: "cal", value: item.totalCal },
+              { label: "calories", value: item.totalCalories },
               { label: "protein", value: item.totalProtein },
-            ], dsl.metric === "entries" ? "entries" : dsl.metric === "cal" ? "cal" : dsl.metric === "protein" ? "protein" : undefined),
+            ], dsl.metric === "entries" ? "entries" : dsl.metric === "calories" ? "calories" : dsl.metric === "protein" ? "protein" : undefined),
           });
         }
       } else if (dsl.source === "exercise" && dailyTotals.exerciseByItem) {
@@ -266,8 +284,8 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
         for (const [, item] of entries) {
           const metricValue =
             dsl.metric === "sets" ? item.totalSets :
-            dsl.metric === "duration" ? item.totalDuration :
-            dsl.metric === "cal_burned" ? item.totalCalBurned :
+            dsl.metric === "duration_minutes" ? item.totalDurationMinutes :
+            dsl.metric === "calories_burned" ? item.totalCaloriesBurned :
             item.count;
           dataPoints.push({
             label: item.description.length > 25 ? item.description.slice(0, 22) + "…" : item.description,
@@ -275,9 +293,9 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
             _details: buildDetails([
               { label: "entries", value: item.count },
               { label: "sets", value: item.totalSets },
-              { label: "duration", value: item.totalDuration },
-              { label: "cal burned", value: item.totalCalBurned },
-            ], dsl.metric === "sets" ? "sets" : dsl.metric === "duration" ? "duration" : dsl.metric === "cal_burned" ? "cal burned" : undefined),
+              { label: "duration_minutes", value: item.totalDurationMinutes },
+              { label: "calories_burned", value: item.totalCaloriesBurned },
+            ], dsl.metric === "sets" ? "sets" : dsl.metric === "duration_minutes" ? "duration_minutes" : dsl.metric === "calories_burned" ? "calories_burned" : undefined),
           });
         }
       }
@@ -288,18 +306,18 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
         for (const [label, totals] of Object.entries(dailyTotals.exerciseByCategory)) {
           const metricValue =
             dsl.metric === "sets" ? totals.sets :
-            dsl.metric === "duration" ? totals.duration :
-            dsl.metric === "distance" ? totals.distance :
-            dsl.metric === "cal_burned" ? totals.cal_burned :
+            dsl.metric === "duration_minutes" ? totals.duration_minutes :
+            dsl.metric === "distance_miles" ? totals.distance_miles :
+            dsl.metric === "calories_burned" ? totals.calories_burned :
             totals.sets;
           dataPoints.push({
             label,
             value: Math.round(metricValue),
             _details: buildDetails([
               { label: "sets", value: totals.sets },
-              { label: "duration", value: totals.duration },
-              { label: "distance", value: totals.distance },
-              { label: "cal burned", value: totals.cal_burned },
+              { label: "duration_minutes", value: totals.duration_minutes },
+              { label: "distance_miles", value: totals.distance_miles },
+              { label: "calories_burned", value: totals.calories_burned },
               { label: "entries", value: totals.entries },
             ], dsl.metric),
           });
@@ -328,14 +346,14 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
 
   // Determine color
   const metricColors: Record<string, string> = {
-    cal: "#2563EB",
+    calories: "#2563EB",
     protein: "#115E83",
     carbs: "#00B4D8",
     fat: "#90E0EF",
     sets: "#7C3AED",
-    duration: "#7C3AED",
-    distance: "#7C3AED",
-    cal_burned: "#7C3AED",
+    duration_minutes: "#7C3AED",
+    distance_miles: "#7C3AED",
+    calories_burned: "#7C3AED",
   };
   const color = metricColors[dsl.metric] ?? "#2563EB";
 

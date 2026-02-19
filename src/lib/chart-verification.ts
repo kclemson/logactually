@@ -209,23 +209,23 @@ function isWeekdayLabel(label: string): boolean {
 /* ── Deterministic verification via known field/formula mappings ── */
 
 const FOOD_KEY_MAP: Record<string, string> = {
-  calories: "cal", cal: "cal", total_calories: "cal",
+  calories: "calories", cal: "calories", total_calories: "calories",
   protein: "protein",
   carbs: "carbs",
   fat: "fat",
   fiber: "fiber",
   sugar: "sugar",
   sodium: "sodium",
-  cholesterol: "chol", chol: "chol",
-  sat_fat: "sat_fat", saturated_fat: "sat_fat",
+  cholesterol: "cholesterol", chol: "cholesterol",
+  sat_fat: "saturated_fat", saturated_fat: "saturated_fat",
   entries: "entries", meals: "entries", meal_count: "entries", meal_entries: "entries",
 };
 
 const EXERCISE_KEY_MAP: Record<string, string> = {
   sets: "sets", logged_sets: "sets",
-  duration: "duration", duration_min: "duration",
-  distance: "distance",
-  cal_burned: "cal_burned",
+  duration: "duration_minutes", duration_minutes: "duration_minutes", duration_min: "duration_minutes",
+  distance: "distance_miles", distance_miles: "distance_miles",
+  cal_burned: "calories_burned", calories_burned: "calories_burned",
 };
 
 /* ── Derived formulas for computable metrics ──────────────── */
@@ -241,16 +241,16 @@ const safeDiv = (num: number, den: number) => den > 0 ? num / den : 0;
 
 const DERIVED_FORMULAS: Record<string, DerivedFormula> = {
   // Macro % of total calories
-  fat_pct:           { source: "food", compute: (r) => safePct(r.fat * 9, r.cal), tolerance: "percentage" },
-  fat_percentage:    { source: "food", compute: (r) => safePct(r.fat * 9, r.cal), tolerance: "percentage" },
-  fat_calories_pct:  { source: "food", compute: (r) => safePct(r.fat * 9, r.cal), tolerance: "percentage" },
-  protein_pct:       { source: "food", compute: (r) => safePct(r.protein * 4, r.cal), tolerance: "percentage" },
-  protein_percentage:{ source: "food", compute: (r) => safePct(r.protein * 4, r.cal), tolerance: "percentage" },
-  carbs_pct:         { source: "food", compute: (r) => safePct(r.carbs * 4, r.cal), tolerance: "percentage" },
-  carbs_percentage:  { source: "food", compute: (r) => safePct(r.carbs * 4, r.cal), tolerance: "percentage" },
+  fat_pct:           { source: "food", compute: (r) => safePct(r.fat * 9, r.calories), tolerance: "percentage" },
+  fat_percentage:    { source: "food", compute: (r) => safePct(r.fat * 9, r.calories), tolerance: "percentage" },
+  fat_calories_pct:  { source: "food", compute: (r) => safePct(r.fat * 9, r.calories), tolerance: "percentage" },
+  protein_pct:       { source: "food", compute: (r) => safePct(r.protein * 4, r.calories), tolerance: "percentage" },
+  protein_percentage:{ source: "food", compute: (r) => safePct(r.protein * 4, r.calories), tolerance: "percentage" },
+  carbs_pct:         { source: "food", compute: (r) => safePct(r.carbs * 4, r.calories), tolerance: "percentage" },
+  carbs_percentage:  { source: "food", compute: (r) => safePct(r.carbs * 4, r.calories), tolerance: "percentage" },
   // Per-meal metrics
-  cal_per_meal:      { source: "food", compute: (r) => safeDiv(r.cal, r.entries), tolerance: "default" },
-  calories_per_meal: { source: "food", compute: (r) => safeDiv(r.cal, r.entries), tolerance: "default" },
+  cal_per_meal:      { source: "food", compute: (r) => safeDiv(r.calories, r.entries), tolerance: "default" },
+  calories_per_meal: { source: "food", compute: (r) => safeDiv(r.calories, r.entries), tolerance: "default" },
   protein_per_meal:  { source: "food", compute: (r) => safeDiv(r.protein, r.entries), tolerance: "default" },
   carbs_per_meal:    { source: "food", compute: (r) => safeDiv(r.carbs, r.entries), tolerance: "default" },
   fat_per_meal:      { source: "food", compute: (r) => safeDiv(r.fat, r.entries), tolerance: "default" },
@@ -270,8 +270,8 @@ const DERIVED_FORMULAS: Record<string, DerivedFormula> = {
   // Exercise-domain
   sets_per_exercise:     { source: "exercise", compute: (r) => safeDiv(r.sets, r.unique_exercises), tolerance: "default" },
   // Cross-domain (mixed)
-  net_calories:          { source: "mixed", compute: (f, e) => (f?.cal || 0) - (e?.cal_burned || 0), tolerance: "default" },
-  calorie_balance:       { source: "mixed", compute: (f, e) => (f?.cal || 0) - (e?.cal_burned || 0), tolerance: "default" },
+  net_calories:          { source: "mixed", compute: (f, e) => (f?.calories || 0) - (e?.calories_burned || 0), tolerance: "default" },
+  calorie_balance:       { source: "mixed", compute: (f, e) => (f?.calories || 0) - (e?.calories_burned || 0), tolerance: "default" },
   protein_per_set:       { source: "mixed", compute: (f, e) => safeDiv(f?.protein || 0, e?.sets || 0), tolerance: "default" },
   // Total daily log entries (food items + exercise sets)
   total_entries:         { source: "mixed", compute: (f, e) => (f?.entries || 0) + (e?.sets || 0), tolerance: "default" },
@@ -290,12 +290,12 @@ const DERIVED_FORMULAS: Record<string, DerivedFormula> = {
  * Confidence: HIGH -- results are mathematically certain for supported metrics.
  *
  * What it handles (with examples):
- *   - Direct field lookups: dataKey "calories" -> food daily total "cal" field
+ *   - Direct field lookups: dataKey "calories" -> food daily total "calories" field
  *   - Direct field lookups: dataKey "sets" -> exercise daily total "sets" field
- *   - Single-source derived formulas: dataKey "fat_pct" -> (fat * 9 / cal) * 100
+ *   - Single-source derived formulas: dataKey "fat_pct" -> (fat * 9 / calories) * 100
  *   - Single-source derived formulas: dataKey "net_carbs" -> carbs - fiber
  *   - Per-meal derived formulas: dataKey "protein_per_meal" -> protein / entries
- *   - Cross-domain (mixed) formulas: dataKey "net_calories" -> food cal - exercise cal_burned
+ *   - Cross-domain (mixed) formulas: dataKey "net_calories" -> food calories - exercise calories_burned
  *
  * What it cannot handle (falls through to verifyDaily/verifyAggregate):
  *   - Aggregated/bucketed charts (e.g. "average calories by weekday")
@@ -514,18 +514,24 @@ const EXERCISE_BY_KEY_FIELD_MAP: Record<string, string> = {
   effort: "avg_effort",
   avg_effort: "avg_effort",
   average_effort: "avg_effort",
-  duration: "avg_duration",
-  avg_duration: "avg_duration",
-  average_duration: "avg_duration",
-  total_duration: "total_duration",
+  duration: "avg_duration_minutes",
+  avg_duration: "avg_duration_minutes",
+  avg_duration_minutes: "avg_duration_minutes",
+  average_duration: "avg_duration_minutes",
+  total_duration: "total_duration_minutes",
+  total_duration_minutes: "total_duration_minutes",
+  duration_minutes: "total_duration_minutes",
   count: "count",
   frequency: "count",
   entries: "count",
-  cal_burned: "total_cal_burned",
-  calories_burned: "total_cal_burned",
-  total_cal_burned: "total_cal_burned",
-  distance: "total_distance",
-  total_distance: "total_distance",
+  cal_burned: "total_calories_burned",
+  calories_burned: "total_calories_burned",
+  total_cal_burned: "total_calories_burned",
+  total_calories_burned: "total_calories_burned",
+  distance: "total_distance_miles",
+  total_distance: "total_distance_miles",
+  total_distance_miles: "total_distance_miles",
+  distance_miles: "total_distance_miles",
   sets: "total_sets",
   total_sets: "total_sets",
 };
