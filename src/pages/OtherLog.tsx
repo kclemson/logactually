@@ -199,13 +199,13 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
               <>
                 {/* Always-stable view-mode select — never unmounts on mode switch */}
                 <Select value={viewMode} onValueChange={(v) => handleViewModeChange(v as ViewMode)}>
-                  <SelectTrigger className="h-8 text-sm px-2 w-[90px] shrink-0">
+                  <SelectTrigger className="h-8 text-sm px-2 w-[140px] shrink-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="date" className="pl-3 [&>span:first-child]:hidden">By Date</SelectItem>
+                    <SelectItem value="date" className="pl-3 [&>span:first-child]:hidden">Show All</SelectItem>
                     {showMedView && (
-                      <SelectItem value="medication" className="pl-3 [&>span:first-child]:hidden">By Meds</SelectItem>
+                      <SelectItem value="medication" className="pl-3 [&>span:first-child]:hidden">Medication Only</SelectItem>
                     )}
                   </SelectContent>
                 </Select>
