@@ -67,6 +67,7 @@ DATA INTEGRITY:
 - Never fabricate or interpolate values. Only return values directly computable from the provided logs.
 - If a bucket has no data, omit it or use zero. Do not invent values.
 - All numeric values in the data array must be non-negative.
+- The client independently verifies your computed values and date-to-bucket assignments against authoritative daily totals. Mismatches are flagged to the user. Double-check your arithmetic and categorical groupings before responding.
 
 Rules:
 - Use short, readable labels for the x-axis (e.g., "6am", "Mon", "Jan 5")
