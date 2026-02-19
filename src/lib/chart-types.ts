@@ -62,6 +62,7 @@ export interface DailyTotals {
 export interface ChartDSL {
   chartType: "bar" | "line" | "area";
   title: string;
+  aiNote?: string;
 
   source: "food" | "exercise";
   metric: string;
