@@ -16,6 +16,7 @@ import { CustomChartDialog } from "@/components/CustomChartDialog";
 import { useSavedCharts } from "@/hooks/useSavedCharts";
 import { DynamicChart, type ChartSpec } from "@/components/trends/DynamicChart";
 import { DeleteConfirmPopover } from "@/components/DeleteConfirmPopover";
+import { ChartContextMenu } from "@/components/trends/ChartContextMenu";
 
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { getEffectiveDailyTarget, ACTIVITY_MULTIPLIERS } from "@/lib/calorie-target";
@@ -79,6 +80,7 @@ const Trends = () => {
   const { savedCharts, deleteMutation } = useSavedCharts();
   const [deletePopoverId, setDeletePopoverId] = useState<string | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ chartId: string; x: number; y: number } | null>(null);
   const handleExerciseBarClick = useCallback((date: string) => {
     navigate(`/weights?date=${date}`);
   }, [navigate]);
@@ -363,6 +365,9 @@ const Trends = () => {
                   const route = ds === "exercise" ? `/weights?date=${date}` : `/?date=${date}`;
                   navigate(route);
                 }}
+                onContextMenu={(e) => {
+                  setContextMenu({ chartId: chart.id, x: e.clientX, y: e.clientY });
+                }}
                 headerAction={isEditMode ? (
                   <div className="flex items-center gap-0.5">
                     <button
@@ -385,6 +390,22 @@ const Trends = () => {
               />
             ))}
           </div>
+
+          <ChartContextMenu
+            x={contextMenu?.x ?? 0}
+            y={contextMenu?.y ?? 0}
+            isOpen={contextMenu !== null}
+            onClose={() => setContextMenu(null)}
+            onEdit={() => {
+              const chart = savedCharts.find(c => c.id === contextMenu?.chartId);
+              if (chart) setEditingChart({ id: chart.id, question: chart.question, chartSpec: chart.chart_spec });
+              setContextMenu(null);
+            }}
+            onDelete={() => {
+              if (contextMenu?.chartId) deleteMutation.mutate(contextMenu.chartId);
+              setContextMenu(null);
+            }}
+          />
         </CollapsibleSection>
       )}
 
