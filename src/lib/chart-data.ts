@@ -66,7 +66,7 @@ async function fetchFoodData(
   const foodByItem: Record<string, {
     count: number; totalCalories: number; totalProtein: number; totalCarbs: number;
     totalFat: number; totalFiber: number; totalSugar: number; totalSaturatedFat: number;
-    totalSodium: number; totalCholesterol: number;
+    totalSodium: number; totalCholesterol: number; uniqueDays: Set<string>;
   }> | undefined = needsItem ? {} : undefined;
 
   for (const row of data ?? []) {
@@ -92,7 +92,7 @@ async function fetchFoodData(
         const existing = foodByItem[key] ?? {
           count: 0, totalCalories: 0, totalProtein: 0, totalCarbs: 0,
           totalFat: 0, totalFiber: 0, totalSugar: 0, totalSaturatedFat: 0,
-          totalSodium: 0, totalCholesterol: 0,
+          totalSodium: 0, totalCholesterol: 0, uniqueDays: new Set<string>(),
         };
         existing.count += 1;
         existing.totalCalories += item.calories || 0;
@@ -104,6 +104,7 @@ async function fetchFoodData(
         existing.totalSaturatedFat += item.saturated_fat || 0;
         existing.totalSodium += item.sodium || 0;
         existing.totalCholesterol += item.cholesterol || 0;
+        existing.uniqueDays.add(row.eaten_date);
         foodByItem[key] = existing;
       }
     }
@@ -163,7 +164,7 @@ async function fetchExerciseData(
 
   const exercise: Record<string, ExerciseDayTotals> = {};
   const exerciseByHour: HourlyTotals<ExerciseDayTotals> | undefined = needsHourly ? {} : undefined;
-  const exerciseByItem: Record<string, { description: string; count: number; totalSets: number; totalDurationMinutes: number; totalCaloriesBurned: number }> | undefined =
+  const exerciseByItem: Record<string, { description: string; count: number; totalSets: number; totalDurationMinutes: number; totalDistanceMiles: number; totalCaloriesBurned: number; uniqueDays: Set<string> }> | undefined =
     needsItem ? {} : undefined;
   const exerciseByCategory: Record<string, ExerciseDayTotals> | undefined =
     needsCategory ? {} : undefined;
@@ -198,11 +199,13 @@ async function fetchExerciseData(
             ? row.exercise_subtype.charAt(0).toUpperCase() + row.exercise_subtype.slice(1)
             : row.description)
         : row.description;
-      const existing = exerciseByItem[key] ?? { description: label, count: 0, totalSets: 0, totalDurationMinutes: 0, totalCaloriesBurned: 0 };
+      const existing = exerciseByItem[key] ?? { description: label, count: 0, totalSets: 0, totalDurationMinutes: 0, totalDistanceMiles: 0, totalCaloriesBurned: 0, uniqueDays: new Set<string>() };
       existing.count += 1;
       existing.totalSets += row.sets ?? 1;
       existing.totalDurationMinutes += row.duration_minutes ?? 0;
+      existing.totalDistanceMiles += row.distance_miles ?? 0;
       existing.totalCaloriesBurned += meta?.calories_burned ?? 0;
+      existing.uniqueDays.add(row.logged_date);
       exerciseByItem[key] = existing;
     }
 
