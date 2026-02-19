@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, BarChart3, RefreshCw, ShieldCheck } from "lucide-react";
-import { useGenerateChart, type DailyTotals } from "@/hooks/useGenerateChart";
+import { useGenerateChart, type DailyTotals, type GenerateChartResult } from "@/hooks/useGenerateChart";
 import { useSavedCharts } from "@/hooks/useSavedCharts";
 import { DynamicChart, type ChartSpec } from "@/components/trends/DynamicChart";
 import { verifyChartData, type VerificationResult } from "@/lib/chart-verification";
@@ -64,6 +64,7 @@ function CustomChartDialogInner({
   const [currentSpec, setCurrentSpec] = useState<ChartSpec | null>(initialChart?.chartSpec ?? null);
   const [dailyTotals, setDailyTotals] = useState<DailyTotals | null>(null);
   const [chartDSL, setChartDSL] = useState<unknown>(null);
+  const [chartOptions, setChartOptions] = useState<GenerateChartResult["chartOptions"] | null>(null);
   const [verification, setVerification] = useState<VerificationResult | null>(null);
   const [lastQuestion, setLastQuestion] = useState(initialChart?.question ?? "");
   const [showDebug, setShowDebug] = useState(false);
@@ -120,10 +121,16 @@ function CustomChartDialogInner({
         period,
         mode,
       });
-      setCurrentSpec(result.chartSpec);
-      setDailyTotals(result.dailyTotals);
-      setChartDSL(result.chartDSL ?? null);
-      setVerification(mode === "v2" ? null : verifyChartData(result.chartSpec, result.dailyTotals));
+      if (result.chartOptions && result.chartOptions.length > 1) {
+        setChartOptions(result.chartOptions);
+        setCurrentSpec(null);
+      } else {
+        setCurrentSpec(result.chartSpec);
+        setDailyTotals(result.dailyTotals);
+        setChartDSL(result.chartDSL ?? null);
+        setChartOptions(null);
+        setVerification(mode === "v2" ? null : verifyChartData(result.chartSpec, result.dailyTotals));
+      }
       setRefining(false);
     } catch (err) {
       console.error("[generate-chart] mutation error:", err);
@@ -142,6 +149,7 @@ function CustomChartDialogInner({
     setCurrentSpec(null);
     setDailyTotals(null);
     setChartDSL(null);
+    setChartOptions(null);
     setVerification(null);
     setShowDebug(false);
     setRefining(false);
@@ -156,10 +164,16 @@ function CustomChartDialogInner({
         period,
         mode,
       });
-      setCurrentSpec(result.chartSpec);
-      setDailyTotals(result.dailyTotals);
-      setChartDSL(result.chartDSL ?? null);
-      setVerification(mode === "v2" ? null : verifyChartData(result.chartSpec, result.dailyTotals));
+      if (result.chartOptions && result.chartOptions.length > 1) {
+        setChartOptions(result.chartOptions);
+        setCurrentSpec(null);
+      } else {
+        setCurrentSpec(result.chartSpec);
+        setDailyTotals(result.dailyTotals);
+        setChartDSL(result.chartDSL ?? null);
+        setChartOptions(null);
+        setVerification(mode === "v2" ? null : verifyChartData(result.chartSpec, result.dailyTotals));
+      }
     } catch (err) {
       console.error("[generate-chart] mutation error:", err);
     }
@@ -194,11 +208,12 @@ function CustomChartDialogInner({
 
   const isSaving = saveMutation.isPending || updateMutation.isPending;
   const isEditing = !!initialChart;
-  const hasExistingContent = !!currentSpec || !!lastQuestion;
+  const hasExistingContent = !!currentSpec || !!lastQuestion || !!chartOptions;
   const showOverlay = generateChart.isPending && hasExistingContent;
   const showChips = !generateChart.isPending || hasExistingContent;
   const showTextarea = !generateChart.isPending || hasExistingContent;
   const showResult = !!currentSpec;
+  const showDisambiguation = !currentSpec && !!chartOptions && chartOptions.length > 1;
 
   return (
     <Dialog open onOpenChange={onOpenChange}>
@@ -342,6 +357,50 @@ function CustomChartDialogInner({
             </div>
           )}
 
+          {/* Disambiguation picker */}
+          {showDisambiguation && (
+            <div className="space-y-3">
+              {lastQuestion && (
+                <p className="text-xs text-muted-foreground italic">"{lastQuestion}"</p>
+              )}
+              <p className="text-xs font-medium text-foreground">Which did you mean?</p>
+              <div className="flex gap-2">
+                {chartOptions!.map((opt, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      setCurrentSpec(opt.chartSpec);
+                      setDailyTotals(opt.dailyTotals);
+                      setChartDSL(opt.chartDSL);
+                      setChartOptions(null);
+                    }}
+                    className="flex-1 flex flex-col items-stretch gap-1.5 rounded-md border border-border hover:border-primary/60 bg-muted/30 hover:bg-muted/60 transition-colors overflow-hidden p-0 cursor-pointer"
+                  >
+                    <div className="w-full pointer-events-none">
+                      <DynamicChart spec={opt.chartSpec} />
+                    </div>
+                    {opt.chartDSL.aiNote && (
+                      <p className="text-[10px] text-muted-foreground px-2 pb-2 text-center leading-tight">
+                        {opt.chartDSL.aiNote}
+                      </p>
+                    )}
+                  </button>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setChartOptions(null);
+                  setLastQuestion("");
+                }}
+                className="w-full text-xs"
+              >
+                Cancel
+              </Button>
+            </div>
+          )}
+
           {/* Result section */}
           {showResult && (
             <div className="space-y-3">
@@ -349,7 +408,7 @@ function CustomChartDialogInner({
                 <p className="text-xs text-muted-foreground italic">"{lastQuestion}"</p>
               )}
               <div className="flex justify-center">
-                <div className="w-[60%] min-w-[220px] border border-border rounded-md overflow-hidden">
+                <div className="w-[50%] min-w-[220px] border border-border rounded-md overflow-hidden">
                   <DynamicChart spec={currentSpec} />
                 </div>
               </div>

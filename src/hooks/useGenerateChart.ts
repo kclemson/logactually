@@ -19,6 +19,8 @@ export interface GenerateChartResult {
   dailyTotals: DailyTotals;
   /** Only present in v2 mode */
   chartDSL?: ChartDSL;
+  /** Populated when AI returned multiple interpretations (v2 only) */
+  chartOptions?: Array<{ chartSpec: ChartSpec; chartDSL: ChartDSL; dailyTotals: DailyTotals }>;
 }
 
 export function useGenerateChart() {
@@ -33,6 +35,24 @@ export function useGenerateChart() {
 
         if (dslError) throw dslError;
         if (dslData?.error) throw new Error(dslData.error);
+        // Multi-option (disambiguation) path
+        if (dslData?.chartDSLOptions) {
+          const options = dslData.chartDSLOptions as ChartDSL[];
+          console.log("[generate-chart] v2 DSL options:", options);
+          const resolved = await Promise.all(
+            options.map(async (dsl) => {
+              const dt = await fetchChartData(supabase, dsl, period);
+              return { chartSpec: executeDSL(dsl, dt), chartDSL: dsl, dailyTotals: dt };
+            })
+          );
+          return {
+            chartSpec: resolved[0].chartSpec,
+            dailyTotals: resolved[0].dailyTotals,
+            chartDSL: resolved[0].chartDSL,
+            chartOptions: resolved,
+          };
+        }
+
         if (!dslData?.chartDSL) throw new Error("No chart DSL returned");
 
         const chartDSL = dslData.chartDSL as ChartDSL;

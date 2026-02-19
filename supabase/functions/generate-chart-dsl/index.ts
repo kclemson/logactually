@@ -150,7 +150,20 @@ GENERAL:
 - title should be concise and descriptive
 - Use aiNote to briefly describe what the chart measures and how to read it (e.g. "Sum of daily calories over the last 30 days"). Keep it under 15 words.
 - Do NOT include any data values — only the schema
-- When the user's request does not specify a metric (e.g. "cardio vs strength split", "exercise breakdown", "what do I eat"), default to "entries" (session count). It is the most universally populated and intuitive measure of activity.`;
+- When the user's request does not specify a metric (e.g. "cardio vs strength split", "exercise breakdown", "what do I eat"), default to "entries" (session count). It is the most universally populated and intuitive measure of activity.
+
+DISAMBIGUATION:
+
+If the user's request has more than one meaningfully different interpretation, respond with a JSON object containing a "chartDSLOptions" key instead of "chartDSL":
+
+{
+  "chartDSLOptions": [
+    { ...full DSL object, "aiNote": "what this interpretation shows" },
+    { ...full DSL object, "aiNote": "what this interpretation shows" }
+  ]
+}
+
+Each option must be a complete DSL object with a distinct aiNote. Maximum 3 options. Only use this when the interpretations would produce genuinely different charts — not just minor variations.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -256,7 +269,20 @@ serve(async (req) => {
 
     console.log("generate-chart-dsl result:", JSON.stringify(dsl).slice(0, 1000));
 
-    // Validate required DSL fields
+    // Handle multi-option (disambiguation) response
+    if (dsl.chartDSLOptions) {
+      if (!Array.isArray(dsl.chartDSLOptions) || dsl.chartDSLOptions.length === 0) {
+        return new Response(
+          JSON.stringify({ error: "AI returned an empty options list. Please try again." }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      return new Response(JSON.stringify({ chartDSLOptions: dsl.chartDSLOptions }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Validate required DSL fields (single chart path)
     if (!dsl.source || !dsl.metric || !dsl.groupBy || !dsl.aggregation) {
       return new Response(
         JSON.stringify({ error: "AI returned an incomplete schema. Please try again." }),
