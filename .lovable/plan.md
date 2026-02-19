@@ -1,81 +1,73 @@
 
-# Fix Left-Justification for All Custom Log Entry Types
+# Add Date Navigation to the "By Type" View
 
-## Two problems to solve
+## The Problem
 
-### Problem 1: `dual_numeric` (e.g. Blood Pressure) is still right-justified
+In `src/pages/OtherLog.tsx`, the three view modes each render their body content differently:
 
-Line 122 of `CustomLogEntryRow.tsx`:
-```tsx
-<div className="grid grid-cols-[1fr_auto_50px_24px] items-center gap-x-1 py-0.5 group">
-  <span />  {/* ← this 1fr spacer pushes everything right */}
-  <div className="flex items-center">  {/* value pair */}
-  ...
-```
-The `1fr` spacer is in column 1, shoving the value pair to the right. Fix: move the spacer to after the unit label (same pattern needed for numeric).
+- **By Meds** (line 378): renders `<DateNavigation>` then `<AllMedicationsView>` ✓
+- **By Date** (line 416): renders `<DateNavigation>` then the grouped entries list ✓
+- **By Type** (line 406): renders only `<CustomLogTypeView>` — **no `<DateNavigation>`** ✗
 
-### Problem 2: `numeric` / `text_numeric` still has an indent
+The "By Type" view was intentionally designed to show all history across all dates (hence no date navigator), but per the user's request, it should behave consistently with the other views and include the date header/picker/navigator.
 
-Line 202: `grid-cols-[auto_auto_auto_1fr_24px]`
+## The Fix — one file, three lines
 
-For a pure `numeric` type, columns 1 and 2 render as empty `<span />`s. Even though they're `auto`-sized (zero intrinsic width), the `gap-x-1` between them and the Input still creates visible left indent. Also the Input has `w-full` which makes it fill the `auto` column aggressively.
+### `src/pages/OtherLog.tsx`
 
-## The fix — one file, surgical edits
-
-### `src/components/CustomLogEntryRow.tsx`
-
-**Fix 1 — `dual_numeric` layout (lines 119–168):**
-
-Change the grid from `grid-cols-[1fr_auto_50px_24px]` to `grid-cols-[auto_50px_1fr_24px]` and remove the leading spacer `<span />`. Layout becomes:
-
-```
-[value1/value2 flex] [unit 50px] [spacer 1fr] [delete 24px]
-```
+Wrap the `type` branch to add `<DateNavigation>` before `<CustomLogTypeView>`, matching the exact same pattern used by the other two views:
 
 ```tsx
-// Before (line 122):
-<div className="grid grid-cols-[1fr_auto_50px_24px] items-center gap-x-1 py-0.5 group">
-  {/* Col 1: spacer pushes content right */}
-  <span />
-  {/* Col 2: tightly packed value pair */}
-  <div className="flex items-center">
+// Before (line 406-415):
+) : effectiveViewMode === 'type' && selectedType ? (
+  /* Type view body */
+  <CustomLogTypeView
+    logType={selectedType}
+    entries={typeEntries}
+    isLoading={typeEntriesLoading}
+    onDelete={(id) => deleteTypeEntry.mutate(id)}
+    onEdit={(entry) => setEditingEntry(entry)}
+    isReadOnly={isReadOnly}
+  />
 
 // After:
-<div className="grid grid-cols-[auto_50px_1fr_24px] items-center gap-x-1 py-0.5 group">
-  {/* Col 1: tightly packed value pair */}
-  <div className="flex items-center">
+) : effectiveViewMode === 'type' && selectedType ? (
+  /* Type view body */
+  <>
+    <DateNavigation
+      selectedDate={selectedDate}
+      isTodaySelected={isTodaySelected}
+      calendarOpen={dateNav.calendarOpen}
+      onCalendarOpenChange={dateNav.setCalendarOpen}
+      calendarMonth={dateNav.calendarMonth}
+      onCalendarMonthChange={dateNav.setCalendarMonth}
+      onPreviousDay={dateNav.goToPreviousDay}
+      onNextDay={dateNav.goToNextDay}
+      onDateSelect={dateNav.handleDateSelect}
+      onGoToToday={dateNav.goToToday}
+      datesWithData={datesWithData}
+      highlightClassName="text-teal-600 dark:text-teal-400 font-semibold"
+      weekStartDay={settings.weekStartDay}
+    />
+    <CustomLogTypeView
+      logType={selectedType}
+      entries={typeEntries}
+      isLoading={typeEntriesLoading}
+      onDelete={(id) => deleteTypeEntry.mutate(id)}
+      onEdit={(entry) => setEditingEntry(entry)}
+      isReadOnly={isReadOnly}
+    />
+  </>
 ```
 
-Remove the leading `<span />` entirely.
+All the necessary props (`selectedDate`, `isTodaySelected`, `dateNav.*`, `datesWithData`, `settings.weekStartDay`) are already available in scope — they're used identically by the other two view branches. No new hooks, no new imports, no database changes.
 
-**Fix 2 — `numeric` / `text_numeric` layout (lines 197–280):**
+Note: The "By Type" view currently shows all history regardless of the selected date (it uses `useCustomLogEntriesForType` which fetches all entries for the type, not filtered by date). After adding the date navigator, the data shown will still be all-time history — the date picker will navigate the app's selected date but won't filter the By Type entries. This is consistent with the current behaviour of that view and can be addressed separately if needed.
 
-Change grid template and give the empty placeholder spans `className="contents"` (or just collapse them) so they don't add gap-induced indent.
+## Files Changed
 
-The cleanest approach: use a **flex row** instead of a grid for this case. That way `numeric` types naturally start from the left with no phantom columns at all:
+| File | Change |
+|---|---|
+| `src/pages/OtherLog.tsx` | Wrap the `type` branch body in a fragment, adding `<DateNavigation>` before `<CustomLogTypeView>` |
 
-```tsx
-// Before:
-"grid-cols-[auto_auto_auto_1fr_24px]"
-
-// After: use flex
-"flex items-center gap-x-1"
-```
-
-Then the children (text div, colon span, input, unit span, delete button) naturally flow left-to-right with no phantom spacer columns. The Input gets a fixed `w-[60px]` instead of `w-full`, and the delete button is pushed right with `ml-auto`.
-
-This also elegantly handles `text_numeric` (label → colon → number → unit → delete) without any phantom spans.
-
-The `isTextOnly` branch already uses its own grid, so that branch is unaffected.
-
-## Exact line changes
-
-| Location | Before | After |
-|---|---|---|
-| Line 122 | `grid grid-cols-[1fr_auto_50px_24px] items-center gap-x-1` | `grid grid-cols-[auto_50px_1fr_24px] items-center gap-x-1` |
-| Line 123-124 | `{/* Col 1: spacer */} <span />` then `{/* Col 2: value pair */}` | Remove spacer, `{/* Col 1: value pair */}` |
-| Lines 198-202 | `grid ... grid-cols-[auto_auto_auto_1fr_24px]` | `flex items-center gap-x-1` |
-| Line 248 | `w-full` on Input | `w-[60px]` |
-| Line 266-278 | delete button (no change needed for position) | Add `ml-auto` to push it right in flex layout |
-
-No other files need to change — this is entirely within `CustomLogEntryRow.tsx`.
+No new imports needed — `DateNavigation` is already imported at line 10.
