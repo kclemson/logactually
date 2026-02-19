@@ -48,7 +48,15 @@ export default function Admin() {
     return lastActive >= twoWeeksAgo;
   });
 
-  const openFeedback = feedback?.filter(f => !f.resolved_at) ?? [];
+  const openFeedback = (feedback?.filter(f => !f.resolved_at) ?? [])
+    .sort((a, b) => {
+      const latest = (f: typeof a) =>
+        Math.max(
+          new Date(f.created_at).getTime(),
+          f.responded_at ? new Date(f.responded_at).getTime() : 0,
+        );
+      return latest(b) - latest(a);
+    });
   const resolvedFeedback = (feedback?.filter(f => !!f.resolved_at) ?? [])
     .sort((a, b) => {
       const latest = (f: typeof a) =>
