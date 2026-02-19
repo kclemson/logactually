@@ -62,7 +62,7 @@ export function SavedItemRow({
           </button>
         )}
 
-        <div className="flex items-center gap-1 flex-1 min-w-0">
+        <div className="flex items-center gap-1 min-w-0 flex-1">
           <div
             className={cn(
               'min-w-0 text-sm cursor-text hover:bg-muted/50 focus-within:bg-focus-bg focus-within:ring-2 focus-within:ring-focus-ring rounded px-1 py-0.5 transition-colors',
@@ -80,8 +80,8 @@ export function SavedItemRow({
               className="focus:outline-none"
             />
           </div>
-        {nameAppend && (
-            <span className="flex items-center gap-1 min-w-0">{nameAppend}</span>
+          {nameAppend && (
+            <span className="text-xs text-muted-foreground shrink-0">{nameAppend}</span>
           )}
         </div>
 

@@ -28,26 +28,19 @@ export function CustomLogTypeRow({
 }: CustomLogTypeRowProps) {
   const [editOpen, setEditOpen] = useState(false);
 
-  // Build nameAppend: for medication show dose (always) + frequency (shrinks away if no room)
-  const nameAppend = (() => {
-    if (type.value_type === 'medication') {
-      const dosePart = type.default_dose != null && type.unit
-        ? `${type.default_dose} ${type.unit}`
-        : type.unit || null;
-      const freqPart = type.doses_per_day > 0 ? `${type.doses_per_day}x/day` : 'as needed';
-      return (
-        <>
-          {dosePart && (
-            <span className="text-xs text-muted-foreground shrink-0">{dosePart}</span>
-          )}
-          <span className="text-xs text-muted-foreground shrink min-w-0 overflow-hidden whitespace-nowrap">
-            {dosePart ? `· ${freqPart}` : freqPart}
-          </span>
-        </>
-      );
-    }
-    return type.unit ? `(${type.unit})` : null;
-  })();
+  // For medication: show dose · freq as meta (right of name, left of icons)
+  const meta = type.value_type === 'medication' ? (() => {
+    const dosePart = type.default_dose != null && type.unit
+      ? `${type.default_dose} ${type.unit}`
+      : type.unit || null;
+    const freqPart = type.doses_per_day > 0 ? `${type.doses_per_day}x/day` : 'as needed';
+    return dosePart ? `${dosePart} · ${freqPart}` : freqPart;
+  })() : undefined;
+
+  // For non-medication: show unit in parens after name
+  const nameAppend = type.value_type !== 'medication' && type.unit
+    ? `(${type.unit})`
+    : null;
 
   return (
     <>
@@ -63,6 +56,7 @@ export function CustomLogTypeRow({
         setOpenDeletePopoverId={setOpenDeletePopoverId}
         expandable={false}
         nameAppend={nameAppend}
+        meta={meta}
         existingNames={existingNames}
       />
       {editOpen && (
