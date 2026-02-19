@@ -1,56 +1,80 @@
 
-## Show dose count in the edit dialog
+## Show medication dose/frequency meta in the custom log section headers
 
-### Root cause
+### What the user wants
 
-The edit dialog already passes `todayEntryCount` and `todayLoggedTimes` to `MedicationEntryInput`, but those values come from `todayMedEntries`, which is derived from:
+In `CustomLogEntriesView.tsx`, each group renders a small header with just the medication name (e.g. "Decadron Eye Drops"). The user wants the same `"2 drops · as needed"` or `"5 mg · 2x/day"` string that already appears in the settings list — appended after the name, separated by a `·`.
+
+### Where the string is built today
+
+In `src/components/CustomLogTypeRow.tsx` (settings list), the meta string is computed inline:
 
 ```ts
-const activeTypeId = viewMode === 'medication' ? selectedMedTypeId : null;
-const { entries: typeEntries } = useCustomLogEntriesForType(activeTypeId);
-const todayMedEntries = typeEntries.filter(e => e.logged_date === dateStr);
+const meta = type.value_type === 'medication' ? (() => {
+  const dosePart = type.default_dose != null && type.unit
+    ? `${type.default_dose} ${type.unit}`
+    : type.unit || null;
+  const freqPart = type.doses_per_day > 0 ? `${type.doses_per_day}x/day` : 'as needed';
+  return dosePart ? `${dosePart} · ${freqPart}` : freqPart;
+})() : undefined;
 ```
 
-When the user edits a medication entry from "Show All" view, `viewMode` is `'date'`, so `activeTypeId` is `null`. `useCustomLogEntriesForType(null)` returns an empty array, so `todayMedEntries` is always `[]` — the dose count line never renders.
+This logic needs to move to a shared utility so both components use the same string without duplication.
 
-### Fix
+### Plan
 
-Introduce a second `useCustomLogEntriesForType` call scoped to the entry being edited. This hook is cheap (query is only enabled when `editingEntry` is non-null) and already exists in the codebase.
+**Step 1 — Extract the helper into `src/lib/medication-meta.ts`**
 
-In `src/pages/OtherLog.tsx`:
+Create a small utility that accepts the relevant fields and returns the formatted string (or `null` for non-medications):
 
-1. Add a second hook call for the editing context:
 ```ts
-const { entries: editingTypeEntries } = useCustomLogEntriesForType(
-  editingEntry?.log_type_id ?? null
-);
+export function getMedicationMeta(logType: {
+  value_type: string;
+  default_dose: number | null;
+  unit: string | null;
+  doses_per_day: number;
+}): string | null {
+  if (logType.value_type !== 'medication') return null;
+  const dosePart = logType.default_dose != null && logType.unit
+    ? `${logType.default_dose} ${logType.unit}`
+    : logType.unit || null;
+  const freqPart = logType.doses_per_day > 0
+    ? `${logType.doses_per_day}x/day`
+    : 'as needed';
+  return dosePart ? `${dosePart} · ${freqPart}` : freqPart;
+}
 ```
 
-2. Derive `editingTodayEntries` from that result, excluding the entry currently being edited (so the count reflects the other logged doses, not counting the one being replaced):
-```ts
-const editingTodayEntries = editingTypeEntries.filter(
-  (e) => e.logged_date === dateStr && e.id !== editingEntry?.id
-);
-```
+**Step 2 — Update the section header in `CustomLogEntriesView.tsx`**
 
-3. Pass these to the edit dialog instead of the shared `todayMedEntries`:
+At lines 281–285, after the medication name, render the meta string in the same muted style used in settings:
+
 ```tsx
-todayEntryCount={editingTodayEntries.length}
-todayLoggedTimes={editingTodayEntries.map(e => e.dose_time).filter(Boolean) as string[]}
+<div className="py-0.5 flex items-baseline gap-1.5">
+  <span className="text-xs font-medium text-muted-foreground">
+    {logType?.name ?? 'Unknown'}
+  </span>
+  {isMedication && logType && (() => {
+    const meta = getMedicationMeta(logType);
+    return meta ? (
+      <span className="text-xs text-muted-foreground/60">· {meta}</span>
+    ) : null;
+  })()}
+</div>
 ```
 
-### Why exclude the entry being edited from the count?
+The `·` separator and slightly more muted color (`text-muted-foreground/60`) give the meta a secondary, subordinate feel — it's informational context, not the primary label.
 
-When editing a dose (e.g., you logged 3 doses but are editing one), the status line should show "2 of 3 doses logged" (the other doses), not "3 of 3" — which would be misleading because the entry under edit hasn't been re-saved yet with new values. This makes the count read as "how many *other* doses are already on the books."
+**Step 3 — Refactor `CustomLogTypeRow.tsx` to use the shared helper**
 
-### One consideration: color threshold
-
-With the editing entry excluded from the count, the maximum `editingTodayEntries.length` can be is `dosesPerDay - 1`, so the "green at complete" threshold (`<= dosesPerDay`) is still correct — it just means the count will show green once *all other* doses are logged.
+Replace the inline IIFE with a call to `getMedicationMeta(type)`, keeping the settings list behavior identical.
 
 ### Files to change
 
 | File | Change |
 |---|---|
-| `src/pages/OtherLog.tsx` | Add `useCustomLogEntriesForType` call for `editingEntry?.log_type_id`, derive `editingTodayEntries`, pass to edit dialog |
+| `src/lib/medication-meta.ts` | **New file** — `getMedicationMeta` utility |
+| `src/components/CustomLogEntriesView.tsx` | Import helper, add meta after name in medication group headers |
+| `src/components/CustomLogTypeRow.tsx` | Import helper, replace inline IIFE |
 
-No changes to `MedicationEntryInput.tsx` — the component already renders the dose count line correctly from its existing props.
+No schema, hook, or page changes needed.
