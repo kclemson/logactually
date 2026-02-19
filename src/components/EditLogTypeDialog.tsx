@@ -3,7 +3,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import type { CustomLogType } from '@/hooks/useCustomLogTypes';
 
@@ -28,6 +27,8 @@ const DOSE_TIME_DEFAULTS: Record<number, string[]> = {
   2: ['morning', 'evening'],
   3: ['8am', '12pm', '4pm'],
   4: ['8am', '12pm', '4pm', '8pm'],
+  5: ['6am', '10am', '2pm', '6pm', '10pm'],
+  6: ['6am', '9am', '12pm', '3pm', '6pm', '9pm'],
 };
 
 export function EditLogTypeDialog({
@@ -111,7 +112,7 @@ export function EditLogTypeDialog({
         <div className="space-y-4">
           {/* Name */}
           <div className="space-y-1.5">
-            <Label htmlFor="edit-name" className="text-sm">Name</Label>
+            <label htmlFor="edit-name" className="text-xs text-muted-foreground">Name</label>
             <Input
               id="edit-name"
               value={name}
@@ -128,7 +129,7 @@ export function EditLogTypeDialog({
             <>
               {/* Standard dose */}
               <div className="space-y-1.5">
-                <Label className="text-sm">Standard dose</Label>
+                <p className="text-xs text-muted-foreground">Standard dose</p>
                 <div className="flex items-center gap-2">
                   <Input
                     type="number"
@@ -150,18 +151,18 @@ export function EditLogTypeDialog({
 
               {/* How often per day */}
               <div className="space-y-1.5">
-                <Label className="text-sm">How often per day?</Label>
+                <p className="text-xs text-muted-foreground">How often per day?</p>
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  {[0, 1, 2, 3, 4].map((count) => (
+                  {[0, 1, 2, 3, 4, 5, 6].map((count) => (
                     <button
                       key={count}
                       type="button"
                       onClick={() => handleDosesPerDayChange(count)}
                       className={cn(
-                        'px-3 py-1 rounded-full text-sm font-medium border transition-colors',
+                        'px-3 py-1 rounded-full text-sm border transition-colors',
                         dosesPerDay === count
-                          ? 'bg-teal-500 text-white border-teal-500'
-                          : 'bg-background text-foreground border-border hover:bg-accent'
+                          ? 'bg-teal-500 text-white border-teal-500 font-medium'
+                          : 'bg-background text-foreground border-border hover:bg-accent font-normal'
                       )}
                     >
                       {count === 0 ? 'As needed' : count}
@@ -175,9 +176,9 @@ export function EditLogTypeDialog({
                 <div className="space-y-2">
                   {Array.from({ length: dosesPerDay }, (_, i) => (
                     <div key={i} className="flex items-center gap-2">
-                      <Label className="text-sm text-muted-foreground w-14 shrink-0">
+                      <p className="text-xs text-muted-foreground w-14 shrink-0">
                         Dose {i + 1}
-                      </Label>
+                      </p>
                       <Input
                         value={doseTimes[i] ?? ''}
                         onChange={(e) => handleDoseTimeChange(i, e.target.value)}
@@ -193,9 +194,9 @@ export function EditLogTypeDialog({
 
           {/* Notes / instructions */}
           <div className="space-y-1.5">
-            <Label htmlFor="edit-description" className="text-sm">
+            <label htmlFor="edit-description" className="text-xs text-muted-foreground">
               {isMedication ? 'Notes' : 'Description / notes'}
-            </Label>
+            </label>
             <Textarea
               id="edit-description"
               value={description}
