@@ -236,27 +236,34 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
         {/* Inline input form — By Date mode only */}
         {showInput && viewMode === 'date' && effectiveTypeId && selectedType && !isReadOnly && (
           selectedType.value_type === 'medication' ? (
-            <MedicationEntryInput
-              label={selectedType.name}
-              unit={selectedType.unit}
-              description={selectedType.description}
-              defaultDose={selectedType.default_dose}
-              dosesPerDay={selectedType.doses_per_day}
-              doseTimes={selectedType.dose_times}
-              todayEntryCount={entries.filter(e => e.log_type_id === selectedType.id).length}
-              onSubmit={(params) => {
-                createEntry.mutate({
-                  log_type_id: selectedType.id,
-                  logged_date: dateStr,
-                  unit: selectedType.unit || null,
-                  ...params,
-                }, {
-                  onSuccess: () => setShowInput(false),
-                });
-              }}
-              onCancel={() => setShowInput(false)}
-              isLoading={createEntry.isPending}
-            />
+            (() => {
+              const todayDateStr = format(new Date(), 'yyyy-MM-dd');
+              const todayMedEntries = entries.filter(e => e.log_type_id === selectedType.id && e.logged_date === todayDateStr);
+              return (
+                <MedicationEntryInput
+                  label={selectedType.name}
+                  unit={selectedType.unit}
+                  description={selectedType.description}
+                  defaultDose={selectedType.default_dose}
+                  dosesPerDay={selectedType.doses_per_day}
+                  doseTimes={selectedType.dose_times}
+                  todayEntryCount={todayMedEntries.length}
+                  todayLoggedTimes={todayMedEntries.map(e => e.logged_time).filter(Boolean) as string[]}
+                  onSubmit={(params) => {
+                    createEntry.mutate({
+                      log_type_id: selectedType.id,
+                      logged_date: dateStr,
+                      unit: selectedType.unit || null,
+                      ...params,
+                    }, {
+                      onSuccess: () => setShowInput(false),
+                    });
+                  }}
+                  onCancel={() => setShowInput(false)}
+                  isLoading={createEntry.isPending}
+                />
+              );
+            })()
           ) : (
             <LogEntryInput
               valueType={selectedType.value_type}
@@ -359,26 +366,33 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
         <Dialog open={showInputDialog} onOpenChange={(open) => { if (!open) setShowInputDialog(false); }}>
           <DialogContent className="max-w-sm p-0 gap-0 border-0 bg-transparent shadow-none [&>button]:hidden">
             {selectedType.value_type === 'medication' ? (
-              <MedicationEntryInput
-                label={selectedType.name}
-                unit={selectedType.unit}
-                description={selectedType.description}
-                defaultDose={selectedType.default_dose}
-                dosesPerDay={selectedType.doses_per_day}
-                doseTimes={selectedType.dose_times}
-                todayEntryCount={typeEntries.filter(e => e.logged_date === format(new Date(), 'yyyy-MM-dd')).length}
-                onSubmit={(params) => {
-                  createTypeEntry.mutate({
-                    log_type_id: selectedType.id,
-                    unit: selectedType.unit || null,
-                    ...params,
-                  }, {
-                    onSuccess: () => setShowInputDialog(false),
-                  });
-                }}
-                onCancel={() => setShowInputDialog(false)}
-                isLoading={createTypeEntry.isPending}
-              />
+              (() => {
+                const todayDateStr = format(new Date(), 'yyyy-MM-dd');
+                const todayMedEntries = typeEntries.filter(e => e.logged_date === todayDateStr);
+                return (
+                  <MedicationEntryInput
+                    label={selectedType.name}
+                    unit={selectedType.unit}
+                    description={selectedType.description}
+                    defaultDose={selectedType.default_dose}
+                    dosesPerDay={selectedType.doses_per_day}
+                    doseTimes={selectedType.dose_times}
+                    todayEntryCount={todayMedEntries.length}
+                    todayLoggedTimes={todayMedEntries.map(e => e.logged_time).filter(Boolean) as string[]}
+                    onSubmit={(params) => {
+                      createTypeEntry.mutate({
+                        log_type_id: selectedType.id,
+                        unit: selectedType.unit || null,
+                        ...params,
+                      }, {
+                        onSuccess: () => setShowInputDialog(false),
+                      });
+                    }}
+                    onCancel={() => setShowInputDialog(false)}
+                    isLoading={createTypeEntry.isPending}
+                  />
+                );
+              })()
             ) : (
               <div className="rounded-lg border border-border bg-card p-3">
                 <LogEntryInput
