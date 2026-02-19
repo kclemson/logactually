@@ -265,10 +265,17 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
         const entries = Object.entries(dailyTotals.foodByItem);
         for (const [label, item] of entries) {
           const metricValue =
-            dsl.metric === "entries" ? item.count :
-            dsl.metric === "calories" ? item.totalCalories :
-            dsl.metric === "protein" ? item.totalProtein :
-            item.count;
+            dsl.metric === "entries"       ? item.count :
+            dsl.metric === "calories"      ? item.totalCalories :
+            dsl.metric === "protein"       ? item.totalProtein :
+            dsl.metric === "carbs"         ? item.totalCarbs :
+            dsl.metric === "fat"           ? item.totalFat :
+            dsl.metric === "fiber"         ? item.totalFiber :
+            dsl.metric === "sugar"         ? item.totalSugar :
+            dsl.metric === "saturated_fat" ? item.totalSaturatedFat :
+            dsl.metric === "sodium"        ? item.totalSodium :
+            dsl.metric === "cholesterol"   ? item.totalCholesterol :
+            item.count; // fallback for unknown metrics
           dataPoints.push({
             label: label.length > 25 ? label.slice(0, 22) + "…" : label,
             value: Math.round(dsl.aggregation === "count" ? item.count : metricValue),

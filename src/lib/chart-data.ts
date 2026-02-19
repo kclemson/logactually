@@ -63,8 +63,11 @@ async function fetchFoodData(
 
   const food: Record<string, FoodDayTotals> = {};
   const foodByHour: HourlyTotals<FoodDayTotals> | undefined = needsHourly ? {} : undefined;
-  const foodByItem: Record<string, { count: number; totalCalories: number; totalProtein: number }> | undefined =
-    needsItem ? {} : undefined;
+  const foodByItem: Record<string, {
+    count: number; totalCalories: number; totalProtein: number; totalCarbs: number;
+    totalFat: number; totalFiber: number; totalSugar: number; totalSaturatedFat: number;
+    totalSodium: number; totalCholesterol: number;
+  }> | undefined = needsItem ? {} : undefined;
 
   for (const row of data ?? []) {
     const items = row.food_items as any[];
@@ -86,10 +89,21 @@ async function fetchFoodData(
       // Item-level aggregation
       if (foodByItem && item.description) {
         const key = (item.description as string).toLowerCase().trim();
-        const existing = foodByItem[key] ?? { count: 0, totalCalories: 0, totalProtein: 0 };
+        const existing = foodByItem[key] ?? {
+          count: 0, totalCalories: 0, totalProtein: 0, totalCarbs: 0,
+          totalFat: 0, totalFiber: 0, totalSugar: 0, totalSaturatedFat: 0,
+          totalSodium: 0, totalCholesterol: 0,
+        };
         existing.count += 1;
         existing.totalCalories += item.calories || 0;
         existing.totalProtein += item.protein || 0;
+        existing.totalCarbs += item.carbs || 0;
+        existing.totalFat += item.fat || 0;
+        existing.totalFiber += item.fiber || 0;
+        existing.totalSugar += item.sugar || 0;
+        existing.totalSaturatedFat += item.saturated_fat || 0;
+        existing.totalSodium += item.sodium || 0;
+        existing.totalCholesterol += item.cholesterol || 0;
         foodByItem[key] = existing;
       }
     }
