@@ -4,6 +4,7 @@ import { CollapsibleSection } from '@/components/CollapsibleSection';
 import { CustomLogTypeRow } from '@/components/CustomLogTypeRow';
 import { LogTemplatePickerDialog } from '@/components/LogTemplatePickerDialog';
 import { CreateLogTypeDialog } from '@/components/CreateLogTypeDialog';
+import { CreateMedicationDialog } from '@/components/CreateMedicationDialog';
 import { useCustomLogTypes } from '@/hooks/useCustomLogTypes';
 
 interface CustomLogTypesSectionProps {
@@ -15,6 +16,7 @@ export function CustomLogTypesSection({ isReadOnly }: CustomLogTypesSectionProps
   const [openLogTypePopoverId, setOpenLogTypePopoverId] = useState<string | null>(null);
   const [createLogTypeDialogOpen, setCreateLogTypeDialogOpen] = useState(false);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+  const [createMedicationOpen, setCreateMedicationOpen] = useState(false);
 
   return (
     <>
@@ -41,6 +43,7 @@ export function CustomLogTypesSection({ isReadOnly }: CustomLogTypesSectionProps
                 onRename={(id, name) => updateType.mutate({ id, name })}
                 onUpdateUnit={(id, unit) => updateType.mutate({ id, unit })}
                 onUpdateDescription={(id, description) => updateType.mutate({ id, description })}
+                onUpdateMedication={(id, params) => updateType.mutate({ id, ...params })}
                 onDelete={(id) => deleteType.mutate(id)}
                 openDeletePopoverId={openLogTypePopoverId}
                 setOpenDeletePopoverId={setOpenLogTypePopoverId}
@@ -64,6 +67,10 @@ export function CustomLogTypesSection({ isReadOnly }: CustomLogTypesSectionProps
             setTemplatePickerOpen(false);
             setCreateLogTypeDialogOpen(true);
           }}
+          onSelectMedication={() => {
+            setTemplatePickerOpen(false);
+            setCreateMedicationOpen(true);
+          }}
           isLoading={createType.isPending}
           existingNames={logTypes.map(t => t.name)}
         />
@@ -78,6 +85,28 @@ export function CustomLogTypesSection({ isReadOnly }: CustomLogTypesSectionProps
               onSuccess: () => setCreateLogTypeDialogOpen(false),
             });
           }}
+          isLoading={createType.isPending}
+          existingNames={logTypes.map(t => t.name)}
+        />
+      )}
+
+      {createMedicationOpen && (
+        <CreateMedicationDialog
+          open={createMedicationOpen}
+          onOpenChange={setCreateMedicationOpen}
+        onSubmit={(params) => {
+          createType.mutate({
+            name: params.name,
+            value_type: 'medication',
+            unit: params.unit,
+            default_dose: params.default_dose,
+            doses_per_day: params.doses_per_day,
+            dose_times: params.dose_times,
+            description: params.description,
+          }, {
+            onSuccess: () => setCreateMedicationOpen(false),
+          });
+        }}
           isLoading={createType.isPending}
           existingNames={logTypes.map(t => t.name)}
         />

@@ -19,12 +19,13 @@ interface LogTemplatePickerDialogProps {
   onSelectTemplate: (params: { name: string; value_type: string; unit: string | null }) => void;
   onSelectTemplates?: (params: { name: string; value_type: string; unit: string | null }[]) => void;
   onCreateCustom: () => void;
+  onSelectMedication?: () => void;
   isLoading: boolean;
   existingNames?: string[];
 }
 
 export function LogTemplatePickerDialog({
-  open, onOpenChange, onSelectTemplate, onSelectTemplates, onCreateCustom, isLoading, existingNames = [],
+  open, onOpenChange, onSelectTemplate, onSelectTemplates, onCreateCustom, onSelectMedication, isLoading, existingNames = [],
 }: LogTemplatePickerDialogProps) {
   const { settings } = useUserSettings();
   const lowerExisting = existingNames.map(n => n.toLowerCase());
@@ -153,7 +154,9 @@ export function LogTemplatePickerDialog({
                 unit={unit}
                 alreadyAdded={alreadyAdded}
                 isLoading={isLoading}
-                onSelect={onSelectTemplate}
+                onSelect={t.name === 'Medication' && onSelectMedication
+                  ? () => onSelectMedication()
+                  : onSelectTemplate}
               />
             );
           })}
@@ -207,13 +210,21 @@ function TemplateRow({ template, unit, alreadyAdded, isLoading, onSelect }: {
   unit: string | null;
   alreadyAdded: boolean;
   isLoading: boolean;
-  onSelect: (params: { name: string; value_type: string; unit: string | null }) => void;
+  onSelect: ((params: { name: string; value_type: string; unit: string | null }) => void) | (() => void);
 }) {
   const Icon = ICON_MAP[template.icon];
   return (
     <button
       disabled={isLoading || alreadyAdded}
-      onClick={() => onSelect({ name: template.name, value_type: template.valueType, unit })}
+      onClick={() => {
+        if (onSelect.length === 0) {
+          (onSelect as () => void)();
+        } else {
+          (onSelect as (params: { name: string; value_type: string; unit: string | null }) => void)(
+            { name: template.name, value_type: template.valueType, unit }
+          );
+        }
+      }}
       className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-colors ${alreadyAdded ? 'opacity-40 cursor-not-allowed' : 'hover:bg-accent'} disabled:opacity-40`}
     >
       {Icon && <Icon className="h-4 w-4 text-teal-500" />}

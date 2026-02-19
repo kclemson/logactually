@@ -10,6 +10,7 @@ import { useCustomLogTypes } from '@/hooks/useCustomLogTypes';
 import { useCustomLogEntries } from '@/hooks/useCustomLogEntries';
 import { useCustomLogEntriesForType } from '@/hooks/useCustomLogEntriesForType';
 import { CreateLogTypeDialog } from '@/components/CreateLogTypeDialog';
+import { CreateMedicationDialog } from '@/components/CreateMedicationDialog';
 import { LogTemplatePickerDialog } from '@/components/LogTemplatePickerDialog';
 import { LogEntryInput } from '@/components/LogEntryInput';
 import { MedicationEntryInput } from '@/components/MedicationEntryInput';
@@ -45,6 +46,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   const [, setSearchParams] = useSearchParams();
   const dateNav = useDateNavigation(initialDate, setSearchParams);
   const [createTypeOpen, setCreateTypeOpen] = useState(false);
+  const [createMedicationOpen, setCreateMedicationOpen] = useState(false);
   const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
   const [showInput, setShowInput] = useState(false);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
@@ -236,6 +238,14 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
               label={selectedType.name}
               unit={selectedType.unit}
               description={selectedType.description}
+              defaultDose={selectedType.default_dose}
+              dosesPerDay={selectedType.doses_per_day}
+              doseTimes={selectedType.dose_times}
+              todayEntryCount={
+                viewMode === 'type'
+                  ? typeEntries.filter(e => e.logged_date === dateStr).length
+                  : entries.filter(e => e.log_type_id === selectedType.id).length
+              }
               onSubmit={(params) => {
                 if (viewMode === 'type') {
                   createTypeEntry.mutate({
@@ -373,6 +383,28 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
         isLoading={createType.isPending}
         existingNames={logTypes.map(t => t.name)}
       />
+      <CreateMedicationDialog
+        open={createMedicationOpen}
+        onOpenChange={setCreateMedicationOpen}
+        onSubmit={(params) => {
+          createType.mutate({
+            name: params.name,
+            value_type: 'medication',
+            unit: params.unit,
+            default_dose: params.default_dose,
+            doses_per_day: params.doses_per_day,
+            dose_times: params.dose_times,
+            description: params.description,
+          }, {
+            onSuccess: (newType) => {
+              setCreateMedicationOpen(false);
+              setSelectedTypeId(newType.id);
+            },
+          });
+        }}
+        isLoading={createType.isPending}
+        existingNames={logTypes.map(t => t.name)}
+      />
       <LogTemplatePickerDialog
         open={templatePickerOpen}
         onOpenChange={setTemplatePickerOpen}
@@ -405,6 +437,10 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
         onCreateCustom={() => {
           setTemplatePickerOpen(false);
           setCreateTypeOpen(true);
+        }}
+        onSelectMedication={() => {
+          setTemplatePickerOpen(false);
+          setCreateMedicationOpen(true);
         }}
         isLoading={createType.isPending}
         existingNames={logTypes.map(t => t.name)}
