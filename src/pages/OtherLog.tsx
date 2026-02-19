@@ -141,12 +141,12 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                   Create your own
                 </button>
               </div>
-            ) : viewMode === 'type' ? (
-              /* Type view: three controls */
+            ) : (
+              /* Has log types: stable view-mode select + mode-specific controls */
               <>
-                {/* Left: view mode select */}
+                {/* Always-stable view-mode select — never unmounts on mode switch */}
                 <Select value={viewMode} onValueChange={(v) => handleViewModeChange(v as ViewMode)}>
-                  <SelectTrigger className="h-8 text-sm px-2 w-auto min-w-[110px]">
+                  <SelectTrigger className="h-8 text-sm px-2 w-[90px] shrink-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -155,87 +155,74 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                   </SelectContent>
                 </Select>
 
-                {/* Middle: log type select */}
-                <Select
-                  value={effectiveTypeId || ''}
-                  onValueChange={(val) => {
-                    setSelectedTypeId(val);
-                    setShowInput(false);
-                  }}
-                >
-                  <SelectTrigger className="h-8 text-sm px-2 w-auto min-w-[100px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sortedLogTypes.map((lt) => (
-                      <SelectItem key={lt.id} value={lt.id} className="pl-3 [&>span:first-child]:hidden">
-                        {lt.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {/* Right: add button */}
-                {selectedType && (
-                  <Button
-                    size="sm"
-                    className="h-8 bg-teal-500 hover:bg-teal-600 text-white border-teal-500 gap-1"
-                    onClick={() => setShowInput(true)}
+                {/* Right side: varies by mode */}
+                {viewMode === 'type' ? (
+                  <>
+                    <Select
+                      value={effectiveTypeId || ''}
+                      onValueChange={(val) => {
+                        setSelectedTypeId(val);
+                        setShowInput(false);
+                      }}
+                    >
+                      <SelectTrigger className="h-8 text-sm px-2 w-auto min-w-[120px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sortedLogTypes.map((lt) => (
+                          <SelectItem key={lt.id} value={lt.id} className="pl-3 [&>span:first-child]:hidden">
+                            {lt.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {selectedType && (
+                      <Button
+                        size="sm"
+                        className="h-8 bg-teal-500 hover:bg-teal-600 text-white border-teal-500 gap-1"
+                        onClick={() => setShowInput(true)}
+                      >
+                        <Plus className="h-3 w-3" />
+                        Log New
+                      </Button>
+                    )}
+                  </>
+                ) : (
+                  <Select
+                    value={effectiveTypeId || ''}
+                    onValueChange={(val) => {
+                      if (val === '__create_new__') {
+                        createNewClickedRef.current = true;
+                        setTemplatePickerOpen(true);
+                      } else {
+                        setSelectedTypeId(val);
+                      }
+                    }}
+                    onOpenChange={(open) => {
+                      if (!open && effectiveTypeId && !createNewClickedRef.current) {
+                        setShowInput(true);
+                      }
+                      createNewClickedRef.current = false;
+                    }}
                   >
-                    <Plus className="h-3 w-3" />
-                    Log New
-                  </Button>
-                )}
-              </>
-            ) : (
-              /* Date view: view mode select + add select */
-              <>
-                {hasLogTypes && (
-                  <Select value={viewMode} onValueChange={(v) => handleViewModeChange(v as ViewMode)}>
-                    <SelectTrigger className="h-8 text-sm w-auto min-w-[100px]">
-                      <SelectValue />
+                    <SelectTrigger className="h-8 text-sm font-medium w-auto min-w-[140px] bg-teal-500 text-white border-teal-500 hover:bg-teal-600">
+                      <span>Add custom log</span>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="date" className="pl-3 [&>span:first-child]:hidden">By Date</SelectItem>
-                      <SelectItem value="type" className="pl-3 [&>span:first-child]:hidden">By Type</SelectItem>
+                      {sortedLogTypes.map((lt) => (
+                        <SelectItem key={lt.id} value={lt.id} className="pl-3 [&>span:first-child]:hidden">
+                          Log {lt.name}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="__create_new__" className="pl-3 [&>span:first-child]:hidden text-primary">
+                        <span className="flex items-center gap-1.5">
+                          <Plus className="h-3 w-3" />
+                          New Custom Log Type
+                        </span>
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 )}
-
-                <Select
-                  value={effectiveTypeId || ''}
-                  onValueChange={(val) => {
-                    if (val === '__create_new__') {
-                      createNewClickedRef.current = true;
-                      setTemplatePickerOpen(true);
-                    } else {
-                      setSelectedTypeId(val);
-                    }
-                  }}
-                  onOpenChange={(open) => {
-                    if (!open && effectiveTypeId && !createNewClickedRef.current) {
-                      setShowInput(true);
-                    }
-                    createNewClickedRef.current = false;
-                  }}
-                >
-                  <SelectTrigger className="h-8 text-sm font-medium w-auto min-w-[140px] bg-teal-500 text-white border-teal-500 hover:bg-teal-600">
-                    <span>Add custom log</span>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sortedLogTypes.map((lt) => (
-                      <SelectItem key={lt.id} value={lt.id} className="pl-3 [&>span:first-child]:hidden">
-                        Log {lt.name}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="__create_new__" className="pl-3 [&>span:first-child]:hidden text-primary">
-                      <span className="flex items-center gap-1.5">
-                        <Plus className="h-3 w-3" />
-                        New Custom Log Type
-                      </span>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
               </>
             )}
           </div>
