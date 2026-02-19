@@ -47,7 +47,7 @@ DATABASE SCHEMA (what the client can query):
 FOOD (table: food_entries):
   - eaten_date (date): the date food was eaten
   - created_at (timestamptz): when the entry was logged — use for hourOfDay grouping
-  - total_calories, total_protein, total_carbs, total_fat (numeric): pre-aggregated entry totals
+  - calories, protein, carbs, fat (numeric): pre-aggregated entry totals (use these exact keys as the metric field)
   - food_items (jsonb array): each item has { calories, protein, carbs, fat, fiber, sugar, saturated_fat, sodium, cholesterol, description, portion }
 
 EXERCISE (table: weight_sets):

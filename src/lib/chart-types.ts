@@ -50,7 +50,18 @@ export interface DailyTotals {
   /** Populated when groupBy === "hourOfDay" and source === "exercise" */
   exerciseByHour?: HourlyTotals<ExerciseDayTotals>;
   /** Populated when groupBy === "item" and source === "food" */
-  foodByItem?: Record<string, { count: number; totalCalories: number; totalProtein: number }>;
+  foodByItem?: Record<string, {
+    count: number;
+    totalCalories: number;
+    totalProtein: number;
+    totalCarbs: number;
+    totalFat: number;
+    totalFiber: number;
+    totalSugar: number;
+    totalSaturatedFat: number;
+    totalSodium: number;
+    totalCholesterol: number;
+  }>;
   /** Populated when groupBy === "item" and source === "exercise" */
   exerciseByItem?: Record<string, { description: string; count: number; totalSets: number; totalDurationMinutes: number; totalCaloriesBurned: number }>;
   /** Populated when groupBy === "category" and source === "exercise" */
