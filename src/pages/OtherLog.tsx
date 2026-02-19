@@ -10,6 +10,7 @@ import { useDateNavigation } from '@/hooks/useDateNavigation';
 import { useCustomLogTypes } from '@/hooks/useCustomLogTypes';
 import { useCustomLogEntries } from '@/hooks/useCustomLogEntries';
 import { useCustomLogEntriesForType } from '@/hooks/useCustomLogEntriesForType';
+import { useAllMedicationEntries } from '@/hooks/useAllMedicationEntries';
 import { CreateLogTypeDialog } from '@/components/CreateLogTypeDialog';
 import { CreateMedicationDialog } from '@/components/CreateMedicationDialog';
 import { LogTemplatePickerDialog } from '@/components/LogTemplatePickerDialog';
@@ -17,9 +18,10 @@ import { LogEntryInput } from '@/components/LogEntryInput';
 import { MedicationEntryInput } from '@/components/MedicationEntryInput';
 import { CustomLogEntryRow } from '@/components/CustomLogEntryRow';
 import { CustomLogTypeView } from '@/components/CustomLogTypeView';
+import { AllMedicationsView } from '@/components/AllMedicationsView';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
-import { getStoredDate, setStoredDate } from '@/lib/selected-date';
-import { LOG_TEMPLATES, MEASUREMENT_TEMPLATES, getTemplateUnit } from '@/lib/log-templates';
+import { getStoredDate } from '@/lib/selected-date';
+import { LOG_TEMPLATES, getTemplateUnit } from '@/lib/log-templates';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { Button } from '@/components/ui/button';
 
@@ -33,12 +35,12 @@ const OtherLog = () => {
 
 export default OtherLog;
 
-type ViewMode = 'date' | 'type';
+type ViewMode = 'date' | 'type' | 'medication';
 
 function getStoredViewMode(): ViewMode {
   try {
     const stored = localStorage.getItem('custom-log-view-mode');
-    if (stored === 'date' || stored === 'type') return stored;
+    if (stored === 'date' || stored === 'type' || stored === 'medication') return stored;
   } catch {}
   return 'date';
 }
@@ -49,6 +51,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   const [createTypeOpen, setCreateTypeOpen] = useState(false);
   const [createMedicationOpen, setCreateMedicationOpen] = useState(false);
   const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
+  const [selectedMedTypeId, setSelectedMedTypeId] = useState<string | null>(null);
   const [showInput, setShowInput] = useState(false);
   const [showInputDialog, setShowInputDialog] = useState(false);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
@@ -80,19 +83,46 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   const effectiveTypeId = selectedTypeId ?? sortedLogTypes[0]?.id ?? null;
   const selectedType = logTypes.find((t) => t.id === effectiveTypeId);
 
-  // Type view data
+  // Medication types and By Meds eligibility
+  const medicationTypes = useMemo(
+    () => logTypes.filter((t) => t.value_type === 'medication'),
+    [logTypes]
+  );
+  const showMedView = medicationTypes.length >= 2;
+
+  // Active type ID for the dialog (unified for By Type and By Meds modes)
+  // Guard: if med view no longer qualifies, treat as 'date' for active type resolution
+  const effectiveViewMode = viewMode === 'medication' && !showMedView ? 'date' : viewMode;
+  const activeTypeId =
+    viewMode === 'type' ? effectiveTypeId
+    : viewMode === 'medication' ? selectedMedTypeId
+    : null;
+
+  // Type/Meds view data
   const {
     entries: typeEntries,
     isLoading: typeEntriesLoading,
     createEntry: createTypeEntry,
     deleteEntry: deleteTypeEntry,
-  } = useCustomLogEntriesForType(viewMode === 'type' ? effectiveTypeId : null);
+  } = useCustomLogEntriesForType(activeTypeId);
 
-  const handleViewModeChange = (mode: ViewMode) => {
+  // All meds view data
+  const medTypeIds = useMemo(() => medicationTypes.map((t) => t.id), [medicationTypes]);
+  const { entries: allMedEntries, isLoading: allMedEntriesLoading, deleteEntry: deleteAllMedEntry } = useAllMedicationEntries(
+    effectiveViewMode === 'medication' ? medTypeIds : []
+  );
+
+  // Dialog type: derived from active view mode
+  const dialogType =
+    effectiveViewMode === 'medication'
+      ? logTypes.find((t) => t.id === selectedMedTypeId)
+      : selectedType;
+
+  function handleViewModeChange(mode: ViewMode) {
     setViewMode(mode);
     setShowInput(false);
     try { localStorage.setItem('custom-log-view-mode', mode); } catch {}
-  };
+  }
 
   const handleCreateType = (name: string, valueType: 'numeric' | 'text' | 'dual_numeric', unit?: string) => {
     createType.mutate({ name, value_type: valueType, unit: unit || null }, {
@@ -104,6 +134,10 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   };
 
   const hasLogTypes = !isLoading && sortedLogTypes.length > 0;
+
+  // Today's entries for the selected medication (used in dialog)
+  const todayDateStr = format(new Date(), 'yyyy-MM-dd');
+  const todayMedEntries = typeEntries.filter((e) => e.logged_date === todayDateStr);
 
   return (
     <div className="space-y-4">
@@ -157,11 +191,37 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                   <SelectContent>
                     <SelectItem value="date" className="pl-3 [&>span:first-child]:hidden">By Date</SelectItem>
                     <SelectItem value="type" className="pl-3 [&>span:first-child]:hidden">By Type</SelectItem>
+                    {showMedView && (
+                      <SelectItem value="medication" className="pl-3 [&>span:first-child]:hidden">By Meds</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
 
                 {/* Right side: varies by mode */}
-                {viewMode === 'type' ? (
+                {effectiveViewMode === 'medication' ? (
+                  /* By Meds: Log New dropdown for medications only */
+                  <Select
+                    value=""
+                    onValueChange={(val) => {
+                      setSelectedMedTypeId(val);
+                      setShowInputDialog(true);
+                    }}
+                  >
+                    <SelectTrigger className="h-8 text-sm font-medium w-auto min-w-[110px] bg-teal-500 text-white border-teal-500 hover:bg-teal-600">
+                      <span className="flex items-center gap-1">
+                        <Plus className="h-3 w-3" />
+                        Log New
+                      </span>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {medicationTypes.map((mt) => (
+                        <SelectItem key={mt.id} value={mt.id} className="pl-3 [&>span:first-child]:hidden">
+                          {mt.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : effectiveViewMode === 'type' ? (
                   <>
                     <Select
                       value={effectiveTypeId || ''}
@@ -193,6 +253,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                     )}
                   </>
                 ) : (
+                  /* By Date: "Add custom log" dropdown */
                   <Select
                     value={effectiveTypeId || ''}
                     onValueChange={(val) => {
@@ -234,11 +295,10 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
         )}
 
         {/* Inline input form — By Date mode only */}
-        {showInput && viewMode === 'date' && effectiveTypeId && selectedType && !isReadOnly && (
+        {showInput && effectiveViewMode === 'date' && effectiveTypeId && selectedType && !isReadOnly && (
           selectedType.value_type === 'medication' ? (
             (() => {
-              const todayDateStr = format(new Date(), 'yyyy-MM-dd');
-              const todayMedEntries = entries.filter(e => e.log_type_id === selectedType.id && e.logged_date === todayDateStr);
+              const inlineTodayEntries = entries.filter(e => e.log_type_id === selectedType.id && e.logged_date === todayDateStr);
               return (
                 <MedicationEntryInput
                   label={selectedType.name}
@@ -247,8 +307,8 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                   defaultDose={selectedType.default_dose}
                   dosesPerDay={selectedType.doses_per_day}
                   doseTimes={selectedType.dose_times}
-                  todayEntryCount={todayMedEntries.length}
-                  todayLoggedTimes={todayMedEntries.map(e => e.logged_time).filter(Boolean) as string[]}
+                  todayEntryCount={inlineTodayEntries.length}
+                  todayLoggedTimes={inlineTodayEntries.map(e => e.logged_time).filter(Boolean) as string[]}
                   onSubmit={(params) => {
                     createEntry.mutate({
                       log_type_id: selectedType.id,
@@ -286,7 +346,16 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
         )}
       </section>
 
-      {viewMode === 'type' && selectedType ? (
+      {effectiveViewMode === 'medication' ? (
+        /* By Meds view body */
+        <AllMedicationsView
+          entries={allMedEntries}
+          logTypes={logTypes}
+          isLoading={allMedEntriesLoading}
+          onDelete={(id) => deleteAllMedEntry.mutate(id)}
+          isReadOnly={isReadOnly}
+        />
+      ) : effectiveViewMode === 'type' && selectedType ? (
         /* Type view body */
         <CustomLogTypeView
           logType={selectedType}
@@ -361,48 +430,48 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
         </>
       )}
 
-      {/* By Type: entry form as modal dialog */}
-      {selectedType && !isReadOnly && (
+      {/* Entry form as modal dialog — used by both By Type and By Meds modes */}
+      {dialogType && !isReadOnly && (
         <Dialog open={showInputDialog} onOpenChange={(open) => { if (!open) setShowInputDialog(false); }}>
           <DialogContent className="max-w-sm p-0 gap-0 border-0 bg-transparent shadow-none [&>button]:hidden">
-            {selectedType.value_type === 'medication' ? (
-              (() => {
-                const todayDateStr = format(new Date(), 'yyyy-MM-dd');
-                const todayMedEntries = typeEntries.filter(e => e.logged_date === todayDateStr);
-                return (
-                  <MedicationEntryInput
-                    label={selectedType.name}
-                    unit={selectedType.unit}
-                    description={selectedType.description}
-                    defaultDose={selectedType.default_dose}
-                    dosesPerDay={selectedType.doses_per_day}
-                    doseTimes={selectedType.dose_times}
-                    todayEntryCount={todayMedEntries.length}
-                    todayLoggedTimes={todayMedEntries.map(e => e.logged_time).filter(Boolean) as string[]}
-                    onSubmit={(params) => {
-                      createTypeEntry.mutate({
-                        log_type_id: selectedType.id,
-                        unit: selectedType.unit || null,
-                        ...params,
-                      }, {
-                        onSuccess: () => setShowInputDialog(false),
-                      });
-                    }}
-                    onCancel={() => setShowInputDialog(false)}
-                    isLoading={createTypeEntry.isPending}
-                  />
-                );
-              })()
+            {dialogType.value_type === 'medication' ? (
+              <MedicationEntryInput
+                label={dialogType.name}
+                unit={dialogType.unit}
+                description={dialogType.description}
+                defaultDose={dialogType.default_dose}
+                dosesPerDay={dialogType.doses_per_day}
+                doseTimes={dialogType.dose_times}
+                todayEntryCount={todayMedEntries.length}
+                todayLoggedTimes={todayMedEntries.map(e => e.logged_time).filter(Boolean) as string[]}
+                onSubmit={(params) => {
+                  createTypeEntry.mutate({
+                    log_type_id: dialogType.id,
+                    unit: dialogType.unit || null,
+                    ...params,
+                  }, {
+                    onSuccess: () => {
+                      setShowInputDialog(false);
+                      if (viewMode === 'medication') setSelectedMedTypeId(null);
+                    },
+                  });
+                }}
+                onCancel={() => {
+                  setShowInputDialog(false);
+                  if (viewMode === 'medication') setSelectedMedTypeId(null);
+                }}
+                isLoading={createTypeEntry.isPending}
+              />
             ) : (
               <div className="rounded-lg border border-border bg-card p-3">
                 <LogEntryInput
-                  valueType={selectedType.value_type}
-                  label={selectedType.name}
-                  unit={selectedType.unit}
+                  valueType={dialogType.value_type}
+                  label={dialogType.name}
+                  unit={dialogType.unit}
                   onSubmit={(params) => {
                     createTypeEntry.mutate({
-                      log_type_id: selectedType.id,
-                      unit: selectedType.unit || null,
+                      log_type_id: dialogType.id,
+                      unit: dialogType.unit || null,
                       ...params,
                     }, {
                       onSuccess: () => setShowInputDialog(false),
