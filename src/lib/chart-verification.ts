@@ -193,6 +193,19 @@ function weekdayIndex(label: string): number | null {
   return idx >= 0 ? idx : null;
 }
 
+/** Map group labels like "Weekdays"/"Weekends" to arrays of day indices. */
+function weekdayGroupIndices(label: string): number[] | null {
+  const lower = label.toLowerCase();
+  if (lower === "weekdays" || lower === "weekday") return [1, 2, 3, 4, 5];
+  if (lower === "weekends" || lower === "weekend") return [0, 6];
+  return null;
+}
+
+/** Returns true if label is a recognized individual weekday OR a group label. */
+function isWeekdayLabel(label: string): boolean {
+  return weekdayIndex(label) !== null || weekdayGroupIndices(label) !== null;
+}
+
 /* ── Deterministic verification via known field/formula mappings ── */
 
 const FOOD_KEY_MAP: Record<string, string> = {
@@ -391,7 +404,7 @@ function verifyCategoricalWeekday(
 
   // Detect: do most data points have weekday-shaped labels?
   const labels = data.map((d) => String(d[xField] ?? ""));
-  const weekdayMatches = labels.filter((l) => weekdayIndex(l) !== null).length;
+  const weekdayMatches = labels.filter((l) => isWeekdayLabel(l)).length;
   if (weekdayMatches < labels.length * 0.5 || labels.length < 2) {
     return { status: "unavailable", reason: "Not a weekday-bucketed chart" };
   }
@@ -457,11 +470,14 @@ function verifyCategoricalWeekday(
   for (const point of data) {
     const label = String(point[xField] ?? "");
     const idx = weekdayIndex(label);
-    if (idx === null) continue;
+    const groupIndices = idx === null ? weekdayGroupIndices(label) : null;
+    if (idx === null && groupIndices === null) continue;
     total++;
 
     const aiValue = Number(point[dataKey]) || 0;
-    const actual = aggregate(buckets[idx]);
+    // Single weekday bucket or merge multiple buckets for group labels
+    const values = idx !== null ? buckets[idx] : groupIndices!.flatMap((i) => buckets[i]);
+    const actual = aggregate(values);
     const rounded = Math.round(actual * 10) / 10;
     const delta = Math.round((aiValue - rounded) * 10) / 10;
     const isMatch = isClose(aiValue, rounded, toleranceMethod);
@@ -533,7 +549,7 @@ function verifyCategoricalExercise(
   const labels = data.map((d) => String(d[xField] ?? ""));
 
   // Guard: if labels look like dates or weekdays, skip
-  const weekdayCount = labels.filter((l) => weekdayIndex(l) !== null).length;
+  const weekdayCount = labels.filter((l) => isWeekdayLabel(l)).length;
   if (weekdayCount >= labels.length * 0.5) {
     return { status: "unavailable", reason: "Weekday chart, not exercise-categorical" };
   }
