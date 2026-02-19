@@ -1,47 +1,60 @@
 
 
-## Two improvements to the Create Chart dialog
+## Three improvements to Create Chart verification
 
-### 1. Show all comparison rows (matches + mismatches) in verification results
+### 1. Add tolerance label to verification summary
 
-Currently, the verification panel only shows mismatches. The user wants to see the full picture: green rows for matches and red rows for mismatches, regardless of overall accuracy.
+The verification summary currently shows "Accuracy: X/Y match (Z%)". Replace this with a human-readable description that includes the tolerance used.
 
-**Changes to `VerificationResult` type** (`src/lib/chart-verification.ts`):
+**`src/lib/chart-verification.ts`:**
+- Add `toleranceLabel?: string` to `VerificationResult`
+- `verifyDaily` and `verifyLegacy`: set `toleranceLabel: "within 1% or 5 units"`
+- `verifyAggregate`: for `method === "average"`, widen `isClose` tolerance (`delta < 20 || delta/actual < 2%`) and set `toleranceLabel: "within 2% or 20 units"`; otherwise use default tolerance and label
 
-- Add a new `allComparisons` array to the interface alongside `mismatches`:
-  ```typescript
-  allComparisons?: Array<{ label: string; ai: number; actual: number; delta: number; match: boolean }>;
-  ```
-- In `verifyDaily`, `verifyAggregate`, and `verifyLegacy`: populate `allComparisons` with every data point (both matches and mismatches), with a `match` boolean flag.
-- Keep `mismatches` as-is for backward compatibility.
+Update `isClose` to accept an optional method parameter:
+```text
+isClose(ai, actual)          -> delta < 5 or delta/actual < 1%
+isClose(ai, actual, "average") -> delta < 20 or delta/actual < 2%
+```
 
-**Changes to verification display** (`src/components/CustomChartDialog.tsx`):
+**`src/components/CustomChartDialog.tsx`:**
+- Replace the summary line with: `{matched}/{total} AI values matched your logs ({toleranceLabel})`
 
-- When `verification.allComparisons` exists, render all rows instead of just mismatches.
-- Green-colored rows (`text-green-400`) for `match: true` entries.
-- Red-colored rows (`text-red-400`) for `match: false` entries.
-- Each row shows: `label: AI=X, actual=Y` (and delta for mismatches).
+### 2. Always show the textarea
 
-### 2. Loading overlay instead of collapsing the dialog
+The textarea currently hides once a chart is generated (unless refining). It should always be visible below the chips so users can type a new prompt at any time.
 
-Currently, when generating a new chart while a result is showing, the dialog hides the result section and shows a small loading spinner, causing the dialog to shrink and jump.
+**`src/components/CustomChartDialog.tsx`:**
+- Change `showTextarea` to: `!generateChart.isPending || hasExistingContent` (remove the `!currentSpec || refining` gate)
+- Dynamic placeholder based on state:
+  - Refining: "Refine this chart..."
+  - Chart exists, not refining: "Describe another chart..."
+  - No chart: "Describe the chart you'd like to see..."
 
-**Changes to `src/components/CustomChartDialog.tsx`**:
+### 3. Auto-run validator on AI response
 
-- When `generateChart.isPending` AND there is already a `currentSpec` (or `lastQuestion`), render a semi-transparent overlay on top of the existing result content instead of hiding it.
-- The overlay: `absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-10` with spinner and "Generating..." text.
-- Wrap the dialog's inner content in a `relative` container so the overlay positions correctly.
-- Only use the current "collapse to spinner" layout for the first-ever request (no previous result to preserve).
+Instead of requiring users to click "Verify accuracy", run verification automatically whenever a chart spec comes back from the AI.
 
-Implementation detail:
-- Change the loading condition: instead of hiding chips/textarea/result when `isPending`, keep them rendered but visually covered by the overlay.
-- `showChips`, `showTextarea`, `showResult` no longer check `!generateChart.isPending` -- they stay true based on whether content exists.
-- Add a separate overlay div that renders when `generateChart.isPending`.
+**`src/components/CustomChartDialog.tsx`:**
+- In both `handleSubmit` and `handleNewRequest`, after `setCurrentSpec(result.chartSpec)` and `setDailyTotals(result.dailyTotals)`, immediately call `verifyChartData` and `setVerification` with the result
+- Keep the "Verify accuracy" button so users can re-run it manually if they want, but the panel will already be populated on load
+
+The relevant code in both handlers changes from:
+```text
+setCurrentSpec(result.chartSpec);
+setDailyTotals(result.dailyTotals);
+```
+to:
+```text
+setCurrentSpec(result.chartSpec);
+setDailyTotals(result.dailyTotals);
+setVerification(verifyChartData(result.chartSpec, result.dailyTotals));
+```
 
 ### Files changed
 
 | File | Change |
 |---|---|
-| `src/lib/chart-verification.ts` | Add `allComparisons` array to `VerificationResult`; populate it in all three verify functions |
-| `src/components/CustomChartDialog.tsx` | Render all comparison rows with green/red coloring; add loading overlay instead of collapsing dialog when a previous result exists |
+| `src/lib/chart-verification.ts` | Add `toleranceLabel` to interface; widen `isClose` for averages; set label in all three verify functions |
+| `src/components/CustomChartDialog.tsx` | Use `toleranceLabel` in summary; always show textarea; auto-run verification after AI response |
 
