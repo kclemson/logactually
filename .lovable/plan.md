@@ -1,99 +1,67 @@
 
-## Add CSV Export for Custom Logs
+## Fix: "groupBy item" for exercises scoped to a single exercise key
 
-### What this builds
+### Root cause
 
-A "Custom Logs" export button in Settings > Import and Export. Visible only when custom logging is enabled AND the user has at least one custom log type created. Sorted newest-first (matching food and exercise exports). Blood Pressure columns (Systolic, Diastolic, Reading) are included only when the user's data actually contains a BP entry.
+When the user asks "# of times I've done walking vs. running workouts", the AI correctly generates:
 
----
-
-### CSV column design
-
-**Without Blood Pressure data:**
-```
-Date, Time, Log Type, Value, Unit
+```json
+{ "source": "exercise", "metric": "entries", "groupBy": "item", "filter": { "exerciseKey": "walk_run" } }
 ```
 
-**With Blood Pressure data (at least one dual_numeric row):**
-```
-Date, Time, Log Type, Value, Systolic, Diastolic, Reading, Unit
-```
-
-- **Value** — `numeric_value` for numeric types; `text_value` for text/multiline types; empty for BP rows.
-- **Systolic / Diastolic / Reading** — included in the header only if `hasBP`; populated only for BP rows.
-- **Unit** — the unit stored on the entry (e.g. `lbs`, `hrs`, `mmHg`).
-- Sorted newest-first by `logged_date` then `created_at` — matching food and exercise exports.
-
-Filename: `custom-log-YYYY-MM-DD.csv`
-
----
-
-### Files changed
-
-**1. `src/lib/csv-export.ts`** — add `CustomLogExportRow` and `exportCustomLog`
+But in `chart-data.ts` line 195, the `exerciseByItem` aggregator always buckets by `row.exercise_key`:
 
 ```ts
-export interface CustomLogExportRow {
-  logged_date: string;
-  created_at: string;
-  log_type_name: string;
-  value_type: string;
-  numeric_value: number | null;
-  numeric_value_2: number | null;
-  text_value: string | null;
-  unit: string | null;
-}
-
-export function exportCustomLog(rows: CustomLogExportRow[]) {
-  // Sort newest-first (matching food/exercise)
-  const sorted = [...rows].sort((a, b) => {
-    if (a.logged_date !== b.logged_date) return b.logged_date.localeCompare(a.logged_date);
-    return b.created_at.localeCompare(a.created_at);
-  });
-
-  const hasBP = sorted.some(r => r.value_type === 'dual_numeric');
-  const headers = hasBP
-    ? ['Date', 'Time', 'Log Type', 'Value', 'Systolic', 'Diastolic', 'Reading', 'Unit']
-    : ['Date', 'Time', 'Log Type', 'Value', 'Unit'];
-
-  // rows mapped accordingly...
-  downloadCSV(csv, `custom-log-${format(new Date(), 'yyyy-MM-dd')}.csv`);
-}
+const key = row.exercise_key; // always "walk_run" for every row
 ```
 
-**2. `src/hooks/useExportData.ts`** — add `handleExportCustomLog`
+Since every row already has `exercise_key = "walk_run"` (due to the filter applied at line 155), all rows collapse into the same bucket — producing one bar labeled "Running" (the description of the last row processed) with a total of 76 entries instead of two separate bars for walking and running.
 
-Fetches custom log entries joined with their log type for `name` and `value_type`. No need to specify sort order on the query since `exportCustomLog` sorts in memory (same pattern as `exportFoodLog` which also re-sorts after fetching):
+The `"Running"` label is also wrong — it comes from `item.description` which is whatever the last row happened to have as its description.
+
+### Fix — two targeted changes
+
+**1. `src/lib/chart-data.ts` — use `exercise_subtype` as the item key when scoped to a single exercise**
+
+When `exerciseKeyFilter` is set and `needsItem` is true, we're already filtered to one exercise key. In that case, the meaningful dimension to split by is `exercise_subtype`. Change the `exerciseByItem` bucket key from `row.exercise_key` to `row.exercise_subtype ?? row.exercise_key`:
 
 ```ts
-const { data } = await supabase
-  .from('custom_log_entries')
-  .select('logged_date, created_at, numeric_value, numeric_value_2, text_value, unit, custom_log_types(name, value_type)')
-  .order('logged_date', { ascending: false })
-  .order('created_at', { ascending: false });
+// Before (line 195):
+const key = row.exercise_key;
+
+// After:
+const key = exerciseKeyFilter ? (row.exercise_subtype ?? row.exercise_key) : row.exercise_key;
 ```
 
-Returns `exportCustomLog` alongside the existing `exportFoodLog` and `exportWeightLog`.
+The `description` stored on each bucket also needs to reflect the subtype — capitalize the subtype key for display (e.g. `"running"` → `"Running"`):
 
-**3. `src/components/settings/ImportExportSection.tsx`** — add conditional button
-
-Two new props: `showCustomLogs: boolean` and `hasCustomLogTypes: boolean`. When both are true and not read-only, renders:
-
+```ts
+const label = exerciseKeyFilter
+  ? (row.exercise_subtype
+      ? row.exercise_subtype.charAt(0).toUpperCase() + row.exercise_subtype.slice(1)
+      : row.description)
+  : row.description;
+const existing = exerciseByItem[key] ?? { description: label, count: 0, ... };
 ```
-Export custom logs to CSV    [Custom Logs]
-```
 
-**4. `src/pages/Settings.tsx`** — thread props down
+This means "Walking" entries bucket under key `"walking"` (description: `"Walking"`) and "Running" entries bucket under `"running"` (description: `"Running"`), while entries with no subtype fall back to their exercise key and description.
 
-Calls `useCustomLogTypes()` (already cached by React Query since `CustomLogTypesSection` uses it — zero extra network cost) and passes:
-- `showCustomLogs={settings.showCustomLogs}`
-- `hasCustomLogTypes={logTypes.length > 0}`
+**2. `src/lib/chart-dsl.ts` — no change needed**
 
----
+The DSL engine's `"item"` case for exercises already uses `item.description` as the label (line 298). Since the fix above stores a properly capitalized subtype name as `description`, the labels will now read `"Walking"` and `"Running"` correctly — no DSL engine change needed.
+
+### Entries metric for subtype buckets
+
+The `entries` metric for exercise is tracked via `seenEntries` (unique `entry_id` per day). This is the **daily** count, not the per-subtype count. For `groupBy: "item"`, the `count` field in `exerciseByItem` is what's used (each row increments `count`). This correctly counts total logged sessions per subtype across the period.
 
 ### What does NOT change
 
-- No database migrations needed
-- No new dependencies
-- Food and exercise log exports untouched
-- `dual_numeric` detection uses `value_type` field — robust regardless of unit wording
+- No change to the DSL schema or AI prompt
+- No change to the filter logic or query
+- Food `groupBy: "item"` is untouched
+- All other `groupBy` modes are untouched
+- Category-filtered exercises (e.g., "cardio by day of week") are untouched
+
+### File changed
+
+Only `src/lib/chart-data.ts` — 3 lines changed inside the `exerciseByItem` block (lines 195–197).
