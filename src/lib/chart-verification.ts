@@ -179,6 +179,20 @@ function verifyAggregate(
   return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, allExact, toleranceLabel, mismatches, allComparisons, method: "ai_aggregate" };
 }
 
+/* ── Weekday name helpers ─────────────────────────────────── */
+
+const WEEKDAY_FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const WEEKDAY_ABBR = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/** Map any weekday label (full or abbreviated, case-insensitive) to a 0-6 index. */
+function weekdayIndex(label: string): number | null {
+  const lower = label.toLowerCase();
+  let idx = WEEKDAY_FULL.findIndex((d) => d.toLowerCase() === lower);
+  if (idx >= 0) return idx;
+  idx = WEEKDAY_ABBR.findIndex((d) => d.toLowerCase() === lower);
+  return idx >= 0 ? idx : null;
+}
+
 /* ── Deterministic verification via known field/formula mappings ── */
 
 const FOOD_KEY_MAP: Record<string, string> = {
@@ -366,20 +380,128 @@ function verifyDeterministic(
   return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, allExact, toleranceLabel, mismatches, allComparisons, method: "deterministic" };
 }
 
+/* ── Categorical weekday verification ────────────────────── */
+
+function verifyCategoricalWeekday(
+  spec: ChartSpec,
+  dailyTotals: DailyTotals,
+): VerificationResult {
+  const { data, dataKey } = spec;
+  const xField = spec.xAxis.field;
+
+  // Detect: do most data points have weekday-shaped labels?
+  const labels = data.map((d) => String(d[xField] ?? ""));
+  const weekdayMatches = labels.filter((l) => weekdayIndex(l) !== null).length;
+  if (weekdayMatches < labels.length * 0.5 || labels.length < 2) {
+    return { status: "unavailable", reason: "Not a weekday-bucketed chart" };
+  }
+
+  // Resolve field / formula using existing maps
+  const foodField = FOOD_KEY_MAP[dataKey];
+  const exerciseField = EXERCISE_KEY_MAP[dataKey];
+  const derivedFormula = DERIVED_FORMULAS[dataKey];
+  if (!foodField && !exerciseField && !derivedFormula && !spec.verification?.field) {
+    return { status: "unavailable", reason: `Cannot verify metric "${dataKey}" for weekday chart` };
+  }
+
+  const isMixedFormula = derivedFormula?.source === "mixed";
+  const sourceKey: "food" | "exercise" =
+    foodField ? "food" : exerciseField ? "exercise" : (derivedFormula?.source as any) ?? spec.verification?.source ?? "food";
+
+  // Group all dates in dailyTotals by weekday (0-6)
+  const buckets: Record<number, number[]> = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+  const allDates = new Set([...Object.keys(dailyTotals.food), ...Object.keys(dailyTotals.exercise)]);
+  for (const dateStr of allDates) {
+    // Parse YYYY-MM-DD as local date to avoid timezone shift
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const day = new Date(y, m - 1, d).getDay();
+    const field = foodField || exerciseField;
+
+    let value: number;
+    if (isMixedFormula) {
+      value = derivedFormula!.compute(dailyTotals.food[dateStr], dailyTotals.exercise[dateStr]);
+    } else if (derivedFormula) {
+      const record = dailyTotals[derivedFormula.source as "food" | "exercise"][dateStr];
+      value = record ? derivedFormula.compute(record) : 0;
+    } else if (field) {
+      const record = dailyTotals[sourceKey][dateStr];
+      value = record ? Number((record as any)[field]) || 0 : 0;
+    } else {
+      const record = dailyTotals[sourceKey][dateStr];
+      value = record ? Number((record as any)[spec.verification?.field]) || 0 : 0;
+    }
+    buckets[day].push(value);
+  }
+
+  // Aggregation method
+  const method = spec.verification?.method || "average";
+  const toleranceMethod = derivedFormula?.tolerance || (method === "average" ? "percentage" : undefined);
+
+  function aggregate(values: number[]): number {
+    if (values.length === 0) return 0;
+    switch (method) {
+      case "average": return values.reduce((a, b) => a + b, 0) / values.length;
+      case "sum": return values.reduce((a, b) => a + b, 0);
+      case "count": return values.filter((v) => v > 0).length;
+      case "max": return Math.max(...values);
+      case "min": return Math.min(...values);
+      default: return values.reduce((a, b) => a + b, 0) / values.length;
+    }
+  }
+
+  const mismatches: VerificationResult["mismatches"] = [];
+  const allComparisons: VerificationResult["allComparisons"] = [];
+  let matched = 0;
+  let total = 0;
+
+  for (const point of data) {
+    const label = String(point[xField] ?? "");
+    const idx = weekdayIndex(label);
+    if (idx === null) continue;
+    total++;
+
+    const aiValue = Number(point[dataKey]) || 0;
+    const actual = aggregate(buckets[idx]);
+    const rounded = Math.round(actual * 10) / 10;
+    const delta = Math.round((aiValue - rounded) * 10) / 10;
+    const isMatch = isClose(aiValue, rounded, toleranceMethod);
+
+    allComparisons.push({ label, ai: aiValue, actual: rounded, delta, match: isMatch });
+    if (isMatch) {
+      matched++;
+    } else {
+      mismatches.push({ date: label, ai: aiValue, actual: rounded, delta });
+    }
+  }
+
+  if (total === 0) {
+    return { status: "unavailable", reason: "No weekday data points matched" };
+  }
+
+  const allExact = matched === total && allComparisons.every(c => c.delta === 0);
+  const toleranceLabel = toleranceMethod === "percentage" ? "within 2% or 2 units" : "within 1% or 5 units";
+  return { status: "success", total, matched, accuracy: Math.round((matched / total) * 100), allExact, toleranceLabel, mismatches, allComparisons, method: "deterministic" };
+}
+
 /* ── Main entry point ────────────────────────────────────── */
 
 export function verifyChartData(
   spec: ChartSpec,
   dailyTotals: DailyTotals,
 ): VerificationResult {
-  // 1. Try deterministic verification first — it's trustworthy and catches the
-  //    "null cop-out" where the AI skips verification on a verifiable chart.
+  // 1. Try deterministic verification first (date-indexed, known metric)
   const deterministicResult = verifyDeterministic(spec, dailyTotals);
   if (deterministicResult.status === "success") {
     return deterministicResult;
   }
 
-  // 2. Heuristic couldn't help — fall back to AI's self-declared verification
+  // 2. Try categorical weekday verification (weekday-bucketed, known metric)
+  const weekdayResult = verifyCategoricalWeekday(spec, dailyTotals);
+  if (weekdayResult.status === "success") {
+    return weekdayResult;
+  }
+
+  // 3. Heuristic couldn't help — fall back to AI's self-declared verification
   if (spec.verification && spec.verification.type) {
     if (spec.verification.type === "daily") {
       return verifyDaily(spec, dailyTotals);
@@ -389,11 +511,11 @@ export function verifyChartData(
     }
   }
 
-  // 3. AI explicitly declared null → unverifiable
+  // 4. AI explicitly declared null → unverifiable
   if (spec.verification === null) {
     return { status: "unavailable", reason: "The AI indicated this chart uses derived metrics that can't be verified against daily totals" };
   }
 
-  // 4. No verification possible
+  // 5. No verification possible
   return deterministicResult;
 }
