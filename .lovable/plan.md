@@ -1,79 +1,48 @@
 
-# Add AI Model Fallback for Resilience Against Gateway Outages
+# Simplify AI Fallback to a 2-Model Cross-Provider Chain
 
-## Problem
+## The Problem with 3 Models
 
-All four AI edge functions use `google/gemini-3-flash-preview` exclusively. When this preview model has an outage (as happened today), there is no fallback — every AI feature in the app fails with a 500 error. The error is from the Lovable AI Gateway, not application code.
+The current (pending) plan adds `openai/gpt-5-mini` as a third option after two Gemini models:
 
-## Solution
-
-Add a **try-primary-then-fallback** retry pattern inside each edge function's AI call. If `google/gemini-3-flash-preview` returns a non-2xx response, the function immediately retries the identical request with `google/gemini-2.5-flash` (the stable, production-grade equivalent). The fallback result is treated exactly like a primary result — no behavior change for the user.
-
-This is purely defensive — it does not change the prompt, the response format, or any other logic.
-
----
-
-## Model strategy
-
-| Role | Model |
-|---|---|
-| Primary | `google/gemini-3-flash-preview` (fast, current) |
-| Fallback | `google/gemini-2.5-flash` (stable, equivalent capability) |
-
----
-
-## Files to change (4 edge functions)
-
-### 1. `supabase/functions/analyze-food/index.ts`
-
-Extract the AI fetch into a small helper that tries primary then fallback:
-
-```typescript
-async function callAI(body: object): Promise<Response> {
-  const models = ['google/gemini-3-flash-preview', 'google/gemini-2.5-flash'];
-  let lastResponse: Response | null = null;
-  for (const model of models) {
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('LOVABLE_API_KEY')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ ...body, model }),
-    });
-    if (response.ok) return response;
-    lastResponse = response;
-    console.warn(`Model ${model} failed with ${response.status}, trying fallback...`);
-  }
-  return lastResponse!;
-}
+```
+gemini-3-flash-preview → gemini-2.5-flash → openai/gpt-5-mini
 ```
 
-Replace the single `fetch(...)` call with `callAI(...)`.
+During a Gemini provider outage, the app makes **two failing requests** — each with its own network round-trip and timeout — before finally reaching OpenAI. That's wasted latency (potentially 10–20 seconds of failed calls) on every request during an outage.
 
-### 2. `supabase/functions/ask-trends-ai/index.ts`
+The only scenario where `gemini-2.5-flash` helps is if the **preview** model breaks specifically (e.g. deprecated) while the rest of Gemini stays up. That's a much rarer event than a provider-wide outage. The tradeoff isn't worth it.
 
-Same pattern — replace the single model fetch with the two-model retry loop.
+## The Better Design
 
-### 3. `supabase/functions/lookup-upc/index.ts`
+```
+google/gemini-3-flash-preview  →  openai/gpt-5-mini
+```
 
-Same pattern.
+- Normal operation: Gemini flash preview (fast, current)
+- Gemini outage: OpenAI gpt-5-mini (different infrastructure, unaffected)
+- One failed request maximum before a working response
 
-### 4. `supabase/functions/populate-demo-data/index.ts`
+## Files to Update
 
-Same pattern (this is admin-only, lower priority but worth making consistent).
+While doing this, the search also revealed that 3 additional functions have **no fallback at all** — they use a single hardcoded model with no retry. Folding those in for completeness:
 
----
+| Function | Current state | Change |
+|---|---|---|
+| `analyze-food/index.ts` | `[gemini-3-flash-preview, gemini-2.5-flash]` | Replace with `[gemini-3-flash-preview, openai/gpt-5-mini]` |
+| `ask-trends-ai/index.ts` | `[gemini-3-flash-preview, gemini-2.5-flash]` | Replace with `[gemini-3-flash-preview, openai/gpt-5-mini]` |
+| `lookup-upc/index.ts` | `[gemini-3-flash-preview, gemini-2.5-flash]` | Replace with `[gemini-3-flash-preview, openai/gpt-5-mini]` |
+| `populate-demo-data/index.ts` | `[gemini-3-flash-preview, gemini-2.5-flash]` | Replace with `[gemini-3-flash-preview, openai/gpt-5-mini]` |
+| `analyze-weights/index.ts` | Single model: `gemini-2.5-flash` (no fallback) | Add loop: `[gemini-3-flash-preview, openai/gpt-5-mini]` |
+| `analyze-food-photo/index.ts` | Single model: `gemini-2.5-flash` (no fallback) | Add loop: `[gemini-3-flash-preview, openai/gpt-5-mini]` |
+| `generate-chart/index.ts` | Single model: `gemini-2.5-flash` (no fallback) | Add loop: `[gemini-3-flash-preview, openai/gpt-5-mini]` |
+| `generate-chart-dsl/index.ts` | Single model: `gemini-2.5-flash` (no fallback) | Add loop: `[gemini-3-flash-preview, openai/gpt-5-mini]` |
 
-## What does NOT change
+Note: `analyze-food-photo` and `generate-chart` use vision/image inputs — `openai/gpt-5-mini` is multimodal and handles image inputs correctly, so the fallback is safe there too.
 
-- Prompts are identical regardless of which model responds
+## What Does NOT Change
+
+- Prompts are identical — `gpt-5-mini` handles all the same structured JSON tasks
 - Response parsing is unchanged
-- Error handling after the AI call is unchanged — if both models fail, the existing error path fires exactly as today
-- No new dependencies
-
----
-
-## Why this is safe
-
-`gemini-2.5-flash` is a fully stable, production model with the same capabilities as `gemini-3-flash-preview`. The preview model is used because it is newer and faster, but in an outage scenario the fallback produces identical quality results. Users will not notice the difference.
+- Error handling is unchanged — if both models fail, the existing error path fires as today
+- No new dependencies, no new secrets
