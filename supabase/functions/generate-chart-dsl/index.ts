@@ -37,7 +37,8 @@ You MUST respond with ONLY a valid JSON object (no markdown, no code fences). Th
     "source": "food" | "exercise"
   } or null,
 
-  "sort": "label" | "value_asc" | "value_desc" or null
+  "sort": "label" | "value_asc" | "value_desc" or null,
+  "limit": <positive integer or null>
 }
 
 DATABASE SCHEMA (what the client can query):

@@ -83,4 +83,5 @@ export interface ChartDSL {
   };
 
   sort?: "label" | "value_asc" | "value_desc";
+  limit?: number;
 }
