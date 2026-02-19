@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { format } from 'date-fns';
+import { format, parseISO, isToday as dateFnsIsToday } from 'date-fns';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,8 @@ interface MedicationEntryInputProps {
   initialDose?: number | null;
   initialTime?: string | null;
   initialNotes?: string | null;
+  /** yyyy-MM-dd date being logged for — used to show date in title and fix count label */
+  loggedDate?: string;
   onSubmit: (params: {
     numeric_value: number | null;
     dose_time: string | null;
@@ -57,6 +59,7 @@ export function MedicationEntryInput({
   initialDose,
   initialTime,
   initialNotes,
+  loggedDate,
   onSubmit,
   onCancel,
   isLoading,
@@ -66,6 +69,12 @@ export function MedicationEntryInput({
     initialDose != null ? String(initialDose) : defaultDose != null ? String(defaultDose) : ''
   );
   const [notes, setNotes] = useState(initialNotes ?? '');
+
+  // Determine if the selected date is today
+  const isLoggedToday = loggedDate ? dateFnsIsToday(parseISO(loggedDate)) : true;
+  const dateLabel = !isLoggedToday && loggedDate
+    ? format(parseISO(loggedDate), 'MMM d')
+    : null;
 
   const canSubmit = doseValue.trim() !== '' && !isNaN(parseFloat(doseValue));
 
@@ -96,22 +105,28 @@ export function MedicationEntryInput({
         return `${freq}${times}`;
       })();
 
-  // Dose count line
+  // Dose count line — date-aware, with logged times inline
   const doseCountLine = (() => {
+    const whenLabel = isLoggedToday ? 'today' : `on ${dateLabel}`;
+    let line: string | null = null;
     if (dosesPerDay > 0) {
-      return `${todayEntryCount} of ${dosesPerDay} dose${dosesPerDay !== 1 ? 's' : ''} logged today`;
+      line = `${todayEntryCount} of ${dosesPerDay} dose${dosesPerDay !== 1 ? 's' : ''} logged ${whenLabel}`;
+    } else if (todayEntryCount > 0) {
+      line = `${todayEntryCount} dose${todayEntryCount !== 1 ? 's' : ''} logged ${whenLabel}`;
     }
-    if (todayEntryCount > 0) {
-      return `${todayEntryCount} dose${todayEntryCount !== 1 ? 's' : ''} logged today`;
+    if (line && todayLoggedTimes && todayLoggedTimes.length > 0) {
+      line += `: ${todayLoggedTimes.map(formatLoggedTime).join('  ·  ')}`;
     }
-    return null;
+    return line;
   })();
 
   return (
     <div className="space-y-2 rounded-lg border border-border bg-card p-3">
-      {/* Name + cancel */}
+      {/* Name (+ date suffix when not today) + cancel */}
       <div className="flex items-center gap-1">
-        <span className="text-sm font-medium flex-1 truncate">{label}</span>
+        <span className="text-sm font-medium flex-1 truncate">
+          {label}{dateLabel ? ` (${dateLabel})` : ''}
+        </span>
         <Button
           variant="ghost"
           size="icon"
@@ -123,16 +138,14 @@ export function MedicationEntryInput({
         </Button>
       </div>
 
-      {/* Schedule line: below name, outside muted box */}
+      {/* Schedule line */}
       {scheduleSummary && (
         <p className="text-xs text-muted-foreground">{scheduleSummary}</p>
       )}
 
-      {/* Description: alone in muted box */}
+      {/* Description: plain "Notes: …" label, no box */}
       {description && (
-        <div className="rounded-md bg-muted/50 px-2.5 py-2">
-          <p className="text-xs text-muted-foreground leading-relaxed">{description}</p>
-        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed">Notes: {description}</p>
       )}
 
       {/* Input row */}
@@ -170,21 +183,14 @@ export function MedicationEntryInput({
         </Button>
       </div>
 
-      {/* Dose count: below input row, with conditional colour */}
+      {/* Dose count + inline times: single line */}
       {doseCountLine && (
         <p className={cn("text-xs", getDoseCountStyle(todayEntryCount, dosesPerDay))}>
           {doseCountLine}
         </p>
       )}
 
-      {/* Logged times for today */}
-      {todayLoggedTimes && todayLoggedTimes.length > 0 && (
-        <p className="text-xs text-muted-foreground">
-          {todayLoggedTimes.map(formatLoggedTime).join('  ·  ')}
-        </p>
-      )}
-
-      {/* Notes */}
+      {/* Notes entry */}
       <Textarea
         placeholder="Notes"
         value={notes}
