@@ -11,7 +11,7 @@ const SYSTEM_PROMPT = `You are a data visualization assistant for a health and f
 
 You have access to:
 - Food log: timestamps (created_at), calories, protein, carbs, fat, fiber, sugar, saturated fat, sodium, cholesterol, item descriptions, and portions
-- Exercise log: dates, exercise names, sets, reps, weight (lbs), duration (minutes), distance (miles), and metadata including heart rate, effort level, and reported calories burned
+- Exercise log: covers all types of physical activity -- strength training, cardio, sports, and everyday activities (e.g. walking, gardening). Fields: dates, exercise names, sets, reps, weight (lbs), duration (minutes), distance (miles), and metadata including heart rate, effort level, and reported calories burned. Not every exercise uses every field; cardio entries typically have duration/distance but no sets/reps/weight
 - Custom log entries: dates, numeric values, text values, and units
 
 Your job:
