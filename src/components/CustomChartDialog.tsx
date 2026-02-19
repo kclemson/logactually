@@ -387,6 +387,16 @@ function CustomChartDialogInner({
                   </button>
                 ))}
               </div>
+              {/* DSL columns for debugging */}
+              <div className="flex gap-2">
+                {chartOptions!.map((opt, i) => (
+                  <div key={i} className="flex-1 rounded border border-border/40 bg-muted/20 p-1.5 overflow-auto max-h-48">
+                    <pre className="text-[9px] leading-tight text-muted-foreground whitespace-pre-wrap break-all font-mono">
+                      {JSON.stringify(opt.chartDSL, null, 2)}
+                    </pre>
+                  </div>
+                ))}
+              </div>
               <Button
                 variant="outline"
                 size="sm"
