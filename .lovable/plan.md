@@ -1,59 +1,211 @@
 
-# Add "Log New" to the By Meds View
+# Four UX Fixes + Edit Support for By Meds View
 
-## What we're building
+## What's currently broken (confirmed by reading the code)
 
-In "By Meds" view, add a teal "Log New" dropdown button to the header row — sitting right next to the view-mode selector — that lets the user pick which medication to log. Selecting a medication opens the existing `MedicationEntryInput` modal dialog.
-
-This mirrors the "Add custom log" dropdown pattern already used in "By Date" mode and avoids forcing the user to switch views just to log a dose.
-
----
-
-## Header row layout for By Meds mode
-
-```
-[By Meds ▾]   [Log New ▾]
-```
-
-The "Log New" dropdown lists only medication-type log types (the same `medicationTypes` array we already filter). Selecting one sets a `selectedMedTypeId` state and opens the `showInputDialog` modal — the exact same dialog used in By Type mode.
-
-This is a dropdown rather than a simple button because there's no "currently selected" medication context in By Meds mode the way there is in By Type mode.
+1. **Selector drifts** — `justify-center` on line 147 of `OtherLog.tsx` causes the entire row to re-center whenever controls change width on mode switch.
+2. **No date nav in By Meds** — The `DateNavigation` component only renders inside the `date` branch (line 370). The `medication` branch (line 349) has no navigation at all, and `useAllMedicationEntries` fetches all 500 rows with no date filter.
+3. **"Log New" wraps** — `SelectTrigger` for "Log New" has `min-w-[110px]` but no `whitespace-nowrap`, causing it to wrap on narrow screens.
+4. **No edit support** — No pencil icon exists anywhere yet; `MedicationEntryInput` has no initial-value props.
 
 ---
 
-## State additions in `OtherLog.tsx`
+## Fix 1 — Stable left-justified header row
 
-We need:
-- `viewMode` extended from `'date' | 'type'` to `'date' | 'type' | 'medication'`
-- `selectedMedTypeId: string | null` — tracks which medication was chosen from the Log New dropdown in By Meds mode
-- `showMedInputDialog: boolean` — separate from `showInputDialog` used in By Type, to avoid coupling (or we can reuse `showInputDialog` and just route `selectedMedTypeId` vs `effectiveTypeId` into the dialog — simpler, one less state)
+**File:** `OtherLog.tsx` line 147
 
-**Simpler approach (one dialog state):** Reuse `showInputDialog` and derive the "active type for the dialog" as:
+Change the flex container from `justify-center` to `justify-start`:
+
+```tsx
+// Before
+<div className="flex items-center justify-center gap-2">
+// After
+<div className="flex items-center justify-start gap-2">
+```
+
+The view-mode `Select` has a fixed `w-[90px]` width, so it always anchors at the left edge. The right-side controls flow naturally after it with no re-centering.
+
+---
+
+## Fix 2 — Date navigation in By Meds, scoped to selected date
+
+The "By Meds" view currently shows all-time history. The plan: scope it to the selected date (same as "By Date" mode), show `DateNavigation` above the list, and group entries by medication name instead of by date (since it's all one day).
+
+### `useAllMedicationEntries.ts`
+
+Add a `dateStr` parameter and filter by `logged_date`. Remove the `.limit(500)` (now unnecessary — one day's data is tiny):
+
 ```ts
-const dialogType = viewMode === 'medication'
-  ? logTypes.find(t => t.id === selectedMedTypeId)
-  : selectedType;  // existing By Type logic
+export function useAllMedicationEntries(medTypeIds: string[], dateStr: string) {
+  ...
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from('custom_log_entries')
+      .select('*')
+      .in('log_type_id', medTypeIds)
+      .eq('logged_date', dateStr)          // ← date-scoped
+      .order('logged_time', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false });
+    ...
+  },
+  enabled: !!user && medTypeIds.length >= 2,
+}
 ```
 
-Then the existing dialog block at the bottom of the JSX just renders `dialogType` instead of `selectedType`.
+### `OtherLog.tsx`
+
+Pass `dateStr` to the hook:
+```ts
+const { entries: allMedEntries, ... } = useAllMedicationEntries(
+  effectiveViewMode === 'medication' ? medTypeIds : [],
+  dateStr
+);
+```
+
+Wrap the `AllMedicationsView` in a fragment that includes `DateNavigation` first — same props as the `date` branch:
+
+```tsx
+{effectiveViewMode === 'medication' ? (
+  <>
+    <DateNavigation ... />   {/* same as date branch */}
+    <AllMedicationsView ... />
+  </>
+) : ...}
+```
+
+### `AllMedicationsView.tsx`
+
+Since it's now date-scoped, remove the date-grouping headers. Group by medication name instead (matching the "By Date" view's pattern of type-name subheaders). Each group shows:
+
+```
+── Metformin ──────────────────────────────
+  9:04 AM   500 mg   [✏] [🗑]
+  8:30 AM   500 mg   [✏] [🗑]
+
+── Lisinopril ─────────────────────────────
+  8:58 AM   10 mg    [✏] [🗑]
+```
+
+Add a muted footer note: "For full history across all dates, export your data in Settings → Import/Export."
 
 ---
 
-## Data for the By Meds view itself
+## Fix 3 — "Log New" button no longer wraps
 
-The new hook `useAllMedicationEntries` queries entries for all `medicationTypes` IDs. This powers the history list below the header.
+**File:** `OtherLog.tsx` line 210–215
 
-For the "Log New" dialog, we reuse `useCustomLogEntriesForType` — but it currently only activates when `viewMode === 'type'`. We extend the condition:
-```ts
-const activeTypeId = viewMode === 'type' ? effectiveTypeId
-                   : viewMode === 'medication' ? selectedMedTypeId
-                   : null;
+Remove `min-w-[110px]`, add `whitespace-nowrap` to the inner span:
 
-const { entries: typeEntries, createEntry: createTypeEntry, deleteEntry: deleteTypeEntry } =
-  useCustomLogEntriesForType(activeTypeId);
+```tsx
+<SelectTrigger className="h-8 text-sm font-medium w-auto bg-teal-500 text-white border-teal-500 hover:bg-teal-600 shrink-0">
+  <span className="flex items-center gap-1 whitespace-nowrap">
+    <Plus className="h-3 w-3 shrink-0" />
+    Log New
+  </span>
+</SelectTrigger>
 ```
 
-This means `todayMedEntries` (for the dose count/timestamps) is already correctly scoped to whichever medication was picked in the dropdown.
+---
+
+## Fix 4 — Reuse MedicationEntryInput for editing (pencil icon)
+
+### `MedicationEntryInput.tsx`
+
+Add three optional props for pre-filling existing entry values:
+
+```ts
+interface MedicationEntryInputProps {
+  ...
+  initialDose?: number | null;
+  initialTime?: string | null;
+  initialNotes?: string | null;
+}
+```
+
+Change the `useState` initializers to prefer these when provided:
+
+```ts
+const [timeValue, setTimeValue] = useState(
+  initialTime ?? getCurrentTimeValue()
+);
+const [doseValue, setDoseValue] = useState(
+  initialDose != null ? String(initialDose) : defaultDose != null ? String(defaultDose) : ''
+);
+const [notes, setNotes] = useState(initialNotes ?? '');
+```
+
+No structural JSX changes needed — the same Save/Cancel button labels work for both create and edit.
+
+### `AllMedicationsView.tsx`
+
+Add `onEdit?: (entry: CustomLogEntry) => void` prop. Render a `Pencil` icon button before the trash icon for each entry (only when `!isReadOnly && onEdit`):
+
+```tsx
+{!isReadOnly && onEdit && (
+  <Button variant="ghost" size="icon" className="h-6 w-6 ..." onClick={() => onEdit(entry)} aria-label="Edit entry">
+    <Pencil className="h-3 w-3" />
+  </Button>
+)}
+```
+
+### `CustomLogTypeView.tsx`
+
+Same pattern — add `onEdit?: (entry: CustomLogEntry) => void`, render pencil only for `isMedication` entries.
+
+### `OtherLog.tsx`
+
+Add edit state and update mutation:
+
+```ts
+const [editingEntry, setEditingEntry] = useState<CustomLogEntry | null>(null);
+const editingLogType = editingEntry ? logTypes.find(t => t.id === editingEntry.log_type_id) : null;
+
+const updateMedEntry = useMutation({
+  mutationFn: async ({ id, numeric_value, logged_time, entry_notes }) => {
+    const { error } = await supabase
+      .from('custom_log_entries')
+      .update({ numeric_value, logged_time, entry_notes })
+      .eq('id', id);
+    if (error) throw error;
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['custom-log-entries-all-meds'] });
+    queryClient.invalidateQueries({ queryKey: ['custom-log-entries-for-type'] });
+    queryClient.invalidateQueries({ queryKey: ['custom-log-entries', dateStr] });
+    setEditingEntry(null);
+  },
+});
+```
+
+Add edit `Dialog` at the bottom (separate from the create dialog):
+
+```tsx
+{editingEntry && editingLogType && !isReadOnly && (
+  <Dialog open={!!editingEntry} onOpenChange={(open) => { if (!open) setEditingEntry(null); }}>
+    <DialogContent className="max-w-sm p-0 gap-0 border-0 bg-transparent shadow-none [&>button]:hidden">
+      <MedicationEntryInput
+        label={editingLogType.name}
+        unit={editingLogType.unit}
+        ...
+        initialDose={editingEntry.numeric_value}
+        initialTime={editingEntry.logged_time}
+        initialNotes={editingEntry.entry_notes}
+        todayEntryCount={todayMedEntries.length}
+        todayLoggedTimes={todayMedEntries.map(e => e.logged_time).filter(Boolean) as string[]}
+        onSubmit={(params) => updateMedEntry.mutate({ id: editingEntry.id, ...params })}
+        onCancel={() => setEditingEntry(null)}
+        isLoading={updateMedEntry.isPending}
+      />
+    </DialogContent>
+  </Dialog>
+)}
+```
+
+Pass `onEdit` to both views:
+```tsx
+<AllMedicationsView onEdit={(e) => setEditingEntry(e)} ... />
+<CustomLogTypeView onEdit={(e) => setEditingEntry(e)} ... />
+```
 
 ---
 
@@ -61,80 +213,10 @@ This means `todayMedEntries` (for the dose count/timestamps) is already correctl
 
 | File | Change |
 |---|---|
-| `src/hooks/useAllMedicationEntries.ts` | New hook — queries `custom_log_entries` IN list of medication type IDs, ordered by date/time DESC |
-| `src/components/AllMedicationsView.tsx` | New component — date-grouped table of all medication doses with name, dose+unit, time, delete |
-| `src/pages/OtherLog.tsx` | (1) Extend `ViewMode` to `'date' \| 'type' \| 'medication'`; (2) compute `medicationTypes` and `showMedView` (>= 2 meds); (3) add `'medication'` to view selector conditionally; (4) add `selectedMedTypeId` state; (5) in By Meds header, render a teal "Log New" dropdown listing medication types; (6) unify dialog logic to use `dialogType` derived from active view mode; (7) render `<AllMedicationsView>` when `viewMode === 'medication'` |
+| `src/pages/OtherLog.tsx` | `justify-center` → `justify-start`; pass `dateStr` to `useAllMedicationEntries`; add `DateNavigation` in By Meds branch; fix "Log New" button; add `editingEntry` state + `updateMedEntry` mutation + edit Dialog; pass `onEdit` callbacks; import `useQueryClient` + `supabase` |
+| `src/hooks/useAllMedicationEntries.ts` | Add `dateStr` param; filter by `logged_date`; remove `.limit(500)` |
+| `src/components/AllMedicationsView.tsx` | Remove date grouping; add medication-name grouping; add `onEdit` prop + pencil icon; add CSV export footer nudge |
+| `src/components/CustomLogTypeView.tsx` | Add `onEdit?` prop; render pencil icon for medication entries only |
+| `src/components/MedicationEntryInput.tsx` | Add `initialDose`, `initialTime`, `initialNotes` props; update `useState` initializers |
 
----
-
-## Technical details
-
-### `useAllMedicationEntries`
-
-```ts
-export function useAllMedicationEntries(medTypeIds: string[]) {
-  return useQuery({
-    queryKey: ['custom-log-entries-all-meds', medTypeIds],
-    queryFn: async () => {
-      if (!medTypeIds.length) return [];
-      const { data, error } = await supabase
-        .from('custom_log_entries')
-        .select('*')
-        .in('log_type_id', medTypeIds)
-        .order('logged_date', { ascending: false })
-        .order('logged_time', { ascending: false, nullsFirst: false })
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data ?? [];
-    },
-    enabled: medTypeIds.length >= 2,
-  });
-}
-```
-
-### `AllMedicationsView` layout
-
-Entries are grouped by `logged_date`. Each date section renders a muted centered date header, then one row per entry:
-
-```
-── Today ─────────────────────────────────
-  Metformin      500 mg    9:04 AM    🗑
-  Lisinopril      10 mg    8:58 AM    🗑
-
-── Feb 18 ────────────────────────────────
-  Metformin      500 mg    8:45 PM    🗑
-```
-
-Columns: name (flex-1 truncate), dose+unit (tabular-nums fixed width `w-28`), time (muted right-align `w-16`), delete icon.
-
-Notes shown below the row in italic muted `text-xs` if present.
-
-### Fallback on med type count drop
-
-If the user is in `'medication'` mode and the count of medication types drops below 2 (e.g. they delete one), we auto-reset to `'date'`:
-
-```ts
-const medicationTypes = logTypes.filter(t => t.value_type === 'medication');
-const showMedView = medicationTypes.length >= 2;
-
-// Guard: fall back if med view no longer qualifies
-if (viewMode === 'medication' && !showMedView) {
-  handleViewModeChange('date');
-}
-```
-
-This is done inline in the render (before the JSX return), not in a `useEffect`, since it's derived state — consistent with the project's guidelines.
-
-### `getStoredViewMode` update
-
-```ts
-function getStoredViewMode(): ViewMode {
-  try {
-    const stored = localStorage.getItem('custom-log-view-mode');
-    if (stored === 'date' || stored === 'type' || stored === 'medication') return stored;
-  } catch {}
-  return 'date';
-}
-```
-
-No DB changes. No new migrations.
+No database migrations needed.
