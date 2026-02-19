@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DateNavigation } from '@/components/DateNavigation';
 import { useDateNavigation } from '@/hooks/useDateNavigation';
 import { useCustomLogTypes } from '@/hooks/useCustomLogTypes';
+import { useExportData } from '@/hooks/useExportData';
 import { useCustomLogEntries } from '@/hooks/useCustomLogEntries';
 import { useCustomLogEntriesForType } from '@/hooks/useCustomLogEntriesForType';
 import { useAllMedicationEntries } from '@/hooks/useAllMedicationEntries';
@@ -67,6 +68,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   const isTodaySelected = isToday(selectedDate);
 
   const { logTypes, isLoading, createType, recentUsage } = useCustomLogTypes();
+  const { exportCustomLog } = useExportData();
   const { entries, createEntry, updateEntry, deleteEntry } = useCustomLogEntries(dateStr);
   const { data: datesWithData = [] } = useCustomLogDatesWithData(dateNav.calendarMonth);
   const { isReadOnly } = useReadOnlyContext();
@@ -397,6 +399,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
             isLoading={allMedEntriesLoading}
             onDelete={(id) => deleteAllMedEntry.mutate(id)}
             onEdit={(entry) => setEditingEntry(entry)}
+            onExport={exportCustomLog}
             isReadOnly={isReadOnly}
           />
         </>
