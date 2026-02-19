@@ -29,7 +29,14 @@ function verifyDaily(
   dailyTotals: DailyTotals,
 ): VerificationResult {
   const v = spec.verification!;
-  const source = dailyTotals[v.source];
+
+  // Cross-check: if the heuristic knows a mapping for this dataKey, prefer it
+  const heuristicField = FOOD_KEY_MAP[spec.dataKey] || EXERCISE_KEY_MAP[spec.dataKey];
+  const field = heuristicField || v.field;
+  const source = heuristicField
+    ? (FOOD_KEY_MAP[spec.dataKey] ? dailyTotals.food : dailyTotals.exercise)
+    : dailyTotals[v.source];
+
   const mismatches: VerificationResult["mismatches"] = [];
   const allComparisons: VerificationResult["allComparisons"] = [];
   let matched = 0;
@@ -42,7 +49,7 @@ function verifyDaily(
 
     const aiValue = Number(point[spec.dataKey]) || 0;
     const record = source[rawDate];
-    const actualValue = record ? Number((record as any)[v.field]) || 0 : 0;
+    const actualValue = record ? Number((record as any)[field]) || 0 : 0;
     const isMatch = isClose(aiValue, actualValue);
 
     allComparisons.push({ label: rawDate, ai: aiValue, actual: actualValue, delta: aiValue - actualValue, match: isMatch });
@@ -217,12 +224,14 @@ export function verifyChartData(
   spec: ChartSpec,
   dailyTotals: DailyTotals,
 ): VerificationResult {
-  // 1. AI explicitly declared verification as null → unverifiable
-  if (spec.verification === null) {
-    return { status: "unavailable", reason: "The AI indicated this chart uses derived metrics that can't be verified against daily totals" };
+  // 1. Try deterministic heuristic first — it's trustworthy and catches the
+  //    "null cop-out" where the AI skips verification on a verifiable chart.
+  const heuristicResult = verifyLegacy(spec, dailyTotals);
+  if (heuristicResult.status === "success") {
+    return heuristicResult;
   }
 
-  // 2. AI declared a verification object → use it
+  // 2. Heuristic couldn't help — fall back to AI's self-declared verification
   if (spec.verification && spec.verification.type) {
     if (spec.verification.type === "daily") {
       return verifyDaily(spec, dailyTotals);
@@ -232,6 +241,11 @@ export function verifyChartData(
     }
   }
 
-  // 3. No verification field (old cached chart) → legacy heuristic fallback
-  return verifyLegacy(spec, dailyTotals);
+  // 3. AI explicitly declared null → unverifiable
+  if (spec.verification === null) {
+    return { status: "unavailable", reason: "The AI indicated this chart uses derived metrics that can't be verified against daily totals" };
+  }
+
+  // 4. No verification possible
+  return heuristicResult;
 }
