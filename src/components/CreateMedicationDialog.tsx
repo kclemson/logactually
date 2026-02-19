@@ -26,6 +26,8 @@ const DOSE_TIME_DEFAULTS: Record<number, string[]> = {
   2: ['morning', 'evening'],
   3: ['8am', '12pm', '4pm'],
   4: ['8am', '12pm', '4pm', '8pm'],
+  5: ['6am', '10am', '2pm', '6pm', '10pm'],
+  6: ['6am', '9am', '12pm', '3pm', '6pm', '9pm'],
 };
 
 export function CreateMedicationDialog({
@@ -58,7 +60,7 @@ export function CreateMedicationDialog({
     if (count === 0) {
       setDoseTimes([]);
     } else {
-      setDoseTimes(DOSE_TIME_DEFAULTS[count] ?? []);
+      setDoseTimes(Array(count).fill(''));
     }
   };
 
@@ -148,7 +150,7 @@ export function CreateMedicationDialog({
           <div className="space-y-1.5">
             <Label className="text-sm">How often per day?</Label>
             <div className="flex items-center gap-1.5 flex-wrap">
-              {[0, 1, 2, 3, 4].map((count) => (
+              {[0, 1, 2, 3, 4, 5, 6].map((count) => (
                 <button
                   key={count}
                   type="button"
@@ -177,8 +179,8 @@ export function CreateMedicationDialog({
                   <Input
                     value={doseTimes[i] ?? ''}
                     onChange={(e) => handleDoseTimeChange(i, e.target.value)}
-                    placeholder="e.g. morning, 8am, with dinner"
-                    className="text-sm"
+                    placeholder={DOSE_TIME_DEFAULTS[dosesPerDay]?.[i] ?? 'e.g. morning, 8am'}
+                    className="text-sm placeholder:text-foreground/50 placeholder:italic"
                   />
                 </div>
               ))}
@@ -193,7 +195,7 @@ export function CreateMedicationDialog({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="e.g. Max 4000mg/day, take with food"
-              className="min-h-[72px] resize-y text-sm"
+              className="min-h-[72px] resize-y text-sm placeholder:text-foreground/50 placeholder:italic"
             />
           </div>
 
