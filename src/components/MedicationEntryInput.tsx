@@ -15,6 +15,9 @@ interface MedicationEntryInputProps {
   doseTimes?: string[] | null;
   todayEntryCount?: number;
   todayLoggedTimes?: string[];
+  initialDose?: number | null;
+  initialTime?: string | null;
+  initialNotes?: string | null;
   onSubmit: (params: {
     numeric_value: number | null;
     logged_time: string | null;
@@ -51,13 +54,18 @@ export function MedicationEntryInput({
   doseTimes,
   todayEntryCount = 0,
   todayLoggedTimes,
+  initialDose,
+  initialTime,
+  initialNotes,
   onSubmit,
   onCancel,
   isLoading,
 }: MedicationEntryInputProps) {
-  const [timeValue, setTimeValue] = useState(getCurrentTimeValue());
-  const [doseValue, setDoseValue] = useState(defaultDose != null ? String(defaultDose) : '');
-  const [notes, setNotes] = useState('');
+  const [timeValue, setTimeValue] = useState(initialTime ?? getCurrentTimeValue());
+  const [doseValue, setDoseValue] = useState(
+    initialDose != null ? String(initialDose) : defaultDose != null ? String(defaultDose) : ''
+  );
+  const [notes, setNotes] = useState(initialNotes ?? '');
 
   const canSubmit = doseValue.trim() !== '' && !isNaN(parseFloat(doseValue));
 

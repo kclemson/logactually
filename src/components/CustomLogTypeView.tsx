@@ -1,5 +1,5 @@
 import { format, isToday, isYesterday, parseISO } from 'date-fns';
-import { Trash2 } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { CustomLogType } from '@/hooks/useCustomLogTypes';
@@ -10,6 +10,7 @@ interface CustomLogTypeViewProps {
   entries: CustomLogEntry[];
   isLoading: boolean;
   onDelete: (id: string) => void;
+  onEdit?: (entry: CustomLogEntry) => void;
   isReadOnly: boolean;
 }
 
@@ -79,7 +80,7 @@ function formatEntryValue(entry: CustomLogEntry, valueType: string, unit: string
   return entry.text_value || '—';
 }
 
-export function CustomLogTypeView({ logType, entries, isLoading, onDelete, isReadOnly }: CustomLogTypeViewProps) {
+export function CustomLogTypeView({ logType, entries, isLoading, onDelete, onEdit, isReadOnly }: CustomLogTypeViewProps) {
   if (isLoading) {
     return (
       <div className="space-y-2">
@@ -118,15 +119,28 @@ export function CustomLogTypeView({ logType, entries, isLoading, onDelete, isRea
                 {formatEntryValue(entry, logType.value_type, logType.unit)}
               </span>
               {!isReadOnly && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0"
-                  onClick={() => onDelete(entry.id)}
-                  aria-label="Delete entry"
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
+                <>
+                  {isMedication && onEdit && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0"
+                      onClick={() => onEdit(entry)}
+                      aria-label="Edit entry"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0"
+                    onClick={() => onDelete(entry.id)}
+                    aria-label="Delete entry"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </>
               )}
             </div>
             {isMedication && entry.entry_notes && (

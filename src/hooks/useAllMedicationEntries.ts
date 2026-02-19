@@ -3,22 +3,21 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import type { CustomLogEntry } from './useCustomLogEntries';
 
-export function useAllMedicationEntries(medTypeIds: string[]) {
+export function useAllMedicationEntries(medTypeIds: string[], dateStr: string) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
   const { data: entries = [], isLoading } = useQuery({
-    queryKey: ['custom-log-entries-all-meds', medTypeIds],
+    queryKey: ['custom-log-entries-all-meds', medTypeIds, dateStr],
     queryFn: async () => {
       if (!medTypeIds.length) return [];
       const { data, error } = await supabase
         .from('custom_log_entries')
         .select('*')
         .in('log_type_id', medTypeIds)
-        .order('logged_date', { ascending: false })
+        .eq('logged_date', dateStr)
         .order('logged_time', { ascending: false, nullsFirst: false })
-        .order('created_at', { ascending: false })
-        .limit(500);
+        .order('created_at', { ascending: false });
       if (error) throw error;
       return data as CustomLogEntry[];
     },
