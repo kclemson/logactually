@@ -1,46 +1,54 @@
 
 
-## Edit-mode toggle for saved charts
+## Add AI Note to Chart DSL v2
 
-### Behavior
+### What changes
 
-- Default state: charts render with no action icons — clean view
-- A pencil icon button on the "My Charts" section header toggles edit mode on/off
-- In edit mode: each chart card shows a pencil icon (opens editor) and a trash icon (delete with confirmation) in its header row
-- Exiting edit mode hides all per-card controls
+The AI will generate a short human-readable note explaining what the chart shows (e.g., "Average daily protein intake over the last 30 days"). This note appears as subtle italic text below the chart, matching the existing `aiNote` rendering in `DynamicChart`.
 
-### Changes
+### 1. Add `aiNote` to ChartDSL type
 
-| File | What changes |
+**File: `src/lib/chart-types.ts`**
+
+Add an optional `aiNote?: string` field to the `ChartDSL` interface, alongside `title`.
+
+### 2. Update the edge function prompt
+
+**File: `supabase/functions/generate-chart-dsl/index.ts`**
+
+- Add `"aiNote": "Brief note explaining what the chart shows, or null"` to the JSON schema in the system prompt.
+- Add a short instruction: "Use aiNote to briefly describe what the chart measures and how to read it (e.g. 'Sum of daily calories over the last 30 days'). Keep it under 15 words."
+
+### 3. Pass aiNote through the DSL engine
+
+**File: `src/lib/chart-dsl.ts`**
+
+In `executeDSL`, copy `dsl.aiNote` into the returned `ChartSpec`:
+
+```
+chartSpec.aiNote = dsl.aiNote ?? undefined;
+```
+
+The `DynamicChart` component already renders `spec.aiNote` as a footer -- no UI changes needed.
+
+### 4. Stop stripping aiNote from saved charts
+
+**File: `src/pages/Trends.tsx`**
+
+Remove the `aiNote: undefined` override when rendering saved charts, so the note persists after pinning.
+
+### Files changed
+
+| File | Change |
 |---|---|
-| `src/pages/Trends.tsx` | Re-introduce `isEditMode` state. Restore the pencil toggle button as the `headerAction` on the `CollapsibleSection`. For each saved chart's `DynamicChart`, only pass the `headerAction` prop (containing edit + delete buttons) when `isEditMode` is true. Keep the `onNavigate` prop always present (it's independent of edit mode). |
+| `src/lib/chart-types.ts` | Add `aiNote?: string` to `ChartDSL` |
+| `supabase/functions/generate-chart-dsl/index.ts` | Add `aiNote` to DSL schema and prompt instructions |
+| `src/lib/chart-dsl.ts` | Pass `dsl.aiNote` through to `ChartSpec` in `executeDSL` |
+| `src/pages/Trends.tsx` | Remove `aiNote: undefined` override on saved charts |
 
-### Detail
+### What does NOT change
 
-The `headerAction` on each `DynamicChart` will be conditionally rendered:
-
-```
-headerAction={isEditMode ? (
-  <div className="flex items-center gap-0.5">
-    <button onClick={() => setEditingChart(...)}>
-      <Pencil className="h-3 w-3" />
-    </button>
-    <DeleteConfirmPopover ... />
-  </div>
-) : undefined}
-```
-
-The section-level header action stays as the edit-mode toggle:
-
-```
-headerAction={
-  <button onClick={() => setIsEditMode(v => !v)}>
-    <Pencil className="h-3.5 w-3.5" />
-  </button>
-}
-```
-
-When `isEditMode` is true, the section header pencil gets a highlight color (e.g. `text-primary`) to indicate active state; when false, it's muted.
-
-One file changed, roughly reverting the edit-mode removal while keeping `onNavigate` and the per-card pencil icon from the previous change.
-
+- `DynamicChart.tsx` -- already renders `aiNote` as italic footer text
+- `ChartCard.tsx` -- already accepts a `footer` prop
+- `useGenerateChart.ts` -- passes DSL through unchanged
+- Database schema -- no changes needed
