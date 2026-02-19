@@ -80,8 +80,8 @@ export function SavedItemRow({
               className="focus:outline-none"
             />
           </div>
-          {nameAppend && (
-            <span className="text-xs text-muted-foreground shrink-0">{nameAppend}</span>
+        {nameAppend && (
+            <span className="flex items-center gap-1 min-w-0">{nameAppend}</span>
           )}
         </div>
 
