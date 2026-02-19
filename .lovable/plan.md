@@ -1,70 +1,52 @@
 
-## Tighten the date/value spacing in CustomLogTypeView
+## Fix: type-view three-control row on mobile
 
-### The problem
+### What's happening
 
-In `src/components/CustomLogTypeView.tsx`, each row uses a flex layout:
+The three-control row in type view:
+- Left Select: `h-8 text-sm w-auto min-w-[130px]` → renders as ~130px+
+- Middle Select: `h-8 text-sm w-auto min-w-[120px]` → renders as ~120px+
+- Right Button: `h-8 ... gap-1` + text "Log Body Weight" → ~140px
 
-```
-<span class="w-36 shrink-0">Yesterday</span>     ← 144px fixed
-<span class="flex-1">148.8 lbs</span>             ← takes ALL remaining space
-<Button>trash</Button>
-```
+Total: ~390px+ on a ~375px viewport. The button clips off-screen.
 
-`flex-1` causes the value span to expand across the entire remaining row width, placing the actual text content right after the 144px date column — visually far from it, especially on wide screens.
+The Settings dropdowns look compact because they have `w-[150px]` fixed widths with the default `px-3` padding — just enough for content.
 
-### The fix
+### Two changes, one file: `src/pages/OtherLog.tsx`
 
-Two changes to `CustomLogTypeView.tsx`:
+**Change 1: Shorten the button label**
 
-**1. Shrink the date column width.**
-`w-36` (144px) is too wide for short strings like "Yesterday", "Feb 17", "Today". Drop it to `w-28` (112px) or even `w-24` (96px) — enough for "Yesterday" at `text-xs` without excess padding.
+```tsx
+// Before
+<Plus className="h-3 w-3" />
+Log {selectedType.name}
 
-**2. Remove `flex-1` from the value span.**
-Replace `flex-1` with `shrink min-w-0`. This lets the value span only take as much space as its content needs, sitting immediately after the date column, with the delete button pushed to the far right via the existing `justify-between` on the row container.
-
-Actually a cleaner approach: change the row from `justify-between` to a simple left-to-right flow, and only push the trash button to the far right:
-
-```jsx
-<div className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0 group">
-  <span className="text-xs text-muted-foreground shrink-0 w-24">
-    {formatEntryDate(...)}
-  </span>
-  <span className="text-sm min-w-0 truncate flex-1">
-    {formatEntryValue(...)}
-  </span>
-  <Button className="ml-auto shrink-0 ...">trash</Button>
-</div>
+// After
+<Plus className="h-3 w-3" />
++ Log New
 ```
 
-Wait — with `flex-1` on the value, the content still aligns left. The visual gap comes from the wide `w-36` date column. Let me re-examine.
+This drops the button from ~140px (for "Log Body Weight") to ~80px — a fixed-width label regardless of log type name length.
 
-Looking at the screenshot: "Yesterday" takes up ~180px column, then "148.8 lbs" starts. The gap is large. The fix is simply **reducing `w-36` to something like `w-20` or `w-[4.5rem]`** while keeping `flex-1` on the value (which is fine — text left-aligns regardless of how wide the span is).
+**Change 2: Reduce padding on the two selects in type view**
 
-For "text" types the date is "Today, 2:14 PM" which is about 10 chars — still fits in `w-28`.
-For "numeric" types the date is "Yesterday" or "Feb 17" — fits in `w-20`.
+Both the view-mode select and the log-type select get `px-2` instead of the default `px-3` on their triggers, and tighter `min-w` values:
 
-Since both types share the same column, use `w-28` (112px) as the date column — enough for "Yesterday, 2:14 PM" at `text-xs` without the excess gap visible in the screenshot.
+- Left (view mode): `h-8 text-sm px-2 w-auto min-w-[110px]` → down from `min-w-[130px]`
+- Middle (log type): `h-8 text-sm px-2 w-auto min-w-[100px]` → down from `min-w-[120px]`
 
-### Exact change
+With those changes the three controls total roughly:
+- Left: ~110px
+- Middle: ~100px  
+- Right: ~80px
+- Gaps (2×8px): 16px
+- **Total: ~306px** — well within a 375px viewport
 
-In `src/components/CustomLogTypeView.tsx`, line 90:
+### Only file changed
 
-**Before:**
-```jsx
-<span className="text-xs text-muted-foreground shrink-0 w-36">
-```
+`src/pages/OtherLog.tsx` — lines 148-188 (the type-view controls block):
+- `SelectTrigger` className on the left select: add `px-2`, reduce `min-w-[130px]` → `min-w-[110px]`
+- `SelectTrigger` className on the middle select: add `px-2`, reduce `min-w-[120px]` → `min-w-[100px]`
+- Button text: `Log {selectedType.name}` → `+ Log New` (remove the redundant `<Plus>` icon since the label already has `+`)
 
-**After:**
-```jsx
-<span className="text-xs text-muted-foreground shrink-0 w-28">
-```
-
-That's the only change needed. One line, one file. The `flex-1` on the value span is correct — it ensures the delete button stays at the far right. The fix is purely the date column width.
-
-### Why `w-28` specifically
-
-- "Yesterday" at `text-xs` (~12px font) = ~56px content width
-- "Today, 2:14 PM" at `text-xs` = ~84px content width  
-- `w-28` = 112px — comfortable fit with a few px breathing room, no excess
-- The previous `w-36` = 144px added ~30-60px of dead space between date and value
+No changes to `CustomLogTypeView.tsx`, `select.tsx`, Settings, or any other file.
