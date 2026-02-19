@@ -63,6 +63,7 @@ function CustomChartDialogInner({
   );
   const [currentSpec, setCurrentSpec] = useState<ChartSpec | null>(initialChart?.chartSpec ?? null);
   const [dailyTotals, setDailyTotals] = useState<DailyTotals | null>(null);
+  const [chartDSL, setChartDSL] = useState<unknown>(null);
   const [verification, setVerification] = useState<VerificationResult | null>(null);
   const [lastQuestion, setLastQuestion] = useState(initialChart?.question ?? "");
   const [showDebug, setShowDebug] = useState(false);
@@ -121,6 +122,7 @@ function CustomChartDialogInner({
       });
       setCurrentSpec(result.chartSpec);
       setDailyTotals(result.dailyTotals);
+      setChartDSL(result.chartDSL ?? null);
       setVerification(mode === "v2" ? null : verifyChartData(result.chartSpec, result.dailyTotals));
       setRefining(false);
     } catch (err) {
@@ -139,6 +141,7 @@ function CustomChartDialogInner({
     setMessages(freshMessages);
     setCurrentSpec(null);
     setDailyTotals(null);
+    setChartDSL(null);
     setVerification(null);
     setShowDebug(false);
     setRefining(false);
@@ -155,6 +158,7 @@ function CustomChartDialogInner({
       });
       setCurrentSpec(result.chartSpec);
       setDailyTotals(result.dailyTotals);
+      setChartDSL(result.chartDSL ?? null);
       setVerification(mode === "v2" ? null : verifyChartData(result.chartSpec, result.dailyTotals));
     } catch (err) {
       console.error("[generate-chart] mutation error:", err);
@@ -379,23 +383,27 @@ function CustomChartDialogInner({
                   onClick={() => setShowDebug((v) => !v)}
                   className="text-xs text-muted-foreground h-7 px-2"
                 >
-                  {showDebug ? "Hide debug JSON" : "Show debug JSON"}
+                  {mode === "v2"
+                    ? (showDebug ? "Hide DSL" : "Show DSL")
+                    : (showDebug ? "Hide debug JSON" : "Show debug JSON")}
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    if (currentSpec && dailyTotals) {
-                      setVerification(verifyChartData(currentSpec, dailyTotals));
-                    } else {
-                      setVerification({ status: "unavailable", reason: "No daily totals available (try regenerating the chart)" });
-                    }
-                  }}
-                  className="text-xs text-muted-foreground h-7 px-2"
-                >
-                  <ShieldCheck className="h-3 w-3 mr-1" />
-                  Verify accuracy
-                </Button>
+                {mode === "v1" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (currentSpec && dailyTotals) {
+                        setVerification(verifyChartData(currentSpec, dailyTotals));
+                      } else {
+                        setVerification({ status: "unavailable", reason: "No daily totals available (try regenerating the chart)" });
+                      }
+                    }}
+                    className="text-xs text-muted-foreground h-7 px-2"
+                  >
+                    <ShieldCheck className="h-3 w-3 mr-1" />
+                    Verify accuracy
+                  </Button>
+                )}
               </div>
 
               {verification && (
@@ -449,7 +457,7 @@ function CustomChartDialogInner({
               {showDebug && (
                 <Textarea
                   readOnly
-                  value={JSON.stringify(currentSpec, null, 2)}
+                  value={JSON.stringify(mode === "v2" ? chartDSL : currentSpec, null, 2)}
                   className="text-[10px] font-mono bg-muted/50 rounded p-2 min-h-[300px] resize-y"
                 />
               )}
