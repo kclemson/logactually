@@ -249,26 +249,33 @@ async function callLovableAI(
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       console.log(`AI call attempt ${attempt + 1}...`);
-      
-      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-3-flash-preview',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
-          ],
-          temperature: 0.3,
-        }),
-      });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`AI call failed: ${response.status} - ${errorText}`);
+      const models = ['google/gemini-3-flash-preview', 'google/gemini-2.5-flash'];
+      let response: Response | null = null;
+      for (const model of models) {
+        const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt },
+            ],
+            temperature: 0.3,
+          }),
+        });
+        if (res.ok) { response = res; break; }
+        console.warn(`Model ${model} failed with ${res.status}, trying fallback...`);
+        response = res;
+      }
+
+      if (!response || !response.ok) {
+        const errorText = await response?.text() ?? 'no response';
+        throw new Error(`AI call failed: ${response?.status} - ${errorText}`);
       }
 
       const data = await response.json();

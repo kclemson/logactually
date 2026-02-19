@@ -178,15 +178,18 @@ serve(async (req) => {
     }
 
     try {
-      const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${lovableApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-3-flash-preview',
-          messages: [{
+      const aiModels = ['google/gemini-3-flash-preview', 'google/gemini-2.5-flash'];
+      let aiResponse: Response | null = null;
+      for (const model of aiModels) {
+        const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${lovableApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model,
+            messages: [{
             role: 'user',
             content: `What food product has UPC barcode ${cleanUpc}? 
 I need the product name and nutritional information for one typical serving.
@@ -200,12 +203,16 @@ sodium and cholesterol should be in milligrams. All other values in grams.
 If you cannot identify the product, respond with:
 {"unknown": true}`
           }],
-          temperature: 0.3,
-        }),
-      });
+            temperature: 0.3,
+          }),
+        });
+        if (res.ok) { aiResponse = res; break; }
+        console.warn(`Model ${model} failed with ${res.status}, trying fallback...`);
+        aiResponse = res;
+      }
 
-      if (!aiResponse.ok) {
-        console.error('AI API error:', aiResponse.status);
+      if (!aiResponse || !aiResponse.ok) {
+        console.error('AI API error:', aiResponse?.status);
         return new Response(
           JSON.stringify({ notFound: true, upc: cleanUpc }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

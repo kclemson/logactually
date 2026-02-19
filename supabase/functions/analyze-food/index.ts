@@ -59,6 +59,25 @@ interface AnalyzeResponse {
 }
 
 
+async function callAI(body: object): Promise<Response> {
+  const models = ['google/gemini-3-flash-preview', 'google/gemini-2.5-flash'];
+  let lastResponse: Response | null = null;
+  for (const model of models) {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('LOVABLE_API_KEY')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ ...body, model }),
+    });
+    if (response.ok) return response;
+    lastResponse = response;
+    console.warn(`Model ${model} failed with ${response.status}, trying fallback...`);
+  }
+  return lastResponse!;
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -117,19 +136,11 @@ serve(async (req) => {
     const promptTemplate = getAnalyzeFoodPrompt(version);
     const prompt = interpolatePrompt(promptTemplate, rawInput, additionalContext);
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('LOVABLE_API_KEY')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
-        messages: [
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.3,
-      }),
+    const response = await callAI({
+      messages: [
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.3,
     });
 
     if (!response.ok) {
