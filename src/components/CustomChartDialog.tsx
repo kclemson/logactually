@@ -57,7 +57,7 @@ function CustomChartDialogInner({
   initialChart?: { id: string; question: string; chartSpec: ChartSpec };
 }) {
   const [input, setInput] = useState("");
-  const [mode, setMode] = useState<"v1" | "v2">("v1");
+  const [mode, setMode] = useState<"v1" | "v2">(() => (localStorage.getItem("chart-mode") as "v1" | "v2") || "v1");
   const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>(
     initialChart ? [{ role: "user", content: initialChart.question }] : []
   );
@@ -223,7 +223,7 @@ function CustomChartDialogInner({
         {/* Mode toggle */}
         <div className="flex gap-1 mt-1">
           <button
-            onClick={() => setMode("v1")}
+            onClick={() => { setMode("v1"); localStorage.setItem("chart-mode", "v1"); }}
             className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
               mode === "v1"
                 ? "bg-primary text-primary-foreground border-primary"
@@ -233,7 +233,7 @@ function CustomChartDialogInner({
             v1 · AI data
           </button>
           <button
-            onClick={() => setMode("v2")}
+            onClick={() => { setMode("v2"); localStorage.setItem("chart-mode", "v2"); }}
             className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
               mode === "v2"
                 ? "bg-primary text-primary-foreground border-primary"
