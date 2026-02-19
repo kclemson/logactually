@@ -87,7 +87,7 @@ export function CustomLogTypeView({ logType, entries, isLoading, onDelete, isRea
           key={entry.id}
           className="flex items-center justify-between gap-3 py-2 border-b border-border/50 last:border-0 group"
         >
-          <span className="text-xs text-muted-foreground shrink-0 w-36">
+          <span className="text-xs text-muted-foreground shrink-0 w-28">
             {formatEntryDate(entry, logType.value_type)}
           </span>
           <span className="text-sm flex-1 min-w-0 truncate">
