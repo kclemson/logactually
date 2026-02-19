@@ -178,7 +178,7 @@ serve(async (req) => {
     }
 
     try {
-      const aiModels = ['google/gemini-3-flash-preview', 'google/gemini-2.5-flash'];
+      const aiModels = ['google/gemini-3-flash-preview', 'openai/gpt-5-mini'];
       let aiResponse: Response | null = null;
       for (const model of aiModels) {
         const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {

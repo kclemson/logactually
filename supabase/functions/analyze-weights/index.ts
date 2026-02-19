@@ -77,21 +77,28 @@ serve(async (req) => {
     console.log(`[analyze-weights] Processing (${version}): "${rawInput.substring(0, 100)}..."`);
     const startTime = Date.now();
 
-    // Call Lovable AI Gateway
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: "You are a fitness tracking assistant. Return only valid JSON." },
-          { role: "user", content: prompt },
-        ],
-      }),
-    });
+    // Call Lovable AI Gateway with primary→fallback model chain
+    const models = ["google/gemini-3-flash-preview", "openai/gpt-5-mini"];
+    let response: Response | null = null;
+    for (const model of models) {
+      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: "You are a fitness tracking assistant. Return only valid JSON." },
+            { role: "user", content: prompt },
+          ],
+        }),
+      });
+      if (res.ok) { response = res; break; }
+      console.warn(`[analyze-weights] Model ${model} failed with ${res.status}, trying fallback...`);
+      response = res;
+    }
 
     if (!response.ok) {
       if (response.status === 429) {
