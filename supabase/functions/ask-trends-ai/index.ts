@@ -183,7 +183,6 @@ serve(async (req) => {
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
           ],
-          temperature: 0.4,
         }),
       });
       if (res.ok) { aiResponse = res; break; }

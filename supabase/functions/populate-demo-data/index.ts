@@ -265,7 +265,6 @@ async function callLovableAI(
               { role: 'system', content: systemPrompt },
               { role: 'user', content: userPrompt },
             ],
-            temperature: 0.3,
           }),
         });
         if (res.ok) { response = res; break; }

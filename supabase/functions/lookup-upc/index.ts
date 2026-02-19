@@ -203,7 +203,6 @@ sodium and cholesterol should be in milligrams. All other values in grams.
 If you cannot identify the product, respond with:
 {"unknown": true}`
           }],
-            temperature: 0.3,
           }),
         });
         if (res.ok) { aiResponse = res; break; }

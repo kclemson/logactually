@@ -140,7 +140,6 @@ serve(async (req) => {
       messages: [
         { role: 'user', content: prompt }
       ],
-      temperature: 0.3,
     });
 
     if (!response.ok) {
