@@ -399,6 +399,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
             isLoading={allMedEntriesLoading}
             onDelete={(id) => deleteAllMedEntry.mutate(id)}
             onEdit={(entry) => setEditingEntry(entry)}
+            onExport={exportCustomLog}
             isReadOnly={isReadOnly}
           />
         </>

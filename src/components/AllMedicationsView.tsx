@@ -49,7 +49,17 @@ export function AllMedicationsView({
           No medications logged for this day.
         </div>
         <p className="text-xs text-muted-foreground text-center">
-          For full history across all dates, export your data in Settings → Import/Export.
+          For full history across all dates,{' '}
+          {onExport ? (
+            <button
+              onClick={onExport}
+              className="underline underline-offset-2 hover:text-foreground transition-colors"
+            >
+              export your data to CSV
+            </button>
+          ) : (
+            'export your data in Settings → Import/Export.'
+          )}
         </p>
       </div>
     );
