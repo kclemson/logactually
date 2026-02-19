@@ -1,84 +1,141 @@
 
-## Fix: `groupBy: "item"` ignores `aggregation: "average"` for exercises
-
-### Root cause
-
-In `chart-dsl.ts` lines 292-299, the `"item"` case for exercise uses a raw `metricValue` plucked directly from the pre-aggregated `exerciseByItem` bucket, then checks only `aggregation === "count"`:
-
-```ts
-value: Math.round(dsl.aggregation === "count" ? item.count : metricValue),
-```
-
-`metricValue` is always the running **total** (`totalDurationMinutes`, `totalCaloriesBurned`, etc.) — never averaged. The `"sum"` vs `"average"` distinction is silently dropped.
-
-To compute a per-day average the engine would need to know how many distinct **days** contributed to each item bucket. That information is not currently stored in `exerciseByItem`.
-
-The food side has the same structural problem — `totalCalories / count` divides by number of *entries*, not days — but the exercise "walking vs running distance" case is the one the user hit today.
+## Plan: "View by Log Type" + Medication Schema Thinking
 
 ---
 
-### Two-part fix
+### Part 1: View by Log Type (what we're building now)
 
-**Part 1 — `src/lib/chart-data.ts`: track `uniqueDays` per item bucket**
+#### What changes in OtherLog
 
-Add a `Set<string>` of `logged_date` values to each `exerciseByItem` entry so the DSL engine can divide by distinct days when `aggregation === "average"`:
+`OtherLogContent` in `src/pages/OtherLog.tsx` gets a `viewMode` state (`'date' | 'type'`) that is:
+- Initialized from `localStorage.getItem('custom-log-view-mode')`, falling back to `'date'`
+- Written back to localStorage in the change handler (not a useEffect — just write in the handler directly)
 
-```ts
-const existing = exerciseByItem[key] ?? {
-  description: label,
-  count: 0,
-  totalSets: 0,
-  totalDurationMinutes: 0,
-  totalCaloriesBurned: 0,
-  uniqueDays: new Set<string>(),   // NEW
-};
-existing.uniqueDays.add(row.logged_date);  // NEW
+The toggle only appears when `logTypes.length > 0`. When there are no log types yet, the existing onboarding template-picker UI renders unchanged.
+
+#### The three-control row in type view
+
+In date view, the current teal "Add custom log" Select sits alone. When `viewMode === 'type'`, the row becomes three controls:
+
+```text
+[ View: By Log Type ▾ ]   [ Body Weight ▾ ]   [ + Log Body Weight ]
 ```
 
-The `exerciseByItem` type in `chart-data.ts` gains the `uniqueDays: Set<string>` field (it is local — not part of the exported `DailyTotals` type in `chart-types.ts`).
+- **Left**: a plain (non-teal) `<Select>` with options "By Date" and "By Log Type"
+- **Middle**: a `<Select>` showing all log type names, defaulting to `sortedLogTypes[0]` (most recently used, same logic that already exists). Its selected value is stored in the same component state as the existing `selectedTypeId`.
+- **Right**: a teal button `+ Log [Type Name]` — clicking it opens the existing `LogEntryInput` inline form below (the same `showInput` flag already in the component). In type view, `LogEntryInput` always submits `logged_date = today` (format today's date as `yyyy-MM-dd`).
 
-Do the same for `foodByItem` so food-source "item" charts get correct averages too — add `uniqueDays: Set<string>` tracking per food item bucket, accumulating `row.eaten_date`.
+In date view, the view-mode select and the existing "Add custom log" Select sit on the same row (view select on the left, action select on the right, same layout as today but with the view dropdown added).
 
-**Part 2 — `src/lib/chart-dsl.ts`: use `uniqueDays` when aggregation is `"average"`**
+#### New hook: `useCustomLogEntriesForType`
 
-In the `"item"` case for exercises, replace the current blind total lookup with:
+New file: `src/hooks/useCustomLogEntriesForType.ts`
 
-```ts
-const divisor = dsl.aggregation === "average"
-  ? (item.uniqueDays?.size || 1)
-  : 1;
+Fetches all entries for a single `log_type_id` across all dates, ordered by `created_at DESC`, limit 500. This parallels `useCustomLogEntries(dateStr)` which fetches by date.
 
-const metricValue =
-  dsl.metric === "distance_miles"   ? item.totalDistanceMiles / divisor :
-  dsl.metric === "duration_minutes" ? item.totalDurationMinutes / divisor :
-  dsl.metric === "calories_burned"  ? item.totalCaloriesBurned / divisor :
-  dsl.metric === "sets"             ? item.totalSets / divisor :
-  item.count;
+Mutations:
+- `deleteEntry`: same as existing, but invalidates `['custom-log-entries-for-type', logTypeId]` in addition to the date-keyed query
+- `createEntry`: inserts with `logged_date = today`, invalidates both query keys
 
-value: Math.round(dsl.aggregation === "count" ? item.count : metricValue),
-```
+The date-keyed and type-keyed queries stay in sync because both are invalidated on any mutation from either hook.
 
-Note `totalDistanceMiles` — `distance_miles` is currently missing from the `exerciseByItem` bucket entirely (the accumulator doesn't track it). This is a secondary bug surfaced by this same query: "miles walked vs run" would always show 0 for `distance_miles` even in the sum case. It needs to be added to both the accumulator in `chart-data.ts` and the lookup in `chart-dsl.ts`.
+#### New component: `CustomLogTypeView`
+
+New file: `src/components/CustomLogTypeView.tsx`
+
+Renders the full history table for a selected log type. Key decisions:
+
+**Date column rendering** — which timestamp to show depends on the `value_type`:
+- `text` and `text_multiline`: show `created_at` with time of day — "Today, 2:14 PM" / "Yesterday, 8:00 AM" / "Feb 18, 3:00 PM". This is meaningful for things like medication notes, mood entries, journal entries where time matters.
+- `numeric`, `dual_numeric`, `text_numeric`: show `logged_date` as a plain date — "Feb 18" / "Yesterday" / "Today". Time of day is not meaningful for a body weight or blood pressure reading.
+
+**Value column** — renders using the same value display logic already in `CustomLogEntryRow`. The type view is intentionally read-only (no inline editing). Edits still happen in the date view. This keeps the type view simple.
+
+**Delete** — trash icon per row, same appearance as `CustomLogEntryRow`.
+
+**Empty state** — "No entries yet for [Type Name]. Tap + Log to add your first entry."
+
+The component receives: `logType: CustomLogType`, `entries: CustomLogEntry[]`, `isLoading: boolean`, `onDelete: (id: string) => void`, `isReadOnly: boolean`.
+
+#### What OtherLog.tsx renders in type view
+
+When `viewMode === 'type'`:
+- The three-control row (view select | type select | add button)
+- `LogEntryInput` form (inline, shown when `showInput` is true), submitting to today's date
+- `CustomLogTypeView` table (no DateNavigation, no grouped-by-date entries list)
+
+When `viewMode === 'date'`:
+- The view-mode select + existing "Add custom log" Select on the same row (unchanged behavior)
+- Existing `DateNavigation`
+- Existing grouped-by-date entries
+
+#### Files changed for Phase 1
+
+| File | Change |
+|---|---|
+| `src/hooks/useCustomLogEntriesForType.ts` | New — all entries for one type, newest first |
+| `src/components/CustomLogTypeView.tsx` | New — read-only type-first history table |
+| `src/pages/OtherLog.tsx` | Add view-mode Select with localStorage; conditional rendering |
+
+No database changes. No changes to `CustomLogEntryRow`, `LogEntryInput`, Settings, Trends, or export.
 
 ---
 
-### Summary of all changes
+### Part 2: Medication schema — thinking through it before committing
 
-**`src/lib/chart-data.ts`**
-- Add `totalDistanceMiles: number` and `uniqueDays: Set<string>` to the `exerciseByItem` bucket initialiser
-- Accumulate `existing.totalDistanceMiles += row.distance_miles ?? 0`
-- Accumulate `existing.uniqueDays.add(row.logged_date)`
-- For `foodByItem`: add `uniqueDays: Set<string>` and accumulate `existing.uniqueDays.add(row.eaten_date)`
+You asked the right question by looking at what Apple Health does. The key insight from comparing their flow to what would actually be useful in this app:
 
-**`src/lib/chart-dsl.ts`**
-- In the `"item"` / exercise block: compute `divisor` from `item.uniqueDays.size` when `aggregation === "average"`, apply it to all metric values
-- Add `distance_miles → item.totalDistanceMiles` to the metric lookup (it's missing today)
-- In the `"item"` / food block: apply the same `divisor` pattern using `item.uniqueDays.size`
+#### What Apple Health tracks that we probably don't need
 
-**`src/lib/chart-types.ts`** — no change needed; `exerciseByItem` type lives only in `chart-data.ts`
+- **Form factor** (liquid-filled capsule, tablet, foam, gel) — Apple needs this for the visual pill log and potentially for interactions. We don't need it.
+- **Scheduled reminders** (specific time, cyclical schedules) — we have no notification infrastructure. Out of scope for now.
+- **Duration/recurrence** (end date) — tightly tied to reminder schedules. Out of scope.
+- **Pill shape** — visual customization. Not useful for logging.
+
+#### What Apple Health tracks that IS useful signal for us
+
+- **Name** (obvious)
+- **Strength** (e.g. 325mg) — this is what `unit` already captures on `custom_log_types`
+- **"As needed" vs scheduled** — this is actually the most interesting one for us
+
+#### The "as needed" insight
+
+Your friend's spreadsheet is entirely "as needed" medications — Compazine, Ativan, Tylenol for pain. The Apple Health flow distinguishes "as needed" from "every day at the same time". For our use case, the interesting constraint is specifically the **as-needed** case: "I can only take this every 6 hours" or "max 3 doses per day."
+
+The scheduled case (take every day at 8am) is really a reminder feature, which we can't support yet.
+
+So the fields that actually serve a non-reminder purpose are:
+
+- `med_min_hours_between_doses numeric` — "I took this. When can I take it again?" Computed answer: `last_taken_at + min_hours`. Directly useful as a display feature in the type view ("Next dose available in 3h 20m").
+- `med_max_doses_per_day integer` — "Have I hit my limit today?" Computed from counting today's entries.
+- `med_notes text` — The free-text "Anti-nausea: Morning and Evening Day 2, 3, 4" from your friend's spreadsheet. Also useful for "Take with food" type instructions.
+
+What Apple calls "strength" (325mg) we handle naturally via `unit` on `custom_log_types` — the log type named "Tylenol" has `unit = "mg"` and each dose entry has `numeric_value = 325`.
+
+#### Schema recommendation: four nullable columns on `custom_log_types`
+
+```sql
+ALTER TABLE custom_log_types
+  ADD COLUMN is_medication boolean NOT NULL DEFAULT false,
+  ADD COLUMN med_min_hours_between_doses numeric,
+  ADD COLUMN med_max_doses_per_day integer,
+  ADD COLUMN med_notes text;
+```
+
+This is deferred to Phase 2. We are not building the medication creation dialog or medication-specific UI in this plan. What we ARE building (the type view) will already work perfectly for medications once Phase 2 adds the medication columns — the type view's time-aware date display (`created_at` with time-of-day for `text` types) is exactly right for medication dose logging.
+
+#### Why defer?
+
+The "as needed" columns (`min_hours_between_doses`, `max_doses_per_day`) only become meaningful UI when we build the "next dose available in X hours" indicator. That indicator belongs in the type view — which we're building now. But we can add it in the same page once the schema exists. There's no blocker to shipping the type view first and layering medication metadata on top. A user creating a "Tylenol" custom log type today will get the full medication experience once Phase 2 lands.
+
+The medication creation flow (the specialized dialog, the template picker entry) is Phase 2 scope.
 
 ---
 
-### Why `uniqueDays` rather than `count`
+### Implementation order
 
-`count` is the number of individual logged **sets/rows** (a single workout session can have many sets). Dividing total distance by `count` would give average distance per set, not per session day — which is meaningless. Dividing by `uniqueDays.size` gives "average distance per day I did this activity", which is exactly what "average daily miles walked vs. run" means.
+1. Create `src/hooks/useCustomLogEntriesForType.ts`
+2. Create `src/components/CustomLogTypeView.tsx`
+3. Update `src/pages/OtherLog.tsx` — add view-mode select, conditional rendering
+
+No migration needed for Phase 1.
