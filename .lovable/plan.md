@@ -1,24 +1,27 @@
 
-## Make "logging consistency" charts verifiable
+
+## Reword the exercise log description in the generate-chart prompt to reduce strength-training bias
 
 ### Problem
-The "Daily Logging Consistency" chart counts food entries + exercise entries per day. This is a simple sum of two known fields (`food.entries` + `exercise.sets`), but `verifyDeterministic` doesn't recognize the dataKey the AI uses (likely `total_entries`, `log_count`, or `entries`), so it falls through to the "unavailable" message.
+The current system prompt describes the exercise log as:
+
+> "Exercise log: dates, exercise names, sets, reps, weight (lbs), duration (minutes), distance (miles)..."
+
+Leading with "sets, reps, weight" primes the AI to treat "exercise" as synonymous with weight lifting, causing it to exclude cardio and daily activities from charts like "Most Frequent Exercises."
 
 ### Fix
 
-**Single file: `src/lib/chart-verification.ts`**
+**Single file: `supabase/functions/generate-chart/index.ts`**
 
-Add new mixed-source derived formulas to `DERIVED_FORMULAS` that cover the likely dataKey names the AI might use for "total logged items per day":
+Replace the exercise log bullet in the `You have access to:` section (line 14) with something like:
 
-```typescript
-// Total daily log entries (food items + exercise sets)
-total_entries:       { source: "mixed", compute: (f, e) => (f?.entries || 0) + (e?.sets || 0), tolerance: "default" },
-log_count:           { source: "mixed", compute: (f, e) => (f?.entries || 0) + (e?.sets || 0), tolerance: "default" },
-total_logs:          { source: "mixed", compute: (f, e) => (f?.entries || 0) + (e?.sets || 0), tolerance: "default" },
-daily_entries:       { source: "mixed", compute: (f, e) => (f?.entries || 0) + (e?.sets || 0), tolerance: "default" },
-entry_count:         { source: "mixed", compute: (f, e) => (f?.entries || 0) + (e?.sets || 0), tolerance: "default" },
+```
+- Exercise log: covers all types of physical activity -- strength training, cardio, sports, and everyday activities (e.g. walking, gardening). Fields: dates, exercise names, sets, reps, weight (lbs), duration (minutes), distance (miles), and metadata including heart rate, effort level, and reported calories burned. Not every exercise uses every field; cardio entries typically have duration/distance but no sets/reps/weight.
 ```
 
-This means the next time this chart is generated, `verifyDeterministic` will recognize the dataKey, compute `food.entries + exercise.sets` for each date, and return a "Verified mathematically" result instead of "unavailable."
+Key changes:
+1. Opens with "covers all types of physical activity" and gives examples spanning strength, cardio, and everyday activity
+2. Explicitly notes that not every exercise uses every field, so the AI won't filter out entries missing sets/reps/weight
+3. Keeps the same field list so nothing is lost
 
-No logic changes to the verification pipeline -- just expanding the formula dictionary.
+No other files affected. The edge function will be redeployed automatically.
