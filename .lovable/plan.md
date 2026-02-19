@@ -1,43 +1,54 @@
 
 
-## Add `groupBy: "category"` to the chart DSL
+## Fix chart DSL: category filter + prompt improvements
 
-### Problem
+### What's changing
 
-When a user asks "cardio vs strength training split", the AI has no way to express this. The closest option is `groupBy: "item"` which lists every individual exercise separately. The user wants just two buckets (Cardio / Strength), which requires knowing the exercise category -- information that exists in the exercise metadata (`isCardio` flag) but isn't accessible to the chart engine.
+Two focused fixes to make exercise category queries and the prompt work correctly:
 
-### Solution
+1. **Add a category filter for exercises** -- so you can ask things like "cardio count by day of week" (filter to cardio only, group by weekday)
+2. **Improve the AI prompt** -- stronger guidance on when to use `groupBy: "category"` vs `filter.category`, and clarify that `entries` means the count of food items logged
 
-Add a new `groupBy: "category"` option that groups exercise data into Cardio vs Strength (non-cardio) buckets. This uses the existing `isCardio` flag from `EXERCISE_MUSCLE_GROUPS` in `exercise-metadata.ts`.
+### What we're NOT doing
 
-### Changes
+Dropping the idea of a separate `food_items_count` metric. The existing `entries` metric will simply be documented as "number of food items logged" -- users think of it as the same thing, so we'll keep it simple.
+
+### Technical details
 
 | File | Change |
 |---|---|
-| `src/lib/chart-types.ts` | Add `"category"` to the `groupBy` union. Add `exerciseByCategory` to `DailyTotals`. |
-| `src/lib/chart-data.ts` | When `groupBy === "category"`, compute `exerciseByCategory` record with two keys: `"Cardio"` and `"Strength"`, each accumulating totals using `isCardioExercise()` from exercise-metadata. |
-| `src/lib/chart-dsl.ts` | Add a `case "category"` block in `executeDSL` that reads `exerciseByCategory` and produces data points for each category bucket. |
-| `supabase/functions/generate-chart-dsl/index.ts` | Add `"category"` to the GROUP BY OPTIONS docs in the system prompt, explaining it groups exercises into Cardio vs Strength buckets. Mark it as categorical in the aggregation semantics section. |
+| `src/lib/chart-types.ts` | Add `category?: "Cardio" \| "Strength"` to the `filter` interface |
+| `src/lib/chart-data.ts` | In `fetchExerciseData`, when `filter.category` is set, skip rows that don't match using `isCardioExercise()` |
+| `src/lib/chart-dsl.ts` | No changes needed (filter is applied at the data layer) |
+| `supabase/functions/generate-chart-dsl/index.ts` | Add `category` filter to the prompt schema. Add guidance distinguishing `groupBy: "category"` (compare cardio vs strength) from `filter.category` (isolate one category, group by something else). Clarify `entries` as "number of food items logged." |
 
-### How it works
+### How the category filter works
 
 ```text
-User: "Cardio vs strength training split"
+User: "Cardio sessions by day of week"
 
 AI returns:
-  groupBy: "category"
   source: "exercise"
-  metric: "cal_burned" (or "sets", "duration", etc.)
+  metric: "sets"
   aggregation: "sum"
+  groupBy: "dayOfWeek"
+  filter: { category: "Cardio" }
 
-Client-side:
-  1. fetchChartData detects groupBy=category, queries weight_sets
-  2. For each row, checks isCardioExercise(exercise_key)
-  3. Buckets into { Cardio: {...totals}, Strength: {...totals} }
-  4. executeDSL reads these two buckets, produces two bar data points
+User: "Cardio vs strength split"
+
+AI returns:
+  source: "exercise"
+  metric: "sets"
+  groupBy: "category"
+  filter: null
 ```
 
-### Technical detail
-
-The category grouping is exercise-only. If the AI mistakenly pairs it with `source: "food"`, the chart will simply render empty (same graceful behavior as other mismatches). The prompt will instruct the AI that `category` only applies to exercise data.
+In `fetchExerciseData`:
+```typescript
+if (categoryFilter) {
+  const isCardio = isCardioExercise(row.exercise_key);
+  if (categoryFilter === "Cardio" && !isCardio) continue;
+  if (categoryFilter === "Strength" && isCardio) continue;
+}
+```
 
