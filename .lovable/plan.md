@@ -1,51 +1,52 @@
 
 
-## Reduce verification fragility: heuristic-first, AI-second
+## Add derived-formula verification for computable metrics
 
-### The problem
+### Problem
 
-The main realistic failure mode isn't "wrong field mapping" (modern LLMs handle this fine) -- it's the **null cop-out**, where the AI declares `verification: null` on a chart that IS verifiable. The current code trusts that declaration and skips verification entirely.
+Charts like "fat as % of total calories" show as unverifiable because the verifier only maps dataKeys to single fields. But `fat * 9 / cal * 100` is trivially computable from data we already have. The AI declaring these "derived metrics that can't be verified" is wrong -- we just never taught the verifier basic arithmetic.
 
-### The fix
+### Solution
 
-Flip the priority in `verifyChartData`: try the deterministic heuristic FIRST, and only fall back to the AI's self-declared verification when the heuristic can't help. This is a small reorder of the existing logic, not a new system.
+Add a `DERIVED_FORMULAS` map alongside the existing `FOOD_KEY_MAP`. Each entry defines a function that computes the expected value from a daily totals record. The legacy heuristic checks this map before giving up on an unknown dataKey.
 
-**`src/lib/chart-verification.ts` -- change `verifyChartData`:**
+### Formulas to support
 
-Current order:
-1. If AI says `null` → give up
-2. If AI declared a verification object → use it
-3. No verification field → legacy heuristic
+| dataKey patterns | Formula | Why |
+|---|---|---|
+| `fat_pct`, `fat_percentage`, `fat_calories_pct` | `(fat * 9 / cal) * 100` | Shown in screenshot |
+| `protein_pct`, `protein_percentage` | `(protein * 4 / cal) * 100` | Same pattern |
+| `carbs_pct`, `carbs_percentage` | `(carbs * 4 / cal) * 100` | Same pattern |
+| `cal_per_meal`, `calories_per_meal` | `cal / entries` | Uses new entries field |
+| `protein_per_meal` | `protein / entries` | Insight chip we added |
+| `fat_calories`, `calories_from_fat` | `fat * 9` | Simple derived |
+| `protein_calories`, `calories_from_protein` | `protein * 4` | Simple derived |
+| `carbs_calories`, `calories_from_carbs` | `carbs * 4` | Simple derived |
 
-New order:
-1. Try heuristic first (it's deterministic and trustworthy)
-2. If heuristic returns "unavailable", THEN check the AI's declaration
-3. If AI says `null` → give up
-
-This means:
-- A simple "calories per day" chart verifies via heuristic even if the AI incorrectly returns `verification: null`
-- A "workout days vs rest days" aggregate chart still uses the AI's declared breakdown (heuristic can't handle aggregates)
-- The AI's declaration is only consulted when our own logic can't figure it out
-
-Additionally, when the AI declares `type: "daily"` and the heuristic also has a mapping, we can cross-check: if the AI's `field` disagrees with the heuristic's mapping, prefer the heuristic (it's deterministic). This is a one-line guard, not architectural complexity.
+All formulas guard against division by zero (return 0 when denominator is 0).
 
 ### Technical details
 
+**`src/lib/chart-verification.ts`:**
+
+Add a new map after the existing key maps:
+
 ```text
-verifyChartData(spec, dailyTotals):
-  1. Run verifyLegacy(spec, dailyTotals)
-  2. If result.status === "success" → return it
-  3. If spec.verification?.type === "daily" → return verifyDaily(spec, dailyTotals)
-  4. If spec.verification?.type === "aggregate" → return verifyAggregate(spec, dailyTotals)
-  5. If spec.verification === null → return unavailable with reason
-  6. Return unavailable (no verification possible)
+DERIVED_FORMULAS: Record<string, {
+  source: "food" | "exercise";
+  compute: (record: any) => number;
+}>
 ```
 
-For daily cross-check: in `verifyDaily`, look up `spec.dataKey` in `FOOD_KEY_MAP`/`EXERCISE_KEY_MAP`. If a mapping exists and disagrees with `spec.verification.field`, override with the heuristic's field.
+In `verifyLegacy`, after the existing `FOOD_KEY_MAP`/`EXERCISE_KEY_MAP` lookup fails, check `DERIVED_FORMULAS`. If a match is found, use its `compute` function instead of a field lookup. The rest of the verification logic (tolerance check, mismatch tracking) stays identical.
+
+Use the percentage tolerance (`delta < 2 || relative < 0.02`) for percentage-type formulas since these are inherently noisier from rounding.
+
+In `verifyDaily`, apply the same derived formula cross-check: if the heuristic has a derived formula for the dataKey, use it instead of the AI's declared field.
 
 ### Files changed
 
 | File | Change |
 |---|---|
-| `src/lib/chart-verification.ts` | Reorder `verifyChartData` to try heuristic first; add field cross-check in `verifyDaily` |
+| `src/lib/chart-verification.ts` | Add `DERIVED_FORMULAS` map; update `verifyLegacy` and `verifyDaily` to use computed values for derived metrics |
 
