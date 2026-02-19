@@ -89,29 +89,29 @@ serve(async (req) => {
 
     const prompt = buildPhotoAnalysisPrompt();
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('LOVABLE_API_KEY')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: prompt },
-              {
-                type: 'image_url',
-                image_url: { url: `data:image/jpeg;base64,${imageBase64}` },
-              },
-            ],
-          },
-        ],
-        temperature: 0.3,
-      }),
-    });
+    const messageContent = [
+      { type: 'text', text: prompt },
+      { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
+    ];
+    const models = ['google/gemini-3-flash-preview', 'openai/gpt-5-mini'];
+    let response: Response | null = null;
+    for (const model of models) {
+      const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('LOVABLE_API_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: 'user', content: messageContent }],
+          temperature: 0.3,
+        }),
+      });
+      if (res.ok) { response = res; break; }
+      console.warn(`Model ${model} failed with ${res.status}, trying fallback...`);
+      response = res;
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
