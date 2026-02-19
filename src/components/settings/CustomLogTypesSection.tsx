@@ -40,6 +40,7 @@ export function CustomLogTypesSection({ isReadOnly }: CustomLogTypesSectionProps
                 type={lt}
                 onRename={(id, name) => updateType.mutate({ id, name })}
                 onUpdateUnit={(id, unit) => updateType.mutate({ id, unit })}
+                onUpdateDescription={(id, description) => updateType.mutate({ id, description })}
                 onDelete={(id) => deleteType.mutate(id)}
                 openDeletePopoverId={openLogTypePopoverId}
                 setOpenDeletePopoverId={setOpenLogTypePopoverId}

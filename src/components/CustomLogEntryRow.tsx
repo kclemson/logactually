@@ -69,6 +69,48 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
     triggerOverlay,
   });
 
+  // Medication layout: time · dose [unit] with optional notes on second line
+  if (valueType === 'medication') {
+    const timeLabel = entry.logged_time
+      ? (() => {
+          // Parse "HH:MM:SS" or "HH:MM" from Postgres time
+          const [h, m] = entry.logged_time.split(':').map(Number);
+          const d = new Date();
+          d.setHours(h, m, 0);
+          return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        })()
+      : null;
+    const doseLabel = entry.numeric_value != null
+      ? `${entry.numeric_value}${unitLabel ? ' ' + unitLabel : ''}`
+      : null;
+
+    return (
+      <div className="py-1 group">
+        <div className="flex items-center gap-2">
+          <span className="text-sm flex-1 min-w-0">
+            {timeLabel && <span className="text-muted-foreground">{timeLabel}{doseLabel ? ' · ' : ''}</span>}
+            {doseLabel && <span>{doseLabel}</span>}
+            {!timeLabel && !doseLabel && <span className="text-muted-foreground">—</span>}
+          </span>
+          {!isReadOnly && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0"
+              onClick={() => onDelete(entry.id)}
+              aria-label="Delete entry"
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
+        {entry.entry_notes && (
+          <p className="text-xs text-muted-foreground italic mt-0.5 pl-0">{entry.entry_notes}</p>
+        )}
+      </div>
+    );
+  }
+
   const isDualNumeric = valueType === 'dual_numeric';
   const hasNumeric = valueType === 'numeric' || valueType === 'text_numeric' || isDualNumeric;
   const hasText = valueType === 'text' || valueType === 'text_numeric' || valueType === 'text_multiline';
