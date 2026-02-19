@@ -13,14 +13,12 @@ import { useCustomLogTypes } from '@/hooks/useCustomLogTypes';
 import { useExportData } from '@/hooks/useExportData';
 import { useCustomLogEntries } from '@/hooks/useCustomLogEntries';
 import { useCustomLogEntriesForType } from '@/hooks/useCustomLogEntriesForType';
-import { useAllMedicationEntries } from '@/hooks/useAllMedicationEntries';
 import { CreateLogTypeDialog } from '@/components/CreateLogTypeDialog';
 import { CreateMedicationDialog } from '@/components/CreateMedicationDialog';
 import { LogTemplatePickerDialog } from '@/components/LogTemplatePickerDialog';
 import { LogEntryInput } from '@/components/LogEntryInput';
 import { MedicationEntryInput } from '@/components/MedicationEntryInput';
-import { CustomLogEntryRow } from '@/components/CustomLogEntryRow';
-import { AllMedicationsView } from '@/components/AllMedicationsView';
+import { CustomLogEntriesView } from '@/components/CustomLogEntriesView';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { getStoredDate } from '@/lib/selected-date';
 import { LOG_TEMPLATES, getTemplateUnit } from '@/lib/log-templates';
@@ -98,20 +96,11 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   const effectiveViewMode = viewMode === 'medication' && !showMedView ? 'date' : viewMode;
   const activeTypeId = viewMode === 'medication' ? selectedMedTypeId : null;
 
-  // Type/Meds view data
+  // Used for medication entry dialog (today's entry count / logged times)
   const {
     entries: typeEntries,
-    isLoading: typeEntriesLoading,
     createEntry: createTypeEntry,
-    deleteEntry: deleteTypeEntry,
   } = useCustomLogEntriesForType(activeTypeId);
-
-  // All meds view data
-  const medTypeIds = useMemo(() => medicationTypes.map((t) => t.id), [medicationTypes]);
-  const { entries: allMedEntries, isLoading: allMedEntriesLoading, deleteEntry: deleteAllMedEntry } = useAllMedicationEntries(
-    effectiveViewMode === 'medication' ? medTypeIds : [],
-    dateStr
-  );
 
   // Update mutation for editing medication entries
   const updateMedEntry = useMutation({
@@ -287,99 +276,35 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
         )}
       </section>
 
-      {effectiveViewMode === 'medication' ? (
-        /* By Meds view body */
-        <>
-          <DateNavigation
-            selectedDate={selectedDate}
-            isTodaySelected={isTodaySelected}
-            calendarOpen={dateNav.calendarOpen}
-            onCalendarOpenChange={dateNav.setCalendarOpen}
-            calendarMonth={dateNav.calendarMonth}
-            onCalendarMonthChange={dateNav.setCalendarMonth}
-            onPreviousDay={dateNav.goToPreviousDay}
-            onNextDay={dateNav.goToNextDay}
-            onDateSelect={dateNav.handleDateSelect}
-            onGoToToday={dateNav.goToToday}
-            datesWithData={datesWithData}
-            highlightClassName="text-teal-600 dark:text-teal-400 font-semibold"
-            weekStartDay={settings.weekStartDay}
-          />
-          <AllMedicationsView
-            entries={allMedEntries}
-            logTypes={logTypes}
-            isLoading={allMedEntriesLoading}
-            onDelete={(id) => deleteAllMedEntry.mutate(id)}
-            onEdit={(entry) => setEditingEntry(entry)}
-            onExport={exportCustomLog}
-            isReadOnly={isReadOnly}
-          />
-        </>
-      ) : (
-        /* Date view body */
-        <>
-          <DateNavigation
-            selectedDate={selectedDate}
-            isTodaySelected={isTodaySelected}
-            calendarOpen={dateNav.calendarOpen}
-            onCalendarOpenChange={dateNav.setCalendarOpen}
-            calendarMonth={dateNav.calendarMonth}
-            onCalendarMonthChange={dateNav.setCalendarMonth}
-            onPreviousDay={dateNav.goToPreviousDay}
-            onNextDay={dateNav.goToNextDay}
-            onDateSelect={dateNav.handleDateSelect}
-            onGoToToday={dateNav.goToToday}
-            datesWithData={datesWithData}
-            highlightClassName="text-teal-600 dark:text-teal-400 font-semibold"
-            weekStartDay={settings.weekStartDay}
-          />
+      {/* Shared date navigation — both modes */}
+      <DateNavigation
+        selectedDate={selectedDate}
+        isTodaySelected={isTodaySelected}
+        calendarOpen={dateNav.calendarOpen}
+        onCalendarOpenChange={dateNav.setCalendarOpen}
+        calendarMonth={dateNav.calendarMonth}
+        onCalendarMonthChange={dateNav.setCalendarMonth}
+        onPreviousDay={dateNav.goToPreviousDay}
+        onNextDay={dateNav.goToNextDay}
+        onDateSelect={dateNav.handleDateSelect}
+        onGoToToday={dateNav.goToToday}
+        datesWithData={datesWithData}
+        highlightClassName="text-teal-600 dark:text-teal-400 font-semibold"
+        weekStartDay={settings.weekStartDay}
+      />
 
-          {/* Entries grouped by log type */}
-          <div className="space-y-3">
-            {entries.length > 0 ? (
-              (() => {
-                const groups: { typeId: string; items: typeof entries }[] = [];
-                const seen = new Map<string, number>();
-                for (const entry of entries) {
-                  const idx = seen.get(entry.log_type_id);
-                  if (idx !== undefined) {
-                    groups[idx].items.push(entry);
-                  } else {
-                    seen.set(entry.log_type_id, groups.length);
-                    groups.push({ typeId: entry.log_type_id, items: [entry] });
-                  }
-                }
-                return groups.map((group) => {
-                  const logType = logTypes.find((t) => t.id === group.typeId);
-                  return (
-                    <div key={group.typeId} className="space-y-0">
-                      <div className="py-1">
-                        <span className="text-xs font-medium text-muted-foreground">
-                          {logType?.name || 'Unknown'}
-                        </span>
-                      </div>
-                      {group.items.map((entry) => (
-                        <CustomLogEntryRow
-                          key={entry.id}
-                          entry={entry}
-                          typeName={logType?.name || ''}
-                          valueType={logType?.value_type || 'text'}
-                          typeUnit={logType?.unit}
-                          onDelete={(id) => deleteEntry.mutate(id)}
-                          onUpdate={(params) => updateEntry.mutate(params)}
-                          isReadOnly={isReadOnly}
-                        />
-                      ))}
-                    </div>
-                  );
-                });
-              })()
-            ) : (
-              <div className="text-center text-muted-foreground py-8">No custom log items for this day</div>
-            )}
-          </div>
-        </>
-      )}
+      {/* Unified entries view — filters to meds-only when in medication mode */}
+      <CustomLogEntriesView
+        entries={entries}
+        logTypes={logTypes}
+        isLoading={isLoading}
+        onDelete={(id) => deleteEntry.mutate(id)}
+        onEdit={(entry) => setEditingEntry(entry)}
+        onUpdate={(params) => updateEntry.mutate(params)}
+        onExport={effectiveViewMode === 'medication' ? exportCustomLog : undefined}
+        isReadOnly={isReadOnly}
+        medicationsOnly={effectiveViewMode === 'medication'}
+      />
 
       {/* Entry form as modal dialog — used by By Date, By Type, and By Meds modes */}
       {dialogType && !isReadOnly && (
