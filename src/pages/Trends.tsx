@@ -75,7 +75,7 @@ const Trends = () => {
   const { pinCount } = usePinnedChats();
   const [createChartOpen, setCreateChartOpen] = useState(false);
   const [editingChart, setEditingChart] = useState<{ id: string; question: string; chartSpec: ChartSpec } | null>(null);
-  const [isEditMode, setIsEditMode] = useState(false);
+  
   const { savedCharts, deleteMutation } = useSavedCharts();
   const [deletePopoverId, setDeletePopoverId] = useState<string | null>(null);
   const handleExerciseBarClick = useCallback((date: string) => {
@@ -336,40 +336,37 @@ const Trends = () => {
 
       {/* My Charts Section — admin only */}
       {isAdmin && savedCharts.length > 0 && (
-        <CollapsibleSection title="My Charts" icon={BarChart3} iconClassName="text-emerald-500 dark:text-emerald-400" defaultOpen={true} storageKey="trends-my-charts" headerAction={
-          <button
-            onClick={(e) => { e.stopPropagation(); setIsEditMode((v) => !v); }}
-            className={`p-0.5 rounded transition-colors ${isEditMode ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
-            aria-label="Toggle edit mode"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
-        }>
+        <CollapsibleSection title="My Charts" icon={BarChart3} iconClassName="text-emerald-500 dark:text-emerald-400" defaultOpen={true} storageKey="trends-my-charts">
           <div className="grid grid-cols-2 gap-2">
             {savedCharts.map((chart) => (
-              <div
+              <DynamicChart
                 key={chart.id}
-                className="cursor-pointer"
-                onClick={() => setEditingChart({ id: chart.id, question: chart.question, chartSpec: chart.chart_spec })}
-              >
-                <DynamicChart
-                  spec={{ ...chart.chart_spec, aiNote: undefined }}
-                  headerAction={
-                    isEditMode ? (
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <DeleteConfirmPopover
-                          id={chart.id}
-                          label="Delete chart?"
-                          description="This chart will be permanently removed."
-                          onDelete={() => deleteMutation.mutate(chart.id)}
-                          openPopoverId={deletePopoverId}
-                          setOpenPopoverId={setDeletePopoverId}
-                        />
-                      </div>
-                    ) : undefined
-                  }
-                />
-              </div>
+                spec={{ ...chart.chart_spec, aiNote: undefined }}
+                onNavigate={(date) => {
+                  const ds = chart.chart_spec.dataSource;
+                  const route = ds === "exercise" ? `/weights?date=${date}` : `/?date=${date}`;
+                  navigate(route);
+                }}
+                headerAction={
+                  <div className="flex items-center gap-0.5">
+                    <button
+                      onClick={() => setEditingChart({ id: chart.id, question: chart.question, chartSpec: chart.chart_spec })}
+                      className="p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label="Edit chart"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                    <DeleteConfirmPopover
+                      id={chart.id}
+                      label="Delete chart?"
+                      description="This chart will be permanently removed."
+                      onDelete={() => deleteMutation.mutate(chart.id)}
+                      openPopoverId={deletePopoverId}
+                      setOpenPopoverId={setDeletePopoverId}
+                    />
+                  </div>
+                }
+              />
             ))}
           </div>
         </CollapsibleSection>
