@@ -86,7 +86,7 @@ export function AllMedicationsView({
         return (
           <div key={group.typeId} className="space-y-0">
             {/* Med name header */}
-            <div className="text-center py-1">
+            <div className="py-1">
               <span className="text-xs font-medium text-muted-foreground">
                 {group.typeName}
               </span>

@@ -451,7 +451,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                   const logType = logTypes.find((t) => t.id === group.typeId);
                   return (
                     <div key={group.typeId} className="space-y-0">
-                      <div className="text-center py-1">
+                      <div className="py-1">
                         <span className="text-xs font-medium text-muted-foreground">
                           {logType?.name || 'Unknown'}
                         </span>
