@@ -1,0 +1,1 @@
+ALTER TABLE public.custom_log_entries RENAME COLUMN logged_time TO dose_time;

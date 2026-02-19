@@ -33,7 +33,7 @@ export function useCustomLogEntriesForType(logTypeId: string | null) {
       numeric_value_2?: number | null;
       text_value?: string | null;
       unit?: string | null;
-      logged_time?: string | null;
+      dose_time?: string | null;
       entry_notes?: string | null;
     }) => {
       if (!user) throw new Error('No user');
