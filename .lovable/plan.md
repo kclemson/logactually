@@ -1,79 +1,79 @@
 
-# Fix Medication Schedule Summary and Dose Time Ghost Text
+# Rename `logged_time` → `dose_time` in Database and Codebase
 
-## Three issues, two files
+## Why this change
 
----
-
-### Issue 1: ", ," in the medication logging dialog schedule line
-
-**File:** `src/components/MedicationEntryInput.tsx` — line 94
-
-The schedule summary joins `doseTimes` directly:
-```tsx
-const times = doseTimes && doseTimes.length > 0 ? ` · ${doseTimes.join(', ')}` : '';
-```
-
-When the user saved a medication with doses-per-day set but left all the dose time fields blank, `doseTimes` is stored as `['', '', '']`. The array has length > 0, so it renders as `· , ,`.
-
-**Fix:** Filter out blank entries before joining:
-```tsx
-const nonEmpty = doseTimes?.filter(t => t.trim()) ?? [];
-const times = nonEmpty.length > 0 ? ` · ${nonEmpty.join(', ')}` : '';
-```
+The database column `custom_log_entries.logged_time` stores the user-entered time of when a medication dose was taken. The name `logged_time` is ambiguous (it sounds like the time the log entry was created, which is already `created_at`). Renaming it to `dose_time` makes the intent clear and consistent with the "Dose Time" CSV column name and the `doseTimes` vocabulary used throughout the medication UI.
 
 ---
 
-### Issue 2: Dose time inputs using actual defaults as placeholder text instead of ghost text
+## Scope of changes
 
-**File:** `src/components/CreateMedicationDialog.tsx` — lines 183–188
+### 1. Database migration
 
-Currently the placeholder is `DOSE_TIME_DEFAULTS[dosesPerDay]?.[i]` which pulls real values like `"morning"`, `"evening"`, `"8am"` etc. These look like actual filled-in values (no italic/muted styling to distinguish them as examples). Per the memory note on form input standards, ghost text should use `placeholder:text-foreground/50 placeholder:italic`.
+Rename the column in `custom_log_entries`:
 
-**Fix:** Replace the variable placeholder with a uniform example string and ensure the ghost text styling is applied:
-```tsx
-// Before:
-placeholder={DOSE_TIME_DEFAULTS[dosesPerDay]?.[i] ?? 'e.g. morning, 8am'}
-className="text-sm placeholder:text-foreground/50 placeholder:italic"
-
-// After:
-placeholder="e.g. morning, 8am, with dinner, etc"
-className="text-sm placeholder:text-foreground/50 placeholder:italic"
+```sql
+ALTER TABLE public.custom_log_entries
+  RENAME COLUMN logged_time TO dose_time;
 ```
 
-The `DOSE_TIME_DEFAULTS` constant can be removed from this file entirely since it's no longer used here.
+No data loss. The column type (`time without time zone`, nullable) stays the same.
 
----
+### 2. TypeScript / React files to update
 
-### Issue 3: Dose time inputs in EditLogTypeDialog missing ghost text styling
+There are 9 files referencing `logged_time` — all references need to be updated to `dose_time`:
 
-**File:** `src/components/EditLogTypeDialog.tsx` — line 182–187
+| File | What changes |
+|---|---|
+| `src/integrations/supabase/types.ts` | Auto-regenerated — will update automatically after migration |
+| `src/hooks/useCustomLogEntries.ts` | Interface field + insert/update payload |
+| `src/hooks/useCustomLogEntriesForType.ts` | Query field reference |
+| `src/hooks/useAllMedicationEntries.ts` | `.order('logged_time', ...)` → `.order('dose_time', ...)` |
+| `src/hooks/useExportData.ts` | `.select()` field + returned row object |
+| `src/components/MedicationEntryInput.tsx` | `onSubmit` params interface + call site |
+| `src/components/CustomLogEntryRow.tsx` | `entry.logged_time` access |
+| `src/components/AllMedicationsView.tsx` | `formatTime(entry.logged_time)` + sort label |
+| `src/components/CustomLogTypeView.tsx` | `entry.logged_time` access |
+| `src/pages/OtherLog.tsx` | `updateMedEntry` mutation, `todayLoggedTimes` mapping, `initialTime` prop |
 
-The `EditLogTypeDialog` already has the correct uniform placeholder text (`"e.g. morning, 8am, with dinner"`) but is missing the `placeholder:text-foreground/50 placeholder:italic` classes, so on dark theme it shows as the default light gray (which can look like real values).
+### 3. CSV export (the original three-issue plan, now with correct field name)
 
-**Fix:** Add `autoComplete="off"` and the ghost text classes:
-```tsx
-// Before:
-className="text-sm"
+In the same pass, implement the full approved export plan in `src/lib/csv-export.ts` and `src/hooks/useExportData.ts`:
+- Add `dose_time` and `entry_notes` to the Supabase `.select()` in `useExportData`
+- Add them to the `CustomLogExportRow` interface in `csv-export.ts`
+- Reorder columns: Unit immediately after Value
+- Add "Dose Time" and "Notes" columns to the CSV output
 
-// After:
-className="text-sm placeholder:text-foreground/50 placeholder:italic"
-autoComplete="off"
+Final CSV column order:
+
+**Without BP:**
+```
+Date | Time | Dose Time | Log Type | Value | Unit | Notes
 ```
 
-Also update the placeholder to match the new uniform wording with `etc` at the end:
+**With BP:**
 ```
-placeholder="e.g. morning, 8am, with dinner, etc"
+Date | Time | Dose Time | Log Type | Value | Unit | Systolic | Diastolic | Reading | Notes
 ```
 
 ---
 
-## Summary of changes
+## Files changed summary
 
 | File | Change |
 |---|---|
-| `src/components/MedicationEntryInput.tsx` | Filter empty strings from `doseTimes` before joining in `scheduleSummary` |
-| `src/components/CreateMedicationDialog.tsx` | Replace per-slot `DOSE_TIME_DEFAULTS` placeholder with uniform ghost text; remove unused `DOSE_TIME_DEFAULTS` constant |
-| `src/components/EditLogTypeDialog.tsx` | Add `placeholder:text-foreground/50 placeholder:italic` and `autoComplete="off"` to dose time inputs; update placeholder wording to match |
+| Database migration | `RENAME COLUMN logged_time TO dose_time` |
+| `src/integrations/supabase/types.ts` | Auto-updated by migration |
+| `src/hooks/useCustomLogEntries.ts` | `logged_time` → `dose_time` |
+| `src/hooks/useCustomLogEntriesForType.ts` | `logged_time` → `dose_time` |
+| `src/hooks/useAllMedicationEntries.ts` | `.order('logged_time')` → `.order('dose_time')` |
+| `src/hooks/useExportData.ts` | Add `dose_time`, `entry_notes` to query + row |
+| `src/components/MedicationEntryInput.tsx` | `logged_time` → `dose_time` in interface + submit |
+| `src/components/CustomLogEntryRow.tsx` | `entry.logged_time` → `entry.dose_time` |
+| `src/components/AllMedicationsView.tsx` | `entry.logged_time` → `entry.dose_time` |
+| `src/components/CustomLogTypeView.tsx` | `entry.logged_time` → `entry.dose_time` |
+| `src/pages/OtherLog.tsx` | All `logged_time` refs → `dose_time` |
+| `src/lib/csv-export.ts` | Add Dose Time + Notes columns, reorder Unit |
 
-No database changes, no new dependencies.
+No new dependencies. One database migration required.
