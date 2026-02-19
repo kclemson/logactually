@@ -33,12 +33,15 @@ function verifyDaily(
   // Cross-check: if the heuristic knows a mapping for this dataKey, prefer it
   const heuristicField = FOOD_KEY_MAP[spec.dataKey] || EXERCISE_KEY_MAP[spec.dataKey];
   const derivedFormula = !heuristicField ? DERIVED_FORMULAS[spec.dataKey] : undefined;
+  const isMixedFormula = derivedFormula?.source === "mixed";
   const field = heuristicField || (derivedFormula ? null : v.field);
-  const source = heuristicField
-    ? (FOOD_KEY_MAP[spec.dataKey] ? dailyTotals.food : dailyTotals.exercise)
-    : derivedFormula
-      ? dailyTotals[derivedFormula.source]
-      : dailyTotals[v.source];
+  const source = isMixedFormula
+    ? null
+    : heuristicField
+      ? (FOOD_KEY_MAP[spec.dataKey] ? dailyTotals.food : dailyTotals.exercise)
+      : derivedFormula
+        ? dailyTotals[derivedFormula.source]
+        : dailyTotals[v.source];
   const toleranceMethod = derivedFormula?.tolerance;
 
   const mismatches: VerificationResult["mismatches"] = [];
@@ -52,15 +55,21 @@ function verifyDaily(
     total++;
 
     const aiValue = Number(point[spec.dataKey]) || 0;
-    const record = source[rawDate];
 
     let actualValue: number;
-    if (derivedFormula && record) {
-      actualValue = derivedFormula.compute(record);
-    } else if (field && record) {
-      actualValue = Number((record as any)[field]) || 0;
+    if (isMixedFormula) {
+      const foodRecord = dailyTotals.food[rawDate];
+      const exerciseRecord = dailyTotals.exercise[rawDate];
+      actualValue = derivedFormula!.compute(foodRecord, exerciseRecord);
     } else {
-      actualValue = record ? Number((record as any)[v.field]) || 0 : 0;
+      const record = source![rawDate];
+      if (derivedFormula && record) {
+        actualValue = derivedFormula.compute(record);
+      } else if (field && record) {
+        actualValue = Number((record as any)[field]) || 0;
+      } else {
+        actualValue = record ? Number((record as any)[v.field]) || 0 : 0;
+      }
     }
 
     const isMatch = isClose(aiValue, actualValue, toleranceMethod);
@@ -169,8 +178,8 @@ const EXERCISE_KEY_MAP: Record<string, string> = {
 /* ── Derived formulas for computable metrics ──────────────── */
 
 interface DerivedFormula {
-  source: "food" | "exercise";
-  compute: (r: any) => number;
+  source: "food" | "exercise" | "mixed";
+  compute: (food: any, exercise?: any) => number;
   tolerance: "percentage" | "default";
 }
 
@@ -190,6 +199,10 @@ const DERIVED_FORMULAS: Record<string, DerivedFormula> = {
   cal_per_meal:      { source: "food", compute: (r) => safeDiv(r.cal, r.entries), tolerance: "default" },
   calories_per_meal: { source: "food", compute: (r) => safeDiv(r.cal, r.entries), tolerance: "default" },
   protein_per_meal:  { source: "food", compute: (r) => safeDiv(r.protein, r.entries), tolerance: "default" },
+  carbs_per_meal:    { source: "food", compute: (r) => safeDiv(r.carbs, r.entries), tolerance: "default" },
+  fat_per_meal:      { source: "food", compute: (r) => safeDiv(r.fat, r.entries), tolerance: "default" },
+  fiber_per_meal:    { source: "food", compute: (r) => safeDiv(r.fiber, r.entries), tolerance: "default" },
+  sodium_per_meal:   { source: "food", compute: (r) => safeDiv(r.sodium, r.entries), tolerance: "default" },
   // Calories from macro
   fat_calories:          { source: "food", compute: (r) => r.fat * 9, tolerance: "default" },
   calories_from_fat:     { source: "food", compute: (r) => r.fat * 9, tolerance: "default" },
@@ -197,6 +210,16 @@ const DERIVED_FORMULAS: Record<string, DerivedFormula> = {
   calories_from_protein: { source: "food", compute: (r) => r.protein * 4, tolerance: "default" },
   carbs_calories:        { source: "food", compute: (r) => r.carbs * 4, tolerance: "default" },
   calories_from_carbs:   { source: "food", compute: (r) => r.carbs * 4, tolerance: "default" },
+  // Net carbs
+  net_carbs:             { source: "food", compute: (r) => Math.max(0, (r.carbs || 0) - (r.fiber || 0)), tolerance: "default" },
+  // Ratios
+  protein_fat_ratio:     { source: "food", compute: (r) => safeDiv(r.protein, r.fat), tolerance: "percentage" },
+  // Exercise-domain
+  sets_per_exercise:     { source: "exercise", compute: (r) => safeDiv(r.sets, r.unique_exercises), tolerance: "default" },
+  // Cross-domain (mixed)
+  net_calories:          { source: "mixed", compute: (f, e) => (f?.cal || 0) - (e?.cal_burned || 0), tolerance: "default" },
+  calorie_balance:       { source: "mixed", compute: (f, e) => (f?.cal || 0) - (e?.cal_burned || 0), tolerance: "default" },
+  protein_per_set:       { source: "mixed", compute: (f, e) => safeDiv(f?.protein || 0, e?.sets || 0), tolerance: "default" },
 };
 
 function verifyLegacy(
@@ -204,11 +227,6 @@ function verifyLegacy(
   dailyTotals: DailyTotals,
 ): VerificationResult {
   const { data, dataKey } = spec;
-
-  // Guard: mixed data source
-  if (spec.dataSource === "mixed") {
-    return { status: "unavailable", reason: "Verification isn't available for charts combining food and exercise data" };
-  }
 
   // Guard: no rawDate fields
   const hasRawDate = data.length > 0 && data.some((d) => d.rawDate);
@@ -234,13 +252,21 @@ function verifyLegacy(
   const exerciseField = EXERCISE_KEY_MAP[dataKey];
   const derivedFormula = DERIVED_FORMULAS[dataKey];
 
+  // Guard: mixed data source — but allow if a mixed-source derived formula exists
+  if (spec.dataSource === "mixed" && derivedFormula?.source !== "mixed") {
+    return { status: "unavailable", reason: "Verification isn't available for charts combining food and exercise data" };
+  }
+
   if (!foodField && !exerciseField && !derivedFormula) {
     return { status: "unavailable", reason: `Verification isn't available for metric "${dataKey}"` };
   }
 
-  const source = derivedFormula
-    ? dailyTotals[derivedFormula.source]
-    : foodField ? dailyTotals.food : dailyTotals.exercise;
+  const isMixedFormula = derivedFormula?.source === "mixed";
+  const source = isMixedFormula
+    ? null // we'll look up both sources per-date
+    : derivedFormula
+      ? dailyTotals[derivedFormula.source]
+      : foodField ? dailyTotals.food : dailyTotals.exercise;
   const field = foodField || exerciseField; // null when using derived formula
   const toleranceMethod = derivedFormula?.tolerance;
 
@@ -254,15 +280,21 @@ function verifyLegacy(
     if (!rawDate) continue;
     total++;
     const aiValue = Number(point[dataKey]) || 0;
-    const record = source[rawDate];
 
     let actualValue: number;
-    if (derivedFormula && record) {
-      actualValue = derivedFormula.compute(record);
-    } else if (field && record) {
-      actualValue = Number((record as any)[field]) || 0;
+    if (isMixedFormula) {
+      const foodRecord = dailyTotals.food[rawDate];
+      const exerciseRecord = dailyTotals.exercise[rawDate];
+      actualValue = derivedFormula!.compute(foodRecord, exerciseRecord);
     } else {
-      actualValue = 0;
+      const record = source![rawDate];
+      if (derivedFormula && record) {
+        actualValue = derivedFormula.compute(record);
+      } else if (field && record) {
+        actualValue = Number((record as any)[field]) || 0;
+      } else {
+        actualValue = 0;
+      }
     }
 
     const isMatch = isClose(aiValue, actualValue, toleranceMethod);
