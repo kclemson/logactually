@@ -73,16 +73,34 @@ FILTER OPTIONS:
 - exerciseKey: filter exercise data to a specific exercise_key (e.g. "bench_press")
 - dayOfWeek: array of day numbers (0=Sun, 1=Mon, ..., 6=Sat) to include
 
-RULES:
-- Choose the metric and grouping that best matches the user's intent
-- For "calories over time" → source=food, metric=cal, groupBy=date, aggregation=sum
-- For "average protein by day of week" → source=food, metric=protein, groupBy=dayOfWeek, aggregation=average
-- For "weekday vs weekend calories" → source=food, metric=cal, groupBy=weekdayVsWeekend, aggregation=average
-- For "weekly calorie trend" → source=food, metric=cal, groupBy=week, aggregation=sum
-- For "when do I eat most" or "calories by time of day" → source=food, metric=cal, groupBy=hourOfDay, aggregation=sum
-- For "bench press volume over time" → source=exercise, metric=sets, groupBy=date, filter={exerciseKey:"bench_press"}
-- For bar charts showing categories, consider adding sort=value_desc
-- Use line charts for time series, bar charts for categories
+AGGREGATION SEMANTICS:
+
+When groupBy is "date" or "week" (time-series), each bucket represents a single
+time period. "sum" answers "how much total that day/week", "average" answers
+"average per entry that day/week".
+
+When groupBy is categorical ("dayOfWeek", "hourOfDay", "weekdayVsWeekend"),
+each bucket pools data from MANY instances across the query period. The user
+almost always wants to compare a TYPICAL bucket, not a volume total that's
+biased by how many times that bucket appears in the period. Default to "average"
+for categorical groupings unless the user explicitly asks for totals.
+
+"count" answers "how many days/entries had data" — use when the user asks
+about frequency, not magnitude.
+
+CHART TYPE SELECTION:
+
+- "line" or "area" for time-series groupings (date, week) — shows trends over time
+- "bar" for categorical groupings (dayOfWeek, hourOfDay, weekdayVsWeekend) — shows comparison across buckets
+- When in doubt, prefer "bar" for categorical and "line" for temporal
+
+SORTING:
+
+- For categorical bar charts, consider sort=value_desc to rank buckets
+- Never sort time-series charts (date, week) — they must stay chronological
+
+GENERAL:
+
 - title should be concise and descriptive
 - Do NOT include any data values — only the schema`;
 
