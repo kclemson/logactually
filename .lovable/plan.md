@@ -1,157 +1,60 @@
 
-# Medication: Standard Dose Amount + Unit in Creation Dialog
+# Three Small Fixes to CreateMedicationDialog
 
-## The Gap
+## What's changing
 
-The current plan has a "Dose unit" field (e.g., `mg`) but no dose amount field. A complete medication setup needs both:
+### 1. Extend "How often per day?" from 4 to 6
 
-- **Dose amount**: `325` (numeric — the prescribed quantity per dose)
-- **Dose unit**: `mg` (text — the unit of measure)
+Change the button array from `[0, 1, 2, 3, 4]` to `[0, 1, 2, 3, 4, 5, 6]`.
 
-Together these mean "325 mg per dose." This is stored on the log type as the **default/prescribed dose** so it can pre-fill the logging form.
+Add smart-default placeholder strings for counts 5 and 6:
+- 5 → `['6am', '10am', '2pm', '6pm', '10pm']`
+- 6 → `['6am', '9am', '12pm', '3pm', '6pm', '9pm']`
 
-Note: unlike time (which always uses the current moment), the dose amount IS worth pre-filling from the definition — the user almost always takes the same prescribed amount, and they can change it if needed (e.g., taking half a dose).
+(These defaults are only used as placeholder hint text — see below.)
 
----
+### 2. Smart defaults become placeholder/ghost text, not actual values
 
-## Database Change
+Currently `handleDosesPerDayChange` fills `doseTimes` state with the default strings (e.g. `['morning', 'evening']`). These show up as real typed text in the inputs, which is wrong — the user would have to clear them to type their own values.
 
-One new column added to `custom_log_types`. The `unit` column already exists for the unit string — we only need to add the numeric amount:
+The fix: when the dose count changes, initialize `doseTimes` as an array of **empty strings** (one per dose). The smart defaults move to the `placeholder` prop of each input, computed from `DOSE_TIME_DEFAULTS[count][i]`.
 
-```sql
-ALTER TABLE public.custom_log_types ADD COLUMN default_dose numeric NULL;
-ALTER TABLE public.custom_log_types ADD COLUMN doses_per_day int NOT NULL DEFAULT 0;
-ALTER TABLE public.custom_log_types ADD COLUMN dose_times text[] NULL;
+```tsx
+// Before (wrong — fills as real values)
+setDoseTimes(DOSE_TIME_DEFAULTS[count] ?? []);
+
+// After (correct — empty values, defaults become placeholders)
+setDoseTimes(Array(count).fill(''));
 ```
 
-`unit` (already exists) = "mg", `default_dose` (new) = 325.0
-
----
-
-## Updated CreateMedicationDialog Layout
-
-```
-┌─────────────────────────────────────────┐
-│  Add Medication                    [×]  │
-├─────────────────────────────────────────┤
-│                                         │
-│  Medication name *                      │
-│  [ Tylenol                           ]  │
-│                                         │
-│  Standard dose *                        │
-│  [ 325      ]  [ mg              ]      │
-│   (number)      (text unit)             │
-│                                         │
-│  How often per day?                     │
-│  [As needed]  [1]  [2]  [3]  [4]       │
-│                                         │
-│  — when 1+ selected —                  │
-│  Dose 1  [ morning               ]     │
-│  Dose 2  [ evening               ]     │
-│                                         │
-│  Notes                                  │
-│  [ e.g. Max 4000mg/day, take with  ]   │
-│  [ food. Every 6 hours as needed.  ]   │
-│                                         │
-│           [Cancel]  [Add Medication]    │
-└─────────────────────────────────────────┘
+Each input then uses:
+```tsx
+placeholder={DOSE_TIME_DEFAULTS[dosesPerDay]?.[i] ?? 'e.g. morning, 8am'}
 ```
 
-"Standard dose" uses two side-by-side inputs: a compact number input (w-24) and a text input for the unit (w-28). Both are required (marked with `*`). The label "Standard dose" is clearer than "Dose unit" since it conveys both the amount and the unit together.
+### 3. Placeholder styling: italic + darker gray
 
-Smart defaults for dose times (unchanged from previous plan):
-- 1 dose → `['morning']`
-- 2 doses → `['morning', 'evening']`
-- 3 doses → `['8am', '12pm', '4pm']`
-- 4 doses → `['8am', '12pm', '4pm', '8pm']`
+The existing `Input` component renders a standard `<input>` with Tailwind class `placeholder:text-muted-foreground`. We need to override this on the dose time inputs to use a darker, italic placeholder.
 
----
-
-## Updated MedicationEntryInput Layout (logging a dose)
-
-When the user opens the log form for Tylenol, the amount field pre-fills from `default_dose`:
-
+Add these classes to the dose time `Input`:
 ```
-┌─────────────────────────────────────────┐
-│  Tylenol                            [×] │
-├─────────────────────────────────────────┤
-│  Max 4000mg/day. Take with food.        │  ← read-only description
-│                                         │
-│  2x/day · morning, evening              │  ← read-only schedule
-│  1 of 2 doses logged today              │  ← computed from today's entries
-│                                         │
-│  ─────────────────────────────────────  │
-│                                         │
-│  Time  [10:42]    Amount  [325]  mg     │
-│          ↑ current time    ↑ pre-filled │
-│          (always now)      from default_dose
-│                                         │
-│  Notes  [__________________________]    │
-│                                         │
-│                          [Save dose]    │
-└─────────────────────────────────────────┘
+placeholder:text-foreground/50 placeholder:italic
 ```
 
-**Time**: always initializes to `getCurrentTimeValue()` — current moment, never from a stored default.  
-**Amount**: pre-fills from `logType.default_dose` (the prescribed amount). User can change it if needed.
+`text-foreground/50` is notably darker than `text-muted-foreground` (which is typically around 40% opacity), giving the "ghost text" a clearer visual presence. Combined with `italic` it reads unmistakably as hint text, not user input.
 
----
+Also apply the same style to the Notes textarea placeholder, for consistency across the dialog.
 
-## EditLogTypeDialog — medication fields
-
-The pencil icon in settings opens this for editing. For medication types it shows all the same fields as creation, allowing the user to fix anything:
-
-- Medication name (already editable inline in the row — may not need to duplicate here)
-- Standard dose amount + unit (side-by-side, same as creation)
-- How often per day (pill selector)
-- Dose time inputs (if > 0)
-- Notes textarea
-
----
-
-## Hook Changes
-
-### `useCustomLogTypes.ts`
-
-Add to `CustomLogType` interface:
-```ts
-default_dose: number | null;
-doses_per_day: number;
-dose_times: string[] | null;
-```
-
-Add to `createType` params:
-```ts
-default_dose?: number | null;
-doses_per_day?: number;
-dose_times?: string[] | null;
-```
-
-Add to `updateType` params (same fields).
-
-### `MedicationEntryInput.tsx`
-
-Add `defaultDose?: number | null` prop. Initial state:
-```ts
-const [doseValue, setDoseValue] = useState(defaultDose != null ? String(defaultDose) : '');
-```
-
-Add `dosesPerDay?: number`, `doseTimes?: string[] | null`, `todayEntryCount?: number` props for the contextual read-only display.
-
----
-
-## Files Changed
+## Files changed
 
 | File | Change |
 |---|---|
-| DB migration | Add `default_dose numeric NULL`, `doses_per_day int NOT NULL DEFAULT 0`, `dose_times text[] NULL` to `custom_log_types` |
-| `src/hooks/useCustomLogTypes.ts` | Add 3 new fields to interface + `createType`/`updateType` params |
-| `src/components/CreateMedicationDialog.tsx` | **New** — name + standard dose (amount + unit side-by-side) + frequency + dose times + notes |
-| `src/components/MedicationEntryInput.tsx` | Add `defaultDose` prop (pre-fills amount), add read-only description/schedule/count display |
-| `src/components/LogTemplatePickerDialog.tsx` | Add `onSelectMedication?: () => void` prop; Medication row calls it |
-| `src/pages/OtherLog.tsx` | Wire `CreateMedicationDialog`; pass `defaultDose`, `dosesPerDay`, `doseTimes`, `todayEntryCount` to `MedicationEntryInput` |
-| `src/components/settings/CustomLogTypesSection.tsx` | Wire `CreateMedicationDialog` for the settings picker |
-| `src/components/EditLogTypeDialog.tsx` | Add all medication fields (dose amount + unit, frequency, dose times) for the pencil-edit flow |
-| `src/components/CustomLogTypeRow.tsx` | Show `default_dose + unit` in nameAppend for medication (e.g., `325 mg · 2x/day`) |
+| `src/components/CreateMedicationDialog.tsx` | Extend count buttons to 6; add defaults for 5 and 6; initialize `doseTimes` as empty strings; move defaults to placeholder prop; add italic+darker placeholder styling to dose time inputs |
 
-No changes to `custom_log_entries` — `logged_time` and `entry_notes` already exist.
+No DB changes, no hook changes, no other files touched.
+
+## Before / After
+
+**Before**: selecting "3" fills the three inputs with actual text "8am", "12pm", "4pm" — user must delete to type their own value.
+
+**After**: selecting "3" shows three empty inputs with italic gray ghost text "8am", "12pm", "4pm" as hints — user types freely without clearing anything.
