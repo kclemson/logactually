@@ -1,50 +1,59 @@
 
-# Fix: Remove `temperature` Parameter from AI Calls
+# Remove "By Type" View from Other Log
 
-## Root Cause
+## What's changing
 
-The edge function logs confirm the exact failure chain:
-1. `google/gemini-3-flash-preview` fails with 500 (Gemini outage)
-2. Fallback fires → `openai/gpt-5-mini` rejects with 400: `"temperature does not support 0.3 with this model. Only the default (1) value is supported."`
-3. Both models fail → the function returns 500 to the client
+The view-mode selector currently has three options: **By Date**, **By Type**, **By Meds**. We're removing "By Type" entirely and making the header controls consistent between the remaining two modes.
 
-The `temperature: 0.3` parameter was hardcoded into the AI call body in `analyze-food`. OpenAI's `gpt-5-mini` does not accept non-default temperature values.
+## Current control layout (per mode)
 
-## Fix
+| Mode | Left control | Right control |
+|---|---|---|
+| By Date | View-mode Select (90px) | "Add custom log" Select (teal, full list) |
+| By Type | View-mode Select (90px) | Type picker Select + "Log New" Button |
+| By Meds | View-mode Select (90px) | "Log New" Select (teal, meds only) |
 
-Remove `temperature` from the request body in all functions that pass it. The default temperature (`1`) is acceptable for structured food/exercise analysis — the JSON output format is enforced by the prompt, not by temperature.
+## Target control layout (after)
 
-## Files to update
+| Mode | Left control | Right control |
+|---|---|---|
+| By Date | View-mode Select (90px, now only 2 options) | "Log New" Select (teal, full list) |
+| By Meds | View-mode Select (90px) | "Log New" Select (teal, meds only) |
 
-| File | Issue |
-|---|---|
-| `supabase/functions/analyze-food/index.ts` | `temperature: 0.3` passed to `callAI` — confirmed failing in logs |
-| All other AI edge functions | Audit and remove `temperature` if present, to prevent the same issue on fallback |
+The "By Date" `Add custom log` Select becomes a `Log New` Select — same underlying mechanic (pick a type → show input dialog, or pick "New Custom Log Type" to open picker), just renamed to match "By Meds".
 
-## Specifically in `analyze-food/index.ts`
+## Technical changes — `src/pages/OtherLog.tsx`
 
-The `callAI` call currently passes:
-```typescript
-const response = await callAI({
-  messages: [...],
-  temperature: 0.3,   // ← this kills the OpenAI fallback
-});
-```
+1. **Narrow `ViewMode` type** from `'date' | 'type' | 'medication'` to `'date' | 'medication'`.
 
-Change to:
-```typescript
-const response = await callAI({
-  messages: [...],
-  // temperature omitted — uses model default
-});
-```
+2. **`getStoredViewMode`** — remove `'type'` from the valid stored values; anything other than `'date'` or `'medication'` falls back to `'date'`.
 
-## Why this is safe
+3. **`effectiveViewMode` guard** — currently handles `viewMode === 'medication' && !showMedView`. Remove the `type` branch entirely; simplify the guard to just handle the meds-threshold case.
 
-- `temperature: 0.3` was chosen to reduce randomness in nutritional estimates, but the prompt itself enforces structured JSON output with explicit instructions. Removing the parameter falls back to the model default (`1`), which still produces consistent, well-structured results.
-- The food analysis prompt already contains explicit instructions like "return only valid JSON" which are far more effective than temperature at controlling output format.
-- `analyze-weights` already works (per the user's report) — its fallback succeeded — so it either doesn't pass temperature or uses a compatible value.
+4. **`activeTypeId`** — remove the `viewMode === 'type' ? effectiveTypeId` branch; it becomes `null` for date mode (the entry dialog uses `effectiveTypeId` separately) and `selectedMedTypeId` for medication mode.
 
-## Scope of audit
+5. **`useCustomLogEntriesForType`** — this hook is currently driven by `activeTypeId`. After removal of the type view it's only needed for meds (`selectedMedTypeId`). The hook call and `typeEntries` / `typeEntriesLoading` remain, but only used in the medication dialog path.
 
-Also check `ask-trends-ai`, `lookup-upc`, `generate-chart`, `generate-chart-dsl`, `analyze-food-photo`, and `populate-demo-data` for any hardcoded `temperature` values, and remove them all to prevent the same failure mode on those functions' fallbacks.
+6. **View-mode Select** — remove the `<SelectItem value="type">` option.
+
+7. **Right-side controls** — remove the entire `effectiveViewMode === 'type'` branch (the nested Type-picker Select + Log New button). The `effectiveViewMode === 'date'` branch's label changes from `"Add custom log"` to `"Log New"` and the trigger gets a `<Plus>` icon prepended to match By Meds styling.
+
+8. **Body rendering** — remove the `effectiveViewMode === 'type' && selectedType` branch (which renders `<CustomLogTypeView>`). The ternary collapses to: medication view → date view.
+
+9. **`selectedTypeId` / `effectiveTypeId` / `selectedType`** — these are still needed for the By Date dialog (to know which log type the user picked from the dropdown before the dialog opens). No change needed here.
+
+10. **`useCustomLogEntriesForType` import** — still needed for the medication entry dialog, so the import stays.
+
+11. **`CustomLogTypeView` import** — can be removed since it's no longer rendered anywhere.
+
+## What's NOT changing
+
+- All entry submission logic, create/update/delete mutations — unchanged
+- `AllMedicationsView`, `MedicationEntryInput`, `LogEntryInput` — unchanged
+- All dialogs (CreateLogType, CreateMedication, LogTemplatePicker) — unchanged
+- DateNavigation — unchanged (still present in both remaining views)
+- The "Log New" by-meds Select already works exactly as desired; no change needed there
+
+## Files to edit
+
+- `src/pages/OtherLog.tsx` — all changes are here; no other files are affected
