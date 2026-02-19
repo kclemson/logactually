@@ -4,6 +4,8 @@ import { useSearchParams } from 'react-router-dom';
 import { format, isToday, parseISO } from 'date-fns';
 import { useCustomLogDatesWithData } from '@/hooks/useDatesWithData';
 import { Plus } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DateNavigation } from '@/components/DateNavigation';
 import { useDateNavigation } from '@/hooks/useDateNavigation';
@@ -56,7 +58,9 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   const [showInputDialog, setShowInputDialog] = useState(false);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>(getStoredViewMode);
+  const [editingEntry, setEditingEntry] = useState<import('@/hooks/useCustomLogEntries').CustomLogEntry | null>(null);
   const createNewClickedRef = useRef(false);
+  const queryClient = useQueryClient();
 
   const dateStr = initialDate;
   const selectedDate = parseISO(initialDate);
@@ -109,8 +113,33 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   // All meds view data
   const medTypeIds = useMemo(() => medicationTypes.map((t) => t.id), [medicationTypes]);
   const { entries: allMedEntries, isLoading: allMedEntriesLoading, deleteEntry: deleteAllMedEntry } = useAllMedicationEntries(
-    effectiveViewMode === 'medication' ? medTypeIds : []
+    effectiveViewMode === 'medication' ? medTypeIds : [],
+    dateStr
   );
+
+  // Update mutation for editing medication entries
+  const updateMedEntry = useMutation({
+    mutationFn: async ({ id, numeric_value, logged_time, entry_notes }: {
+      id: string;
+      numeric_value: number | null;
+      logged_time: string | null;
+      entry_notes: string | null;
+    }) => {
+      const { error } = await supabase
+        .from('custom_log_entries')
+        .update({ numeric_value, logged_time, entry_notes })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['custom-log-entries-all-meds'] });
+      queryClient.invalidateQueries({ queryKey: ['custom-log-entries-for-type'] });
+      queryClient.invalidateQueries({ queryKey: ['custom-log-entries', dateStr] });
+      setEditingEntry(null);
+    },
+  });
+
+  const editingLogType = editingEntry ? logTypes.find(t => t.id === editingEntry.log_type_id) : null;
 
   // Dialog type: derived from active view mode
   const dialogType =
@@ -144,7 +173,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
       {/* Top section: matches LogInput height on Food/Exercise pages */}
       <section className="min-h-[148px] flex flex-col justify-center space-y-3">
         {!isReadOnly && (
-          <div className="flex items-center justify-center gap-2">
+          <div className="flex items-center justify-start gap-2">
             {!isLoading && sortedLogTypes.length === 0 ? (
               /* Onboarding: no log types yet */
               <div className="flex flex-col items-center gap-3 w-full max-w-sm mx-auto">
@@ -207,9 +236,9 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                       setShowInputDialog(true);
                     }}
                   >
-                    <SelectTrigger className="h-8 text-sm font-medium w-auto min-w-[110px] bg-teal-500 text-white border-teal-500 hover:bg-teal-600">
-                      <span className="flex items-center gap-1">
-                        <Plus className="h-3 w-3" />
+                    <SelectTrigger className="h-8 text-sm font-medium w-auto bg-teal-500 text-white border-teal-500 hover:bg-teal-600 shrink-0">
+                      <span className="flex items-center gap-1 whitespace-nowrap">
+                        <Plus className="h-3 w-3 shrink-0" />
                         Log New
                       </span>
                     </SelectTrigger>
@@ -348,13 +377,31 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
 
       {effectiveViewMode === 'medication' ? (
         /* By Meds view body */
-        <AllMedicationsView
-          entries={allMedEntries}
-          logTypes={logTypes}
-          isLoading={allMedEntriesLoading}
-          onDelete={(id) => deleteAllMedEntry.mutate(id)}
-          isReadOnly={isReadOnly}
-        />
+        <>
+          <DateNavigation
+            selectedDate={selectedDate}
+            isTodaySelected={isTodaySelected}
+            calendarOpen={dateNav.calendarOpen}
+            onCalendarOpenChange={dateNav.setCalendarOpen}
+            calendarMonth={dateNav.calendarMonth}
+            onCalendarMonthChange={dateNav.setCalendarMonth}
+            onPreviousDay={dateNav.goToPreviousDay}
+            onNextDay={dateNav.goToNextDay}
+            onDateSelect={dateNav.handleDateSelect}
+            onGoToToday={dateNav.goToToday}
+            datesWithData={datesWithData}
+            highlightClassName="text-teal-600 dark:text-teal-400 font-semibold"
+            weekStartDay={settings.weekStartDay}
+          />
+          <AllMedicationsView
+            entries={allMedEntries}
+            logTypes={logTypes}
+            isLoading={allMedEntriesLoading}
+            onDelete={(id) => deleteAllMedEntry.mutate(id)}
+            onEdit={(entry) => setEditingEntry(entry)}
+            isReadOnly={isReadOnly}
+          />
+        </>
       ) : effectiveViewMode === 'type' && selectedType ? (
         /* Type view body */
         <CustomLogTypeView
@@ -362,6 +409,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
           entries={typeEntries}
           isLoading={typeEntriesLoading}
           onDelete={(id) => deleteTypeEntry.mutate(id)}
+          onEdit={(entry) => setEditingEntry(entry)}
           isReadOnly={isReadOnly}
         />
       ) : (
@@ -482,6 +530,32 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                 />
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Edit dialog — reuses MedicationEntryInput pre-filled with existing entry data */}
+      {editingEntry && editingLogType && !isReadOnly && (
+        <Dialog open={!!editingEntry} onOpenChange={(open) => { if (!open) setEditingEntry(null); }}>
+          <DialogContent className="max-w-sm p-0 gap-0 border-0 bg-transparent shadow-none [&>button]:hidden">
+            <MedicationEntryInput
+              label={editingLogType.name}
+              unit={editingLogType.unit}
+              description={editingLogType.description}
+              defaultDose={editingLogType.default_dose}
+              dosesPerDay={editingLogType.doses_per_day}
+              doseTimes={editingLogType.dose_times}
+              initialDose={editingEntry.numeric_value}
+              initialTime={editingEntry.logged_time}
+              initialNotes={editingEntry.entry_notes}
+              todayEntryCount={todayMedEntries.length}
+              todayLoggedTimes={todayMedEntries.map(e => e.logged_time).filter(Boolean) as string[]}
+              onSubmit={(params) => {
+                updateMedEntry.mutate({ id: editingEntry.id, ...params });
+              }}
+              onCancel={() => setEditingEntry(null)}
+              isLoading={updateMedEntry.isPending}
+            />
           </DialogContent>
         </Dialog>
       )}
