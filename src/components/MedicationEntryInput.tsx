@@ -14,6 +14,7 @@ interface MedicationEntryInputProps {
   dosesPerDay?: number;
   doseTimes?: string[] | null;
   todayEntryCount?: number;
+  todayLoggedTimes?: string[];
   onSubmit: (params: {
     numeric_value: number | null;
     logged_time: string | null;
@@ -34,6 +35,13 @@ function getDoseCountStyle(todayEntryCount: number, dosesPerDay: number): string
   return 'text-red-500';
 }
 
+function formatLoggedTime(t: string): string {
+  const [h, m] = t.split(':').map(Number);
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  return format(d, 'h:mm a');
+}
+
 export function MedicationEntryInput({
   label,
   unit,
@@ -42,6 +50,7 @@ export function MedicationEntryInput({
   dosesPerDay = 0,
   doseTimes,
   todayEntryCount = 0,
+  todayLoggedTimes,
   onSubmit,
   onCancel,
   isLoading,
@@ -156,6 +165,13 @@ export function MedicationEntryInput({
       {doseCountLine && (
         <p className={cn("text-xs", getDoseCountStyle(todayEntryCount, dosesPerDay))}>
           {doseCountLine}
+        </p>
+      )}
+
+      {/* Logged times for today */}
+      {todayLoggedTimes && todayLoggedTimes.length > 0 && (
+        <p className="text-xs text-muted-foreground">
+          {todayLoggedTimes.map(formatLoggedTime).join('  ·  ')}
         </p>
       )}
 
