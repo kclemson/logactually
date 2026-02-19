@@ -1,52 +1,64 @@
 
-## Fix: align delete icons vertically with a fixed-width value column
+## Fix: stabilize the view-mode dropdown position when switching between By Date / By Type
 
 ### The problem
 
-The value span currently has `min-w-0 truncate max-w-[55%]` — it shrinks to the width of its text content. So:
-
-- `"149.6 lbs"` → ~78px wide → trash icon at ~78px
-- `"149 lbs"` → ~62px wide → trash icon at ~62px
-
-The result is a jagged column of trash icons at different X positions, looking "bedraggled".
-
-### The fix: fixed-width value column
-
-Replace the `min-w-0 truncate max-w-[55%]` with a **fixed width** (`w-32`, 128px) plus `truncate`. Every row's value column is exactly the same width, so every delete icon starts at the same horizontal position:
+The row is currently built with two entirely separate JSX branches:
 
 ```
-[date: w-28]  [value: w-32 fixed]  [trash: always at same X]
+viewMode === 'type'  → [view-select] [type-select] [Log New button]
+viewMode === 'date'  → [view-select] [Add custom log teal select]
 ```
 
-128px comfortably fits:
-- `"149.6 lbs"` (typical numeric with unit)
-- `"120 / 80 mmHg"` (dual_numeric)
-- `"text_numeric"` labels up to about 15 chars
+Because the view-mode Select is rendered as part of each branch, React treats them as two separate elements. When you switch modes, the whole row re-renders, the view-mode dropdown is unmounted and remounted at a slightly different position (different `min-w` values, different siblings), and it jumps.
 
-For long text/text_multiline entries, the value truncates at 128px and the trash still lines up.
+### The fix: hoist the view-mode Select above the branch, let only the right-side controls vary
 
-### Adding `tabular-nums` for numbers
+Restructure the control row so:
 
-For numeric types, `font-variant-numeric: tabular-nums` (Tailwind: `tabular-nums`) makes each digit the same width, so `149` and `149.6` align on the decimal point visually. This is a nice-to-have that pairs well with the fixed column.
+1. The view-mode Select is rendered **once**, always first, always `w-[90px]` fixed width — never unmounts on mode switch.
+2. A separate right-side area conditionally renders either:
+   - **Type mode**: `[type-picker select]` + `[+ Log New button]`
+   - **Date mode**: `[Add custom log teal select]`
 
-Apply it on the value span unconditionally — it has no visible effect on non-numeric text.
+The outer container stays `flex items-center gap-2 justify-center` but now the view-mode Select is a stable first child, and only what's to its right changes.
 
-### Exact change: one line in `src/components/CustomLogTypeView.tsx`
+### Width decisions
 
-**Line 93** — value span:
-```tsx
-// Before
-<span className="text-sm min-w-0 truncate max-w-[55%]">
+- View-mode Select: `w-[90px]` — "By Date" and "By Type" are both 7 chars, `text-sm`, so 90px is snug but not cramped. Currently it's `min-w-[110px]` / `min-w-[100px]` (different per branch), which is wider than needed.
+- Type-picker Select: `min-w-[120px]` — accommodates most log type names.
+- Log New button: stays as-is (`h-8` teal).
+- "Add custom log" teal Select: stays as-is (`min-w-[140px]`).
 
-// After
-<span className="text-sm tabular-nums truncate w-32 shrink-0">
+### Structural change (pseudocode)
+
+```jsx
+{/* Always rendered — stable DOM position */}
+<Select value={viewMode} onValueChange={handleViewModeChange}>
+  <SelectTrigger className="h-8 text-sm px-2 w-[90px] shrink-0">
+    <SelectValue />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="date">By Date</SelectItem>
+    <SelectItem value="type">By Type</SelectItem>
+  </SelectContent>
+</Select>
+
+{/* Right side: changes per mode */}
+{viewMode === 'type' ? (
+  <>
+    <Select value={effectiveTypeId} ...>  {/* type picker */}
+    <Button ...>+ Log New</Button>
+  </>
+) : (
+  <Select value={effectiveTypeId} ...>  {/* teal "Add custom log" */}
+)}
 ```
 
-- `w-32` (128px) — fixed width, aligns all trash icons
-- `shrink-0` — prevents flex from collapsing it below 128px
-- `truncate` — handles overflow for long text values
-- `tabular-nums` — digits align cleanly within the column
+This replaces the current three-way branch (`no log types` / `type mode` / `date mode`) with:
+- The onboarding empty-state (no log types) stays as its own branch and shows instead of the controls when there are no log types — that case is unchanged.
+- When log types exist, the view-mode select is always shown first, then the right-side controls.
 
 ### Only file changed
 
-`src/components/CustomLogTypeView.tsx` — one line, line 93.
+`src/pages/OtherLog.tsx` — restructuring the controls section (~lines 144–203). No new files, no schema changes.
