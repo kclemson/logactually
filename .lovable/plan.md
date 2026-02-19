@@ -1,90 +1,80 @@
 
-# What needs to happen (nothing was implemented yet)
+# Replace Inline Input with Dialog in "By Date" Mode
 
-The plan was approved across multiple messages but no code was ever written. The database column is still `logged_time`, and `csv-export.ts` / `useExportData.ts` are both unchanged from their original state. This is a full implementation from scratch.
+## Problem
 
----
+In "By Date" mode, selecting a log type from the "Add custom log" dropdown triggers an inline expansion (`showInput = true`) that renders a `LogEntryInput` or `MedicationEntryInput` directly in the page, pushing all content below it down. This is disorienting.
 
-## Part 1 — Database column rename
+"By Type" and "By Meds" modes already use a proper `<Dialog>` via `showInputDialog`. The fix is to route "By Date" mode through the same dialog path.
 
-Run a migration:
-
-```sql
-ALTER TABLE public.custom_log_entries
-  RENAME COLUMN logged_time TO dose_time;
-```
-
-No data loss. The column type (`time without time zone`, nullable) and all existing data are preserved.
+Similarly, editing entries in "By Date" mode currently only works for medications (via `MedicationEntryInput` in the edit dialog). Non-medication edits in "By Date" mode use inline cell editing — but the user wants consistent dialog-based creation at minimum, and the edit path should also use a dialog for non-medication types.
 
 ---
 
-## Part 2 — Update all TypeScript files referencing `logged_time`
+## Changes — all in `src/pages/OtherLog.tsx`
 
-After the migration, `logged_time` no longer exists on the table, so every reference in code must become `dose_time`.
+### 1. Change the "Add custom log" dropdown `onOpenChange` handler
 
-Files to update:
+**Current behavior**: when the dropdown closes with a valid selection, it sets `showInput = true`.
 
-| File | Change |
-|---|---|
-| `src/hooks/useCustomLogEntries.ts` | Rename interface field `logged_time` → `dose_time`; rename in insert payload |
-| `src/hooks/useCustomLogEntriesForType.ts` | Rename any `logged_time` field reference |
-| `src/hooks/useAllMedicationEntries.ts` | `.order('logged_time', ...)` → `.order('dose_time', ...)` |
-| `src/components/MedicationEntryInput.tsx` | `onSubmit` params interface field + call site |
-| `src/components/CustomLogEntryRow.tsx` | `entry.logged_time` → `entry.dose_time` |
-| `src/components/AllMedicationsView.tsx` | `entry.logged_time` → `entry.dose_time` |
-| `src/components/CustomLogTypeView.tsx` | `entry.logged_time` → `entry.dose_time` |
-| `src/pages/OtherLog.tsx` | All `logged_time` references → `dose_time` |
+**New behavior**: set `showInputDialog = true` instead.
+
+```ts
+// Before
+onOpenChange={(open) => {
+  if (!open && effectiveTypeId && !createNewClickedRef.current) {
+    setShowInput(true);  // ← inline
+  }
+  createNewClickedRef.current = false;
+}}
+
+// After
+onOpenChange={(open) => {
+  if (!open && effectiveTypeId && !createNewClickedRef.current) {
+    setShowInputDialog(true);  // ← dialog
+  }
+  createNewClickedRef.current = false;
+}}
+```
+
+### 2. Remove the entire inline input block
+
+Delete the `{showInput && effectiveViewMode === 'date' && ...}` block (lines 327–375) from inside the `<section>`. The `showInput` state variable and all references to it can also be removed since it is no longer needed.
+
+### 3. Fix `dialogType` resolution to include "By Date" mode
+
+Currently `dialogType` is:
+```ts
+const dialogType =
+  effectiveViewMode === 'medication'
+    ? logTypes.find((t) => t.id === selectedMedTypeId)
+    : selectedType;  // resolves for 'type' AND 'date', so this already works!
+```
+
+The `selectedType` already points to the right log type in Date mode (it's derived from `effectiveTypeId`). So the dialog will already render correctly for Date mode — no change needed here.
+
+### 4. Ensure the dialog `onSuccess` also handles Date mode
+
+The existing dialog submit handler for non-medication types (lines 536–544) calls `createTypeEntry` (from `useCustomLogEntriesForType`). This hook is keyed to `activeTypeId`, which is `null` in Date mode. The created entry wouldn't appear in the date view because the mutation invalidates the wrong query key.
+
+The fix: in Date mode, use `createEntry` (from `useCustomLogEntries`, already used for inline) instead of `createTypeEntry`. The dialog submit handler needs to branch on `effectiveViewMode`:
+
+- If `effectiveViewMode === 'date'`: call `createEntry.mutate({ log_type_id: dialogType.id, logged_date: dateStr, unit: ..., ...params })`
+- Otherwise: call `createTypeEntry.mutate(...)` as today
+
+### 5. Edit dialog — extend to non-medication types in "By Date" mode
+
+Currently the edit dialog (lines 556–579) only renders `MedicationEntryInput`. For non-medication entries edited in Date view, editing is done inline in `CustomLogEntryRow`. The user's request is specifically about **creation** being dialog-based, so inline editing of existing entries via `CustomLogEntryRow` can stay as-is for now. No change needed to the edit path.
 
 ---
 
-## Part 3 — Fix the CSV export (the three original issues)
+## Summary of changes
 
-### `src/hooks/useExportData.ts`
+| What | Where | Change |
+|---|---|---|
+| Remove `showInput` state | `OtherLog.tsx` | Delete state var + all references |
+| Dropdown `onOpenChange` | `OtherLog.tsx` line ~297 | `setShowInput(true)` → `setShowInputDialog(true)` |
+| Remove inline input block | `OtherLog.tsx` lines 327–375 | Delete entire `{showInput && ...}` render block |
+| Dialog submit for Date mode | `OtherLog.tsx` lines 536–544 | Branch: use `createEntry` in Date mode, `createTypeEntry` in Type/Meds mode |
 
-Update the Supabase `.select()` to also fetch `dose_time` and `entry_notes`:
-
-```
-.select('logged_date, created_at, dose_time, entry_notes, numeric_value, numeric_value_2, text_value, unit, custom_log_types(name, value_type)')
-```
-
-And include `dose_time` and `entry_notes` in the returned row objects.
-
-### `src/lib/csv-export.ts`
-
-1. Add `dose_time` and `entry_notes` to the `CustomLogExportRow` interface.
-2. Update `exportCustomLog` with:
-   - Correct column order: **Unit immediately after Value**
-   - New **"Dose Time"** column (from `dose_time` — blank if null)
-   - New **"Notes"** column at the end (from `entry_notes` — blank if null)
-
-Final column order:
-
-**Without BP data:**
-```
-Date | Time | Dose Time | Log Type | Value | Unit | Notes
-```
-
-**With BP data:**
-```
-Date | Time | Dose Time | Log Type | Value | Unit | Systolic | Diastolic | Reading | Notes
-```
-
----
-
-## Summary of all files changed
-
-| File | Change type |
-|---|---|
-| Database migration | Rename column `logged_time` → `dose_time` |
-| `src/hooks/useCustomLogEntries.ts` | `logged_time` → `dose_time` |
-| `src/hooks/useCustomLogEntriesForType.ts` | `logged_time` → `dose_time` |
-| `src/hooks/useAllMedicationEntries.ts` | `.order('logged_time')` → `.order('dose_time')` |
-| `src/hooks/useExportData.ts` | Add `dose_time`, `entry_notes` to select + row mapping |
-| `src/components/MedicationEntryInput.tsx` | `logged_time` → `dose_time` |
-| `src/components/CustomLogEntryRow.tsx` | `entry.logged_time` → `entry.dose_time` |
-| `src/components/AllMedicationsView.tsx` | `entry.logged_time` → `entry.dose_time` |
-| `src/components/CustomLogTypeView.tsx` | `entry.logged_time` → `entry.dose_time` |
-| `src/pages/OtherLog.tsx` | All `logged_time` refs → `dose_time` |
-| `src/lib/csv-export.ts` | Add Dose Time + Notes columns, move Unit after Value |
-
-No new dependencies. One database migration required (non-destructive rename).
+No new components. No new dependencies. One file changed.
