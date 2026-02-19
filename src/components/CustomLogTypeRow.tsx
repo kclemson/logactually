@@ -26,9 +26,7 @@ export function CustomLogTypeRow({
 }: CustomLogTypeRowProps) {
   const [editOpen, setEditOpen] = useState(false);
 
-  const metaContent = type.unit ? (
-    <span className="text-muted-foreground">({type.unit})</span>
-  ) : null;
+  const unitAppend = type.unit ? `(${type.unit})` : null;
 
   return (
     <>
@@ -43,7 +41,7 @@ export function CustomLogTypeRow({
         openDeletePopoverId={openDeletePopoverId}
         setOpenDeletePopoverId={setOpenDeletePopoverId}
         expandable={false}
-        meta={metaContent}
+        nameAppend={unitAppend}
         existingNames={existingNames}
       />
       {editOpen && (
