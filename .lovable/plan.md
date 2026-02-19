@@ -1,57 +1,55 @@
 
-# Move Dose+Schedule to `meta` — Simpler Layout, No Flex Fighting
+# Two Fixes: Add Doses 5 & 6, Restyle Dialog Typography
 
-## Why this is cleaner
+## Fix 1: Add doses 5 and 6 to "How often per day?"
 
-`SavedItemRow` already has a `meta` prop that renders as a `shrink-0` span between the name area and the action icons. This is exactly the layout shown in the reference screenshot (name on the left, dose+schedule in the middle, pencil+trash on the right). Using `meta` for this purpose is semantically correct and eliminates all the flex-shrink complexity we added to `nameAppend`.
+The button array `[0, 1, 2, 3, 4]` needs two more entries. We also need defaults for dose times at counts 5 and 6 in `DOSE_TIME_DEFAULTS`.
 
-Current (complex):
-```
-[name div (flex-1)] [nameAppend wrapper (shrink, overflow-hidden)] [pencil] [trash]
-                          ↳ dose (shrink-0) + freq (shrinks to 0)
-```
-
-Target (simple):
-```
-[name div (natural width)] [meta: dose · freq (shrink-0)] [pencil] [trash]
+```ts
+// Add to DOSE_TIME_DEFAULTS:
+5: ['6am', '10am', '2pm', '6pm', '10pm'],
+6: ['6am', '9am', '12pm', '3pm', '6pm', '9pm'],
 ```
 
-## What changes
+The button row uses `flex-wrap` already so 5 and 6 will wrap cleanly on narrow dialogs.
 
-### `CustomLogTypeRow.tsx`
+Change `[0, 1, 2, 3, 4]` to `[0, 1, 2, 3, 4, 5, 6]`.
 
-Move medication metadata from `nameAppend` to `meta`. The `meta` prop already renders as `shrink-0 text-xs text-muted-foreground` — perfect for dose+schedule. Non-medication types (`(lbs)`, `(mmHg)`) stay as `nameAppend` since they belong right after the name.
+## Fix 2: Match CalorieBurnDialog's lighter typography style
 
-```tsx
-// For medication: build a meta string instead of nameAppend JSX
-const meta = type.value_type === 'medication' ? (() => {
-  const dosePart = type.default_dose != null && type.unit
-    ? `${type.default_dose} ${type.unit}`
-    : type.unit || null;
-  const freqPart = type.doses_per_day > 0 ? `${type.doses_per_day}x/day` : 'as needed';
-  return dosePart ? `${dosePart} · ${freqPart}` : freqPart;
-})() : undefined;
+### What CalorieBurnDialog does
 
-const nameAppend = type.value_type !== 'medication' && type.unit
-  ? `(${type.unit})`
-  : null;
-```
+- Section headings: `text-xs font-medium text-muted-foreground uppercase tracking-wider`
+- Field labels: `text-xs text-muted-foreground` (plain `<p>` tags, not `<Label>`)
+- Sub-notes: `text-[10px] text-muted-foreground/70`
+- Input values: standard input component, normal weight text
 
-Pass `meta={meta}` and `nameAppend={nameAppend}` to `SavedItemRow`.
+### What EditLogTypeDialog currently does
 
-### `SavedItemRow.tsx`
+- `<Label>` component — bakes in `font-medium` from `labelVariants` CVA — making every label bold
+- `<Input>` component — `text-sm` without any weight override, but inherits normal weight from the base (actually this is fine)
+- The bold labels + bright white text on dark creates the "overwhelming" feeling
 
-Revert the `nameAppend` wrapper back to something simple — since we're no longer passing complex JSX into `nameAppend` for medications, the wrapper doesn't need `min-w-0 overflow-hidden`. Restore it to a neutral `shrink-0` wrapper (or just render inline), and remove the `flex-1` / overflow changes we added to the name div.
+### The fix
 
-The name div goes back to `min-w-0 text-sm cursor-text ...` — no `flex-1`, no `whitespace-nowrap`, no `overflow-hidden`. Natural behavior: name renders at content width and wraps if it truly can't fit, which is fine since `meta` being `shrink-0` means the row gives it space from the right side rather than squeezing from within the name area.
+Replace `<Label>` elements with plain `<p>` tags styled as `text-xs text-muted-foreground` to match CalorieBurnDialog's pattern. This is what the CalorieBurnDialog uses and what gives the clean, layered visual hierarchy.
 
-Actually, one consideration: on mobile the `meta` is `shrink-0` so a very long name + a long dose string could push things. But this is the same tradeoff that exists today for non-medication rows with `(lbs)` — it works fine in practice because medication names are short enough. The reference screenshot confirms this is acceptable.
+Specific changes in `EditLogTypeDialog.tsx`:
 
-## Files changed
+1. **All `<Label>` elements** → `<p className="text-xs text-muted-foreground">` (or keep `<label>` HTML semantics with `for` attribute, but drop the Label component's font-medium). Since labels without `htmlFor` don't need the Radix Label component, use plain `<p>` for non-input labels and `<label>` for the ones with `htmlFor`.
+
+2. **Dialog title** stays as-is (it uses `text-title` which is correct).
+
+3. **"Dose 1", "Dose 2" sub-labels** inside the dose times section: switch from `<Label className="text-sm text-muted-foreground ...">` to `<p className="text-xs text-muted-foreground ...">`.
+
+4. **Input components** — the `Input` component already renders normal-weight text; no change needed there. The Textarea also renders normally.
+
+5. **"As needed" / number pill buttons** — currently `font-medium` — soften to `font-normal` for unselected state, keep selected (teal) as-is.
+
+## Files Changed
 
 | File | Change |
 |---|---|
-| `src/components/CustomLogTypeRow.tsx` | For medication: compute a plain string `meta` (dose + freq) instead of JSX `nameAppend`. Pass as `meta=` prop. Keep `nameAppend` only for non-medication unit display. |
-| `src/components/SavedItemRow.tsx` | Revert `nameAppend` wrapper to simpler form — remove `min-w-0 overflow-hidden` since it's no longer needed for medication JSX fragments. Revert name div to remove `flex-1`. |
+| `src/components/EditLogTypeDialog.tsx` | (1) Add 5 & 6 to button array and DOSE_TIME_DEFAULTS; (2) Replace `<Label>` components with plain `<p className="text-xs text-muted-foreground">` throughout; soften unselected pill button font weight |
 
-No DB changes. No hook changes. Two small component edits.
+No other files need changing.
