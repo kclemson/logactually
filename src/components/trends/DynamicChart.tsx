@@ -51,9 +51,10 @@ interface DynamicChartProps {
   spec: ChartSpec;
   onNavigate?: (date: string) => void;
   headerAction?: ReactNode;
+  onContextMenu?: (e: React.MouseEvent) => void;
 }
 
-export function DynamicChart({ spec, onNavigate, headerAction }: DynamicChartProps) {
+export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu }: DynamicChartProps) {
   const { data, dataKey, color, chartType, xAxis, valueFormat, referenceLine } = spec;
 
   const interaction = useChartInteraction({
@@ -145,6 +146,7 @@ export function DynamicChart({ spec, onNavigate, headerAction }: DynamicChartPro
       onDismiss={interaction.dismiss}
       footer={footer}
       headerAction={headerAction}
+      onContextMenu={onContextMenu}
     >
       <div className="h-24">
         <ResponsiveContainer width="100%" height="100%" style={{ overflow: "visible" }}>

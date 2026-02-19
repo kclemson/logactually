@@ -13,6 +13,8 @@ interface ChartCardProps {
   footer?: ReactNode;
   /** Optional action in header (e.g. delete button) */
   headerAction?: ReactNode;
+  /** Right-click / long-press context menu handler */
+  onContextMenu?: (e: React.MouseEvent) => void;
 }
 
 export function ChartCard({
@@ -24,6 +26,7 @@ export function ChartCard({
   children,
   footer,
   headerAction,
+  onContextMenu,
 }: ChartCardProps) {
   return (
     <Card
@@ -31,6 +34,12 @@ export function ChartCard({
         "border-0 shadow-none relative",
         isTouchDevice && isTooltipActive && "z-50"
       )}
+      onContextMenu={(e) => {
+        if (onContextMenu) {
+          e.preventDefault();
+          onContextMenu(e);
+        }
+      }}
     >
       {isTouchDevice && isTooltipActive && (
         <div className="fixed inset-0 z-30" onClick={onDismiss} />
