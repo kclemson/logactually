@@ -199,7 +199,7 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
       "grid items-center gap-x-1 py-0.5 group",
       isTextOnly
         ? "grid-cols-[minmax(0,1fr)_24px] justify-items-center"
-        : "grid-cols-[1fr_auto_60px_50px_24px]"
+        : "grid-cols-[auto_auto_auto_1fr_24px]"
     )}>
       {hasText ? (
         <div className={cn(
