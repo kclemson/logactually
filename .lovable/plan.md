@@ -1,95 +1,37 @@
 
-## Multi-chart disambiguation for ambiguous queries
+## Fix dual_numeric row layout to match numeric style
 
-### Summary
+### The problem
 
-When the AI detects genuine ambiguity in a query, it returns 2–3 DSL variants instead of one. The dialog shows them side-by-side as small previews with their `aiNote` as captions. The user picks one, and the normal Save/Refine flow continues. Unambiguous queries are completely unchanged.
+The current `dual_numeric` grid is `grid-cols-[60px_auto_60px_50px_24px]` — this stretches the two input fields and the `/` separator across the entire row width, so `130` sits at the far left, `/` floates in the middle, and `85` sits in the center-right. The result is the wide, hard-to-read layout shown in the screenshot.
 
-The single-chart preview shrinks from `w-[60%]` to `w-[50%]` — a minor visual tweak that also makes the two-up disambiguation layout feel consistent rather than introducing a different size just for that state.
+The `numeric` layout (e.g. Weight) uses `grid-cols-[1fr_auto_60px_50px_24px]`, where the value sits in a fixed-width column near the right, followed by a narrow unit column. Everything is pushed right by the `1fr` spacer in col 1.
 
----
+### The fix
 
-### 1. Edge function — minimal system prompt addition
+Replace the `dual_numeric` grid template to match the `numeric` pattern: push the combined value group to the right, keep the unit and delete in their usual columns.
 
-**File: `supabase/functions/generate-chart-dsl/index.ts`**
-
-Add a short paragraph after the existing JSON schema block. No examples, no enumerated triggers:
+Instead of three separate grid columns for `[value1] [/] [value2]`, collapse them into a single inline flex group that sits in the same column position as a single numeric value. That group contains:
 
 ```
-DISAMBIGUATION:
-
-If the user's request has more than one meaningfully different interpretation, respond with a JSON object containing a "chartDSLOptions" key instead of "chartDSL":
-
-{
-  "chartDSLOptions": [
-    { ...full DSL object, "aiNote": "what this interpretation shows" },
-    { ...full DSL object, "aiNote": "what this interpretation shows" }
-  ]
-}
-
-Each option must be a complete DSL object with a distinct aiNote. Maximum 3 options. Only use this when the interpretations would produce genuinely different charts — not just minor variations.
+[input 130] [/ span] [input 85]
 ```
 
-Update response validation to also pass through `chartDSLOptions` if that key is present.
+all tightly packed with `gap-x-0.5` or `gap-x-1`, with no outer spacing between them.
 
----
+New grid template: `grid-cols-[1fr_auto_50px_24px]`
 
-### 2. `useGenerateChart` — handle multi-option response
+- **Col 1** (`1fr`): empty spacer (pushes everything right, same as numeric rows)
+- **Col 2** (`auto`): inline flex group containing `[input1] / [input2]` tight together
+- **Col 3** (`50px`): unit label (mmHg)
+- **Col 4** (`24px`): delete button
 
-**File: `src/hooks/useGenerateChart.ts`**
+The two inputs inside the flex group use `w-14` (56px) each, which fits 3-digit BP values comfortably. The `/` separator is an inline `text-sm text-muted-foreground mx-0.5`.
 
-Extend the result interface:
+### Result
 
-```typescript
-export interface GenerateChartResult {
-  chartSpec: ChartSpec;
-  dailyTotals: DailyTotals;
-  chartDSL?: ChartDSL;
-  chartOptions?: Array<{ chartSpec: ChartSpec; chartDSL: ChartDSL; dailyTotals: DailyTotals }>;
-}
-```
+The entry will read: `130/85  mmHg  [trash]` — all pushed to the right, matching how `170.4  lbs` looks for Weight. Editing either number focuses just that input; the other stays stable.
 
-In the v2 path, after the edge function responds:
-- `chartDSL` present → existing single path, unchanged
-- `chartDSLOptions` present → execute `fetchChartData` + `executeDSL` for each option (they share the same `period`, fully independent), populate `chartOptions`, set `chartSpec` to the first as a fallback default
+### File changed
 
----
-
-### 3. Disambiguation UI in `CustomChartDialog`
-
-**File: `src/components/CustomChartDialog.tsx`**
-
-Add `chartOptions` state alongside `currentSpec`. When options are present (length > 1), replace the single-chart result with a picker:
-
-```
-"Which did you mean?"
-
-[ Chart A preview ]  [ Chart B preview ]
-  "Average per meal"   "Total across logs"
-
-[ Cancel ]
-```
-
-- Each thumbnail is `w-[50%]` (matching the new single-chart size) with a caption below it from its `aiNote`
-- Clicking a thumbnail calls `setCurrentSpec(chosen.chartSpec)` and clears `chartOptions` — drops back into the normal single-chart result view
-- Cancel clears `chartOptions` and `currentSpec`, returning to the empty state
-- The loading overlay applies to the disambiguation state too (the `showOverlay` logic already covers this since it keys off `generateChart.isPending && hasExistingContent`)
-
-Single-chart preview width: `w-[60%]` → `w-[50%]` (minor, makes the sizing consistent across both states).
-
----
-
-### Files changed
-
-| File | Change |
-|---|---|
-| `supabase/functions/generate-chart-dsl/index.ts` | Add 8-line disambiguation rule to prompt; accept `chartDSLOptions` in validation |
-| `src/hooks/useGenerateChart.ts` | Handle `chartDSLOptions` in v2 path; extend `GenerateChartResult` type |
-| `src/components/CustomChartDialog.tsx` | Add `chartOptions` state; render side-by-side picker when options returned; `w-[60%]` → `w-[50%]` |
-
-### What stays the same
-
-- Single-chart path for unambiguous queries — completely unchanged
-- v1 mode — unaffected
-- Save, Refine, Edit, context menu, chips — all unchanged
-- `chart-data.ts`, `chart-types.ts`, `chart-dsl.ts`, `DynamicChart.tsx` — no changes
+Only `src/components/CustomLogEntryRow.tsx` — specifically the `if (isDualNumeric)` branch (lines 78–120). No other files touched.
