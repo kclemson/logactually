@@ -1,70 +1,43 @@
 
 
-## Replace example-based rules with conceptual aggregation guidance
+## Add `groupBy: "category"` to the chart DSL
 
 ### Problem
 
-The current system prompt teaches the AI what to do via specific examples ("for X do Y"). This doesn't scale -- it can't reason about novel combinations or edge cases it hasn't seen an example for. The `dayOfWeek + sum` bug is a symptom: the AI had no framework to understand *why* `average` is the right choice for categorical groupings when the user asks "which day is highest."
+When a user asks "cardio vs strength training split", the AI has no way to express this. The closest option is `groupBy: "item"` which lists every individual exercise separately. The user wants just two buckets (Cardio / Strength), which requires knowing the exercise category -- information that exists in the exercise metadata (`isCardio` flag) but isn't accessible to the chart engine.
 
-### The Fix
+### Solution
 
-Replace the example-heavy RULES section with a short conceptual framework that explains *how groupBy and aggregation interact semantically*. The AI already understands these concepts -- it just needs the right framing to reason correctly.
+Add a new `groupBy: "category"` option that groups exercise data into Cardio vs Strength (non-cardio) buckets. This uses the existing `isCardio` flag from `EXERCISE_MUSCLE_GROUPS` in `exercise-metadata.ts`.
 
-### What changes
-
-**File: `supabase/functions/generate-chart-dsl/index.ts`**
-
-Replace the RULES block (lines 76-87) with something like:
-
-```
-AGGREGATION SEMANTICS:
-
-When groupBy is "date" or "week" (time-series), each bucket represents a single
-time period. "sum" answers "how much total that day/week", "average" answers
-"average per entry that day/week".
-
-When groupBy is categorical ("dayOfWeek", "hourOfDay", "weekdayVsWeekend"),
-each bucket pools data from MANY instances across the query period. The user
-almost always wants to compare a TYPICAL bucket, not a volume total that's
-biased by how many times that bucket appears in the period. Default to "average"
-for categorical groupings unless the user explicitly asks for totals.
-
-"count" answers "how many days/entries had data" — use when the user asks
-about frequency, not magnitude.
-
-CHART TYPE SELECTION:
-
-- "line" or "area" for time-series groupings (date, week) — shows trends over time
-- "bar" for categorical groupings (dayOfWeek, hourOfDay, weekdayVsWeekend) — shows comparison across buckets
-- When in doubt, prefer "bar" for categorical and "line" for temporal
-
-SORTING:
-
-- For categorical bar charts, consider sort=value_desc to rank buckets
-- Never sort time-series charts (date, week) — they must stay chronological
-
-GENERAL:
-
-- title should be concise and descriptive
-- Do NOT include any data values — only the schema
-```
-
-### Why this is better
-
-- **Scales**: The AI can now reason about *any* groupBy + aggregation combination, including future ones we add, without needing a specific example for each.
-- **Teaches the "why"**: Instead of memorizing "dayOfWeek uses average", the AI understands that categorical buckets pool unequal counts, so average is the unbiased default. It can apply this reasoning to hourOfDay, weekdayVsWeekend, or any new grouping.
-- **Fewer tokens**: A short conceptual block replaces a growing list of "for X do Y" examples.
-- **Handles ambiguity**: When a user says "calories by day of week", the AI can reason through "categorical grouping, user wants to compare typical days, so average" instead of pattern-matching against a memorized example.
-
-### What stays
-
-- The DATABASE SCHEMA section (lines 38-54) -- unchanged, this is factual reference
-- The AVAILABLE METRICS, DERIVED METRICS, GROUP BY OPTIONS, FILTER OPTIONS sections -- unchanged, these are valid enum documentation
-- Everything outside the system prompt -- unchanged
-
-### Files to change
+### Changes
 
 | File | Change |
 |---|---|
-| `supabase/functions/generate-chart-dsl/index.ts` | Replace the RULES block with the conceptual aggregation semantics section described above |
+| `src/lib/chart-types.ts` | Add `"category"` to the `groupBy` union. Add `exerciseByCategory` to `DailyTotals`. |
+| `src/lib/chart-data.ts` | When `groupBy === "category"`, compute `exerciseByCategory` record with two keys: `"Cardio"` and `"Strength"`, each accumulating totals using `isCardioExercise()` from exercise-metadata. |
+| `src/lib/chart-dsl.ts` | Add a `case "category"` block in `executeDSL` that reads `exerciseByCategory` and produces data points for each category bucket. |
+| `supabase/functions/generate-chart-dsl/index.ts` | Add `"category"` to the GROUP BY OPTIONS docs in the system prompt, explaining it groups exercises into Cardio vs Strength buckets. Mark it as categorical in the aggregation semantics section. |
+
+### How it works
+
+```text
+User: "Cardio vs strength training split"
+
+AI returns:
+  groupBy: "category"
+  source: "exercise"
+  metric: "cal_burned" (or "sets", "duration", etc.)
+  aggregation: "sum"
+
+Client-side:
+  1. fetchChartData detects groupBy=category, queries weight_sets
+  2. For each row, checks isCardioExercise(exercise_key)
+  3. Buckets into { Cardio: {...totals}, Strength: {...totals} }
+  4. executeDSL reads these two buckets, produces two bar data points
+```
+
+### Technical detail
+
+The category grouping is exercise-only. If the AI mistakenly pairs it with `source: "food"`, the chart will simply render empty (same graceful behavior as other mismatches). The prompt will instruct the AI that `category` only applies to exercise data.
 
