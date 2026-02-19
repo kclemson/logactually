@@ -1,60 +1,71 @@
 
 
-## Three improvements to Create Chart verification
+## Two improvements: verifiable meal counts + better suggestion chips
 
-### 1. Add tolerance label to verification summary
+### 1. Make "meals per day" verifiable
 
-The verification summary currently shows "Accuracy: X/Y match (Z%)". Replace this with a human-readable description that includes the tolerance used.
+Currently the AI returns `verification: null` for meal-count charts because `entries` isn't tracked in daily totals. The edge function already loops through `foodEntries` -- we just need to count rows per date.
+
+**`supabase/functions/generate-chart/index.ts`:**
+- Add `entries: 0` to the daily food totals accumulator type
+- Increment `entries` once per `food_entries` row (not per item)
+- Include `entries` in the daily food summary string sent to the AI
+- Include `entries` in the serialized food totals sent to the client
+- Update the system prompt's field list: `Food: cal, protein, carbs, fat, fiber, sugar, sat_fat, sodium, chol, entries`
+- Add a note: `entries = number of food log entries (meals) for that date`
 
 **`src/lib/chart-verification.ts`:**
-- Add `toleranceLabel?: string` to `VerificationResult`
-- `verifyDaily` and `verifyLegacy`: set `toleranceLabel: "within 1% or 5 units"`
-- `verifyAggregate`: for `method === "average"`, widen `isClose` tolerance (`delta < 20 || delta/actual < 2%`) and set `toleranceLabel: "within 2% or 20 units"`; otherwise use default tolerance and label
+- Add to `FOOD_KEY_MAP`: `entries: "entries"`, `meals: "entries"`, `meal_count: "entries"`, `meal_entries: "entries"`
 
-Update `isClose` to accept an optional method parameter:
-```text
-isClose(ai, actual)          -> delta < 5 or delta/actual < 1%
-isClose(ai, actual, "average") -> delta < 20 or delta/actual < 2%
-```
+### 2. Improve suggestion chips
 
-**`src/components/CustomChartDialog.tsx`:**
-- Replace the summary line with: `{matched}/{total} AI values matched your logs ({toleranceLabel})`
+Keep existing useful prompts (fiber, sodium, sugar), remove redundant/low-value ones, and add more insight-driven prompts. The goal is a mix of "obvious useful" basics and "aha moment" analytical questions.
 
-### 2. Always show the textarea
+**`src/components/CustomChartDialog.tsx` -- replace `ALL_CHIPS`:**
 
-The textarea currently hides once a chart is generated (unless refining). It should always be visible below the chips so users can type a new prompt at any time.
+Keeping (basics that users will want):
+- "Daily fiber intake over time"
+- "Sodium intake trend"
+- "Average sugar per day"
+- "My highest calorie days"
 
-**`src/components/CustomChartDialog.tsx`:**
-- Change `showTextarea` to: `!generateChart.isPending || hasExistingContent` (remove the `!currentSpec || refining` gate)
-- Dynamic placeholder based on state:
-  - Refining: "Refine this chart..."
-  - Chart exists, not refining: "Describe another chart..."
-  - No chart: "Describe the chart you'd like to see..."
+Keeping (already good analytical prompts):
+- "Average calories by hour of day"
+- "Which day of the week do I eat the most?"
+- "How many meals do I log per day on average?"
+- "Average calories on workout days vs rest days"
+- "Exercise frequency by day of week"
+- "Which exercises do I do most often?"
+- "Calorie comparison: weekdays vs weekends"
 
-### 3. Auto-run validator on AI response
+Removing (redundant or low-value):
+- "Fat as percentage of total calories over time" (too niche for a chip)
+- "Protein to calorie ratio over time" (similar to above)
+- "Days where I exceeded 2000 calories" (too specific a number)
+- "Average protein on workout days vs rest days" (very similar to calorie version)
+- "Do I eat more on days I exercise?" (same as workout vs rest days)
+- "Average carbs on weekdays vs weekends" (similar to calorie weekday/weekend)
+- "Total exercise duration per week" (generic)
+- "How many days per week did I exercise?" (similar to exercise frequency)
+- "Training volume trend over time" (vague)
 
-Instead of requiring users to click "Verify accuracy", run verification automatically whenever a chart spec comes back from the AI.
+Adding (insight-driven):
+- "Weekly calorie average trend" (smoothed view, very popular request)
+- "How consistent is my logging?" (days with entries -- adherence tracking)
+- "Protein per meal over time" (quality-per-meal insight)
+- "Which meals have the most calories?" (identify problem meals)
+- "My most common foods" (self-awareness)
+- "Cardio vs strength training split" (exercise balance)
+- "Average heart rate by exercise" (if they track it)
+- "Rest days between workouts" (recovery insight)
 
-**`src/components/CustomChartDialog.tsx`:**
-- In both `handleSubmit` and `handleNewRequest`, after `setCurrentSpec(result.chartSpec)` and `setDailyTotals(result.dailyTotals)`, immediately call `verifyChartData` and `setVerification` with the result
-- Keep the "Verify accuracy" button so users can re-run it manually if they want, but the panel will already be populated on load
-
-The relevant code in both handlers changes from:
-```text
-setCurrentSpec(result.chartSpec);
-setDailyTotals(result.dailyTotals);
-```
-to:
-```text
-setCurrentSpec(result.chartSpec);
-setDailyTotals(result.dailyTotals);
-setVerification(verifyChartData(result.chartSpec, result.dailyTotals));
-```
+Final list of ~20 chips, balanced between basics and insights.
 
 ### Files changed
 
 | File | Change |
 |---|---|
-| `src/lib/chart-verification.ts` | Add `toleranceLabel` to interface; widen `isClose` for averages; set label in all three verify functions |
-| `src/components/CustomChartDialog.tsx` | Use `toleranceLabel` in summary; always show textarea; auto-run verification after AI response |
+| `supabase/functions/generate-chart/index.ts` | Add `entries` count to daily food totals, summary, serialization, and system prompt |
+| `src/lib/chart-verification.ts` | Add `entries`/`meals`/`meal_count` to FOOD_KEY_MAP |
+| `src/components/CustomChartDialog.tsx` | Replace ALL_CHIPS with curated strategic list |
 
