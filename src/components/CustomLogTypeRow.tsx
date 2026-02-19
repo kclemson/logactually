@@ -70,10 +70,12 @@ export function CustomLogTypeRow({
           logType={type}
           open={editOpen}
           onOpenChange={setEditOpen}
+          existingNames={existingNames.filter(n => n !== type.name)}
           onSave={(id, params) => {
             if (type.value_type === 'medication' && onUpdateMedication) {
               onUpdateMedication(id, params);
             } else {
+              if (params.name && params.name !== type.name) onRename(id, params.name);
               onUpdateDescription(id, params.description);
               if (params.unit !== undefined) onUpdateUnit(id, params.unit);
             }
