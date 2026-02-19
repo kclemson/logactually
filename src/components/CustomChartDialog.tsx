@@ -181,9 +181,11 @@ function CustomChartDialogInner({
 
   const isSaving = saveMutation.isPending || updateMutation.isPending;
   const isEditing = !!initialChart;
-  const showChips = !generateChart.isPending;
-  const showTextarea = !generateChart.isPending && (!currentSpec || refining);
-  const showResult = !!currentSpec && !generateChart.isPending;
+  const hasExistingContent = !!currentSpec || !!lastQuestion;
+  const showOverlay = generateChart.isPending && hasExistingContent;
+  const showChips = !generateChart.isPending || hasExistingContent;
+  const showTextarea = (!generateChart.isPending || hasExistingContent) && (!currentSpec || refining);
+  const showResult = !!currentSpec;
 
   return (
     <Dialog open onOpenChange={onOpenChange}>
@@ -205,14 +207,25 @@ function CustomChartDialogInner({
           )}
         </DialogTitle>
 
-        <div className="space-y-3 mt-2">
-          {/* Chips — visible whenever not loading */}
+        <div className="space-y-3 mt-2 relative">
+          {/* Loading overlay — covers existing content instead of collapsing */}
+          {showOverlay && (
+            <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-md">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Generating...
+              </div>
+            </div>
+          )}
+
+          {/* Chips — visible whenever not loading (or overlay covers them) */}
           {showChips && (
             <div className="flex flex-wrap gap-1.5 items-start">
               {visibleChips.map((chip) => (
                 <button
                   key={chip}
                   onClick={() => handleNewRequest(chip)}
+                  disabled={generateChart.isPending}
                   className="text-xs px-2.5 py-1 rounded-full border border-border bg-muted/50 text-foreground hover:bg-muted transition-colors text-left"
                 >
                   {chip}
@@ -240,6 +253,7 @@ function CustomChartDialogInner({
                 }
                 className="min-h-[60px] max-h-[120px] resize-none text-sm"
                 maxLength={500}
+                disabled={generateChart.isPending}
               />
               <div className="flex justify-end gap-2">
                 {refining && (
@@ -258,7 +272,7 @@ function CustomChartDialogInner({
                 <Button
                   size="sm"
                   onClick={() => handleTextareaSubmit(input)}
-                  disabled={!input.trim()}
+                  disabled={!input.trim() || generateChart.isPending}
                   className="h-9"
                 >
                   {refining ? "Refine" : "Create"}
@@ -267,8 +281,8 @@ function CustomChartDialogInner({
             </div>
           )}
 
-          {/* Loading */}
-          {generateChart.isPending && (
+          {/* Loading — only shown for first-ever request (no existing content) */}
+          {generateChart.isPending && !hasExistingContent && (
             <div className="space-y-3">
               {lastQuestion && (
                 <p className="text-xs text-muted-foreground italic">"{lastQuestion}"</p>
@@ -305,7 +319,7 @@ function CustomChartDialogInner({
                 <Button
                   size="sm"
                   onClick={handleSave}
-                  disabled={isSaving}
+                  disabled={isSaving || generateChart.isPending}
                   className="flex-1"
                 >
                   {isSaving ? (
@@ -317,6 +331,7 @@ function CustomChartDialogInner({
                   variant="outline"
                   size="sm"
                   onClick={() => setRefining(true)}
+                  disabled={generateChart.isPending}
                 >
                   Refine
                 </Button>
@@ -365,12 +380,20 @@ function CustomChartDialogInner({
                       <p className="font-medium">
                         Accuracy: {verification.matched}/{verification.total} match ({verification.accuracy}%)
                       </p>
-                      {verification.mismatches && verification.mismatches.length > 0 && (
+                      {verification.allComparisons && verification.allComparisons.length > 0 && (
                         <div className="space-y-0.5 mt-1">
-                          <p className="text-[10px] font-medium opacity-70">Mismatches:</p>
-                          {verification.mismatches.map((m) => (
-                            <p key={m.date} className="text-[10px] font-mono">
-                              {m.date}: AI={m.ai}, actual={m.actual} (Δ{m.delta > 0 ? "+" : ""}{m.delta})
+                          <p className="text-[10px] font-medium opacity-70">Details:</p>
+                          {verification.allComparisons.map((c) => (
+                            <p
+                              key={c.label}
+                              className={`text-[10px] font-mono ${
+                                c.match
+                                  ? "text-green-700 dark:text-green-400"
+                                  : "text-red-700 dark:text-red-400"
+                              }`}
+                            >
+                              {c.label}: AI={c.ai}, actual={c.actual}
+                              {!c.match && ` (Δ${c.delta > 0 ? "+" : ""}${c.delta})`}
                             </p>
                           ))}
                         </div>

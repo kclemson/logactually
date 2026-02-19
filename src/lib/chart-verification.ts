@@ -7,6 +7,7 @@ export interface VerificationResult {
   matched?: number;
   accuracy?: number;
   mismatches?: Array<{ date: string; ai: number; actual: number; delta: number }>;
+  allComparisons?: Array<{ label: string; ai: number; actual: number; delta: number; match: boolean }>;
   reason?: string;
 }
 
@@ -26,6 +27,7 @@ function verifyDaily(
   const v = spec.verification!;
   const source = dailyTotals[v.source];
   const mismatches: VerificationResult["mismatches"] = [];
+  const allComparisons: VerificationResult["allComparisons"] = [];
   let matched = 0;
   let total = 0;
 
@@ -37,15 +39,18 @@ function verifyDaily(
     const aiValue = Number(point[spec.dataKey]) || 0;
     const record = source[rawDate];
     const actualValue = record ? Number((record as any)[v.field]) || 0 : 0;
+    const isMatch = isClose(aiValue, actualValue);
 
-    if (isClose(aiValue, actualValue)) {
+    allComparisons.push({ label: rawDate, ai: aiValue, actual: actualValue, delta: aiValue - actualValue, match: isMatch });
+
+    if (isMatch) {
       matched++;
     } else {
       mismatches.push({ date: rawDate, ai: aiValue, actual: actualValue, delta: aiValue - actualValue });
     }
   }
 
-  return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, mismatches };
+  return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, mismatches, allComparisons };
 }
 
 function verifyAggregate(
@@ -60,6 +65,7 @@ function verifyAggregate(
   const source = dailyTotals[v.source];
   const xField = spec.xAxis.field;
   const mismatches: VerificationResult["mismatches"] = [];
+  const allComparisons: VerificationResult["allComparisons"] = [];
   let matched = 0;
   let total = 0;
 
@@ -99,14 +105,17 @@ function verifyAggregate(
         actual = values.reduce((a, b) => a + b, 0);
     }
 
-    if (isClose(aiValue, actual)) {
+    const isMatch = isClose(aiValue, actual);
+    allComparisons.push({ label: bucket.label, ai: aiValue, actual: Math.round(actual), delta: Math.round(aiValue - actual), match: isMatch });
+
+    if (isMatch) {
       matched++;
     } else {
       mismatches.push({ date: bucket.label, ai: aiValue, actual: Math.round(actual), delta: Math.round(aiValue - actual) });
     }
   }
 
-  return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, mismatches };
+  return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, mismatches, allComparisons };
 }
 
 /* ── Legacy heuristic fallback (for old cached charts) ───── */
@@ -171,6 +180,7 @@ function verifyLegacy(
   const field = (foodField || exerciseField)!;
 
   const mismatches: VerificationResult["mismatches"] = [];
+  const allComparisons: VerificationResult["allComparisons"] = [];
   let matched = 0;
   let total = 0;
 
@@ -181,15 +191,18 @@ function verifyLegacy(
     const aiValue = Number(point[dataKey]) || 0;
     const actualRecord = source[rawDate];
     const actualValue = actualRecord ? Number((actualRecord as any)[field]) || 0 : 0;
+    const isMatch = isClose(aiValue, actualValue);
 
-    if (isClose(aiValue, actualValue)) {
+    allComparisons.push({ label: rawDate, ai: aiValue, actual: actualValue, delta: aiValue - actualValue, match: isMatch });
+
+    if (isMatch) {
       matched++;
     } else {
       mismatches.push({ date: rawDate, ai: aiValue, actual: actualValue, delta: aiValue - actualValue });
     }
   }
 
-  return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, mismatches };
+  return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, mismatches, allComparisons };
 }
 
 /* ── Main entry point ────────────────────────────────────── */
