@@ -10,8 +10,8 @@ const makeTotals = (): DailyTotals => ({
     // 2026-02-16 = Mon, 17 = Tue, 18 = Wed
   },
   exercise: {
-    "2026-02-16": { sets: 12, duration: 45, distance: 0, cal_burned: 300, unique_exercises: 4 },
-    "2026-02-17": { sets: 0, duration: 30, distance: 3.5, cal_burned: 250, unique_exercises: 1 },
+    "2026-02-16": { sets: 12, duration: 45, distance: 0, cal_burned: 300, unique_exercises: 4, entries: 6 },
+    "2026-02-17": { sets: 0, duration: 30, distance: 3.5, cal_burned: 250, unique_exercises: 1, entries: 1 },
   },
 });
 

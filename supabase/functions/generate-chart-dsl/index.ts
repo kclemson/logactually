@@ -82,8 +82,8 @@ When the user asks about a SPECIFIC activity that is a subtype (e.g. "running", 
 When the user asks about the GENERAL activity (e.g. "cardio", "walk/run"), use only filter.exerciseKey without exerciseSubtype.
 
 AVAILABLE METRICS:
-- Food source: cal, protein, carbs, fat, fiber, sugar, sat_fat, sodium, chol, entries (number of food items logged)
-- Exercise source: sets, duration, distance, cal_burned, unique_exercises
+- Food source: cal, protein, carbs, fat, fiber, sugar, sat_fat, sodium, chol, entries (number of food logging sessions)
+- Exercise source: sets, duration, distance, cal_burned, unique_exercises (distinct exercise types per day), entries (number of exercise sessions logged — each logged group counts separately, not deduplicated by exercise type. Two separate dog walks = 2 entries.)
 
 DERIVED METRICS (food source only, use derivedMetric field):
 - protein_pct, carbs_pct, fat_pct: macro percentage of total calories
@@ -121,8 +121,16 @@ almost always wants to compare a TYPICAL bucket, not a volume total that's
 biased by how many times that bucket appears in the period. Default to "average"
 for categorical groupings unless the user explicitly asks for totals.
 
-"count" answers "how many days/entries had data" — use when the user asks
-about frequency, not magnitude.
+"count" answers "how many days/entries had data" — it IGNORES the metric value
+entirely. Use ONLY when the user asks about frequency of logging (e.g. "how many
+days did I exercise"). Do NOT use count when the user wants to know the value of
+a metric (e.g. "how many exercises per day" needs average or sum of entries, not count).
+
+IMPORTANT — "frequency" and "how many" disambiguation:
+- "How often do I exercise" / "how many days" = count (number of days with data)
+- "How many exercises do I do" / "exercise count" / "# of exercises" = average/sum of entries (the metric value)
+- "Exercise frequency by day of week" = average of entries per weekday
+When in doubt and a specific metric like entries or unique_exercises is involved, prefer average over count.
 
 CHART TYPE SELECTION:
 

@@ -24,7 +24,7 @@ const EMPTY_FOOD: FoodDayTotals = {
 };
 
 const EMPTY_EXERCISE: ExerciseDayTotals = {
-  sets: 0, duration: 0, distance: 0, cal_burned: 0, unique_exercises: 0,
+  sets: 0, duration: 0, distance: 0, cal_burned: 0, unique_exercises: 0, entries: 0,
 };
 
 // ── Public API ──────────────────────────────────────────────
@@ -133,7 +133,7 @@ async function fetchExerciseData(
 ): Promise<DailyTotals> {
   let query = supabase
     .from("weight_sets")
-    .select("logged_date, exercise_key, description, sets, duration_minutes, distance_miles, exercise_metadata, created_at, exercise_subtype")
+    .select("logged_date, exercise_key, description, sets, duration_minutes, distance_miles, exercise_metadata, created_at, exercise_subtype, entry_id")
     .gte("logged_date", startDate)
     .order("logged_date", { ascending: true });
 
@@ -154,6 +154,7 @@ async function fetchExerciseData(
   const exerciseByCategory: Record<string, ExerciseDayTotals> | undefined =
     needsCategory ? {} : undefined;
   const seenKeys: Record<string, Set<string>> = {};
+  const seenEntries: Record<string, Set<string>> = {};
 
   for (const row of data ?? []) {
     // Category filter: skip rows that don't match
@@ -172,6 +173,7 @@ async function fetchExerciseData(
       distance: row.distance_miles ?? 0,
       cal_burned: meta?.calories_burned ?? 0,
       unique_exercises: 0,
+      entries: 0,
     };
 
     // Item-level aggregation
@@ -205,6 +207,8 @@ async function fetchExerciseData(
     existing.cal_burned += setTotals.cal_burned;
     (seenKeys[date] ??= new Set()).add(row.exercise_key);
     existing.unique_exercises = seenKeys[date].size;
+    (seenEntries[date] ??= new Set()).add(row.entry_id);
+    existing.entries = seenEntries[date].size;
     exercise[date] = existing;
 
     // Hourly aggregation
