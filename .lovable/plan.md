@@ -1,47 +1,39 @@
 
 
-## Rename DSL metric keys to match DB field names
+## Two changes to pinned (saved) charts
 
-### Problem
+### 1. Edit button in chart header instead of full-card click
 
-The internal metric keys (`cal`, `sat_fat`, `chol`, `duration`, `distance`, `cal_burned`) are arbitrary abbreviations that don't appear anywhere in the database schema. The AI sees column names like `calories`, `saturated_fat`, `cholesterol`, `duration_minutes`, `distance_miles`, `calories_burned` in the prompt, so it sometimes uses those instead of the short keys -- producing empty charts.
+Currently the entire saved chart card is wrapped in a clickable div that opens the chart editor. This will be replaced with a small pencil icon button in the chart's header row (right-aligned next to the title), always visible on saved charts -- no need for the separate "edit mode" toggle.
 
-### Solution
-
-Rename the internal keys to match the names the AI naturally encounters in the DB schema. This eliminates the mismatch at the source instead of working around it.
-
-### Key renames
-
-| Old key | New key | Matches |
-|---|---|---|
-| `cal` | `calories` | food_items JSONB field |
-| `sat_fat` | `saturated_fat` | food_items JSONB field |
-| `chol` | `cholesterol` | food_items JSONB field |
-| `duration` | `duration_minutes` | weight_sets column |
-| `distance` | `distance_miles` | weight_sets column |
-| `cal_burned` | `calories_burned` | exercise_metadata JSONB field |
-
-`protein`, `carbs`, `fat`, `fiber`, `sugar`, `sodium`, `sets`, `entries`, `unique_exercises` already match naturally and stay the same.
-
-### Files changed
+**Changes:**
 
 | File | What changes |
 |---|---|
-| `src/lib/chart-types.ts` | Rename fields in `FoodDayTotals` (`cal` to `calories`, `sat_fat` to `saturated_fat`, `chol` to `cholesterol`) and `ExerciseDayTotals` (`duration` to `duration_minutes`, `distance` to `distance_miles`, `cal_burned` to `calories_burned`) |
-| `src/lib/chart-data.ts` | Update `EMPTY_FOOD`, `EMPTY_EXERCISE` constants and all field references to use new names |
-| `src/lib/chart-dsl.ts` | Update `FOOD_METRICS`, `EXERCISE_METRICS` arrays, `DERIVED_FORMULAS` references, `extractValue` usage, all `buildDetails` calls, and `metricColors` map to use new key names |
-| `supabase/functions/generate-chart-dsl/index.ts` | Update the AVAILABLE METRICS section to list the new key names (`calories` instead of `cal`, etc.) |
+| `src/pages/Trends.tsx` | Remove the wrapper `<div className="cursor-pointer" onClick={...}>` around each saved chart. Instead, pass a `headerAction` to `DynamicChart` that renders a pencil icon button which opens the editor. The pencil and delete button both show in the header -- pencil always, delete only in edit mode. Remove the section-level edit-mode pencil toggle since delete can stay inline (or keep it for delete-only). |
 
-### What does NOT change
+The pencil button will be small and muted, similar to the existing delete button styling, to avoid visual clutter.
 
-- No database changes
-- No UI changes
-- `CompactChartTooltip.tsx` -- unchanged, renders whatever `_details` contains
-- `DynamicChart.tsx` -- unchanged, passes data through
-- `useGenerateChart.ts` -- unchanged, orchestrates but doesn't reference metric keys
-- The `ChartDSL` interface itself -- `metric` is still a `string`, only the valid values change
+### 2. Click-to-navigate for date-axis dynamic charts
 
-### Risk
+`DynamicChart` already supports an `onNavigate` prop that hooks into `useChartInteraction` (bar click on desktop navigates, on touch it shows tooltip with a "Go to day" button). The saved charts just never pass `onNavigate`.
 
-Low. The metric keys are only used within the chart pipeline (chart-types, chart-data, chart-dsl, and the prompt). No other features reference these field names. Existing saved charts that stored a `chartDSL` with old metric names would need the old keys to still work -- we can add a small 6-line alias map in `executeDSL` that silently remaps old keys (`cal` to `calories`, etc.) so saved charts don't break.
+The fix: when rendering saved charts, pass `onNavigate` based on `chart.chart_spec.dataSource`:
+- `"food"` or `"mixed"` navigates to `/?date=YYYY-MM-DD` (food log)
+- `"exercise"` navigates to `/weights?date=YYYY-MM-DD`
 
+This only works for charts where the X axis represents dates (i.e., `groupBy: "date"` or `groupBy: "week"`). For other groupBy types (`dayOfWeek`, `item`, `category`, `hourOfDay`, `weekdayVsWeekend`), the data points don't have a `rawDate` field, so `onNavigate` naturally does nothing -- no special handling needed.
+
+**Changes:**
+
+| File | What changes |
+|---|---|
+| `src/pages/Trends.tsx` | Pass `onNavigate` to each saved `DynamicChart`. The callback checks `chart.chart_spec.dataSource` to determine the target route (`/` for food, `/weights` for exercise), then calls `navigate`. |
+
+No changes needed in `DynamicChart`, `useChartInteraction`, or `CompactChartTooltip` -- the plumbing is already there.
+
+### Summary
+
+Two small changes, both in `Trends.tsx`:
+1. Replace card-level click with a pencil icon `headerAction`
+2. Add `onNavigate` prop based on `dataSource`
