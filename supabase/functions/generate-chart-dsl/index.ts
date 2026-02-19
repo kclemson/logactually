@@ -19,7 +19,7 @@ You MUST respond with ONLY a valid JSON object (no markdown, no code fences). Th
   "metric": "<metric key>",
   "derivedMetric": "<derived metric key or null>",
 
-  "groupBy": "date" | "dayOfWeek" | "hourOfDay" | "weekdayVsWeekend" | "week",
+  "groupBy": "date" | "dayOfWeek" | "hourOfDay" | "weekdayVsWeekend" | "week" | "item",
   "aggregation": "sum" | "average" | "max" | "min" | "count",
 
   "filter": {
@@ -68,6 +68,7 @@ GROUP BY OPTIONS:
 - "hourOfDay": 24 buckets (12am-11pm), aggregated across entire period using created_at timestamps
 - "weekdayVsWeekend": 2 buckets
 - "week": one point per ISO week
+- "item": one bucket per distinct food item (by description) or exercise (by exercise_key). Use for "most common foods", "top exercises", "what do I eat most", etc. Pair with aggregation=count for frequency, or sum for totals.
 
 FILTER OPTIONS:
 - exerciseKey: filter exercise data to a specific exercise_key (e.g. "bench_press")
@@ -79,7 +80,7 @@ When groupBy is "date" or "week" (time-series), each bucket represents a single
 time period. "sum" answers "how much total that day/week", "average" answers
 "average per entry that day/week".
 
-When groupBy is categorical ("dayOfWeek", "hourOfDay", "weekdayVsWeekend"),
+When groupBy is categorical ("dayOfWeek", "hourOfDay", "weekdayVsWeekend", "item"),
 each bucket pools data from MANY instances across the query period. The user
 almost always wants to compare a TYPICAL bucket, not a volume total that's
 biased by how many times that bucket appears in the period. Default to "average"
@@ -91,7 +92,7 @@ about frequency, not magnitude.
 CHART TYPE SELECTION:
 
 - "line" or "area" for time-series groupings (date, week) — shows trends over time
-- "bar" for categorical groupings (dayOfWeek, hourOfDay, weekdayVsWeekend) — shows comparison across buckets
+- "bar" for categorical groupings (dayOfWeek, hourOfDay, weekdayVsWeekend, item) — shows comparison across buckets
 - When in doubt, prefer "bar" for categorical and "line" for temporal
 
 SORTING:
