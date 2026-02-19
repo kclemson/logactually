@@ -405,14 +405,31 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
         </>
       ) : effectiveViewMode === 'type' && selectedType ? (
         /* Type view body */
-        <CustomLogTypeView
-          logType={selectedType}
-          entries={typeEntries}
-          isLoading={typeEntriesLoading}
-          onDelete={(id) => deleteTypeEntry.mutate(id)}
-          onEdit={(entry) => setEditingEntry(entry)}
-          isReadOnly={isReadOnly}
-        />
+        <>
+          <DateNavigation
+            selectedDate={selectedDate}
+            isTodaySelected={isTodaySelected}
+            calendarOpen={dateNav.calendarOpen}
+            onCalendarOpenChange={dateNav.setCalendarOpen}
+            calendarMonth={dateNav.calendarMonth}
+            onCalendarMonthChange={dateNav.setCalendarMonth}
+            onPreviousDay={dateNav.goToPreviousDay}
+            onNextDay={dateNav.goToNextDay}
+            onDateSelect={dateNav.handleDateSelect}
+            onGoToToday={dateNav.goToToday}
+            datesWithData={datesWithData}
+            highlightClassName="text-teal-600 dark:text-teal-400 font-semibold"
+            weekStartDay={settings.weekStartDay}
+          />
+          <CustomLogTypeView
+            logType={selectedType}
+            entries={typeEntries}
+            isLoading={typeEntriesLoading}
+            onDelete={(id) => deleteTypeEntry.mutate(id)}
+            onEdit={(entry) => setEditingEntry(entry)}
+            isReadOnly={isReadOnly}
+          />
+        </>
       ) : (
         /* Date view body */
         <>
