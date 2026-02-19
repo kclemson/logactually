@@ -262,6 +262,11 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
     }
   }
 
+  // Apply limit
+  if (dsl.limit && dsl.limit > 0) {
+    dataPoints = dataPoints.slice(0, dsl.limit);
+  }
+
   // Determine color
   const metricColors: Record<string, string> = {
     cal: "#2563EB",
