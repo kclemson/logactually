@@ -89,14 +89,15 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu }: 
   };
 
   const lineLabelRenderer = (props: any) => {
-    const { cx, cy, value, index } = props;
+    const { viewBox, value, index } = props;
     if (!chartData[index]?._showLabel) return null;
     if (value == null || value === 0) return null;
-    if (typeof cx !== "number" || typeof cy !== "number") return null;
+    const { x, y, width } = viewBox ?? {};
+    if (typeof x !== "number" || typeof y !== "number") return null;
     return (
       <text
-        x={cx}
-        y={cy - 6}
+        x={x + (width ?? 0) / 2}
+        y={y - 4}
         fill={color}
         textAnchor="middle"
         fontSize={7}
