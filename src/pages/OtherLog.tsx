@@ -151,7 +151,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
 
   // Today's entries for the selected medication (used in dialog)
   const todayDateStr = format(new Date(), 'yyyy-MM-dd');
-  const todayMedEntries = typeEntries.filter((e) => e.logged_date === todayDateStr);
+  const todayMedEntries = typeEntries.filter((e) => e.logged_date === dateStr);
 
   return (
     <div className="space-y-4">
@@ -320,6 +320,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                 doseTimes={dialogType.dose_times}
                 todayEntryCount={todayMedEntries.length}
                 todayLoggedTimes={todayMedEntries.map(e => e.dose_time).filter(Boolean) as string[]}
+                loggedDate={dateStr}
                 onSubmit={(params) => {
                   if (effectiveViewMode === 'date') {
                     createEntry.mutate({
@@ -333,6 +334,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                   } else {
                     createTypeEntry.mutate({
                       log_type_id: dialogType.id,
+                      logged_date: dateStr,
                       unit: dialogType.unit || null,
                       ...params,
                     }, {
@@ -400,6 +402,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
               initialNotes={editingEntry.entry_notes}
               todayEntryCount={todayMedEntries.length}
               todayLoggedTimes={todayMedEntries.map(e => e.dose_time).filter(Boolean) as string[]}
+              loggedDate={dateStr}
               onSubmit={(params) => {
                 updateMedEntry.mutate({ id: editingEntry.id, numeric_value: params.numeric_value, dose_time: params.dose_time, entry_notes: params.entry_notes });
               }}

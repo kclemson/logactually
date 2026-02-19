@@ -29,6 +29,7 @@ export function useCustomLogEntriesForType(logTypeId: string | null) {
   const createEntry = useMutation({
     mutationFn: async (params: {
       log_type_id: string;
+      logged_date?: string;
       numeric_value?: number | null;
       numeric_value_2?: number | null;
       text_value?: string | null;
@@ -37,10 +38,11 @@ export function useCustomLogEntriesForType(logTypeId: string | null) {
       entry_notes?: string | null;
     }) => {
       if (!user) throw new Error('No user');
-      const today = format(new Date(), 'yyyy-MM-dd');
+      const { logged_date, ...rest } = params;
+      const dateToUse = logged_date ?? format(new Date(), 'yyyy-MM-dd');
       const { data, error } = await supabase
         .from('custom_log_entries')
-        .insert({ user_id: user.id, logged_date: today, ...params })
+        .insert({ user_id: user.id, logged_date: dateToUse, ...rest })
         .select()
         .single();
       if (error) throw error;
