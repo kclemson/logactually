@@ -264,17 +264,20 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
       if (dsl.source === "food" && dailyTotals.foodByItem) {
         const entries = Object.entries(dailyTotals.foodByItem);
         for (const [label, item] of entries) {
+          const divisor = dsl.aggregation === "average"
+            ? ((item as any).uniqueDays?.size || 1)
+            : 1;
           const metricValue =
             dsl.metric === "entries"       ? item.count :
-            dsl.metric === "calories"      ? item.totalCalories :
-            dsl.metric === "protein"       ? item.totalProtein :
-            dsl.metric === "carbs"         ? item.totalCarbs :
-            dsl.metric === "fat"           ? item.totalFat :
-            dsl.metric === "fiber"         ? item.totalFiber :
-            dsl.metric === "sugar"         ? item.totalSugar :
-            dsl.metric === "saturated_fat" ? item.totalSaturatedFat :
-            dsl.metric === "sodium"        ? item.totalSodium :
-            dsl.metric === "cholesterol"   ? item.totalCholesterol :
+            dsl.metric === "calories"      ? item.totalCalories / divisor :
+            dsl.metric === "protein"       ? item.totalProtein / divisor :
+            dsl.metric === "carbs"         ? item.totalCarbs / divisor :
+            dsl.metric === "fat"           ? item.totalFat / divisor :
+            dsl.metric === "fiber"         ? item.totalFiber / divisor :
+            dsl.metric === "sugar"         ? item.totalSugar / divisor :
+            dsl.metric === "saturated_fat" ? item.totalSaturatedFat / divisor :
+            dsl.metric === "sodium"        ? item.totalSodium / divisor :
+            dsl.metric === "cholesterol"   ? item.totalCholesterol / divisor :
             item.count; // fallback for unknown metrics
           dataPoints.push({
             label: label.length > 25 ? label.slice(0, 22) + "…" : label,
@@ -289,10 +292,14 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
       } else if (dsl.source === "exercise" && dailyTotals.exerciseByItem) {
         const entries = Object.entries(dailyTotals.exerciseByItem);
         for (const [, item] of entries) {
+          const divisor = dsl.aggregation === "average"
+            ? ((item as any).uniqueDays?.size || 1)
+            : 1;
           const metricValue =
-            dsl.metric === "sets" ? item.totalSets :
-            dsl.metric === "duration_minutes" ? item.totalDurationMinutes :
-            dsl.metric === "calories_burned" ? item.totalCaloriesBurned :
+            dsl.metric === "sets"             ? item.totalSets / divisor :
+            dsl.metric === "duration_minutes" ? item.totalDurationMinutes / divisor :
+            dsl.metric === "distance_miles"   ? ((item as any).totalDistanceMiles ?? 0) / divisor :
+            dsl.metric === "calories_burned"  ? item.totalCaloriesBurned / divisor :
             item.count;
           dataPoints.push({
             label: item.description.length > 25 ? item.description.slice(0, 22) + "…" : item.description,
