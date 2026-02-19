@@ -192,8 +192,13 @@ async function fetchExerciseData(
 
     // Item-level aggregation
     if (exerciseByItem) {
-      const key = row.exercise_key;
-      const existing = exerciseByItem[key] ?? { description: row.description, count: 0, totalSets: 0, totalDurationMinutes: 0, totalCaloriesBurned: 0 };
+      const key = exerciseKeyFilter ? (row.exercise_subtype ?? row.exercise_key) : row.exercise_key;
+      const label = exerciseKeyFilter
+        ? (row.exercise_subtype
+            ? row.exercise_subtype.charAt(0).toUpperCase() + row.exercise_subtype.slice(1)
+            : row.description)
+        : row.description;
+      const existing = exerciseByItem[key] ?? { description: label, count: 0, totalSets: 0, totalDurationMinutes: 0, totalCaloriesBurned: 0 };
       existing.count += 1;
       existing.totalSets += row.sets ?? 1;
       existing.totalDurationMinutes += row.duration_minutes ?? 0;
