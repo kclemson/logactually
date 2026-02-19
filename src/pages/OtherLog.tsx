@@ -146,7 +146,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
               <>
                 {/* Left: view mode select */}
                 <Select value={viewMode} onValueChange={(v) => handleViewModeChange(v as ViewMode)}>
-                  <SelectTrigger className="h-8 text-sm w-auto min-w-[130px]">
+                  <SelectTrigger className="h-8 text-sm px-2 w-auto min-w-[110px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -163,7 +163,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                     setShowInput(false);
                   }}
                 >
-                  <SelectTrigger className="h-8 text-sm w-auto min-w-[120px]">
+                  <SelectTrigger className="h-8 text-sm px-2 w-auto min-w-[100px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -183,7 +183,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                     onClick={() => setShowInput(true)}
                   >
                     <Plus className="h-3 w-3" />
-                    Log {selectedType.name}
+                    Log New
                   </Button>
                 )}
               </>
