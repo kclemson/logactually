@@ -1,53 +1,59 @@
 
 
-## Inject exercise reference list into chart DSL prompt + add subtype filter
+## Add exercise `entries` metric (count of logged sessions, not unique exercises)
 
 ### Problem
 
-The previous plan suggested hardcoding a mapping table of common terms (e.g., "running" maps to `walk_run`). But the canonical exercise list already exists in `_shared/exercises.ts` with keys, aliases, and `isCardio` flags. The AI is smart enough to figure out the mapping if we just give it the list. Similarly, subtype data already exists in the database -- we just need to tell the AI about the hierarchy and let it use `exerciseSubtype` in filters.
+When asking "# of exercises by day of week," the AI returns `metric: "unique_exercises"` with `aggregation: "count"`. This is wrong in two ways:
 
-### Approach
+1. **`unique_exercises` deduplicates** -- two separate dog walking sessions count as 1 because they share the same `exercise_key`
+2. **`count` aggregation counts the number of days** that had data, not the metric value itself
 
-1. Import and inject the canonical exercise list into the generate-chart-dsl prompt (same pattern used by `analyze-weights`)
-2. Add `exerciseSubtype` to the DSL filter schema
-3. Add `exercise_subtype` to the query select and apply it as a filter
-4. Let the AI handle all the mapping logic -- no hardcoded term tables
+The user wants: "how many active things did I log" -- where each expandable group in the weight log (each distinct `entry_id`) counts as one.
 
-### Changes
+### Solution
+
+Add an `entries` metric to the exercise source that counts distinct `entry_id` values per day. This mirrors the existing `entries` metric on the food side.
+
+### Technical details
 
 | File | Change |
 |---|---|
-| `supabase/functions/generate-chart-dsl/index.ts` | Import `getWeightExerciseReferenceForPrompt` and `getCardioExerciseReferenceForPrompt` from `_shared/exercises.ts`. Inject them into the system prompt under a new "CANONICAL EXERCISES" section. Add `exerciseSubtype` to the filter schema. Add guidance explaining the key/subtype hierarchy (e.g., `walk_run` is the key, `running`/`walking`/`hiking` are subtypes). |
-| `src/lib/chart-types.ts` | Add `exerciseSubtype?: string` to the filter interface. |
-| `src/lib/chart-data.ts` | Add `exercise_subtype` to the select columns. Accept `exerciseSubtype` filter param. When set, add `.eq("exercise_subtype", value)` to the query. |
+| `src/lib/chart-data.ts` | Add `entry_id` to the exercise query select. Track distinct `entry_id` values per day (similar to how `unique_exercises` tracks distinct `exercise_key`). Store the count in a new `entries` field on `ExerciseDayTotals`. |
+| `src/lib/chart-types.ts` | Add `entries: number` to `ExerciseDayTotals` interface. Update `EMPTY_EXERCISE` constant in `chart-data.ts` to include `entries: 0`. |
+| `src/lib/chart-dsl.ts` | Add `"entries"` to the `EXERCISE_METRICS` array. |
+| `supabase/functions/generate-chart-dsl/index.ts` | Update the exercise metrics list to include `entries` described as "number of exercise sessions logged (each logged group counts as one, even if the same exercise appears twice)". Strengthen `count` aggregation guidance to clarify it counts days, not the metric value. Add disambiguation for "how many exercises" vs "how often do I exercise". |
 
-### What the prompt will look like
+### How it works
 
-The existing exercise reference helpers produce output like:
-```
-- bench_press: "Bench Press" [Chest + Triceps] (also: flat bench, barbell bench, ...)
-- walk_run: "Walk/Run" (also: treadmill, running, walking, jogging, ...)
-```
+In `fetchExerciseData`, alongside the existing `seenKeys` tracker:
 
-We add a section explaining the hierarchy:
-```
-CANONICAL EXERCISES:
-Some exercises share a key with subtypes. For example, "walk_run" covers
-walking, running, and hiking. When the user asks about a specific activity
-like "running", use filter.exerciseKey="walk_run" + filter.exerciseSubtype="running".
-
-Known subtypes in user data: walk_run (walking, running, hiking),
-cycling (indoor, outdoor).
-
-Strength exercises:
-  [injected list]
-
-Cardio exercises:
-  [injected list]
+```text
+seenEntries[date] = Set of entry_id values seen for that date
+existing.entries = seenEntries[date].size
 ```
 
-### What does NOT change
+Two dog walks on Monday with different `entry_id` values = `entries: 2`.
+Two dog walks grouped under the same `entry_id` = `entries: 1`.
 
-- No new mapping tables or constants
-- No changes to `_shared/exercises.ts`
-- No changes to `chart-dsl.ts` (filter applied at data layer)
+### Expected AI output after fix
+
+User: "# of exercises by day of week"
+
+```json
+{
+  "source": "exercise",
+  "metric": "entries",
+  "aggregation": "average",
+  "groupBy": "dayOfWeek",
+  "chartType": "bar"
+}
+```
+
+This would show something like 8-11 per day (matching reality) instead of 3-5.
+
+### Prompt changes summary
+
+- Add `entries` to exercise metrics: "number of exercise sessions logged (each logged group counts separately, not deduplicated by exercise type)"
+- Clarify `count` aggregation: "counts how many days/periods had data -- IGNORES the metric value. Do NOT use when the user wants the value of a metric."
+- Add disambiguation: "how many exercises did I do" = `average` of `entries`, not `count` of `unique_exercises`
