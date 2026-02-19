@@ -105,7 +105,6 @@ serve(async (req) => {
         body: JSON.stringify({
           model,
           messages: [{ role: 'user', content: messageContent }],
-          temperature: 0.3,
         }),
       });
       if (res.ok) { response = res; break; }

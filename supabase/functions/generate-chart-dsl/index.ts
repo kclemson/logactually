@@ -232,7 +232,6 @@ serve(async (req) => {
           model,
           messages: aiMessages,
           response_format: { type: "json_object" },
-          temperature: 0.3,
         }),
       });
       if (res.ok) { aiResponse = res; break; }
