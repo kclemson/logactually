@@ -201,6 +201,36 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
       }
       break;
     }
+    case "item": {
+      if (dsl.source === "food" && dailyTotals.foodByItem) {
+        const entries = Object.entries(dailyTotals.foodByItem);
+        for (const [label, item] of entries) {
+          const metricValue =
+            dsl.metric === "entries" ? item.count :
+            dsl.metric === "cal" ? item.totalCal :
+            dsl.metric === "protein" ? item.totalProtein :
+            item.count;
+          dataPoints.push({
+            label: label.length > 25 ? label.slice(0, 22) + "…" : label,
+            value: Math.round(dsl.aggregation === "count" ? item.count : metricValue),
+          });
+        }
+      } else if (dsl.source === "exercise" && dailyTotals.exerciseByItem) {
+        const entries = Object.entries(dailyTotals.exerciseByItem);
+        for (const [, item] of entries) {
+          const metricValue =
+            dsl.metric === "sets" ? item.totalSets :
+            dsl.metric === "duration" ? item.totalDuration :
+            dsl.metric === "cal_burned" ? item.totalCalBurned :
+            item.count;
+          dataPoints.push({
+            label: item.description.length > 25 ? item.description.slice(0, 22) + "…" : item.description,
+            value: Math.round(dsl.aggregation === "count" ? item.count : metricValue),
+          });
+        }
+      }
+      break;
+    }
   }
 
   // Apply sorting for categorical charts

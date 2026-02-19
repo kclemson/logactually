@@ -35,11 +35,12 @@ export async function fetchChartData(
 ): Promise<DailyTotals> {
   const startDate = format(subDays(new Date(), period), "yyyy-MM-dd");
   const needsHourly = dsl.groupBy === "hourOfDay";
+  const needsItem = dsl.groupBy === "item";
 
   if (dsl.source === "food") {
-    return fetchFoodData(supabase, startDate, needsHourly);
+    return fetchFoodData(supabase, startDate, needsHourly, needsItem);
   }
-  return fetchExerciseData(supabase, startDate, needsHourly, dsl.filter?.exerciseKey);
+  return fetchExerciseData(supabase, startDate, needsHourly, dsl.filter?.exerciseKey, needsItem);
 }
 
 // ── Food fetcher ────────────────────────────────────────────
@@ -48,6 +49,7 @@ async function fetchFoodData(
   supabase: TypedClient,
   startDate: string,
   needsHourly: boolean,
+  needsItem: boolean = false,
 ): Promise<DailyTotals> {
   const { data, error } = await supabase
     .from("food_entries")
@@ -59,6 +61,8 @@ async function fetchFoodData(
 
   const food: Record<string, FoodDayTotals> = {};
   const foodByHour: HourlyTotals<FoodDayTotals> | undefined = needsHourly ? {} : undefined;
+  const foodByItem: Record<string, { count: number; totalCal: number; totalProtein: number }> | undefined =
+    needsItem ? {} : undefined;
 
   for (const row of data ?? []) {
     const items = row.food_items as any[];
@@ -76,6 +80,16 @@ async function fetchFoodData(
       entryTotals.sat_fat += item.saturated_fat || 0;
       entryTotals.sodium += item.sodium || 0;
       entryTotals.chol += item.cholesterol || 0;
+
+      // Item-level aggregation
+      if (foodByItem && item.description) {
+        const key = (item.description as string).toLowerCase().trim();
+        const existing = foodByItem[key] ?? { count: 0, totalCal: 0, totalProtein: 0 };
+        existing.count += 1;
+        existing.totalCal += item.calories || 0;
+        existing.totalProtein += item.protein || 0;
+        foodByItem[key] = existing;
+      }
     }
 
     // Daily aggregation
@@ -100,7 +114,7 @@ async function fetchFoodData(
     }
   }
 
-  return { food, exercise: {}, foodByHour };
+  return { food, exercise: {}, foodByHour, foodByItem };
 }
 
 // ── Exercise fetcher ────────────────────────────────────────
@@ -110,10 +124,11 @@ async function fetchExerciseData(
   startDate: string,
   needsHourly: boolean,
   exerciseKeyFilter?: string,
+  needsItem: boolean = false,
 ): Promise<DailyTotals> {
   let query = supabase
     .from("weight_sets")
-    .select("logged_date, exercise_key, sets, duration_minutes, distance_miles, exercise_metadata, created_at")
+    .select("logged_date, exercise_key, description, sets, duration_minutes, distance_miles, exercise_metadata, created_at")
     .gte("logged_date", startDate)
     .order("logged_date", { ascending: true });
 
@@ -126,6 +141,8 @@ async function fetchExerciseData(
 
   const exercise: Record<string, ExerciseDayTotals> = {};
   const exerciseByHour: HourlyTotals<ExerciseDayTotals> | undefined = needsHourly ? {} : undefined;
+  const exerciseByItem: Record<string, { description: string; count: number; totalSets: number; totalDuration: number; totalCalBurned: number }> | undefined =
+    needsItem ? {} : undefined;
   const seenKeys: Record<string, Set<string>> = {};
 
   for (const row of data ?? []) {
@@ -137,8 +154,19 @@ async function fetchExerciseData(
       duration: row.duration_minutes ?? 0,
       distance: row.distance_miles ?? 0,
       cal_burned: meta?.calories_burned ?? 0,
-      unique_exercises: 0, // computed after
+      unique_exercises: 0,
     };
+
+    // Item-level aggregation
+    if (exerciseByItem) {
+      const key = row.exercise_key;
+      const existing = exerciseByItem[key] ?? { description: row.description, count: 0, totalSets: 0, totalDuration: 0, totalCalBurned: 0 };
+      existing.count += 1;
+      existing.totalSets += row.sets ?? 1;
+      existing.totalDuration += row.duration_minutes ?? 0;
+      existing.totalCalBurned += meta?.calories_burned ?? 0;
+      exerciseByItem[key] = existing;
+    }
 
     // Daily aggregation
     const existing = exercise[date] ?? { ...EMPTY_EXERCISE };
@@ -146,7 +174,6 @@ async function fetchExerciseData(
     existing.duration += setTotals.duration;
     existing.distance += setTotals.distance;
     existing.cal_burned += setTotals.cal_burned;
-    // Track unique exercises
     (seenKeys[date] ??= new Set()).add(row.exercise_key);
     existing.unique_exercises = seenKeys[date].size;
     exercise[date] = existing;
@@ -158,5 +185,5 @@ async function fetchExerciseData(
     }
   }
 
-  return { food: {}, exercise, exerciseByHour };
+  return { food: {}, exercise, exerciseByHour, exerciseByItem };
 }
