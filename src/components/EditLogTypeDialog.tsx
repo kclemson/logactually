@@ -22,14 +22,6 @@ interface EditLogTypeDialogProps {
   existingNames?: string[];
 }
 
-const DOSE_TIME_DEFAULTS: Record<number, string[]> = {
-  1: ['morning'],
-  2: ['morning', 'evening'],
-  3: ['8am', '12pm', '4pm'],
-  4: ['8am', '12pm', '4pm', '8pm'],
-  5: ['6am', '10am', '2pm', '6pm', '10pm'],
-  6: ['6am', '9am', '12pm', '3pm', '6pm', '9pm'],
-};
 
 export function EditLogTypeDialog({
   logType,
@@ -55,15 +47,12 @@ export function EditLogTypeDialog({
     setDosesPerDay(count);
     if (count === 0) {
       setDoseTimes([]);
-    } else if (count > doseTimes.length) {
-      const defaults = DOSE_TIME_DEFAULTS[count] ?? [];
-      setDoseTimes(prev => {
-        const next = [...prev];
-        while (next.length < count) next.push(defaults[next.length] ?? '');
-        return next.slice(0, count);
-      });
     } else {
-      setDoseTimes(prev => prev.slice(0, count));
+      setDoseTimes(prev => {
+        const next = prev.slice(0, count);
+        while (next.length < count) next.push('');
+        return next;
+      });
     }
   };
 
