@@ -1,32 +1,53 @@
 
-## Fix "sessions" terminology in chart DSL prompt
+## Store and restore chart DSL for edit flow
 
 ### Problem
 
-The `generate-chart-dsl` system prompt defines the `entries` metric as:
-- Food: `entries (number of food logging sessions)`
-- Exercise: `entries (number of exercise sessions logged ...)`
+When you open a pinned chart to edit it, the DSL panel is empty because the DSL was never persisted. The `saved_charts` table only stores `chart_spec` (the rendering definition), not `chart_dsl` (the v2 intent object). So when the edit dialog opens, `chartDSL` state starts as `null`, and "Show DSL" shows nothing useful.
 
-The AI uses this phrasing when writing chart titles and `aiNote` text, producing output like *"Average number of food and exercise logging sessions per day of week."* Users think of their logs as individual items they recorded, not "sessions," which implies a workout or app session.
+This matters for the Refine flow too: ideally a future iteration could include the saved DSL in the refinement conversation context.
 
-### Fix
+---
 
-In `supabase/functions/generate-chart-dsl/index.ts`, update the two `entries` metric descriptions on lines 87–88:
+### Three-part fix
 
-**Before:**
-```
-entries (number of food logging sessions)
-entries (number of exercise sessions logged — each logged group counts separately...)
-```
+**1. Database — add `chart_dsl` column**
 
-**After:**
-```
-entries (number of food items logged)
-entries (number of exercise items logged — each logged entry counts separately, not deduplicated by exercise type. Two separate dog walks = 2 entries.)
+Add a nullable `jsonb` column `chart_dsl` to the `saved_charts` table. Nullable so all existing saved charts continue to work without migration data.
+
+```sql
+ALTER TABLE saved_charts ADD COLUMN IF NOT EXISTS chart_dsl jsonb;
 ```
 
-This causes the AI to naturally use phrasing like *"items logged"* or *"entries logged"* in generated titles and notes — language that matches how users think about their data.
+**2. `useSavedCharts.ts` — persist DSL on save/update**
 
-### File changed
+- Extend the `SavedChart` interface to include `chart_dsl?: unknown`
+- Update `saveMutation` to accept and store an optional `chartDsl` field
+- Update `updateMutation` similarly
 
-Only `supabase/functions/generate-chart-dsl/index.ts` — two lines in the AVAILABLE METRICS section. The edge function will be redeployed automatically.
+**3. `CustomChartDialog.tsx` + `Trends.tsx` — thread DSL through the edit path**
+
+- `CustomChartDialogProps.initialChart` gains an optional `chartDsl?: unknown` field
+- On mount, `chartDSL` state is pre-populated from `initialChart.chartDsl` if present
+- `handleSave` passes `chartDsl: chartDSL` to the save/update mutations
+- In `Trends.tsx`, `editingChart` state type is extended to include `chartDsl?: unknown`, and when opening the edit dialog it maps `chart.chart_dsl` onto that field
+
+---
+
+### What this achieves
+
+- **Edit → Show DSL**: works immediately for newly-saved charts; existing charts will populate DSL the next time they're saved/refined
+- **Refine loop**: DSL is now in-memory and correctly populated from the saved version, ready for future use in refinement context
+- **No data loss**: the column is nullable so all existing rows are unaffected
+- **v1 charts**: `chart_dsl` will be `null` for v1 charts (they don't produce a DSL), which is correct — the debug panel for v1 already shows `chart_spec` instead
+
+---
+
+### Files changed
+
+| File | Change |
+|---|---|
+| DB migration | Add `chart_dsl jsonb` column to `saved_charts` |
+| `src/hooks/useSavedCharts.ts` | Extend type + accept/persist `chartDsl` in save/update mutations |
+| `src/components/CustomChartDialog.tsx` | Accept `chartDsl` in `initialChart`; seed state on mount; pass to save |
+| `src/pages/Trends.tsx` | Include `chart_dsl` from DB record when setting `editingChart` |
