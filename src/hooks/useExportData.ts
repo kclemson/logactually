@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 import { FoodEntry, FoodItem } from '@/types/food';
-import { exportFoodLog, exportWeightLog as exportWeightLogCSV, WeightSetExport } from '@/lib/csv-export';
+import { exportFoodLog, exportWeightLog as exportWeightLogCSV, exportCustomLog, WeightSetExport, CustomLogExportRow } from '@/lib/csv-export';
 
 export function useExportData() {
   const [isExporting, setIsExporting] = useState(false);
@@ -90,9 +90,43 @@ export function useExportData() {
     }
   };
 
+  const fetchAllCustomLogEntries = async (): Promise<CustomLogExportRow[]> => {
+    const { data, error } = await supabase
+      .from('custom_log_entries')
+      .select('logged_date, created_at, numeric_value, numeric_value_2, text_value, unit, custom_log_types(name, value_type)')
+      .order('logged_date', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map((row) => ({
+      logged_date: row.logged_date,
+      created_at: row.created_at,
+      log_type_name: (row.custom_log_types as unknown as { name: string; value_type: string } | null)?.name ?? '',
+      value_type: (row.custom_log_types as unknown as { name: string; value_type: string } | null)?.value_type ?? '',
+      numeric_value: row.numeric_value,
+      numeric_value_2: row.numeric_value_2,
+      text_value: row.text_value,
+      unit: row.unit,
+    }));
+  };
+
+  const handleExportCustomLog = async () => {
+    setIsExporting(true);
+    try {
+      const rows = await fetchAllCustomLogEntries();
+      exportCustomLog(rows);
+    } catch (error) {
+      logger.error('Export failed:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return {
     isExporting,
     exportFoodLog: handleExportFoodLog,
     exportWeightLog: handleExportWeightLog,
+    exportCustomLog: handleExportCustomLog,
   };
 }

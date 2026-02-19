@@ -81,6 +81,60 @@ export function exportFoodLog(entries: FoodEntry[]) {
 }
 
 /**
+ * Custom log data for CSV export
+ */
+export interface CustomLogExportRow {
+  logged_date: string;
+  created_at: string;
+  log_type_name: string;
+  value_type: string;
+  numeric_value: number | null;
+  numeric_value_2: number | null;
+  text_value: string | null;
+  unit: string | null;
+}
+
+/**
+ * Export custom logs - one row per entry, with conditional BP columns
+ */
+export function exportCustomLog(rows: CustomLogExportRow[]) {
+  const sorted = [...rows].sort((a, b) => {
+    if (a.logged_date !== b.logged_date) return b.logged_date.localeCompare(a.logged_date);
+    return b.created_at.localeCompare(a.created_at);
+  });
+
+  const hasBP = sorted.some(r => r.value_type === 'dual_numeric');
+  const headers = hasBP
+    ? ['Date', 'Time', 'Log Type', 'Value', 'Systolic', 'Diastolic', 'Reading', 'Unit']
+    : ['Date', 'Time', 'Log Type', 'Value', 'Unit'];
+
+  const dataRows = sorted.map((row) => {
+    const isBP = row.value_type === 'dual_numeric';
+    const time = format(new Date(row.created_at), 'HH:mm');
+    const value = isBP ? '' : (row.numeric_value ?? row.text_value ?? '');
+    const base: (string | number)[] = [row.logged_date, time, row.log_type_name, value];
+    if (hasBP) {
+      base.push(
+        isBP ? (row.numeric_value ?? '') : '',
+        isBP ? (row.numeric_value_2 ?? '') : '',
+        isBP && row.numeric_value != null && row.numeric_value_2 != null
+          ? `${row.numeric_value}/${row.numeric_value_2}`
+          : '',
+      );
+    }
+    base.push(row.unit ?? '');
+    return base;
+  });
+
+  const csv = [
+    headers.join(','),
+    ...dataRows.map((row) => row.map(escapeCSV).join(',')),
+  ].join('\n');
+
+  downloadCSV(csv, `custom-log-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+}
+
+/**
  * Weight set data for CSV export
  */
 export interface WeightSetExport {
