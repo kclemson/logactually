@@ -98,6 +98,60 @@ Field names must exactly match daily totals keys:
 - Food: cal, protein, carbs, fat, fiber, sugar, sat_fat, sodium, chol, entries (entries = number of food log entries/meals for that date)
 - Exercise: sets, duration, distance, cal_burned, unique_exercises`;
 
+const SCHEMA_SYSTEM_PROMPT = `You are a semantic parser for a health and fitness tracking app. The user will describe a chart they want to see. Your job is to interpret their intent and return a declarative chart schema (DSL). You do NOT compute any data — the client will execute the schema against its own data.
+
+You MUST respond with ONLY a valid JSON object (no markdown, no code fences). The JSON object must conform to this schema:
+
+{
+  "chartType": "bar" | "line" | "area",
+  "title": "Chart title",
+
+  "source": "food" | "exercise",
+  "metric": "<metric key>",
+  "derivedMetric": "<derived metric key or null>",
+
+  "groupBy": "date" | "dayOfWeek" | "weekdayVsWeekend" | "week",
+  "aggregation": "sum" | "average" | "max" | "min" | "count",
+
+  "filter": {
+    "exerciseKey": "<exercise key or null>",
+    "dayOfWeek": [0-6] or null
+  } or null,
+
+  "compare": {
+    "metric": "<metric key>",
+    "source": "food" | "exercise"
+  } or null,
+
+  "sort": "label" | "value_asc" | "value_desc" or null
+}
+
+AVAILABLE METRICS:
+- Food source: cal, protein, carbs, fat, fiber, sugar, sat_fat, sodium, chol, entries
+- Exercise source: sets, duration, distance, cal_burned, unique_exercises
+
+DERIVED METRICS (food source only, use derivedMetric field):
+- protein_pct, carbs_pct, fat_pct: macro percentage of total calories
+- net_carbs: carbs minus fiber
+- cal_per_meal, protein_per_meal: per-entry averages
+
+GROUP BY OPTIONS:
+- "date": one point per day (time series)
+- "dayOfWeek": 7 buckets (Mon-Sun), aggregated across entire period
+- "weekdayVsWeekend": 2 buckets
+- "week": one point per ISO week
+
+RULES:
+- Choose the metric and grouping that best matches the user's intent
+- For "calories over time" → source=food, metric=cal, groupBy=date, aggregation=sum
+- For "average protein by day of week" → source=food, metric=protein, groupBy=dayOfWeek, aggregation=average
+- For "weekday vs weekend calories" → source=food, metric=cal, groupBy=weekdayVsWeekend, aggregation=average
+- For "weekly calorie trend" → source=food, metric=cal, groupBy=week, aggregation=sum
+- For bar charts showing categories, consider adding sort=value_desc
+- Use line charts for time series, bar charts for categories
+- title should be concise and descriptive
+- Do NOT include any data values — only the schema`;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -128,7 +182,7 @@ serve(async (req) => {
       });
     }
 
-    const { messages, period } = await req.json();
+    const { messages, period, mode } = await req.json();
 
     if (!Array.isArray(messages) || messages.length === 0) {
       return new Response(
@@ -331,9 +385,12 @@ serve(async (req) => {
 
     const dataContext = [foodDailySummary, foodContext, exerciseDailySummary, exerciseContext, customContext].filter(Boolean).join("\n\n");
 
+    // Choose system prompt based on mode
+    const systemPrompt = mode === "schema" ? SCHEMA_SYSTEM_PROMPT : SYSTEM_PROMPT;
+
     // Build AI messages
     const aiMessages = [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: systemPrompt },
       {
         role: "user",
         content: `Here is the user's data for the last ${days} days:\n\n${dataContext}\n\n---\n\nConversation:`,
@@ -397,7 +454,55 @@ serve(async (req) => {
 
     console.log("generate_chart args:", JSON.stringify(args).slice(0, 2000));
 
-    // Validate and filter data items
+    // Serialize dailyTotals (needed for both modes)
+    const serializedFoodTotals: Record<string, any> = {};
+    for (const [date, t] of dailyFoodTotals.entries()) {
+      serializedFoodTotals[date] = { cal: Math.round(t.cal), protein: Math.round(t.protein), carbs: Math.round(t.carbs), fat: Math.round(t.fat), fiber: Math.round(t.fiber), sugar: Math.round(t.sugar), sat_fat: Math.round(t.sat_fat), sodium: Math.round(t.sodium), chol: Math.round(t.chol), entries: t.entries };
+    }
+    const serializedExTotals: Record<string, any> = {};
+    for (const [date, t] of dailyExTotals.entries()) {
+      serializedExTotals[date] = { sets: t.sets, duration: Math.round(t.duration), distance: Math.round(t.distance * 10) / 10, cal_burned: Math.round(t.cal_burned), unique_exercises: t.exercises.size };
+    }
+    const serializedExByKey: Record<string, any> = {};
+    for (const [key, t] of exerciseByKey.entries()) {
+      serializedExByKey[key] = {
+        description: t.description,
+        count: t.count,
+        total_sets: t.total_sets,
+        total_duration: Math.round(t.total_duration),
+        avg_duration: t.count > 0 ? Math.round(t.total_duration / t.count * 10) / 10 : 0,
+        total_distance: Math.round(t.total_distance * 10) / 10,
+        avg_heart_rate: t.heart_rates.length > 0
+          ? Math.round(t.heart_rates.reduce((a, b) => a + b, 0) / t.heart_rates.length)
+          : null,
+        avg_effort: t.efforts.length > 0
+          ? Math.round(t.efforts.reduce((a, b) => a + b, 0) / t.efforts.length * 10) / 10
+          : null,
+        total_cal_burned: Math.round(t.total_cal_burned),
+      };
+    }
+
+    const dailyTotals = { food: serializedFoodTotals, exercise: serializedExTotals, exerciseByKey: serializedExByKey };
+
+    // Schema mode: return the DSL + dailyTotals, no data computation
+    if (mode === "schema") {
+      // Validate it has required DSL fields
+      if (!args.source || !args.metric || !args.groupBy || !args.aggregation) {
+        return new Response(
+          JSON.stringify({ error: "AI returned an incomplete schema. Please try again." }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(JSON.stringify({
+        chartDSL: args,
+        dailyTotals,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // V1 mode: validate and return computed data
     const rawData = Array.isArray(args.data) ? args.data : [];
     const validData = rawData.filter((d: any) =>
       d && Object.keys(d).length > 0 && d[args.xAxisField] !== undefined && d[args.dataKey] !== undefined
@@ -431,38 +536,9 @@ serve(async (req) => {
       verification: args.verification !== undefined ? args.verification : undefined,
     };
 
-    // Serialize dailyTotals for client-side verification
-    const serializedFoodTotals: Record<string, any> = {};
-    for (const [date, t] of dailyFoodTotals.entries()) {
-      serializedFoodTotals[date] = { cal: Math.round(t.cal), protein: Math.round(t.protein), carbs: Math.round(t.carbs), fat: Math.round(t.fat), fiber: Math.round(t.fiber), sugar: Math.round(t.sugar), sat_fat: Math.round(t.sat_fat), sodium: Math.round(t.sodium), chol: Math.round(t.chol), entries: t.entries };
-    }
-    const serializedExTotals: Record<string, any> = {};
-    for (const [date, t] of dailyExTotals.entries()) {
-      serializedExTotals[date] = { sets: t.sets, duration: Math.round(t.duration), distance: Math.round(t.distance * 10) / 10, cal_burned: Math.round(t.cal_burned), unique_exercises: t.exercises.size };
-    }
-
-    const serializedExByKey: Record<string, any> = {};
-    for (const [key, t] of exerciseByKey.entries()) {
-      serializedExByKey[key] = {
-        description: t.description,
-        count: t.count,
-        total_sets: t.total_sets,
-        total_duration: Math.round(t.total_duration),
-        avg_duration: t.count > 0 ? Math.round(t.total_duration / t.count * 10) / 10 : 0,
-        total_distance: Math.round(t.total_distance * 10) / 10,
-        avg_heart_rate: t.heart_rates.length > 0
-          ? Math.round(t.heart_rates.reduce((a, b) => a + b, 0) / t.heart_rates.length)
-          : null,
-        avg_effort: t.efforts.length > 0
-          ? Math.round(t.efforts.reduce((a, b) => a + b, 0) / t.efforts.length * 10) / 10
-          : null,
-        total_cal_burned: Math.round(t.total_cal_burned),
-      };
-    }
-
     return new Response(JSON.stringify({
       chartSpec,
-      dailyTotals: { food: serializedFoodTotals, exercise: serializedExTotals, exerciseByKey: serializedExByKey },
+      dailyTotals,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

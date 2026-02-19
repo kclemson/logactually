@@ -11,6 +11,7 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@
 import { UtensilsCrossed, Dumbbell, ClipboardList, Pin, Plus, BarChart3, Pencil } from "lucide-react";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { useWeightTrends, ExerciseTrend } from "@/hooks/useWeightTrends";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { CustomChartDialog } from "@/components/CustomChartDialog";
 import { useSavedCharts } from "@/hooks/useSavedCharts";
 import { DynamicChart, type ChartSpec } from "@/components/trends/DynamicChart";
@@ -49,6 +50,7 @@ const periods = [
 const LBS_TO_KG = 0.453592;
 
 const Trends = () => {
+  const { data: isAdmin } = useIsAdmin();
   const navigate = useNavigate();
   const [selectedPeriod, setSelectedPeriod] = useState(() => {
     const saved = localStorage.getItem("trends-period");
@@ -320,18 +322,20 @@ const Trends = () => {
             ))}
           </SelectContent>
         </Select>
-        <Button
-          size="sm"
-          onClick={() => setCreateChartOpen(true)}
-          className="gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Chart
-        </Button>
+        {isAdmin && (
+          <Button
+            size="sm"
+            onClick={() => setCreateChartOpen(true)}
+            className="gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Chart
+          </Button>
+        )}
       </div>
 
-      {/* My Charts Section */}
-      {savedCharts.length > 0 && (
+      {/* My Charts Section — admin only */}
+      {isAdmin && savedCharts.length > 0 && (
         <CollapsibleSection title="My Charts" icon={BarChart3} iconClassName="text-emerald-500 dark:text-emerald-400" defaultOpen={true} storageKey="trends-my-charts" headerAction={
           <button
             onClick={(e) => { e.stopPropagation(); setIsEditMode((v) => !v); }}
