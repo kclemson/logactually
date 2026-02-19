@@ -102,6 +102,14 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
     createEntry: createTypeEntry,
   } = useCustomLogEntriesForType(activeTypeId);
 
+  // Used for the edit dialog — scoped to the type being edited, regardless of view mode
+  const { entries: editingTypeEntries } = useCustomLogEntriesForType(
+    editingEntry?.log_type_id ?? null
+  );
+  const editingTodayEntries = editingTypeEntries.filter(
+    (e) => e.logged_date === dateStr && e.id !== editingEntry?.id
+  );
+
   // Update mutation for editing medication entries
   const updateMedEntry = useMutation({
     mutationFn: async ({ id, numeric_value, dose_time, entry_notes }: {
@@ -400,8 +408,8 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
               initialDose={editingEntry.numeric_value}
               initialTime={editingEntry.dose_time}
               initialNotes={editingEntry.entry_notes}
-              todayEntryCount={todayMedEntries.length}
-              todayLoggedTimes={todayMedEntries.map(e => e.dose_time).filter(Boolean) as string[]}
+              todayEntryCount={editingTodayEntries.length}
+              todayLoggedTimes={editingTodayEntries.map(e => e.dose_time).filter(Boolean) as string[]}
               loggedDate={dateStr}
               onSubmit={(params) => {
                 updateMedEntry.mutate({ id: editingEntry.id, numeric_value: params.numeric_value, dose_time: params.dose_time, entry_notes: params.entry_notes });
