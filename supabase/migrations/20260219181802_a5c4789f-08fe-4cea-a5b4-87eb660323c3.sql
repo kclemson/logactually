@@ -1,0 +1,1 @@
+ALTER TABLE saved_charts ADD COLUMN IF NOT EXISTS chart_dsl jsonb;

@@ -305,6 +305,7 @@ export type Database = {
       }
       saved_charts: {
         Row: {
+          chart_dsl: Json | null
           chart_spec: Json
           created_at: string
           id: string
@@ -313,6 +314,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          chart_dsl?: Json | null
           chart_spec: Json
           created_at?: string
           id?: string
@@ -321,6 +323,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          chart_dsl?: Json | null
           chart_spec?: Json
           created_at?: string
           id?: string

@@ -75,7 +75,7 @@ const Trends = () => {
   const [exerciseInitialView, setExerciseInitialView] = useState<"ask" | "pinned">("ask");
   const { pinCount } = usePinnedChats();
   const [createChartOpen, setCreateChartOpen] = useState(false);
-  const [editingChart, setEditingChart] = useState<{ id: string; question: string; chartSpec: ChartSpec } | null>(null);
+  const [editingChart, setEditingChart] = useState<{ id: string; question: string; chartSpec: ChartSpec; chartDsl?: unknown } | null>(null);
   
   const { savedCharts, deleteMutation } = useSavedCharts();
   const [deletePopoverId, setDeletePopoverId] = useState<string | null>(null);
@@ -371,7 +371,7 @@ const Trends = () => {
                 headerAction={isEditMode ? (
                   <div className="flex items-center gap-0.5">
                     <button
-                      onClick={() => setEditingChart({ id: chart.id, question: chart.question, chartSpec: chart.chart_spec })}
+                      onClick={() => setEditingChart({ id: chart.id, question: chart.question, chartSpec: chart.chart_spec, chartDsl: chart.chart_dsl })}
                       className="p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors"
                       aria-label="Edit chart"
                     >
@@ -398,7 +398,7 @@ const Trends = () => {
             onClose={() => setContextMenu(null)}
             onEdit={() => {
               const chart = savedCharts.find(c => c.id === contextMenu?.chartId);
-              if (chart) setEditingChart({ id: chart.id, question: chart.question, chartSpec: chart.chart_spec });
+              if (chart) setEditingChart({ id: chart.id, question: chart.question, chartSpec: chart.chart_spec, chartDsl: chart.chart_dsl });
               setContextMenu(null);
             }}
             onDelete={() => {
