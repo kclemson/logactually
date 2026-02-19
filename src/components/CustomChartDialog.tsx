@@ -57,6 +57,7 @@ function CustomChartDialogInner({
   initialChart?: { id: string; question: string; chartSpec: ChartSpec };
 }) {
   const [input, setInput] = useState("");
+  const [mode, setMode] = useState<"v1" | "v2">("v1");
   const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>(
     initialChart ? [{ role: "user", content: initialChart.question }] : []
   );
@@ -116,10 +117,11 @@ function CustomChartDialogInner({
       const result = await generateChart.mutateAsync({
         messages: newMessages,
         period,
+        mode,
       });
       setCurrentSpec(result.chartSpec);
       setDailyTotals(result.dailyTotals);
-      setVerification(verifyChartData(result.chartSpec, result.dailyTotals));
+      setVerification(mode === "v2" ? null : verifyChartData(result.chartSpec, result.dailyTotals));
       setRefining(false);
     } catch (err) {
       console.error("[generate-chart] mutation error:", err);
@@ -149,10 +151,11 @@ function CustomChartDialogInner({
       const result = await generateChart.mutateAsync({
         messages: freshMessages,
         period,
+        mode,
       });
       setCurrentSpec(result.chartSpec);
       setDailyTotals(result.dailyTotals);
-      setVerification(verifyChartData(result.chartSpec, result.dailyTotals));
+      setVerification(mode === "v2" ? null : verifyChartData(result.chartSpec, result.dailyTotals));
     } catch (err) {
       console.error("[generate-chart] mutation error:", err);
     }
@@ -212,6 +215,30 @@ function CustomChartDialogInner({
             </button>
           )}
         </DialogTitle>
+
+        {/* Mode toggle */}
+        <div className="flex gap-1 mt-1">
+          <button
+            onClick={() => setMode("v1")}
+            className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+              mode === "v1"
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-muted/50 text-muted-foreground border-border hover:bg-muted"
+            }`}
+          >
+            v1 · AI data
+          </button>
+          <button
+            onClick={() => setMode("v2")}
+            className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+              mode === "v2"
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-muted/50 text-muted-foreground border-border hover:bg-muted"
+            }`}
+          >
+            v2 · AI schema
+          </button>
+        </div>
 
         <div className="space-y-3 mt-2 relative">
           {/* Loading overlay — covers existing content instead of collapsing */}
