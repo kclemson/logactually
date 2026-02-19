@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { getMedicationMeta } from '@/lib/medication-meta';
 import { format } from 'date-fns';
 import { Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -278,10 +279,16 @@ export function CustomLogEntriesView({
         return (
           <div key={group.typeId} className="space-y-0">
             {/* Section header */}
-            <div className="py-0.5">
+            <div className="py-0.5 flex items-baseline gap-1.5">
               <span className="text-xs font-medium text-muted-foreground">
                 {logType?.name ?? 'Unknown'}
               </span>
+              {isMedication && logType && (() => {
+                const meta = getMedicationMeta(logType);
+                return meta ? (
+                  <span className="text-xs text-muted-foreground/60">· {meta}</span>
+                ) : null;
+              })()}
             </div>
 
             {isMedication ? (

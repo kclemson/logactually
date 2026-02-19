@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { CustomLogType } from '@/hooks/useCustomLogTypes';
 import { SavedItemRow } from '@/components/SavedItemRow';
 import { EditLogTypeDialog } from '@/components/EditLogTypeDialog';
+import { getMedicationMeta } from '@/lib/medication-meta';
 
 interface CustomLogTypeRowProps {
   type: CustomLogType;
@@ -29,13 +30,7 @@ export function CustomLogTypeRow({
   const [editOpen, setEditOpen] = useState(false);
 
   // For medication: show dose · freq as meta (right of name, left of icons)
-  const meta = type.value_type === 'medication' ? (() => {
-    const dosePart = type.default_dose != null && type.unit
-      ? `${type.default_dose} ${type.unit}`
-      : type.unit || null;
-    const freqPart = type.doses_per_day > 0 ? `${type.doses_per_day}x/day` : 'as needed';
-    return dosePart ? `${dosePart} · ${freqPart}` : freqPart;
-  })() : undefined;
+  const meta = getMedicationMeta(type) ?? undefined;
 
   // For non-medication: show unit in parens after name
   const nameAppend = type.value_type !== 'medication' && type.unit
