@@ -1,45 +1,47 @@
 
-## Add value labels to line charts in DynamicChart
+## Fix line chart labels — use viewBox instead of cx/cy
 
-### Problem
+### Root cause
 
-The `labelRenderer` function in `DynamicChart.tsx` is designed for bar charts — it reads `x`, `y`, and `width` (rect-based geometry from Recharts' `Bar`). A `Line` + `LabelList` combination provides `cx`/`cy` (centre-point of each dot) instead. Currently the `LabelList` is only attached to the `Bar` element and the line chart branch has no labels at all, as visible in the screenshot.
+Recharts' `LabelList` with a custom `content` renderer receives a `viewBox` object (`{ x, y, width, height }`) — it does **not** pass `cx`/`cy` directly. The current `lineLabelRenderer` destructures `cx` and `cy`, which are always `undefined`, so the guard `typeof cx !== "number"` is always `true` and every label returns `null`.
 
-### Solution
+The bar chart renderer works correctly because it uses `x`, `y`, and `width` — which are exactly the `viewBox` fields that `LabelList` does provide.
 
-The fix is entirely self-contained in `DynamicChart.tsx` — no other files need to change. The approach reuses the same `_showLabel` flag, `formatValue` helper, and `labelInterval` logic already in place.
+### Fix
 
-**1. Split `labelRenderer` into two specialised renderers — both private to the component**
-
-- **`barLabelRenderer`** — identical to the current `labelRenderer`; uses `x + width/2` and `y - 4`
-- **`lineLabelRenderer`** — uses `cx` and `cy - 6`; skips rendering when the value would be zero/null so sparse line charts (e.g. fiber with missing days) don't clutter the baseline
-
-Both renderers:
-- Check `chartData[index]?._showLabel` to respect the same thinning interval
-- Call `formatValue(value, valueFormat)` for consistent number formatting
-- Use the same `fill={color}`, `fontSize={7}`, `fontWeight={500}` styling
-
-**2. Attach `LabelList` to the `Line` element**
+Update `lineLabelRenderer` in `DynamicChart.tsx` to read from `viewBox` instead:
 
 ```tsx
-<Line ...>
-  <LabelList dataKey={dataKey} content={lineLabelRenderer} />
-</Line>
+const lineLabelRenderer = (props: any) => {
+  const { viewBox, value, index } = props;
+  if (!chartData[index]?._showLabel) return null;
+  if (value == null || value === 0) return null;
+  const { x, y, width } = viewBox ?? {};
+  if (typeof x !== "number" || typeof y !== "number") return null;
+  return (
+    <text
+      x={x + (width ?? 0) / 2}
+      y={y - 4}
+      fill={color}
+      textAnchor="middle"
+      fontSize={7}
+      fontWeight={500}
+    >
+      {formatValue(Number(value), valueFormat)}
+    </text>
+  );
+};
 ```
 
-**3. Increase `LineChart` top margin from 12 → 16** to match the bar chart, giving labels room above the topmost dot (currently they would clip).
-
-### Why this is already future-proof for built-in charts
-
-The request notes that all built-in charts will eventually migrate to `DynamicChart`. Because the label logic lives entirely inside the shared component (driven by `ChartSpec.chartType`), any chart migrated to use `DynamicChart` with `chartType: "line"` will automatically get the same label behaviour — no per-chart changes needed.
+The `viewBox` bounding box is centered on the dot, so `x + width/2` is the dot's center X and `y - 4` places the label just above the dot's top edge — consistent with the bar label offset of `y - 4`.
 
 ### What stays the same
 
-- `_showLabel` thinning interval — unchanged, same `getLabelInterval` call
-- Touch tooltip/dismiss behaviour — unaffected
-- Bar chart labels — untouched (the `barLabelRenderer` is just a renamed copy of the current code)
-- `ChartSpec` type — no new fields required
+- `_showLabel` thinning interval — unchanged
+- `formatValue` formatting — unchanged
+- Bar chart labels — untouched
+- No other files change
 
 ### File changed
 
-Only `src/components/trends/DynamicChart.tsx` — roughly 15 lines added/changed.
+Only `src/components/trends/DynamicChart.tsx` — 4-line change inside `lineLabelRenderer`.
