@@ -16,7 +16,7 @@ export function useAllMedicationEntries(medTypeIds: string[], dateStr: string) {
         .select('*')
         .in('log_type_id', medTypeIds)
         .eq('logged_date', dateStr)
-        .order('logged_time', { ascending: false, nullsFirst: false })
+        .order('dose_time', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as CustomLogEntry[];

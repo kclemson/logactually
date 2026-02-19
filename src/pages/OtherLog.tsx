@@ -121,15 +121,15 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
 
   // Update mutation for editing medication entries
   const updateMedEntry = useMutation({
-    mutationFn: async ({ id, numeric_value, logged_time, entry_notes }: {
+    mutationFn: async ({ id, numeric_value, dose_time, entry_notes }: {
       id: string;
       numeric_value: number | null;
-      logged_time: string | null;
+      dose_time: string | null;
       entry_notes: string | null;
     }) => {
       const { error } = await supabase
         .from('custom_log_entries')
-        .update({ numeric_value, logged_time, entry_notes })
+        .update({ numeric_value, dose_time, entry_notes })
         .eq('id', id);
       if (error) throw error;
     },
@@ -337,7 +337,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                   dosesPerDay={selectedType.doses_per_day}
                   doseTimes={selectedType.dose_times}
                   todayEntryCount={inlineTodayEntries.length}
-                  todayLoggedTimes={inlineTodayEntries.map(e => e.logged_time).filter(Boolean) as string[]}
+                  todayLoggedTimes={inlineTodayEntries.map(e => e.dose_time).filter(Boolean) as string[]}
                   onSubmit={(params) => {
                     createEntry.mutate({
                       log_type_id: selectedType.id,
@@ -509,7 +509,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                 dosesPerDay={dialogType.doses_per_day}
                 doseTimes={dialogType.dose_times}
                 todayEntryCount={todayMedEntries.length}
-                todayLoggedTimes={todayMedEntries.map(e => e.logged_time).filter(Boolean) as string[]}
+                todayLoggedTimes={todayMedEntries.map(e => e.dose_time).filter(Boolean) as string[]}
                 onSubmit={(params) => {
                   createTypeEntry.mutate({
                     log_type_id: dialogType.id,
@@ -564,12 +564,12 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
               dosesPerDay={editingLogType.doses_per_day}
               doseTimes={editingLogType.dose_times}
               initialDose={editingEntry.numeric_value}
-              initialTime={editingEntry.logged_time}
+              initialTime={editingEntry.dose_time}
               initialNotes={editingEntry.entry_notes}
               todayEntryCount={todayMedEntries.length}
-              todayLoggedTimes={todayMedEntries.map(e => e.logged_time).filter(Boolean) as string[]}
+              todayLoggedTimes={todayMedEntries.map(e => e.dose_time).filter(Boolean) as string[]}
               onSubmit={(params) => {
-                updateMedEntry.mutate({ id: editingEntry.id, ...params });
+                updateMedEntry.mutate({ id: editingEntry.id, numeric_value: params.numeric_value, dose_time: params.dose_time, entry_notes: params.entry_notes });
               }}
               onCancel={() => setEditingEntry(null)}
               isLoading={updateMedEntry.isPending}

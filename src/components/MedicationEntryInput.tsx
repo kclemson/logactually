@@ -20,7 +20,7 @@ interface MedicationEntryInputProps {
   initialNotes?: string | null;
   onSubmit: (params: {
     numeric_value: number | null;
-    logged_time: string | null;
+    dose_time: string | null;
     entry_notes: string | null;
   }) => void;
   onCancel: () => void;
@@ -73,7 +73,7 @@ export function MedicationEntryInput({
     if (!canSubmit) return;
     onSubmit({
       numeric_value: parseFloat(doseValue),
-      logged_time: timeValue || null,
+      dose_time: timeValue || null,
       entry_notes: notes.trim() || null,
     });
   };

@@ -71,10 +71,10 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
 
   // Medication layout: time · dose [unit] with optional notes on second line
   if (valueType === 'medication') {
-    const timeLabel = entry.logged_time
+    const timeLabel = entry.dose_time
       ? (() => {
           // Parse "HH:MM:SS" or "HH:MM" from Postgres time
-          const [h, m] = entry.logged_time.split(':').map(Number);
+          const [h, m] = entry.dose_time.split(':').map(Number);
           const d = new Date();
           d.setHours(h, m, 0);
           return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });

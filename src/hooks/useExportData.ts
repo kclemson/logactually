@@ -93,7 +93,7 @@ export function useExportData() {
   const fetchAllCustomLogEntries = async (): Promise<CustomLogExportRow[]> => {
     const { data, error } = await supabase
       .from('custom_log_entries')
-      .select('logged_date, created_at, numeric_value, numeric_value_2, text_value, unit, custom_log_types(name, value_type)')
+      .select('logged_date, created_at, dose_time, entry_notes, numeric_value, numeric_value_2, text_value, unit, custom_log_types(name, value_type)')
       .order('logged_date', { ascending: false })
       .order('created_at', { ascending: false });
 
@@ -108,6 +108,8 @@ export function useExportData() {
       numeric_value_2: row.numeric_value_2,
       text_value: row.text_value,
       unit: row.unit,
+      dose_time: (row as any).dose_time ?? null,
+      entry_notes: (row as any).entry_notes ?? null,
     }));
   };
 

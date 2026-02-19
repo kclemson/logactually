@@ -22,8 +22,8 @@ function formatEntryDate(entry: CustomLogEntry, valueType: string): string {
     // Show logged_date + logged_time if available
     const dt = parseISO(entry.logged_date);
     const dateStr = isToday(dt) ? 'Today' : isYesterday(dt) ? 'Yesterday' : format(dt, 'MMM d');
-    if (entry.logged_time) {
-      const [h, m] = entry.logged_time.split(':').map(Number);
+    if (entry.dose_time) {
+      const [h, m] = entry.dose_time.split(':').map(Number);
       const d = new Date();
       d.setHours(h, m, 0);
       const timeStr = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });

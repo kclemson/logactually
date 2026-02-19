@@ -92,6 +92,8 @@ export interface CustomLogExportRow {
   numeric_value_2: number | null;
   text_value: string | null;
   unit: string | null;
+  dose_time: string | null;
+  entry_notes: string | null;
 }
 
 /**
@@ -104,15 +106,26 @@ export function exportCustomLog(rows: CustomLogExportRow[]) {
   });
 
   const hasBP = sorted.some(r => r.value_type === 'dual_numeric');
+
+  // Column order: Date | Time | Dose Time | Log Type | Value | Unit | [Systolic | Diastolic | Reading |] Notes
   const headers = hasBP
-    ? ['Date', 'Time', 'Log Type', 'Value', 'Systolic', 'Diastolic', 'Reading', 'Unit']
-    : ['Date', 'Time', 'Log Type', 'Value', 'Unit'];
+    ? ['Date', 'Time', 'Dose Time', 'Log Type', 'Value', 'Unit', 'Systolic', 'Diastolic', 'Reading', 'Notes']
+    : ['Date', 'Time', 'Dose Time', 'Log Type', 'Value', 'Unit', 'Notes'];
+
+  function formatDoseTime(dose_time: string | null): string {
+    if (!dose_time) return '';
+    const [h, m] = dose_time.split(':').map(Number);
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
 
   const dataRows = sorted.map((row) => {
     const isBP = row.value_type === 'dual_numeric';
     const time = format(new Date(row.created_at), 'HH:mm');
+    const doseTime = formatDoseTime(row.dose_time);
     const value = isBP ? '' : (row.numeric_value ?? row.text_value ?? '');
-    const base: (string | number)[] = [row.logged_date, time, row.log_type_name, value];
+    const base: (string | number)[] = [row.logged_date, time, doseTime, row.log_type_name, value, row.unit ?? ''];
     if (hasBP) {
       base.push(
         isBP ? (row.numeric_value ?? '') : '',
@@ -122,7 +135,7 @@ export function exportCustomLog(rows: CustomLogExportRow[]) {
           : '',
       );
     }
-    base.push(row.unit ?? '');
+    base.push(row.entry_notes ?? '');
     return base;
   });
 

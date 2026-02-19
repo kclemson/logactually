@@ -17,11 +17,11 @@ export type Database = {
       custom_log_entries: {
         Row: {
           created_at: string
+          dose_time: string | null
           entry_notes: string | null
           id: string
           log_type_id: string
           logged_date: string
-          logged_time: string | null
           numeric_value: number | null
           numeric_value_2: number | null
           text_value: string | null
@@ -31,11 +31,11 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          dose_time?: string | null
           entry_notes?: string | null
           id?: string
           log_type_id: string
           logged_date?: string
-          logged_time?: string | null
           numeric_value?: number | null
           numeric_value_2?: number | null
           text_value?: string | null
@@ -45,11 +45,11 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          dose_time?: string | null
           entry_notes?: string | null
           id?: string
           log_type_id?: string
           logged_date?: string
-          logged_time?: string | null
           numeric_value?: number | null
           numeric_value_2?: number | null
           text_value?: string | null

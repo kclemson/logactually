@@ -15,9 +15,9 @@ interface AllMedicationsViewProps {
   isReadOnly: boolean;
 }
 
-function formatTime(logged_time: string | null): string {
-  if (!logged_time) return '—';
-  const [h, m] = logged_time.split(':').map(Number);
+function formatTime(dose_time: string | null): string {
+  if (!dose_time) return '—';
+  const [h, m] = dose_time.split(':').map(Number);
   const d = new Date();
   d.setHours(h, m, 0, 0);
   return format(d, 'h:mm a');
@@ -111,7 +111,7 @@ export function AllMedicationsView({
                   <div className="flex items-center gap-2 py-2">
                     {/* Time */}
                     <span className="text-xs text-muted-foreground w-16 shrink-0">
-                      {formatTime(entry.logged_time)}
+                      {formatTime(entry.dose_time)}
                     </span>
                     {/* Dose */}
                     <span className="text-sm tabular-nums text-foreground flex-1">
