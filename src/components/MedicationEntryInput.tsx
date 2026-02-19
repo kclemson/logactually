@@ -192,6 +192,7 @@ export function MedicationEntryInput({
         onKeyDown={(e) => {
           if (e.key === 'Escape') onCancel();
         }}
+        spellCheck={false}
         className="min-h-[60px] text-sm resize-y"
       />
     </div>
