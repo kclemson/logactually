@@ -70,7 +70,7 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu }: 
     _showLabel: (data.length - 1 - i) % labelInterval === 0,
   }));
 
-  const labelRenderer = (props: any) => {
+  const barLabelRenderer = (props: any) => {
     const { x, y, width, value, index } = props;
     if (!chartData[index]?._showLabel) return null;
     if (value == null || typeof x !== "number" || typeof width !== "number") return null;
@@ -78,6 +78,25 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu }: 
       <text
         x={x + width / 2}
         y={y - 4}
+        fill={color}
+        textAnchor="middle"
+        fontSize={7}
+        fontWeight={500}
+      >
+        {formatValue(Number(value), valueFormat)}
+      </text>
+    );
+  };
+
+  const lineLabelRenderer = (props: any) => {
+    const { cx, cy, value, index } = props;
+    if (!chartData[index]?._showLabel) return null;
+    if (value == null || value === 0) return null;
+    if (typeof cx !== "number" || typeof cy !== "number") return null;
+    return (
+      <text
+        x={cx}
+        y={cy - 6}
         fill={color}
         textAnchor="middle"
         fontSize={7}
@@ -151,7 +170,7 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu }: 
       <div className="h-24">
         <ResponsiveContainer width="100%" height="100%" style={{ overflow: "visible" }}>
           {chartType === "line" ? (
-            <LineChart data={chartData} margin={{ top: 12, right: 4, left: 0, bottom: 0 }}>
+            <LineChart data={chartData} margin={{ top: 16, right: 4, left: 0, bottom: 0 }}>
               <XAxis {...sharedXAxisProps} />
               {referenceLine && (
                 <ReferenceLine
@@ -171,7 +190,9 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu }: 
                 dot={{ r: 2, fill: color }}
                 activeDot={{ r: 3 }}
                 className="cursor-pointer"
-              />
+              >
+                <LabelList dataKey={dataKey} content={lineLabelRenderer} />
+              </Line>
             </LineChart>
           ) : (
             <BarChart data={chartData} margin={{ top: 16, right: 0, left: 0, bottom: 0 }}>
@@ -193,7 +214,7 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu }: 
                 onClick={(data: any, index: number) => interaction.handleBarClick(data, index)}
                 className="cursor-pointer"
               >
-                <LabelList dataKey={dataKey} content={labelRenderer} />
+                <LabelList dataKey={dataKey} content={barLabelRenderer} />
               </Bar>
             </BarChart>
           )}
