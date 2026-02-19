@@ -1,67 +1,84 @@
 
-## Fix: "groupBy item" for exercises scoped to a single exercise key
+## Fix: `groupBy: "item"` ignores `aggregation: "average"` for exercises
 
 ### Root cause
 
-When the user asks "# of times I've done walking vs. running workouts", the AI correctly generates:
-
-```json
-{ "source": "exercise", "metric": "entries", "groupBy": "item", "filter": { "exerciseKey": "walk_run" } }
-```
-
-But in `chart-data.ts` line 195, the `exerciseByItem` aggregator always buckets by `row.exercise_key`:
+In `chart-dsl.ts` lines 292-299, the `"item"` case for exercise uses a raw `metricValue` plucked directly from the pre-aggregated `exerciseByItem` bucket, then checks only `aggregation === "count"`:
 
 ```ts
-const key = row.exercise_key; // always "walk_run" for every row
+value: Math.round(dsl.aggregation === "count" ? item.count : metricValue),
 ```
 
-Since every row already has `exercise_key = "walk_run"` (due to the filter applied at line 155), all rows collapse into the same bucket — producing one bar labeled "Running" (the description of the last row processed) with a total of 76 entries instead of two separate bars for walking and running.
+`metricValue` is always the running **total** (`totalDurationMinutes`, `totalCaloriesBurned`, etc.) — never averaged. The `"sum"` vs `"average"` distinction is silently dropped.
 
-The `"Running"` label is also wrong — it comes from `item.description` which is whatever the last row happened to have as its description.
+To compute a per-day average the engine would need to know how many distinct **days** contributed to each item bucket. That information is not currently stored in `exerciseByItem`.
 
-### Fix — two targeted changes
+The food side has the same structural problem — `totalCalories / count` divides by number of *entries*, not days — but the exercise "walking vs running distance" case is the one the user hit today.
 
-**1. `src/lib/chart-data.ts` — use `exercise_subtype` as the item key when scoped to a single exercise**
+---
 
-When `exerciseKeyFilter` is set and `needsItem` is true, we're already filtered to one exercise key. In that case, the meaningful dimension to split by is `exercise_subtype`. Change the `exerciseByItem` bucket key from `row.exercise_key` to `row.exercise_subtype ?? row.exercise_key`:
+### Two-part fix
+
+**Part 1 — `src/lib/chart-data.ts`: track `uniqueDays` per item bucket**
+
+Add a `Set<string>` of `logged_date` values to each `exerciseByItem` entry so the DSL engine can divide by distinct days when `aggregation === "average"`:
 
 ```ts
-// Before (line 195):
-const key = row.exercise_key;
-
-// After:
-const key = exerciseKeyFilter ? (row.exercise_subtype ?? row.exercise_key) : row.exercise_key;
+const existing = exerciseByItem[key] ?? {
+  description: label,
+  count: 0,
+  totalSets: 0,
+  totalDurationMinutes: 0,
+  totalCaloriesBurned: 0,
+  uniqueDays: new Set<string>(),   // NEW
+};
+existing.uniqueDays.add(row.logged_date);  // NEW
 ```
 
-The `description` stored on each bucket also needs to reflect the subtype — capitalize the subtype key for display (e.g. `"running"` → `"Running"`):
+The `exerciseByItem` type in `chart-data.ts` gains the `uniqueDays: Set<string>` field (it is local — not part of the exported `DailyTotals` type in `chart-types.ts`).
+
+Do the same for `foodByItem` so food-source "item" charts get correct averages too — add `uniqueDays: Set<string>` tracking per food item bucket, accumulating `row.eaten_date`.
+
+**Part 2 — `src/lib/chart-dsl.ts`: use `uniqueDays` when aggregation is `"average"`**
+
+In the `"item"` case for exercises, replace the current blind total lookup with:
 
 ```ts
-const label = exerciseKeyFilter
-  ? (row.exercise_subtype
-      ? row.exercise_subtype.charAt(0).toUpperCase() + row.exercise_subtype.slice(1)
-      : row.description)
-  : row.description;
-const existing = exerciseByItem[key] ?? { description: label, count: 0, ... };
+const divisor = dsl.aggregation === "average"
+  ? (item.uniqueDays?.size || 1)
+  : 1;
+
+const metricValue =
+  dsl.metric === "distance_miles"   ? item.totalDistanceMiles / divisor :
+  dsl.metric === "duration_minutes" ? item.totalDurationMinutes / divisor :
+  dsl.metric === "calories_burned"  ? item.totalCaloriesBurned / divisor :
+  dsl.metric === "sets"             ? item.totalSets / divisor :
+  item.count;
+
+value: Math.round(dsl.aggregation === "count" ? item.count : metricValue),
 ```
 
-This means "Walking" entries bucket under key `"walking"` (description: `"Walking"`) and "Running" entries bucket under `"running"` (description: `"Running"`), while entries with no subtype fall back to their exercise key and description.
+Note `totalDistanceMiles` — `distance_miles` is currently missing from the `exerciseByItem` bucket entirely (the accumulator doesn't track it). This is a secondary bug surfaced by this same query: "miles walked vs run" would always show 0 for `distance_miles` even in the sum case. It needs to be added to both the accumulator in `chart-data.ts` and the lookup in `chart-dsl.ts`.
 
-**2. `src/lib/chart-dsl.ts` — no change needed**
+---
 
-The DSL engine's `"item"` case for exercises already uses `item.description` as the label (line 298). Since the fix above stores a properly capitalized subtype name as `description`, the labels will now read `"Walking"` and `"Running"` correctly — no DSL engine change needed.
+### Summary of all changes
 
-### Entries metric for subtype buckets
+**`src/lib/chart-data.ts`**
+- Add `totalDistanceMiles: number` and `uniqueDays: Set<string>` to the `exerciseByItem` bucket initialiser
+- Accumulate `existing.totalDistanceMiles += row.distance_miles ?? 0`
+- Accumulate `existing.uniqueDays.add(row.logged_date)`
+- For `foodByItem`: add `uniqueDays: Set<string>` and accumulate `existing.uniqueDays.add(row.eaten_date)`
 
-The `entries` metric for exercise is tracked via `seenEntries` (unique `entry_id` per day). This is the **daily** count, not the per-subtype count. For `groupBy: "item"`, the `count` field in `exerciseByItem` is what's used (each row increments `count`). This correctly counts total logged sessions per subtype across the period.
+**`src/lib/chart-dsl.ts`**
+- In the `"item"` / exercise block: compute `divisor` from `item.uniqueDays.size` when `aggregation === "average"`, apply it to all metric values
+- Add `distance_miles → item.totalDistanceMiles` to the metric lookup (it's missing today)
+- In the `"item"` / food block: apply the same `divisor` pattern using `item.uniqueDays.size`
 
-### What does NOT change
+**`src/lib/chart-types.ts`** — no change needed; `exerciseByItem` type lives only in `chart-data.ts`
 
-- No change to the DSL schema or AI prompt
-- No change to the filter logic or query
-- Food `groupBy: "item"` is untouched
-- All other `groupBy` modes are untouched
-- Category-filtered exercises (e.g., "cardio by day of week") are untouched
+---
 
-### File changed
+### Why `uniqueDays` rather than `count`
 
-Only `src/lib/chart-data.ts` — 3 lines changed inside the `exerciseByItem` block (lines 195–197).
+`count` is the number of individual logged **sets/rows** (a single workout session can have many sets). Dividing total distance by `count` would give average distance per set, not per session day — which is meaningless. Dividing by `uniqueDays.size` gives "average distance per day I did this activity", which is exactly what "average daily miles walked vs. run" means.
