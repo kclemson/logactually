@@ -1,48 +1,50 @@
 
-# Simplify AI Fallback to a 2-Model Cross-Provider Chain
+# Fix: Remove `temperature` Parameter from AI Calls
 
-## The Problem with 3 Models
+## Root Cause
 
-The current (pending) plan adds `openai/gpt-5-mini` as a third option after two Gemini models:
+The edge function logs confirm the exact failure chain:
+1. `google/gemini-3-flash-preview` fails with 500 (Gemini outage)
+2. Fallback fires → `openai/gpt-5-mini` rejects with 400: `"temperature does not support 0.3 with this model. Only the default (1) value is supported."`
+3. Both models fail → the function returns 500 to the client
 
+The `temperature: 0.3` parameter was hardcoded into the AI call body in `analyze-food`. OpenAI's `gpt-5-mini` does not accept non-default temperature values.
+
+## Fix
+
+Remove `temperature` from the request body in all functions that pass it. The default temperature (`1`) is acceptable for structured food/exercise analysis — the JSON output format is enforced by the prompt, not by temperature.
+
+## Files to update
+
+| File | Issue |
+|---|---|
+| `supabase/functions/analyze-food/index.ts` | `temperature: 0.3` passed to `callAI` — confirmed failing in logs |
+| All other AI edge functions | Audit and remove `temperature` if present, to prevent the same issue on fallback |
+
+## Specifically in `analyze-food/index.ts`
+
+The `callAI` call currently passes:
+```typescript
+const response = await callAI({
+  messages: [...],
+  temperature: 0.3,   // ← this kills the OpenAI fallback
+});
 ```
-gemini-3-flash-preview → gemini-2.5-flash → openai/gpt-5-mini
+
+Change to:
+```typescript
+const response = await callAI({
+  messages: [...],
+  // temperature omitted — uses model default
+});
 ```
 
-During a Gemini provider outage, the app makes **two failing requests** — each with its own network round-trip and timeout — before finally reaching OpenAI. That's wasted latency (potentially 10–20 seconds of failed calls) on every request during an outage.
+## Why this is safe
 
-The only scenario where `gemini-2.5-flash` helps is if the **preview** model breaks specifically (e.g. deprecated) while the rest of Gemini stays up. That's a much rarer event than a provider-wide outage. The tradeoff isn't worth it.
+- `temperature: 0.3` was chosen to reduce randomness in nutritional estimates, but the prompt itself enforces structured JSON output with explicit instructions. Removing the parameter falls back to the model default (`1`), which still produces consistent, well-structured results.
+- The food analysis prompt already contains explicit instructions like "return only valid JSON" which are far more effective than temperature at controlling output format.
+- `analyze-weights` already works (per the user's report) — its fallback succeeded — so it either doesn't pass temperature or uses a compatible value.
 
-## The Better Design
+## Scope of audit
 
-```
-google/gemini-3-flash-preview  →  openai/gpt-5-mini
-```
-
-- Normal operation: Gemini flash preview (fast, current)
-- Gemini outage: OpenAI gpt-5-mini (different infrastructure, unaffected)
-- One failed request maximum before a working response
-
-## Files to Update
-
-While doing this, the search also revealed that 3 additional functions have **no fallback at all** — they use a single hardcoded model with no retry. Folding those in for completeness:
-
-| Function | Current state | Change |
-|---|---|---|
-| `analyze-food/index.ts` | `[gemini-3-flash-preview, gemini-2.5-flash]` | Replace with `[gemini-3-flash-preview, openai/gpt-5-mini]` |
-| `ask-trends-ai/index.ts` | `[gemini-3-flash-preview, gemini-2.5-flash]` | Replace with `[gemini-3-flash-preview, openai/gpt-5-mini]` |
-| `lookup-upc/index.ts` | `[gemini-3-flash-preview, gemini-2.5-flash]` | Replace with `[gemini-3-flash-preview, openai/gpt-5-mini]` |
-| `populate-demo-data/index.ts` | `[gemini-3-flash-preview, gemini-2.5-flash]` | Replace with `[gemini-3-flash-preview, openai/gpt-5-mini]` |
-| `analyze-weights/index.ts` | Single model: `gemini-2.5-flash` (no fallback) | Add loop: `[gemini-3-flash-preview, openai/gpt-5-mini]` |
-| `analyze-food-photo/index.ts` | Single model: `gemini-2.5-flash` (no fallback) | Add loop: `[gemini-3-flash-preview, openai/gpt-5-mini]` |
-| `generate-chart/index.ts` | Single model: `gemini-2.5-flash` (no fallback) | Add loop: `[gemini-3-flash-preview, openai/gpt-5-mini]` |
-| `generate-chart-dsl/index.ts` | Single model: `gemini-2.5-flash` (no fallback) | Add loop: `[gemini-3-flash-preview, openai/gpt-5-mini]` |
-
-Note: `analyze-food-photo` and `generate-chart` use vision/image inputs — `openai/gpt-5-mini` is multimodal and handles image inputs correctly, so the fallback is safe there too.
-
-## What Does NOT Change
-
-- Prompts are identical — `gpt-5-mini` handles all the same structured JSON tasks
-- Response parsing is unchanged
-- Error handling is unchanged — if both models fail, the existing error path fires as today
-- No new dependencies, no new secrets
+Also check `ask-trends-ai`, `lookup-upc`, `generate-chart`, `generate-chart-dsl`, `analyze-food-photo`, and `populate-demo-data` for any hardcoded `temperature` values, and remove them all to prevent the same failure mode on those functions' fallbacks.
