@@ -153,7 +153,7 @@ function verifyAggregate(
   return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, toleranceLabel, mismatches, allComparisons };
 }
 
-/* ── Legacy heuristic fallback (for old cached charts) ───── */
+/* ── Deterministic verification via known field/formula mappings ── */
 
 const FOOD_KEY_MAP: Record<string, string> = {
   calories: "cal", cal: "cal", total_calories: "cal",
@@ -222,7 +222,7 @@ const DERIVED_FORMULAS: Record<string, DerivedFormula> = {
   protein_per_set:       { source: "mixed", compute: (f, e) => safeDiv(f?.protein || 0, e?.sets || 0), tolerance: "default" },
 };
 
-function verifyLegacy(
+function verifyDeterministic(
   spec: ChartSpec,
   dailyTotals: DailyTotals,
 ): VerificationResult {
@@ -318,11 +318,11 @@ export function verifyChartData(
   spec: ChartSpec,
   dailyTotals: DailyTotals,
 ): VerificationResult {
-  // 1. Try deterministic heuristic first — it's trustworthy and catches the
+  // 1. Try deterministic verification first — it's trustworthy and catches the
   //    "null cop-out" where the AI skips verification on a verifiable chart.
-  const heuristicResult = verifyLegacy(spec, dailyTotals);
-  if (heuristicResult.status === "success") {
-    return heuristicResult;
+  const deterministicResult = verifyDeterministic(spec, dailyTotals);
+  if (deterministicResult.status === "success") {
+    return deterministicResult;
   }
 
   // 2. Heuristic couldn't help — fall back to AI's self-declared verification
@@ -341,5 +341,5 @@ export function verifyChartData(
   }
 
   // 4. No verification possible
-  return heuristicResult;
+  return deterministicResult;
 }
