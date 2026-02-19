@@ -20,7 +20,6 @@ import { LogTemplatePickerDialog } from '@/components/LogTemplatePickerDialog';
 import { LogEntryInput } from '@/components/LogEntryInput';
 import { MedicationEntryInput } from '@/components/MedicationEntryInput';
 import { CustomLogEntryRow } from '@/components/CustomLogEntryRow';
-import { CustomLogTypeView } from '@/components/CustomLogTypeView';
 import { AllMedicationsView } from '@/components/AllMedicationsView';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { getStoredDate } from '@/lib/selected-date';
@@ -38,12 +37,12 @@ const OtherLog = () => {
 
 export default OtherLog;
 
-type ViewMode = 'date' | 'type' | 'medication';
+type ViewMode = 'date' | 'medication';
 
 function getStoredViewMode(): ViewMode {
   try {
     const stored = localStorage.getItem('custom-log-view-mode');
-    if (stored === 'date' || stored === 'type' || stored === 'medication') return stored;
+    if (stored === 'date' || stored === 'medication') return stored;
   } catch {}
   return 'date';
 }
@@ -95,13 +94,9 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   );
   const showMedView = medicationTypes.length >= 2;
 
-  // Active type ID for the dialog (unified for By Type and By Meds modes)
-  // Guard: if med view no longer qualifies, treat as 'date' for active type resolution
+  // Guard: if med view no longer qualifies, fall back to 'date'
   const effectiveViewMode = viewMode === 'medication' && !showMedView ? 'date' : viewMode;
-  const activeTypeId =
-    viewMode === 'type' ? effectiveTypeId
-    : viewMode === 'medication' ? selectedMedTypeId
-    : null;
+  const activeTypeId = viewMode === 'medication' ? selectedMedTypeId : null;
 
   // Type/Meds view data
   const {
@@ -220,7 +215,6 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="date" className="pl-3 [&>span:first-child]:hidden">By Date</SelectItem>
-                    <SelectItem value="type" className="pl-3 [&>span:first-child]:hidden">By Type</SelectItem>
                     {showMedView && (
                       <SelectItem value="medication" className="pl-3 [&>span:first-child]:hidden">By Meds</SelectItem>
                     )}
@@ -249,38 +243,8 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                       ))}
                     </SelectContent>
                   </Select>
-                ) : effectiveViewMode === 'type' ? (
-                  <>
-                    <Select
-                      value={effectiveTypeId || ''}
-                      onValueChange={(val) => {
-                        setSelectedTypeId(val);
-                      }}
-                    >
-                      <SelectTrigger className="h-8 text-sm px-2 w-auto min-w-[120px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {sortedLogTypes.map((lt) => (
-                          <SelectItem key={lt.id} value={lt.id} className="pl-3 [&>span:first-child]:hidden">
-                            {lt.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {selectedType && (
-                      <Button
-                        size="sm"
-                        className="h-8 bg-teal-500 hover:bg-teal-600 text-white border-teal-500 gap-1"
-                        onClick={() => setShowInputDialog(true)}
-                      >
-                        <Plus className="h-3 w-3" />
-                        Log New
-                      </Button>
-                    )}
-                  </>
                 ) : (
-                  /* By Date: "Add custom log" dropdown — opens dialog on selection */
+                  /* By Date: "Log New" dropdown — opens dialog on selection */
                   <Select
                     value={effectiveTypeId || ''}
                     onValueChange={(val) => {
@@ -298,8 +262,9 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                       createNewClickedRef.current = false;
                     }}
                   >
-                    <SelectTrigger className="h-8 text-sm font-medium w-auto min-w-[140px] bg-teal-500 text-white border-teal-500 hover:bg-teal-600">
-                      <span>Add custom log</span>
+                    <SelectTrigger className="h-8 text-sm font-medium flex items-center gap-1 w-auto bg-teal-500 text-white border-teal-500 hover:bg-teal-600 shrink-0 whitespace-nowrap">
+                      <Plus className="h-3 w-3 shrink-0" />
+                      Log New
                     </SelectTrigger>
                     <SelectContent>
                       {sortedLogTypes.map((lt) => (
@@ -347,33 +312,6 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
             onDelete={(id) => deleteAllMedEntry.mutate(id)}
             onEdit={(entry) => setEditingEntry(entry)}
             onExport={exportCustomLog}
-            isReadOnly={isReadOnly}
-          />
-        </>
-      ) : effectiveViewMode === 'type' && selectedType ? (
-        /* Type view body */
-        <>
-          <DateNavigation
-            selectedDate={selectedDate}
-            isTodaySelected={isTodaySelected}
-            calendarOpen={dateNav.calendarOpen}
-            onCalendarOpenChange={dateNav.setCalendarOpen}
-            calendarMonth={dateNav.calendarMonth}
-            onCalendarMonthChange={dateNav.setCalendarMonth}
-            onPreviousDay={dateNav.goToPreviousDay}
-            onNextDay={dateNav.goToNextDay}
-            onDateSelect={dateNav.handleDateSelect}
-            onGoToToday={dateNav.goToToday}
-            datesWithData={datesWithData}
-            highlightClassName="text-teal-600 dark:text-teal-400 font-semibold"
-            weekStartDay={settings.weekStartDay}
-          />
-          <CustomLogTypeView
-            logType={selectedType}
-            entries={typeEntries}
-            isLoading={typeEntriesLoading}
-            onDelete={(id) => deleteTypeEntry.mutate(id)}
-            onEdit={(entry) => setEditingEntry(entry)}
             isReadOnly={isReadOnly}
           />
         </>
