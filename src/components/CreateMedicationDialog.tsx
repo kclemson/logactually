@@ -21,14 +21,6 @@ interface CreateMedicationDialogProps {
   existingNames?: string[];
 }
 
-const DOSE_TIME_DEFAULTS: Record<number, string[]> = {
-  1: ['morning'],
-  2: ['morning', 'evening'],
-  3: ['8am', '12pm', '4pm'],
-  4: ['8am', '12pm', '4pm', '8pm'],
-  5: ['6am', '10am', '2pm', '6pm', '10pm'],
-  6: ['6am', '9am', '12pm', '3pm', '6pm', '9pm'],
-};
 
 export function CreateMedicationDialog({
   open,
@@ -182,7 +174,7 @@ export function CreateMedicationDialog({
                   <Input
                     value={doseTimes[i] ?? ''}
                     onChange={(e) => handleDoseTimeChange(i, e.target.value)}
-                    placeholder={DOSE_TIME_DEFAULTS[dosesPerDay]?.[i] ?? 'e.g. morning, 8am'}
+                    placeholder="e.g. morning, 8am, with dinner, etc"
                     className="text-sm placeholder:text-foreground/50 placeholder:italic"
                     autoComplete="off"
                   />
