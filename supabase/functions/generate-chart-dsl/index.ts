@@ -17,6 +17,7 @@ You MUST respond with ONLY a valid JSON object (no markdown, no code fences). Th
 {
   "chartType": "bar" | "line" | "area",
   "title": "Chart title",
+  "aiNote": "Brief note explaining what the chart shows, or null",
 
   "source": "food" | "exercise",
   "metric": "<metric key>",
@@ -147,6 +148,7 @@ SORTING:
 GENERAL:
 
 - title should be concise and descriptive
+- Use aiNote to briefly describe what the chart measures and how to read it (e.g. "Sum of daily calories over the last 30 days"). Keep it under 15 words.
 - Do NOT include any data values — only the schema
 - When the user's request does not specify a metric (e.g. "cardio vs strength split", "exercise breakdown", "what do I eat"), default to "entries" (session count). It is the most universally populated and intuitive measure of activity.`;
 

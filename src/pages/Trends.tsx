@@ -357,7 +357,7 @@ const Trends = () => {
             {savedCharts.map((chart) => (
               <DynamicChart
                 key={chart.id}
-                spec={{ ...chart.chart_spec, aiNote: undefined }}
+                spec={chart.chart_spec}
                 onNavigate={(date) => {
                   const ds = chart.chart_spec.dataSource;
                   const route = ds === "exercise" ? `/weights?date=${date}` : `/?date=${date}`;

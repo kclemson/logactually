@@ -361,6 +361,7 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
   const chartSpec: ChartSpec = {
     chartType: dsl.chartType === "area" ? "line" : dsl.chartType,
     title: dsl.title,
+    aiNote: dsl.aiNote ?? undefined,
     xAxis: { field: "label", label: dsl.groupBy === "date" ? "Date" : dsl.groupBy },
     yAxis: { label: dsl.derivedMetric || dsl.metric },
     color,
