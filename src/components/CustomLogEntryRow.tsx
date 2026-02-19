@@ -74,42 +74,49 @@ export function CustomLogEntryRow({ entry, typeName, valueType, typeUnit, onDele
   const hasText = valueType === 'text' || valueType === 'text_numeric' || valueType === 'text_multiline';
   const isMultiline = valueType === 'text_multiline';
 
-  // Dual numeric layout: [value1] / [value2] [unit] [delete]
+  // Dual numeric layout: [spacer] [value1 / value2] [unit] [delete]
   if (isDualNumeric) {
     return (
-      <div className="grid grid-cols-[60px_auto_60px_50px_24px] items-center gap-x-1 py-0.5 group">
-        <Input
-          type="number"
-          inputMode="decimal"
-          value={
-            inlineEdit.editingCell?.field === 'numeric'
-              ? inlineEdit.editingCell.value
-              : (entry.numeric_value ?? '')
-          }
-          onFocus={() => inlineEdit.startEditing(0, 'numeric', entry.numeric_value ?? 0)}
-          onChange={(e) => inlineEdit.updateEditingValue(e.target.value, parseFloat)}
-          onBlur={inlineEdit.handleNumericBlur}
-          onKeyDown={inlineEdit.handleNumericKeyDown}
-          className={cn("h-7 w-full text-sm text-center px-1 border-0 bg-transparent", "focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:bg-focus-bg")}
-        />
-        <span className="text-sm text-muted-foreground text-center">/</span>
-        <Input
-          type="number"
-          inputMode="decimal"
-          value={
-            inlineEdit.editingCell?.field === 'numeric_2'
-              ? inlineEdit.editingCell.value
-              : (entry.numeric_value_2 ?? '')
-          }
-          onFocus={() => inlineEdit.startEditing(0, 'numeric_2', entry.numeric_value_2 ?? 0)}
-          onChange={(e) => inlineEdit.updateEditingValue(e.target.value, parseFloat)}
-          onBlur={inlineEdit.handleNumericBlur}
-          onKeyDown={inlineEdit.handleNumericKeyDown}
-          className={cn("h-7 w-full text-sm text-center px-1 border-0 bg-transparent", "focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:bg-focus-bg")}
-        />
+      <div className="grid grid-cols-[1fr_auto_50px_24px] items-center gap-x-1 py-0.5 group">
+        {/* Col 1: spacer pushes content right */}
+        <span />
+        {/* Col 2: tightly packed value pair */}
+        <div className="flex items-center">
+          <Input
+            type="number"
+            inputMode="decimal"
+            value={
+              inlineEdit.editingCell?.field === 'numeric'
+                ? inlineEdit.editingCell.value
+                : (entry.numeric_value ?? '')
+            }
+            onFocus={() => inlineEdit.startEditing(0, 'numeric', entry.numeric_value ?? 0)}
+            onChange={(e) => inlineEdit.updateEditingValue(e.target.value, parseFloat)}
+            onBlur={inlineEdit.handleNumericBlur}
+            onKeyDown={inlineEdit.handleNumericKeyDown}
+            className={cn("h-7 w-14 text-sm text-center px-1 border-0 bg-transparent", "focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:bg-focus-bg")}
+          />
+          <span className="text-sm text-muted-foreground mx-0.5">/</span>
+          <Input
+            type="number"
+            inputMode="decimal"
+            value={
+              inlineEdit.editingCell?.field === 'numeric_2'
+                ? inlineEdit.editingCell.value
+                : (entry.numeric_value_2 ?? '')
+            }
+            onFocus={() => inlineEdit.startEditing(0, 'numeric_2', entry.numeric_value_2 ?? 0)}
+            onChange={(e) => inlineEdit.updateEditingValue(e.target.value, parseFloat)}
+            onBlur={inlineEdit.handleNumericBlur}
+            onKeyDown={inlineEdit.handleNumericKeyDown}
+            className={cn("h-7 w-14 text-sm text-center px-1 border-0 bg-transparent", "focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:bg-focus-bg")}
+          />
+        </div>
+        {/* Col 3: unit label */}
         {unitLabel ? (
           <span className="text-xs text-muted-foreground">{unitLabel}</span>
         ) : <span />}
+        {/* Col 4: delete button */}
         {!isReadOnly ? (
           <Button variant="ghost" size="icon" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity" onClick={() => onDelete(entry.id)} aria-label="Delete entry">
             <Trash2 className="h-3 w-3" />
