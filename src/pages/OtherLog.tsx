@@ -151,7 +151,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="date" className="pl-3 [&>span:first-child]:hidden">By Date</SelectItem>
-                    <SelectItem value="type" className="pl-3 [&>span:first-child]:hidden">By Log Type</SelectItem>
+                    <SelectItem value="type" className="pl-3 [&>span:first-child]:hidden">By Type</SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -197,7 +197,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="date" className="pl-3 [&>span:first-child]:hidden">By Date</SelectItem>
-                      <SelectItem value="type" className="pl-3 [&>span:first-child]:hidden">By Log Type</SelectItem>
+                      <SelectItem value="type" className="pl-3 [&>span:first-child]:hidden">By Type</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
