@@ -146,7 +146,8 @@ SORTING:
 GENERAL:
 
 - title should be concise and descriptive
-- Do NOT include any data values — only the schema`;
+- Do NOT include any data values — only the schema
+- When the user's request does not specify a metric (e.g. "cardio vs strength split", "exercise breakdown", "what do I eat"), default to "entries" (session count). It is the most universally populated and intuitive measure of activity.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
