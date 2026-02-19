@@ -1,57 +1,47 @@
 
-# Fix: "Log New" Button Wrapping in By Meds View
+# Make "export your data to CSV" a Clickable Link
 
-## Root Cause
+## What changes
 
-The `SelectTrigger` component in `src/components/ui/select.tsx` has this base class:
+**`AllMedicationsView.tsx`** — two small edits:
 
-```
-[&>span]:line-clamp-1
-```
-
-This applies `-webkit-line-clamp: 1` and `display: -webkit-box` to **every direct `<span>` child**. Our "Log New" trigger passes its content as a `<span>`:
+1. Add `onExport?: () => void` to the props interface.
+2. Replace the plain text footer with mixed text + inline button:
 
 ```tsx
-<SelectTrigger ...>
-  <span className="flex items-center gap-1 whitespace-nowrap">
-    <Plus className="h-3 w-3 shrink-0" />
-    Log New
-  </span>
-</SelectTrigger>
+<p className="text-xs text-muted-foreground text-center pt-2">
+  For full history across all dates,{' '}
+  {onExport ? (
+    <button
+      onClick={onExport}
+      className="underline underline-offset-2 hover:text-foreground transition-colors"
+    >
+      export your data to CSV
+    </button>
+  ) : (
+    'export your data in Settings → Import/Export.'
+  )}
+</p>
 ```
 
-`line-clamp-1` overrides `whitespace-nowrap` by forcing `display: -webkit-box`, which collapses the span and causes the content to wrap before the chevron icon.
+If no `onExport` is passed (e.g. in read-only / demo mode), it gracefully falls back to the plain text.
 
-## Fix
-
-Two small changes to `OtherLog.tsx` — no changes to the shared `select.tsx` component (which would affect every select in the app):
-
-**1. Stop using a `<span>` wrapper** — pass the icon and text as direct React children instead. Or, easier: add `[&>span]:!whitespace-nowrap [&>span]:!overflow-visible` to the trigger className to override the line-clamp for this specific trigger.
-
-The cleanest approach is to override the problematic utility on this specific trigger:
+**`OtherLog.tsx`** — import `useExportData` and pass the handler:
 
 ```tsx
-<SelectTrigger className="h-8 text-sm font-medium w-auto bg-teal-500 text-white border-teal-500 hover:bg-teal-600 shrink-0 [&>span]:!overflow-visible [&>span]:![display:flex] [&>span]:items-center [&>span]:gap-1">
-  <Plus className="h-3 w-3 shrink-0" />
-  Log New
-</SelectTrigger>
+const { exportCustomLog } = useExportData();
+...
+<AllMedicationsView
+  onExport={exportCustomLog}
+  ...
+/>
 ```
 
-But even simpler: just don't use a `<span>` at all — pass the icon and text as direct children of the trigger (not wrapped in a span), so `[&>span]:line-clamp-1` never fires:
+`useExportData` is already used elsewhere in the settings page, so it's a well-tested path.
 
-```tsx
-<SelectTrigger className="h-8 text-sm font-medium flex items-center gap-1 w-auto bg-teal-500 text-white border-teal-500 hover:bg-teal-600 shrink-0 whitespace-nowrap">
-  <Plus className="h-3 w-3 shrink-0" />
-  Log New
-</SelectTrigger>
-```
-
-The trigger is already a flex container (`flex items-center justify-between` from the base class), so `Plus` + `"Log New"` text will sit inline naturally. The `whitespace-nowrap` on the trigger itself prevents any text wrapping. The chevron is appended by the component after our children.
-
-## File Changed
+## Files changed
 
 | File | Change |
 |---|---|
-| `src/pages/OtherLog.tsx` | Remove the inner `<span>` from the "Log New" `SelectTrigger`; move `Plus` icon and "Log New" text as direct children; add `whitespace-nowrap` to the trigger className |
-
-One line change, no other files affected.
+| `src/components/AllMedicationsView.tsx` | Add `onExport?` prop; replace plain footer text with inline clickable link |
+| `src/pages/OtherLog.tsx` | Import `useExportData`; pass `exportCustomLog` as `onExport` to `AllMedicationsView` |
