@@ -135,6 +135,7 @@ const FOOD_KEY_MAP: Record<string, string> = {
   sodium: "sodium",
   cholesterol: "chol", chol: "chol",
   sat_fat: "sat_fat", saturated_fat: "sat_fat",
+  entries: "entries", meals: "entries", meal_count: "entries", meal_entries: "entries",
 };
 
 const EXERCISE_KEY_MAP: Record<string, string> = {
