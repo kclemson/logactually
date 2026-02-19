@@ -1,37 +1,94 @@
 
-## Fix dual_numeric row layout to match numeric style
+## Fix: Two root causes for the "calorie count as item count" bug
 
-### The problem
+### What actually happened
 
-The current `dual_numeric` grid is `grid-cols-[60px_auto_60px_50px_24px]` — this stretches the two input fields and the `/` separator across the entire row width, so `130` sits at the far left, `/` floates in the middle, and `85` sits in the center-right. The result is the wide, hard-to-read layout shown in the screenshot.
+The query returned counts (39, 18, 17) instead of calorie sums. Two things combined to cause this:
 
-The `numeric` layout (e.g. Weight) uses `grid-cols-[1fr_auto_60px_50px_24px]`, where the value sits in a fixed-width column near the right, followed by a narrow unit column. Everything is pushed right by the `1fr` spacer in col 1.
+**Root cause 1 — schema description uses column names, not metric keys**
 
-### The fix
+The system prompt's DATABASE SCHEMA section describes the food table columns as `total_calories, total_protein, total_carbs, total_fat`. This is correct for the raw database columns, but the DSL `metric` field is supposed to use the short form: `calories`, `protein`, etc. The model saw `total_calories` in the schema and used it as the metric key. Since `total_calories` doesn't match any known metric, the `item` groupBy fallback in `chart-dsl.ts` silently returned `item.count`.
 
-Replace the `dual_numeric` grid template to match the `numeric` pattern: push the combined value group to the right, keep the unit and delete in their usual columns.
+**Root cause 2 — the item groupBy in `chart-dsl.ts` has an incomplete mapping with a silent count fallback**
 
-Instead of three separate grid columns for `[value1] [/] [value2]`, collapse them into a single inline flex group that sits in the same column position as a single numeric value. That group contains:
+The food `item` branch (lines 264–279 of `chart-dsl.ts`) only explicitly handles `calories` and `protein`. For every other metric — `fat`, `carbs`, `fiber`, `sugar`, etc. — it falls through to `item.count`. This is a silent data corruption: the chart renders with plausible-looking values that are actually frequencies, not the requested metric.
+
+---
+
+### The fixes
+
+**Fix 1 — `supabase/functions/generate-chart-dsl/index.ts` (system prompt, ~1 line)**
+
+Change the schema description from raw column names to metric key names, matching exactly what the AVAILABLE METRICS section already says. Replace:
 
 ```
-[input 130] [/ span] [input 85]
+total_calories, total_protein, total_carbs, total_fat (numeric): pre-aggregated entry totals
 ```
 
-all tightly packed with `gap-x-0.5` or `gap-x-1`, with no outer spacing between them.
+with:
 
-New grid template: `grid-cols-[1fr_auto_50px_24px]`
+```
+calories, protein, carbs, fat (numeric): pre-aggregated entry totals
+```
 
-- **Col 1** (`1fr`): empty spacer (pushes everything right, same as numeric rows)
-- **Col 2** (`auto`): inline flex group containing `[input1] / [input2]` tight together
-- **Col 3** (`50px`): unit label (mmHg)
-- **Col 4** (`24px`): delete button
+This eliminates the `total_calories` confusion at the source. The model will now use `calories` as the metric key, which correctly maps through the DSL engine.
 
-The two inputs inside the flex group use `w-14` (56px) each, which fits 3-digit BP values comfortably. The `/` separator is an inline `text-sm text-muted-foreground mx-0.5`.
+**Fix 2 — `src/lib/chart-dsl.ts` (item groupBy food branch)**
 
-### Result
+Expand `foodByItem` to store all the metrics that could be queried per item, and fix the metric selection switch to cover all of them. Currently `foodByItem` only stores `count`, `totalCalories`, and `totalProtein`. It needs to also store `totalCarbs`, `totalFat`, `totalFiber`, `totalSugar`, `totalSaturatedFat`, `totalSodium`, `totalCholesterol`.
 
-The entry will read: `130/85  mmHg  [trash]` — all pushed to the right, matching how `170.4  lbs` looks for Weight. Editing either number focuses just that input; the other stays stable.
+Changes needed in two places:
 
-### File changed
+1. **`chart-types.ts`** — extend the `foodByItem` type:
+```typescript
+foodByItem?: Record<string, {
+  count: number;
+  totalCalories: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFat: number;
+  totalFiber: number;
+  totalSugar: number;
+  totalSaturatedFat: number;
+  totalSodium: number;
+  totalCholesterol: number;
+}>;
+```
 
-Only `src/components/CustomLogEntryRow.tsx` — specifically the `if (isDualNumeric)` branch (lines 78–120). No other files touched.
+2. **`chart-data.ts`** — accumulate those fields in the `foodByItem` loop (already iterating `item.carbs`, `item.fat`, etc. for the daily totals — just also add them to `foodByItem[key]`)
+
+3. **`chart-dsl.ts`** — expand the metric switch to cover all metrics instead of falling back to count:
+```typescript
+const metricValue =
+  dsl.metric === "entries"   ? item.count :
+  dsl.metric === "calories"  ? item.totalCalories :
+  dsl.metric === "protein"   ? item.totalProtein :
+  dsl.metric === "carbs"     ? item.totalCarbs :
+  dsl.metric === "fat"       ? item.totalFat :
+  dsl.metric === "fiber"     ? item.totalFiber :
+  dsl.metric === "sugar"     ? item.totalSugar :
+  dsl.metric === "saturated_fat" ? item.totalSaturatedFat :
+  dsl.metric === "sodium"    ? item.totalSodium :
+  dsl.metric === "cholesterol" ? item.totalCholesterol :
+  item.count; // genuine fallback for unknown metrics
+```
+
+The fallback to `item.count` stays as a last resort, but it will no longer silently trigger for any legitimate food metric.
+
+---
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `supabase/functions/generate-chart-dsl/index.ts` | Fix schema description: `total_calories/protein/carbs/fat` → `calories/protein/carbs/fat` |
+| `src/lib/chart-types.ts` | Extend `foodByItem` type with all macro fields |
+| `src/lib/chart-data.ts` | Accumulate `totalCarbs`, `totalFat`, `totalFiber`, etc. in the `foodByItem` aggregation loop |
+| `src/lib/chart-dsl.ts` | Expand food `item` metric switch to cover all macros; remove silent count fallback for known metrics |
+
+### What stays the same
+
+- No changes to the disambiguation flow
+- Exercise `item` path is unaffected (already has a fuller mapping)
+- All other groupBy paths (`date`, `week`, `dayOfWeek`, etc.) are unaffected
+- The `total_calories` schema column names stay in the edge function where they describe actual DB columns — only the metric key names are corrected
