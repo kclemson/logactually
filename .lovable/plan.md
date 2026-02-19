@@ -1,60 +1,80 @@
 
-# Three Small Fixes to CreateMedicationDialog
+# Responsive Medication Name Append: Dose Always Visible, Frequency Optional
 
-## What's changing
+## The Problem
 
-### 1. Extend "How often per day?" from 4 to 6
+In `SavedItemRow`, `nameAppend` is rendered as a single `<span className="... shrink-0">`. Currently `CustomLogTypeRow` builds one concatenated string (`"2 mg · as needed"`) and passes it as that single `shrink-0` span. Because the whole thing is `shrink-0`, it never yields space — causing the name to wrap (as seen with "Ativan (anti-anxiety, anti-nausea)").
 
-Change the button array from `[0, 1, 2, 3, 4]` to `[0, 1, 2, 3, 4, 5, 6]`.
+The goal: on narrow viewports, the name + dose part should always show; the frequency part ("as needed" / "3x/day") should simply disappear if there isn't room.
 
-Add smart-default placeholder strings for counts 5 and 6:
-- 5 → `['6am', '10am', '2pm', '6pm', '10pm']`
-- 6 → `['6am', '9am', '12pm', '3pm', '6pm', '9pm']`
+## Solution
 
-(These defaults are only used as placeholder hint text — see below.)
-
-### 2. Smart defaults become placeholder/ghost text, not actual values
-
-Currently `handleDosesPerDayChange` fills `doseTimes` state with the default strings (e.g. `['morning', 'evening']`). These show up as real typed text in the inputs, which is wrong — the user would have to clear them to type their own values.
-
-The fix: when the dose count changes, initialize `doseTimes` as an array of **empty strings** (one per dose). The smart defaults move to the `placeholder` prop of each input, computed from `DOSE_TIME_DEFAULTS[count][i]`.
+Split the medication `nameAppend` into two separate `<span>` elements passed as a JSX fragment:
 
 ```tsx
-// Before (wrong — fills as real values)
-setDoseTimes(DOSE_TIME_DEFAULTS[count] ?? []);
+// In CustomLogTypeRow, for medication types:
+const nameAppend = (() => {
+  if (type.value_type === 'medication') {
+    const dosePart = type.default_dose != null && type.unit
+      ? `${type.default_dose} ${type.unit}`
+      : type.unit || null;
+    const freqPart = type.doses_per_day > 0 ? `${type.doses_per_day}x/day` : 'as needed';
 
-// After (correct — empty values, defaults become placeholders)
-setDoseTimes(Array(count).fill(''));
+    return (
+      <>
+        {dosePart && (
+          <span className="text-xs text-muted-foreground shrink-0">{dosePart}</span>
+        )}
+        <span className="text-xs text-muted-foreground shrink min-w-0 truncate hidden sm:inline">
+          {dosePart ? `· ${freqPart}` : freqPart}
+        </span>
+      </>
+    );
+  }
+  return type.unit ? `(${type.unit})` : null;
+})();
 ```
 
-Each input then uses:
+The frequency `<span>` uses `hidden sm:inline` — hidden on the smallest breakpoint (mobile), visible from `sm` (640px) upward. This is a clean cut: mobile never sees it, tablet/desktop always does.
+
+However, "smallest viewport" in the screenshot could be anything below `sm`. An alternative that handles the in-between gracefully is `shrink min-w-0 overflow-hidden` — this lets the span shrink all the way to zero when space is exhausted, disappearing naturally without a hard breakpoint cut.
+
+The best approach combines both: `shrink min-w-0 overflow-hidden whitespace-nowrap` on the frequency span, with **no** hard breakpoint — it just vanishes organically as the name grows. No text truncation ellipsis (which would show "· as need…"), just clean disappearance via `overflow-hidden` on a shrinkable element.
+
+## Layout Flow
+
+```
+[  name div (flex-1 min-w-0)  ] [ dose span (shrink-0) ] [ freq span (shrinks to 0) ] [pencil] [trash]
+```
+
+- Name div has `flex-1 min-w-0` — it gets first claim on space and can wrap/truncate
+- Dose span has `shrink-0` — never gives up space
+- Freq span has `shrink min-w-0 overflow-hidden whitespace-nowrap` — last to get space, first to disappear
+
+## Changes Required
+
+`SavedItemRow` currently wraps `nameAppend` in its own `<span className="text-xs text-muted-foreground shrink-0">`. Since we're now passing pre-styled JSX spans from `CustomLogTypeRow`, we need to update `SavedItemRow` to render `nameAppend` without its own wrapping span (when it's ReactNode, just render it directly inside the flex container). Or alternatively: keep the wrapper but remove `shrink-0` from it so the child spans control their own shrink behavior.
+
+The cleanest approach: change `SavedItemRow`'s `nameAppend` rendering from:
 ```tsx
-placeholder={DOSE_TIME_DEFAULTS[dosesPerDay]?.[i] ?? 'e.g. morning, 8am'}
+{nameAppend && (
+  <span className="text-xs text-muted-foreground shrink-0">{nameAppend}</span>
+)}
+```
+to:
+```tsx
+{nameAppend && (
+  <span className="flex items-center gap-1 min-w-0">{nameAppend}</span>
+)}
 ```
 
-### 3. Placeholder styling: italic + darker gray
+This neutral wrapper lets child spans control their own shrink/grow/truncate behavior. Non-medication rows still pass a plain string, which renders fine inside this wrapper with no visual change (it will just be text inside a flex span).
 
-The existing `Input` component renders a standard `<input>` with Tailwind class `placeholder:text-muted-foreground`. We need to override this on the dose time inputs to use a darker, italic placeholder.
-
-Add these classes to the dose time `Input`:
-```
-placeholder:text-foreground/50 placeholder:italic
-```
-
-`text-foreground/50` is notably darker than `text-muted-foreground` (which is typically around 40% opacity), giving the "ghost text" a clearer visual presence. Combined with `italic` it reads unmistakably as hint text, not user input.
-
-Also apply the same style to the Notes textarea placeholder, for consistency across the dialog.
-
-## Files changed
+## Files Changed
 
 | File | Change |
 |---|---|
-| `src/components/CreateMedicationDialog.tsx` | Extend count buttons to 6; add defaults for 5 and 6; initialize `doseTimes` as empty strings; move defaults to placeholder prop; add italic+darker placeholder styling to dose time inputs |
+| `src/components/SavedItemRow.tsx` | Change `nameAppend` wrapper from `shrink-0` span to a neutral `flex items-center gap-1 min-w-0` span |
+| `src/components/CustomLogTypeRow.tsx` | For medication: return JSX fragment with two separate spans — dose (`shrink-0`) and frequency (`shrink min-w-0 overflow-hidden whitespace-nowrap`) |
 
-No DB changes, no hook changes, no other files touched.
-
-## Before / After
-
-**Before**: selecting "3" fills the three inputs with actual text "8am", "12pm", "4pm" — user must delete to type their own value.
-
-**After**: selecting "3" shows three empty inputs with italic gray ghost text "8am", "12pm", "4pm" as hints — user types freely without clearing anything.
+No DB changes, no hook changes.
