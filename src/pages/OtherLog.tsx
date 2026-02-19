@@ -236,11 +236,9 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                       setShowInputDialog(true);
                     }}
                   >
-                    <SelectTrigger className="h-8 text-sm font-medium w-auto bg-teal-500 text-white border-teal-500 hover:bg-teal-600 shrink-0">
-                      <span className="flex items-center gap-1 whitespace-nowrap">
-                        <Plus className="h-3 w-3 shrink-0" />
-                        Log New
-                      </span>
+                    <SelectTrigger className="h-8 text-sm font-medium flex items-center gap-1 w-auto bg-teal-500 text-white border-teal-500 hover:bg-teal-600 shrink-0 whitespace-nowrap">
+                      <Plus className="h-3 w-3 shrink-0" />
+                      Log New
                     </SelectTrigger>
                     <SelectContent>
                       {medicationTypes.map((mt) => (
