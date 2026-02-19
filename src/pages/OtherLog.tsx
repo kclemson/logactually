@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DateNavigation } from '@/components/DateNavigation';
 import { useDateNavigation } from '@/hooks/useDateNavigation';
 import { useCustomLogTypes } from '@/hooks/useCustomLogTypes';
+import { useExportData } from '@/hooks/useExportData';
 import { useCustomLogEntries } from '@/hooks/useCustomLogEntries';
 import { useCustomLogEntriesForType } from '@/hooks/useCustomLogEntriesForType';
 import { useAllMedicationEntries } from '@/hooks/useAllMedicationEntries';

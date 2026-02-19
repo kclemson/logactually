@@ -11,6 +11,7 @@ interface AllMedicationsViewProps {
   isLoading: boolean;
   onDelete: (id: string) => void;
   onEdit?: (entry: CustomLogEntry) => void;
+  onExport?: () => void;
   isReadOnly: boolean;
 }
 
