@@ -1,54 +1,53 @@
 
 
-## Fix chart DSL: category filter + prompt improvements
+## Inject exercise reference list into chart DSL prompt + add subtype filter
 
-### What's changing
+### Problem
 
-Two focused fixes to make exercise category queries and the prompt work correctly:
+The previous plan suggested hardcoding a mapping table of common terms (e.g., "running" maps to `walk_run`). But the canonical exercise list already exists in `_shared/exercises.ts` with keys, aliases, and `isCardio` flags. The AI is smart enough to figure out the mapping if we just give it the list. Similarly, subtype data already exists in the database -- we just need to tell the AI about the hierarchy and let it use `exerciseSubtype` in filters.
 
-1. **Add a category filter for exercises** -- so you can ask things like "cardio count by day of week" (filter to cardio only, group by weekday)
-2. **Improve the AI prompt** -- stronger guidance on when to use `groupBy: "category"` vs `filter.category`, and clarify that `entries` means the count of food items logged
+### Approach
 
-### What we're NOT doing
+1. Import and inject the canonical exercise list into the generate-chart-dsl prompt (same pattern used by `analyze-weights`)
+2. Add `exerciseSubtype` to the DSL filter schema
+3. Add `exercise_subtype` to the query select and apply it as a filter
+4. Let the AI handle all the mapping logic -- no hardcoded term tables
 
-Dropping the idea of a separate `food_items_count` metric. The existing `entries` metric will simply be documented as "number of food items logged" -- users think of it as the same thing, so we'll keep it simple.
-
-### Technical details
+### Changes
 
 | File | Change |
 |---|---|
-| `src/lib/chart-types.ts` | Add `category?: "Cardio" \| "Strength"` to the `filter` interface |
-| `src/lib/chart-data.ts` | In `fetchExerciseData`, when `filter.category` is set, skip rows that don't match using `isCardioExercise()` |
-| `src/lib/chart-dsl.ts` | No changes needed (filter is applied at the data layer) |
-| `supabase/functions/generate-chart-dsl/index.ts` | Add `category` filter to the prompt schema. Add guidance distinguishing `groupBy: "category"` (compare cardio vs strength) from `filter.category` (isolate one category, group by something else). Clarify `entries` as "number of food items logged." |
+| `supabase/functions/generate-chart-dsl/index.ts` | Import `getWeightExerciseReferenceForPrompt` and `getCardioExerciseReferenceForPrompt` from `_shared/exercises.ts`. Inject them into the system prompt under a new "CANONICAL EXERCISES" section. Add `exerciseSubtype` to the filter schema. Add guidance explaining the key/subtype hierarchy (e.g., `walk_run` is the key, `running`/`walking`/`hiking` are subtypes). |
+| `src/lib/chart-types.ts` | Add `exerciseSubtype?: string` to the filter interface. |
+| `src/lib/chart-data.ts` | Add `exercise_subtype` to the select columns. Accept `exerciseSubtype` filter param. When set, add `.eq("exercise_subtype", value)` to the query. |
 
-### How the category filter works
+### What the prompt will look like
 
-```text
-User: "Cardio sessions by day of week"
-
-AI returns:
-  source: "exercise"
-  metric: "sets"
-  aggregation: "sum"
-  groupBy: "dayOfWeek"
-  filter: { category: "Cardio" }
-
-User: "Cardio vs strength split"
-
-AI returns:
-  source: "exercise"
-  metric: "sets"
-  groupBy: "category"
-  filter: null
+The existing exercise reference helpers produce output like:
+```
+- bench_press: "Bench Press" [Chest + Triceps] (also: flat bench, barbell bench, ...)
+- walk_run: "Walk/Run" (also: treadmill, running, walking, jogging, ...)
 ```
 
-In `fetchExerciseData`:
-```typescript
-if (categoryFilter) {
-  const isCardio = isCardioExercise(row.exercise_key);
-  if (categoryFilter === "Cardio" && !isCardio) continue;
-  if (categoryFilter === "Strength" && isCardio) continue;
-}
+We add a section explaining the hierarchy:
+```
+CANONICAL EXERCISES:
+Some exercises share a key with subtypes. For example, "walk_run" covers
+walking, running, and hiking. When the user asks about a specific activity
+like "running", use filter.exerciseKey="walk_run" + filter.exerciseSubtype="running".
+
+Known subtypes in user data: walk_run (walking, running, hiking),
+cycling (indoor, outdoor).
+
+Strength exercises:
+  [injected list]
+
+Cardio exercises:
+  [injected list]
 ```
 
+### What does NOT change
+
+- No new mapping tables or constants
+- No changes to `_shared/exercises.ts`
+- No changes to `chart-dsl.ts` (filter applied at data layer)
