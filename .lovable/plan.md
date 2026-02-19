@@ -1,61 +1,95 @@
 
-## Context menu (right-click / long-press) on saved charts
+## Multi-chart disambiguation for ambiguous queries
 
-### What changes
+### Summary
 
-Saved chart cards will respond to right-click on desktop and long-press on mobile with a small floating context menu containing "Edit" and "Delete" options. This is additive — it does not replace the header-toggle edit mode or the navigate-on-click behavior.
+When the AI detects genuine ambiguity in a query, it returns 2–3 DSL variants instead of one. The dialog shows them side-by-side as small previews with their `aiNote` as captions. The user picks one, and the normal Save/Refine flow continues. Unambiguous queries are completely unchanged.
 
-### Conflict analysis
+The single-chart preview shrinks from `w-[60%]` to `w-[50%]` — a minor visual tweak that also makes the two-up disambiguation layout feel consistent rather than introducing a different size just for that state.
 
-| Existing interaction | Event used | Conflicts with context menu? |
-|---|---|---|
-| Bar click → navigate (desktop) | Recharts `onClick` | No — `onContextMenu` is a separate event |
-| Bar tap → tooltip (touch) | Recharts `onClick` / `touchend` | No — long-press fires `contextmenu` after ~500ms, tap fires on `touchend` immediately |
-| Tooltip dismiss overlay | `onClick` on fixed overlay | No — only present when tooltip is active, not when context menu is open |
-| Edit-mode toggle in section header | `onClick` on button | No — unrelated |
+---
 
-### Implementation approach
+### 1. Edge function — minimal system prompt addition
 
-**New component: `ChartContextMenu`** (`src/components/trends/ChartContextMenu.tsx`)
+**File: `supabase/functions/generate-chart-dsl/index.ts`**
 
-A small self-contained component that:
-- Accepts `x`, `y`, `isOpen`, `onClose`, `onEdit`, `onDelete` props
-- Renders a fixed-position floating menu at `(x, y)` with "Edit" (pencil icon) and "Delete" (trash icon, destructive color) items
-- Closes on outside click via a transparent backdrop `div` at `z-40`, menu itself at `z-50`
-- No Radix dependency needed — just a simple positioned `div`
+Add a short paragraph after the existing JSON schema block. No examples, no enumerated triggers:
 
-**Changes to `DynamicChart`** (`src/components/trends/DynamicChart.tsx`)
+```
+DISAMBIGUATION:
 
-Add an optional `onContextMenu?: (e: React.MouseEvent) => void` prop. Pass it as `onContextMenu` on the outer wrapper `div` in `ChartCard`.
+If the user's request has more than one meaningfully different interpretation, respond with a JSON object containing a "chartDSLOptions" key instead of "chartDSL":
 
-**Changes to `ChartCard`** (`src/components/trends/ChartCard.tsx`)
+{
+  "chartDSLOptions": [
+    { ...full DSL object, "aiNote": "what this interpretation shows" },
+    { ...full DSL object, "aiNote": "what this interpretation shows" }
+  ]
+}
 
-Add optional `onContextMenu?: (e: React.MouseEvent) => void` to props and attach it to the root `Card` element. Also call `e.preventDefault()` there to suppress the browser's default context menu.
+Each option must be a complete DSL object with a distinct aiNote. Maximum 3 options. Only use this when the interpretations would produce genuinely different charts — not just minor variations.
+```
 
-**Changes to `Trends.tsx`** (`src/pages/Trends.tsx`)
+Update response validation to also pass through `chartDSLOptions` if that key is present.
 
-- Add state: `contextMenu: { chartId: string; x: number; y: number } | null`
-- On each saved `DynamicChart`, pass `onContextMenu={(e) => { e.preventDefault(); setContextMenu({ chartId: chart.id, x: e.clientX, y: e.clientY }); }}`
-- Render `ChartContextMenu` once (outside the map) at the page level, wired to the active `contextMenu` state
-- "Edit" in menu → `setEditingChart(...)` + close menu
-- "Delete" in menu → directly call `deleteMutation.mutate(chartId)` + close menu (skipping the popover confirmation since this is a secondary, deliberate gesture — or optionally keep confirmation)
+---
+
+### 2. `useGenerateChart` — handle multi-option response
+
+**File: `src/hooks/useGenerateChart.ts`**
+
+Extend the result interface:
+
+```typescript
+export interface GenerateChartResult {
+  chartSpec: ChartSpec;
+  dailyTotals: DailyTotals;
+  chartDSL?: ChartDSL;
+  chartOptions?: Array<{ chartSpec: ChartSpec; chartDSL: ChartDSL; dailyTotals: DailyTotals }>;
+}
+```
+
+In the v2 path, after the edge function responds:
+- `chartDSL` present → existing single path, unchanged
+- `chartDSLOptions` present → execute `fetchChartData` + `executeDSL` for each option (they share the same `period`, fully independent), populate `chartOptions`, set `chartSpec` to the first as a fallback default
+
+---
+
+### 3. Disambiguation UI in `CustomChartDialog`
+
+**File: `src/components/CustomChartDialog.tsx`**
+
+Add `chartOptions` state alongside `currentSpec`. When options are present (length > 1), replace the single-chart result with a picker:
+
+```
+"Which did you mean?"
+
+[ Chart A preview ]  [ Chart B preview ]
+  "Average per meal"   "Total across logs"
+
+[ Cancel ]
+```
+
+- Each thumbnail is `w-[50%]` (matching the new single-chart size) with a caption below it from its `aiNote`
+- Clicking a thumbnail calls `setCurrentSpec(chosen.chartSpec)` and clears `chartOptions` — drops back into the normal single-chart result view
+- Cancel clears `chartOptions` and `currentSpec`, returning to the empty state
+- The loading overlay applies to the disambiguation state too (the `showOverlay` logic already covers this since it keys off `generateChart.isPending && hasExistingContent`)
+
+Single-chart preview width: `w-[60%]` → `w-[50%]` (minor, makes the sizing consistent across both states).
+
+---
 
 ### Files changed
 
 | File | Change |
 |---|---|
-| `src/components/trends/ChartContextMenu.tsx` | New component — floating context menu with Edit + Delete |
-| `src/components/trends/ChartCard.tsx` | Add optional `onContextMenu` prop, attach to root Card, `preventDefault` |
-| `src/components/trends/DynamicChart.tsx` | Thread `onContextMenu` prop through to `ChartCard` |
-| `src/pages/Trends.tsx` | Add context menu state, pass handler to saved charts, render `ChartContextMenu` |
+| `supabase/functions/generate-chart-dsl/index.ts` | Add 8-line disambiguation rule to prompt; accept `chartDSLOptions` in validation |
+| `src/hooks/useGenerateChart.ts` | Handle `chartDSLOptions` in v2 path; extend `GenerateChartResult` type |
+| `src/components/CustomChartDialog.tsx` | Add `chartOptions` state; render side-by-side picker when options returned; `w-[60%]` → `w-[50%]` |
 
-### What does NOT change
+### What stays the same
 
-- The header-toggle edit mode — still works as before
-- Bar click → navigate — still works on desktop
-- Bar tap → tooltip → "Go to day" — still works on touch
-- Built-in charts (Food, Exercise, etc.) — unaffected, they don't receive `onContextMenu`
-
-### Delete confirmation
-
-For the context menu delete, a simple `window.confirm()` or skipping confirmation is fine since this is already a deliberate secondary interaction (right-click/long-press). Alternatively, the existing `DeleteConfirmPopover` can be reused positioned at the cursor — but that adds complexity. The plan uses a direct delete with no extra confirmation step inside the context menu, keeping it snappy for your debugging workflow.
+- Single-chart path for unambiguous queries — completely unchanged
+- v1 mode — unaffected
+- Save, Refine, Edit, context menu, chips — all unchanged
+- `chart-data.ts`, `chart-types.ts`, `chart-dsl.ts`, `DynamicChart.tsx` — no changes
