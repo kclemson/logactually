@@ -114,6 +114,7 @@ export function CreateMedicationDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Tylenol, Lisinopril"
+              autoComplete="off"
               autoFocus
               onKeyDown={(e) => e.key === 'Enter' && canSubmit && handleSubmit()}
             />
@@ -136,12 +137,14 @@ export function CreateMedicationDialog({
                 placeholder="325"
                 className="w-24 text-sm"
                 min="0"
+                autoComplete="off"
               />
               <Input
                 value={doseUnit}
                 onChange={(e) => setDoseUnit(e.target.value)}
                 placeholder="mg, tablets, ml…"
                 className="flex-1 text-sm"
+                autoComplete="off"
               />
             </div>
           </div>
@@ -181,6 +184,7 @@ export function CreateMedicationDialog({
                     onChange={(e) => handleDoseTimeChange(i, e.target.value)}
                     placeholder={DOSE_TIME_DEFAULTS[dosesPerDay]?.[i] ?? 'e.g. morning, 8am'}
                     className="text-sm placeholder:text-foreground/50 placeholder:italic"
+                    autoComplete="off"
                   />
                 </div>
               ))}
