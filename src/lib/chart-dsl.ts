@@ -231,6 +231,23 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
       }
       break;
     }
+    case "category": {
+      if (dsl.source === "exercise" && dailyTotals.exerciseByCategory) {
+        for (const [label, totals] of Object.entries(dailyTotals.exerciseByCategory)) {
+          const metricValue =
+            dsl.metric === "sets" ? totals.sets :
+            dsl.metric === "duration" ? totals.duration :
+            dsl.metric === "distance" ? totals.distance :
+            dsl.metric === "cal_burned" ? totals.cal_burned :
+            totals.sets;
+          dataPoints.push({
+            label,
+            value: Math.round(metricValue),
+          });
+        }
+      }
+      break;
+    }
   }
 
   // Apply sorting for categorical charts
