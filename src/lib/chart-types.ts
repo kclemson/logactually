@@ -22,6 +22,7 @@ export interface ExerciseDayTotals {
   distance: number;
   cal_burned: number;
   unique_exercises: number;
+  entries: number;
 }
 
 // ── Hourly aggregates (keyed 0-23) ─────────────────────────

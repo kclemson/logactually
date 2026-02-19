@@ -8,7 +8,7 @@ export type { ChartDSL } from "./chart-types";
 // ── Known metrics ─────────────────────────────────────────
 
 const FOOD_METRICS = ["cal", "protein", "carbs", "fat", "fiber", "sugar", "sat_fat", "sodium", "chol", "entries"] as const;
-const EXERCISE_METRICS = ["sets", "duration", "distance", "cal_burned", "unique_exercises"] as const;
+const EXERCISE_METRICS = ["sets", "duration", "distance", "cal_burned", "unique_exercises", "entries"] as const;
 
 // Derived formulas compute from raw food daily totals
 const DERIVED_FORMULAS: Record<string, (t: Record<string, number>) => number> = {
