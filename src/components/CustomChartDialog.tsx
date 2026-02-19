@@ -16,32 +16,25 @@ interface CustomChartDialogProps {
 }
 
 const ALL_CHIPS = [
-  // Food timing & patterns
   "Average calories by hour of day",
   "Which day of the week do I eat the most?",
   "How many meals do I log per day on average?",
-  // Nutrient trends
   "Daily fiber intake over time",
   "Sodium intake trend",
   "Average sugar per day",
   "Fat as percentage of total calories over time",
   "Protein to calorie ratio over time",
-  // High/low analysis
   "My highest calorie days",
   "Days where I exceeded 2000 calories",
-  // Exercise
   "Exercise frequency by day of week",
   "Total exercise duration per week",
   "Which exercises do I do most often?",
   "How many days per week did I exercise?",
-  // Cross-domain
   "Average calories on workout days vs rest days",
   "Average protein on workout days vs rest days",
   "Do I eat more on days I exercise?",
-  // Weekday/weekend
   "Average carbs on weekdays vs weekends",
   "Calorie comparison: weekdays vs weekends",
-  // Volume/strength
   "Training volume trend over time",
 ];
 
@@ -68,8 +61,8 @@ function CustomChartDialogInner({
   const [verification, setVerification] = useState<VerificationResult | null>(null);
   const [lastQuestion, setLastQuestion] = useState(initialChart?.question ?? "");
   const [showDebug, setShowDebug] = useState(false);
+  const [refining, setRefining] = useState(false);
 
-  // Track whether we're editing an existing chart or creating new
   const editingIdRef = useRef<string | null>(initialChart?.id ?? null);
 
   const generateChart = useGenerateChart();
@@ -96,6 +89,7 @@ function CustomChartDialogInner({
 
   const refreshChips = () => setVisibleChips(pickFresh());
 
+  // Existing refinement-aware submit (appends to conversation history)
   const handleSubmit = async (question: string) => {
     if (!question.trim() || generateChart.isPending) return;
 
@@ -121,20 +115,41 @@ function CustomChartDialogInner({
       });
       setCurrentSpec(result.chartSpec);
       setDailyTotals(result.dailyTotals);
-      } catch (err) {
+      setRefining(false);
+    } catch (err) {
       console.error("[generate-chart] mutation error:", err);
     }
   };
 
-  const handleStartOver = () => {
-    setMessages([]);
+  // Fresh request — clears all state and submits as a brand-new conversation
+  const handleNewRequest = async (question: string) => {
+    if (!question.trim() || generateChart.isPending) return;
+
+    const trimmed = question.trim();
+    const freshMessages = [{ role: "user" as const, content: trimmed }];
+
+    // Atomically reset everything
+    setMessages(freshMessages);
     setCurrentSpec(null);
     setDailyTotals(null);
     setVerification(null);
-    setLastQuestion("");
+    setShowDebug(false);
+    setRefining(false);
+    setLastQuestion(trimmed);
     setInput("");
     editingIdRef.current = null;
     generateChart.reset();
+
+    try {
+      const result = await generateChart.mutateAsync({
+        messages: freshMessages,
+        period,
+      });
+      setCurrentSpec(result.chartSpec);
+      setDailyTotals(result.dailyTotals);
+    } catch (err) {
+      console.error("[generate-chart] mutation error:", err);
+    }
   };
 
   const handleSave = () => {
@@ -153,8 +168,22 @@ function CustomChartDialogInner({
     }
   };
 
+  // Decide which submit path to use from textarea
+  const handleTextareaSubmit = (question: string) => {
+    if (refining) {
+      handleSubmit(question); // refinement — keep conversation
+    } else if (currentSpec) {
+      handleNewRequest(question); // new request while chart showing
+    } else {
+      handleSubmit(question); // first request
+    }
+  };
+
   const isSaving = saveMutation.isPending || updateMutation.isPending;
   const isEditing = !!initialChart;
+  const showChips = !generateChart.isPending;
+  const showTextarea = !generateChart.isPending && (!currentSpec || refining);
+  const showResult = !!currentSpec && !generateChart.isPending;
 
   return (
     <Dialog open onOpenChange={onOpenChange}>
@@ -165,7 +194,7 @@ function CustomChartDialogInner({
         <DialogTitle className="text-sm font-medium flex items-center gap-1.5">
           <BarChart3 className="h-4 w-4" />
           {isEditing ? "Edit Chart" : "Create Chart"}
-          {!currentSpec && !generateChart.isPending && messages.length === 0 && (
+          {showChips && (
             <button
               onClick={refreshChips}
               className="absolute right-12 top-3.5 p-1.5 rounded-full border border-border bg-muted/50 hover:bg-muted active:scale-75 transition-all duration-150"
@@ -177,15 +206,13 @@ function CustomChartDialogInner({
         </DialogTitle>
 
         <div className="space-y-3 mt-2">
-          {!currentSpec && !generateChart.isPending && messages.length === 0 && (
+          {/* Chips — visible whenever not loading */}
+          {showChips && (
             <div className="flex flex-wrap gap-1.5 items-start">
               {visibleChips.map((chip) => (
                 <button
                   key={chip}
-                  onClick={() => {
-                    setInput(chip);
-                    handleSubmit(chip);
-                  }}
+                  onClick={() => handleNewRequest(chip)}
                   className="text-xs px-2.5 py-1 rounded-full border border-border bg-muted/50 text-foreground hover:bg-muted transition-colors text-left"
                 >
                   {chip}
@@ -194,7 +221,8 @@ function CustomChartDialogInner({
             </div>
           )}
 
-          {!generateChart.isPending && (
+          {/* Textarea — visible when no chart, or when refining */}
+          {showTextarea && (
             <div className="space-y-2">
               <Textarea
                 value={input}
@@ -202,30 +230,44 @@ function CustomChartDialogInner({
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
-                    handleSubmit(input);
+                    handleTextareaSubmit(input);
                   }
                 }}
                 placeholder={
-                  currentSpec
+                  refining
                     ? "Refine this chart... (e.g. 'make it a line chart')"
                     : "Describe the chart you'd like to see..."
                 }
                 className="min-h-[60px] max-h-[120px] resize-none text-sm"
                 maxLength={500}
               />
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
+                {refining && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setRefining(false);
+                      setInput("");
+                    }}
+                    className="h-9"
+                  >
+                    Cancel
+                  </Button>
+                )}
                 <Button
                   size="sm"
-                  onClick={() => handleSubmit(input)}
+                  onClick={() => handleTextareaSubmit(input)}
                   disabled={!input.trim()}
                   className="h-9"
                 >
-                  {currentSpec ? "Refine" : "Create"}
+                  {refining ? "Refine" : "Create"}
                 </Button>
               </div>
             </div>
           )}
 
+          {/* Loading */}
           {generateChart.isPending && (
             <div className="space-y-3">
               {lastQuestion && (
@@ -240,13 +282,15 @@ function CustomChartDialogInner({
             </div>
           )}
 
+          {/* Error */}
           {generateChart.error && (
             <div className="text-sm text-destructive p-3 rounded-md bg-destructive/10">
               {generateChart.error.message || "Something went wrong. Please try again."}
             </div>
           )}
 
-          {currentSpec && !generateChart.isPending && (
+          {/* Result section */}
+          {showResult && (
             <div className="space-y-3">
               {lastQuestion && (
                 <p className="text-xs text-muted-foreground italic">"{lastQuestion}"</p>
@@ -269,8 +313,12 @@ function CustomChartDialogInner({
                   ) : null}
                   {editingIdRef.current ? "Save Changes" : "Save to Trends"}
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleStartOver}>
-                  Start over
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRefining(true)}
+                >
+                  Refine
                 </Button>
               </div>
 
@@ -333,11 +381,11 @@ function CustomChartDialogInner({
               )}
 
               {showDebug && (
-              <Textarea
-                readOnly
-                value={JSON.stringify(currentSpec, null, 2)}
-                className="text-[10px] font-mono bg-muted/50 rounded p-2 min-h-[300px] resize-y"
-              />
+                <Textarea
+                  readOnly
+                  value={JSON.stringify(currentSpec, null, 2)}
+                  className="text-[10px] font-mono bg-muted/50 rounded p-2 min-h-[300px] resize-y"
+                />
               )}
             </div>
           )}
