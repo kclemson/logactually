@@ -1,22 +1,49 @@
 
 
-## Add `limit` field to chart DSL
+## Richer tooltips for dynamic charts
 
-### Problem
+### Approach
 
-The DSL has no way to cap the number of results, so "top 10" queries return all items.
+Attach a generic `_details` array of `{label, value}` pairs to each data point inside `executeDSL`. The tooltip component renders these automatically -- no chart-specific logic needed.
 
-### Solution
+### What shows up in tooltips
 
-Add an optional `limit` field to the schema and a single line of prompt guidance. The AI model understands the concept of limiting results -- it just needs the field to exist.
+| groupBy | Extra details shown |
+|---|---|
+| `date` | All non-zero metrics for that day (e.g. cal, protein, sets, duration) |
+| `item` (food) | count, totalCal, totalProtein (excluding the primary metric) |
+| `item` (exercise) | count, totalSets, totalDuration, totalCalBurned (excluding primary) |
+| `category` | sets, duration, distance, cal_burned, entries (excluding primary) |
+| `dayOfWeek` / `week` / `weekdayVsWeekend` | number of days in the bucket |
+| `hourOfDay` | number of entries in the bucket |
 
 ### Changes
 
 | File | Change |
 |---|---|
-| `src/lib/chart-types.ts` | Add `limit?: number` to `ChartDSL` interface |
-| `src/lib/chart-dsl.ts` | After sorting, slice: `if (dsl.limit) dataPoints = dataPoints.slice(0, dsl.limit);` |
-| `supabase/functions/generate-chart-dsl/index.ts` | Add `"limit": "<positive integer or null>"` to the DSL JSON schema in the prompt |
+| `src/lib/chart-dsl.ts` | In each `groupBy` branch, attach a `_details` array to each data point with the relevant secondary metrics (skipping the primary metric to avoid duplication). Add a helper function `buildDetails(pairs)` that filters out zero/null values and formats numbers. |
+| `src/components/trends/CompactChartTooltip.tsx` | After rendering the main payload rows, check for `payload[0]?.payload?._details` and render each as a small `text-[10px]` line in muted color. |
+| `src/components/trends/DynamicChart.tsx` | No changes needed -- `_details` flows through the existing data pipeline automatically. |
 
-No additional prompt prose needed -- the field name and type are self-explanatory to the model.
+### Example tooltip output
 
+For a "top 10 foods by fiber" bar:
+
+```
+Oatmeal
+Fiber: 8g
+---
+12 entries, 1440 cal, 48g protein
+```
+
+The details line is rendered in muted text below the primary value.
+
+### Technical detail
+
+`_details` structure:
+```typescript
+_details: Array<{ label: string; value: string }>
+// e.g. [{ label: "entries", value: "12" }, { label: "cal", value: "1,440" }]
+```
+
+The tooltip renders them as a comma-separated line or as individual rows depending on count, keeping things compact.
