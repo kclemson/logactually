@@ -12,7 +12,7 @@ interface CustomChartDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   period: number;
-  initialChart?: { id: string; question: string; chartSpec: ChartSpec };
+  initialChart?: { id: string; question: string; chartSpec: ChartSpec; chartDsl?: unknown };
 }
 
 const ALL_CHIPS = [
@@ -54,7 +54,7 @@ function CustomChartDialogInner({
 }: {
   onOpenChange: (open: boolean) => void;
   period: number;
-  initialChart?: { id: string; question: string; chartSpec: ChartSpec };
+  initialChart?: { id: string; question: string; chartSpec: ChartSpec; chartDsl?: unknown };
 }) {
   const [input, setInput] = useState("");
   const [mode, setMode] = useState<"v1" | "v2">(() => (localStorage.getItem("chart-mode") as "v1" | "v2") || "v1");
@@ -63,7 +63,7 @@ function CustomChartDialogInner({
   );
   const [currentSpec, setCurrentSpec] = useState<ChartSpec | null>(initialChart?.chartSpec ?? null);
   const [dailyTotals, setDailyTotals] = useState<DailyTotals | null>(null);
-  const [chartDSL, setChartDSL] = useState<unknown>(null);
+  const [chartDSL, setChartDSL] = useState<unknown>(initialChart?.chartDsl ?? null);
   const [chartOptions, setChartOptions] = useState<GenerateChartResult["chartOptions"] | null>(null);
   const [verification, setVerification] = useState<VerificationResult | null>(null);
   const [lastQuestion, setLastQuestion] = useState(initialChart?.question ?? "");
@@ -184,12 +184,12 @@ function CustomChartDialogInner({
 
     if (editingIdRef.current) {
       updateMutation.mutate(
-        { id: editingIdRef.current, question: lastQuestion, chartSpec: currentSpec },
+        { id: editingIdRef.current, question: lastQuestion, chartSpec: currentSpec, chartDsl: chartDSL ?? undefined },
         { onSuccess: () => onOpenChange(false) }
       );
     } else {
       saveMutation.mutate(
-        { question: lastQuestion, chartSpec: currentSpec },
+        { question: lastQuestion, chartSpec: currentSpec, chartDsl: chartDSL ?? undefined },
         { onSuccess: () => onOpenChange(false) }
       );
     }
