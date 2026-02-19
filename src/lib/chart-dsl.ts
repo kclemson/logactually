@@ -31,6 +31,23 @@ const DERIVED_FORMULAS: Record<string, (t: Record<string, number>) => number> = 
 
 // ── Helpers ───────────────────────────────────────────────
 
+type DetailPair = { label: string; value: string };
+
+/** Build a compact secondary-details array, filtering out zeros and the primary metric */
+function buildDetails(
+  pairs: Array<{ label: string; value: number | null | undefined }>,
+  excludeLabel?: string,
+): DetailPair[] {
+  return pairs
+    .filter((p) => p.label !== excludeLabel && p.value != null && p.value !== 0)
+    .map((p) => ({
+      label: p.label,
+      value: typeof p.value === "number"
+        ? (p.value >= 1000 ? p.value.toLocaleString("en-US", { maximumFractionDigits: 0 }) : String(Math.round(p.value!)))
+        : String(p.value),
+    }));
+}
+
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const HOUR_LABELS = [
@@ -116,11 +133,32 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
 
   switch (dsl.groupBy) {
     case "date": {
-      dataPoints = dateValues.map(({ date, value }) => ({
-        rawDate: date,
-        label: format(new Date(`${date}T12:00:00`), "MMM d"),
-        value: Math.round(dsl.aggregation === "average" ? value : value),
-      }));
+      dataPoints = dateValues.map(({ date, value }) => {
+        const foodDay = dailyTotals.food[date];
+        const exDay = dailyTotals.exercise[date];
+        const details = dsl.source === "food"
+          ? buildDetails([
+              { label: "cal", value: foodDay?.cal },
+              { label: "protein", value: foodDay?.protein },
+              { label: "carbs", value: foodDay?.carbs },
+              { label: "fat", value: foodDay?.fat },
+              { label: "fiber", value: foodDay?.fiber },
+              { label: "entries", value: foodDay?.entries },
+            ], dsl.derivedMetric || dsl.metric)
+          : buildDetails([
+              { label: "sets", value: exDay?.sets },
+              { label: "duration", value: exDay?.duration },
+              { label: "distance", value: exDay?.distance },
+              { label: "cal burned", value: exDay?.cal_burned },
+              { label: "entries", value: exDay?.entries },
+            ], dsl.metric);
+        return {
+          rawDate: date,
+          label: format(new Date(`${date}T12:00:00`), "MMM d"),
+          value: Math.round(value),
+          _details: details,
+        };
+      });
       break;
     }
     case "dayOfWeek": {
@@ -136,6 +174,7 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
         dataPoints.push({
           label: DAY_NAMES[dow],
           value: Math.round(aggregate(vals, dsl.aggregation)),
+          _details: [{ label: "days", value: String(vals.length) }],
         });
       }
       break;
@@ -149,10 +188,10 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
         else weekday.push(value);
       }
       if (weekday.length > 0) {
-        dataPoints.push({ label: "Weekdays", value: Math.round(aggregate(weekday, dsl.aggregation)) });
+        dataPoints.push({ label: "Weekdays", value: Math.round(aggregate(weekday, dsl.aggregation)), _details: [{ label: "days", value: String(weekday.length) }] });
       }
       if (weekend.length > 0) {
-        dataPoints.push({ label: "Weekends", value: Math.round(aggregate(weekend, dsl.aggregation)) });
+        dataPoints.push({ label: "Weekends", value: Math.round(aggregate(weekend, dsl.aggregation)), _details: [{ label: "days", value: String(weekend.length) }] });
       }
       break;
     }
@@ -172,6 +211,7 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
           rawDate: weekDates[weekKey],
           label: weekKey,
           value: Math.round(aggregate(buckets[weekKey], dsl.aggregation)),
+          _details: [{ label: "days", value: String(buckets[weekKey].length) }],
         });
       }
       break;
@@ -197,6 +237,7 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
         dataPoints.push({
           label: HOUR_LABELS[hour],
           value: Math.round(aggregate(values, dsl.aggregation)),
+          _details: [{ label: "entries", value: String(entries.length) }],
         });
       }
       break;
@@ -213,6 +254,11 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
           dataPoints.push({
             label: label.length > 25 ? label.slice(0, 22) + "…" : label,
             value: Math.round(dsl.aggregation === "count" ? item.count : metricValue),
+            _details: buildDetails([
+              { label: "entries", value: item.count },
+              { label: "cal", value: item.totalCal },
+              { label: "protein", value: item.totalProtein },
+            ], dsl.metric === "entries" ? "entries" : dsl.metric === "cal" ? "cal" : dsl.metric === "protein" ? "protein" : undefined),
           });
         }
       } else if (dsl.source === "exercise" && dailyTotals.exerciseByItem) {
@@ -226,6 +272,12 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
           dataPoints.push({
             label: item.description.length > 25 ? item.description.slice(0, 22) + "…" : item.description,
             value: Math.round(dsl.aggregation === "count" ? item.count : metricValue),
+            _details: buildDetails([
+              { label: "entries", value: item.count },
+              { label: "sets", value: item.totalSets },
+              { label: "duration", value: item.totalDuration },
+              { label: "cal burned", value: item.totalCalBurned },
+            ], dsl.metric === "sets" ? "sets" : dsl.metric === "duration" ? "duration" : dsl.metric === "cal_burned" ? "cal burned" : undefined),
           });
         }
       }
@@ -243,6 +295,13 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
           dataPoints.push({
             label,
             value: Math.round(metricValue),
+            _details: buildDetails([
+              { label: "sets", value: totals.sets },
+              { label: "duration", value: totals.duration },
+              { label: "distance", value: totals.distance },
+              { label: "cal burned", value: totals.cal_burned },
+              { label: "entries", value: totals.entries },
+            ], dsl.metric),
           });
         }
       }
