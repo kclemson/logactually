@@ -1,14 +1,21 @@
 
 # Make "export your data to CSV" a Clickable Link
 
-## What changes
+This is a small two-file change with no new dependencies or database changes needed.
 
-**`AllMedicationsView.tsx`** — two small edits:
+## Changes
 
-1. Add `onExport?: () => void` to the props interface.
-2. Replace the plain text footer with mixed text + inline button:
+### `src/components/AllMedicationsView.tsx`
+
+1. Add `onExport?: () => void` to the `AllMedicationsViewProps` interface and destructure it.
+2. Update the footer paragraph (line 144-146) to render an inline `<button>` when `onExport` is provided, falling back to plain text otherwise.
+3. Do the same for the empty-state footer (lines 49-51).
 
 ```tsx
+// Props interface — add one line
+onExport?: () => void;
+
+// Footer (both the empty-state and the populated list)
 <p className="text-xs text-muted-foreground text-center pt-2">
   For full history across all dates,{' '}
   {onExport ? (
@@ -24,24 +31,25 @@
 </p>
 ```
 
-If no `onExport` is passed (e.g. in read-only / demo mode), it gracefully falls back to the plain text.
+### `src/pages/OtherLog.tsx`
 
-**`OtherLog.tsx`** — import `useExportData` and pass the handler:
+Import `useExportData` and call it, then pass `exportCustomLog` to `AllMedicationsView`:
 
 ```tsx
+import { useExportData } from '@/hooks/useExportData';
+// inside component:
 const { exportCustomLog } = useExportData();
-...
-<AllMedicationsView
-  onExport={exportCustomLog}
-  ...
-/>
+// on the component:
+<AllMedicationsView onExport={exportCustomLog} ... />
 ```
 
-`useExportData` is already used elsewhere in the settings page, so it's a well-tested path.
+`useExportData` is already used in `ImportExportSection` — no new patterns introduced.
 
 ## Files changed
 
 | File | Change |
 |---|---|
-| `src/components/AllMedicationsView.tsx` | Add `onExport?` prop; replace plain footer text with inline clickable link |
+| `src/components/AllMedicationsView.tsx` | Add `onExport?` prop; replace plain footer text in both empty-state and populated-list with clickable inline button |
 | `src/pages/OtherLog.tsx` | Import `useExportData`; pass `exportCustomLog` as `onExport` to `AllMedicationsView` |
+
+No database changes, no new dependencies.
