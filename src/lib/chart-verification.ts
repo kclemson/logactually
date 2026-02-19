@@ -10,6 +10,7 @@ export interface VerificationResult {
   mismatches?: Array<{ date: string; ai: number; actual: number; delta: number }>;
   allComparisons?: Array<{ label: string; ai: number; actual: number; delta: number; match: boolean }>;
   reason?: string;
+  method?: "deterministic" | "ai_daily" | "ai_aggregate";
 }
 
 /* ── Tolerance check (shared) ────────────────────────────── */
@@ -106,7 +107,7 @@ function verifyDaily(
   }
 
   const dailyToleranceLabel = toleranceMethod === "percentage" ? "within 2% or 2 units" : "within 1% or 5 units";
-  return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, toleranceLabel: dailyToleranceLabel, mismatches, allComparisons };
+  return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, toleranceLabel: dailyToleranceLabel, mismatches, allComparisons, method: "ai_daily" };
 }
 
 function verifyAggregate(
@@ -172,7 +173,7 @@ function verifyAggregate(
   }
 
   const toleranceLabel = v.method === "average" ? "within 2% or 20 units" : "within 1% or 5 units";
-  return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, toleranceLabel, mismatches, allComparisons };
+  return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, toleranceLabel, mismatches, allComparisons, method: "ai_aggregate" };
 }
 
 /* ── Deterministic verification via known field/formula mappings ── */
@@ -352,7 +353,7 @@ function verifyDeterministic(
   }
 
   const toleranceLabel = toleranceMethod === "percentage" ? "within 2% or 2 units" : "within 1% or 5 units";
-  return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, toleranceLabel, mismatches, allComparisons };
+  return { status: "success", total, matched, accuracy: total > 0 ? Math.round((matched / total) * 100) : 100, toleranceLabel, mismatches, allComparisons, method: "deterministic" };
 }
 
 /* ── Main entry point ────────────────────────────────────── */
