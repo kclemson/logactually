@@ -12,6 +12,7 @@ import type {
   ExerciseDayTotals,
   HourlyTotals,
 } from "./chart-types";
+import { isCardioExercise } from "./exercise-metadata";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -36,11 +37,12 @@ export async function fetchChartData(
   const startDate = format(subDays(new Date(), period), "yyyy-MM-dd");
   const needsHourly = dsl.groupBy === "hourOfDay";
   const needsItem = dsl.groupBy === "item";
+  const needsCategory = dsl.groupBy === "category";
 
   if (dsl.source === "food") {
     return fetchFoodData(supabase, startDate, needsHourly, needsItem);
   }
-  return fetchExerciseData(supabase, startDate, needsHourly, dsl.filter?.exerciseKey, needsItem);
+  return fetchExerciseData(supabase, startDate, needsHourly, dsl.filter?.exerciseKey, needsItem, needsCategory);
 }
 
 // ── Food fetcher ────────────────────────────────────────────
@@ -125,6 +127,7 @@ async function fetchExerciseData(
   needsHourly: boolean,
   exerciseKeyFilter?: string,
   needsItem: boolean = false,
+  needsCategory: boolean = false,
 ): Promise<DailyTotals> {
   let query = supabase
     .from("weight_sets")
@@ -143,6 +146,8 @@ async function fetchExerciseData(
   const exerciseByHour: HourlyTotals<ExerciseDayTotals> | undefined = needsHourly ? {} : undefined;
   const exerciseByItem: Record<string, { description: string; count: number; totalSets: number; totalDuration: number; totalCalBurned: number }> | undefined =
     needsItem ? {} : undefined;
+  const exerciseByCategory: Record<string, ExerciseDayTotals> | undefined =
+    needsCategory ? {} : undefined;
   const seenKeys: Record<string, Set<string>> = {};
 
   for (const row of data ?? []) {
@@ -168,6 +173,18 @@ async function fetchExerciseData(
       exerciseByItem[key] = existing;
     }
 
+    // Category aggregation (Cardio vs Strength)
+    if (exerciseByCategory) {
+      const catKey = isCardioExercise(row.exercise_key) ? "Cardio" : "Strength";
+      const cat = exerciseByCategory[catKey] ?? { ...EMPTY_EXERCISE };
+      cat.sets += 1;
+      cat.duration += row.duration_minutes ?? 0;
+      cat.distance += row.distance_miles ?? 0;
+      cat.cal_burned += meta?.calories_burned ?? 0;
+      cat.unique_exercises = 0; // not meaningful for category
+      exerciseByCategory[catKey] = cat;
+    }
+
     // Daily aggregation
     const existing = exercise[date] ?? { ...EMPTY_EXERCISE };
     existing.sets += 1;
@@ -185,5 +202,5 @@ async function fetchExerciseData(
     }
   }
 
-  return { food: {}, exercise, exerciseByHour, exerciseByItem };
+  return { food: {}, exercise, exerciseByHour, exerciseByItem, exerciseByCategory };
 }

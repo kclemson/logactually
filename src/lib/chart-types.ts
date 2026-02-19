@@ -52,6 +52,8 @@ export interface DailyTotals {
   foodByItem?: Record<string, { count: number; totalCal: number; totalProtein: number }>;
   /** Populated when groupBy === "item" and source === "exercise" */
   exerciseByItem?: Record<string, { description: string; count: number; totalSets: number; totalDuration: number; totalCalBurned: number }>;
+  /** Populated when groupBy === "category" and source === "exercise" */
+  exerciseByCategory?: Record<string, ExerciseDayTotals>;
 }
 
 // ── DSL schema ─────────────────────────────────────────────
@@ -64,7 +66,7 @@ export interface ChartDSL {
   metric: string;
   derivedMetric?: string;
 
-  groupBy: "date" | "dayOfWeek" | "hourOfDay" | "weekdayVsWeekend" | "week" | "item";
+  groupBy: "date" | "dayOfWeek" | "hourOfDay" | "weekdayVsWeekend" | "week" | "item" | "category";
   aggregation: "sum" | "average" | "max" | "min" | "count";
 
   filter?: {

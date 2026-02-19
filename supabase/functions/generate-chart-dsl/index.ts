@@ -19,7 +19,7 @@ You MUST respond with ONLY a valid JSON object (no markdown, no code fences). Th
   "metric": "<metric key>",
   "derivedMetric": "<derived metric key or null>",
 
-  "groupBy": "date" | "dayOfWeek" | "hourOfDay" | "weekdayVsWeekend" | "week" | "item",
+  "groupBy": "date" | "dayOfWeek" | "hourOfDay" | "weekdayVsWeekend" | "week" | "item" | "category",
   "aggregation": "sum" | "average" | "max" | "min" | "count",
 
   "filter": {
@@ -69,6 +69,7 @@ GROUP BY OPTIONS:
 - "weekdayVsWeekend": 2 buckets
 - "week": one point per ISO week
 - "item": one bucket per distinct food item (by description) or exercise (by exercise_key). Use for "most common foods", "top exercises", "what do I eat most", etc. Pair with aggregation=count for frequency, or sum for totals.
+- "category": EXERCISE SOURCE ONLY. Groups exercises into two buckets: "Cardio" and "Strength". Use for "cardio vs strength split", "cardio vs weights", "training type breakdown". Pair with sum for totals (e.g. total calories burned, total sets, total duration).
 
 FILTER OPTIONS:
 - exerciseKey: filter exercise data to a specific exercise_key (e.g. "bench_press")
@@ -80,7 +81,7 @@ When groupBy is "date" or "week" (time-series), each bucket represents a single
 time period. "sum" answers "how much total that day/week", "average" answers
 "average per entry that day/week".
 
-When groupBy is categorical ("dayOfWeek", "hourOfDay", "weekdayVsWeekend", "item"),
+When groupBy is categorical ("dayOfWeek", "hourOfDay", "weekdayVsWeekend", "item", "category"),
 each bucket pools data from MANY instances across the query period. The user
 almost always wants to compare a TYPICAL bucket, not a volume total that's
 biased by how many times that bucket appears in the period. Default to "average"
