@@ -71,6 +71,7 @@ export interface ChartDSL {
 
   filter?: {
     exerciseKey?: string;
+    exerciseSubtype?: string;
     dayOfWeek?: number[]; // 0=Sun … 6=Sat
     category?: "Cardio" | "Strength";
   };

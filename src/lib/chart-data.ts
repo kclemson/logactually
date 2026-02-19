@@ -42,7 +42,7 @@ export async function fetchChartData(
   if (dsl.source === "food") {
     return fetchFoodData(supabase, startDate, needsHourly, needsItem);
   }
-  return fetchExerciseData(supabase, startDate, needsHourly, dsl.filter?.exerciseKey, needsItem, needsCategory, dsl.filter?.category);
+  return fetchExerciseData(supabase, startDate, needsHourly, dsl.filter?.exerciseKey, needsItem, needsCategory, dsl.filter?.category, dsl.filter?.exerciseSubtype);
 }
 
 // ── Food fetcher ────────────────────────────────────────────
@@ -129,15 +129,19 @@ async function fetchExerciseData(
   needsItem: boolean = false,
   needsCategory: boolean = false,
   categoryFilter?: "Cardio" | "Strength",
+  exerciseSubtypeFilter?: string,
 ): Promise<DailyTotals> {
   let query = supabase
     .from("weight_sets")
-    .select("logged_date, exercise_key, description, sets, duration_minutes, distance_miles, exercise_metadata, created_at")
+    .select("logged_date, exercise_key, description, sets, duration_minutes, distance_miles, exercise_metadata, created_at, exercise_subtype")
     .gte("logged_date", startDate)
     .order("logged_date", { ascending: true });
 
   if (exerciseKeyFilter) {
     query = query.eq("exercise_key", exerciseKeyFilter);
+  }
+  if (exerciseSubtypeFilter) {
+    query = query.eq("exercise_subtype", exerciseSubtypeFilter);
   }
 
   const { data, error } = await query;
