@@ -17,6 +17,7 @@ interface SavedItemRowProps {
   expandable?: boolean;
   isExpanded?: boolean;
   onToggleExpand?: () => void;
+  nameAppend?: ReactNode;
   meta?: ReactNode;
   children?: ReactNode;
   existingNames?: string[];
@@ -35,6 +36,7 @@ export function SavedItemRow({
   expandable = true,
   isExpanded = false,
   onToggleExpand,
+  nameAppend,
   meta,
   children,
   existingNames = [],
@@ -63,7 +65,7 @@ export function SavedItemRow({
         <div className="flex items-center gap-1 flex-1 min-w-0">
           <div
             className={cn(
-              'flex-1 min-w-0 text-sm cursor-text hover:bg-muted/50 focus-within:bg-focus-bg focus-within:ring-2 focus-within:ring-focus-ring rounded px-1 py-0.5 transition-colors',
+              'min-w-0 text-sm cursor-text hover:bg-muted/50 focus-within:bg-focus-bg focus-within:ring-2 focus-within:ring-focus-ring rounded px-1 py-0.5 transition-colors',
               flashError && 'ring-2 ring-destructive bg-destructive/10'
             )}
           >
@@ -78,6 +80,9 @@ export function SavedItemRow({
               className="focus:outline-none"
             />
           </div>
+          {nameAppend && (
+            <span className="text-xs text-muted-foreground shrink-0">{nameAppend}</span>
+          )}
         </div>
 
         {meta && (
