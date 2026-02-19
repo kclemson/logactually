@@ -1,28 +1,22 @@
 
 
-## Simplify prompt: default to `entries` when metric is ambiguous
+## Add `limit` field to chart DSL
 
 ### Problem
 
-The previously proposed fix was too narrow — it only addressed `category` comparisons defaulting to `cal_burned`. But the same issue applies broadly: when the user asks a vague question like "cardio vs strength split" or "exercise breakdown," the AI shouldn't guess a specific metric like `cal_burned` or `sets`. It should default to `entries` (session count) since that's the most universally meaningful and consistently populated metric.
+The DSL has no way to cap the number of results, so "top 10" queries return all items.
 
 ### Solution
 
-Add one short general guideline to the prompt instead of a category-specific rule.
+Add an optional `limit` field to the schema and a single line of prompt guidance. The AI model understands the concept of limiting results -- it just needs the field to exist.
 
 ### Changes
 
 | File | Change |
 |---|---|
-| `supabase/functions/generate-chart-dsl/index.ts` | Add a brief "DEFAULT METRIC" note in the GENERAL section at the bottom of the prompt |
+| `src/lib/chart-types.ts` | Add `limit?: number` to `ChartDSL` interface |
+| `src/lib/chart-dsl.ts` | After sorting, slice: `if (dsl.limit) dataPoints = dataPoints.slice(0, dsl.limit);` |
+| `supabase/functions/generate-chart-dsl/index.ts` | Add `"limit": "<positive integer or null>"` to the DSL JSON schema in the prompt |
 
-### Prompt addition (in the GENERAL section)
-
-```
-- When the user's request does not specify a metric (e.g. "cardio vs strength
-  split", "exercise breakdown", "what do I eat"), default to "entries" (session
-  count). It is the most universally populated and intuitive measure of activity.
-```
-
-This covers category splits, vague breakdowns, and any other case where the AI would otherwise guess a metric that may be sparsely populated.
+No additional prompt prose needed -- the field name and type are self-explanatory to the model.
 
