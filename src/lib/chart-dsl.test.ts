@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { executeDSL, type ChartDSL } from "./chart-dsl";
-import type { DailyTotals } from "@/hooks/useGenerateChart";
+import { executeDSL } from "./chart-dsl";
+import type { ChartDSL, DailyTotals } from "./chart-types";
 
 const makeTotals = (): DailyTotals => ({
   food: {
@@ -43,7 +43,6 @@ describe("executeDSL", () => {
       aggregation: "average",
     };
     const result = executeDSL(dsl, makeTotals());
-    // Mon=2000, Tue=1800, Wed=2200 — each day has 1 value
     expect(result.data).toHaveLength(3);
     expect(result.data[0].label).toBe("Mon");
     expect(result.data[0].value).toBe(2000);
@@ -59,7 +58,6 @@ describe("executeDSL", () => {
       aggregation: "average",
     };
     const result = executeDSL(dsl, makeTotals());
-    // All 3 dates are weekdays
     expect(result.data).toHaveLength(1);
     expect(result.data[0].label).toBe("Weekdays");
   });
@@ -75,7 +73,6 @@ describe("executeDSL", () => {
       aggregation: "sum",
     };
     const result = executeDSL(dsl, makeTotals());
-    // Day 1: protein=150 → 600cal / (600+800+720)=2120 → 28%
     expect(result.data[0].value).toBe(28);
   });
 
@@ -101,7 +98,7 @@ describe("executeDSL", () => {
       metric: "cal",
       groupBy: "date",
       aggregation: "sum",
-      filter: { dayOfWeek: [1] }, // Monday only
+      filter: { dayOfWeek: [1] },
     };
     const result = executeDSL(dsl, makeTotals());
     expect(result.data).toHaveLength(1);
@@ -133,5 +130,65 @@ describe("executeDSL", () => {
     };
     const result = executeDSL(dsl, makeTotals());
     expect(result.chartType).toBe("line");
+  });
+
+  it("groups by hourOfDay using foodByHour data", () => {
+    const totals: DailyTotals = {
+      food: {},
+      exercise: {},
+      foodByHour: {
+        7:  [{ cal: 400, protein: 20, carbs: 50, fat: 15, fiber: 5, sugar: 10, sat_fat: 5, sodium: 300, chol: 50, entries: 1 }],
+        12: [
+          { cal: 600, protein: 30, carbs: 70, fat: 20, fiber: 8, sugar: 15, sat_fat: 7, sodium: 500, chol: 80, entries: 1 },
+          { cal: 500, protein: 25, carbs: 60, fat: 18, fiber: 6, sugar: 12, sat_fat: 6, sodium: 400, chol: 70, entries: 1 },
+        ],
+        19: [{ cal: 800, protein: 40, carbs: 90, fat: 30, fiber: 10, sugar: 20, sat_fat: 10, sodium: 700, chol: 100, entries: 1 }],
+      },
+    };
+
+    const dsl: ChartDSL = {
+      chartType: "bar",
+      title: "Calories by Hour",
+      source: "food",
+      metric: "cal",
+      groupBy: "hourOfDay",
+      aggregation: "sum",
+    };
+
+    const result = executeDSL(dsl, totals);
+    expect(result.data).toHaveLength(3);
+    expect(result.data[0].label).toBe("7am");
+    expect(result.data[0].value).toBe(400);
+    expect(result.data[1].label).toBe("12pm");
+    expect(result.data[1].value).toBe(1100); // 600 + 500
+    expect(result.data[2].label).toBe("7pm");
+    expect(result.data[2].value).toBe(800);
+  });
+
+  it("groups by hourOfDay with average aggregation", () => {
+    const totals: DailyTotals = {
+      food: {},
+      exercise: {},
+      foodByHour: {
+        12: [
+          { cal: 600, protein: 30, carbs: 70, fat: 20, fiber: 8, sugar: 15, sat_fat: 7, sodium: 500, chol: 80, entries: 1 },
+          { cal: 400, protein: 20, carbs: 50, fat: 15, fiber: 5, sugar: 10, sat_fat: 5, sodium: 300, chol: 50, entries: 1 },
+        ],
+      },
+    };
+
+    const dsl: ChartDSL = {
+      chartType: "bar",
+      title: "Avg Calories by Hour",
+      source: "food",
+      metric: "cal",
+      groupBy: "hourOfDay",
+      aggregation: "average",
+    };
+
+    const result = executeDSL(dsl, totals);
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0].label).toBe("12pm");
+    expect(result.data[0].value).toBe(500); // (600+400)/2
   });
 });
