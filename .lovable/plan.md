@@ -1,55 +1,89 @@
 
-# Two Fixes: Add Doses 5 & 6, Restyle Dialog Typography
+# Three Changes to Medication Entry UX
 
-## Fix 1: Add doses 5 and 6 to "How often per day?"
+## Overview of changes
 
-The button array `[0, 1, 2, 3, 4]` needs two more entries. We also need defaults for dose times at counts 5 and 6 in `DOSE_TIME_DEFAULTS`.
+1. Reorder the content in `MedicationEntryInput` so the layout flows: name → schedule → (gap) → description → (gap) → [time] [dose] [unit] [Save] → dose count line → notes textarea
+2. Add conditional colour formatting to the "X of Y doses logged today" line
+3. Convert the inline `MedicationEntryInput` (and `LogEntryInput` for consistency) in the "By Type" view into a modal dialog with a backdrop overlay, instead of pushing the page content down
 
-```ts
-// Add to DOSE_TIME_DEFAULTS:
-5: ['6am', '10am', '2pm', '6pm', '10pm'],
-6: ['6am', '9am', '12pm', '3pm', '6pm', '9pm'],
+---
+
+## Change 1 — Reorder content in `MedicationEntryInput`
+
+**Current order inside the context block:**
+1. description
+2. schedule (e.g. `2x/day · morning, evening`)
+3. dose count ("X of Y doses logged today")
+
+**Target order (per mockup):**
+```
+Medication name           ← already at top (keep)
+2x/day · morning, evening ← pull schedule UP, out of the muted box
+[blank gap]
+description (in muted box) ← description goes inside the muted box alone
+[blank gap]
+[Time] [Dose] [mg] [Save] ← inputs row (keep)
+X of Y doses logged today  ← dose count moves BELOW the input row
+[Notes textarea]           ← (keep)
 ```
 
-The button row uses `flex-wrap` already so 5 and 6 will wrap cleanly on narrow dialogs.
+Concretely in `MedicationEntryInput.tsx`:
 
-Change `[0, 1, 2, 3, 4]` to `[0, 1, 2, 3, 4, 5, 6]`.
+- Move `scheduleSummary` line up to appear just below the name header (outside the muted box), as plain `text-xs text-muted-foreground`
+- The muted box now contains only `description` (if present)
+- After the `[Time] [Dose] [Save]` row, render the `doseCountLine` with conditional colour (see Change 2)
+- Notes textarea stays at the bottom
 
-## Fix 2: Match CalorieBurnDialog's lighter typography style
+---
 
-### What CalorieBurnDialog does
+## Change 2 — Conditional formatting for "X of Y doses logged today"
 
-- Section headings: `text-xs font-medium text-muted-foreground uppercase tracking-wider`
-- Field labels: `text-xs text-muted-foreground` (plain `<p>` tags, not `<Label>`)
-- Sub-notes: `text-[10px] text-muted-foreground/70`
-- Input values: standard input component, normal weight text
+Logic:
 
-### What EditLogTypeDialog currently does
+| Condition | Style |
+|---|---|
+| `dosesPerDay === 0` (as-needed) and `todayEntryCount > 0` | Neutral muted — just "N doses logged today" |
+| `todayEntryCount === 0` | Neutral muted — no emphasis needed |
+| `todayEntryCount > 0` and `todayEntryCount < dosesPerDay` | Amber/warning — partial, e.g. `text-amber-500` |
+| `todayEntryCount === dosesPerDay` | Green — on track, e.g. `text-green-500 dark:text-green-400` |
+| `todayEntryCount > dosesPerDay` | Red — over limit, e.g. `text-red-500` |
 
-- `<Label>` component — bakes in `font-medium` from `labelVariants` CVA — making every label bold
-- `<Input>` component — `text-sm` without any weight override, but inherits normal weight from the base (actually this is fine)
-- The bold labels + bright white text on dark creates the "overwhelming" feeling
+This gives a clear at-a-glance status without feeling alarming (amber is "good progress, not done" and green is "complete").
 
-### The fix
+Implementation: a small helper function `getDoseCountStyle(todayEntryCount, dosesPerDay)` returns a Tailwind class string. Applied to the `doseCountLine` paragraph below the input row.
 
-Replace `<Label>` elements with plain `<p>` tags styled as `text-xs text-muted-foreground` to match CalorieBurnDialog's pattern. This is what the CalorieBurnDialog uses and what gives the clean, layered visual hierarchy.
+---
 
-Specific changes in `EditLogTypeDialog.tsx`:
+## Change 3 — Convert inline entry form to a dialog with overlay
 
-1. **All `<Label>` elements** → `<p className="text-xs text-muted-foreground">` (or keep `<label>` HTML semantics with `for` attribute, but drop the Label component's font-medium). Since labels without `htmlFor` don't need the Radix Label component, use plain `<p>` for non-input labels and `<label>` for the ones with `htmlFor`.
+**Problem:** When "Log New" is clicked in "By Type" view, `MedicationEntryInput` (or `LogEntryInput`) renders inline, pushing the toolbar row up and the entries list down — cluttering the view.
 
-2. **Dialog title** stays as-is (it uses `text-title` which is correct).
+**Solution:** Wrap `MedicationEntryInput` and `LogEntryInput` in a simple modal dialog (using the existing `Dialog`/`DialogContent` from `@radix-ui/react-dialog`) so the background is masked and the data entry is focused.
 
-3. **"Dose 1", "Dose 2" sub-labels** inside the dose times section: switch from `<Label className="text-sm text-muted-foreground ...">` to `<p className="text-xs text-muted-foreground ...">`.
+The dialog:
+- No `DialogHeader` (the medication name is already inside `MedicationEntryInput` as a label)
+- `DialogContent` with `className="max-w-sm p-0"` to let `MedicationEntryInput` control its own padding
+- The existing `onCancel` closes the dialog, so no extra close button needed (the `X` inside `MedicationEntryInput` already handles that, and Radix provides an accessible dismiss)
+- For `LogEntryInput` (non-medication types), same wrapping
 
-4. **Input components** — the `Input` component already renders normal-weight text; no change needed there. The Textarea also renders normally.
+This applies only in "By Type" view mode. In "By Date" view mode, the existing inline behavior is fine (it's already inside the top section with a fixed min-height).
 
-5. **"As needed" / number pill buttons** — currently `font-medium` — soften to `font-normal` for unselected state, keep selected (teal) as-is.
+Actually, re-reading the user's request: "#3: When the user clicks 'log new', it moves the top row of dropdowns/buttons up a row..." — this is specifically about the "By Type" view's "Log New" button triggering inline entry. The fix: instead of `setShowInput(true)` inline, open a `Dialog` with the entry form inside.
 
-## Files Changed
+**Implementation approach:**
+
+In `OtherLog.tsx`, add a `showInputDialog` boolean state (separate from `showInput` which controls the By Date inline form). When in `viewMode === 'type'`, clicking "Log New" sets `showInputDialog(true)`. The `Dialog` containing `MedicationEntryInput` or `LogEntryInput` is rendered at the bottom of the page component (outside the section), and `onSubmit`/`onCancel` set `showInputDialog(false)`.
+
+The By Date inline form behaviour is unchanged.
+
+---
+
+## Files changed
 
 | File | Change |
 |---|---|
-| `src/components/EditLogTypeDialog.tsx` | (1) Add 5 & 6 to button array and DOSE_TIME_DEFAULTS; (2) Replace `<Label>` components with plain `<p className="text-xs text-muted-foreground">` throughout; soften unselected pill button font weight |
+| `src/components/MedicationEntryInput.tsx` | Reorder layout (schedule up, description in muted box alone, dose count below inputs with colour); add `getDoseCountStyle` helper |
+| `src/pages/OtherLog.tsx` | Add `showInputDialog` state; "Log New" in type view opens Dialog; render Dialog at bottom of component |
 
-No other files need changing.
+No DB changes. No new hooks needed.
