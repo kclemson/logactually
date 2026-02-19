@@ -16,6 +16,7 @@ export function useCustomLogEntriesForType(logTypeId: string | null) {
         .from('custom_log_entries')
         .select('*')
         .eq('log_type_id', logTypeId)
+        .order('logged_date', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(500);
 
