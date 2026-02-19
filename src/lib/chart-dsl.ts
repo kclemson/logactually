@@ -1,40 +1,14 @@
-import type { DailyTotals } from "@/hooks/useGenerateChart";
+import type { ChartDSL, DailyTotals } from "./chart-types";
 import type { ChartSpec } from "@/components/trends/DynamicChart";
 import { format, getDay, getISOWeek, getISOWeekYear } from "date-fns";
 
-// ── DSL Type ──────────────────────────────────────────────
-
-export interface ChartDSL {
-  chartType: "bar" | "line" | "area";
-  title: string;
-
-  source: "food" | "exercise";
-  metric: string;
-  derivedMetric?: string;
-
-  groupBy: "date" | "dayOfWeek" | "hourOfDay" | "weekdayVsWeekend" | "week";
-  aggregation: "sum" | "average" | "max" | "min" | "count";
-
-  filter?: {
-    exerciseKey?: string;
-    dayOfWeek?: number[]; // 0=Sun … 6=Sat
-  };
-
-  compare?: {
-    metric: string;
-    source?: "food" | "exercise";
-  };
-
-  sort?: "label" | "value_asc" | "value_desc";
-}
+// Re-export ChartDSL for backward compat
+export type { ChartDSL } from "./chart-types";
 
 // ── Known metrics ─────────────────────────────────────────
 
 const FOOD_METRICS = ["cal", "protein", "carbs", "fat", "fiber", "sugar", "sat_fat", "sodium", "chol", "entries"] as const;
 const EXERCISE_METRICS = ["sets", "duration", "distance", "cal_burned", "unique_exercises"] as const;
-
-type FoodMetric = typeof FOOD_METRICS[number];
-type ExerciseMetric = typeof EXERCISE_METRICS[number];
 
 // Derived formulas compute from raw food daily totals
 const DERIVED_FORMULAS: Record<string, (t: Record<string, number>) => number> = {
@@ -59,6 +33,12 @@ const DERIVED_FORMULAS: Record<string, (t: Record<string, number>) => number> = 
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+const HOUR_LABELS = [
+  "12am", "1am", "2am", "3am", "4am", "5am", "6am", "7am",
+  "8am", "9am", "10am", "11am", "12pm", "1pm", "2pm", "3pm",
+  "4pm", "5pm", "6pm", "7pm", "8pm", "9pm", "10pm", "11pm",
+];
+
 function getDayOfWeek(dateStr: string): number {
   return getDay(new Date(`${dateStr}T12:00:00`));
 }
@@ -71,7 +51,6 @@ function extractValue(
   dateStr: string,
 ): number | null {
   if (derivedMetric && DERIVED_FORMULAS[derivedMetric]) {
-    // Derived metrics only work on food source
     const foodDay = dailyTotals.food[dateStr];
     if (!foodDay) return null;
     return DERIVED_FORMULAS[derivedMetric](foodDay as unknown as Record<string, number>);
@@ -122,8 +101,6 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
     const allowed = new Set(dsl.filter.dayOfWeek);
     dates = dates.filter((d) => allowed.has(getDayOfWeek(d)));
   }
-  // exerciseKey filter — only relevant for exercise source with exerciseByKey
-  // For now, exerciseKey filter isn't applicable to daily aggregates (future enhancement)
 
   // Extract values per date
   const dateValues: Array<{ date: string; value: number }> = [];
@@ -152,7 +129,6 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
         const dow = getDayOfWeek(date);
         (buckets[dow] ??= []).push(value);
       }
-      // Order Mon-Sun (1,2,3,4,5,6,0)
       const dayOrder = [1, 2, 3, 4, 5, 6, 0];
       for (const dow of dayOrder) {
         const vals = buckets[dow];
@@ -187,7 +163,6 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
         const d = new Date(`${date}T12:00:00`);
         const weekKey = `${getISOWeekYear(d)}-W${String(getISOWeek(d)).padStart(2, "0")}`;
         (buckets[weekKey] ??= []).push(value);
-        // Track latest date per week for rawDate
         if (!weekDates[weekKey] || date > weekDates[weekKey]) {
           weekDates[weekKey] = date;
         }
@@ -202,9 +177,28 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
       break;
     }
     case "hourOfDay": {
-      // hourOfDay requires created_at timestamps which we don't have in dailyTotals
-      // Return empty with a note
-      dataPoints = [];
+      const hourlySource = dsl.source === "food"
+        ? dailyTotals.foodByHour
+        : dailyTotals.exerciseByHour;
+
+      if (!hourlySource) break;
+
+      for (let hour = 0; hour < 24; hour++) {
+        const entries = hourlySource[hour];
+        if (!entries || entries.length === 0) continue;
+
+        const values = entries.map((entry) => {
+          if (dsl.derivedMetric && DERIVED_FORMULAS[dsl.derivedMetric]) {
+            return DERIVED_FORMULAS[dsl.derivedMetric](entry as unknown as Record<string, number>);
+          }
+          return (entry as any)[dsl.metric] ?? 0;
+        });
+
+        dataPoints.push({
+          label: HOUR_LABELS[hour],
+          value: Math.round(aggregate(values, dsl.aggregation)),
+        });
+      }
       break;
     }
   }
@@ -218,7 +212,6 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
       case "value_desc":
         dataPoints.sort((a, b) => b.value - a.value);
         break;
-      // "label" = keep existing order
     }
   }
 
