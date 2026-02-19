@@ -1,53 +1,45 @@
 
-## Store and restore chart DSL for edit flow
+## Add value labels to line charts in DynamicChart
 
 ### Problem
 
-When you open a pinned chart to edit it, the DSL panel is empty because the DSL was never persisted. The `saved_charts` table only stores `chart_spec` (the rendering definition), not `chart_dsl` (the v2 intent object). So when the edit dialog opens, `chartDSL` state starts as `null`, and "Show DSL" shows nothing useful.
+The `labelRenderer` function in `DynamicChart.tsx` is designed for bar charts — it reads `x`, `y`, and `width` (rect-based geometry from Recharts' `Bar`). A `Line` + `LabelList` combination provides `cx`/`cy` (centre-point of each dot) instead. Currently the `LabelList` is only attached to the `Bar` element and the line chart branch has no labels at all, as visible in the screenshot.
 
-This matters for the Refine flow too: ideally a future iteration could include the saved DSL in the refinement conversation context.
+### Solution
 
----
+The fix is entirely self-contained in `DynamicChart.tsx` — no other files need to change. The approach reuses the same `_showLabel` flag, `formatValue` helper, and `labelInterval` logic already in place.
 
-### Three-part fix
+**1. Split `labelRenderer` into two specialised renderers — both private to the component**
 
-**1. Database — add `chart_dsl` column**
+- **`barLabelRenderer`** — identical to the current `labelRenderer`; uses `x + width/2` and `y - 4`
+- **`lineLabelRenderer`** — uses `cx` and `cy - 6`; skips rendering when the value would be zero/null so sparse line charts (e.g. fiber with missing days) don't clutter the baseline
 
-Add a nullable `jsonb` column `chart_dsl` to the `saved_charts` table. Nullable so all existing saved charts continue to work without migration data.
+Both renderers:
+- Check `chartData[index]?._showLabel` to respect the same thinning interval
+- Call `formatValue(value, valueFormat)` for consistent number formatting
+- Use the same `fill={color}`, `fontSize={7}`, `fontWeight={500}` styling
 
-```sql
-ALTER TABLE saved_charts ADD COLUMN IF NOT EXISTS chart_dsl jsonb;
+**2. Attach `LabelList` to the `Line` element**
+
+```tsx
+<Line ...>
+  <LabelList dataKey={dataKey} content={lineLabelRenderer} />
+</Line>
 ```
 
-**2. `useSavedCharts.ts` — persist DSL on save/update**
+**3. Increase `LineChart` top margin from 12 → 16** to match the bar chart, giving labels room above the topmost dot (currently they would clip).
 
-- Extend the `SavedChart` interface to include `chart_dsl?: unknown`
-- Update `saveMutation` to accept and store an optional `chartDsl` field
-- Update `updateMutation` similarly
+### Why this is already future-proof for built-in charts
 
-**3. `CustomChartDialog.tsx` + `Trends.tsx` — thread DSL through the edit path**
+The request notes that all built-in charts will eventually migrate to `DynamicChart`. Because the label logic lives entirely inside the shared component (driven by `ChartSpec.chartType`), any chart migrated to use `DynamicChart` with `chartType: "line"` will automatically get the same label behaviour — no per-chart changes needed.
 
-- `CustomChartDialogProps.initialChart` gains an optional `chartDsl?: unknown` field
-- On mount, `chartDSL` state is pre-populated from `initialChart.chartDsl` if present
-- `handleSave` passes `chartDsl: chartDSL` to the save/update mutations
-- In `Trends.tsx`, `editingChart` state type is extended to include `chartDsl?: unknown`, and when opening the edit dialog it maps `chart.chart_dsl` onto that field
+### What stays the same
 
----
+- `_showLabel` thinning interval — unchanged, same `getLabelInterval` call
+- Touch tooltip/dismiss behaviour — unaffected
+- Bar chart labels — untouched (the `barLabelRenderer` is just a renamed copy of the current code)
+- `ChartSpec` type — no new fields required
 
-### What this achieves
+### File changed
 
-- **Edit → Show DSL**: works immediately for newly-saved charts; existing charts will populate DSL the next time they're saved/refined
-- **Refine loop**: DSL is now in-memory and correctly populated from the saved version, ready for future use in refinement context
-- **No data loss**: the column is nullable so all existing rows are unaffected
-- **v1 charts**: `chart_dsl` will be `null` for v1 charts (they don't produce a DSL), which is correct — the debug panel for v1 already shows `chart_spec` instead
-
----
-
-### Files changed
-
-| File | Change |
-|---|---|
-| DB migration | Add `chart_dsl jsonb` column to `saved_charts` |
-| `src/hooks/useSavedCharts.ts` | Extend type + accept/persist `chartDsl` in save/update mutations |
-| `src/components/CustomChartDialog.tsx` | Accept `chartDsl` in `initialChart`; seed state on mount; pass to save |
-| `src/pages/Trends.tsx` | Include `chart_dsl` from DB record when setting `editingChart` |
+Only `src/components/trends/DynamicChart.tsx` — roughly 15 lines added/changed.
