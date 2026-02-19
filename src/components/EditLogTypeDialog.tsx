@@ -12,6 +12,7 @@ interface EditLogTypeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (id: string, params: {
+    name?: string;
     description: string | null;
     unit?: string | null;
     default_dose?: number | null;
@@ -19,6 +20,7 @@ interface EditLogTypeDialogProps {
     dose_times?: string[] | null;
   }) => void;
   isLoading?: boolean;
+  existingNames?: string[];
 }
 
 const DOSE_TIME_DEFAULTS: Record<number, string[]> = {
@@ -34,9 +36,12 @@ export function EditLogTypeDialog({
   onOpenChange,
   onSave,
   isLoading,
+  existingNames = [],
 }: EditLogTypeDialogProps) {
   const isMedication = logType.value_type === 'medication';
 
+  const [name, setName] = useState(logType.name);
+  const [nameError, setNameError] = useState('');
   const [description, setDescription] = useState(logType.description ?? '');
   const [doseAmount, setDoseAmount] = useState(
     logType.default_dose != null ? String(logType.default_dose) : ''
@@ -50,7 +55,6 @@ export function EditLogTypeDialog({
     if (count === 0) {
       setDoseTimes([]);
     } else if (count > doseTimes.length) {
-      // Extend with defaults for new slots
       const defaults = DOSE_TIME_DEFAULTS[count] ?? [];
       setDoseTimes(prev => {
         const next = [...prev];
@@ -71,9 +75,20 @@ export function EditLogTypeDialog({
   };
 
   const handleSave = () => {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setNameError('Name is required');
+      return;
+    }
+    if (existingNames.map(n => n.toLowerCase()).includes(trimmedName.toLowerCase())) {
+      setNameError('A log type with this name already exists');
+      return;
+    }
+
     if (isMedication) {
       const parsedAmount = parseFloat(doseAmount);
       onSave(logType.id, {
+        name: trimmedName,
         description: description.trim() || null,
         unit: doseUnit.trim() || null,
         default_dose: !isNaN(parsedAmount) && parsedAmount > 0 ? parsedAmount : null,
@@ -81,7 +96,7 @@ export function EditLogTypeDialog({
         dose_times: dosesPerDay > 0 ? doseTimes : [],
       });
     } else {
-      onSave(logType.id, { description: description.trim() || null });
+      onSave(logType.id, { name: trimmedName, description: description.trim() || null });
     }
     onOpenChange(false);
   };
@@ -90,10 +105,25 @@ export function EditLogTypeDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>{logType.name}</DialogTitle>
+          <DialogTitle>{isMedication ? 'Edit medication' : 'Edit log type'}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Name */}
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-name" className="text-sm">Name</Label>
+            <Input
+              id="edit-name"
+              value={name}
+              onChange={(e) => { setName(e.target.value); setNameError(''); }}
+              autoComplete="off"
+              className="text-sm"
+            />
+            {nameError && (
+              <p className="text-xs text-destructive">{nameError}</p>
+            )}
+          </div>
+
           {isMedication && (
             <>
               {/* Standard dose */}
