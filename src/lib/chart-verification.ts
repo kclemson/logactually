@@ -483,6 +483,116 @@ function verifyCategoricalWeekday(
   return { status: "success", total, matched, accuracy: Math.round((matched / total) * 100), allExact, toleranceLabel, mismatches, allComparisons, method: "deterministic" };
 }
 
+/* ── Categorical exercise verification ────────────────────── */
+
+/** Normalize a label or key for fuzzy matching: lowercase, replace _/- with spaces, trim. */
+function normalizeExerciseLabel(s: string): string {
+  return s.toLowerCase().replace(/[_-]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+/** Map common chart dataKey names to exerciseByKey fields. */
+const EXERCISE_BY_KEY_FIELD_MAP: Record<string, string> = {
+  heart_rate: "avg_heart_rate",
+  avg_heart_rate: "avg_heart_rate",
+  average_heart_rate: "avg_heart_rate",
+  effort: "avg_effort",
+  avg_effort: "avg_effort",
+  average_effort: "avg_effort",
+  duration: "avg_duration",
+  avg_duration: "avg_duration",
+  average_duration: "avg_duration",
+  total_duration: "total_duration",
+  count: "count",
+  frequency: "count",
+  entries: "count",
+  cal_burned: "total_cal_burned",
+  calories_burned: "total_cal_burned",
+  total_cal_burned: "total_cal_burned",
+  distance: "total_distance",
+  total_distance: "total_distance",
+  sets: "total_sets",
+  total_sets: "total_sets",
+};
+
+function verifyCategoricalExercise(
+  spec: ChartSpec,
+  dailyTotals: DailyTotals,
+): VerificationResult {
+  const exerciseByKey = dailyTotals.exerciseByKey;
+  if (!exerciseByKey || Object.keys(exerciseByKey).length === 0) {
+    return { status: "unavailable", reason: "No per-exercise aggregates available" };
+  }
+
+  // Only attempt for exercise-sourced charts
+  if (spec.dataSource !== "exercise") {
+    return { status: "unavailable", reason: "Not an exercise chart" };
+  }
+
+  const { data, dataKey } = spec;
+  const xField = spec.xAxis.field;
+  const labels = data.map((d) => String(d[xField] ?? ""));
+
+  // Guard: if labels look like dates or weekdays, skip
+  const weekdayCount = labels.filter((l) => weekdayIndex(l) !== null).length;
+  if (weekdayCount >= labels.length * 0.5) {
+    return { status: "unavailable", reason: "Weekday chart, not exercise-categorical" };
+  }
+
+  // Resolve the field in exerciseByKey
+  const mappedField = EXERCISE_BY_KEY_FIELD_MAP[dataKey];
+  if (!mappedField) {
+    return { status: "unavailable", reason: `Cannot verify metric "${dataKey}" for exercise-categorical chart` };
+  }
+
+  // Build a lookup: normalized key/description -> exerciseByKey entry
+  const normalizedLookup = new Map<string, { key: string; entry: any }>();
+  for (const [key, entry] of Object.entries(exerciseByKey)) {
+    normalizedLookup.set(normalizeExerciseLabel(key), { key, entry });
+    if (entry.description) {
+      normalizedLookup.set(normalizeExerciseLabel(entry.description), { key, entry });
+    }
+  }
+
+  const mismatches: VerificationResult["mismatches"] = [];
+  const allComparisons: VerificationResult["allComparisons"] = [];
+  let matched = 0;
+  let total = 0;
+  let unmatchedLabels = 0;
+
+  for (const point of data) {
+    const label = String(point[xField] ?? "");
+    const normalized = normalizeExerciseLabel(label);
+    const found = normalizedLookup.get(normalized);
+    if (!found) {
+      unmatchedLabels++;
+      continue;
+    }
+
+    total++;
+    const aiValue = Number(point[dataKey]) || 0;
+    const actualValue = Number(found.entry[mappedField]) || 0;
+    const rounded = Math.round(actualValue * 10) / 10;
+    const delta = Math.round((aiValue - rounded) * 10) / 10;
+    const isMatch = isClose(aiValue, rounded, "average");
+
+    allComparisons.push({ label, ai: aiValue, actual: rounded, delta, match: isMatch });
+    if (isMatch) {
+      matched++;
+    } else {
+      mismatches.push({ date: label, ai: aiValue, actual: rounded, delta });
+    }
+  }
+
+  // If we couldn't match most labels, bail out
+  if (total === 0 || unmatchedLabels > data.length * 0.5) {
+    return { status: "unavailable", reason: "Could not match chart labels to exercise keys" };
+  }
+
+  const allExact = matched === total && allComparisons.every(c => c.delta === 0);
+  const toleranceLabel = "within 2% or 2 units";
+  return { status: "success", total, matched, accuracy: Math.round((matched / total) * 100), allExact, toleranceLabel, mismatches, allComparisons, method: "deterministic" };
+}
+
 /* ── Main entry point ────────────────────────────────────── */
 
 export function verifyChartData(
@@ -501,7 +611,13 @@ export function verifyChartData(
     return weekdayResult;
   }
 
-  // 3. Heuristic couldn't help — fall back to AI's self-declared verification
+  // 3. Try categorical exercise verification (exercise-keyed, known metric)
+  const exerciseResult = verifyCategoricalExercise(spec, dailyTotals);
+  if (exerciseResult.status === "success") {
+    return exerciseResult;
+  }
+
+  // 4. Heuristic couldn't help — fall back to AI's self-declared verification
   if (spec.verification && spec.verification.type) {
     if (spec.verification.type === "daily") {
       return verifyDaily(spec, dailyTotals);
@@ -511,11 +627,11 @@ export function verifyChartData(
     }
   }
 
-  // 4. AI explicitly declared null → unverifiable
+  // 5. AI explicitly declared null → unverifiable
   if (spec.verification === null) {
     return { status: "unavailable", reason: "The AI indicated this chart uses derived metrics that can't be verified against daily totals" };
   }
 
-  // 5. No verification possible
+  // 6. No verification possible
   return deterministicResult;
 }
