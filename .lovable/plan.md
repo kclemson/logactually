@@ -1,35 +1,36 @@
 
 
-# Remove remaining anchoring examples from generate-chart-dsl prompt
+# Shorten chart titles
 
-## Changes
+## Problem
 
-**Single file: `supabase/functions/generate-chart-dsl/index.ts`**
+Chart titles like "Walking-Only vs. Other Workout Days" and "Logging Consistency by Day of Week" wrap to two lines in the card layout. The only guidance in both prompts is `"title should be concise and descriptive"`.
 
-### 1. Line 189 — Remove inline examples from dayClassification intro
+## Fix
 
-Current:
+Update the title guidance in both edge functions to enforce brevity:
+
+**`supabase/functions/generate-chart-dsl/index.ts` (line 167)**
+
+Change:
 ```
-Use groupBy "dayClassification" when the user wants to partition their logged days into two labeled groups and count days in each group. This produces a 2-bar chart showing the count of days in each bucket. Examples: "rest days vs workout days", "high protein days vs low protein days", "leg day vs non-leg day", "days I only walked vs days I did more".
+- title should be concise and descriptive
 ```
-
-Change to:
+To:
 ```
-Use groupBy "dayClassification" when the user wants to partition their logged days into two labeled groups and count days in each group. This produces a 2-bar chart showing the count of days in each bucket.
-```
-
-The six rule descriptions that follow already convey when dayClassification applies. The examples add anchoring risk (notably "days I only walked" is still here) without adding clarity.
-
-### 2. Line 228 — Remove defensive "Do NOT use this for..." list
-
-Current:
-```
-Do NOT use this for heart rate, common foods, exercise frequency, cardio vs strength, rest day classification, or any query that maps cleanly to the available metrics, groupBy options, and filters above.
+- title should be short (under 5 words) and descriptive
 ```
 
-Remove entirely. If a request maps to the schema, the model should recognize that from the schema itself. This list is incomplete by nature and risks creating false negatives if it doesn't mention a valid capability.
+**`supabase/functions/generate-chart/index.ts` (line 145)**
 
-### Why this is the right scope
+Same change:
+```
+- title should be short (under 5 words) and descriptive
+```
 
-These are the last two instances of the over-specification pattern that caused the `only_keys` bug. Everything else in the prompt (calories_burned warning, category vs filter.category, frequency disambiguation) addresses genuinely non-obvious distinctions that the model can't reliably infer from the schema alone.
+## Why this works
+
+Titles like "Daily Fiber Intake", "Exercise Category Split", and "Weekly Average Calories" already fit on one line and are under 5 words. The problematic ones ("Walking-Only vs. Other Workout Days" = 6 words, "Logging Consistency by Day of Week" = 6 words, "Estimated Calories from Fast Food Items" = 7 words) would be guided toward shorter forms like "Walking vs Workout Days", "Logging by Weekday", "Fast Food Calories".
+
+Existing saved charts won't change -- this only affects newly generated titles.
 
