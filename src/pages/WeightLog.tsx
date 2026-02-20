@@ -633,11 +633,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   );
 
   return (
-    <div className={cn(
-      "space-y-4",
-      mountDir === 'left' && 'animate-slide-in-from-right',
-      mountDir === 'right' && 'animate-slide-in-from-left',
-    )}>
+    <div className="space-y-4">
       {/* Weight Input Section */}
       <section>
         <LogInput
@@ -705,7 +701,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
       </section>
 
       {/* Swipe zone: DateNavigation + entries (swipe left = next day, swipe right = prev day) */}
-      <div ref={swipeHandlers.ref} onTouchStart={swipeHandlers.onTouchStart} onTouchEnd={swipeHandlers.onTouchEnd} style={{ touchAction: 'pan-y' }} className="min-h-[calc(100dvh-8rem)] md:min-h-0">
+      <div ref={swipeHandlers.ref} onTouchStart={swipeHandlers.onTouchStart} onTouchEnd={swipeHandlers.onTouchEnd} style={{ touchAction: 'pan-y' }} className={cn("min-h-[calc(100dvh-8rem)] md:min-h-0", mountDir === 'left' && 'animate-slide-in-from-right', mountDir === 'right' && 'animate-slide-in-from-left')}>
         {/* Date Navigation */}
         <DateNavigation
           selectedDate={selectedDate}
