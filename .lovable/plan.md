@@ -1,49 +1,47 @@
 
-# Debug and fix: dayClassification charts rendering empty
+# Trim over-specified prompt examples in both charting edge functions
 
-## What we know
-- The v2 DSL is generated correctly with `groupBy: "dayClassification"` and `classify.rule: "only_keys"`
-- The database has valid data (walking-only days exist: Jan 24, 26, 30, Feb 7, 19, 20)
-- The chart card renders (title, aiNote visible) but with zero bars
-- No console errors are thrown
-- The `only_keys` logic and `tokensToEvaluate` fix are correct in source code
+## What's happening
 
-## Root cause hypothesis
-Since the logic traces perfectly on paper but produces empty output at runtime, the most likely cause is that `dailyTotals.exerciseKeysByDate` is `undefined` or `{}` when `executeDSL` runs. This could happen if:
-1. The build hasn't fully deployed the latest chart-data.ts changes that populate `exerciseKeysByDate`
-2. A subtle runtime issue strips the property during object transfer
+The model is being over-guided by inline examples and trigger-phrase lists that don't add clarity beyond what the rule descriptions already convey. This causes two problems:
+1. Specific examples create implicit anchoring — the model pattern-matches on phrasing instead of reasoning from semantics (the `only_keys` / "only walked" bug is caused by exactly this)
+2. More text = more surface area for contradictions and stale guidance as the system evolves
 
-## Plan
+## Audit findings
 
-### Step 1: Add diagnostic console.log in executeDSL
-Add a temporary log at the top of the `dayClassification` case in `src/lib/chart-dsl.ts` to expose the actual runtime state:
+### `generate-chart-dsl/index.ts` (v2 DSL prompt)
 
-```ts
-case "dayClassification": {
-  const classify = dsl.classify;
-  if (!classify) break;
-  console.log("[dayClassification] exerciseKeysByDate keys:", Object.keys(dailyTotals.exerciseKeysByDate ?? {}), "classify:", classify.rule);
-  // ... rest of logic
-```
+**RULE SELECTION GUIDE (lines 224-231)** — Remove entirely. Each of the 7 bullet points is a restatement of the rule description that immediately precedes it (lines 202-222). The descriptions are already semantically unambiguous; the guide only adds risk of mapping errors like the `only_keys` bug.
 
-This will immediately reveal whether `exerciseKeysByDate` is empty at runtime.
+**CLASSIFICATION EXAMPLES (lines 233-239)** — Trim from 5 to 2. Keep only the two that are genuinely non-obvious:
+- `"days I ran vs days I only walked"` → `any_key` (counter-intuitive: "only walked" could suggest `only_keys` but the framing is comparative, so `any_key` on running is correct)
+- `"high protein days vs low"` → `threshold` with `source: "food"` (the cross-source requirement isn't obvious from the schema description)
 
-### Step 2: Add diagnostic log in fetchExerciseData return
-Add a log in `src/lib/chart-data.ts` right before the return statement to confirm the data is populated at fetch time:
+Remove:
+- `"rest days vs workout days"` → derivable from the `any_strength` description
+- `"leg day vs non-leg day"` → the model should select the keys itself; hard-coding a specific list is brittle
+- `"days where I only walked vs days with more"` → the known bug case; removing it lets the `all_cardio` description do the right thing
 
-```ts
-console.log("[chart-data] exerciseKeysByDate sample:", Object.keys(exerciseKeysByDate).slice(0, 3), "total dates:", Object.keys(exerciseKeysByDate).length);
-return { food: {}, exercise, exerciseByHour, exerciseByItem, exerciseByCategory, exerciseKeysByDate };
-```
+**`only_keys` rule (lines 210-220)** — The bullet-point sub-rules and the final example are redundant. Trim to the essential semantic content: what the rule means, the two token formats, and the subtype-vs-plain-key guidance (which is genuinely non-obvious).
 
-### Step 3: Test and identify the gap
-Generate a dayClassification chart and check the console:
-- If chart-data log shows populated data but executeDSL log shows empty -- the property is lost in transit
-- If chart-data log also shows empty -- there's a bug in the seenKeys loop
-- If both show data -- the issue is elsewhere (sorting/limiting/rendering)
+**ROLLING WINDOW (line 116)** — The trigger-phrase list ("rolling average", "7-day average", "smoothed", "trend line", "moving average") is unnecessary. Remove the phrase list, keep `window=7 for a 7-day trailing average` as the one concrete example (number format, not phrase anchoring).
 
-### Step 4: Fix based on findings
-Apply the targeted fix once the root cause is identified from the logs.
+**CUMULATIVE TRANSFORM (lines 118-119)** — Same pattern. Remove the trigger-phrase list, keep the example since it shows the format.
 
-### Step 5: Remove diagnostic logs
-Clean up the temporary console.log statements after the fix is confirmed working.
+---
+
+### `generate-chart/index.ts` (v1 prompt)
+
+**SCHEMA_SYSTEM_PROMPT RULES (lines 143-152)** — Four `"for X → do Y"` inline examples are entirely redundant with the groupBy/metric descriptions above them. Remove all four, keep only the remaining two bullets about sort and chart type.
+
+**Common categorical patterns (lines 55-58)** — "by hour of day → 24 buckets labeled 12am–11pm" and "by day of week → 7 buckets, ordered by weekday name" are derivable from the schema. Remove these two sub-bullets, keep the general description of categorical vs time-series.
+
+---
+
+## Changes
+
+Two files:
+- `supabase/functions/generate-chart-dsl/index.ts` — remove RULE SELECTION GUIDE, trim CLASSIFICATION EXAMPLES to 2, trim `only_keys` sub-bullets and inline example, remove trigger-phrase lists from ROLLING WINDOW and CUMULATIVE TRANSFORM sections
+- `supabase/functions/generate-chart/index.ts` — remove the 4 `→` inline examples from SCHEMA_SYSTEM_PROMPT, remove the 2 "common categorical patterns" sub-bullets
+
+Both edge functions are deployed automatically after saving.
