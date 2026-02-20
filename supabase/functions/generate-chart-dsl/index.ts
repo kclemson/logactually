@@ -165,6 +165,8 @@ If the user's request has more than one meaningfully different interpretation, r
 
 Each option must be a complete DSL object with a distinct aiNote. Maximum 3 options. Only use this when the interpretations would produce genuinely different charts — not just minor variations.
 
+**Single-series constraint:** The DSL renders one data series only. When the user wants to compare two subtypes (e.g. "walking vs running"), only groupBy "item" can show them side by side — never offer groupBy "date" as an alternative interpretation, because it collapses both subtypes into a single line and loses the comparison.
+
 UNSUPPORTED REQUEST:
 
 If the user's request CANNOT be expressed using the available schema — specifically:
