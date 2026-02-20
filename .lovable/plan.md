@@ -1,88 +1,120 @@
 
-# Scope correction: gate My Charts on `canUseCharts = isAdmin || isBeta`
+# Refined `dayClassification` DSL: handling intensity within cardio
 
-## What was wrong in the previous plan description
+## The problem with the previous design
 
-The plan text said "The food/exercise AI Ask buttons and other features that are admin-only remain untouched." That was inaccurate — the Ask AI buttons are NOT admin-gated at all; they're available to everyone. This doesn't change what needs to happen, it just means there's no risk of accidentally touching those buttons. The two `isAdmin` guards in `Trends.tsx` are exclusively around the My Charts feature (the `+ Chart` button and the My Charts collapsible section).
+The previous `classify` rules (`any_strength`, `all_cardio`, `any_key`, `threshold`) treat all cardio as equivalent. But "rest day" semantics require distinguishing *intensity within cardio*: walking is low-intensity, running is not; leisure cycling might be, aggressive interval cycling is not.
 
-## Confirmed scope: exactly two `isAdmin` references in `Trends.tsx` relate to My Charts
+The schema already encodes this nuance:
+- `exercise_key` distinguishes activity type (`walk_run`, `cycling`, `rowing`, etc.)
+- `exercise_subtype` distinguishes variants within a key (`walking`, `running`, `hiking` for `walk_run`)
+- Ad-hoc activities (gardening, etc.) are stored as free-form `exercise_key` values that won't match any canonical cardio key
 
-| Line | Current | After |
-|---|---|---|
-| 346 | `{isAdmin && <Button … + Chart>}` | `{canUseCharts && <Button … + Chart>}` |
-| 359 | `{isAdmin && savedCharts.length > 0 && (` | `{canUseCharts && savedCharts.length > 0 && (` |
+The missing rule is: **"this day contained only activities from a low-intensity allowlist"** — which is the inverse of `any_key`. We need `only_keys`: a day is TRUE if every exercise key (and optionally subtype) logged that day is within a specified allowlist.
 
-Everything else (`isAdmin` used for DevTools panel, admin page navigation, etc.) is untouched.
+## Revised rule set
 
-## Full change set
-
-### 1. Database migration — add `beta` to the `app_role` enum
-
-```sql
-ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'beta';
+```
+rule: "any_strength"   — day is TRUE if ANY exercise logged has isCardio=false
+rule: "all_cardio"     — day is TRUE if ALL exercises logged are cardio
+rule: "any_cardio"     — day is TRUE if ANY cardio exercise was logged
+rule: "any_key"        — day is TRUE if ANY of keys[] appears on that day
+rule: "only_keys"      — day is TRUE if EVERY exercise on that day is within keys[] (optionally matched by subtype too)
+rule: "threshold"      — day is TRUE if daily metric value meets thresholdOp + thresholdValue (food source)
 ```
 
-Non-destructive. The existing `has_role()` security definer function and `user_roles` RLS policies already cover this new value — no policy changes needed.
+The new `only_keys` rule is what makes "rest day" semantics work correctly.
 
-### 2. New hook: `src/hooks/useIsBeta.ts`
+## How key+subtype matching works for `only_keys`
 
-```ts
-import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
+The `keys` array supports two formats:
+- `"walk_run"` — matches any `walk_run` entry regardless of subtype
+- `"walk_run:walking"` — matches only `walk_run` entries where `exercise_subtype = 'walking'`
+- `"walk_run:hiking"` — matches only hiking entries
 
-export function useIsBeta() {
-  const { user } = useAuth();
-  return useQuery({
-    queryKey: ['isBeta', user?.id],
-    queryFn: async () => {
-      if (!user) return false;
-      const { data, error } = await supabase
-        .rpc('has_role', { _user_id: user.id, _role: 'beta' });
-      if (error) return false;
-      return data === true;
-    },
-    enabled: !!user,
-    staleTime: 5 * 60 * 1000,
-  });
+So "your rest day" definition becomes:
+
+```json
+{
+  "classify": {
+    "rule": "only_keys",
+    "keys": ["walk_run:walking", "walk_run:hiking", "other"],
+    "trueLabel": "Rest Days",
+    "falseLabel": "Active Days"
+  }
 }
 ```
 
-Exact mirror of `useIsAdmin.ts` — same pattern, same staleTime.
+This correctly handles:
+- Walk logged with subtype `walking` → rest day ✓
+- Walk logged with subtype `running` → NOT a rest day ✓
+- `gardening` (ad-hoc key, not in allowlist) → NOT a rest day ✓
+- `bench_press` (strength) → NOT a rest day ✓
 
-### 3. `src/pages/Trends.tsx` — two-line change
+And for someone who considers moderate cycling a rest day:
 
-Add `useIsBeta` import, derive `canUseCharts`, replace the two occurrences:
-
-```ts
-import { useIsBeta } from "@/hooks/useIsBeta";
-
-// Near top of component:
-const { data: isAdmin } = useIsAdmin();
-const { data: isBeta } = useIsBeta();
-const canUseCharts = isAdmin || isBeta;
+```json
+{
+  "classify": {
+    "rule": "only_keys",
+    "keys": ["walk_run:walking", "cycling"],
+    "trueLabel": "Rest Days",
+    "falseLabel": "Workout Days"
+  }
+}
 ```
 
-Then lines 346 and 359 change `isAdmin` → `canUseCharts`. That's all.
+## What `exerciseKeysByDate` needs to store
 
-### 4. `src/pages/Admin.tsx` — Beta Users management section
+The current `seenKeys` in `chart-data.ts` (line 253) stores just `exercise_key`. To support subtype matching, it needs to store **compound tokens** of the form `key` and `key:subtype` per day:
 
-A new collapsible section (consistent with existing admin UI patterns) with:
-- A list of current beta users pulled from `user_roles` where `role = 'beta'`, joined with user number from existing stats data
-- A user picker (select from existing users) to grant the beta role
-- A revoke button next to each beta user
+```ts
+// For each row, add both the plain key AND the key:subtype variant (if subtype exists)
+seenKeys[date].add(row.exercise_key);               // e.g. "walk_run"
+if (row.exercise_subtype) {
+  seenKeys[date].add(`${row.exercise_key}:${row.exercise_subtype}`); // e.g. "walk_run:walking"
+}
+```
 
-Two mutations (both protected by existing `"Admins can manage roles"` RLS policy which covers all operations on `user_roles`):
-- **Grant**: `INSERT INTO user_roles (user_id, role) VALUES (uuid, 'beta') ON CONFLICT DO NOTHING`
-- **Revoke**: `DELETE FROM user_roles WHERE user_id = uuid AND role = 'beta'`
+Then in `executeDSL`, the `only_keys` rule checks: for every token in that day's set, is it covered by the allowlist? An allowlist entry of `"walk_run"` covers any `walk_run` token (both `walk_run` and `walk_run:walking`). An allowlist entry of `"walk_run:walking"` covers ONLY `walk_run:walking`, not bare `walk_run` or `walk_run:running`.
 
-The admin page already queries all user stats including `user_id`, so the select dropdown can map user IDs to user numbers without any additional queries.
+## Full classification examples
 
-## What beta users see vs. don't see
+| User query | AI-generated classify |
+|---|---|
+| "rest days vs workout days" (basic) | `rule: "any_strength"`, truLabel: "Workout", falseLabel: "Rest" |
+| "my rest days (only walking)" | `rule: "only_keys"`, keys: `["walk_run:walking", "walk_run:hiking"]`, true: "Rest", false: "Active" |
+| "days I only did cardio" | `rule: "all_cardio"`, true: "Cardio-only", false: "Included Strength" |
+| "leg day vs non-leg day" | `rule: "any_key"`, keys: `["squat","leg_press","leg_extension","leg_curl","romanian_deadlift","lunge","bulgarian_split_squat","hack_squat","step_up"]`, true: "Leg Day", false: "Non-Leg Day" |
+| "high protein days (≥150g)" | `rule: "threshold"`, thresholdValue: 150, thresholdOp: "gte", true: "High Protein", false: "Low Protein" |
+| "days I ran vs days I only walked" | Two separate `dayClassification` charts OR single chart with `rule: "any_key"`, keys: `["walk_run:running"]`, true: "Running Days", false: "Walking-only Days" |
 
-| Feature | Admin | Beta | Regular |
-|---|---|---|---|
-| My Charts (+ Chart button, saved charts grid) | Yes | Yes | No |
-| Ask AI (food/exercise) | Yes | Yes | Yes (already public) |
-| Admin page | Yes | No | No |
-| DevTools panel | Yes | No | No |
+## What the AI needs to know (prompt additions)
+
+The `generate-chart-dsl` system prompt needs a `DAY CLASSIFICATION` section that:
+
+1. Lists all six rules with concise definitions
+2. Explains the `key:subtype` notation for the `only_keys` allowlist
+3. Lists the known subtypes for `walk_run`: `walking`, `running`, `hiking`, `indoor`, `outdoor`
+4. Explains that ad-hoc/unknown exercise keys (like `gardening`) will NOT match any canonical key, so `only_keys` will correctly exclude them if they're not in the allowlist
+5. Clarifies that `only_keys` is the right rule when the user says "only", "nothing but", "just walked", "exclusively"
+6. Clarifies that `any_key` is right when the user says "at least one", "any day I did", "days that included"
+7. Notes that days with zero exercise are excluded from both buckets
+
+## Files changing
+
+| File | Change |
+|---|---|
+| `src/lib/chart-types.ts` | Add `"dayClassification"` to `groupBy` union; add `classify?` object to `ChartDSL`; add `exerciseKeysByDate?: Record<string, string[]>` to `DailyTotals` |
+| `src/lib/chart-data.ts` | In `fetchExerciseData`: always populate `exerciseKeysByDate` using compound `key` + `key:subtype` tokens from already-iterated rows (no new DB query) |
+| `src/lib/chart-dsl.ts` | Add `case "dayClassification"`: iterate `exerciseKeysByDate` or `food` by date, apply classify rule, return two labeled count bars |
+| `supabase/functions/generate-chart-dsl/index.ts` | Add `DAY CLASSIFICATION` section to SYSTEM_PROMPT documenting all 6 rules, `key:subtype` notation, known subtypes, and rule-selection guidance; remove "Gap or streak analysis" from UNSUPPORTED |
+
+No schema changes. No new DB queries. The subtype data is already fetched in the existing `weight_sets` select (line 158 of `chart-data.ts` already includes `exercise_subtype`).
+
+## What remains unsupported (unchanged)
+
+- Gap analysis / streak counting (consecutive days)
+- 3-way+ classification in one chart
+- Cross-source classification (days I hit protein goal AND worked out)
+- Food-side `only_keys` (not needed; threshold covers food classification)
