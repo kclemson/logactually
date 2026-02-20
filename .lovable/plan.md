@@ -1,82 +1,49 @@
 
-# Fix: dayClassification `only_keys` rule produces empty chart
+# Debug and fix: dayClassification charts rendering empty
 
-## Root cause
+## What we know
+- The v2 DSL is generated correctly with `groupBy: "dayClassification"` and `classify.rule: "only_keys"`
+- The database has valid data (walking-only days exist: Jan 24, 26, 30, Feb 7, 19, 20)
+- The chart card renders (title, aiNote visible) but with zero bars
+- No console errors are thrown
+- The `only_keys` logic and `tokensToEvaluate` fix are correct in source code
 
-The bug is in the `only_keys` matching logic in `src/lib/chart-dsl.ts` (lines 415-430).
+## Root cause hypothesis
+Since the logic traces perfectly on paper but produces empty output at runtime, the most likely cause is that `dailyTotals.exerciseKeysByDate` is `undefined` or `{}` when `executeDSL` runs. This could happen if:
+1. The build hasn't fully deployed the latest chart-data.ts changes that populate `exerciseKeysByDate`
+2. A subtle runtime issue strips the property during object transfer
 
-`exerciseKeysByDate` stores BOTH plain key tokens AND compound tokens per day. For a day with `walk_run:walking`, the set contains:
+## Plan
 
-```
-["walk_run", "walk_run:walking"]
-```
-
-The current `only_keys` check does `tokens.every(token => ...)` — meaning every token in the array must be covered by the allowlist. With allowlist `["walk_run:walking"]`:
-
-- `"walk_run:walking"` — covered ✓
-- `"walk_run"` — NOT covered (the entry `"walk_run:walking"` has a colon, so the `!entry.includes(":")` guard blocks the plain-key fallback) ✗
-
-So `matches = false` for every day, producing zero results.
-
-## The fix
-
-The plain key token (`"walk_run"`) is structurally redundant — it's already represented by its compound variants (`"walk_run:walking"`). When evaluating `only_keys`, we should **skip plain key tokens that have at least one compound variant present** in the token set, since the compound token will be evaluated instead.
-
-More precisely, the check should be: only evaluate a token if it is either:
-1. A compound token (`key:subtype`) — always evaluate these
-2. A plain key token with NO compound variants in the set for that key — evaluate as-is (e.g., a day with a strength exercise that has no subtype)
-
-This preserves correct behavior for:
-- `"bench_press"` (no subtype ever) → evaluated as a plain key, correctly fails the `"walk_run:walking"` allowlist
-- `"walk_run"` with `"walk_run:walking"` present → skip the plain token, evaluate `"walk_run:walking"` instead → correctly covered
-- `"walk_run"` with `"walk_run:running"` present → skip the plain token, evaluate `"walk_run:running"` → NOT covered by `"walk_run:walking"` allowlist → correctly fails
-
-## Technical change
-
-Single file: `src/lib/chart-dsl.ts`, `case "only_keys"` block (lines 415-430).
-
-Change from evaluating `tokens.every(...)` on all tokens, to:
+### Step 1: Add diagnostic console.log in executeDSL
+Add a temporary log at the top of the `dayClassification` case in `src/lib/chart-dsl.ts` to expose the actual runtime state:
 
 ```ts
-case "only_keys": {
-  const allowlist = classify.keys ?? [];
-  const tokenSet = new Set(tokens);
-  // For each token, skip plain keys that have a compound variant present
-  // (the compound variant will be evaluated instead, which is more specific)
-  const tokensToEvaluate = tokens.filter(token => {
-    if (token.includes(":")) return true; // always evaluate compound tokens
-    // Skip this plain key if any "key:subtype" variant exists in the set
-    return !tokens.some(t => t.startsWith(`${token}:`));
-  });
-  matches = tokensToEvaluate.length > 0 && tokensToEvaluate.every(token => {
-    return allowlist.some(entry => {
-      if (entry === token) return true;
-      // Plain allowlist entry covers any compound variant of that key
-      if (!entry.includes(":") && token.startsWith(`${entry}:`)) return true;
-      return false;
-    });
-  });
-  break;
-}
+case "dayClassification": {
+  const classify = dsl.classify;
+  if (!classify) break;
+  console.log("[dayClassification] exerciseKeysByDate keys:", Object.keys(dailyTotals.exerciseKeysByDate ?? {}), "classify:", classify.rule);
+  // ... rest of logic
 ```
 
-This is the minimal, surgical fix. No data fetching changes, no type changes, no prompt changes. One switch-case block changes in one file.
+This will immediately reveal whether `exerciseKeysByDate` is empty at runtime.
 
-## Why `tokensToEvaluate.length > 0` matters
+### Step 2: Add diagnostic log in fetchExerciseData return
+Add a log in `src/lib/chart-data.ts` right before the return statement to confirm the data is populated at fetch time:
 
-This keeps the existing guard that days with zero tokens (no exercise logged) are excluded from both buckets. An empty day won't accidentally count as a "rest day".
+```ts
+console.log("[chart-data] exerciseKeysByDate sample:", Object.keys(exerciseKeysByDate).slice(0, 3), "total dates:", Object.keys(exerciseKeysByDate).length);
+return { food: {}, exercise, exerciseByHour, exerciseByItem, exerciseByCategory, exerciseKeysByDate };
+```
 
-## Verification
+### Step 3: Test and identify the gap
+Generate a dayClassification chart and check the console:
+- If chart-data log shows populated data but executeDSL log shows empty -- the property is lost in transit
+- If chart-data log also shows empty -- there's a bug in the seenKeys loop
+- If both show data -- the issue is elsewhere (sorting/limiting/rendering)
 
-After the fix, a day with `["walk_run", "walk_run:walking"]` and allowlist `["walk_run:walking"]`:
-- `tokensToEvaluate` = `["walk_run:walking"]` (plain `"walk_run"` skipped because `"walk_run:walking"` exists)
-- `"walk_run:walking"` covered by `"walk_run:walking"` → `matches = true` ✓
+### Step 4: Fix based on findings
+Apply the targeted fix once the root cause is identified from the logs.
 
-A mixed day with `["walk_run", "walk_run:walking", "bench_press"]` and same allowlist:
-- `tokensToEvaluate` = `["walk_run:walking", "bench_press"]`
-- `"walk_run:walking"` → covered ✓
-- `"bench_press"` → NOT in allowlist → `matches = false` ✓
-
-A day with only strength `["bench_press", "squat"]` and same allowlist:
-- `tokensToEvaluate` = `["bench_press", "squat"]` (no subtypes, so plain keys are evaluated)
-- Both fail → `matches = false` ✓
+### Step 5: Remove diagnostic logs
+Clean up the temporary console.log statements after the fix is confirmed working.
