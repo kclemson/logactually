@@ -1,77 +1,86 @@
 
-# Add rolling window support to the Chart DSL
+# Add `transform: "cumulative"` to the Chart DSL
 
 ## What this solves
 
-When users ask for "rolling average" or "7-day average" charts (e.g. body weight, calories), the DSL currently has no way to express a windowed calculation. Instead the AI picks `aggregation: "average"` with `groupBy: "date"`, which gives raw daily values — producing the jagged line the user saw. With a `window` field, the DSL can produce genuinely smoothed trend lines.
+Users often want "total to date" views — cumulative miles run this month, cumulative calories logged this week, total sets completed so far. Currently the DSL can only show per-period values (daily/weekly bars or lines). A cumulative transform turns any time-series into a running total, which is a completely different and useful lens on the same data.
 
-## Schema change: add `window` to ChartDSL
+## Why this one next
+
+It follows the exact same pattern as `window` — a pure post-processing pass in `executeDSL` after the `groupBy: "date"` or `"week"` cases build `dataPoints`. Zero new data fetching, zero new Supabase queries, zero changes to `DynamicChart`. The only risk is the system prompt update in the edge function.
+
+The three larger extensions — `compare` (dual-series), `source: "custom_log"`, and target overlays — are each meaningfully bigger:
+- `compare` needs a second data series returned from `executeDSL`, a second key in `ChartSpec`, and `DynamicChart` rendering two lines/bars.
+- `source: "custom_log"` needs the edge function to query the user's custom log types at request time and inject them into the prompt, plus a new fetch branch in `chart-data.ts`.
+
+Cumulative closes out the "post-processing transforms" category cleanly before we move into the harder structural work.
+
+## Schema change
 
 ```ts
 // src/lib/chart-types.ts
-window?: number; // trailing N-day average applied after date grouping
+transform?: "cumulative";  // prefix-sum applied after groupBy aggregation
 ```
 
-This field is only meaningful when `groupBy === "date"` or `groupBy === "week"`. It tells the executor: after aggregating raw daily values, replace each point's value with the trailing average of the last N points.
+Only valid with `groupBy: "date"` or `"week"` (same constraint as `window`). Can be combined with `window` — e.g. a 7-day rolling average that is also cumulative would be unusual, but the execution order is: aggregate → apply window → apply cumulative.
 
-## How the rolling average is computed (chart-dsl.ts)
+## Execution logic (chart-dsl.ts)
 
-After the `groupBy: "date"` case builds `dataPoints`, a post-processing pass runs if `dsl.window` is set:
+After the window pass (if any), one more post-processing block:
 
 ```ts
-if (dsl.window && dsl.window > 1 && dsl.groupBy === "date") {
-  for (let i = 0; i < dataPoints.length; i++) {
-    const start = Math.max(0, i - dsl.window + 1);
-    const slice = dataPoints.slice(start, i + 1).map(p => p.value);
-    dataPoints[i].value = Math.round(slice.reduce((a, b) => a + b, 0) / slice.length);
+if (dsl.transform === "cumulative") {
+  let running = 0;
+  for (const point of dataPoints) {
+    running += point.value;
+    point.value = running;
   }
 }
 ```
 
-This is a simple trailing window — no dependencies, no new data fetching. It works on the already-aggregated `dateValues` array that `fetchChartData` already produces. The first N-1 points use a shorter window (partial average) which is standard behavior for rolling averages at the start of a series.
+Six lines. No branching complexity. Works on both the `date` and `week` groupBy cases identically since both produce flat `dataPoints` arrays by that point.
 
 ## System prompt update (generate-chart-dsl/index.ts)
 
-Add `window` to the DSL JSON schema block shown to the AI, and a brief explanation in the GROUP BY OPTIONS section:
+Add `transform` to the JSON schema block:
 
 ```
-"window": <positive integer, or null> — only valid when groupBy is "date" or "week". 
-Applies a trailing N-day rolling average to the data points. Use when the user 
-says "rolling average", "7-day average", "smoothed", "trend line", or similar.
+"transform": "cumulative" or null
 ```
 
-This is a purely mechanical, unambiguous instruction — the AI sees `window: 7` means "trailing 7-day average". No semantic reasoning required.
+And a section after the ROLLING WINDOW block:
+
+```
+CUMULATIVE TRANSFORM:
+- "transform": "cumulative" or null — ONLY valid when groupBy is "date" or "week". 
+  Converts each point to a running total (prefix sum). Use when the user says 
+  "cumulative", "total so far", "running total", "to date", or similar.
+  Example: "total miles run this month so far" → groupBy="date", metric="distance_miles", 
+  transform="cumulative". Do NOT combine with window (rolling average and cumulative 
+  total are contradictory intents).
+```
 
 ## What changes
 
 | File | Change |
 |---|---|
-| `src/lib/chart-types.ts` | Add `window?: number` to `ChartDSL` interface |
-| `src/lib/chart-dsl.ts` | Add post-processing pass after `groupBy: "date"` and `groupBy: "week"` cases that applies the trailing window average |
-| `supabase/functions/generate-chart-dsl/index.ts` | Add `window` field to the JSON schema block and a one-line description in the GROUP BY section |
-
-No changes to `chart-data.ts` (data fetching is unchanged), `DynamicChart`, or `useGenerateChart`. Saved charts that have no `window` field continue to work exactly as before (undefined = no windowing).
-
-## Example DSL the AI would now produce
-
-For "7-day rolling average of my weight" (which would come through as a custom log chart once that's built, but for now would apply to food calories, protein, etc.):
-
-```json
-{
-  "chartType": "line",
-  "title": "7-Day Rolling Average Calories",
-  "source": "food",
-  "metric": "calories",
-  "groupBy": "date",
-  "aggregation": "sum",
-  "window": 7,
-  "aiNote": "Trailing 7-day average of daily calories"
-}
-```
+| `src/lib/chart-types.ts` | Add `transform?: "cumulative"` to `ChartDSL` interface |
+| `src/lib/chart-dsl.ts` | Add prefix-sum pass after the window pass in the `date` and `week` groupBy cases |
+| `supabase/functions/generate-chart-dsl/index.ts` | Add `transform` to the JSON schema block; add CUMULATIVE TRANSFORM instruction section |
 
 ## What this enables immediately
 
-- "7-day rolling average protein" → smooth line instead of jagged daily bars
-- "Rolling calorie trend over 90 days" → immediately useful for seeing macro trends
-- "Smoothed exercise duration" → filters out missed days / outlier sessions
-- Body weight custom log (once `source: "custom_log"` is added) — this is the most compelling use case
+- "Cumulative calories this week" → running total line that climbs from Monday to Sunday
+- "Total miles run this month so far" → shows progress toward a distance goal
+- "Cumulative protein logged over 30 days" → useful for tracking adherence trends
+- "Total sets completed this month" → strength volume to date
+
+Saved charts with no `transform` field continue to work exactly as before (undefined = no transform).
+
+## Sequencing note
+
+After this lands, the recommended next steps in order of value vs. complexity:
+
+1. **`source: "custom_log"`** — highest user impact (body weight charts), medium complexity
+2. **`compare` (dual-series)** — medium impact, touches more files (`chart-data.ts`, `ChartSpec`, `DynamicChart`)
+3. **Goal/target line overlay** — low complexity (a horizontal reference line in `DynamicChart`), useful for "show my calorie target on the chart"
