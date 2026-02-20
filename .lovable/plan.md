@@ -1,86 +1,70 @@
 
-# Add `transform: "cumulative"` to the Chart DSL
+# Remove the v1/v2 UI toggle, default to v2, preserve chip-level mode routing
 
-## What this solves
+## What changes and why
 
-Users often want "total to date" views — cumulative miles run this month, cumulative calories logged this week, total sets completed so far. Currently the DSL can only show per-period values (daily/weekly bars or lines). A cumulative transform turns any time-series into a running total, which is a completely different and useful lens on the same data.
+The v1/v2 toggle is removed from the UI. The `mode` state and `chip.mode` routing logic stay — chips marked `mode: "v1"` will still fire directly against v1 without the DSL roundtrip. The only thing disappearing is:
+- The visible toggle buttons (the user can't change the global mode)
+- `localStorage` persistence of the mode (no toggle means no user preference to save)
+- The `setMode("v1")` + `localStorage.setItem` side effects in the `usedFallback` blocks (a single unsupported query no longer poisons future requests)
 
-## Why this one next
+The default changes from `"v1"` to `"v2"`, so freehand text input and v2 chips will use the DSL path — meaning `window`, `transform: "cumulative"`, and future DSL features are now live for all users by default.
 
-It follows the exact same pattern as `window` — a pure post-processing pass in `executeDSL` after the `groupBy: "date"` or `"week"` cases build `dataPoints`. Zero new data fetching, zero new Supabase queries, zero changes to `DynamicChart`. The only risk is the system prompt update in the edge function.
+## One file: `src/components/CustomChartDialog.tsx`
 
-The three larger extensions — `compare` (dual-series), `source: "custom_log"`, and target overlays — are each meaningfully bigger:
-- `compare` needs a second data series returned from `executeDSL`, a second key in `ChartSpec`, and `DynamicChart` rendering two lines/bars.
-- `source: "custom_log"` needs the edge function to query the user's custom log types at request time and inject them into the prompt, plus a new fetch branch in `chart-data.ts`.
-
-Cumulative closes out the "post-processing transforms" category cleanly before we move into the harder structural work.
-
-## Schema change
+### Change 1 — Default mode: `"v1"` → `"v2"` (line 62)
 
 ```ts
-// src/lib/chart-types.ts
-transform?: "cumulative";  // prefix-sum applied after groupBy aggregation
+// BEFORE
+const [mode, setMode] = useState<"v1" | "v2">(() => (localStorage.getItem("chart-mode") as "v1" | "v2") || "v1");
+
+// AFTER
+const [mode, setMode] = useState<"v1" | "v2">("v2");
 ```
 
-Only valid with `groupBy: "date"` or `"week"` (same constraint as `window`). Can be combined with `window` — e.g. a 7-day rolling average that is also cumulative would be unusual, but the execution order is: aggregate → apply window → apply cumulative.
+No more localStorage read. `setMode` is still called by `handleNewRequest` when a chip passes `chip.mode` — that's the only remaining writer.
 
-## Execution logic (chart-dsl.ts)
+### Change 2 — Remove UI toggle block (lines 261–289)
 
-After the window pass (if any), one more post-processing block:
+The entire `{/* Mode toggle */}` div with the two v1/v2 pill buttons is deleted. Nothing else references these buttons.
+
+### Change 3 — `handleSubmit`: remove `usedFallback` localStorage + setMode side effects (lines 134–137)
 
 ```ts
-if (dsl.transform === "cumulative") {
-  let running = 0;
-  for (const point of dataPoints) {
-    running += point.value;
-    point.value = running;
-  }
-}
+// REMOVE these two lines:
+setMode("v1");
+localStorage.setItem("chart-mode", "v1");
 ```
 
-Six lines. No branching complexity. Works on both the `date` and `week` groupBy cases identically since both produce flat `dataPoints` arrays by that point.
+`resultMode` is still set to `"v1"` via `actualMode` — the debug label continues to show which engine ran.
 
-## System prompt update (generate-chart-dsl/index.ts)
+### Change 4 — `handleNewRequest`: remove localStorage write on chip-mode sync (line 176)
 
-Add `transform` to the JSON schema block:
-
-```
-"transform": "cumulative" or null
-```
-
-And a section after the ROLLING WINDOW block:
-
-```
-CUMULATIVE TRANSFORM:
-- "transform": "cumulative" or null — ONLY valid when groupBy is "date" or "week". 
-  Converts each point to a running total (prefix sum). Use when the user says 
-  "cumulative", "total so far", "running total", "to date", or similar.
-  Example: "total miles run this month so far" → groupBy="date", metric="distance_miles", 
-  transform="cumulative". Do NOT combine with window (rolling average and cumulative 
-  total are contradictory intents).
+```ts
+// REMOVE:
+localStorage.setItem("chart-mode", effectiveMode);
 ```
 
-## What changes
+`setMode(effectiveMode)` stays — this is what makes chip-level v1/v2 routing work. The mode is set for the duration of that request and stays until the next chip click or new fresh request. No localStorage involved.
 
-| File | Change |
-|---|---|
-| `src/lib/chart-types.ts` | Add `transform?: "cumulative"` to `ChartDSL` interface |
-| `src/lib/chart-dsl.ts` | Add prefix-sum pass after the window pass in the `date` and `week` groupBy cases |
-| `supabase/functions/generate-chart-dsl/index.ts` | Add `transform` to the JSON schema block; add CUMULATIVE TRANSFORM instruction section |
+### Change 5 — `handleNewRequest`: remove `usedFallback` localStorage + setMode side effects (lines 189–191)
 
-## What this enables immediately
+```ts
+// REMOVE these two lines (same as Change 3, but in handleNewRequest):
+setMode("v1");
+localStorage.setItem("chart-mode", "v1");
+```
 
-- "Cumulative calories this week" → running total line that climbs from Monday to Sunday
-- "Total miles run this month so far" → shows progress toward a distance goal
-- "Cumulative protein logged over 30 days" → useful for tracking adherence trends
-- "Total sets completed this month" → strength volume to date
+## Summary of net result
 
-Saved charts with no `transform` field continue to work exactly as before (undefined = no transform).
+| Scenario | Before | After |
+|---|---|---|
+| New user opens dialog | v1 (localStorage default) | v2 |
+| User with `"v1"` in localStorage | v1 (sticky) | v2 (localStorage no longer read) |
+| Clicks a v2 chip | v2 | v2 |
+| Clicks a v1 chip | v1 | v1 (chip.mode still respected) |
+| Types a custom prompt | whatever localStorage said | v2 |
+| Request falls back to v1 | Permanently writes v1 to localStorage | Uses v1 for that result only, next request stays v2 |
+| Regenerate button | `handleNewRequest(lastQuestion, undefined, true)` → uses current mode | Same — uses `mode` state (v2 unless last chip was v1) |
 
-## Sequencing note
-
-After this lands, the recommended next steps in order of value vs. complexity:
-
-1. **`source: "custom_log"`** — highest user impact (body weight charts), medium complexity
-2. **`compare` (dual-series)** — medium impact, touches more files (`chart-data.ts`, `ChartSpec`, `DynamicChart`)
-3. **Goal/target line overlay** — low complexity (a horizontal reference line in `DynamicChart`), useful for "show my calorie target on the chart"
+No changes to `Chip` interface, `ALL_CHIPS`, `handleNewRequest` signature, chip `onClick`, `useGenerateChart`, or any other file.
