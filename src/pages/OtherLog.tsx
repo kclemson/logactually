@@ -172,11 +172,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   );
 
   return (
-    <div className={cn(
-      "space-y-4",
-      mountDir === 'left' && 'animate-slide-in-from-right',
-      mountDir === 'right' && 'animate-slide-in-from-left',
-    )}>
+    <div className="space-y-4">
       {/* Top section: matches LogInput height on Food/Exercise pages */}
       <section className="min-h-[148px] flex flex-col justify-center space-y-3">
         {!isReadOnly && (
@@ -299,7 +295,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
       </section>
 
       {/* Swipe zone: DateNavigation + entries (swipe left = next day, swipe right = prev day) */}
-      <div ref={swipeHandlers.ref} onTouchStart={swipeHandlers.onTouchStart} onTouchEnd={swipeHandlers.onTouchEnd} style={{ touchAction: 'pan-y' }} className="min-h-[calc(100dvh-8rem)] md:min-h-0">
+      <div ref={swipeHandlers.ref} onTouchStart={swipeHandlers.onTouchStart} onTouchEnd={swipeHandlers.onTouchEnd} style={{ touchAction: 'pan-y' }} className={cn("min-h-[calc(100dvh-8rem)] md:min-h-0", mountDir === 'left' && 'animate-slide-in-from-right', mountDir === 'right' && 'animate-slide-in-from-left')}>
         {/* Shared date navigation — both modes */}
         <DateNavigation
           selectedDate={selectedDate}
