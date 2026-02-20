@@ -36,7 +36,8 @@ const WEIGHT_EDITABLE_FIELDS: WeightEditableField[] = ['description', 'sets', 'r
 const WeightLog = () => {
   const [searchParams] = useSearchParams();
   const dateParam = searchParams.get('date');
-  const dateKey = dateParam || getStoredDate() || format(new Date(), 'yyyy-MM-dd');
+  const validDateParam = dateParam && dateParam !== 'undefined' ? dateParam : null;
+  const dateKey = validDateParam || getStoredDate() || format(new Date(), 'yyyy-MM-dd');
   
   return <WeightLogContent key={dateKey} initialDate={dateKey} />;
 };
