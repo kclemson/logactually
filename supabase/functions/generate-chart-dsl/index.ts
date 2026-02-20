@@ -85,7 +85,7 @@ When the user asks about the GENERAL activity (e.g. "cardio", "walk/run"), use o
 
 AVAILABLE METRICS:
 - Food source: calories, protein, carbs, fat, fiber, sugar, saturated_fat, sodium, cholesterol, entries (number of food items logged)
-- Exercise source: sets, duration_minutes, distance_miles, calories_burned, heart_rate (average BPM from exercise_metadata.heart_rate — use aggregation: "average"; not all rows have this), unique_exercises (distinct exercise types per day), entries (number of exercise items logged — each logged entry counts separately, not deduplicated by exercise type. Two separate dog walks = 2 entries.)
+- Exercise source: sets, duration_minutes, distance_miles, calories_burned (WARNING: only reflects values the user explicitly typed like "burned 300 calories" — NOT estimated burn; for most users this will be near zero or missing for strength training), heart_rate (average BPM from exercise_metadata.heart_rate — use aggregation: "average"; not all rows have this), unique_exercises (distinct exercise types per day), entries (number of exercise items logged — each logged entry counts separately, not deduplicated by exercise type. Two separate dog walks = 2 entries.)
 
 DERIVED METRICS (food source only, use derivedMetric field):
 - protein_pct, carbs_pct, fat_pct: macro percentage of total calories
@@ -171,6 +171,7 @@ If the user's request CANNOT be expressed using the available schema — specifi
 - Filtering food by description content (e.g. "candy", "chocolate", "fried") since there is no category or tag column on food items, only free-text descriptions
 - Gap or streak analysis (e.g. "rest days between workouts", "longest streak") since this requires lag/window operations not expressible in the DSL
 - Meal-level grouping (e.g. "which meals have most calories") since there is no meal entity in the schema
+- Calories burned comparisons (e.g. "calories burned: cardio vs strength", "total calories burned") because exercise_metadata.calories_burned is only populated when the user explicitly typed a calorie value — estimated burn is computed server-side and is NOT available in this schema. Using this metric will produce near-zero or misleading results for almost all users.
 
 ...then respond with: { "unsupported": true, "reason": "One concise sentence explaining what the DSL can't express" }
 
