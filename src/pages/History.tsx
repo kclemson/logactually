@@ -29,6 +29,7 @@ import { CalorieTargetTooltipContent } from '@/components/CalorieTargetTooltipCo
 
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { setStoredDate } from '@/lib/selected-date';
+import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
 
 interface DaySummary {
   date: string;
@@ -277,6 +278,8 @@ const History = () => {
     );
   };
 
+  const swipeHandlers = useSwipeNavigation(goToNextMonth, goToPreviousMonth);
+
   return (
     <div className="space-y-4">
       {/* Month Navigation */}
@@ -312,171 +315,174 @@ const History = () => {
         />
       )}
 
-      {/* Week day headers */}
-      <div className="grid grid-cols-7 gap-1.5">
-        {weekDays.map((day) => (
-          <div
-            key={day}
-            className="py-1 text-center font-medium text-muted-foreground"
-          >
-            {day}
-          </div>
-        ))}
-      </div>
-
-
-      {/* Calendar Grid */}
-      <TooltipProvider delayDuration={150}>
+      {/* Swipe zone: calendar grid (swipe left = next month, swipe right = prev month) */}
+      <div {...swipeHandlers}>
+        {/* Week day headers */}
         <div className="grid grid-cols-7 gap-1.5">
-        {calendarDays.map((day, index) => {
-            const dateStr = format(day, 'yyyy-MM-dd');
-            const summary = summaryByDate.get(dateStr);
-            const isCurrentMonth = isSameMonth(day, currentMonth);
-            const isTodayDate = isToday(day);
-            const isFutureDate = day > new Date();
-            const hasEntries = !!summary;
-            const weightData = weightByDate.get(dateStr);
-            const hasWeights = showWeights && !!weightData;
-            const hasCustomLogs = showCustomLogs && customLogDates.has(dateStr);
+          {weekDays.map((day) => (
+            <div
+              key={day}
+              className="py-1 text-center font-medium text-muted-foreground"
+            >
+              {day}
+            </div>
+          ))}
+        </div>
 
-            const baseTarget = getEffectiveDailyTarget(settings);
-            const hasDot = hasEntries && baseTarget != null && baseTarget > 0;
-            const showTooltip = hasDot && isCurrentMonth;
 
-            const tooltipContent = showTooltip && summary ? buildDayTooltip(day, summary) : null;
-            const isActive = activeDayIndex === index;
+        {/* Calendar Grid */}
+        <TooltipProvider delayDuration={150}>
+          <div className="grid grid-cols-7 gap-1.5">
+          {calendarDays.map((day, index) => {
+              const dateStr = format(day, 'yyyy-MM-dd');
+              const summary = summaryByDate.get(dateStr);
+              const isCurrentMonth = isSameMonth(day, currentMonth);
+              const isTodayDate = isToday(day);
+              const isFutureDate = day > new Date();
+              const hasEntries = !!summary;
+              const weightData = weightByDate.get(dateStr);
+              const hasWeights = showWeights && !!weightData;
+              const hasCustomLogs = showCustomLogs && customLogDates.has(dateStr);
 
-            const cellContent = (
-              <button
-                key={index}
-                onClick={() => !isFutureDate && handleDayClick(day, index)}
-                disabled={isFutureDate}
-                className={cn(
-                  "grid grid-rows-3 content-center items-center justify-items-center p-1.5 min-h-[64px] rounded-xl transition-colors relative z-auto",
-                  isFutureDate && "bg-muted/20 text-muted-foreground/50 cursor-default",
-                  !isCurrentMonth && !isFutureDate && "bg-muted/30 hover:bg-muted/50 text-muted-foreground/60 cursor-pointer",
-                  isCurrentMonth && !isFutureDate && !hasEntries && !hasWeights && "bg-muted/40 hover:bg-muted/60 cursor-pointer",
-                  hasEntries && !hasWeights && !isFutureDate && "bg-rose-100 hover:bg-rose-200 dark:bg-rose-900/40 dark:hover:bg-rose-800/50",
-                  hasWeights && !hasEntries && !isFutureDate && "bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/40 dark:hover:bg-purple-800/50",
-                  hasWeights && hasEntries && !isFutureDate && "bg-gradient-to-br from-rose-100 to-purple-100 hover:from-rose-200 hover:to-purple-200 dark:from-rose-900/40 dark:to-purple-900/40 dark:hover:from-rose-800/50 dark:hover:to-purple-800/50",
-                  isTodayDate && "ring-2 ring-primary ring-inset",
-                )}
-              >
-                {/* Row 1: Calorie count */}
-                <span className={cn(
-                  "text-[10px]",
-                  hasEntries && isCurrentMonth 
-                    ? "text-blue-500 dark:text-blue-400" 
-                    : "invisible"
-                )}>
-                  {hasEntries && isCurrentMonth 
-                    ? (
-                      <>
-                        {`${Math.round(summary.totalCalories).toLocaleString()}`}
-                        {(() => {
-                          const target = usesBurns && baseTarget
-                            ? getExerciseAdjustedTarget(baseTarget, burnByDate.get(dateStr) ?? 0)
-                            : baseTarget;
-                          return target && target > 0 ? (
-                            <span className={`text-[10px] leading-none relative top-[-0.5px] ${getTargetDotColor(summary.totalCalories, target)}`}>●</span>
-                          ) : null;
-                        })()}
-                      </>
-                    )
-                    : "\u00A0"}
-                </span>
-                
-                {/* Row 2: Day number */}
-                <span
+              const baseTarget = getEffectiveDailyTarget(settings);
+              const hasDot = hasEntries && baseTarget != null && baseTarget > 0;
+              const showTooltip = hasDot && isCurrentMonth;
+
+              const tooltipContent = showTooltip && summary ? buildDayTooltip(day, summary) : null;
+              const isActive = activeDayIndex === index;
+
+              const cellContent = (
+                <button
+                  key={index}
+                  onClick={() => !isFutureDate && handleDayClick(day, index)}
+                  disabled={isFutureDate}
                   className={cn(
-                    "font-medium",
-                    isTodayDate && "text-primary font-semibold",
-                    !isCurrentMonth && "text-muted-foreground/30",
+                    "grid grid-rows-3 content-center items-center justify-items-center p-1.5 min-h-[64px] rounded-xl transition-colors relative z-auto",
+                    isFutureDate && "bg-muted/20 text-muted-foreground/50 cursor-default",
+                    !isCurrentMonth && !isFutureDate && "bg-muted/30 hover:bg-muted/50 text-muted-foreground/60 cursor-pointer",
+                    isCurrentMonth && !isFutureDate && !hasEntries && !hasWeights && "bg-muted/40 hover:bg-muted/60 cursor-pointer",
+                    hasEntries && !hasWeights && !isFutureDate && "bg-rose-100 hover:bg-rose-200 dark:bg-rose-900/40 dark:hover:bg-rose-800/50",
+                    hasWeights && !hasEntries && !isFutureDate && "bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/40 dark:hover:bg-purple-800/50",
+                    hasWeights && hasEntries && !isFutureDate && "bg-gradient-to-br from-rose-100 to-purple-100 hover:from-rose-200 hover:to-purple-200 dark:from-rose-900/40 dark:to-purple-900/40 dark:hover:from-rose-800/50 dark:hover:to-purple-800/50",
+                    isTodayDate && "ring-2 ring-primary ring-inset",
                   )}
                 >
-                  {format(day, 'd')}
-                </span>
+                  {/* Row 1: Calorie count */}
+                  <span className={cn(
+                    "text-[10px]",
+                    hasEntries && isCurrentMonth 
+                      ? "text-blue-500 dark:text-blue-400" 
+                      : "invisible"
+                  )}>
+                    {hasEntries && isCurrentMonth 
+                      ? (
+                        <>
+                          {`${Math.round(summary.totalCalories).toLocaleString()}`}
+                          {(() => {
+                            const target = usesBurns && baseTarget
+                              ? getExerciseAdjustedTarget(baseTarget, burnByDate.get(dateStr) ?? 0)
+                              : baseTarget;
+                            return target && target > 0 ? (
+                              <span className={`text-[10px] leading-none relative top-[-0.5px] ${getTargetDotColor(summary.totalCalories, target)}`}>●</span>
+                            ) : null;
+                          })()}
+                        </>
+                      )
+                      : "\u00A0"}
+                  </span>
+                  
+                  {/* Row 2: Day number */}
+                  <span
+                    className={cn(
+                      "font-medium",
+                      isTodayDate && "text-primary font-semibold",
+                      !isCurrentMonth && "text-muted-foreground/30",
+                    )}
+                  >
+                    {format(day, 'd')}
+                  </span>
 
-                {/* Row 3: Exercise/custom log indicators */}
-                <span className={cn(
-                  "h-3 flex items-center justify-center gap-0.5",
-                  !((hasWeights || hasCustomLogs) && isCurrentMonth) && "invisible"
-                )}>
-                  {(() => {
-                    const maxIcons = isMobile ? 3 : 4;
-                    const exerciseKeys: string[] = [];
-                    if (weightData?.hasLifting) exerciseKeys.push('lifting');
-                    if (weightData?.hasRunWalk) exerciseKeys.push('runwalk');
-                    if (weightData?.hasCycling) exerciseKeys.push('cycling');
-                    if (weightData?.hasOtherCardio) exerciseKeys.push('othercardio');
-                    const hasExercise = exerciseKeys.length > 0;
-                    const exerciseSlots = (hasCustomLogs && hasExercise) ? maxIcons - 1 : maxIcons;
-                    const visible = exerciseKeys.slice(0, exerciseSlots);
-                    return (
-                      <>
-                        {visible.map((key) => {
-                          const Icon = ICON_MAP[key];
-                          return <Icon key={key} className="h-3 w-3 text-purple-500 dark:text-purple-400" />;
-                        })}
-                        {hasCustomLogs && <ClipboardList className="h-3 w-3 text-teal-500 dark:text-teal-400" />}
-                      </>
-                    );
-                  })()}
-                </span>
-              </button>
-            );
+                  {/* Row 3: Exercise/custom log indicators */}
+                  <span className={cn(
+                    "h-3 flex items-center justify-center gap-0.5",
+                    !((hasWeights || hasCustomLogs) && isCurrentMonth) && "invisible"
+                  )}>
+                    {(() => {
+                      const maxIcons = isMobile ? 3 : 4;
+                      const exerciseKeys: string[] = [];
+                      if (weightData?.hasLifting) exerciseKeys.push('lifting');
+                      if (weightData?.hasRunWalk) exerciseKeys.push('runwalk');
+                      if (weightData?.hasCycling) exerciseKeys.push('cycling');
+                      if (weightData?.hasOtherCardio) exerciseKeys.push('othercardio');
+                      const hasExercise = exerciseKeys.length > 0;
+                      const exerciseSlots = (hasCustomLogs && hasExercise) ? maxIcons - 1 : maxIcons;
+                      const visible = exerciseKeys.slice(0, exerciseSlots);
+                      return (
+                        <>
+                          {visible.map((key) => {
+                            const Icon = ICON_MAP[key];
+                            return <Icon key={key} className="h-3 w-3 text-purple-500 dark:text-purple-400" />;
+                          })}
+                          {hasCustomLogs && <ClipboardList className="h-3 w-3 text-teal-500 dark:text-teal-400" />}
+                        </>
+                      );
+                    })()}
+                  </span>
+                </button>
+              );
 
-            // Wrap in tooltip when applicable
-            if (tooltipContent) {
-              if (hasHover) {
-                // Desktop: hover tooltip, click still navigates
-                return (
-                  <Tooltip key={index}>
-                    <TooltipTrigger asChild>
-                      {cellContent}
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" sideOffset={5}>
-                      {tooltipContent}
-                    </TooltipContent>
-                  </Tooltip>
-                );
-              } else {
-                // Mobile: controlled tooltip via activeDayIndex
-                return (
-                  <Tooltip key={index} open={isActive} onOpenChange={(open) => {
-                    if (!open) setActiveDayIndex(null);
-                  }}>
-                    <TooltipTrigger asChild>
-                      {cellContent}
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" sideOffset={5} onPointerDownOutside={() => setActiveDayIndex(null)}>
-                      {tooltipContent}
-                      <button
-                        className="mt-1.5 text-primary-foreground/80 underline underline-offset-2 text-xs"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveDayIndex(null);
-                          navigateToDay(day);
-                        }}
-                      >
-                        Go to day →
-                      </button>
-                    </TooltipContent>
-                  </Tooltip>
-                );
+              // Wrap in tooltip when applicable
+              if (tooltipContent) {
+                if (hasHover) {
+                  // Desktop: hover tooltip, click still navigates
+                  return (
+                    <Tooltip key={index}>
+                      <TooltipTrigger asChild>
+                        {cellContent}
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" sideOffset={5}>
+                        {tooltipContent}
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                } else {
+                  // Mobile: controlled tooltip via activeDayIndex
+                  return (
+                    <Tooltip key={index} open={isActive} onOpenChange={(open) => {
+                      if (!open) setActiveDayIndex(null);
+                    }}>
+                      <TooltipTrigger asChild>
+                        {cellContent}
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" sideOffset={5} onPointerDownOutside={() => setActiveDayIndex(null)}>
+                        {tooltipContent}
+                        <button
+                          className="mt-1.5 text-primary-foreground/80 underline underline-offset-2 text-xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveDayIndex(null);
+                            navigateToDay(day);
+                          }}
+                        >
+                          Go to day →
+                        </button>
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                }
               }
-            }
 
-            return cellContent;
-          })}
-        </div>
-      </TooltipProvider>
+              return cellContent;
+            })}
+          </div>
+        </TooltipProvider>
 
-      {isLoading && (
-        <div className="flex justify-center py-4">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        </div>
-      )}
+        {isLoading && (
+          <div className="flex justify-center py-4">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -24,6 +24,7 @@ import { getStoredDate } from '@/lib/selected-date';
 import { LOG_TEMPLATES, getTemplateUnit } from '@/lib/log-templates';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { Button } from '@/components/ui/button';
+import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
 
 // Wrapper: extracts date from URL, forces remount via key
 const OtherLog = () => {
@@ -161,6 +162,12 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   const todayDateStr = format(new Date(), 'yyyy-MM-dd');
   const todayMedEntries = typeEntries.filter((e) => e.logged_date === dateStr);
 
+  const swipeHandlers = useSwipeNavigation(
+    dateNav.goToNextDay,
+    dateNav.goToPreviousDay,
+    dateNav.calendarOpen,
+  );
+
   return (
     <div className="space-y-4">
       {/* Top section: matches LogInput height on Food/Exercise pages */}
@@ -284,35 +291,38 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
         )}
       </section>
 
-      {/* Shared date navigation — both modes */}
-      <DateNavigation
-        selectedDate={selectedDate}
-        isTodaySelected={isTodaySelected}
-        calendarOpen={dateNav.calendarOpen}
-        onCalendarOpenChange={dateNav.setCalendarOpen}
-        calendarMonth={dateNav.calendarMonth}
-        onCalendarMonthChange={dateNav.setCalendarMonth}
-        onPreviousDay={dateNav.goToPreviousDay}
-        onNextDay={dateNav.goToNextDay}
-        onDateSelect={dateNav.handleDateSelect}
-        onGoToToday={dateNav.goToToday}
-        datesWithData={datesWithData}
-        highlightClassName="text-teal-600 dark:text-teal-400 font-semibold"
-        weekStartDay={settings.weekStartDay}
-      />
+      {/* Swipe zone: DateNavigation + entries (swipe left = next day, swipe right = prev day) */}
+      <div {...swipeHandlers}>
+        {/* Shared date navigation — both modes */}
+        <DateNavigation
+          selectedDate={selectedDate}
+          isTodaySelected={isTodaySelected}
+          calendarOpen={dateNav.calendarOpen}
+          onCalendarOpenChange={dateNav.setCalendarOpen}
+          calendarMonth={dateNav.calendarMonth}
+          onCalendarMonthChange={dateNav.setCalendarMonth}
+          onPreviousDay={dateNav.goToPreviousDay}
+          onNextDay={dateNav.goToNextDay}
+          onDateSelect={dateNav.handleDateSelect}
+          onGoToToday={dateNav.goToToday}
+          datesWithData={datesWithData}
+          highlightClassName="text-teal-600 dark:text-teal-400 font-semibold"
+          weekStartDay={settings.weekStartDay}
+        />
 
-      {/* Unified entries view — filters to meds-only when in medication mode */}
-      <CustomLogEntriesView
-        entries={entries}
-        logTypes={logTypes}
-        isLoading={isLoading}
-        onDelete={(id) => deleteEntry.mutate(id)}
-        onEdit={(entry) => setEditingEntry(entry)}
-        onUpdate={(params) => updateEntry.mutate(params)}
-        onExport={effectiveViewMode === 'medication' ? exportCustomLog : undefined}
-        isReadOnly={isReadOnly}
-        medicationsOnly={effectiveViewMode === 'medication'}
-      />
+        {/* Unified entries view — filters to meds-only when in medication mode */}
+        <CustomLogEntriesView
+          entries={entries}
+          logTypes={logTypes}
+          isLoading={isLoading}
+          onDelete={(id) => deleteEntry.mutate(id)}
+          onEdit={(entry) => setEditingEntry(entry)}
+          onUpdate={(params) => updateEntry.mutate(params)}
+          onExport={effectiveViewMode === 'medication' ? exportCustomLog : undefined}
+          isReadOnly={isReadOnly}
+          medicationsOnly={effectiveViewMode === 'medication'}
+        />
+      </div>
 
       {/* Entry form as modal dialog — used by By Date, By Type, and By Meds modes */}
       {dialogType && !isReadOnly && (

@@ -29,6 +29,7 @@ import { getStoredDate, setStoredDate } from '@/lib/selected-date';
 import { useGroupPortionScale } from '@/hooks/useGroupPortionScale';
 import { getEffectiveDailyTarget, getExerciseAdjustedTarget, usesActualExerciseBurns, getCalorieTargetComponents } from '@/lib/calorie-target';
 import { useDailyCalorieBurn } from '@/hooks/useDailyCalorieBurn';
+import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
 
 // Wrapper component: extracts date from URL, forces remount via key
 const FoodLog = () => {
@@ -679,6 +680,12 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     deleteAllByDate.mutate(dateStr);
   };
 
+  const swipeHandlers = useSwipeNavigation(
+    dateNav.goToNextDay,
+    dateNav.goToPreviousDay,
+    dateNav.calendarOpen,
+  );
+
   return (
     <div className="space-y-4">
       {/* Food Input Section - At top */}
@@ -758,84 +765,86 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
         )}
       </section>
 
-      {/* Date Navigation */}
-      <DateNavigation
-        selectedDate={selectedDate}
-        isTodaySelected={isTodaySelected}
-        calendarOpen={dateNav.calendarOpen}
-        onCalendarOpenChange={dateNav.setCalendarOpen}
-        calendarMonth={dateNav.calendarMonth}
-        onCalendarMonthChange={dateNav.setCalendarMonth}
-        onPreviousDay={dateNav.goToPreviousDay}
-        onNextDay={dateNav.goToNextDay}
-        onDateSelect={dateNav.handleDateSelect}
-        onGoToToday={dateNav.goToToday}
-        datesWithData={datesWithFood}
-        highlightClassName="text-blue-600 dark:text-blue-400 font-semibold"
-        weekStartDay={settings.weekStartDay}
-      />
+      {/* Swipe zone: DateNavigation + entries (swipe left = next day, swipe right = prev day) */}
+      <div {...swipeHandlers}>
+        <DateNavigation
+          selectedDate={selectedDate}
+          isTodaySelected={isTodaySelected}
+          calendarOpen={dateNav.calendarOpen}
+          onCalendarOpenChange={dateNav.setCalendarOpen}
+          calendarMonth={dateNav.calendarMonth}
+          onCalendarMonthChange={dateNav.setCalendarMonth}
+          onPreviousDay={dateNav.goToPreviousDay}
+          onNextDay={dateNav.goToNextDay}
+          onDateSelect={dateNav.handleDateSelect}
+          onGoToToday={dateNav.goToToday}
+          datesWithData={datesWithFood}
+          highlightClassName="text-blue-600 dark:text-blue-400 font-semibold"
+          weekStartDay={settings.weekStartDay}
+        />
 
-      <section>
-        {displayItems.length > 0 && (
-          <FoodItemsTable
-            items={displayItems}
-            editable={true}
-            onUpdateItem={handleItemUpdate}
-            onUpdateItemBatch={handleItemUpdateBatch}
-            onRemoveItem={handleItemRemove}
-            newEntryIds={newEntryIds}
-            totals={displayTotals}
-            totalsPosition="top"
-            showTotals={true}
-            onDeleteAll={handleDeleteAll}
-            entryBoundaries={entryBoundaries}
-            entryRawInputs={entryRawInputs}
-            expandedEntryIds={expandedEntryIds}
-            onToggleEntryExpand={handleToggleEntryExpand}
-            onSaveAsMeal={handleSaveAsMeal}
-            entryMealNames={entryMealNames}
-            entrySourceMealIds={entrySourceMealIds}
-            entryGroupNames={entryGroupNames}
-            onUpdateGroupName={updateGroupName}
-            entryPortionMultipliers={entryPortionMultipliers}
-            onScaleGroupPortion={scaleGroupPortion}
-            dailyCalorieTarget={(() => {
-              const base = getEffectiveDailyTarget(settings);
-              if (base == null) return undefined;
-              if (usesBurns) {
-                const burn = dailyBurnForSelectedDay;
-                return getExerciseAdjustedTarget(base, burn);
-              }
-              return base;
-            })()}
-            showCalorieTargetDot={true}
-            dailyBurn={dailyBurnForSelectedDay}
-            calorieTargetComponents={getCalorieTargetComponents(settings)}
-            onDeleteEntry={(entryId) => {
-              deleteEntry.mutate(entryId);
-              setExpandedEntryIds(prev => {
-                const next = new Set(prev);
-                next.delete(entryId);
-                return next;
-              });
-            }}
-            onShowDetails={handleShowDetails}
-            onCopyEntryToToday={!isTodaySelected && !isReadOnly ? handleCopyEntryToToday : undefined}
-          />
-        )}
+        <section className="mt-4">
+          {displayItems.length > 0 && (
+            <FoodItemsTable
+              items={displayItems}
+              editable={true}
+              onUpdateItem={handleItemUpdate}
+              onUpdateItemBatch={handleItemUpdateBatch}
+              onRemoveItem={handleItemRemove}
+              newEntryIds={newEntryIds}
+              totals={displayTotals}
+              totalsPosition="top"
+              showTotals={true}
+              onDeleteAll={handleDeleteAll}
+              entryBoundaries={entryBoundaries}
+              entryRawInputs={entryRawInputs}
+              expandedEntryIds={expandedEntryIds}
+              onToggleEntryExpand={handleToggleEntryExpand}
+              onSaveAsMeal={handleSaveAsMeal}
+              entryMealNames={entryMealNames}
+              entrySourceMealIds={entrySourceMealIds}
+              entryGroupNames={entryGroupNames}
+              onUpdateGroupName={updateGroupName}
+              entryPortionMultipliers={entryPortionMultipliers}
+              onScaleGroupPortion={scaleGroupPortion}
+              dailyCalorieTarget={(() => {
+                const base = getEffectiveDailyTarget(settings);
+                if (base == null) return undefined;
+                if (usesBurns) {
+                  const burn = dailyBurnForSelectedDay;
+                  return getExerciseAdjustedTarget(base, burn);
+                }
+                return base;
+              })()}
+              showCalorieTargetDot={true}
+              dailyBurn={dailyBurnForSelectedDay}
+              calorieTargetComponents={getCalorieTargetComponents(settings)}
+              onDeleteEntry={(entryId) => {
+                deleteEntry.mutate(entryId);
+                setExpandedEntryIds(prev => {
+                  const next = new Set(prev);
+                  next.delete(entryId);
+                  return next;
+                });
+              }}
+              onShowDetails={handleShowDetails}
+              onCopyEntryToToday={!isTodaySelected && !isReadOnly ? handleCopyEntryToToday : undefined}
+            />
+          )}
 
-        {displayItems.length === 0 && isFetching && (
-          <div className="flex justify-center py-8">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          </div>
-        )}
+          {displayItems.length === 0 && isFetching && (
+            <div className="flex justify-center py-8">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            </div>
+          )}
 
-        {displayItems.length === 0 && !isFetching && !isAnalyzing && (
-          <p className="text-muted-foreground">
-            {isTodaySelected ? 'No entries yet today.' : 'No entries for this day.'}
-          </p>
-        )}
-      </section>
+          {displayItems.length === 0 && !isFetching && !isAnalyzing && (
+            <p className="text-muted-foreground">
+              {isTodaySelected ? 'No entries yet today.' : 'No entries for this day.'}
+            </p>
+          )}
+        </section>
+      </div>
 
       {/* Save Meal Dialog (from existing entry) */}
       {saveMealDialogData && (
