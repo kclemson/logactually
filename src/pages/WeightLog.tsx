@@ -705,7 +705,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
       </section>
 
       {/* Swipe zone: DateNavigation + entries (swipe left = next day, swipe right = prev day) */}
-      <div {...swipeHandlers}>
+      <div ref={swipeHandlers.ref} onTouchStart={swipeHandlers.onTouchStart} onTouchEnd={swipeHandlers.onTouchEnd}>
         {/* Date Navigation */}
         <DateNavigation
           selectedDate={selectedDate}

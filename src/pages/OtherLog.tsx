@@ -299,7 +299,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
       </section>
 
       {/* Swipe zone: DateNavigation + entries (swipe left = next day, swipe right = prev day) */}
-      <div {...swipeHandlers}>
+      <div ref={swipeHandlers.ref} onTouchStart={swipeHandlers.onTouchStart} onTouchEnd={swipeHandlers.onTouchEnd}>
         {/* Shared date navigation — both modes */}
         <DateNavigation
           selectedDate={selectedDate}
