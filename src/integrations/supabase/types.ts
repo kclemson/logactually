@@ -566,10 +566,11 @@ export type Database = {
       }
       increment_login_count: { Args: { user_id: string }; Returns: undefined }
       is_read_only_user: { Args: { _user_id: string }; Returns: boolean }
+      toggle_demo_beta: { Args: never; Returns: boolean }
       toggle_demo_read_only: { Args: never; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "moderator" | "user"
+      app_role: "admin" | "moderator" | "user" | "beta"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -697,7 +698,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "moderator", "user"],
+      app_role: ["admin", "moderator", "user", "beta"],
     },
   },
 } as const

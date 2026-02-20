@@ -87,6 +87,21 @@ export default function Admin() {
     staleTime: 60_000,
   });
   const [toggling, setToggling] = useState(false);
+  const [togglingBeta, setTogglingBeta] = useState(false);
+
+  const { data: demoBeta } = useQuery({
+    queryKey: ['demoBeta'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('user_roles')
+        .select('id')
+        .eq('role', 'beta' as any)
+        .limit(1)
+        .maybeSingle();
+      return !!data;
+    },
+    staleTime: 60_000,
+  });
 
   const handleToggleDemoLock = async () => {
     setToggling(true);
@@ -98,6 +113,19 @@ export default function Admin() {
       console.error('Failed to toggle demo lock:', e);
     } finally {
       setToggling(false);
+    }
+  };
+
+  const handleToggleDemoBeta = async () => {
+    setTogglingBeta(true);
+    try {
+      const { data, error } = await supabase.rpc('toggle_demo_beta' as any);
+      if (error) throw error;
+      queryClient.setQueryData(['demoBeta'], data);
+    } catch (e) {
+      console.error('Failed to toggle demo beta:', e);
+    } finally {
+      setTogglingBeta(false);
     }
   };
 
@@ -193,6 +221,14 @@ export default function Admin() {
             >
               {demoLocked ? <Lock className="h-2.5 w-2.5" /> : <LockOpen className="h-2.5 w-2.5" />}
               {demoLocked ? "Locked" : "Unlocked"}
+            </button>
+            <button
+              onClick={handleToggleDemoBeta}
+              disabled={togglingBeta || demoBeta === undefined}
+              className={cn("inline-flex items-center gap-0.5 text-[10px] px-1 py-0 rounded border border-border hover:bg-muted disabled:opacity-50", demoBeta && "text-green-500 border-green-500/50")}
+              title={demoBeta ? "Demo has beta role. Click to revoke." : "Demo lacks beta role. Click to grant."}
+            >
+              Beta {demoBeta ? "✓" : "✗"}
             </button>
           </p>
           <p>Last 24h: <span className={(demoLogins24h ?? 0) > 0 ? "text-green-500" : ""}>{demoLogins24h ?? 0}</span></p>
