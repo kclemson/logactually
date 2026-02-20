@@ -36,7 +36,8 @@ import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
 const FoodLog = () => {
   const [searchParams] = useSearchParams();
   const dateParam = searchParams.get('date');
-  const dateKey = dateParam || getStoredDate() || format(new Date(), 'yyyy-MM-dd');
+  const validDateParam = dateParam && dateParam !== 'undefined' ? dateParam : null;
+  const dateKey = validDateParam || getStoredDate() || format(new Date(), 'yyyy-MM-dd');
   
   return <FoodLogContent key={dateKey} initialDate={dateKey} />;
 };
