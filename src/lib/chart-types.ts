@@ -100,4 +100,6 @@ export interface ChartDSL {
   limit?: number;
   /** Trailing N-period rolling average. Only valid when groupBy is "date" or "week". */
   window?: number;
+  /** Prefix-sum cumulative transform. Only valid when groupBy is "date" or "week". Applied after window (if any). */
+  transform?: "cumulative";
 }

@@ -40,7 +40,8 @@ You MUST respond with ONLY a valid JSON object (no markdown, no code fences). Th
 
   "sort": "label" | "value_asc" | "value_desc" or null,
   "limit": <positive integer or null>,
-  "window": <positive integer or null>
+  "window": <positive integer or null>,
+  "transform": "cumulative" or null
 }
 
 DATABASE SCHEMA (what the client can query):
@@ -104,6 +105,9 @@ GROUP BY OPTIONS:
 
 ROLLING WINDOW:
 - "window": <positive integer or null> — ONLY valid when groupBy is "date" or "week". Applies a trailing N-period rolling average to smooth the data. Use whenever the user says "rolling average", "7-day average", "smoothed", "trend line", "moving average", or similar. Example: window=7 for a 7-day trailing average. Omit (or null) when the user wants raw daily/weekly values.
+
+CUMULATIVE TRANSFORM:
+- "transform": "cumulative" or null — ONLY valid when groupBy is "date" or "week". Converts each data point to a running total (prefix sum) so the line only ever goes up. Use when the user says "cumulative", "total so far", "running total", "to date", or similar. Example: "total miles run this month so far" → groupBy="date", metric="distance_miles", transform="cumulative". Do NOT combine with window — rolling average and cumulative total are contradictory intents. Omit (or null) for all other requests.
 
 FILTER OPTIONS:
 - exerciseKey: filter exercise data to a specific exercise_key (e.g. "bench_press")

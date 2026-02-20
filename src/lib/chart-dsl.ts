@@ -116,6 +116,24 @@ function aggregate(values: number[], method: ChartDSL["aggregation"]): number {
   }
 }
 
+// ── Post-processing helpers ────────────────────────────────
+
+function applyWindow(dataPoints: Array<Record<string, any>>, window: number): void {
+  for (let i = 0; i < dataPoints.length; i++) {
+    const start = Math.max(0, i - window + 1);
+    const slice = dataPoints.slice(start, i + 1).map((p) => p.value);
+    dataPoints[i].value = Math.round(slice.reduce((a, b) => a + b, 0) / slice.length);
+  }
+}
+
+function applyCumulative(dataPoints: Array<Record<string, any>>): void {
+  let running = 0;
+  for (const point of dataPoints) {
+    running += point.value;
+    point.value = running;
+  }
+}
+
 // ── Main engine ───────────────────────────────────────────
 
 export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
@@ -178,14 +196,8 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
           _details: details,
         };
       });
-      // Apply rolling window if requested
-      if (dsl.window && dsl.window > 1) {
-        for (let i = 0; i < dataPoints.length; i++) {
-          const start = Math.max(0, i - dsl.window + 1);
-          const slice = dataPoints.slice(start, i + 1).map((p) => p.value);
-          dataPoints[i].value = Math.round(slice.reduce((a, b) => a + b, 0) / slice.length);
-        }
-      }
+      if (dsl.window && dsl.window > 1) applyWindow(dataPoints, dsl.window);
+      if (dsl.transform === "cumulative") applyCumulative(dataPoints);
       break;
     }
     case "dayOfWeek": {
@@ -241,14 +253,8 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
           _details: [{ label: "days", value: String(buckets[weekKey].length) }],
         });
       }
-      // Apply rolling window if requested
-      if (dsl.window && dsl.window > 1) {
-        for (let i = 0; i < dataPoints.length; i++) {
-          const start = Math.max(0, i - dsl.window + 1);
-          const slice = dataPoints.slice(start, i + 1).map((p) => p.value);
-          dataPoints[i].value = Math.round(slice.reduce((a, b) => a + b, 0) / slice.length);
-        }
-      }
+      if (dsl.window && dsl.window > 1) applyWindow(dataPoints, dsl.window);
+      if (dsl.transform === "cumulative") applyCumulative(dataPoints);
       break;
     }
     case "hourOfDay": {
