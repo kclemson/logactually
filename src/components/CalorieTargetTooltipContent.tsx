@@ -170,11 +170,11 @@ function TargetEquation({
         const isOver = remaining < 0;
         return (
           <>
-            <div className={`text-right ${isOver ? 'text-rose-400' : 'text-green-400'}`}>
-              {isOver ? `over ${Math.abs(remaining).toLocaleString()}` : remaining.toLocaleString()}
+            <div className="text-right">
+              {Math.abs(remaining).toLocaleString()}
             </div>
-            <div className={`text-[9px] italic opacity-60 ${isOver ? 'text-rose-400' : 'text-green-400'}`}>
-              {isOver ? 'cal over target' : 'cal remaining'}
+            <div className="text-[9px] italic opacity-60">
+              {isOver ? 'calories over target' : 'calories remaining'}
             </div>
           </>
         );
