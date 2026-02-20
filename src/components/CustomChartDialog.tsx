@@ -19,16 +19,13 @@ const ALL_CHIPS = [
   // Basics — obvious but useful
   "Daily fiber intake over time",
   "Sodium intake trend",
-  "Average sugar per day",
   "My highest calorie days",
   // Meal timing & patterns
   "Average calories by hour of day",
-  "Which day of the week do I eat the most?",
-  "How many meals do I log per day on average?",
+  "Which day of the week do I tend to eat the most?",
   "Which meals have the most calories?",
   // Insights — deeper analysis
   "Weekly calorie average trend",
-  "How consistent is my logging?",
   "Protein per meal over time",
   "My most common foods",
   "Calorie comparison: weekdays vs weekends",
@@ -59,7 +56,7 @@ function CustomChartDialogInner({
   const [input, setInput] = useState("");
   const [mode, setMode] = useState<"v1" | "v2">(() => (localStorage.getItem("chart-mode") as "v1" | "v2") || "v1");
   const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>(
-    initialChart ? [{ role: "user", content: initialChart.question }] : []
+    initialChart ? [{ role: "user", content: initialChart.question }] : [],
   );
   const [currentSpec, setCurrentSpec] = useState<ChartSpec | null>(initialChart?.chartSpec ?? null);
   const [dailyTotals, setDailyTotals] = useState<DailyTotals | null>(null);
@@ -185,12 +182,12 @@ function CustomChartDialogInner({
     if (editingIdRef.current) {
       updateMutation.mutate(
         { id: editingIdRef.current, question: lastQuestion, chartSpec: currentSpec, chartDsl: chartDSL ?? undefined },
-        { onSuccess: () => onOpenChange(false) }
+        { onSuccess: () => onOpenChange(false) },
       );
     } else {
       saveMutation.mutate(
         { question: lastQuestion, chartSpec: currentSpec, chartDsl: chartDSL ?? undefined },
-        { onSuccess: () => onOpenChange(false) }
+        { onSuccess: () => onOpenChange(false) },
       );
     }
   };
@@ -238,7 +235,10 @@ function CustomChartDialogInner({
         {/* Mode toggle */}
         <div className="flex gap-1 mt-1">
           <button
-            onClick={() => { setMode("v1"); localStorage.setItem("chart-mode", "v1"); }}
+            onClick={() => {
+              setMode("v1");
+              localStorage.setItem("chart-mode", "v1");
+            }}
             className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
               mode === "v1"
                 ? "bg-primary text-primary-foreground border-primary"
@@ -248,7 +248,10 @@ function CustomChartDialogInner({
             v1 · AI data
           </button>
           <button
-            onClick={() => { setMode("v2"); localStorage.setItem("chart-mode", "v2"); }}
+            onClick={() => {
+              setMode("v2");
+              localStorage.setItem("chart-mode", "v2");
+            }}
             className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
               mode === "v2"
                 ? "bg-primary text-primary-foreground border-primary"
@@ -302,8 +305,8 @@ function CustomChartDialogInner({
                   refining
                     ? "Refine this chart... (e.g. 'make it a line chart')"
                     : currentSpec
-                    ? "Describe another chart..."
-                    : "Describe the chart you'd like to see..."
+                      ? "Describe another chart..."
+                      : "Describe the chart you'd like to see..."
                 }
                 className="min-h-[60px] max-h-[120px] resize-none text-sm"
                 maxLength={500}
@@ -338,9 +341,7 @@ function CustomChartDialogInner({
           {/* Loading — only shown for first-ever request (no existing content) */}
           {generateChart.isPending && !hasExistingContent && (
             <div className="space-y-3">
-              {lastQuestion && (
-                <p className="text-xs text-muted-foreground italic">"{lastQuestion}"</p>
-              )}
+              {lastQuestion && <p className="text-xs text-muted-foreground italic">"{lastQuestion}"</p>}
               <div className="flex justify-end">
                 <Button size="sm" disabled className="h-9">
                   <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
@@ -360,9 +361,7 @@ function CustomChartDialogInner({
           {/* Disambiguation picker */}
           {showDisambiguation && (
             <div className="space-y-3">
-              {lastQuestion && (
-                <p className="text-xs text-muted-foreground italic">"{lastQuestion}"</p>
-              )}
+              {lastQuestion && <p className="text-xs text-muted-foreground italic">"{lastQuestion}"</p>}
               <p className="text-xs font-medium text-foreground">Which did you mean?</p>
               <div className="flex gap-2">
                 {chartOptions!.map((opt, i) => (
@@ -390,7 +389,10 @@ function CustomChartDialogInner({
               {/* DSL columns for debugging */}
               <div className="flex gap-2">
                 {chartOptions!.map((opt, i) => (
-                  <div key={i} className="flex-1 rounded border border-border/40 bg-muted/20 p-1.5 overflow-auto max-h-48">
+                  <div
+                    key={i}
+                    className="flex-1 rounded border border-border/40 bg-muted/20 p-1.5 overflow-auto max-h-48"
+                  >
                     <pre className="text-[9px] leading-tight text-muted-foreground whitespace-pre-wrap break-all font-mono">
                       {JSON.stringify(opt.chartDSL, null, 2)}
                     </pre>
@@ -414,9 +416,7 @@ function CustomChartDialogInner({
           {/* Result section */}
           {showResult && (
             <div className="space-y-3">
-              {lastQuestion && (
-                <p className="text-xs text-muted-foreground italic">"{lastQuestion}"</p>
-              )}
+              {lastQuestion && <p className="text-xs text-muted-foreground italic">"{lastQuestion}"</p>}
               <div className="flex justify-center">
                 <div className="w-[50%] min-w-[220px] border border-border rounded-md overflow-hidden">
                   <DynamicChart spec={currentSpec} />
@@ -430,9 +430,7 @@ function CustomChartDialogInner({
                   disabled={isSaving || generateChart.isPending}
                   className="flex-1"
                 >
-                  {isSaving ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
-                  ) : null}
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
                   {editingIdRef.current ? "Save Changes" : "Save to Trends"}
                 </Button>
                 <Button
@@ -453,8 +451,12 @@ function CustomChartDialogInner({
                   className="text-xs text-muted-foreground h-7 px-2"
                 >
                   {mode === "v2"
-                    ? (showDebug ? "Hide DSL" : "Show DSL")
-                    : (showDebug ? "Hide debug JSON" : "Show debug JSON")}
+                    ? showDebug
+                      ? "Hide DSL"
+                      : "Show DSL"
+                    : showDebug
+                      ? "Hide debug JSON"
+                      : "Show debug JSON"}
                 </Button>
                 {mode === "v1" && (
                   <Button
@@ -464,7 +466,10 @@ function CustomChartDialogInner({
                       if (currentSpec && dailyTotals) {
                         setVerification(verifyChartData(currentSpec, dailyTotals));
                       } else {
-                        setVerification({ status: "unavailable", reason: "No daily totals available (try regenerating the chart)" });
+                        setVerification({
+                          status: "unavailable",
+                          reason: "No daily totals available (try regenerating the chart)",
+                        });
                       }
                     }}
                     className="text-xs text-muted-foreground h-7 px-2"
@@ -476,22 +481,26 @@ function CustomChartDialogInner({
               </div>
 
               {verification && (
-                <div className={`text-xs p-2 rounded-md border ${
-                  verification.status === "unavailable"
-                    ? "bg-muted/50 text-muted-foreground"
-                    : verification.accuracy! > 95
-                    ? "bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-400"
-                    : verification.accuracy! > 80
-                    ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-700 dark:text-yellow-400"
-                    : "bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-400"
-                }`}>
+                <div
+                  className={`text-xs p-2 rounded-md border ${
+                    verification.status === "unavailable"
+                      ? "bg-muted/50 text-muted-foreground"
+                      : verification.accuracy! > 95
+                        ? "bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-400"
+                        : verification.accuracy! > 80
+                          ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-700 dark:text-yellow-400"
+                          : "bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-400"
+                  }`}
+                >
                   {verification.status === "unavailable" ? (
                     <p>{verification.reason}</p>
                   ) : (
                     <div className="space-y-1">
                       <p className="font-medium">
                         {verification.matched}/{verification.total} AI values matched your logs{" "}
-                        {verification.allExact ? "exactly" : `(${verification.toleranceLabel || "within 1% or 5 units"})`}
+                        {verification.allExact
+                          ? "exactly"
+                          : `(${verification.toleranceLabel || "within 1% or 5 units"})`}
                       </p>
                       {verification.method && (
                         <p className="text-[10px] opacity-70">
@@ -507,9 +516,7 @@ function CustomChartDialogInner({
                             <p
                               key={c.label}
                               className={`text-[10px] font-mono ${
-                                c.match
-                                  ? "text-green-700 dark:text-green-400"
-                                  : "text-red-700 dark:text-red-400"
+                                c.match ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"
                               }`}
                             >
                               {c.label}: AI={c.ai}, actual={c.actual}
