@@ -98,4 +98,6 @@ export interface ChartDSL {
 
   sort?: "label" | "value_asc" | "value_desc";
   limit?: number;
+  /** Trailing N-period rolling average. Only valid when groupBy is "date" or "week". */
+  window?: number;
 }
