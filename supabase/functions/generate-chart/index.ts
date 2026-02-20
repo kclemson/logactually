@@ -52,9 +52,7 @@ AGGREGATION MODES — choose the right one based on what the user is asking:
 
 For categorical charts, set rawDate to the most recent date that contributed data to that bucket.
 
-Common categorical patterns:
-- "by hour of day" → 24 buckets max, labeled "12am"–"11pm", aggregate using created_at timestamps
-- "by day of week" → 7 buckets, ordered by weekday name
+For categorical charts, use created_at timestamps for time-of-day grouping.
 
 COMPARING GROUPS (e.g. "workout days vs rest days"):
 - The result is categorical with one bucket per group
@@ -142,10 +140,6 @@ GROUP BY OPTIONS:
 
 RULES:
 - Choose the metric and grouping that best matches the user's intent
-- For "calories over time" → source=food, metric=cal, groupBy=date, aggregation=sum
-- For "average protein by day of week" → source=food, metric=protein, groupBy=dayOfWeek, aggregation=average
-- For "weekday vs weekend calories" → source=food, metric=cal, groupBy=weekdayVsWeekend, aggregation=average
-- For "weekly calorie trend" → source=food, metric=cal, groupBy=week, aggregation=sum
 - For bar charts showing categories, consider adding sort=value_desc
 - Use line charts for time series, bar charts for categories
 - title should be concise and descriptive

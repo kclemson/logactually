@@ -113,10 +113,10 @@ GROUP BY OPTIONS:
 - "category": EXERCISE SOURCE ONLY. Groups exercises into two buckets: "Cardio" and "Strength". Use for "cardio vs strength split", "cardio vs weights", "training type breakdown". Pair with sum for totals (e.g. total calories burned, total sets, total duration).
 
 ROLLING WINDOW:
-- "window": <positive integer or null> — ONLY valid when groupBy is "date" or "week". Applies a trailing N-period rolling average to smooth the data. Use whenever the user says "rolling average", "7-day average", "smoothed", "trend line", "moving average", or similar. Example: window=7 for a 7-day trailing average. Omit (or null) when the user wants raw daily/weekly values.
+- "window": <positive integer or null> — ONLY valid when groupBy is "date" or "week". Applies a trailing N-period rolling average to smooth the data. Example: window=7 for a 7-day trailing average. Omit (or null) when the user wants raw daily/weekly values.
 
 CUMULATIVE TRANSFORM:
-- "transform": "cumulative" or null — ONLY valid when groupBy is "date" or "week". Converts each data point to a running total (prefix sum) so the line only ever goes up. Use when the user says "cumulative", "total so far", "running total", "to date", or similar. Example: "total miles run this month so far" → groupBy="date", metric="distance_miles", transform="cumulative". Do NOT combine with window — rolling average and cumulative total are contradictory intents. Omit (or null) for all other requests.
+- "transform": "cumulative" or null — ONLY valid when groupBy is "date" or "week". Converts each data point to a running total (prefix sum) so the line only ever goes up. Example: "total miles run this month so far" → groupBy="date", metric="distance_miles", transform="cumulative". Do NOT combine with window — they are contradictory intents. Omit (or null) for all other requests.
 
 FILTER OPTIONS:
 - exerciseKey: filter exercise data to a specific exercise_key (e.g. "bench_press")
@@ -207,36 +207,13 @@ THE SIX CLASSIFICATION RULES (exercise source unless noted):
 
 4. "any_key" — TRUE if ANY of the specified keys[] appears in that day's log. Use when the user says "at least one", "any day I did", "days that included", "days I did [exercise]". keys[] entries can be plain keys ("squat") or "key:subtype" tokens ("walk_run:running").
 
-5. "only_keys" — TRUE if EVERY exercise logged that day is within the keys[] allowlist. This is the inverse of any_key. Use when the user says "only", "nothing but", "exclusively", "just walked". This is the correct rule for defining "rest days" in terms of a low-intensity allowlist.
-   - keys[] supports two token formats:
-     - "walk_run" — matches any walk_run entry regardless of subtype (walking, running, hiking all match)
-     - "walk_run:walking" — matches ONLY walk_run entries where exercise_subtype = 'walking' (excludes running/hiking)
-     - "walk_run:hiking" — matches ONLY hiking entries
-   - IMPORTANT: Use the plain key (e.g. "walk_run") when the user says "only walked" / "only walking" unless they specifically say "no running" or are distinguishing walking from running. Use the specific subtype (e.g. "walk_run:walking") ONLY when the user explicitly wants to exclude running or hiking.
-   - A day is TRUE only if every single exercise token on that day is covered by an allowlist entry
-   - Known subtypes for walk_run: "walking", "running", "hiking"
-   - Known subtypes for cycling: "indoor", "outdoor"
-   - Ad-hoc/unknown exercise keys (like "gardening", "yard_work") will NOT match any canonical key, so they correctly fail the only_keys test unless explicitly included in keys[]
-   - Example for "my rest days = only walking or gardening": keys: ["walk_run", "other"]
+5. "only_keys" — TRUE if EVERY exercise logged that day is within the keys[] allowlist. A day is TRUE only if every exercise token is covered by an allowlist entry. keys[] supports two token formats: plain key ("walk_run" — matches regardless of subtype) or "key:subtype" ("walk_run:walking" — matches only that subtype). Use the plain key unless the user explicitly wants to exclude specific subtypes.
 
 6. "threshold" — TRUE if the daily food metric meets thresholdOp + thresholdValue. Source must be "food". Use for "high protein days", "days over my calorie goal", "low carb days". Requires thresholdValue (number) and thresholdOp ("gte" | "lte" | "gt" | "lt").
 
-RULE SELECTION GUIDE:
-- User says "only walking" / "exclusively" / "nothing but" → only_keys with plain key "walk_run"
-- User says "only walking (no running)" → only_keys with subtype "walk_run:walking"
-- User says "at least one [exercise]" / "any day I did" / "leg day" → any_key
-- User says "workout day" / "training day" / "day I lifted" → any_strength
-- User says "cardio only day" → all_cardio
-- User says "days I did cardio" → any_cardio
-- User says "high [food metric] days" / "over [number]g protein" → threshold (food source)
-
-CLASSIFICATION EXAMPLES:
-- "rest days vs workout days" → rule: "any_strength", trueLabel: "Workout Days", falseLabel: "Rest Days", source: "exercise"
-- "my rest days (I consider only walking to be rest)" → rule: "only_keys", keys: ["walk_run"], trueLabel: "Rest Days", falseLabel: "Active Days", source: "exercise"
-- "high protein days vs low" → rule: "threshold", thresholdValue: 150, thresholdOp: "gte", trueLabel: "High Protein", falseLabel: "Low Protein", source: "food", metric: "protein"
-- "leg day vs non-leg day" → rule: "any_key", keys: ["squat","leg_press","leg_extension","leg_curl","romanian_deadlift","lunge","bulgarian_split_squat","hack_squat"], trueLabel: "Leg Days", falseLabel: "Non-Leg Days", source: "exercise"
-- "days I ran vs days I only walked" → rule: "any_key", keys: ["walk_run:running"], trueLabel: "Running Days", falseLabel: "Non-Running Days", source: "exercise"
-- "days where I only walked vs days with more" → rule: "only_keys", keys: ["walk_run"], trueLabel: "Walking Only", falseLabel: "More Intense Days", source: "exercise"
+CLASSIFICATION EXAMPLES (non-obvious cases only):
+- "days I ran vs days I only walked" → rule: "any_key", keys: ["walk_run:running"], trueLabel: "Running Days", falseLabel: "Non-Running Days", source: "exercise" (the framing is comparative — the user wants to identify running days, not constrain to an allowlist)
+- "high protein days vs low" → rule: "threshold", thresholdValue: 150, thresholdOp: "gte", trueLabel: "High Protein", falseLabel: "Low Protein", source: "food", metric: "protein" (threshold requires source: "food")
 
 UNSUPPORTED REQUEST:
 
