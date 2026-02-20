@@ -85,7 +85,7 @@ When the user asks about the GENERAL activity (e.g. "cardio", "walk/run"), use o
 
 AVAILABLE METRICS:
 - Food source: calories, protein, carbs, fat, fiber, sugar, saturated_fat, sodium, cholesterol, entries (number of food items logged)
-- Exercise source: sets, duration_minutes, distance_miles, calories_burned, unique_exercises (distinct exercise types per day), entries (number of exercise items logged — each logged entry counts separately, not deduplicated by exercise type. Two separate dog walks = 2 entries.)
+- Exercise source: sets, duration_minutes, distance_miles, calories_burned, heart_rate (average BPM from exercise_metadata.heart_rate — use aggregation: "average"; not all rows have this), unique_exercises (distinct exercise types per day), entries (number of exercise items logged — each logged entry counts separately, not deduplicated by exercise type. Two separate dog walks = 2 entries.)
 
 DERIVED METRICS (food source only, use derivedMetric field):
 - protein_pct, carbs_pct, fat_pct: macro percentage of total calories
@@ -163,7 +163,18 @@ If the user's request has more than one meaningfully different interpretation, r
   ]
 }
 
-Each option must be a complete DSL object with a distinct aiNote. Maximum 3 options. Only use this when the interpretations would produce genuinely different charts — not just minor variations.`;
+Each option must be a complete DSL object with a distinct aiNote. Maximum 3 options. Only use this when the interpretations would produce genuinely different charts — not just minor variations.
+
+UNSUPPORTED REQUEST:
+
+If the user's request CANNOT be expressed using the available schema — specifically:
+- Filtering food by description content (e.g. "candy", "chocolate", "fried") since there is no category or tag column on food items, only free-text descriptions
+- Gap or streak analysis (e.g. "rest days between workouts", "longest streak") since this requires lag/window operations not expressible in the DSL
+- Meal-level grouping (e.g. "which meals have most calories") since there is no meal entity in the schema
+
+...then respond with: { "unsupported": true, "reason": "One concise sentence explaining what the DSL can't express" }
+
+Do NOT use this for heart rate, common foods, exercise frequency, cardio vs strength, or any query that maps cleanly to the available metrics, groupBy options, and filters above.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -274,6 +285,14 @@ serve(async (req) => {
     }
 
     console.log("generate-chart-dsl result:", JSON.stringify(dsl).slice(0, 1000));
+
+    // Handle unsupported request signal
+    if (dsl.unsupported === true) {
+      console.log("generate-chart-dsl: unsupported request:", dsl.reason);
+      return new Response(JSON.stringify({ unsupported: true, reason: dsl.reason ?? "Request cannot be expressed in the chart DSL" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Handle multi-option (disambiguation) response
     if (dsl.chartDSLOptions) {

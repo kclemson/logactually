@@ -18,7 +18,7 @@ const METRIC_COMPAT: Record<string, string> = {
 // ── Known metrics ─────────────────────────────────────────
 
 const FOOD_METRICS = ["calories", "protein", "carbs", "fat", "fiber", "sugar", "saturated_fat", "sodium", "cholesterol", "entries"] as const;
-const EXERCISE_METRICS = ["sets", "duration_minutes", "distance_miles", "calories_burned", "unique_exercises", "entries"] as const;
+const EXERCISE_METRICS = ["sets", "duration_minutes", "distance_miles", "calories_burned", "heart_rate", "unique_exercises", "entries"] as const;
 
 // Derived formulas compute from raw food daily totals
 const DERIVED_FORMULAS: Record<string, (t: Record<string, number>) => number> = {
@@ -168,6 +168,7 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
               { label: "duration_minutes", value: exDay?.duration_minutes },
               { label: "distance_miles", value: exDay?.distance_miles },
               { label: "calories_burned", value: exDay?.calories_burned },
+              { label: "heart_rate", value: exDay?.heart_rate },
               { label: "entries", value: exDay?.entries },
             ], dsl.metric);
         return {
@@ -295,11 +296,14 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
           const divisor = dsl.aggregation === "average"
             ? ((item as any).uniqueDays?.size || 1)
             : 1;
+          // For heart_rate, average over rows that actually had heart rate data
+          const heartRateDivisor = (item as any).heartRateCount > 0 ? (item as any).heartRateCount : 1;
           const metricValue =
             dsl.metric === "sets"             ? item.totalSets / divisor :
             dsl.metric === "duration_minutes" ? item.totalDurationMinutes / divisor :
             dsl.metric === "distance_miles"   ? ((item as any).totalDistanceMiles ?? 0) / divisor :
             dsl.metric === "calories_burned"  ? item.totalCaloriesBurned / divisor :
+            dsl.metric === "heart_rate"       ? (item as any).totalHeartRate / heartRateDivisor :
             item.count;
           dataPoints.push({
             label: item.description.length > 25 ? item.description.slice(0, 22) + "…" : item.description,
@@ -309,7 +313,8 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
               { label: "sets", value: item.totalSets },
               { label: "duration_minutes", value: item.totalDurationMinutes },
               { label: "calories_burned", value: item.totalCaloriesBurned },
-            ], dsl.metric === "sets" ? "sets" : dsl.metric === "duration_minutes" ? "duration_minutes" : dsl.metric === "calories_burned" ? "calories_burned" : undefined),
+              { label: "heart_rate", value: (item as any).heartRateCount > 0 ? Math.round((item as any).totalHeartRate / (item as any).heartRateCount) : null },
+            ], dsl.metric === "sets" ? "sets" : dsl.metric === "duration_minutes" ? "duration_minutes" : dsl.metric === "calories_burned" ? "calories_burned" : dsl.metric === "heart_rate" ? "heart_rate" : undefined),
           });
         }
       }
