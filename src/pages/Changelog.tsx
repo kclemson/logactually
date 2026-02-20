@@ -22,6 +22,7 @@ type ChangelogEntry = {
 
 // prettier-ignore
 const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+{ date: "Feb-19", text: "Updated the feedback form on the Help page — you can now attach a photo from your gallery or take a screenshot of any page in the app directly from the feedback form.", image: "feedback-attachments.png" },
 { date: "Feb-18", text: "Added the ability to pin AI responses from 'Ask AI' to refer to later.", image: "pinned-chats.png" },
 { date: "Feb-18", text: "Added 'Copy to today' — expand any past food or exercise entry and tap the link to copy it to today's log.", image: "copy-to-today.png" },
 { date: "Feb-18", text: "Added a details viewer/editor for logged food and exercise items.", image: "detailed-dialog.png" },
@@ -52,7 +53,7 @@ const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   { date: "Jan-23", text: "It's alive! v1 of app published with support for food logging & AI integration, editing logged items (and editing calories auto-scales protein/carbs/fat), charts for trends over time, mobile & desktop layouts, PWA support for pinning to home screen." },
 ];
 
-export const LAST_UPDATED = "Feb-18-26";
+export const LAST_UPDATED = "Feb-19-26";
 // ============================================
 
 export default function Changelog() {
