@@ -31,6 +31,13 @@ interface OpenFoodFactsProduct {
   };
 }
 
+function truncateProductName(name: string, maxChars = 45): string {
+  if (name.length <= maxChars) return name;
+  const truncated = name.slice(0, maxChars);
+  const lastSpace = truncated.lastIndexOf(' ');
+  return lastSpace > 15 ? truncated.slice(0, lastSpace) : truncated;
+}
+
 interface OpenFoodFactsResponse {
   status: number;
   product?: OpenFoodFactsProduct;
@@ -107,7 +114,7 @@ serve(async (req) => {
           const servingSize = (product.serving_size || '1 serving')
             .replace(/\s*\([^)]*\)\s*/g, '')
             .trim() || '1 serving';
-          const productName = product.product_name || 'Unknown product';
+          const productName = truncateProductName(product.product_name || 'Unknown product');
 
           // Prefer per-serving values, fall back to per-100g
           const calories = Math.round(
@@ -187,7 +194,7 @@ serve(async (req) => {
             const nutriments = product.nutriments || {};
             const servingSize = (product.serving_size || '1 serving')
               .replace(/\s*\([^)]*\)\s*/g, '').trim() || '1 serving';
-            const productName = product.product_name || 'Unknown product';
+            const productName = truncateProductName(product.product_name || 'Unknown product');
             const calories = Math.round(nutriments['energy-kcal_serving'] ?? nutriments['energy-kcal_100g'] ?? 0);
             const protein = Math.round(nutriments.proteins_serving ?? nutriments.proteins_100g ?? 0);
             const carbs = Math.round(nutriments.carbohydrates_serving ?? nutriments.carbohydrates_100g ?? 0);
@@ -244,7 +251,7 @@ I need the product name and nutritional information for one typical serving.
 
 IMPORTANT: Respond ONLY with valid JSON, no markdown formatting, no code blocks.
 Use this exact format:
-{"name": "Product Name", "serving": "simple quantity-unit format like '1 bag' or '36 pretzels' -- never combine multiple units or add parenthetical context", "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "fiber": 0, "sugar": 0, "saturated_fat": 0, "sodium": 0, "cholesterol": 0}
+{"name": "Short product name, max 25 characters", "serving": "simple quantity-unit format like '1 bag' or '36 pretzels' -- never combine multiple units or add parenthetical context", "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "fiber": 0, "sugar": 0, "saturated_fat": 0, "sodium": 0, "cholesterol": 0}
 
 sodium and cholesterol should be in milligrams. All other values in grams.
 
