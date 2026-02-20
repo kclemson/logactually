@@ -1,86 +1,118 @@
 
-## Fix: Remove `max-h-[3rem]` cap, use `line-clamp-2` on description only
+## Root cause: `line-clamp-2` makes spans behave like blocks
 
-### Why everything so far has failed
+`line-clamp-2` is CSS shorthand for:
+```css
+display: -webkit-box;
+-webkit-line-clamp: 2;
+overflow: hidden;
+```
 
-All previous attempts kept `max-h-[3rem]` as the safety net. But `max-h-[3rem]` is roughly 48px — exactly 2 lines at the default line-height. The moment a description wraps to 2 lines AND a portion is present, the portion becomes line 3 and gets clipped. No amount of `flex-wrap`, `truncate`, or `line-clamp-1` can fix this while the outer container is still height-capped to 2 lines.
+The `display: -webkit-box` turns the element into a block formatting context. That's why "Sausage Biscuit Mini" and "(2 sandwiches)" always end up on separate lines — the description span is technically a block, so the portion button wraps below no matter what.
 
-The two goals — "cap description to 2 lines" and "always show portion" — are fundamentally in conflict when using a single height cap on the whole container.
+Every approach so far has kept either `line-clamp` or a flex container fighting this — none of them can win.
 
-### The real fix: separate the two concerns
+## The correct approach: treat description + portion as inline text
 
-Remove `max-h-[3rem]` from the container. Instead, apply `line-clamp-2` directly to the description text element. This way:
+The description and portion should flow as **inline text**, exactly like words in a sentence. CSS already knows how to do this perfectly:
 
-- **Description** is capped to 2 lines via `line-clamp-2` — same visual behaviour as before
-- **Portion** sits below as a flex-wrap sibling, always visible, no height cap fighting it
-- **Total row height** = at most 2 lines of description + 1 line of portion — perfectly acceptable
+```
+Sausage Biscuit Mini (2 sandwiches)   ← short: all on one line
+Bacon egg & cheese pita               ← medium: wraps naturally,
+(0.5 sandwiches)                      ← portion stays inline after
+Old-fashioned vanilla farmstyle       ← long: wraps to 2 lines,
+greek yogurt (5.3 ONZ)                ← portion on same line as tail
+```
 
-### Changes to `src/components/FoodItemsTable.tsx`
+The implementation: make the description a plain `inline` element and the portion button/span also `inline`. Wrap them in a `<div>` that is `block` (normal flow). The description text wraps naturally, and the portion sits right after the last character of the description.
 
-**Read-only item row (around line 792-817):**
+No flex, no line-clamp, no height cap. Just inline text flow — the way browsers have handled this for 30 years.
 
-The outer `<div>` drops `max-h-[3rem]` and `overflow-hidden`. The description `<span>` gains `line-clamp-2`. The portion/edited indicator remain `shrink-0 whitespace-nowrap`.
+For the "don't let it grow forever" concern: a food log description longer than ~3 lines would be genuinely unusual. The row can accommodate 2-3 lines naturally. If a hard cap is still wanted, `line-clamp-3` applied to the **outer** `<div>` (not the description span) would cap the entire block including the portion, which is acceptable.
 
+## Changes to `src/components/FoodItemsTable.tsx`
+
+### Read-only item row (lines 791–816)
+
+**Before:**
 ```tsx
-// Before
-<div className={cn("flex items-baseline gap-1 flex-wrap flex-1 min-w-0 pl-1 pr-0 py-1", compact && "text-sm")}>
-  <span title={...} className="min-w-0">
-
-// After
 <div className={cn("flex gap-1 flex-wrap flex-1 min-w-0 pl-1 pr-0 py-1", compact && "text-sm")}>
-  <span title={...} className="line-clamp-2 w-full min-w-0">
+  <span title={getItemTooltip(item)} className="line-clamp-2 min-w-0">
+    {item.description}
+  </span>
+  {item.portion && (
+    <span className="shrink-0 ml-1 text-xs text-muted-foreground whitespace-nowrap">({item.portion})</span>
+  )}
+</div>
 ```
 
-Note `w-full` on the description span — this forces it to always occupy the full row width, so the portion naturally starts on its own line below. Without `w-full`, short descriptions sit inline with the portion (one line, fine), and long descriptions wrap to 2 lines then portion flows below (also fine).
-
-Actually — for the flex-wrap approach, `w-full` is not always wanted (it would force portion to a new line even for "Coffee (1 portion)"). The better approach: keep `flex-wrap` on the container, let the description span grow naturally with `line-clamp-2`, and the portion wraps to a new line only when needed.
-
-**Editable item row (around line 748-776):**
-
-The container div drops `max-h-[3rem]` and `overflow-hidden`. The `DescriptionCell` gets `className="line-clamp-2"`.
-
+**After:**
 ```tsx
-// Before (container)
-"flex-1 min-w-0 rounded pl-1 py-1",
-"overflow-hidden max-h-[3rem]",
-"flex items-baseline gap-1 flex-wrap",
-
-// After (container)
-"flex-1 min-w-0 rounded pl-1 py-1",
-"flex items-baseline gap-1 flex-wrap",
+<div className={cn("flex-1 min-w-0 pl-1 pr-0 py-1 leading-snug", compact && "text-sm")}>
+  <span title={getItemTooltip(item)}>
+    {item.description}
+  </span>
+  {item.portion && (
+    <span className="ml-1 text-xs text-muted-foreground"> ({item.portion})</span>
+  )}
+  {hasAnyEditedFields(item) && (
+    <span className="text-focus-ring font-bold" title={formatEditedFields(item) || 'Edited'}> *</span>
+  )}
+</div>
 ```
 
+The description `<span>` and portion `<span>` are now just inline text that flows together. No flex, no clamp, no shrink.
+
+### Editable item row (lines 748–776)
+
+The `DescriptionCell` component uses `contentEditable` which is already inline-ish. Remove `line-clamp-2` from it, and move the portion button + edited indicator **outside** the `DescriptionCell` but inside the same `<div>`:
+
+**Before:**
 ```tsx
-// DescriptionCell
-className="line-clamp-2"   // replaces "min-w-0"
-```
-
-**Group header rows (~lines 371 and 551):**
-
-Same change — remove `max-h-[3rem]` from the container class, add `line-clamp-2` to the `DescriptionCell` className.
-
-```tsx
-// Before
-<div className={cn("flex-1 min-w-0 overflow-hidden max-h-[3rem] rounded pl-1 py-1 flex items-baseline gap-1 flex-wrap ...", ...)}>
-  <DescriptionCell ... className="min-w-0">
-
-// After
-<div className={cn("flex-1 min-w-0 rounded pl-1 py-1 flex items-baseline gap-1 flex-wrap ...", ...)}>
+<div className={cn(
+  "flex-1 min-w-0 rounded pl-1 py-1",
+  "flex items-baseline gap-1 flex-wrap",
+  "focus-within:ring-2 ..."
+)}>
   <DescriptionCell ... className="line-clamp-2">
+    {item.portion && <button ...>({item.portion})</button>}
+    {hasAnyEditedFields(item) && <span ...> *</span>}
+  </DescriptionCell>
+</div>
 ```
 
-### Why this works for all cases
+**After:**
+```tsx
+<div className={cn(
+  "flex-1 min-w-0 rounded pl-1 py-1 leading-snug",
+  "focus-within:ring-2 ..."
+)}>
+  <DescriptionCell ... className="">
+    {item.portion && (
+      <button ...>({item.portion})</button>
+    )}
+    {hasAnyEditedFields(item) && <span ...> *</span>}
+  </DescriptionCell>
+</div>
+```
 
-| Description | With portion? | Result |
-|---|---|---|
-| Short ("Coffee") | Yes ("1 portion") | Both on 1 line — portion fits inline |
-| Medium ("Bacon egg & cheese pita") | Yes ("0.5 sandwiches") | Both on 1 line — enough space |
-| Long ("Old-fashioned vanilla farmstyle greek") | Yes ("6 oz") | Description uses up to 2 lines via `line-clamp-2`, portion wraps to line 3 — **always visible** |
-| Very long, no portion | No | Description wraps to 2 lines, no portion, same as before |
-| Extremely long | Yes | Description clamps at 2 lines with `…`, portion is line 3 — always visible |
+The portion button and edited indicator stay as children of `DescriptionCell` (rendered after the `contentEditable` span via the `children` prop slot), which already renders them inline. Just remove the flex + line-clamp from the container.
 
-### Files changed
+### Group header rows (lines 371 and ~551)
+
+Same approach — remove `flex-wrap items-baseline gap-1` from the container `<div>`, and remove `line-clamp-2` from the `DescriptionCell` className. The group name and "(1 portion)" button flow inline naturally.
+
+## Why this is the right long-term approach
+
+| Approach | Problem |
+|---|---|
+| `truncate` on description | Forces 1 line, portion gets cut |
+| `line-clamp-2` on description | `-webkit-box` makes it a block, portion always on new line |
+| `max-h-[3rem]` on container | Clips portion when description wraps |
+| **Inline text flow** | Description wraps naturally, portion follows inline — always visible |
+
+## Files changed
 
 | File | Change |
 |---|---|
-| `src/components/FoodItemsTable.tsx` | Remove `overflow-hidden max-h-[3rem]` from the description container in: editable item row, read-only item row, and both group header rows. Add `line-clamp-2` to description elements (DescriptionCell className and read-only span className). |
+| `src/components/FoodItemsTable.tsx` | Remove `flex flex-wrap items-baseline gap-1` from description containers. Remove `line-clamp-2` from description spans/DescriptionCell. Let description + portion render as plain inline elements. |
