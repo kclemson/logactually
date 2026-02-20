@@ -1,68 +1,71 @@
 
-## Move "Thanks!" below the Photo/Screenshot links
+## Fix: Sticky header with scrollable content
 
-### What the user wants
+### The problem
 
-The success message should appear on a second line **below** the Photo and Screenshot buttons, still to the left of the Send Feedback button. The button is taller than the attachment links, so there's natural vertical space for this to sit cleanly underneath them.
+Currently the page is `min-h-screen` with a normal document scroll. The X button is `position: absolute` inside the content `div`, so it scrolls off the top as the user scrolls down.
 
+### The fix
+
+Convert the page to a full-viewport column layout where:
+- The **header row** (title + X button) is fixed/sticky at the top
+- The **content area** (entries + feedback form) scrolls independently underneath it
+
+### Exact layout change
+
+Replace the current structure:
 ```
-[📎 Photo]  [📷 Screenshot a page]
-Thanks for the feedback!                    [Send Feedback]
-```
-
-### How to implement it
-
-The outer wrapper stays `flex items-start justify-between gap-3` (left group and button right-aligned and top-aligned).
-
-The **left group** changes from `flex items-center gap-3` (single row) to `flex flex-col gap-1` (column), containing:
-1. A `flex items-center gap-3` inner row for the two attachment buttons
-2. The `{showSuccess && <span>...</span>}` message as the second row — only rendered when visible, so it takes up no space normally
-
-The **right group** stays `flex-shrink-0` with just the Send button.
-
-### Exact change in `src/components/FeedbackForm.tsx` (lines 277–341)
-
-Replace:
-```tsx
-{/* Left: attachment controls */}
-<div className="flex items-center gap-3 flex-wrap">
-  ...buttons...
-</div>
-
-{/* Right: send button + success */}
-<div className="flex items-center gap-3 flex-shrink-0">
-  <Button ...>Send Feedback</Button>
-  {showSuccess && <span>...</span>}
-</div>
-```
-
-With:
-```tsx
-{/* Left: attachment controls + success message below */}
-<div className="flex flex-col gap-1">
-  <div className="flex items-center gap-3">
-    ...buttons (unchanged)...
+<div className="min-h-screen bg-background">
+  <div className="mx-auto max-w-2xl px-4 py-8">
+    <div className="relative">
+      <button absolute X />
+      <h1>Changelog</h1>
+      <p>Last updated</p>
+      <ul>...entries...</ul>
+      <FeedbackForm />
+    </div>
   </div>
-  {showSuccess && (
-    <span className="text-sm text-muted-foreground animate-in fade-in">
-      {FEEDBACK_CONTENT.successMessage}
-    </span>
-  )}
-</div>
-
-{/* Right: send button only */}
-<div className="flex-shrink-0">
-  <Button ...>Send Feedback</Button>
 </div>
 ```
 
-### Also in the same pass: Changelog cache-busting
+With a `flex flex-col h-screen` outer shell:
 
-Add `?v=${LAST_UPDATED}` to all 4 image `src`/`onClick` expressions in `src/pages/Changelog.tsx` so dev mode always shows the latest screenshot when the changelog is updated.
+```
+<div className="flex flex-col h-screen bg-background">
+
+  {/* Sticky header row */}
+  <div className="flex-shrink-0 border-b border-border">
+    <div className="mx-auto max-w-2xl px-4 py-4 flex items-start justify-between">
+      <div>
+        <h1 className="text-2xl font-bold">Changelog</h1>
+        <p className="text-sm text-muted-foreground">Last updated: {LAST_UPDATED}</p>
+      </div>
+      <button X />
+    </div>
+  </div>
+
+  {/* Scrollable content */}
+  <div className="flex-1 overflow-y-auto">
+    <div className="mx-auto max-w-2xl px-4 py-6">
+      <ul>...entries...</ul>
+      <FeedbackForm />
+    </div>
+  </div>
+
+</div>
+```
+
+Key details:
+- `h-screen` on the outer div caps the page to the viewport height (no document scroll)
+- `flex-shrink-0` on the header prevents it from being squeezed
+- `flex-1 overflow-y-auto` on the content area makes only that region scroll
+- The X button moves from `absolute` to a natural `flex` child in the header row — positioned right with `justify-between`, aligned top with `items-start`
+- `border-b border-border` gives the header a subtle separator from the content
+- The `py-8` top padding from the old layout becomes `py-4` on the header and `py-6` on the content start — preserving similar visual spacing
+- The lightbox overlay (`fixed inset-0`) is unaffected by this change
 
 ### Files changed
 
 | File | Change |
 |---|---|
-| `src/components/FeedbackForm.tsx` | Restructure left group to `flex-col`; move success message to second row below attachment buttons; simplify right group to button only |
-| `src/pages/Changelog.tsx` | Add `?v=${LAST_UPDATED}` to all changelog image `src` and `setLightboxSrc` calls |
+| `src/pages/Changelog.tsx` | Replace `min-h-screen` scroll layout with `h-screen flex-col` sticky header + scrollable content body |
