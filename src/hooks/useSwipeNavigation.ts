@@ -73,7 +73,8 @@ export function useSwipeNavigation(
       return;
     }
     const target = e.target as Element;
-    if (target.closest(INTERACTIVE_SELECTORS)) {
+    const interactiveEl = target.closest(INTERACTIVE_SELECTORS);
+    if (interactiveEl && !interactiveEl.hasAttribute('data-swipe-exempt')) {
       cancelled.current = true;
       return;
     }
