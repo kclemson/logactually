@@ -1,71 +1,42 @@
 
-## Fix: Sticky header with scrollable content
+## Tag Ask AI logs with [dev] vs [user]
 
 ### The problem
 
-Currently the page is `min-h-screen` with a normal document scroll. The X button is `position: absolute` inside the content `div`, so it scrolls off the top as the user scrolls down.
+The edge function has no structured logging for incoming questions, so there's no way to tell from Supabase logs whether a given "Ask AI" call came from you (admin) or a real user.
 
 ### The fix
 
-Convert the page to a full-viewport column layout where:
-- The **header row** (title + X button) is fixed/sticky at the top
-- The **content area** (entries + feedback form) scrolls independently underneath it
+Add a single `console.log` line in the edge function, just before the AI call, that emits the question alongside a `[dev]` or `[user]` tag — determined server-side by calling the existing `has_role` DB function.
 
-### Exact layout change
-
-Replace the current structure:
+Example log output:
 ```
-<div className="min-h-screen bg-background">
-  <div className="mx-auto max-w-2xl px-4 py-8">
-    <div className="relative">
-      <button absolute X />
-      <h1>Changelog</h1>
-      <p>Last updated</p>
-      <ul>...entries...</ul>
-      <FeedbackForm />
-    </div>
-  </div>
-</div>
+[user] food: "How has my diet changed over the past month?"
+[dev]  exercise: "What exercises should I do more often?"
 ```
 
-With a `flex flex-col h-screen` outer shell:
+### How it works
 
-```
-<div className="flex flex-col h-screen bg-background">
+After the userId is extracted from the JWT (line 40), add one DB call:
 
-  {/* Sticky header row */}
-  <div className="flex-shrink-0 border-b border-border">
-    <div className="mx-auto max-w-2xl px-4 py-4 flex items-start justify-between">
-      <div>
-        <h1 className="text-2xl font-bold">Changelog</h1>
-        <p className="text-sm text-muted-foreground">Last updated: {LAST_UPDATED}</p>
-      </div>
-      <button X />
-    </div>
-  </div>
-
-  {/* Scrollable content */}
-  <div className="flex-1 overflow-y-auto">
-    <div className="mx-auto max-w-2xl px-4 py-6">
-      <ul>...entries...</ul>
-      <FeedbackForm />
-    </div>
-  </div>
-
-</div>
+```ts
+const { data: isAdmin } = await supabase
+  .rpc('has_role', { _user_id: userId, _role: 'admin' });
+const tag = isAdmin ? '[dev]' : '[user]';
 ```
 
-Key details:
-- `h-screen` on the outer div caps the page to the viewport height (no document scroll)
-- `flex-shrink-0` on the header prevents it from being squeezed
-- `flex-1 overflow-y-auto` on the content area makes only that region scroll
-- The X button moves from `absolute` to a natural `flex` child in the header row — positioned right with `justify-between`, aligned top with `items-start`
-- `border-b border-border` gives the header a subtle separator from the content
-- The `py-8` top padding from the old layout becomes `py-4` on the header and `py-6` on the content start — preserving similar visual spacing
-- The lightbox overlay (`fixed inset-0`) is unaffected by this change
+Then, right before the AI gateway fetch (after the prompt is built), add:
+
+```ts
+console.log(`${tag} ${mode}: "${question}"`);
+```
+
+That's it — two additions to `supabase/functions/ask-trends-ai/index.ts`. No client-side changes needed, no new tables, no trust issues (the tag is decided by the server using the same role check the Admin page uses).
+
+The logs are visible in the Supabase edge function logs for `ask-trends-ai`.
 
 ### Files changed
 
 | File | Change |
 |---|---|
-| `src/pages/Changelog.tsx` | Replace `min-h-screen` scroll layout with `h-screen flex-col` sticky header + scrollable content body |
+| `supabase/functions/ask-trends-ai/index.ts` | Check `has_role` after auth, store result as `tag`, add one `console.log` before the AI call |
