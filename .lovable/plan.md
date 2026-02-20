@@ -1,50 +1,66 @@
 
-## Add three demo medications to the populate-demo-data edge function
+## Add swipe-left/right gesture for day navigation on mobile
 
-### What's being added
+### What's changing
 
-Three medication log types with entries spread across all days in the populated date range:
+A custom `useSwipeNavigation` hook handles horizontal touch swipes on a wrapper element. It will be applied to the content area below the input/add buttons on Food, Exercise, and Custom logs. The History page's calendar grid will also get swipe support for month navigation (since that's what the user's friend complained about).
 
-| Medication | Dose | Schedule | Time of day |
-|---|---|---|---|
-| Magnesium Glycinate | 400 mg | 2x/day (morning, evening) | Morning ~7:30–8:30am, Evening ~8:00–9:30pm |
-| Creatine Gummies | 2 gummies | 1x/day (morning) | Morning ~7:30–8:30am |
-| Vitamin D3 | 2000 IU | As needed | Random time, ~70% of days |
+### Approach
 
-### Where the change lives
+**New shared hook: `src/hooks/useSwipeNavigation.ts`**
 
-Everything goes inside the `generateCustomLogs` block in `doPopulationWork`, in `supabase/functions/populate-demo-data/index.ts`, after the existing Body Measurements type (around line 1350).
+Detects horizontal swipe gestures with safeguards to not interfere with:
+- Vertical scrolling (only activates when horizontal intent is clear)
+- Interactive elements inside the zone (inputs, buttons, selects, dialogs)
+- The `PullToRefresh` gesture (which is vertical-only and won't conflict)
 
-### What gets inserted
+The hook returns `{ onTouchStart, onTouchMove, onTouchEnd }` event handlers to spread onto a `div`.
 
-**Three custom log types** (`value_type: 'medication'`):
-- Magnesium Glycinate: `doses_per_day: 2`, `dose_times: ['morning', 'evening']`, `default_dose: 400`, `unit: 'mg'`
-- Creatine Gummies: `doses_per_day: 1`, `dose_times: ['morning']`, `default_dose: 2`, `unit: 'gummies'`
-- Vitamin D3: `doses_per_day: 0`, `dose_times: null`, `default_dose: 2000`, `unit: 'IU'`
-
-**Log entries** — looping over every day in the full date range (not just `selectedDays`, so medications appear on all days):
-
-For each day:
-- **Magnesium morning**: `numeric_value: 400`, `dose_time` = random time between 07:25–08:35 (e.g. `08:03:00`)
-- **Magnesium evening**: `numeric_value: 400`, `dose_time` = random time between 19:55–21:35 (e.g. `20:47:00`)
-- **Creatine**: `numeric_value: 2`, `dose_time` = random time between 07:25–08:35 (slightly different from the magnesium time so they don't always line up)
-- **Vitamin D3**: ~70% of days, `numeric_value: 2000`, `dose_time` = random time during the day (08:00–20:00), to simulate "remembered sometimes"
-
-Times are varied per-day by adding/subtracting random minutes (e.g. `± 0–30 min`) so you see realistic variety like `08:03`, `07:47`, `08:19` across different days.
-
-### Technical detail: time format
-
-`dose_time` is stored as Postgres `time without time zone`. It accepts `HH:MM:SS` strings. A small helper will be added:
-
+Core logic:
 ```ts
-function randomTime(baseHour: number, baseMin: number, jitterMinutes: number): string {
-  const totalMins = baseHour * 60 + baseMin + Math.floor((Math.random() - 0.5) * 2 * jitterMinutes);
-  const h = Math.floor(totalMins / 60) % 24;
-  const m = totalMins % 60;
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
-}
+const MIN_SWIPE_X = 40;       // minimum px horizontal movement to count
+const MAX_SWIPE_Y_RATIO = 0.6; // if vertical movement is >60% of horizontal, it's a scroll not a swipe
+
+function useSwipeNavigation(onSwipeLeft: () => void, onSwipeRight: () => void, disabled = false)
 ```
 
-### Only file changed
+- `onTouchStart`: records start X and Y
+- `onTouchMove`: if vertical delta significantly exceeds horizontal delta early on, cancel the gesture (let the scroll through)
+- `onTouchEnd`: if `|deltaX| >= MIN_SWIPE_X` and `|deltaY| / |deltaX| < MAX_SWIPE_Y_RATIO`, fire left or right callback
 
-`supabase/functions/populate-demo-data/index.ts` — add medication type creation + entry generation inside the existing `generateCustomLogs` block, after the Body Measurements section (~line 1349). The function is redeployed automatically.
+### Where it's applied
+
+The hook is applied to a wrapper `div` that wraps the date navigation + entries section on each page. The "above" boundary is the bottom of the input section (LogInput / controls row), and it extends through all the entries.
+
+| Page | Swipe zone covers | Callbacks |
+|---|---|---|
+| `FoodLog` | `DateNavigation` + `FoodItemsTable` section | `goToPreviousDay` / `goToNextDay` |
+| `WeightLog` | `DateNavigation` + exercise entries section | `goToPreviousDay` / `goToNextDay` |
+| `OtherLog` | `DateNavigation` + `CustomLogEntriesView` | `goToPreviousDay` / `goToNextDay` |
+| `History` | entire calendar grid | `goToPreviousMonth` / `goToNextMonth` |
+
+### Conflict avoidance
+
+The hook checks `event.target` on `onTouchStart` — if the touch begins on an interactive element (input, button, select, [role="dialog"]) it sets a flag to skip the gesture entirely. This means:
+- Tapping a row's edit/delete button → no swipe triggered
+- Tapping the DateNavigation chevrons → no swipe triggered
+- Dragging inside a text field → no swipe triggered
+
+The `disabled` parameter allows callers to disable swipe when a dialog/popover is open (e.g. the calendar popover on `DateNavigation`).
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `src/hooks/useSwipeNavigation.ts` | New hook — touch handlers returning `onTouchStart`, `onTouchMove`, `onTouchEnd` |
+| `src/pages/FoodLog.tsx` | Wrap `DateNavigation` + entries `section` in a swipe `div` |
+| `src/pages/WeightLog.tsx` | Same treatment as FoodLog |
+| `src/pages/OtherLog.tsx` | Wrap `DateNavigation` + `CustomLogEntriesView` in a swipe `div` |
+| `src/pages/History.tsx` | Wrap calendar grid in swipe `div` for month navigation |
+
+### Technical notes
+
+- The hook is mobile-only in effect but safe on desktop (touch events simply never fire)
+- No new dependencies needed — pure React touch event handlers
+- The `goToNextDay` from `useDateNavigation` already guards against future dates, so swiping left on today is a no-op navigation-wise
+- Disabling during `calendarOpen` state prevents a race where the popover's internal swipe (calendar month picker) conflicts with the day-swipe handler
