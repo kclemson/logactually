@@ -562,7 +562,13 @@ function CustomChartDialogInner({
               {showDebug && (
                 <Textarea
                   readOnly
-                  value={JSON.stringify(resultMode === "v2" ? chartDSL : currentSpec, null, 2)}
+                  value={JSON.stringify(
+                    resultMode === "v2"
+                      ? { _generator: "v2 · AI schema (DSL)", ...(chartDSL as object) }
+                      : { _generator: "v1 · AI data (direct chart spec)", ...(currentSpec as object) },
+                    null,
+                    2,
+                  )}
                   className="text-[10px] font-mono bg-muted/50 rounded p-2 min-h-[300px] resize-y"
                 />
               )}

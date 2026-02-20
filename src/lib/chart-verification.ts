@@ -311,7 +311,7 @@ function verifyDeterministic(
   // Guard: no rawDate fields
   const hasRawDate = data.length > 0 && data.some((d) => d.rawDate);
   if (!hasRawDate) {
-    return { status: "unavailable", reason: "Verification isn't available for this chart type (no date-based data)" };
+    return { status: "unavailable", reason: "Verification isn't available for categorical charts (e.g. grouped by item, day-of-week, or hour)" };
   }
 
   // Guard: duplicate rawDates
@@ -319,12 +319,6 @@ function verifyDeterministic(
   const uniqueDates = new Set(rawDates);
   if (uniqueDates.size < rawDates.length) {
     return { status: "unavailable", reason: "Verification isn't available for aggregated charts (multiple points share the same date)" };
-  }
-
-  // Guard: non-date x-axis
-  const xField = spec.xAxis.field.toLowerCase();
-  if (!xField.includes("date")) {
-    return { status: "unavailable", reason: "Verification isn't available for categorical charts" };
   }
 
   // Determine source and field — check direct maps first, then derived formulas
