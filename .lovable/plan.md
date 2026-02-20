@@ -1,46 +1,88 @@
 
-# Debugging: Append v1/v2 to the saved chart subtitle
+# Scope correction: gate My Charts on `canUseCharts = isAdmin || isBeta`
 
-## What & Why
+## What was wrong in the previous plan description
 
-Each saved chart on the Trends page already has a subtitle like "Last 30 days" rendered via the `timeRange` prop in `ChartCard`. The v1/v2 signal is already available in the data: `chart.chart_dsl` is non-null for v2-generated charts and null for v1. This change threads that signal through to the subtitle.
+The plan text said "The food/exercise AI Ask buttons and other features that are admin-only remain untouched." That was inaccurate — the Ask AI buttons are NOT admin-gated at all; they're available to everyone. This doesn't change what needs to happen, it just means there's no risk of accidentally touching those buttons. The two `isAdmin` guards in `Trends.tsx` are exclusively around the My Charts feature (the `+ Chart` button and the My Charts collapsible section).
 
-## Minimal approach (two files, no schema changes)
+## Confirmed scope: exactly two `isAdmin` references in `Trends.tsx` relate to My Charts
 
-### 1. `src/components/trends/DynamicChart.tsx`
+| Line | Current | After |
+|---|---|---|
+| 346 | `{isAdmin && <Button … + Chart>}` | `{canUseCharts && <Button … + Chart>}` |
+| 359 | `{isAdmin && savedCharts.length > 0 && (` | `{canUseCharts && savedCharts.length > 0 && (` |
 
-Add an optional `timeRangeSuffix?: string` prop to `DynamicChartProps`. When present, append it to the `periodLabel()` string passed to `ChartCard`:
+Everything else (`isAdmin` used for DevTools panel, admin page navigation, etc.) is untouched.
+
+## Full change set
+
+### 1. Database migration — add `beta` to the `app_role` enum
+
+```sql
+ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'beta';
+```
+
+Non-destructive. The existing `has_role()` security definer function and `user_roles` RLS policies already cover this new value — no policy changes needed.
+
+### 2. New hook: `src/hooks/useIsBeta.ts`
 
 ```ts
-// Before
-timeRange={periodLabel(period)}
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 
-// After
-timeRange={[periodLabel(period), timeRangeSuffix].filter(Boolean).join(" ")}
+export function useIsBeta() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ['isBeta', user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      const { data, error } = await supabase
+        .rpc('has_role', { _user_id: user.id, _role: 'beta' });
+      if (error) return false;
+      return data === true;
+    },
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000,
+  });
+}
 ```
 
-This means the suffix only appears when a period label exists. If `period` is undefined (no label), no suffix either.
+Exact mirror of `useIsAdmin.ts` — same pattern, same staleTime.
 
-### 2. `src/pages/Trends.tsx`
+### 3. `src/pages/Trends.tsx` — two-line change
 
-When rendering saved charts, derive the suffix from `chart.chart_dsl`:
+Add `useIsBeta` import, derive `canUseCharts`, replace the two occurrences:
 
-```tsx
-<DynamicChart
-  key={chart.id}
-  spec={chart.chart_spec}
-  period={selectedPeriod}
-  timeRangeSuffix={chart.chart_dsl ? "· v2" : "· v1"}
-  ...
-/>
+```ts
+import { useIsBeta } from "@/hooks/useIsBeta";
+
+// Near top of component:
+const { data: isAdmin } = useIsAdmin();
+const { data: isBeta } = useIsBeta();
+const canUseCharts = isAdmin || isBeta;
 ```
 
-That's it. Two small targeted edits, no schema changes, no edge function changes, no other components affected.
+Then lines 346 and 359 change `isAdmin` → `canUseCharts`. That's all.
 
-## Result
+### 4. `src/pages/Admin.tsx` — Beta Users management section
 
-Saved charts will show subtitles like:
-- `Last 30 days · v2` (generated via DSL)
-- `Last 30 days · v1` (generated via legacy AI data engine or before v2 existed)
+A new collapsible section (consistent with existing admin UI patterns) with:
+- A list of current beta users pulled from `user_roles` where `role = 'beta'`, joined with user number from existing stats data
+- A user picker (select from existing users) to grant the beta role
+- A revoke button next to each beta user
 
-Easily removable later by deleting the `timeRangeSuffix` prop from the Trends render.
+Two mutations (both protected by existing `"Admins can manage roles"` RLS policy which covers all operations on `user_roles`):
+- **Grant**: `INSERT INTO user_roles (user_id, role) VALUES (uuid, 'beta') ON CONFLICT DO NOTHING`
+- **Revoke**: `DELETE FROM user_roles WHERE user_id = uuid AND role = 'beta'`
+
+The admin page already queries all user stats including `user_id`, so the select dropdown can map user IDs to user numbers without any additional queries.
+
+## What beta users see vs. don't see
+
+| Feature | Admin | Beta | Regular |
+|---|---|---|---|
+| My Charts (+ Chart button, saved charts grid) | Yes | Yes | No |
+| Ask AI (food/exercise) | Yes | Yes | Yes (already public) |
+| Admin page | Yes | No | No |
+| DevTools panel | Yes | No | No |
