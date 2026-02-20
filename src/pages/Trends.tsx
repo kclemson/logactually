@@ -15,6 +15,9 @@ import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { CustomChartDialog } from "@/components/CustomChartDialog";
 import { useSavedCharts } from "@/hooks/useSavedCharts";
 import { DynamicChart, type ChartSpec } from "@/components/trends/DynamicChart";
+import { fetchChartData } from "@/lib/chart-data";
+import { verifyChartData, type VerificationResult } from "@/lib/chart-verification";
+import type { ChartDSL } from "@/lib/chart-types";
 import { DeleteConfirmPopover } from "@/components/DeleteConfirmPopover";
 import { ChartContextMenu } from "@/components/trends/ChartContextMenu";
 
@@ -76,7 +79,22 @@ const Trends = () => {
   const { pinCount } = usePinnedChats();
   const [createChartOpen, setCreateChartOpen] = useState(false);
   const [editingChart, setEditingChart] = useState<{ id: string; question: string; chartSpec: ChartSpec; chartDsl?: unknown } | null>(null);
-  
+  const [editingChartVerification, setEditingChartVerification] = useState<VerificationResult | null>(null);
+
+  const openChartForEditing = useCallback(async (chart: { id: string; question: string; chart_spec: ChartSpec; chart_dsl?: unknown }) => {
+    setEditingChartVerification(null);
+    setEditingChart({ id: chart.id, question: chart.question, chartSpec: chart.chart_spec, chartDsl: chart.chart_dsl });
+    if (chart.chart_dsl) {
+      try {
+        const dt = await fetchChartData(supabase, chart.chart_dsl as ChartDSL, selectedPeriod);
+        const result = verifyChartData(chart.chart_spec, dt);
+        setEditingChartVerification(result);
+      } catch (err) {
+        console.error("[openChartForEditing] verification fetch failed:", err);
+      }
+    }
+  }, [selectedPeriod]);
+
   const { savedCharts, deleteMutation } = useSavedCharts();
   const [deletePopoverId, setDeletePopoverId] = useState<string | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -372,7 +390,7 @@ const Trends = () => {
                 headerAction={isEditMode ? (
                   <div className="flex items-center gap-0.5">
                     <button
-                      onClick={() => setEditingChart({ id: chart.id, question: chart.question, chartSpec: chart.chart_spec, chartDsl: chart.chart_dsl })}
+                      onClick={() => openChartForEditing(chart)}
                       className="p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors"
                       aria-label="Edit chart"
                     >
@@ -399,7 +417,7 @@ const Trends = () => {
             onClose={() => setContextMenu(null)}
             onEdit={() => {
               const chart = savedCharts.find(c => c.id === contextMenu?.chartId);
-              if (chart) setEditingChart({ id: chart.id, question: chart.question, chartSpec: chart.chart_spec, chartDsl: chart.chart_dsl });
+              if (chart) openChartForEditing(chart);
               setContextMenu(null);
             }}
             onDelete={() => {
@@ -647,9 +665,10 @@ const Trends = () => {
       <CustomChartDialog open={createChartOpen} onOpenChange={setCreateChartOpen} period={selectedPeriod} />
       <CustomChartDialog
         open={!!editingChart}
-        onOpenChange={(open) => { if (!open) setEditingChart(null); }}
+        onOpenChange={(open) => { if (!open) { setEditingChart(null); setEditingChartVerification(null); } }}
         period={selectedPeriod}
         initialChart={editingChart ?? undefined}
+        initialVerification={editingChartVerification}
       />
     </div>
   );

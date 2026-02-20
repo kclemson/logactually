@@ -13,6 +13,7 @@ interface CustomChartDialogProps {
   onOpenChange: (open: boolean) => void;
   period: number;
   initialChart?: { id: string; question: string; chartSpec: ChartSpec; chartDsl?: unknown };
+  initialVerification?: VerificationResult | null;
 }
 
 interface Chip {
@@ -41,19 +42,21 @@ const ALL_CHIPS: Chip[] = [
   { label: "Rest days between workouts", mode: "v1" },
 ];
 
-export function CustomChartDialog({ open, onOpenChange, initialChart, period }: CustomChartDialogProps) {
+export function CustomChartDialog({ open, onOpenChange, initialChart, initialVerification, period }: CustomChartDialogProps) {
   if (!open) return null;
-  return <CustomChartDialogInner onOpenChange={onOpenChange} period={period} initialChart={initialChart} />;
+  return <CustomChartDialogInner onOpenChange={onOpenChange} period={period} initialChart={initialChart} initialVerification={initialVerification} />;
 }
 
 function CustomChartDialogInner({
   onOpenChange,
   period,
   initialChart,
+  initialVerification,
 }: {
   onOpenChange: (open: boolean) => void;
   period: number;
   initialChart?: { id: string; question: string; chartSpec: ChartSpec; chartDsl?: unknown };
+  initialVerification?: VerificationResult | null;
 }) {
   const [input, setInput] = useState("");
   const [mode, setMode] = useState<"v1" | "v2">(() => (localStorage.getItem("chart-mode") as "v1" | "v2") || "v1");
@@ -64,7 +67,7 @@ function CustomChartDialogInner({
   const [dailyTotals, setDailyTotals] = useState<DailyTotals | null>(null);
   const [chartDSL, setChartDSL] = useState<unknown>(initialChart?.chartDsl ?? null);
   const [chartOptions, setChartOptions] = useState<GenerateChartResult["chartOptions"] | null>(null);
-  const [verification, setVerification] = useState<VerificationResult | null>(null);
+  const [verification, setVerification] = useState<VerificationResult | null>(initialVerification ?? null);
   const [lastQuestion, setLastQuestion] = useState(initialChart?.question ?? "");
   const [showDebug, setShowDebug] = useState(false);
   const [refining, setRefining] = useState(false);
