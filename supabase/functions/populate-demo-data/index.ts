@@ -1348,6 +1348,74 @@ async function doPopulationWork(
         else customLogEntriesCreated += allBodyEntries.length;
       }
 
+      // Helper: generate a random HH:MM:SS time string
+      function randomTime(baseHour: number, baseMin: number, jitterMinutes: number): string {
+        const totalMins = baseHour * 60 + baseMin + Math.floor((Math.random() - 0.5) * 2 * jitterMinutes);
+        const h = Math.floor(totalMins / 60) % 24;
+        const m = ((totalMins % 60) + 60) % 60;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
+      }
+
+      // Build a full list of every day in the range for medication entries
+      const allDaysInRange: Date[] = [];
+      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        allDaysInRange.push(new Date(d));
+      }
+
+      // --- 4. Magnesium Glycinate (medication, 400mg, 2x/day: morning + evening) ---
+      const { data: magType, error: magTypeErr } = await serviceClient
+        .from('custom_log_types')
+        .insert({ user_id: demoUserId, name: 'Magnesium Glycinate', value_type: 'medication', unit: 'mg', default_dose: 400, doses_per_day: 2, dose_times: ['morning', 'evening'], sort_order: 3 })
+        .select().single();
+
+      if (magTypeErr || !magType) {
+        console.error('Error creating Magnesium Glycinate log type:', magTypeErr);
+      } else {
+        const magEntries = allDaysInRange.flatMap(day => [
+          { user_id: demoUserId, log_type_id: magType.id, logged_date: formatDate(day), numeric_value: 400, unit: 'mg', dose_time: randomTime(8, 0, 35) },
+          { user_id: demoUserId, log_type_id: magType.id, logged_date: formatDate(day), numeric_value: 400, unit: 'mg', dose_time: randomTime(20, 30, 45) },
+        ]);
+        const { error } = await serviceClient.from('custom_log_entries').insert(magEntries);
+        if (error) console.error('Error inserting magnesium entries:', error);
+        else customLogEntriesCreated += magEntries.length;
+      }
+
+      // --- 5. Creatine Gummies (medication, 2 gummies, 1x/day: morning) ---
+      const { data: creatineType, error: creatineTypeErr } = await serviceClient
+        .from('custom_log_types')
+        .insert({ user_id: demoUserId, name: 'Creatine Gummies', value_type: 'medication', unit: 'gummies', default_dose: 2, doses_per_day: 1, dose_times: ['morning'], sort_order: 4 })
+        .select().single();
+
+      if (creatineTypeErr || !creatineType) {
+        console.error('Error creating Creatine Gummies log type:', creatineTypeErr);
+      } else {
+        const creatineEntries = allDaysInRange.map(day => ({
+          user_id: demoUserId, log_type_id: creatineType.id, logged_date: formatDate(day), numeric_value: 2, unit: 'gummies', dose_time: randomTime(7, 52, 28),
+        }));
+        const { error } = await serviceClient.from('custom_log_entries').insert(creatineEntries);
+        if (error) console.error('Error inserting creatine entries:', error);
+        else customLogEntriesCreated += creatineEntries.length;
+      }
+
+      // --- 6. Vitamin D3 (medication, 2000 IU, as-needed ~70% of days) ---
+      const { data: vitDType, error: vitDTypeErr } = await serviceClient
+        .from('custom_log_types')
+        .insert({ user_id: demoUserId, name: 'Vitamin D3', value_type: 'medication', unit: 'IU', default_dose: 2000, doses_per_day: 0, dose_times: null, sort_order: 5 })
+        .select().single();
+
+      if (vitDTypeErr || !vitDType) {
+        console.error('Error creating Vitamin D3 log type:', vitDTypeErr);
+      } else {
+        const vitDEntries = allDaysInRange
+          .filter(() => Math.random() < 0.7)
+          .map(day => ({
+            user_id: demoUserId, log_type_id: vitDType.id, logged_date: formatDate(day), numeric_value: 2000, unit: 'IU', dose_time: randomTime(12, 0, 240),
+          }));
+        const { error } = await serviceClient.from('custom_log_entries').insert(vitDEntries);
+        if (error) console.error('Error inserting vitamin D3 entries:', error);
+        else customLogEntriesCreated += vitDEntries.length;
+      }
+
       // Enable showCustomLogs in demo user's profile settings
       const { data: profile } = await serviceClient
         .from('profiles')
