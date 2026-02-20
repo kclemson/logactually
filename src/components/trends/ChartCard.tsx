@@ -1,10 +1,9 @@
 import { type ReactNode } from "react";
-import { Card, CardContent, CardHeader, ChartTitle, ChartSubtitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, ChartTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 interface ChartCardProps {
   title: string;
-  subtitle?: string;
   isTooltipActive: boolean;
   isTouchDevice: boolean;
   onDismiss: () => void;
@@ -19,7 +18,6 @@ interface ChartCardProps {
 
 export function ChartCard({
   title,
-  subtitle,
   isTooltipActive,
   isTouchDevice,
   onDismiss,
@@ -50,7 +48,6 @@ export function ChartCard({
           <div className="flex items-start justify-between gap-1">
             <div className="flex flex-col gap-0.5 min-w-0">
               <ChartTitle>{title}</ChartTitle>
-              {subtitle && <ChartSubtitle>{subtitle}</ChartSubtitle>}
             </div>
             {headerAction}
           </div>

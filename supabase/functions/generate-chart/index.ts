@@ -24,7 +24,6 @@ You MUST respond with ONLY a valid JSON object (no markdown, no code fences, no 
 {
   "chartType": "bar" or "line",
   "title": "Chart title",
-  "subtitle": "Optional subtitle or null",
   "aiNote": "Optional methodology note or null",
   "dataSource": "food" or "exercise" or "custom" or "mixed",
   "xAxisField": "the key name used in each data item for x-axis labels",

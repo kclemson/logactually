@@ -11,7 +11,6 @@ import { type ReactNode } from "react";
 export interface ChartSpec {
   chartType: "bar" | "line";
   title: string;
-  subtitle?: string;
   aiNote?: string;
   xAxis: { field: string; label: string };
   yAxis: { label: string };
@@ -160,7 +159,6 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu }: 
   return (
     <ChartCard
       title={spec.title}
-      subtitle={spec.subtitle}
       isTooltipActive={interaction.isTooltipActive}
       isTouchDevice={interaction.isTouchDevice}
       onDismiss={interaction.dismiss}
