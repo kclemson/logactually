@@ -167,12 +167,20 @@ export function FeedbackForm() {
       const html2canvas = (await import("html2canvas")).default;
       const target = document.querySelector("main") as HTMLElement;
       if (!target) throw new Error("No <main> element found");
-      const canvas = await html2canvas(target, {
-        useCORS: true,
-        allowTaint: false,
-        scale: 1,
-        logging: false,
-      });
+      const htmlEl = document.documentElement;
+      const wasDark = htmlEl.classList.contains("dark");
+      if (wasDark) htmlEl.classList.remove("dark");
+      let canvas: HTMLCanvasElement;
+      try {
+        canvas = await html2canvas(target, {
+          useCORS: true,
+          allowTaint: false,
+          scale: 1,
+          logging: false,
+        });
+      } finally {
+        if (wasDark) htmlEl.classList.add("dark");
+      }
       const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
       // Store in sessionStorage so the screenshot survives the unmount/remount
       // that happens when we navigate back to /help
