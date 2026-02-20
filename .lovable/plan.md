@@ -1,39 +1,40 @@
 
-## Bug: `?date=undefined` crashes the Weight (and Food/Other) log page
+## Fix: Swipe gesture allows navigating into the future on log pages
 
 ### Root cause
 
-When a URL like `/weights?date=undefined` is loaded, `searchParams.get('date')` returns the **literal string `"undefined"`** — not JS `undefined`. Because `"undefined"` is truthy, this line:
+`goToNextDay` in `useDateNavigation.ts` has no guard against advancing past today. The `>` chevron button is protected separately via `disabled={isTodaySelected}` in `DateNavigation.tsx`, but the swipe gesture calls `goToNextDay` directly, bypassing that button entirely.
+
+The History page handles this correctly with a `goToNextMonthGuarded` function:
 
 ```ts
-const dateKey = dateParam || getStoredDate() || format(new Date(), 'yyyy-MM-dd');
+const goToNextMonthGuarded = () => {
+  if (isSameMonth(currentMonth, new Date())) return; // guard
+  ...
+};
 ```
 
-passes `"undefined"` straight through as `initialDate`. That string then reaches:
+The log pages have no equivalent guard in their swipe handler.
 
-- `parseISO("undefined")` → invalid Date object
-- `useWeightDatesWithData(calendarMonth)` → `format(invalidDate, ...)` → **`RangeError: Invalid time value`** → ErrorBoundary crash
+### The fix
 
-This is a defensive-coding gap that exists in all three log pages identically. It was exposed by the recent swipe animation change, which added a `setSearchParams` call path that somehow serialised `undefined` as the string `"undefined"` in at least one navigation scenario.
-
-### The fix — 3 lines across 3 files
-
-Add a guard that rejects the literal string `"undefined"` (and any other non-date-looking value) before it reaches `parseISO`. The cleanest approach is:
+Add one guard line inside `goToNextDay` in `useDateNavigation.ts`:
 
 ```ts
-// Reject the literal string "undefined" that URLSearchParams can produce
-const validDateParam = dateParam && dateParam !== 'undefined' ? dateParam : null;
-const dateKey = validDateParam || getStoredDate() || format(new Date(), 'yyyy-MM-dd');
+const goToNextDay = () => {
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const currentStr = format(selectedDate, 'yyyy-MM-dd');
+  if (currentStr >= todayStr) return; // already on today or future — do nothing
+  ...rest of existing logic...
+};
 ```
 
-This gracefully falls through to `getStoredDate()` or today when the param is absent, null, or the string `"undefined"`.
+This single change fixes all three log pages (Food, Weight, Custom) simultaneously because they all share the same hook. No changes needed to the pages or the swipe handler itself.
 
 ### Files changed
 
-| File | Line | Change |
-|---|---|---|
-| `src/pages/WeightLog.tsx` | 38-39 | Add `validDateParam` guard before the `||` chain |
-| `src/pages/FoodLog.tsx` | 38-39 | Same guard |
-| `src/pages/OtherLog.tsx` | 33-34 | Same guard |
+| File | Change |
+|---|---|
+| `src/hooks/useDateNavigation.ts` | Add a today-guard at the top of `goToNextDay` |
 
-No logic changes, no new state, no component restructuring — purely defensive input sanitisation on three identical lines.
+This is a one-line fix in one file. Zero risk.
