@@ -30,6 +30,7 @@ import { CalorieTargetTooltipContent } from '@/components/CalorieTargetTooltipCo
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { setStoredDate } from '@/lib/selected-date';
 import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
+import { useState as useAnimState } from 'react';
 
 interface DaySummary {
   date: string;
@@ -57,6 +58,7 @@ const History = () => {
   const isMobile = useIsMobile();
   const hasHover = useHasHover();
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [slideDir, setSlideDir] = useState<'left' | 'right' | null>(null);
   const [activeDayIndex, setActiveDayIndex] = useState<number | null>(null);
   const [rollupTooltipOpen, setRollupTooltipOpen] = useState(false);
 
@@ -234,8 +236,12 @@ const History = () => {
     }
   };
 
-  const goToPreviousMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
-  const goToNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
+  const goToPreviousMonth = () => { setSlideDir('right'); setCurrentMonth(subMonths(currentMonth, 1)); };
+  const goToNextMonthGuarded = () => {
+    if (isSameMonth(currentMonth, new Date())) return;
+    setSlideDir('left');
+    setCurrentMonth(addMonths(currentMonth, 1));
+  };
 
   const allWeekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const wsd = settings.weekStartDay ?? 0;
@@ -278,7 +284,7 @@ const History = () => {
     );
   };
 
-  const swipeHandlers = useSwipeNavigation(goToNextMonth, goToPreviousMonth);
+  const swipeHandlers = useSwipeNavigation(goToNextMonthGuarded, goToPreviousMonth);
 
   return (
     <div className="space-y-4">
@@ -293,7 +299,7 @@ const History = () => {
         <Button 
           variant="ghost" 
           size="icon" 
-          onClick={goToNextMonth}
+          onClick={goToNextMonthGuarded}
           disabled={isSameMonth(currentMonth, new Date())}
           aria-label="Next month"
         >
@@ -317,6 +323,14 @@ const History = () => {
 
       {/* Swipe zone: calendar grid (swipe left = next month, swipe right = prev month) */}
       <div {...swipeHandlers}>
+        <div
+          key={format(currentMonth, 'yyyy-MM')}
+          className={cn(
+            slideDir === 'left' && 'animate-slide-in-from-right',
+            slideDir === 'right' && 'animate-slide-in-from-left',
+            !slideDir && 'animate-fade-in',
+          )}
+        >
         {/* Week day headers */}
         <div className="grid grid-cols-7 gap-1.5">
           {weekDays.map((day) => (
@@ -482,6 +496,7 @@ const History = () => {
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
         )}
+        </div>{/* end keyed animated wrapper */}
       </div>
     </div>
   );

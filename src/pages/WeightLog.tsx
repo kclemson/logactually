@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
+import { cn } from '@/lib/utils';
 import { DetailDialog, buildExerciseDetailFields, flattenExerciseValues, processExerciseSaveUpdates, EXERCISE_HIDE_WHEN_EMPTY } from '@/components/DetailDialog';
 import { isMultiItemEntry } from '@/lib/entry-boundaries';
 import { useSearchParams } from 'react-router-dom';
@@ -26,7 +27,7 @@ import { detectRepeatedWeightEntry, isDismissed, dismissSuggestion, shouldShowOp
 import { estimateTotalCalorieBurn, formatCalorieBurnValue, type CalorieBurnSettings, type ExerciseInput } from '@/lib/calorie-burn';
 import { WeightSet, WeightEditableField, SavedExerciseSet, AnalyzedExercise } from '@/types/weight';
 import { generateRoutineName } from '@/lib/routine-naming';
-import { getStoredDate, setStoredDate } from '@/lib/selected-date';
+import { getStoredDate, setStoredDate, getSwipeDirection, setSwipeDirection } from '@/lib/selected-date';
 import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
 
 const WEIGHT_EDITABLE_FIELDS: WeightEditableField[] = ['description', 'sets', 'reps', 'weight_lbs'];
@@ -47,6 +48,8 @@ interface WeightLogContentProps {
 }
 
 const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
+  const mountDir = useRef(getSwipeDirection()).current;
+  setSwipeDirection(null);
   const [, setSearchParams] = useSearchParams();
   const dateNav = useDateNavigation(initialDate, setSearchParams);
   const [expandedEntryIds, setExpandedEntryIds] = useState<Set<string>>(new Set());
@@ -630,7 +633,11 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   );
 
   return (
-    <div className="space-y-4">
+    <div className={cn(
+      "space-y-4",
+      mountDir === 'left' && 'animate-slide-in-from-right',
+      mountDir === 'right' && 'animate-slide-in-from-left',
+    )}>
       {/* Weight Input Section */}
       <section>
         <LogInput

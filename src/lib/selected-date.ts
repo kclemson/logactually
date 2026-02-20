@@ -1,6 +1,7 @@
 import { format, parseISO, isFuture, isValid } from 'date-fns';
 
 const STORAGE_KEY = 'selectedDate';
+const SWIPE_DIR_KEY = 'swipeDirection';
 
 /**
  * Read the persisted date from localStorage.
@@ -32,5 +33,35 @@ export function setStoredDate(dateStr: string): void {
     }
   } catch {
     // localStorage unavailable -- silently ignore
+  }
+}
+
+/**
+ * Write the swipe direction hint to sessionStorage.
+ * Call this before triggering navigation so the newly-mounted
+ * content component can read which direction to animate from.
+ */
+export function setSwipeDirection(dir: 'left' | 'right' | null): void {
+  try {
+    if (dir === null) {
+      sessionStorage.removeItem(SWIPE_DIR_KEY);
+    } else {
+      sessionStorage.setItem(SWIPE_DIR_KEY, dir);
+    }
+  } catch {
+    // sessionStorage unavailable -- silently ignore
+  }
+}
+
+/**
+ * Read (and consume) the swipe direction hint from sessionStorage.
+ */
+export function getSwipeDirection(): 'left' | 'right' | null {
+  try {
+    const val = sessionStorage.getItem(SWIPE_DIR_KEY);
+    if (val === 'left' || val === 'right') return val;
+    return null;
+  } catch {
+    return null;
   }
 }
