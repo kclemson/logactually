@@ -273,59 +273,66 @@ export function FeedbackForm() {
 
         {/* Attachment buttons + Send button — single row */}
         <div className="flex items-start justify-between gap-3">
-          {/* Left: attachment controls */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleFileInputChange}
-            />
-            <button
-              type="button"
-              disabled={isReadOnly}
-              onClick={() => fileInputRef.current?.click()}
-              className={cn(
-                "flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors",
-                isReadOnly && "opacity-50 pointer-events-none",
-              )}
-            >
-              <Paperclip className="h-3.5 w-3.5" />
-              Photo
-            </button>
-            <div className="relative">
+          {/* Left: attachment controls + success message below */}
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileInputChange}
+              />
               <button
                 type="button"
-                disabled={isReadOnly || isCapturing}
-                onClick={() => setShowPagePicker((v) => !v)}
+                disabled={isReadOnly}
+                onClick={() => fileInputRef.current?.click()}
                 className={cn(
                   "flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors",
-                  (isReadOnly || isCapturing) && "opacity-50 pointer-events-none",
+                  isReadOnly && "opacity-50 pointer-events-none",
                 )}
               >
-                <Camera className="h-3.5 w-3.5" />
-                {isCapturing ? "Capturing…" : "Screenshot a page"}
+                <Paperclip className="h-3.5 w-3.5" />
+                Photo
               </button>
-              {showPagePicker && (
-                <div className="absolute left-0 top-5 z-50 bg-popover border border-border rounded-md shadow-md py-1 min-w-[140px]">
-                  {CAPTURABLE_PAGES.map((page) => (
-                    <button
-                      key={page.path}
-                      type="button"
-                      onClick={() => handleCapturePage(page.path)}
-                      className="w-full text-left px-3 py-1.5 text-xs hover:bg-accent hover:text-accent-foreground transition-colors"
-                    >
-                      {page.label}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <div className="relative">
+                <button
+                  type="button"
+                  disabled={isReadOnly || isCapturing}
+                  onClick={() => setShowPagePicker((v) => !v)}
+                  className={cn(
+                    "flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors",
+                    (isReadOnly || isCapturing) && "opacity-50 pointer-events-none",
+                  )}
+                >
+                  <Camera className="h-3.5 w-3.5" />
+                  {isCapturing ? "Capturing…" : "Screenshot a page"}
+                </button>
+                {showPagePicker && (
+                  <div className="absolute left-0 top-5 z-50 bg-popover border border-border rounded-md shadow-md py-1 min-w-[140px]">
+                    {CAPTURABLE_PAGES.map((page) => (
+                      <button
+                        key={page.path}
+                        type="button"
+                        onClick={() => handleCapturePage(page.path)}
+                        className="w-full text-left px-3 py-1.5 text-xs hover:bg-accent hover:text-accent-foreground transition-colors"
+                      >
+                        {page.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
+            {showSuccess && (
+              <span className="text-sm text-muted-foreground animate-in fade-in">
+                {FEEDBACK_CONTENT.successMessage}
+              </span>
+            )}
           </div>
 
-          {/* Right: send button + success */}
-          <div className="flex items-center gap-3 flex-shrink-0">
+          {/* Right: send button only */}
+          <div className="flex-shrink-0">
             <Button
               size="sm"
               onClick={handleSubmit}
@@ -333,11 +340,6 @@ export function FeedbackForm() {
             >
               {submitFeedback.isPending ? FEEDBACK_CONTENT.submittingButton : FEEDBACK_CONTENT.submitButton}
             </Button>
-            {showSuccess && (
-              <span className="text-sm text-muted-foreground animate-in fade-in">
-                {FEEDBACK_CONTENT.successMessage}
-              </span>
-            )}
           </div>
         </div>
 

@@ -101,10 +101,10 @@ export default function Changelog() {
                 {entry.image && (
                   <img
                     loading="lazy"
-                    src={`/changelog/${entry.image}`}
+                    src={`/changelog/${entry.image}?v=${LAST_UPDATED}`}
                     alt={`Screenshot for ${entry.date} update`}
                     className="mt-2 mx-auto block max-h-[200px] max-w-[280px] w-auto object-contain cursor-pointer"
-                    onClick={() => setLightboxSrc(`/changelog/${entry.image}`)}
+                    onClick={() => setLightboxSrc(`/changelog/${entry.image}?v=${LAST_UPDATED}`)}
                   />
                 )}
                 {entry.images && (
@@ -113,10 +113,10 @@ export default function Changelog() {
                       <img
                         key={i}
                         loading="lazy"
-                        src={`/changelog/${img}`}
+                        src={`/changelog/${img}?v=${LAST_UPDATED}`}
                         alt={`Screenshot ${i + 1} for ${entry.date} update`}
                         className="max-h-[200px] max-w-[280px] w-auto object-contain cursor-pointer"
-                        onClick={() => setLightboxSrc(`/changelog/${img}`)}
+                        onClick={() => setLightboxSrc(`/changelog/${img}?v=${LAST_UPDATED}`)}
                       />
                     ))}
                   </div>
