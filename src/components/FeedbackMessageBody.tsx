@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { X } from "lucide-react";
 
 interface FeedbackMessageBodyProps {
   message: string;
@@ -15,6 +16,7 @@ interface FeedbackMessageBodyProps {
 
 function FeedbackImage({ path }: { path: string }) {
   const [url, setUrl] = useState<string | null>(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -27,16 +29,55 @@ function FeedbackImage({ path }: { path: string }) {
     return () => { cancelled = true; };
   }, [path]);
 
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setLightboxOpen(false);
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [lightboxOpen]);
+
   if (!url) return null;
 
   return (
-    <a href={url} target="_blank" rel="noopener noreferrer" className="block mt-1">
-      <img
-        src={url}
-        alt="Attached screenshot"
-        className="max-h-64 w-auto rounded border border-border object-contain"
-      />
-    </a>
+    <>
+      <button
+        type="button"
+        onClick={() => setLightboxOpen(true)}
+        className="block mt-1 focus:outline-none"
+        aria-label="View attachment full size"
+      >
+        <img
+          src={url}
+          alt="Attached screenshot"
+          className="max-h-64 w-auto rounded border border-border object-contain cursor-zoom-in hover:opacity-90 transition-opacity"
+        />
+      </button>
+
+      {lightboxOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center"
+          onClick={() => setLightboxOpen(false)}
+        >
+          <div className="relative" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setLightboxOpen(false)}
+              className="absolute -top-3 -right-3 bg-background rounded-full p-1 text-muted-foreground hover:text-foreground transition-colors shadow-md z-10"
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <img
+              src={url}
+              alt="Attachment full size"
+              className="max-w-[90vw] max-h-[85vh] object-contain rounded shadow-xl"
+            />
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

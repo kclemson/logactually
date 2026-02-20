@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useReadOnlyContext } from "@/contexts/ReadOnlyContext";
-import { MessageSquare, Trash2, ChevronDown, Paperclip, Camera, X } from "lucide-react";
+import { MessageSquare, Trash2, ChevronDown, Paperclip, Camera, X, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useSubmitFeedback, useUserFeedback, useDeleteFeedback, useMarkFeedbackRead } from "@/hooks/feedback";
@@ -271,54 +271,72 @@ export function FeedbackForm() {
           disabled={isReadOnly}
         />
 
-        {/* Attachment buttons */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleFileInputChange}
-          />
-          <button
-            type="button"
-            disabled={isReadOnly}
-            onClick={() => fileInputRef.current?.click()}
-            className={cn(
-              "flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors",
-              isReadOnly && "opacity-50 pointer-events-none",
-            )}
-          >
-            <Paperclip className="h-3.5 w-3.5" />
-            Attach photo
-          </button>
-          <span className="text-muted-foreground/40 text-xs">·</span>
-          <div className="relative">
+        {/* Attachment buttons + Send button — single row */}
+        <div className="flex items-start justify-between gap-3">
+          {/* Left: attachment controls */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileInputChange}
+            />
             <button
               type="button"
-              disabled={isReadOnly || isCapturing}
-              onClick={() => setShowPagePicker((v) => !v)}
+              disabled={isReadOnly}
+              onClick={() => fileInputRef.current?.click()}
               className={cn(
                 "flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors",
-                (isReadOnly || isCapturing) && "opacity-50 pointer-events-none",
+                isReadOnly && "opacity-50 pointer-events-none",
               )}
             >
-              <Camera className="h-3.5 w-3.5" />
-              {isCapturing ? "Capturing…" : "Screenshot a page"}
+              <Paperclip className="h-3.5 w-3.5" />
+              Photo
             </button>
-            {showPagePicker && (
-              <div className="absolute left-0 top-5 z-50 bg-popover border border-border rounded-md shadow-md py-1 min-w-[140px]">
-                {CAPTURABLE_PAGES.map((page) => (
-                  <button
-                    key={page.path}
-                    type="button"
-                    onClick={() => handleCapturePage(page.path)}
-                    className="w-full text-left px-3 py-1.5 text-xs hover:bg-accent hover:text-accent-foreground transition-colors"
-                  >
-                    {page.label}
-                  </button>
-                ))}
-              </div>
+            <div className="relative">
+              <button
+                type="button"
+                disabled={isReadOnly || isCapturing}
+                onClick={() => setShowPagePicker((v) => !v)}
+                className={cn(
+                  "flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors",
+                  (isReadOnly || isCapturing) && "opacity-50 pointer-events-none",
+                )}
+              >
+                <Camera className="h-3.5 w-3.5" />
+                {isCapturing ? "Capturing…" : "Screenshot a page"}
+              </button>
+              {showPagePicker && (
+                <div className="absolute left-0 top-5 z-50 bg-popover border border-border rounded-md shadow-md py-1 min-w-[140px]">
+                  {CAPTURABLE_PAGES.map((page) => (
+                    <button
+                      key={page.path}
+                      type="button"
+                      onClick={() => handleCapturePage(page.path)}
+                      className="w-full text-left px-3 py-1.5 text-xs hover:bg-accent hover:text-accent-foreground transition-colors"
+                    >
+                      {page.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right: send button + success */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <Button
+              size="sm"
+              onClick={handleSubmit}
+              disabled={isReadOnly || !message.trim() || submitFeedback.isPending}
+            >
+              {submitFeedback.isPending ? FEEDBACK_CONTENT.submittingButton : FEEDBACK_CONTENT.submitButton}
+            </Button>
+            {showSuccess && (
+              <span className="text-sm text-muted-foreground animate-in fade-in">
+                {FEEDBACK_CONTENT.successMessage}
+              </span>
             )}
           </div>
         </div>
@@ -373,20 +391,6 @@ export function FeedbackForm() {
           </div>
         )}
 
-        <div className="flex items-center gap-3">
-          <Button
-            size="sm"
-            onClick={handleSubmit}
-            disabled={isReadOnly || !message.trim() || submitFeedback.isPending}
-          >
-            {submitFeedback.isPending ? FEEDBACK_CONTENT.submittingButton : FEEDBACK_CONTENT.submitButton}
-          </Button>
-          {showSuccess && (
-            <span className="text-sm text-muted-foreground animate-in fade-in">
-              {FEEDBACK_CONTENT.successMessage}
-            </span>
-          )}
-        </div>
       </div>
 
       {feedbackHistory && feedbackHistory.length > 0 && (
@@ -407,6 +411,9 @@ export function FeedbackForm() {
                 >
                   <div className="flex items-center gap-2 text-xs">
                     <span className="text-muted-foreground font-mono">#{item.feedback_id}</span>
+                    {item.image_url && (
+                      <ImageIcon className="h-3 w-3 text-muted-foreground/60 flex-shrink-0" />
+                    )}
                     <span className="text-muted-foreground">
                       {format(parseISO(item.created_at), "MMM d, yyyy")}
                     </span>
