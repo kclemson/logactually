@@ -1,36 +1,60 @@
 
-## Fix: dose count always shows a color when doses have been logged
+## Show dose amount and schedule in the medication entry dialog for all medications, including "as needed"
 
-### Problem
+### What's happening
 
-`getDoseCountStyle` in `MedicationEntryInput.tsx` has this condition:
+In `MedicationEntryInput.tsx`, the `scheduleSummary` variable is built like this:
 
 ```ts
-if (dosesPerDay === 0 || todayEntryCount === 0) return 'text-muted-foreground';
+const scheduleSummary = dosesPerDay === 0
+  ? null   // ← "as needed" meds return null → nothing rendered
+  : (() => {
+      const freq = `${dosesPerDay}x/day`;
+      ...
+    })();
 ```
 
-The `dosesPerDay === 0` case covers "as needed" medications. Since there's no target dose count, the function bails out early and returns muted grey — even when doses have actually been logged today. The user sees "3 doses logged today" in a flat, unnoticeable color.
+So for "as needed" medications, the schedule line is suppressed entirely. The user wants it to always show — with dose amount and frequency — matching the same style already visible in the list view (`· 200 mg · as needed`).
 
 ### Fix
 
-Split the two conditions. Keep `todayEntryCount === 0` as muted (nothing logged = nothing to highlight). But when doses *have* been logged:
+Replace the `scheduleSummary` logic to handle both cases:
 
-- **`dosesPerDay > 0`** (scheduled): green if at or under target, red if over
-- **`dosesPerDay === 0`** (as needed): use amber — always colored when any doses are logged, since there's no target to compare against
+- **Scheduled** (`dosesPerDay > 0`): `"2x/day · morning, evening"` (same as today)
+- **As needed** (`dosesPerDay === 0`): `"as needed"`, or `"200 mg · as needed"` if a default dose + unit exist
 
 ```ts
-function getDoseCountStyle(todayEntryCount: number, dosesPerDay: number): string {
-  if (todayEntryCount === 0) return 'text-muted-foreground';
-  if (dosesPerDay === 0) return 'text-amber-500 dark:text-amber-400'; // as-needed: always amber
-  if (todayEntryCount <= dosesPerDay) return 'text-green-500 dark:text-green-400';
-  return 'text-red-500';
-}
+const scheduleSummary = (() => {
+  const dosePart = defaultDose != null && unit
+    ? `${defaultDose} ${unit}`
+    : unit || null;
+
+  if (dosesPerDay === 0) {
+    // as-needed: show dose if available, always show "as needed"
+    return dosePart ? `${dosePart} · as needed` : 'as needed';
+  }
+
+  // scheduled: freq + optional named times
+  const freq = `${dosesPerDay}x/day`;
+  const nonEmpty = doseTimes?.filter(t => t.trim()) ?? [];
+  const times = nonEmpty.length > 0 ? ` · ${nonEmpty.join(', ')}` : '';
+  return `${freq}${times}`;
+})();
 ```
 
-Amber is a natural fit here — it's attention-grabbing and neutral (not pass/fail), appropriate for "as needed" medications where the count is informational rather than a compliance indicator.
+Then remove the conditional `{scheduleSummary && ...}` guard (or keep it — since `scheduleSummary` now always returns a string, the guard becomes irrelevant but harmless).
+
+### Result
+
+| Medication type | Schedule line shown |
+|---|---|
+| As needed, no dose | `as needed` |
+| As needed, 200 mg | `200 mg · as needed` |
+| 2x/day, named times | `2x/day · morning, evening` |
+| 2x/day, no times | `2x/day` |
 
 ### Only file to change
 
 | File | Change |
 |---|---|
-| `src/components/MedicationEntryInput.tsx` | Update `getDoseCountStyle` to use amber for as-needed medications with at least one dose logged |
+| `src/components/MedicationEntryInput.tsx` | Replace `scheduleSummary` logic to always produce a string, including "as needed" case with optional dose prefix |
