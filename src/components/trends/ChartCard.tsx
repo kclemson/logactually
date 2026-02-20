@@ -14,6 +14,8 @@ interface ChartCardProps {
   headerAction?: ReactNode;
   /** Right-click / long-press context menu handler */
   onContextMenu?: (e: React.MouseEvent) => void;
+  /** Human-readable time range label (e.g. "Last 30 days") */
+  timeRange?: string;
 }
 
 export function ChartCard({
@@ -25,6 +27,7 @@ export function ChartCard({
   footer,
   headerAction,
   onContextMenu,
+  timeRange,
 }: ChartCardProps) {
   return (
     <Card
@@ -46,8 +49,11 @@ export function ChartCard({
       <div className="relative z-20">
         <CardHeader className="p-2 pb-1">
           <div className="flex items-start justify-between gap-1">
-            <div className="flex flex-col gap-0.5 min-w-0">
+            <div className="flex flex-col gap-0 min-w-0">
               <ChartTitle>{title}</ChartTitle>
+              {timeRange && (
+                <span className="text-[10px] text-muted-foreground leading-tight">{timeRange}</span>
+              )}
             </div>
             {headerAction}
           </div>

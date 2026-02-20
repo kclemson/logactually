@@ -360,6 +360,7 @@ const Trends = () => {
               <DynamicChart
                 key={chart.id}
                 spec={chart.chart_spec}
+                period={selectedPeriod}
                 onNavigate={(date) => {
                   const ds = chart.chart_spec.dataSource;
                   const route = ds === "exercise" ? `/weights?date=${date}` : `/?date=${date}`;

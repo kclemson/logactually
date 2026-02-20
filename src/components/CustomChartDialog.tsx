@@ -440,7 +440,7 @@ function CustomChartDialogInner({
               {lastQuestion && <p className="text-xs text-muted-foreground italic">"{lastQuestion}"</p>}
               <div className="flex justify-center">
                 <div className="w-[50%] min-w-[220px] border border-border rounded-md overflow-hidden">
-                  <DynamicChart spec={currentSpec} />
+                  <DynamicChart spec={currentSpec} period={period} />
                 </div>
               </div>
 
