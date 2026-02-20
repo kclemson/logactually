@@ -61,7 +61,7 @@ export function CalorieTargetTooltipContent({
 
       {/* Daily target equation */}
       {targetComponents ? (
-        <TargetEquation targetComponents={targetComponents} target={target} burn={burn} />
+        <TargetEquation targetComponents={targetComponents} target={target} burn={burn} showRemaining={showRemaining} intake={intake} />
       ) : (
         <div className="grid grid-cols-[auto_1fr] gap-x-2 pl-2 opacity-75 tabular-nums">
           <div className="text-right">{target.toLocaleString()}</div>
@@ -70,21 +70,6 @@ export function CalorieTargetTooltipContent({
       )}
 
 
-      {/* Calories remaining — today only */}
-      {showRemaining && target > 0 && (() => {
-        const remaining = target - intake;
-        const isOver = remaining < 0;
-        return (
-          <>
-            <div className="border-t border-border my-1 -mx-3" />
-            <div className={`tabular-nums font-medium ${isOver ? 'text-rose-400' : 'text-green-400'}`}>
-              {isOver
-                ? `over by ${Math.abs(remaining).toLocaleString()} cal`
-                : `${remaining.toLocaleString()} cal remaining`}
-            </div>
-          </>
-        );
-      })()}
 
       {/* Weekly section */}
       {weekRollup && weekLabel && (() => {
@@ -123,11 +108,15 @@ function TargetEquation({
   target,
   burn,
   isWeekly,
+  showRemaining,
+  intake,
 }: {
   targetComponents: CalorieTargetComponents;
   target: number;
   burn: number;
   isWeekly?: boolean;
+  showRemaining?: boolean;
+  intake?: number;
 }) {
   const isExerciseAdjusted = targetComponents.mode === 'exercise_adjusted';
   const isMultiplier = targetComponents.mode === 'body_stats_multiplier';
@@ -176,6 +165,20 @@ function TargetEquation({
           <div className="text-[9px] italic opacity-60 pt-0.5">{targetLabel}</div>
         </>
       )}
+      {showRemaining && intake !== undefined && target > 0 && (() => {
+        const remaining = target - intake;
+        const isOver = remaining < 0;
+        return (
+          <>
+            <div className={`text-right ${isOver ? 'text-rose-400' : 'text-green-400'}`}>
+              {isOver ? `over ${Math.abs(remaining).toLocaleString()}` : remaining.toLocaleString()}
+            </div>
+            <div className={`text-[9px] italic opacity-60 ${isOver ? 'text-rose-400' : 'text-green-400'}`}>
+              {isOver ? 'cal over target' : 'cal remaining'}
+            </div>
+          </>
+        );
+      })()}
     </div>
   );
 }
