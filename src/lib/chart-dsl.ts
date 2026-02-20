@@ -1,4 +1,5 @@
 import type { ChartDSL, DailyTotals } from "./chart-types";
+import { isCardioExercise } from "./exercise-metadata";
 import type { ChartSpec } from "@/components/trends/DynamicChart";
 import { format, getDay, getISOWeek, getISOWeekYear } from "date-fns";
 
@@ -365,6 +366,81 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
             ], dsl.metric),
           });
         }
+      }
+      break;
+    }
+    case "dayClassification": {
+      const classify = dsl.classify;
+      if (!classify) break;
+
+      let trueCount = 0;
+      let falseCount = 0;
+
+      if (classify.rule === "threshold" && dsl.source === "food") {
+        // Food threshold: partition food days by metric value
+        for (const [date, day] of Object.entries(dailyTotals.food)) {
+          const val = (day as any)[dsl.metric] ?? 0;
+          const { thresholdValue = 0, thresholdOp = "gte" } = classify;
+          const matches =
+            thresholdOp === "gte" ? val >= thresholdValue :
+            thresholdOp === "lte" ? val <= thresholdValue :
+            thresholdOp === "gt"  ? val > thresholdValue :
+            thresholdOp === "lt"  ? val < thresholdValue : false;
+          if (matches) trueCount++; else falseCount++;
+        }
+      } else {
+        // Exercise-based classification
+        const keysByDate = dailyTotals.exerciseKeysByDate ?? {};
+        for (const [, tokens] of Object.entries(keysByDate)) {
+          const tokenSet = new Set(tokens);
+          // Derive plain keys (no colon) for cardio checks
+          const plainKeys = tokens.filter(t => !t.includes(":"));
+
+          let matches = false;
+          switch (classify.rule) {
+            case "any_strength":
+              matches = plainKeys.some(k => !isCardioExercise(k));
+              break;
+            case "all_cardio":
+              matches = plainKeys.length > 0 && plainKeys.every(k => isCardioExercise(k));
+              break;
+            case "any_cardio":
+              matches = plainKeys.some(k => isCardioExercise(k));
+              break;
+            case "any_key": {
+              const allowlist = new Set(classify.keys ?? []);
+              matches = tokens.some(t => allowlist.has(t));
+              break;
+            }
+            case "only_keys": {
+              // Every token must be covered by at least one allowlist entry.
+              // Allowlist "walk_run" covers both "walk_run" and "walk_run:walking".
+              // Allowlist "walk_run:walking" covers ONLY "walk_run:walking".
+              const allowlist = classify.keys ?? [];
+              matches = tokens.length > 0 && tokens.every(token => {
+                return allowlist.some(entry => {
+                  if (entry === token) return true;
+                  // Plain allowlist entry (no colon) covers both the plain key
+                  // and any "key:subtype" variant of that key.
+                  if (!entry.includes(":") && token.startsWith(`${entry}:`)) return true;
+                  return false;
+                });
+              });
+              break;
+            }
+            default:
+              matches = false;
+          }
+
+          if (matches) trueCount++; else falseCount++;
+        }
+      }
+
+      if (trueCount > 0) {
+        dataPoints.push({ label: classify.trueLabel, value: trueCount });
+      }
+      if (falseCount > 0) {
+        dataPoints.push({ label: classify.falseLabel, value: falseCount });
       }
       break;
     }

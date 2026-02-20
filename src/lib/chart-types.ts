@@ -35,6 +35,8 @@ export type HourlyTotals<T> = Record<number, T[]>;
 export interface DailyTotals {
   food: Record<string, FoodDayTotals>;
   exercise: Record<string, ExerciseDayTotals>;
+  /** Per-date set of compound tokens: plain key ("walk_run") and key:subtype ("walk_run:walking") */
+  exerciseKeysByDate?: Record<string, string[]>;
   exerciseByKey?: Record<string, {
     description: string;
     count: number;
@@ -81,7 +83,33 @@ export interface ChartDSL {
   metric: string;
   derivedMetric?: string;
 
-  groupBy: "date" | "dayOfWeek" | "hourOfDay" | "weekdayVsWeekend" | "week" | "item" | "category";
+  groupBy: "date" | "dayOfWeek" | "hourOfDay" | "weekdayVsWeekend" | "week" | "item" | "category" | "dayClassification";
+
+  /**
+   * Required when groupBy === "dayClassification".
+   * Partitions days into two labeled buckets based on that day's exercise/food composition.
+   */
+  classify?: {
+    /**
+     * any_strength: TRUE if ANY exercise that day has isCardio=false
+     * all_cardio:   TRUE if ALL exercises that day are cardio
+     * any_cardio:   TRUE if ANY cardio exercise was logged
+     * any_key:      TRUE if ANY key in keys[] appears on that day (supports "key" or "key:subtype" tokens)
+     * only_keys:    TRUE if EVERY exercise on that day is within keys[] (allowlist — inverse of any_key)
+     * threshold:    TRUE if the daily food metric meets thresholdOp + thresholdValue
+     */
+    rule: "any_strength" | "all_cardio" | "any_cardio" | "any_key" | "only_keys" | "threshold";
+    /** For any_key / only_keys: array of "exerciseKey" or "exerciseKey:subtype" tokens */
+    keys?: string[];
+    /** For threshold: numeric value to compare against */
+    thresholdValue?: number;
+    /** For threshold: comparison operator */
+    thresholdOp?: "gte" | "lte" | "gt" | "lt";
+    /** Label for days matching the condition */
+    trueLabel: string;
+    /** Label for days NOT matching the condition */
+    falseLabel: string;
+  };
   aggregation: "sum" | "average" | "max" | "min" | "count";
 
   filter?: {
