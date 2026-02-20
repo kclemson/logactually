@@ -74,23 +74,28 @@ export default function Changelog() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-2xl px-4 py-8">
-        <div className="relative">
-          {/* Close button */}
+    <div className="flex flex-col h-screen bg-background">
+
+      {/* Sticky header row */}
+      <div className="flex-shrink-0 border-b border-border">
+        <div className="mx-auto max-w-2xl px-4 py-4 flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Changelog</h1>
+            <p className="text-sm text-muted-foreground">Last updated: {LAST_UPDATED}</p>
+          </div>
           <button
             onClick={handleClose}
-            className="absolute right-0 top-0 p-2 -mr-2 -mt-2 text-muted-foreground hover:text-foreground transition-colors"
+            className="p-2 -mr-2 -mt-1 text-muted-foreground hover:text-foreground transition-colors"
             aria-label="Close changelog"
           >
             <X className="h-5 w-5" />
           </button>
+        </div>
+      </div>
 
-          {/* Header */}
-          <h1 className="text-2xl font-bold mb-1">Changelog</h1>
-          <p className="text-sm text-muted-foreground mb-6">Last updated: {LAST_UPDATED}</p>
-
-          {/* Entries */}
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-2xl px-4 py-6">
           <ul className="space-y-3">
             {CHANGELOG_ENTRIES.map((entry, index) => (
               <li key={index} className="text-sm">
