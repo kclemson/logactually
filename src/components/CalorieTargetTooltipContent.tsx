@@ -8,6 +8,8 @@ interface CalorieTargetTooltipContentProps {
   targetComponents: CalorieTargetComponents | null;
   weekLabel?: string;
   weekRollup?: RollupResult | null;
+  /** When true, shows calories remaining/over for today's log */
+  showRemaining?: boolean;
 }
 
 /** Inline 4-column legend row */
@@ -41,6 +43,7 @@ export function CalorieTargetTooltipContent({
   targetComponents,
   weekLabel,
   weekRollup,
+  showRemaining = false,
 }: CalorieTargetTooltipContentProps) {
   const dotColor = getTargetDotColor(intake, target);
 
@@ -65,6 +68,23 @@ export function CalorieTargetTooltipContent({
           <div className="text-[9px] italic opacity-60">(daily calorie target)</div>
         </div>
       )}
+
+
+      {/* Calories remaining — today only */}
+      {showRemaining && target > 0 && (() => {
+        const remaining = target - intake;
+        const isOver = remaining < 0;
+        return (
+          <>
+            <div className="border-t border-border my-1 -mx-3" />
+            <div className={`tabular-nums font-medium ${isOver ? 'text-rose-400' : 'text-green-400'}`}>
+              {isOver
+                ? `over by ${Math.abs(remaining).toLocaleString()} cal`
+                : `${remaining.toLocaleString()} cal remaining`}
+            </div>
+          </>
+        );
+      })()}
 
       {/* Weekly section */}
       {weekRollup && weekLabel && (() => {

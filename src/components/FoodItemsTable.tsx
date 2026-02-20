@@ -76,6 +76,8 @@ interface FoodItemsTableProps {
   showCalorieTargetDot?: boolean;
   dailyBurn?: number;
   calorieTargetComponents?: CalorieTargetComponents | null;
+  /** When true, shows calories remaining/over in the tooltip (today only) */
+  isToday?: boolean;
   /** Callback to persist updated group name via inline editing */
   onUpdateGroupName?: (entryId: string, newName: string) => void;
   /** Callback when user clicks "Details" on an entry's expanded panel */
@@ -118,6 +120,7 @@ export function FoodItemsTable({
   showCalorieTargetDot = false,
   dailyBurn = 0,
   calorieTargetComponents,
+  isToday = false,
   onUpdateGroupName,
   onShowDetails,
   onCopyEntryToToday,
@@ -249,6 +252,7 @@ export function FoodItemsTable({
                       target={dailyCalorieTarget}
                       burn={dailyBurn}
                       targetComponents={calorieTargetComponents ?? null}
+                      showRemaining={isToday}
                     />
                   </TooltipContent>
                 </Tooltip>
