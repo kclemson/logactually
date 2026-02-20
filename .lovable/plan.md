@@ -1,36 +1,33 @@
 
-## Style fix: calories remaining row — no color, spelled out, symmetric number column
+## Fix "calories remaining" row — no color, symmetric number, full word
 
-### What's wrong
+### Three specific problems to fix
 
-Lines 168–181 of `TargetEquation`:
-- Apply `text-green-400` / `text-rose-400` to both the number and label — color is noisy and clashes with the legend
-- Prefix the number with the word `over` when over target (e.g. `over 247`) — breaks the right-aligned number column
-- Abbreviate "cal" instead of spelling out "calories"
+1. **Color** — `text-green-400` / `text-rose-400` are applied to both the number and label. Green is already used in the legend to mean "within target", so applying it here creates a false signal. Remove it — the row inherits `opacity-75` from the parent grid, same as every other equation row.
 
-### What it should look like
+2. **Number column format** — when over target, the number is rendered as `over 247`, embedding a word inside the number column. This breaks the right-alignment. Fix: always render `Math.abs(remaining)` in column 1, let column 2 carry the meaning.
 
-```
-= 1,500  adjusted daily calorie target
-    247  calories over target
-```
+3. **Abbreviation** — `cal remaining` / `cal over target` → `calories remaining` / `calories over target`.
 
-or
+### Result
 
+Under target:
 ```
 = 1,500  adjusted daily calorie target
     122  calories remaining
 ```
 
-- Number column: always just the plain absolute value, right-aligned — no prefix
-- Label column: `calories over target` or `calories remaining` — spelled out
-- No color classes — inherits `opacity-75` from the parent grid
+Over target:
+```
+= 1,500  adjusted daily calorie target
+    247  calories over target
+```
 
-### Technical changes
+Plain, aligned, no color clash with the legend.
 
-**`src/components/CalorieTargetTooltipContent.tsx`** — lines 168–181 only:
+### Technical change
 
-Replace the current block with:
+One file, one block — lines 168–181 of `src/components/CalorieTargetTooltipContent.tsx`:
 
 ```tsx
 {showRemaining && intake !== undefined && target > 0 && (() => {
@@ -53,4 +50,4 @@ Replace the current block with:
 
 | File | Change |
 |---|---|
-| `src/components/CalorieTargetTooltipContent.tsx` | Remove color classes; use `Math.abs(remaining)` in number column; spell out "calories" in label strings |
+| `src/components/CalorieTargetTooltipContent.tsx` | Remove color classes; `Math.abs(remaining)` in number column; spell out "calories" |
