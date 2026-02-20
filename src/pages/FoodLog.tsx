@@ -824,6 +824,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
               showCalorieTargetDot={true}
               dailyBurn={dailyBurnForSelectedDay}
               calorieTargetComponents={getCalorieTargetComponents(settings)}
+              isToday={isTodaySelected}
               onDeleteEntry={(entryId) => {
                 deleteEntry.mutate(entryId);
                 setExpandedEntryIds(prev => {
