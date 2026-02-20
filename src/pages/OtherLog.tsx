@@ -295,9 +295,10 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
       </section>
 
       {/* Swipe zone: DateNavigation + entries (swipe left = next day, swipe right = prev day) */}
-      <div ref={swipeHandlers.ref} onTouchStart={swipeHandlers.onTouchStart} onTouchEnd={swipeHandlers.onTouchEnd} style={{ touchAction: 'pan-y' }} className={cn("min-h-[calc(100dvh-8rem)] md:min-h-0", mountDir === 'left' && 'animate-slide-in-from-right', mountDir === 'right' && 'animate-slide-in-from-left')}>
+      <div ref={swipeHandlers.ref} onTouchStart={swipeHandlers.onTouchStart} onTouchEnd={swipeHandlers.onTouchEnd} style={{ touchAction: 'pan-y' }} className="min-h-[calc(100dvh-8rem)] md:min-h-0">
         {/* Shared date navigation — both modes */}
         <DateNavigation
+          mountDir={mountDir}
           selectedDate={selectedDate}
           isTodaySelected={isTodaySelected}
           calendarOpen={dateNav.calendarOpen}
@@ -314,17 +315,19 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
         />
 
         {/* Unified entries view — filters to meds-only when in medication mode */}
-        <CustomLogEntriesView
-          entries={entries}
-          logTypes={logTypes}
-          isLoading={isLoading}
-          onDelete={(id) => deleteEntry.mutate(id)}
-          onEdit={(entry) => setEditingEntry(entry)}
-          onUpdate={(params) => updateEntry.mutate(params)}
-          onExport={effectiveViewMode === 'medication' ? exportCustomLog : undefined}
-          isReadOnly={isReadOnly}
-          medicationsOnly={effectiveViewMode === 'medication'}
-        />
+        <div className={cn("mt-4", mountDir === 'left' && 'animate-slide-in-from-right', mountDir === 'right' && 'animate-slide-in-from-left')}>
+          <CustomLogEntriesView
+            entries={entries}
+            logTypes={logTypes}
+            isLoading={isLoading}
+            onDelete={(id) => deleteEntry.mutate(id)}
+            onEdit={(entry) => setEditingEntry(entry)}
+            onUpdate={(params) => updateEntry.mutate(params)}
+            onExport={effectiveViewMode === 'medication' ? exportCustomLog : undefined}
+            isReadOnly={isReadOnly}
+            medicationsOnly={effectiveViewMode === 'medication'}
+          />
+        </div>
       </div>
 
       {/* Entry form as modal dialog — used by By Date, By Type, and By Meds modes */}

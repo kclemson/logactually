@@ -769,8 +769,9 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       </section>
 
       {/* Swipe zone: DateNavigation + entries (swipe left = next day, swipe right = prev day) */}
-      <div ref={swipeHandlers.ref} onTouchStart={swipeHandlers.onTouchStart} onTouchEnd={swipeHandlers.onTouchEnd} style={{ touchAction: 'pan-y' }} className={cn("min-h-[calc(100dvh-8rem)] md:min-h-0", mountDir === 'left' && 'animate-slide-in-from-right', mountDir === 'right' && 'animate-slide-in-from-left')}>
+      <div ref={swipeHandlers.ref} onTouchStart={swipeHandlers.onTouchStart} onTouchEnd={swipeHandlers.onTouchEnd} style={{ touchAction: 'pan-y' }} className="min-h-[calc(100dvh-8rem)] md:min-h-0">
         <DateNavigation
+          mountDir={mountDir}
           selectedDate={selectedDate}
           isTodaySelected={isTodaySelected}
           calendarOpen={dateNav.calendarOpen}
@@ -786,7 +787,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
           weekStartDay={settings.weekStartDay}
         />
 
-        <section className="mt-4">
+        <section className={cn("mt-4", mountDir === 'left' && 'animate-slide-in-from-right', mountDir === 'right' && 'animate-slide-in-from-left')}>
           {displayItems.length > 0 && (
             <FoodItemsTable
               items={displayItems}

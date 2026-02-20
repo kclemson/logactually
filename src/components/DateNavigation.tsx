@@ -19,6 +19,7 @@ interface DateNavigationProps {
   datesWithData: Date[];
   highlightClassName: string;
   weekStartDay?: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+  mountDir?: 'left' | 'right' | null;
 }
 
 export function DateNavigation({
@@ -35,6 +36,7 @@ export function DateNavigation({
   datesWithData,
   highlightClassName,
   weekStartDay = 0,
+  mountDir,
 }: DateNavigationProps) {
   return (
     <div className="flex items-center justify-center gap-1 relative">
@@ -53,7 +55,9 @@ export function DateNavigation({
           <button
             className={cn(
               "flex items-center gap-1.5 px-2 py-1 text-heading",
-              "text-foreground underline decoration-2 underline-offset-4 decoration-foreground"
+              "text-foreground underline decoration-2 underline-offset-4 decoration-foreground",
+              mountDir === 'left' && 'animate-slide-in-from-right',
+              mountDir === 'right' && 'animate-slide-in-from-left',
             )}
           >
             <CalendarIcon className="h-4 w-4" />
