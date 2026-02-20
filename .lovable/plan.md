@@ -1,52 +1,104 @@
 
-# Two issues with the category calories-burned chart
+# Four improvements: verify at edit time, auto-verify v2, usage logging, boot log clarification
 
-## Issue 1 — Strength bar is nearly zero (the real data problem)
+## Issue 1 — "Verify accuracy" missing in edit mode
 
-The `calories_burned` metric in the v2 pipeline reads from `exercise_metadata.calories_burned`, a field that is only populated when the AI explicitly extracted a calorie value from user text (e.g. "burned 300 calories"). For strength training this is almost never present — the app estimates calorie burn client-side in `useDailyCalorieBurn` via `estimateCalorieBurn()`, but that computation is separate from what gets written to `exercise_metadata`.
+**Root cause**: In `CustomChartDialog.tsx`, the `Verify accuracy` button is conditionally rendered only when `resultMode === "v1"` (line 482). When the dialog opens in edit mode (`initialChart` is set), `resultMode` is initialized to `null` — it only gets set after a new generation. So even though the chart being edited was a v1 chart with verification data, `resultMode` is `null` and the button never appears.
 
-So the chart is technically correct given the raw data — it is showing stored calorie values only, not estimated ones. But that makes it misleading for most users who haven't manually logged calories burned.
+**Fix**: Initialize `resultMode` from the saved chart's metadata. The saved chart's `chartDsl` field is null for v1 charts and populated for v2 charts. We can use that to set the initial `resultMode`:
 
-The cleanest fix is to add a note about this in the v2 system prompt so the AI can include a caveat in `aiNote`, **and** to surface this in the `UNSUPPORTED REQUEST` guidance — because for `calories_burned` specifically, the v2 DSL will give a misleading answer unless the user has manually logged calorie data.
-
-However, the deeper fix would be to fall back to v1 for any `metric: "calories_burned"` query, since v1 has access to the estimated totals computed server-side. This is the right call:
-
-- Add `calories_burned` to the `generate-chart-dsl` system prompt as a note: "Only reflects manually logged values; for most users this will be near zero. If the user is asking about calories burned, prefer the `unsupported` response so the server-side estimated path (v1) is used instead."
-- In the `UNSUPPORTED REQUEST` section of the system prompt, add calories burned as a case where the DSL cannot give an accurate answer.
-
-This means the query will automatically fall back to v1 via the `usedFallback` path already implemented.
-
-## Issue 2 — Time range is invisible to the user
-
-The `period` prop is passed through the chain (`CustomChartDialog` → `useGenerateChart` → `fetchChartData`) but is never shown anywhere in the UI. The user has no way to know if the chart covers 30 days, 90 days, or all time.
-
-The fix is straightforward: render a small muted time-range label inside the chart card, below the title, using the `period` value that's already available in `DynamicChart` as a prop.
-
-### Where to add it
-
-`DynamicChart` already receives `spec` and renders `ChartCard`. We can derive a human-readable label from the `period` prop and pass it to `ChartCard` as a new optional `timeRange` prop:
-
-```
-period 30  → "Last 30 days"
-period 60  → "Last 60 days"
-period 90  → "Last 90 days"
-period 180 → "Last 6 months"
-period 365 → "Last year"
-anything else → "Last {n} days"
+```typescript
+const [resultMode, setResultMode] = useState<"v1" | "v2" | null>(
+  () => initialChart ? (initialChart.chartDsl ? "v2" : "v1") : null
+);
 ```
 
-`DynamicChart` already takes a `period?: number` prop — if it doesn't yet, we add it. `ChartCard` gets a new optional `timeRange?: string` prop rendered as a small muted line below the title (where `ChartSubtitle` used to live — same slot, but now populated with the time range instead of the AI subtitle).
+This correctly infers: if we're editing a chart that has no DSL, it was a v1 chart → show the verify button. If it has a DSL, it was v2.
 
-This is useful in both:
-- The **creation dialog** (user sees what window the chart covers while building it)
-- The **Trends page** pinned charts (user understands the saved chart's scope at a glance)
+There's a secondary problem: `dailyTotals` is also `null` on open, so clicking "Verify accuracy" will hit the `"unavailable"` branch. The verify button's on-click handler already handles this gracefully with the message "No daily totals available (try regenerating the chart)". That is acceptable behavior for edit mode — the user can refine/regenerate to get fresh data and then verify. No change needed to that logic.
+
+**File**: `src/components/CustomChartDialog.tsx` — change the `useState` initializer for `resultMode`.
+
+---
+
+## Issue 2 — Auto-verification for v2 charts
+
+The user asks whether verification could be run automatically after v2 chart generation, to build user confidence. This is a good idea with a specific nuance: the v2 DSL engine is fully deterministic (no AI hallucination risk for the data), so the "Verify accuracy" concept shifts from "did the AI compute the right numbers?" to "does the chart DSL produce results consistent with an independent check?".
+
+**Proposed behavior**:
+- For **v1 charts**: keep the existing on-demand "Verify accuracy" button (unchanged). Verification runs against `dailyTotals` returned from the server.
+- For **v2 charts**: automatically run verification immediately after chart generation, but use the v2 `dailyTotals` fetched client-side. Display the result below the chart without requiring a button click. The "Show DSL" / "Hide DSL" button still exists for debugging. No separate "Verify accuracy" button is needed for v2 since it runs automatically.
+
+**How v2 verification works**: `verifyChartData` in `src/lib/chart-verification.ts` already accepts `(chartSpec, dailyTotals)` and works for any chart. The `dailyTotals` from `fetchChartData` is in the same format the v2 result carries. So we can call `verifyChartData(result.chartSpec, result.dailyTotals)` for v2 the same way we do for v1.
+
+The current code at line 137 explicitly skips verification for v2:
+```typescript
+setVerification(actualMode === "v2" ? null : verifyChartData(...))
+```
+
+**Fix**: Remove that guard — always run verification:
+```typescript
+setVerification(verifyChartData(result.chartSpec, result.dailyTotals));
+```
+
+This applies in both `handleSubmit` and `handleNewRequest`. The UI rendering section already shows the verification result whenever `verification` is non-null, so it will appear automatically for v2 charts too.
+
+For **v2 charts**, the verification result will typically say something like "6/6 matched" with high accuracy since the DSL engine is deterministic. This actually gives the user a positive signal: "your data was computed deterministically and cross-checked." That's the confidence boost.
+
+For the edge case where v2 verification hits a chart type that can't be verified (e.g. a derived percentage metric), `verifyChartData` already returns `{ status: "unavailable" }` which renders as a neutral grey box — still a non-alarming outcome.
+
+**File**: `src/components/CustomChartDialog.tsx` — remove the `actualMode === "v2" ?` guard in both `handleSubmit` and `handleNewRequest`.
+
+---
+
+## Issue 3 — Usage logging for generate-chart and generate-chart-dsl
+
+Following the same pattern as `ask-trends-ai` (which logs `[dev] exercise: "..."` or `[user] exercise: "..."`), we want a single line per request showing who called it and what they asked.
+
+**Pattern from ask-trends-ai**:
+```typescript
+const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
+const tag = isAdmin ? '[dev]' : '[user]';
+console.info(`${tag} exercise: "${question}"`);
+```
+
+**For generate-chart** (`supabase/functions/generate-chart/index.ts`):
+- After auth validation, extract `userId` from claims
+- Call `has_role` RPC to determine dev vs user
+- Log: `[dev] generate-chart v1: "Daily fiber intake" (30d)` or `[user] generate-chart v1: "..." (30d)`
+- Remove the existing verbose `generate_chart args:` log at line 460 (it dumps 2000 chars of JSON per request — not useful for usage tracking)
+
+**For generate-chart-dsl** (`supabase/functions/generate-chart-dsl/index.ts`):
+- After auth validation, extract `userId` from claims (it has `claimsData.claims` already)
+- Call `has_role` RPC to determine dev vs user  
+- Log: `[dev] generate-chart-dsl: "Average heart rate by exercise" (30d) → DSL` or `→ unsupported` or `→ options(2)`
+- The outcome suffix tells us at a glance whether the AI returned a valid DSL, fell back with unsupported, or returned a disambiguation options list
+- Keep the existing `generate-chart-dsl result:` line as-is (it's useful for debugging the DSL shape), or trim it slightly
+
+The `userId` is already available in both functions from `claimsData.claims.sub`.
+
+**Files**: 
+- `supabase/functions/generate-chart/index.ts`
+- `supabase/functions/generate-chart-dsl/index.ts`
+
+---
+
+## Issue 4 — Boot/listening/shutdown logs
+
+These are emitted by the **Supabase edge function runtime** (Deno Deploy), not by application code. They appear as:
+- `booted (time: 29ms)`
+- `Listening on http://localhost:9999/`
+
+There is no way to suppress them — they are infrastructure-level events outside of the function code. This is a known limitation of the Supabase edge function log viewer and is not something we can change.
+
+The best mitigation is to use more distinctive log lines in application code so they're easier to visually scan past — which the logging improvements in Issue 3 will help with.
+
+---
 
 ## Files changed
 
 | File | Change |
 |---|---|
-| `supabase/functions/generate-chart-dsl/index.ts` | In the `UNSUPPORTED REQUEST` section, add `calories_burned` as a case that should return `unsupported: true` since the stored values are sparsely populated and misleading; a note in the metric list warns the AI |
-| `src/components/trends/ChartCard.tsx` | Add optional `timeRange?: string` prop; render it as a small muted line below the title (reusing the slot where `ChartSubtitle` was before we removed it) |
-| `src/components/trends/DynamicChart.tsx` | Accept `period?: number` prop; derive a human-readable range string and pass it to `ChartCard` as `timeRange` |
-| `src/pages/Trends.tsx` | Pass `period` to `DynamicChart` when rendering pinned saved charts |
-| `src/components/CustomChartDialog.tsx` | Pass `period` to `DynamicChart` in the preview area |
+| `src/components/CustomChartDialog.tsx` | Initialize `resultMode` from `initialChart?.chartDsl` so the verify button appears in edit mode; remove `v2` guard so verification runs automatically for both v1 and v2 results |
+| `supabase/functions/generate-chart/index.ts` | Add `[dev]`/`[user]` usage log after auth; remove the verbose `generate_chart args:` JSON dump |
+| `supabase/functions/generate-chart-dsl/index.ts` | Add `[dev]`/`[user]` usage log with outcome suffix (DSL / unsupported / options) after auth |
