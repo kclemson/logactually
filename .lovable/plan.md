@@ -1,54 +1,153 @@
 
-# Add "Regenerate" button and fix button layout
+# Add "Recent examples" to chart tooltips — with date, time, description, and metric
 
-## Current state
+## What's changing from the previous plan
 
-The result section has two rows of buttons:
-- **Row 1**: `[Save to Trends / Save Changes]` (flex-1 — takes up almost all width) + `[Refine]`
-- **Row 2**: `[Show DSL / debug JSON]` + optionally `[Verify accuracy]`
+The previous discussion proposed splitting each sample into a multi-line `lines[]` array (one line for description, one for metrics, one for time). The user's correction is clear: each sample is a **single joined string** with the date first:
 
-Issues:
-1. Save button is `flex-1` which makes it unnecessarily wide
-2. No regenerate option — user must open the textarea and re-type or re-submit the same question
-3. Button ordering hasn't been thought through deliberately
+```
+Feb 19 · 8:32 AM · dog walk · 2.4 mi · 47 min
+```
 
-## Proposed button order rationale
+This is simpler to build and easier to read. Each sample is pre-formatted as a single string in `chart-data.ts`, and the tooltip just renders it as one `<p>` per sample.
 
-Using the principle that the most "committed" / irreversible action sits rightmost (standard convention: Cancel → secondary → primary):
+---
 
-| Position | Button | Why |
-|---|---|---|
-| Left | Regenerate | Destructive-ish (replaces current result), least committed |
-| Middle | Refine | Opens a follow-up, moderate commitment |
-| Right | Save | The terminal, intentional action — rightmost |
+## Data available (no new queries needed)
 
-## Implementing "Regenerate"
+All needed fields are already fetched:
 
-Regenerate is a fresh call with the same `lastQuestion` and same `mode`, clearing all current chart state — identical in behavior to `handleNewRequest(lastQuestion)`. No new function needed; just wire the button to `handleNewRequest(lastQuestion)`.
+**Exercise** (`weight_sets`): `logged_date`, `created_at`, `description`, `distance_miles`, `duration_minutes`, `sets`, `exercise_metadata` (calories_burned)
 
-The button should be:
-- Disabled while `generateChart.isPending`
-- Shows `<Loader2>` spinner when pending (since it's the one that triggered the load, the user can see the overlay, so a simple disabled state is enough)
-- Label: "Regenerate" with a `RefreshCw` icon (already imported)
+**Food** (`food_entries`): `eaten_date`, `created_at`, `food_items[].description`, `food_items[].calories`, `food_items[].protein`
 
-## Button sizing fix
+---
 
-Remove `className="flex-1"` from the Save button. All three buttons in the row (`Regenerate`, `Refine`, `Save`) should be `size="sm"` with no width forcing — they'll naturally size to their label width. Use `flex gap-2 justify-end` on the container so buttons hug the right edge (matching the textarea's submit button alignment).
+## Changes by file
+
+### 1. `src/lib/chart-types.ts`
+
+Add `recentSamples: string[]` to both `foodByItem` and `exerciseByItem` inline types — the simplest possible shape since each sample is already a formatted string:
+
+```typescript
+// foodByItem entry gains:
+recentSamples: string[];
+
+// exerciseByItem entry gains:
+recentSamples: string[];
+```
+
+---
+
+### 2. `src/lib/chart-data.ts`
+
+**Exercise side** — inside the `exerciseByItem` block, after updating totals, build and push a formatted sample string. Since rows arrive `ascending` by `logged_date`, we always append and `slice(-3)` to keep only the 3 most recent:
+
+```typescript
+// Format: "Feb 19 · 8:32 AM · dog walk · 2.4 mi · 47 min"
+const dateLabel = format(new Date(`${row.logged_date}T12:00:00`), "MMM d");
+const timeLabel = row.created_at
+  ? format(new Date(row.created_at), "h:mm a")
+  : null;
+const metricParts: string[] = [];
+if (row.distance_miles) metricParts.push(`${row.distance_miles.toFixed(1)} mi`);
+if (row.duration_minutes) metricParts.push(`${row.duration_minutes} min`);
+const parts = [dateLabel, timeLabel, label, ...metricParts].filter(Boolean);
+const sampleStr = parts.join(" · ");
+existing.recentSamples = [...(existing.recentSamples ?? []), sampleStr].slice(-3);
+```
+
+**Food side** — inside the `foodByItem` item loop, same pattern but using `item.description` and calories. Note that food items within a single food_entry log share the same `created_at` timestamp:
+
+```typescript
+const dateLabel = format(new Date(`${row.eaten_date}T12:00:00`), "MMM d");
+const timeLabel = row.created_at
+  ? format(new Date(row.created_at), "h:mm a")
+  : null;
+const calStr = `${Math.round(item.calories || 0)} cal`;
+const parts = [dateLabel, timeLabel, item.description, calStr].filter(Boolean);
+const sampleStr = parts.join(" · ");
+existing.recentSamples = [...(existing.recentSamples ?? []), sampleStr].slice(-3);
+```
+
+---
+
+### 3. `src/lib/chart-dsl.ts`
+
+In `case "item":` for both food and exercise data points, add `_samples`:
+
+```typescript
+dataPoints.push({
+  label: ...,
+  value: ...,
+  _details: [...],
+  _samples: item.recentSamples ?? [],
+});
+```
+
+No formatting work here — strings are already ready from `chart-data.ts`.
+
+---
+
+### 4. `src/components/trends/CompactChartTooltip.tsx`
+
+After the `_details` block, render samples with a divider and "Recent" header:
+
+```tsx
+{payload[0]?.payload?._samples?.length > 0 && (
+  <div className="mt-1 pt-1 border-t border-border/40">
+    <p className="text-[9px] text-muted-foreground font-medium mb-0.5">Recent</p>
+    {(payload[0].payload._samples as string[]).map((sample, i) => (
+      <p key={i} className="text-[9px] text-muted-foreground leading-snug">
+        {sample}
+      </p>
+    ))}
+  </div>
+)}
+```
+
+---
+
+## Final tooltip appearance
+
+```
+Walking
+56 mi
+56 entries · 1,258 min · 3,644 cal
+
+──────────────
+Recent
+Feb 19 · 8:32 AM · dog walk · 2.4 mi · 47 min
+Feb 17 · 7:15 AM · dog walk · 1.8 mi · 38 min
+Feb 14 · 9:04 AM · dog walk · 3.2 mi · 31 min
+```
+
+And for a food item chart:
+```
+Yogurt and Strawberries
+605 cal
+3 entries · 75g protein
+
+──────────────
+Recent
+Feb 19 · 6:45 AM · yogurt and strawberries · 320 cal
+Feb 17 · 7:02 AM · yogurt and strawberries · 285 cal
+```
+
+---
 
 ## Files changed
 
 | File | Change |
 |---|---|
-| `src/components/CustomChartDialog.tsx` | Replace the 2-button row with a 3-button row: `[Regenerate] [Refine] [Save]`; remove `flex-1` from Save; add `onClick={() => handleNewRequest(lastQuestion)}` for Regenerate; use `justify-end` on the row container |
+| `src/lib/chart-types.ts` | Add `recentSamples: string[]` to both `foodByItem` and `exerciseByItem` type definitions |
+| `src/lib/chart-data.ts` | Build formatted sample strings and push to `recentSamples` (keeping last 3) during item-level aggregation for both exercise and food |
+| `src/lib/chart-dsl.ts` | Attach `_samples: item.recentSamples ?? []` to data points in `case "item":` for both food and exercise |
+| `src/components/trends/CompactChartTooltip.tsx` | Render `_samples` as a "Recent" section below the `_details` line, with a divider |
 
-## Before / After
+## Scope notes
 
-```text
-BEFORE:
-[ Save to Trends ←————————————→ ]  [ Refine ]
-
-AFTER:
-                  [ Regenerate ]  [ Refine ]  [ Save to Trends ]
-```
-
-The row uses `flex justify-end gap-2` so the three buttons sit at the right, naturally sized. No button dominates the row.
+- Only `groupBy: "item"` charts — both food and exercise
+- Only v2 DSL charts (v1 charts don't carry `_samples`, tooltip degrades gracefully with nothing shown)
+- No new queries, no schema changes, no edge function changes
+- Max 3 samples, most recent first (enforced by `slice(-3)` on ascending-ordered data)
