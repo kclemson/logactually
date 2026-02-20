@@ -368,14 +368,14 @@ export function FoodItemsTable({
                         />
                       </div>
                     )}
-                    <div className={cn("flex-1 min-w-0 rounded pl-1 py-1 flex items-baseline gap-1 flex-wrap focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg", compact && "text-sm")}>
+                    <div className={cn("flex-1 min-w-0 rounded pl-1 py-1 leading-snug focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg", compact && "text-sm")}>
                        <DescriptionCell
                          value={groupName}
                          onSave={(newName) => onUpdateGroupName?.(boundary.entryId, newName)}
                          readOnly={isReadOnly}
                          onReadOnlyAttempt={triggerOverlay}
                          title={groupName}
-                         className="line-clamp-2"
+                         className=""
                        >
                         {(() => {
                           const cumulative = entryPortionMultipliers?.get(boundary.entryId) ?? 1.0;
@@ -387,7 +387,7 @@ export function FoodItemsTable({
                                 setGroupScalingEntryId(groupScalingEntryId === boundary.entryId ? null : boundary.entryId);
                                 setGroupPortionMultiplier(1.0);
                               }}
-                              className="shrink-0 ml-1 text-xs text-muted-foreground whitespace-nowrap cursor-pointer hover:text-foreground transition-colors"
+                              className="ml-1 text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
                             >({scalePortion("1 portion", cumulative)})</button>
                           );
                         })()}
@@ -548,14 +548,14 @@ export function FoodItemsTable({
                         />
                       </div>
                     )}
-                    <div className={cn("flex-1 min-w-0 rounded pl-1 py-1 flex items-baseline gap-1 flex-wrap focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg", compact && "text-sm")}>
+                    <div className={cn("flex-1 min-w-0 rounded pl-1 py-1 leading-snug focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg", compact && "text-sm")}>
                        <DescriptionCell
                          value={groupName}
                          onSave={(newName) => onUpdateGroupName?.(boundary.entryId, newName)}
                          readOnly={isReadOnly}
                          onReadOnlyAttempt={triggerOverlay}
                          title={groupName}
-                         className="line-clamp-2"
+                         className=""
                        >
                         {(() => {
                           const cumulative = entryPortionMultipliers?.get(boundary.entryId) ?? 1.0;
@@ -567,7 +567,7 @@ export function FoodItemsTable({
                                 setGroupScalingEntryId(groupScalingEntryId === boundary.entryId ? null : boundary.entryId);
                                 setGroupPortionMultiplier(1.0);
                               }}
-                              className="shrink-0 ml-1 text-xs text-muted-foreground whitespace-nowrap cursor-pointer hover:text-foreground transition-colors"
+                              className="ml-1 text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
                             >({scalePortion("1 portion", cumulative)})</button>
                           );
                         })()}
@@ -746,8 +746,7 @@ export function FoodItemsTable({
                     </div>
                   )}
                   <div className={cn(
-                    "flex-1 min-w-0 rounded pl-1 py-1",
-                    "flex items-baseline gap-1 flex-wrap",
+                    "flex-1 min-w-0 rounded pl-1 py-1 leading-snug",
                     "focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg"
                   )}>
                     <DescriptionCell
@@ -756,7 +755,7 @@ export function FoodItemsTable({
                         onUpdateItem?.(index, 'description', desc);
                       }}
                       title={getItemTooltip(item)}
-                      className="line-clamp-2"
+                      className=""
                     >
                       {item.portion && (
                         <button
@@ -766,11 +765,11 @@ export function FoodItemsTable({
                             setPortionScalingIndex(portionScalingIndex === index ? null : index);
                             setPortionMultiplier(1.0);
                           }}
-                          className="shrink-0 ml-1 text-xs text-muted-foreground whitespace-nowrap cursor-pointer hover:text-foreground transition-colors"
+                          className="ml-1 text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
                         >({item.portion})</button>
                       )}
                       {hasAnyEditedFields(item) && (
-                        <span className="shrink-0 text-focus-ring font-bold whitespace-nowrap" title={formatEditedFields(item) || 'Edited'}> *</span>
+                        <span className="text-focus-ring font-bold" title={formatEditedFields(item) || 'Edited'}> *</span>
                       )}
                     </DescriptionCell>
                   </div>
@@ -788,11 +787,8 @@ export function FoodItemsTable({
                       ) : null}
                     </div>
                   )}
-                  <div className={cn("flex gap-1 flex-wrap flex-1 min-w-0 pl-1 pr-0 py-1", compact && "text-sm")}>
-                    <span
-                      title={getItemTooltip(item)}
-                      className="line-clamp-2 min-w-0"
-                    >
+                  <div className={cn("flex-1 min-w-0 pl-1 pr-0 py-1 leading-snug", compact && "text-sm")}>
+                    <span title={getItemTooltip(item)}>
                       {item.description}
                     </span>
                     {item.portion && (
@@ -804,14 +800,14 @@ export function FoodItemsTable({
                             setPortionScalingIndex(portionScalingIndex === index ? null : index);
                             setPortionMultiplier(1.0);
                           }}
-                          className="shrink-0 ml-1 text-xs text-muted-foreground whitespace-nowrap cursor-pointer hover:text-foreground transition-colors"
+                          className="ml-1 text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
                         >({item.portion})</button>
                       ) : (
-                        <span className="shrink-0 ml-1 text-xs text-muted-foreground whitespace-nowrap">({item.portion})</span>
+                        <span className="ml-1 text-xs text-muted-foreground">({item.portion})</span>
                       )
                     )}
                     {hasAnyEditedFields(item) && (
-                      <span className="shrink-0 text-focus-ring font-bold" title={formatEditedFields(item) || 'Edited'}> *</span>
+                      <span className="text-focus-ring font-bold" title={formatEditedFields(item) || 'Edited'}> *</span>
                     )}
                   </div>
                 </div>
