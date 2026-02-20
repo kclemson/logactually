@@ -1,138 +1,42 @@
 
-# Add "Recent examples" to chart tooltips — with date, time, description, and metric
+# Fix three issues: duplicate aiNote, wrong disambiguation option, prompt verbosity
 
-## What's changing from the previous plan
+## Summary of what to fix
 
-The previous discussion proposed splitting each sample into a multi-line `lines[]` array (one line for description, one for metrics, one for time). The user's correction is clear: each sample is a **single joined string** with the date first:
+### Issue 1: Duplicate aiNote in disambiguation picker (code fix)
 
-```
-Feb 19 · 8:32 AM · dog walk · 2.4 mi · 47 min
-```
+**Root cause:** In the disambiguation picker, the `DynamicChart` component renders `spec.aiNote` as an italic footer inside `ChartCard`. Immediately below that, `CustomChartDialog` also renders `opt.chartDSL.aiNote` in its own plain `<p>` tag. Both point to the same string, so it appears twice — once italic (from `DynamicChart`), once plain (from the dialog's explicit `<p>`).
 
-This is simpler to build and easier to read. Each sample is pre-formatted as a single string in `chart-data.ts`, and the tooltip just renders it as one `<p>` per sample.
-
----
-
-## Data available (no new queries needed)
-
-All needed fields are already fetched:
-
-**Exercise** (`weight_sets`): `logged_date`, `created_at`, `description`, `distance_miles`, `duration_minutes`, `sets`, `exercise_metadata` (calories_burned)
-
-**Food** (`food_entries`): `eaten_date`, `created_at`, `food_items[].description`, `food_items[].calories`, `food_items[].protein`
-
----
-
-## Changes by file
-
-### 1. `src/lib/chart-types.ts`
-
-Add `recentSamples: string[]` to both `foodByItem` and `exerciseByItem` inline types — the simplest possible shape since each sample is already a formatted string:
-
-```typescript
-// foodByItem entry gains:
-recentSamples: string[];
-
-// exerciseByItem entry gains:
-recentSamples: string[];
-```
-
----
-
-### 2. `src/lib/chart-data.ts`
-
-**Exercise side** — inside the `exerciseByItem` block, after updating totals, build and push a formatted sample string. Since rows arrive `ascending` by `logged_date`, we always append and `slice(-3)` to keep only the 3 most recent:
-
-```typescript
-// Format: "Feb 19 · 8:32 AM · dog walk · 2.4 mi · 47 min"
-const dateLabel = format(new Date(`${row.logged_date}T12:00:00`), "MMM d");
-const timeLabel = row.created_at
-  ? format(new Date(row.created_at), "h:mm a")
-  : null;
-const metricParts: string[] = [];
-if (row.distance_miles) metricParts.push(`${row.distance_miles.toFixed(1)} mi`);
-if (row.duration_minutes) metricParts.push(`${row.duration_minutes} min`);
-const parts = [dateLabel, timeLabel, label, ...metricParts].filter(Boolean);
-const sampleStr = parts.join(" · ");
-existing.recentSamples = [...(existing.recentSamples ?? []), sampleStr].slice(-3);
-```
-
-**Food side** — inside the `foodByItem` item loop, same pattern but using `item.description` and calories. Note that food items within a single food_entry log share the same `created_at` timestamp:
-
-```typescript
-const dateLabel = format(new Date(`${row.eaten_date}T12:00:00`), "MMM d");
-const timeLabel = row.created_at
-  ? format(new Date(row.created_at), "h:mm a")
-  : null;
-const calStr = `${Math.round(item.calories || 0)} cal`;
-const parts = [dateLabel, timeLabel, item.description, calStr].filter(Boolean);
-const sampleStr = parts.join(" · ");
-existing.recentSamples = [...(existing.recentSamples ?? []), sampleStr].slice(-3);
-```
-
----
-
-### 3. `src/lib/chart-dsl.ts`
-
-In `case "item":` for both food and exercise data points, add `_samples`:
-
-```typescript
-dataPoints.push({
-  label: ...,
-  value: ...,
-  _details: [...],
-  _samples: item.recentSamples ?? [],
-});
-```
-
-No formatting work here — strings are already ready from `chart-data.ts`.
-
----
-
-### 4. `src/components/trends/CompactChartTooltip.tsx`
-
-After the `_details` block, render samples with a divider and "Recent" header:
-
+**Fix:** Remove the explicit `<p>` block in `CustomChartDialog.tsx` lines 404-408:
 ```tsx
-{payload[0]?.payload?._samples?.length > 0 && (
-  <div className="mt-1 pt-1 border-t border-border/40">
-    <p className="text-[9px] text-muted-foreground font-medium mb-0.5">Recent</p>
-    {(payload[0].payload._samples as string[]).map((sample, i) => (
-      <p key={i} className="text-[9px] text-muted-foreground leading-snug">
-        {sample}
-      </p>
-    ))}
-  </div>
+{opt.chartDSL.aiNote && (
+  <p className="text-[10px] text-muted-foreground px-2 pb-2 text-center leading-tight">
+    {opt.chartDSL.aiNote}
+  </p>
 )}
 ```
 
+The `DynamicChart` already shows it. One render is sufficient.
+
+**DSL debug panels: not touched.** They are intentional, admin-gated, and stay exactly as-is.
+
 ---
 
-## Final tooltip appearance
+### Issue 2 + 3 combined: Wrong disambiguation option, concise prompt fix
 
-```
-Walking
-56 mi
-56 entries · 1,258 min · 3,644 cal
+**What the model did wrong:** For "total miles walked vs run", the AI offered two options:
+- Option 1 (bar, `groupBy: "item"`, `exerciseKey: "walk_run"`, `exerciseSubtype: null`) — correct: groups all walk_run activity by subtype key, producing one bar per subtype
+- Option 2 (line, `groupBy: "date"`, `exerciseSubtype: null`) — wrong: collapses walking and running into one merged line per day, losing the comparison entirely
 
-──────────────
-Recent
-Feb 19 · 8:32 AM · dog walk · 2.4 mi · 47 min
-Feb 17 · 7:15 AM · dog walk · 1.8 mi · 38 min
-Feb 14 · 9:04 AM · dog walk · 3.2 mi · 31 min
-```
+**Why this is wrong:** The DSL is single-series only. A `groupBy: "date"` chart with `exerciseSubtype: null` and `exerciseKey: "walk_run"` produces one data point per day (total walk_run miles), not two lines. The model hallucinated a "over time" option that the engine cannot render as a comparison.
 
-And for a food item chart:
-```
-Yogurt and Strawberries
-605 cal
-3 entries · 75g protein
+**The fix in two sentences**, added to the end of the DISAMBIGUATION section of the system prompt:
 
-──────────────
-Recent
-Feb 19 · 6:45 AM · yogurt and strawberries · 320 cal
-Feb 17 · 7:02 AM · yogurt and strawberries · 285 cal
-```
+> **Single-series constraint:** The DSL renders one data series only. When the user wants to compare two subtypes (e.g. "walking vs running"), only `groupBy: "item"` can show them side by side — never offer `groupBy: "date"` as an alternative interpretation, because it collapses both subtypes into a single line and loses the comparison.
+
+That's it. No paragraph, no complex reasoning — just a hard constraint. The model gets a direct rule: subtype comparisons → `groupBy: "item"`, not time-series.
+
+**"sessions" terminology:** Not worth a prompt rule. The aiNote is admin-only context, and adding prompt text to police phrasing preferences adds noise without payoff. Leave it.
 
 ---
 
@@ -140,14 +44,11 @@ Feb 17 · 7:02 AM · yogurt and strawberries · 285 cal
 
 | File | Change |
 |---|---|
-| `src/lib/chart-types.ts` | Add `recentSamples: string[]` to both `foodByItem` and `exerciseByItem` type definitions |
-| `src/lib/chart-data.ts` | Build formatted sample strings and push to `recentSamples` (keeping last 3) during item-level aggregation for both exercise and food |
-| `src/lib/chart-dsl.ts` | Attach `_samples: item.recentSamples ?? []` to data points in `case "item":` for both food and exercise |
-| `src/components/trends/CompactChartTooltip.tsx` | Render `_samples` as a "Recent" section below the `_details` line, with a divider |
+| `src/components/CustomChartDialog.tsx` | Remove the duplicate `aiNote` `<p>` block (lines 404-408) inside the disambiguation button. The DSL debug panels below are untouched. |
+| `supabase/functions/generate-chart-dsl/index.ts` | Add 2-sentence single-series constraint to end of DISAMBIGUATION section |
 
-## Scope notes
+## Scope
 
-- Only `groupBy: "item"` charts — both food and exercise
-- Only v2 DSL charts (v1 charts don't carry `_samples`, tooltip degrades gracefully with nothing shown)
-- No new queries, no schema changes, no edge function changes
-- Max 3 samples, most recent first (enforced by `slice(-3)` on ascending-ordered data)
+- No changes to debug panel visibility or conditions
+- No changes to `DynamicChart`, chart types, or data fetching
+- Edge function requires redeployment after the prompt change
