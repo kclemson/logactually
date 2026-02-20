@@ -59,7 +59,7 @@ function CustomChartDialogInner({
   initialVerification?: VerificationResult | null;
 }) {
   const [input, setInput] = useState("");
-  const [mode, setMode] = useState<"v1" | "v2">(() => (localStorage.getItem("chart-mode") as "v1" | "v2") || "v1");
+  const [mode, setMode] = useState<"v1" | "v2">("v2");
   const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>(
     initialChart ? [{ role: "user", content: initialChart.question }] : [],
   );
@@ -131,10 +131,6 @@ function CustomChartDialogInner({
         setCurrentSpec(null);
       } else {
         const actualMode = result.usedFallback ? "v1" : mode;
-        if (result.usedFallback) {
-          setMode("v1");
-          localStorage.setItem("chart-mode", "v1");
-        }
         setCurrentSpec(result.chartSpec);
         setDailyTotals(result.dailyTotals);
         setChartDSL(result.chartDSL ?? null);
@@ -171,9 +167,8 @@ function CustomChartDialogInner({
     if (!preserveId) editingIdRef.current = null;
     generateChart.reset();
 
-    // Sync toggle to the engine we're actually using
+    // Sync mode to the engine the chip requested (chip.mode routing)
     setMode(effectiveMode);
-    localStorage.setItem("chart-mode", effectiveMode);
 
     try {
       const result = await generateChart.mutateAsync({
@@ -186,10 +181,6 @@ function CustomChartDialogInner({
         setCurrentSpec(null);
       } else {
         const actualMode = result.usedFallback ? "v1" : effectiveMode;
-        if (result.usedFallback) {
-          setMode("v1");
-          localStorage.setItem("chart-mode", "v1");
-        }
         setCurrentSpec(result.chartSpec);
         setDailyTotals(result.dailyTotals);
         setChartDSL(result.chartDSL ?? null);
@@ -258,35 +249,6 @@ function CustomChartDialogInner({
           )}
         </DialogTitle>
 
-        {/* Mode toggle */}
-        <div className="flex gap-1 mt-1">
-          <button
-            onClick={() => {
-              setMode("v1");
-              localStorage.setItem("chart-mode", "v1");
-            }}
-            className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
-              mode === "v1"
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-muted/50 text-muted-foreground border-border hover:bg-muted"
-            }`}
-          >
-            v1 · AI data
-          </button>
-          <button
-            onClick={() => {
-              setMode("v2");
-              localStorage.setItem("chart-mode", "v2");
-            }}
-            className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
-              mode === "v2"
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-muted/50 text-muted-foreground border-border hover:bg-muted"
-            }`}
-          >
-            v2 · AI schema
-          </button>
-        </div>
 
         <div className="space-y-3 mt-2 relative">
           {/* Loading overlay — covers existing content instead of collapsing */}
