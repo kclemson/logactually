@@ -1,113 +1,90 @@
 
-## Feature: Screenshot attachment in feedback
+## Fix: "Screenshot this page" on the Help page is always self-referential
 
-### Overview
+### The problem
 
-Two things need to happen:
-1. Users can attach a photo (from their camera roll or files) to a feedback submission
-2. Users can capture a screenshot of their current in-app view with a single tap — "attach a screenshot of this page"
+`FeedbackForm` lives on `/help`. When a user clicks "Screenshot this page", `html2canvas` captures the `<main>` element — which is the Help & Feedback page itself. That screenshot is almost never what the user wants; they want to capture their food log, trends, or weight page.
 
-Both are achievable cleanly without any complex routing or one-off logic. The "current view screenshot" works by using `html2canvas` to render the live DOM of the app's `<main>` content area to a canvas, then compressing it to JPEG — no browser permissions required.
+### The solution: a page picker
 
-### Complexity assessment: Low–Medium
+Instead of auto-capturing the current page (which is always `/help`), show a small inline picker of the app's main pages so the user can say "screenshot my Food Log" or "screenshot my Trends". When they pick one, the app:
 
-- **Photo from gallery**: Reuse the existing `PhotoCapture` component pattern — very low risk
-- **In-app screenshot**: Add `html2canvas` (a well-maintained library), target the `<main>` element — low risk, no permissions prompt, no server involvement
-- **Storage**: Add a storage bucket and a migration adding `image_url` to `feedback` — straightforward
-- **Admin view**: Render the image inline when present — trivial
+1. Navigates a hidden iframe (or uses `history.pushState` + `html2canvas` on the live DOM) to that route
+2. Captures it
 
-### Technical changes
+**Simpler, better approach — navigate away, capture, come back:**
 
-#### 1. Database migration — add `image_url` to `feedback`
+The cleanest UX is a dropdown/select of named pages. When the user picks one:
 
-```sql
-ALTER TABLE public.feedback ADD COLUMN image_url text;
-```
+1. Use `window.history.pushState` to silently change the URL to the target route (e.g. `/`)
+2. Re-render triggers React Router to mount the target page's content in `<main>`
+3. Call `html2canvas` on `<main>` after a short `requestAnimationFrame` delay
+4. Use `window.history.pushState` to restore `/help`
 
-#### 2. Storage bucket — `feedback-images`
+This is actually elegant — React Router renders the route immediately, no iframes needed.
 
-A new private storage bucket with RLS: users can insert their own images, admins can read all, users can read their own.
+**Alternatively (even simpler):** Just rename and reframe the button. Show a labelled picker: `📷 Capture page` → dropdown with named options. On selection, navigate away briefly, capture, return. This is fully self-contained in `FeedbackForm.tsx`.
 
-```sql
-INSERT INTO storage.buckets (id, name, public) VALUES ('feedback-images', 'feedback-images', false);
-```
+### The named pages available
 
-#### 3. New dependency — `html2canvas`
+From `App.tsx`:
+- `/` → Food Log
+- `/weights` → Exercise Log  
+- `/trends` → Trends
+- `/history` → History
+- `/custom` → Custom Log
 
-```
-npm install html2canvas
-```
+### Implementation details
 
-This is a proven, widely-used library for rendering DOM to canvas. It captures exactly what is rendered — dark mode, custom fonts, current scroll position of the target element.
+#### `src/components/FeedbackForm.tsx`
 
-#### 4. `src/hooks/feedback/FeedbackSubmit.ts`
+1. Replace the plain "Screenshot this page" button with a small inline selector:
+   - A button labelled "Capture a page screenshot"
+   - On click, shows a compact list of 5 named page options (Food Log, Exercise Log, Trends, History, Custom Log)
+2. When a page option is selected:
+   - Use `useNavigate` from `react-router-dom` to navigate to the target route
+   - Wait one animation frame for React Router to render the new route's content in `<main>`
+   - Call `html2canvas` on `<main>` 
+   - Navigate back to `/help`
+   - Set the captured image as the attachment
+3. The picker dismisses after selection (or on clicking elsewhere)
 
-Change the `mutationFn` signature to accept `{ message: string; imageUrl?: string }` and include `image_url` in the insert.
+#### State additions
+- `showPagePicker: boolean` — controls whether the page list is shown
+- `isCapturing: boolean` — replaces `isScreenshoting`, shows "Capturing…" during the async flow
 
-#### 5. `src/components/FeedbackForm.tsx`
-
-Add below the textarea:
-
-- A **"📎 Attach photo"** button — opens a hidden `<input type="file" accept="image/*">` (no camera capture, since this is a desktop-leaning feature), compresses via canvas (reuse the `compressAndEmit` pattern from `PhotoCapture`)
-- A **"📷 Screenshot this page"** button — calls `html2canvas(document.querySelector('main'))`, compresses the result, stores it as a preview
-- A small inline thumbnail preview of the attached image with an ✕ remove button
-- On submit: uploads the image to the `feedback-images` bucket under `{userId}/{feedbackId}.jpg`, then saves the public/signed URL alongside the feedback row
-
-The screenshot targets `document.querySelector('main')` — which is the `<main>` element in `Layout.tsx` containing all page content. This gives a clean capture of whatever page the user is currently viewing (food log, trends, etc.) without capturing the nav bars.
-
-#### 6. `src/hooks/feedback/FeedbackTypes.ts`
-
-Add `image_url: string | null` to both `FeedbackWithUser` and `UserFeedback`.
-
-#### 7. `src/components/FeedbackMessageBody.tsx`
-
-When `image_url` is present, render it below the message text as a tap-to-enlarge thumbnail (using a simple `<a target="_blank">` wrapping an `<img>`).
-
-#### 8. Admin view (`src/pages/Admin.tsx`)
-
-The `FeedbackMessageBody` component is shared, so images appear automatically in the admin portal too.
-
-### User flow
-
-```text
-User opens Settings → Feedback
-  ↓
-Types a message
-  ↓
-Option A: taps "Attach photo" → picks from gallery → thumbnail appears
-Option B: taps "Screenshot this page" → html2canvas captures <main> → thumbnail appears
-  ↓
-Taps "Send Feedback"
-  → image uploaded to feedback-images/{userId}/timestamp.jpg
-  → feedback row inserted with image_url
-  ↓
-Admin sees the message + image inline in the admin portal
-```
-
-### What "screenshot this page" captures
-
-Because it targets the `<main>` DOM element, it captures the current route's full rendered content:
-- On `/` → today's food log
-- On `/weights` → today's exercise log  
-- On `/trends` → the trends charts
-- On `/custom` → custom log entries
-
-No extra routing logic needed — whatever is rendered is what gets captured.
+#### No new dependencies needed
+`useNavigate` is already available from `react-router-dom` (already installed). `html2canvas` is already installed.
 
 ### Files changed
 
 | File | Change |
 |---|---|
-| Database migration | Add `image_url text` to `feedback` |
-| Storage | Create `feedback-images` bucket + RLS policies |
-| `package.json` | Add `html2canvas` dependency |
-| `src/hooks/feedback/FeedbackSubmit.ts` | Accept optional `imageUrl`, include in insert |
-| `src/hooks/feedback/FeedbackTypes.ts` | Add `image_url` field to both interfaces |
-| `src/components/FeedbackForm.tsx` | Attach photo + screenshot buttons, thumbnail preview, upload on submit |
-| `src/components/FeedbackMessageBody.tsx` | Render image when `image_url` is present |
+| `src/components/FeedbackForm.tsx` | Replace "Screenshot this page" with a page-picker flow using `useNavigate` + `html2canvas` |
 
-### Caveats
+### UX flow
 
-- `html2canvas` cannot capture cross-origin iframes or certain CSS `background-image` URLs loaded from different origins — not an issue here since all content is in the same origin
-- The screenshot captures the state at the moment the button is clicked — exactly what you'd want
-- Images are stored privately; a signed URL (valid 1 hour) is generated at submit time and stored in the row, or alternatively the path is stored and a signed URL generated at read time by the admin view. The simpler approach is to store the path and generate signed URLs on read
+```text
+User types feedback on /help
+  ↓
+Clicks "📷 Capture a page screenshot"
+  ↓
+Compact inline list appears:
+  • Food Log
+  • Exercise Log
+  • Trends
+  • History
+  • Custom Log
+  ↓
+User taps "Food Log"
+  ↓
+App navigates to /, waits one frame, captures <main>, navigates back to /help
+  ↓
+Thumbnail preview appears in form
+  ↓
+User sends feedback with screenshot attached
+```
+
+### Edge case: navigation delay
+
+Some pages (Food Log, Trends) load data asynchronously. To handle this, after navigating we wait ~400ms (a `setTimeout`) before capturing — long enough for the skeleton/loading state to pass in most cases, short enough to feel instant. We can also show "Capturing Food Log…" during this wait.
