@@ -1,61 +1,50 @@
 
-## Fix: Stop the input section from flashing on swipe
+## Three changes across three files
 
-### What's happening
+### 1. Edge function system prompt — `supabase/functions/ask-trends-ai/index.ts`
 
-In all three pages, the slide animation is applied to a wrapper `div` that contains **everything** — the `LogInput` textarea, error messages, save suggestions, `DateNavigation`, and the entries list:
+Replace the final sentence of the system prompt:
 
+**Current:**
 ```
-<div className="animate-slide-in-from-right">   ← animates ALL of this
-  <section>
-    <LogInput ... />       ← textarea + buttons (date-independent, shouldn't move)
-    <SimilarEntryPrompt /> ← also date-independent
-  </section>
-
-  <div ref={swipeHandlers.ref} ...>   ← swipe zone
-    <DateNavigation />
-    <FoodItemsTable />                ← only this should animate
-  </div>
-</div>
+Do not give medical advice — suggest consulting a professional for medical questions. If the data is insufficient to answer, say so.
 ```
 
-The swipe zone `div` (already at line 776 in FoodLog, similar in the others) is already a natural boundary. The fix is to move the animation class from the outer wrapper down to the swipe zone `div`. The `LogInput` section stays completely still.
+**Updated:**
+```
+You can make general wellness observations and data-driven suggestions from the user's logs. Do not diagnose conditions, make clinical deficiency claims, prescribe specific supplements or therapeutic diets, or claim to treat or prevent any health condition. If the question is clearly clinical in nature, briefly note that the user should consult a healthcare professional or registered dietitian. If the data is insufficient to answer, say so.
+```
 
-### The change — three files, one line each
+---
 
-**`src/pages/FoodLog.tsx`** — lines 693–697 and 776:
+### 2. Live response disclaimer — `src/components/AskTrendsAIDialog.tsx`
+
+Add a static disclaimer line between the response div and the action buttons:
+
 ```tsx
-// Before: animation on outer wrapper
-<div className={cn("space-y-4", mountDir === 'left' && 'animate-slide-in-from-right', ...)}>
-  <section><LogInput ... /></section>
-  <div ref={swipeHandlers.ref} ...>   ← no animation class here
-    <DateNavigation /><FoodItemsTable />
-  </div>
-</div>
-
-// After: animation moved to swipe zone only
-<div className="space-y-4">
-  <section><LogInput ... /></section>  ← completely still
-  <div ref={swipeHandlers.ref} className={cn(mountDir === 'left' && 'animate-slide-in-from-right', ...)} ...>
-    <DateNavigation /><FoodItemsTable />
-  </div>
-</div>
+<p className="text-[10px] text-muted-foreground leading-snug">
+  Not medical advice — consult a healthcare professional or registered dietitian for personal health guidance.
+</p>
 ```
 
-Same pattern in `WeightLog.tsx` and `OtherLog.tsx`.
+---
 
-### What the user will see
+### 3. Pinned chat expanded view — `src/components/PinnedChatsView.tsx`
 
-- Swipe left/right: the textarea and buttons stay perfectly still. Only the date nav row and the entries list below it slide in.
-- Arrow button presses: same — only the entries section animates (the textarea was always still for arrows too, since it was re-rendered in place — but this makes it consistent).
-- No structural refactoring, no prop changes, no new components.
+Add the same disclaimer below the expanded response div, inside the `isExpanded` block:
 
-### Files changed
+```tsx
+<p className="text-[10px] text-muted-foreground mt-1 leading-snug">
+  Not medical advice — consult a healthcare professional or registered dietitian for personal health guidance.
+</p>
+```
+
+---
+
+### Summary
 
 | File | Change |
 |---|---|
-| `src/pages/FoodLog.tsx` | Remove animation classes from outer `div`; add them to the swipe zone `div` (line 776) |
-| `src/pages/WeightLog.tsx` | Same — move animation to the swipe zone `div` |
-| `src/pages/OtherLog.tsx` | Same — move animation to the swipe zone `div` |
-
-That's the entire change. Three files, approximately two lines modified in each.
+| `supabase/functions/ask-trends-ai/index.ts` | Broaden system prompt disclaimer to cover diagnosis/prescription, not nutritional observations |
+| `src/components/AskTrendsAIDialog.tsx` | Add static "Not medical advice" disclaimer after the response div |
+| `src/components/PinnedChatsView.tsx` | Add same disclaimer below expanded pinned chat response |
