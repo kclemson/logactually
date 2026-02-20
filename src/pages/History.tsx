@@ -322,7 +322,7 @@ const History = () => {
       )}
 
       {/* Swipe zone: calendar grid (swipe left = next month, swipe right = prev month) */}
-      <div {...swipeHandlers}>
+      <div ref={swipeHandlers.ref} onTouchStart={swipeHandlers.onTouchStart} onTouchEnd={swipeHandlers.onTouchEnd}>
         <div
           key={format(currentMonth, 'yyyy-MM')}
           className={cn(
