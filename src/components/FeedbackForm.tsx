@@ -74,6 +74,17 @@ export function FeedbackForm() {
   const [followUp, setFollowUp] = useState("");
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  // On mount, pick up any screenshot that was captured during navigation
+  useEffect(() => {
+    const pending = sessionStorage.getItem("feedback-pending-screenshot");
+    if (!pending) return;
+    sessionStorage.removeItem("feedback-pending-screenshot");
+    compressImageToFile(pending).then((file) => {
+      setAttachedFile(file);
+      setPreviewUrl(fileToPreviewUrl(file));
+    }).catch(console.error);
+  }, []);
   const [isCapturing, setIsCapturing] = useState(false);
   const [showPagePicker, setShowPagePicker] = useState(false);
   const navigate = useNavigate();
@@ -161,17 +172,16 @@ export function FeedbackForm() {
         logging: false,
       });
       const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
-      const compressed = await compressImageToFile(dataUrl);
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-      setAttachedFile(compressed);
-      setPreviewUrl(fileToPreviewUrl(compressed));
+      // Store in sessionStorage so the screenshot survives the unmount/remount
+      // that happens when we navigate back to /help
+      sessionStorage.setItem("feedback-pending-screenshot", dataUrl);
     } catch (err) {
       console.error("Screenshot failed:", err);
     } finally {
       navigate("/help");
       setIsCapturing(false);
     }
-  }, [navigate, previewUrl]);
+  }, [navigate]);
 
   const handleSubmit = async () => {
     if (!message.trim()) return;
