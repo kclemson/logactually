@@ -39,6 +39,10 @@ serve(async (req) => {
 
     const userId = claimsData.claims.sub;
 
+    // Check if admin for log tagging
+    const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
+    const tag = isAdmin ? '[dev]' : '[user]';
+
     // Parse & validate input
     const { question, mode, includeProfile } = await req.json();
 
@@ -163,6 +167,8 @@ serve(async (req) => {
     const systemPrompt = `You are a concise health and fitness assistant. The user opened this from the ${mode} tab, so weight your answer toward ${modeLabel} — but you have access to both their food and exercise logs. Answer cross-domain questions when asked. Use plain, everyday language — avoid gym jargon and technical fitness terminology. Match your response style to the question:\n- If the user asks for suggestions, recommendations, or practical advice, give direct actionable answers grounded in their logged data.\n- If the user asks about trends, patterns, or analysis, summarize at a high level — avoid listing individual dates or day-by-day examples. Use ranges and generalizations instead of citing specific dates.\nUse bullet points when making multiple observations. Keep answers to 2-3 short paragraphs max. You can make general wellness observations and data-driven suggestions from the user's logs. Do not diagnose conditions, make clinical deficiency claims, prescribe specific supplements or therapeutic diets, or claim to treat or prevent any health condition. If the question is clearly clinical in nature, briefly note that the user should consult a healthcare professional or registered dietitian. If the data is insufficient to answer, say so.`;
 
     const userPrompt = `${dataContext}${profileContext}\n\nQuestion: ${question}`;
+
+    console.log(`${tag} ${mode}: "${question}"`);
 
     // Call Lovable AI Gateway
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
