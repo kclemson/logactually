@@ -36,7 +36,8 @@ function getCurrentTimeValue() {
 }
 
 function getDoseCountStyle(todayEntryCount: number, dosesPerDay: number): string {
-  if (dosesPerDay === 0 || todayEntryCount === 0) return 'text-muted-foreground';
+  if (todayEntryCount === 0) return 'text-muted-foreground';
+  if (dosesPerDay === 0) return 'text-amber-500 dark:text-amber-400';
   if (todayEntryCount <= dosesPerDay) return 'text-green-500 dark:text-green-400';
   return 'text-red-500';
 }
