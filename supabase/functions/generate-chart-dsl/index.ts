@@ -209,19 +209,21 @@ THE SIX CLASSIFICATION RULES (exercise source unless noted):
 
 5. "only_keys" — TRUE if EVERY exercise logged that day is within the keys[] allowlist. This is the inverse of any_key. Use when the user says "only", "nothing but", "exclusively", "just walked". This is the correct rule for defining "rest days" in terms of a low-intensity allowlist.
    - keys[] supports two token formats:
-     - "walk_run" — matches any walk_run entry regardless of subtype
-     - "walk_run:walking" — matches ONLY walk_run entries where exercise_subtype = 'walking'
+     - "walk_run" — matches any walk_run entry regardless of subtype (walking, running, hiking all match)
+     - "walk_run:walking" — matches ONLY walk_run entries where exercise_subtype = 'walking' (excludes running/hiking)
      - "walk_run:hiking" — matches ONLY hiking entries
+   - IMPORTANT: Use the plain key (e.g. "walk_run") when the user says "only walked" / "only walking" unless they specifically say "no running" or are distinguishing walking from running. Use the specific subtype (e.g. "walk_run:walking") ONLY when the user explicitly wants to exclude running or hiking.
    - A day is TRUE only if every single exercise token on that day is covered by an allowlist entry
    - Known subtypes for walk_run: "walking", "running", "hiking"
    - Known subtypes for cycling: "indoor", "outdoor"
    - Ad-hoc/unknown exercise keys (like "gardening", "yard_work") will NOT match any canonical key, so they correctly fail the only_keys test unless explicitly included in keys[]
-   - Example for "my rest days = only walking or gardening": keys: ["walk_run:walking", "walk_run:hiking", "other"]
+   - Example for "my rest days = only walking or gardening": keys: ["walk_run", "other"]
 
 6. "threshold" — TRUE if the daily food metric meets thresholdOp + thresholdValue. Source must be "food". Use for "high protein days", "days over my calorie goal", "low carb days". Requires thresholdValue (number) and thresholdOp ("gte" | "lte" | "gt" | "lt").
 
 RULE SELECTION GUIDE:
-- User says "only walking" / "exclusively" / "nothing but" → only_keys
+- User says "only walking" / "exclusively" / "nothing but" → only_keys with plain key "walk_run"
+- User says "only walking (no running)" → only_keys with subtype "walk_run:walking"
 - User says "at least one [exercise]" / "any day I did" / "leg day" → any_key
 - User says "workout day" / "training day" / "day I lifted" → any_strength
 - User says "cardio only day" → all_cardio
@@ -230,10 +232,11 @@ RULE SELECTION GUIDE:
 
 CLASSIFICATION EXAMPLES:
 - "rest days vs workout days" → rule: "any_strength", trueLabel: "Workout Days", falseLabel: "Rest Days", source: "exercise"
-- "my rest days (I consider only walking to be rest)" → rule: "only_keys", keys: ["walk_run:walking", "walk_run:hiking"], trueLabel: "Rest Days", falseLabel: "Active Days", source: "exercise"
+- "my rest days (I consider only walking to be rest)" → rule: "only_keys", keys: ["walk_run"], trueLabel: "Rest Days", falseLabel: "Active Days", source: "exercise"
 - "high protein days vs low" → rule: "threshold", thresholdValue: 150, thresholdOp: "gte", trueLabel: "High Protein", falseLabel: "Low Protein", source: "food", metric: "protein"
 - "leg day vs non-leg day" → rule: "any_key", keys: ["squat","leg_press","leg_extension","leg_curl","romanian_deadlift","lunge","bulgarian_split_squat","hack_squat"], trueLabel: "Leg Days", falseLabel: "Non-Leg Days", source: "exercise"
-- "days I ran vs days I only walked" → rule: "any_key", keys: ["walk_run:running"], trueLabel: "Running Days", falseLabel: "Walking-only Days", source: "exercise"
+- "days I ran vs days I only walked" → rule: "any_key", keys: ["walk_run:running"], trueLabel: "Running Days", falseLabel: "Non-Running Days", source: "exercise"
+- "days where I only walked vs days with more" → rule: "only_keys", keys: ["walk_run"], trueLabel: "Walking Only", falseLabel: "More Intense Days", source: "exercise"
 
 UNSUPPORTED REQUEST:
 
