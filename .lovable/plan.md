@@ -1,48 +1,44 @@
 
-# Fix: Regenerate preserves the "Save Changes" association
+# Fix: Verify accuracy runs immediately when opening an existing chart
 
-## Root cause
+## Why `useEffect` is wrong here
 
-In `handleNewRequest` (the function called by both the chip buttons and the "Regenerate" button), there is a state reset block that includes:
+The user is right. A `useEffect` that runs on mount is the wrong tool — it's hiding the real trigger, which is a concrete user event (clicking the edit button). Instead, we do the work in the event handler itself, pass the result in as a prop, and seed `useState` from it. No effect needed.
+
+## Approach
+
+### 1. `Trends.tsx` — extract an async `openChartForEditing` handler
+
+Both edit triggers (inline pencil button and context menu) call `setEditingChart(...)` with the same shape. We replace them both with a single `openChartForEditing` async function that:
+
+1. Sets `editingChart` immediately so the dialog opens (the chart spec is already available — the user sees it right away)
+2. In the background, if `chart.chart_dsl` is present (v2 chart), calls `fetchChartData(supabase, chart.chart_dsl, period)` then `verifyChartData(chart.chart_spec, dt)`
+3. Sets a separate piece of state `editingChartVerification` with the result
+4. Passes that as `initialVerification` into `CustomChartDialog`
+
+The dialog opens instantly. The verification result populates a moment later when the DB query resolves (same latency as the first-time generation flow).
+
+### 2. `CustomChartDialog` — accept `initialVerification` prop and seed state
+
+Add `initialVerification?: VerificationResult` to `CustomChartDialogProps`. Thread it through the outer wrapper to `CustomChartDialogInner`, and use it to seed `useState`:
 
 ```ts
-editingIdRef.current = null;
+const [verification, setVerification] = useState<VerificationResult | null>(initialVerification ?? null);
 ```
 
-This is intentional when the user types a completely new question — that creates a new chart. But "Regenerate" calls the same function with `lastQuestion` as the question. Once `editingIdRef.current` is cleared, `handleSave` sees `null` and routes to `saveMutation` ("Save to Trends") instead of `updateMutation` ("Save Changes").
+That's it. Because `CustomChartDialog` conditionally renders `CustomChartDialogInner` only when `open` is true (line 44-46), and `editingChart` and `editingChartVerification` are set in the same event handler, the inner component mounts with the verification already in state — or populates it shortly after if the DB query is still in flight. No `useEffect`, no mount logic.
 
-## Fix
-
-`handleNewRequest` needs to know whether it's being called as a genuine new request or as a regeneration of the current chart. The cleanest way is to add an optional `preserveId` boolean parameter (defaulting to `false`). Only the "Regenerate" button passes `preserveId: true`.
-
-### Change 1: Add `preserveId` param to `handleNewRequest`
-
-```ts
-const handleNewRequest = async (question: string, overrideMode?: "v1" | "v2", preserveId?: boolean) => {
-  ...
-  // Only clear the id if this is genuinely a new chart request
-  if (!preserveId) {
-    editingIdRef.current = null;
-  }
-  ...
-```
-
-### Change 2: Pass `preserveId: true` from the Regenerate button
-
-The Regenerate button currently calls:
-```tsx
-onClick={() => handleNewRequest(lastQuestion)}
-```
-
-Change to:
-```tsx
-onClick={() => handleNewRequest(lastQuestion, undefined, true)}
-```
-
-That's the entire fix — two lines touched. No state shape changes, no new hooks, no other logic affected. Chip clicks and textarea new-questions still pass `preserveId: false` (the default), so those correctly clear the editing id.
+For v1 charts (no `chartDsl`), `openChartForEditing` skips the fetch and passes `initialVerification: null` — same experience as today.
 
 ## Files changed
 
 | File | Change |
 |---|---|
-| `src/components/CustomChartDialog.tsx` | Add `preserveId?: boolean` param to `handleNewRequest`; skip `editingIdRef.current = null` when `preserveId` is true; pass `true` from the Regenerate button's `onClick` |
+| `src/pages/Trends.tsx` | Add `editingChartVerification` state; replace both `setEditingChart(...)` calls with an `openChartForEditing` async function; pass `initialVerification` to `CustomChartDialog` |
+| `src/components/CustomChartDialog.tsx` | Add `initialVerification?: VerificationResult` to props interface; thread through to inner component; seed `useState` from it |
+
+## What stays the same
+
+- Auto-verification after every AI generation (already works, untouched)
+- Verify button visibility and behaviour (untouched)
+- No `useEffect` added anywhere
