@@ -446,15 +446,15 @@ function CustomChartDialogInner({
                 </div>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 justify-end">
                 <Button
+                  variant="outline"
                   size="sm"
-                  onClick={handleSave}
-                  disabled={isSaving || generateChart.isPending}
-                  className="flex-1"
+                  onClick={() => handleNewRequest(lastQuestion)}
+                  disabled={generateChart.isPending || !lastQuestion}
                 >
-                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
-                  {editingIdRef.current ? "Save Changes" : "Save to Trends"}
+                  <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                  Regenerate
                 </Button>
                 <Button
                   variant="outline"
@@ -463,6 +463,14 @@ function CustomChartDialogInner({
                   disabled={generateChart.isPending}
                 >
                   Refine
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={isSaving || generateChart.isPending}
+                >
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
+                  {editingIdRef.current ? "Save Changes" : "Save to Trends"}
                 </Button>
               </div>
 
