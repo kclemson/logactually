@@ -146,7 +146,7 @@ function CustomChartDialogInner({
   };
 
   // Fresh request — clears all state and submits as a brand-new conversation
-  const handleNewRequest = async (question: string, overrideMode?: "v1" | "v2") => {
+  const handleNewRequest = async (question: string, overrideMode?: "v1" | "v2", preserveId?: boolean) => {
     if (!question.trim() || generateChart.isPending) return;
 
     const effectiveMode = overrideMode ?? mode;
@@ -165,7 +165,7 @@ function CustomChartDialogInner({
     setLastQuestion(trimmed);
     setInput("");
     setResultMode(null);
-    editingIdRef.current = null;
+    if (!preserveId) editingIdRef.current = null;
     generateChart.reset();
 
     // Sync toggle to the engine we're actually using
@@ -445,7 +445,7 @@ function CustomChartDialogInner({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleNewRequest(lastQuestion)}
+                  onClick={() => handleNewRequest(lastQuestion, undefined, true)}
                   disabled={generateChart.isPending || !lastQuestion}
                 >
                   <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
