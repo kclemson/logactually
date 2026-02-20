@@ -9,7 +9,7 @@ export function useAdminFeedback() {
       // Get feedback with user info via a join
       const { data, error } = await supabase
         .from('feedback')
-        .select('id, feedback_id, message, created_at, user_id, response, responded_at, resolved_at, resolved_reason')
+        .select('id, feedback_id, message, created_at, user_id, response, responded_at, resolved_at, resolved_reason, image_url')
         .order('created_at', { ascending: false })
         .limit(50);
       
@@ -34,6 +34,7 @@ export function useAdminFeedback() {
         responded_at: f.responded_at,
         resolved_at: f.resolved_at,
         resolved_reason: f.resolved_reason,
+        image_url: (f as any).image_url ?? null,
       })) as FeedbackWithUser[];
     },
   });

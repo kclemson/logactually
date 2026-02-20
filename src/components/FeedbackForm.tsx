@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useReadOnlyContext } from "@/contexts/ReadOnlyContext";
-import { MessageSquare, Trash2, ChevronDown } from "lucide-react";
+import { MessageSquare, Trash2, ChevronDown, Paperclip, Camera, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useSubmitFeedback, useUserFeedback, useDeleteFeedback, useMarkFeedbackRead } from "@/hooks/feedback";
@@ -33,17 +33,56 @@ const FEEDBACK_CONTENT = {
   deleteConfirmDescription: "This will permanently delete this feedback message.",
 };
 
+function compressImageToFile(src: string): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 1200;
+      let { width, height } = img;
+      if (width > MAX || height > MAX) {
+        const scale = MAX / Math.max(width, height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) return reject(new Error("Canvas toBlob failed"));
+          resolve(new File([blob], "image.jpg", { type: "image/jpeg" }));
+        },
+        "image/jpeg",
+        0.82,
+      );
+    };
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+function fileToPreviewUrl(file: File): string {
+  return URL.createObjectURL(file);
+}
+
 export function FeedbackForm() {
   const [message, setMessage] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
   const [replyingId, setReplyingId] = useState<string | null>(null);
   const [followUp, setFollowUp] = useState("");
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isScreenshoting, setIsScreenshoting] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
     try {
-      const stored = localStorage.getItem('feedback-expanded-ids');
+      const stored = localStorage.getItem("feedback-expanded-ids");
       return stored ? new Set(JSON.parse(stored)) : new Set();
-    } catch { return new Set(); }
+    } catch {
+      return new Set();
+    }
   });
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const submitFeedback = useSubmitFeedback();
   const { data: feedbackHistory } = useUserFeedback();
@@ -57,13 +96,76 @@ export function FeedbackForm() {
     }
   }, [isReadOnly]);
 
-  // Read-only users see the full UI but with disabled controls
+  // Cleanup object URLs on unmount
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  const clearAttachment = useCallback(() => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setAttachedFile(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }, [previewUrl]);
+
+  const handleFileSelected = useCallback((file: File) => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const compressed = await compressImageToFile(e.target?.result as string);
+        setAttachedFile(compressed);
+        setPreviewUrl(fileToPreviewUrl(compressed));
+      } catch (err) {
+        console.error("Image compression failed:", err);
+      }
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
+  const handleFileInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) handleFileSelected(file);
+      e.target.value = "";
+    },
+    [handleFileSelected],
+  );
+
+  const handleScreenshot = useCallback(async () => {
+    setIsScreenshoting(true);
+    try {
+      const html2canvas = (await import("html2canvas")).default;
+      const target = document.querySelector("main") as HTMLElement;
+      if (!target) throw new Error("No <main> element found");
+      const canvas = await html2canvas(target, {
+        useCORS: true,
+        allowTaint: false,
+        scale: 1,
+        logging: false,
+      });
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      const compressed = await compressImageToFile(dataUrl);
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setAttachedFile(compressed);
+      setPreviewUrl(fileToPreviewUrl(compressed));
+    } catch (err) {
+      console.error("Screenshot failed:", err);
+    } finally {
+      setIsScreenshoting(false);
+    }
+  }, [previewUrl]);
 
   const handleSubmit = async () => {
     if (!message.trim()) return;
     try {
-      await submitFeedback.mutateAsync(message.trim());
+      await submitFeedback.mutateAsync({
+        message: message.trim(),
+        imageFile: attachedFile ?? undefined,
+      });
       setMessage("");
+      clearAttachment();
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (error) {
@@ -78,21 +180,22 @@ export function FeedbackForm() {
       updatePayload.resolved_at = null;
       updatePayload.resolved_reason = null;
     }
-    await supabase.from('feedback').update(updatePayload).eq('id', item.id);
-    queryClient.invalidateQueries({ queryKey: ['userFeedback'] });
-    queryClient.invalidateQueries({ queryKey: ['adminFeedback'] });
+    await supabase.from("feedback").update(updatePayload).eq("id", item.id);
+    queryClient.invalidateQueries({ queryKey: ["userFeedback"] });
+    queryClient.invalidateQueries({ queryKey: ["adminFeedback"] });
     setReplyingId(null);
     setFollowUp("");
   };
 
   const toggleExpand = (id: string) => {
     const next = new Set(expandedIds);
-    if (next.has(id)) next.delete(id); else next.add(id);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
     setExpandedIds(next);
     if (next.size > 0) {
-      localStorage.setItem('feedback-expanded-ids', JSON.stringify([...next]));
+      localStorage.setItem("feedback-expanded-ids", JSON.stringify([...next]));
     } else {
-      localStorage.removeItem('feedback-expanded-ids');
+      localStorage.removeItem("feedback-expanded-ids");
     }
     if (replyingId && replyingId !== id) {
       setReplyingId(null);
@@ -100,10 +203,9 @@ export function FeedbackForm() {
     }
   };
 
-
   const resolvedLabel = (reason: string | null) => {
-    if (reason === 'fixed') return 'Resolved (Fixed)';
-    return 'Resolved';
+    if (reason === "fixed") return "Resolved (Fixed)";
+    return "Resolved";
   };
 
   return (
@@ -122,8 +224,68 @@ export function FeedbackForm() {
           maxLength={1000}
           disabled={isReadOnly}
         />
+
+        {/* Attachment buttons */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileInputChange}
+          />
+          <button
+            type="button"
+            disabled={isReadOnly}
+            onClick={() => fileInputRef.current?.click()}
+            className={cn(
+              "flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors",
+              isReadOnly && "opacity-50 pointer-events-none",
+            )}
+          >
+            <Paperclip className="h-3.5 w-3.5" />
+            Attach photo
+          </button>
+          <span className="text-muted-foreground/40 text-xs">·</span>
+          <button
+            type="button"
+            disabled={isReadOnly || isScreenshoting}
+            onClick={handleScreenshot}
+            className={cn(
+              "flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors",
+              (isReadOnly || isScreenshoting) && "opacity-50 pointer-events-none",
+            )}
+          >
+            <Camera className="h-3.5 w-3.5" />
+            {isScreenshoting ? "Capturing…" : "Screenshot this page"}
+          </button>
+        </div>
+
+        {/* Thumbnail preview */}
+        {previewUrl && (
+          <div className="relative inline-block">
+            <img
+              src={previewUrl}
+              alt="Attachment preview"
+              className="h-24 w-auto rounded border border-border object-cover"
+            />
+            <button
+              type="button"
+              onClick={clearAttachment}
+              className="absolute -top-1.5 -right-1.5 bg-background border border-border rounded-full p-0.5 text-muted-foreground hover:text-foreground"
+              aria-label="Remove attachment"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+
         <div className="flex items-center gap-3">
-          <Button size="sm" onClick={handleSubmit} disabled={isReadOnly || !message.trim() || submitFeedback.isPending}>
+          <Button
+            size="sm"
+            onClick={handleSubmit}
+            disabled={isReadOnly || !message.trim() || submitFeedback.isPending}
+          >
             {submitFeedback.isPending ? FEEDBACK_CONTENT.submittingButton : FEEDBACK_CONTENT.submitButton}
           </Button>
           {showSuccess && (
@@ -156,12 +318,14 @@ export function FeedbackForm() {
                       {format(parseISO(item.created_at), "MMM d, yyyy")}
                     </span>
                     {isResolved && (
-                      <span className={cn(
-                        "text-xs",
-                        item.resolved_reason === 'fixed'
-                          ? "text-green-600 dark:text-green-400"
-                          : "text-[hsl(217_91%_60%)]"
-                      )}>
+                      <span
+                        className={cn(
+                          "text-xs",
+                          item.resolved_reason === "fixed"
+                            ? "text-green-600 dark:text-green-400"
+                            : "text-[hsl(217_91%_60%)]",
+                        )}
+                      >
                         ✓ {resolvedLabel(item.resolved_reason)}
                       </span>
                     )}
@@ -171,15 +335,15 @@ export function FeedbackForm() {
                     {item.response && !isResolved && (
                       <span className="text-xs text-[hsl(217_91%_60%)]">• Response</span>
                     )}
-                    <ChevronDown className={cn(
-                      "h-3 w-3 ml-auto text-muted-foreground transition-transform",
-                      isExpanded && "rotate-180"
-                    )} />
+                    <ChevronDown
+                      className={cn(
+                        "h-3 w-3 ml-auto text-muted-foreground transition-transform",
+                        isExpanded && "rotate-180",
+                      )}
+                    />
                   </div>
                   {!isExpanded && (
-                    <p className="text-xs text-muted-foreground truncate">
-                      {truncate(item.message)}
-                    </p>
+                    <p className="text-xs text-muted-foreground truncate">{truncate(item.message)}</p>
                   )}
                 </button>
 
@@ -191,28 +355,38 @@ export function FeedbackForm() {
                       createdAt={item.created_at}
                       response={item.response}
                       respondedAt={item.responded_at}
+                      imagePath={item.image_url}
                     />
 
                     {/* Actions row */}
                     <div className="flex items-center gap-3 text-xs">
-                      {/* Reply / Re-open */}
                       {!isReplying && (
                         <>
                           {isResolved ? (
                             <button
                               disabled={isReadOnly}
-                              onClick={(e) => { e.stopPropagation(); setReplyingId(item.id); }}
-                              className={cn("text-orange-500 hover:text-orange-600 hover:underline",
-                                isReadOnly && "opacity-50 pointer-events-none")}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setReplyingId(item.id);
+                              }}
+                              className={cn(
+                                "text-orange-500 hover:text-orange-600 hover:underline",
+                                isReadOnly && "opacity-50 pointer-events-none",
+                              )}
                             >
                               Re-open
                             </button>
                           ) : (
                             <button
                               disabled={isReadOnly}
-                              onClick={(e) => { e.stopPropagation(); setReplyingId(item.id); }}
-                              className={cn("text-[hsl(217_91%_60%)] hover:underline",
-                                isReadOnly && "opacity-50 pointer-events-none")}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setReplyingId(item.id);
+                              }}
+                              className={cn(
+                                "text-[hsl(217_91%_60%)] hover:underline",
+                                isReadOnly && "opacity-50 pointer-events-none",
+                              )}
                             >
                               Reply
                             </button>
@@ -220,13 +394,14 @@ export function FeedbackForm() {
                         </>
                       )}
 
-                      {/* Delete */}
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <button
                             disabled={isReadOnly}
-                            className={cn("text-destructive flex items-center gap-1",
-                              isReadOnly && "opacity-50 pointer-events-none")}
+                            className={cn(
+                              "text-destructive flex items-center gap-1",
+                              isReadOnly && "opacity-50 pointer-events-none",
+                            )}
                           >
                             <Trash2 className="h-3 w-3" /> Delete
                           </button>
@@ -234,17 +409,20 @@ export function FeedbackForm() {
                         <AlertDialogContent>
                           <AlertDialogHeader>
                             <AlertDialogTitle>{FEEDBACK_CONTENT.deleteConfirmTitle}</AlertDialogTitle>
-                            <AlertDialogDescription>{FEEDBACK_CONTENT.deleteConfirmDescription}</AlertDialogDescription>
+                            <AlertDialogDescription>
+                              {FEEDBACK_CONTENT.deleteConfirmDescription}
+                            </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => deleteFeedback.mutate(item.id)}>Delete</AlertDialogAction>
+                            <AlertDialogAction onClick={() => deleteFeedback.mutate(item.id)}>
+                              Delete
+                            </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
                     </div>
 
-                    {/* Reply textarea */}
                     {isReplying && (
                       <div className="space-y-1">
                         <Textarea
@@ -258,7 +436,14 @@ export function FeedbackForm() {
                           <Button size="sm" onClick={handleReply(item, isResolved)} disabled={!followUp.trim()}>
                             {isResolved ? "Send & Re-open" : "Send"}
                           </Button>
-                          <Button size="sm" variant="ghost" onClick={() => { setReplyingId(null); setFollowUp(""); }}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setReplyingId(null);
+                              setFollowUp("");
+                            }}
+                          >
                             Cancel
                           </Button>
                         </div>

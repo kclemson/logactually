@@ -527,8 +527,9 @@ export default function Admin() {
                       <FeedbackMessageBody
                         message={f.message}
                         createdAt={f.created_at}
-                        response={replyingToId === f.id && replyMode === 'edit' ? null : f.response}
+                        response={f.response}
                         respondedAt={f.responded_at}
+                        imagePath={f.image_url}
                       />
 
                       {replyingToId === f.id && (
@@ -620,6 +621,7 @@ export default function Admin() {
                         createdAt={f.created_at}
                         response={f.response}
                         respondedAt={f.responded_at}
+                        imagePath={f.image_url}
                       />
                     </div>
                   )}

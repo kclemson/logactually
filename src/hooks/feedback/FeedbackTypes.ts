@@ -8,6 +8,7 @@ export interface FeedbackWithUser {
   responded_at: string | null;
   resolved_at: string | null;
   resolved_reason: string | null;
+  image_url: string | null;
 }
 
 export interface UserFeedback {
@@ -20,4 +21,5 @@ export interface UserFeedback {
   read_at: string | null;
   resolved_at: string | null;
   resolved_reason: string | null;
+  image_url: string | null;
 }
