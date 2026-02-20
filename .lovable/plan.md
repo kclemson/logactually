@@ -1,91 +1,60 @@
 
-## Fix: Portion button clipped on mobile — trim description to make room
+## Fix: Allow description to wrap to 2 lines while keeping portion always visible
 
-### User preference
-Keep the layout exactly as-is (inline portion button on the same line as the description). Just ensure the description truncates sooner when a portion is present, so the portion button is never clipped off.
+### What's happening
 
-### Root cause
-The container is `overflow-hidden max-h-[3rem]`, which is roughly 2 lines tall. `DescriptionCell` renders a `<span>` with the description text inline, followed by the portion button as a sibling. When the description wraps to 2 lines on mobile, the portion button becomes a third line and is silently clipped by `overflow-hidden`.
+The current implementation uses `truncate` on the description span, which is shorthand for `overflow-hidden whitespace-nowrap text-overflow-ellipsis`. This forces the description onto a single line always — that's why every item is being cut short regardless of whether the portion would fit on the same line.
 
-### The fix: `line-clamp-1` on the description when a portion is present
+### The correct fix
 
-Currently the editable `DescriptionCell` span has no explicit `line-clamp`. When a `portion` exists, add `line-clamp-1` via a `className` prop so the description truncates to one line with an ellipsis — keeping the portion button always visible on the same second "line" of the container.
+Replace `truncate` with a **wrapping** approach. The key insight: use `flex-wrap: wrap` on the container so the description and portion are flex items that can flow across 2 lines naturally. The description uses `min-w-0` but no explicit line clamp, so it wraps freely. The portion button has `shrink-0` and `basis-full` only kicks in when needed — actually, the simpler approach is:
 
-There are two places to fix:
+- Description span: `min-w-0 break-words` (allows wrapping, no artificial 1-line limit)
+- Portion button: `shrink-0 whitespace-nowrap` (stays on same line if there's room, otherwise wraps to next line)
+- Container: `flex-wrap: wrap` so the portion can wrap to a new line when description fills the row
 
-**1. Editable mode** (~line 751): Pass `className="line-clamp-1"` to `DescriptionCell` when `item.portion` is truthy. When there's no portion, leave it unclamped (current behaviour — description can wrap to 2 lines).
+With `max-h-[3rem]` still on the outer container, the total height is still capped at ~2 lines. The combination means:
 
-**2. Read-only mode** (~line 790): The `<span>` already has `line-clamp-2`. When `item.portion` is truthy, switch it to `line-clamp-1` so the portion fits inline.
+| Description | Portion | Result |
+|---|---|---|
+| Short ("Coffee") | "(1 portion)" | Both on 1 line |
+| Medium ("Bacon egg & cheese pita") | "(0.5 sandwiches)" | Both on 1 line |
+| Long ("GOLD STANDARD 100% WHEY...") | "(1 scoop)" | Description wraps, portion on line 2 |
+| Very long, no portion | — | Description wraps to 2 lines as before |
 
-Both group header rows (~line 371 and ~line 550) use a group portion — same fix applies: clamp the group name to 1 line when a cumulative portion multiplier is displayed.
+This mirrors exactly what the user showed in the screenshot — descriptions wrap naturally and the portion appears on the second line when needed.
 
-### Technical details
+### Changes to `src/components/FoodItemsTable.tsx`
 
-`DescriptionCell` already accepts a `className` prop that it passes to its inner `<span>`:
-
+**Editable row container (~line 748-751):** Add `flex-wrap` to the container:
 ```tsx
-// DescriptionCell.tsx — the span already forwards className
-<span
-  className={cn(
-    "border-0 bg-transparent focus:outline-none cursor-text hover:bg-muted/50",
-    className  // ← this is where we inject line-clamp-1
-  )}
-  ...
-/>
+"flex items-baseline gap-1 flex-wrap",  // add flex-wrap
 ```
 
-So the change is purely at the call-site in `FoodItemsTable.tsx` — no changes to `DescriptionCell` itself.
-
-### Change at individual item editable row (~line 751)
-
+**Editable row DescriptionCell (~line 760):** Replace `truncate flex-1 min-w-0` with `min-w-0`:
 ```tsx
-// Before
-<DescriptionCell
-  value={item.description}
-  onSave={...}
-  title={...}
->
+className="min-w-0"
+```
+(Remove `truncate` and `flex-1` — we no longer want artificial truncation or stretching)
 
-// After
-<DescriptionCell
-  value={item.description}
-  onSave={...}
-  title={...}
-  className={item.portion ? "line-clamp-1" : undefined}
->
+**Read-only row container (~line 792):** Add `flex-wrap`:
+```tsx
+className={cn("flex items-baseline gap-1 flex-wrap flex-1 min-w-0 pl-1 pr-0 py-1", compact && "text-sm")}
 ```
 
-### Change at individual item read-only row (~line 790)
-
+**Read-only row description span (~line 793-795):** Replace `truncate flex-1 min-w-0` with `min-w-0`:
 ```tsx
-// Before
-<span className={cn("pl-1 pr-0 py-1 line-clamp-2 shrink min-w-0", compact && "text-sm")}>
-
-// After
-<span className={cn("pl-1 pr-0 py-1 shrink min-w-0", item.portion ? "line-clamp-1" : "line-clamp-2", compact && "text-sm")}>
+className="min-w-0"
 ```
 
-### Change at group header rows (~lines 372 and 552)
+**Group header rows (~lines 375-378 and ~555-558):** Same change — replace `truncate flex-1 min-w-0` with `min-w-0` on the DescriptionCell className. Add `flex-wrap` to the flex container wrapping the group name + portion button.
 
-Same pattern — both use a `DescriptionCell` for the group name. When a cumulative multiplier is displayed (i.e. when the portion button renders), add `className="line-clamp-1"`:
+### Why this works without layout explosion
 
-```tsx
-<DescriptionCell
-  value={groupName}
-  ...
-  className={hasPortionButton ? "line-clamp-1" : undefined}
->
-```
+The outer `overflow-hidden max-h-[3rem]` container remains unchanged. It caps the total rendered height to ~2 lines (~3rem). With `flex-wrap`, the browser flows description text first, then the portion button on the next line only if the description fills the row. The hard height cap means if somehow both overflow (very long description + long portion), nothing bleeds out — it's just clipped gracefully.
 
 ### Files changed
 
 | File | Change |
 |---|---|
-| `src/components/FoodItemsTable.tsx` | In editable item row: add `className={item.portion ? "line-clamp-1" : undefined}` to `DescriptionCell`. In read-only item row: conditionally switch `line-clamp-2` to `line-clamp-1` when `item.portion` is truthy. In both group header rows: same pattern on the `DescriptionCell` when a portion multiplier button is shown. |
-
-### Result
-
-- Short descriptions with a portion: description fits on one line + portion visible beside it ✓
-- Long descriptions with a portion: description truncates with `…` on one line + portion visible beside it ✓  
-- Long descriptions without a portion: still wraps to 2 lines as today ✓
-- No layout restructuring, no extra vertical space ✓
+| `src/components/FoodItemsTable.tsx` | Replace `truncate flex-1 min-w-0` with `min-w-0` on description spans/DescriptionCell. Add `flex-wrap` to the flex containers in editable row, read-only row, and both group header rows. |
