@@ -1,78 +1,68 @@
 
-## Four feedback UX improvements in one pass
+## Move "Thanks!" below the Photo/Screenshot links
 
-### Change 1 — Attachment row layout (FeedbackForm.tsx)
+### What the user wants
 
-Replace the two separate blocks (attachment buttons row + send button row) with a single `flex items-start justify-between` row:
+The success message should appear on a second line **below** the Photo and Screenshot buttons, still to the left of the Send Feedback button. The button is taller than the attachment links, so there's natural vertical space for this to sit cleanly underneath them.
 
 ```
-[📎 Photo]  [📷 Screenshot a page]          [Send Feedback]
+[📎 Photo]  [📷 Screenshot a page]
+Thanks for the feedback!                    [Send Feedback]
 ```
 
-- Left side: `flex items-center gap-3` containing the two attachment buttons. The separator dot `·` is removed — gap-3 is sufficient visual separation.
-- "Attach photo" shortened to **"Photo"** to save width.
-- Right side: `flex-shrink-0` Send button + success message.
-- `items-start` so both sides top-align if the left side wraps on very narrow screens.
+### How to implement it
 
-The thumbnail preview block remains below this row (unchanged).
+The outer wrapper stays `flex items-start justify-between gap-3` (left group and button right-aligned and top-aligned).
 
----
+The **left group** changes from `flex items-center gap-3` (single row) to `flex flex-col gap-1` (column), containing:
+1. A `flex items-center gap-3` inner row for the two attachment buttons
+2. The `{showSuccess && <span>...</span>}` message as the second row — only rendered when visible, so it takes up no space normally
 
-### Change 2 — FeedbackMessageBody: lightbox instead of new tab
+The **right group** stays `flex-shrink-0` with just the Send button.
 
-`FeedbackImage` currently wraps the image in `<a href={url} target="_blank">`. This opens a new browser tab in both the user's feedback history and the admin portal.
+### Exact change in `src/components/FeedbackForm.tsx` (lines 277–341)
 
-Replace it with a self-contained lightbox component matching the pattern from `FeedbackForm`:
-
-- Add `lightboxOpen` state inside `FeedbackImage`
-- Clicking the thumbnail sets `lightboxOpen(true)` — image gets `cursor-zoom-in`
-- Overlay: `fixed inset-0 z-50 bg-black/80 flex items-center justify-center`
-- Inner wrapper: `relative` with `onClick={(e) => e.stopPropagation()}`
-- Close button: `absolute -top-3 -right-3 bg-background rounded-full p-1 text-muted-foreground hover:text-foreground transition-colors shadow-md z-10` — hugs the image corner
-- Escape key handler via `useEffect` (only active when `lightboxOpen` is true)
-- Thumbnail display: `max-h-64 w-auto rounded border border-border object-contain cursor-zoom-in hover:opacity-90 transition-opacity` (matches existing size)
-- The `<a>` wrapper is removed entirely
-
-Since `FeedbackMessageBody` is shared between user history and admin portal, both benefit automatically from a single change.
-
----
-
-### Change 3 — Image indicator icon on collapsed rows
-
-Add a small `ImageIcon` (from lucide-react) immediately after the `#id` span in collapsed header rows, visible only when the item has an `image_url`. This signals an attachment before the user expands.
-
-**`src/components/FeedbackForm.tsx`** — user history collapsed row (line ~408):
+Replace:
 ```tsx
-<span className="text-muted-foreground font-mono">#{item.feedback_id}</span>
-{item.image_url && (
-  <ImageIcon className="h-3 w-3 text-muted-foreground/60 flex-shrink-0" />
-)}
+{/* Left: attachment controls */}
+<div className="flex items-center gap-3 flex-wrap">
+  ...buttons...
+</div>
+
+{/* Right: send button + success */}
+<div className="flex items-center gap-3 flex-shrink-0">
+  <Button ...>Send Feedback</Button>
+  {showSuccess && <span>...</span>}
+</div>
 ```
 
-**`src/pages/Admin.tsx`** — open feedback collapsed row (line ~467):
+With:
 ```tsx
-<span className="text-muted-foreground font-mono">#{f.feedback_id}</span>
-{f.image_url && (
-  <ImageIcon className="h-3 w-3 text-muted-foreground/60 flex-shrink-0" />
-)}
+{/* Left: attachment controls + success message below */}
+<div className="flex flex-col gap-1">
+  <div className="flex items-center gap-3">
+    ...buttons (unchanged)...
+  </div>
+  {showSuccess && (
+    <span className="text-sm text-muted-foreground animate-in fade-in">
+      {FEEDBACK_CONTENT.successMessage}
+    </span>
+  )}
+</div>
+
+{/* Right: send button only */}
+<div className="flex-shrink-0">
+  <Button ...>Send Feedback</Button>
+</div>
 ```
 
-**`src/pages/Admin.tsx`** — resolved feedback collapsed row (line ~588):
-```tsx
-<span className="text-muted-foreground font-mono">#{f.feedback_id}</span>
-{f.image_url && (
-  <ImageIcon className="h-3 w-3 text-muted-foreground/60 flex-shrink-0" />
-)}
-```
+### Also in the same pass: Changelog cache-busting
 
-`ImageIcon` is imported from `lucide-react` in each file that needs it.
-
----
+Add `?v=${LAST_UPDATED}` to all 4 image `src`/`onClick` expressions in `src/pages/Changelog.tsx` so dev mode always shows the latest screenshot when the changelog is updated.
 
 ### Files changed
 
-| File | Changes |
+| File | Change |
 |---|---|
-| `src/components/FeedbackForm.tsx` | Merge attachment + send into one row; shorten "Attach photo" → "Photo"; remove separator dot; add `ImageIcon` to collapsed history rows |
-| `src/components/FeedbackMessageBody.tsx` | Replace `<a target="_blank">` on `FeedbackImage` with self-contained lightbox (state + overlay + Escape handler + corner X button) |
-| `src/pages/Admin.tsx` | Add `ImageIcon` indicator to both open and resolved collapsed feedback rows; import `ImageIcon` from lucide-react |
+| `src/components/FeedbackForm.tsx` | Restructure left group to `flex-col`; move success message to second row below attachment buttons; simplify right group to button only |
+| `src/pages/Changelog.tsx` | Add `?v=${LAST_UPDATED}` to all changelog image `src` and `setLightboxSrc` calls |
