@@ -139,25 +139,31 @@ serve(async (req) => {
             nutriments.cholesterol_serving ?? nutriments.cholesterol_100g ?? 0
           );
 
-          console.log('Found product in Open Food Facts:', productName);
-
-          return new Response(
-            JSON.stringify({
-              description: productName,
-              portion: servingSize,
-              calories,
-              protein,
-              carbs,
-              fat,
-              fiber,
-              sugar,
-              saturated_fat,
-              sodium,
-              cholesterol,
-              source: 'openfoodfacts',
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          // Guard: if OFF returned a stub with no nutrition data, fall through to AI
+          const hasNutritionData = calories > 0 || protein > 0 || carbs > 0 || fat > 0;
+          if (!hasNutritionData) {
+            console.log('OFF product found but has no nutrition data, falling through to AI:', productName);
+            // Don't return — fall through to EAN-8 retry / AI fallback below
+          } else {
+            console.log('Found product in Open Food Facts:', productName);
+            return new Response(
+              JSON.stringify({
+                description: productName,
+                portion: servingSize,
+                calories,
+                protein,
+                carbs,
+                fat,
+                fiber,
+                sugar,
+                saturated_fat,
+                sodium,
+                cholesterol,
+                source: 'openfoodfacts',
+              }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
         }
       }
     } catch (offError) {
@@ -165,7 +171,49 @@ serve(async (req) => {
       // Continue to AI fallback
     }
 
-    // Step 2: Fallback to AI
+    // Step 2: EAN-8 → EAN-13 zero-pad retry (before AI fallback)
+    if (cleanUpc.length < 13) {
+      const paddedUpc = cleanUpc.padStart(13, '0');
+      console.log('Retrying OFF with zero-padded EAN-13:', paddedUpc);
+      try {
+        const offRetryResponse = await fetch(
+          `https://world.openfoodfacts.org/api/v0/product/${paddedUpc}.json`,
+          { headers: { 'User-Agent': 'FoodLog/1.0' } }
+        );
+        if (offRetryResponse.ok) {
+          const offRetryData: OpenFoodFactsResponse = await offRetryResponse.json();
+          if (offRetryData.status === 1 && offRetryData.product) {
+            const product = offRetryData.product;
+            const nutriments = product.nutriments || {};
+            const servingSize = (product.serving_size || '1 serving')
+              .replace(/\s*\([^)]*\)\s*/g, '').trim() || '1 serving';
+            const productName = product.product_name || 'Unknown product';
+            const calories = Math.round(nutriments['energy-kcal_serving'] ?? nutriments['energy-kcal_100g'] ?? 0);
+            const protein = Math.round(nutriments.proteins_serving ?? nutriments.proteins_100g ?? 0);
+            const carbs = Math.round(nutriments.carbohydrates_serving ?? nutriments.carbohydrates_100g ?? 0);
+            const fat = Math.round(nutriments.fat_serving ?? nutriments.fat_100g ?? 0);
+            const hasNutritionData = calories > 0 || protein > 0 || carbs > 0 || fat > 0;
+            if (hasNutritionData) {
+              const fiber = Math.round(nutriments.fiber_serving ?? nutriments.fiber_100g ?? 0);
+              const sugar = Math.round(nutriments.sugars_serving ?? nutriments.sugars_100g ?? 0);
+              const saturated_fat = Math.round(nutriments['saturated-fat_serving'] ?? nutriments['saturated-fat_100g'] ?? 0);
+              const sodium = Math.round((nutriments.sodium_serving ?? nutriments.sodium_100g ?? 0) * 1000);
+              const cholesterol = Math.round(nutriments.cholesterol_serving ?? nutriments.cholesterol_100g ?? 0);
+              console.log('Found product in OFF via zero-padded EAN-13:', productName);
+              return new Response(
+                JSON.stringify({ description: productName, portion: servingSize, calories, protein, carbs, fat, fiber, sugar, saturated_fat, sodium, cholesterol, source: 'openfoodfacts' }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+            console.log('OFF zero-padded result also has no nutrition data, falling through to AI');
+          }
+        }
+      } catch (padError) {
+        console.error('OFF zero-pad retry error:', padError);
+      }
+    }
+
+    // Step 3: Fallback to AI
     console.log('Product not found in Open Food Facts, using AI fallback');
 
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
