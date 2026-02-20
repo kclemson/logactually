@@ -207,6 +207,10 @@ serve(async (req) => {
       });
     }
 
+    const userId = claimsData.claims.sub;
+    const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
+    const tag = isAdmin ? '[dev]' : '[user]';
+
     const { messages, period } = await req.json();
 
     if (!Array.isArray(messages) || messages.length === 0) {
@@ -217,6 +221,7 @@ serve(async (req) => {
     }
 
     const days = typeof period === "number" && [7, 30, 90].includes(period) ? period : 30;
+    const question = Array.isArray(messages) ? (messages.filter((m: any) => m.role === 'user').pop()?.content ?? '?') : '?';
 
     // Build AI messages — NO user data, just schema context
     const aiMessages = [
@@ -285,11 +290,9 @@ serve(async (req) => {
       throw new Error("AI returned invalid JSON");
     }
 
-    console.log("generate-chart-dsl result:", JSON.stringify(dsl).slice(0, 1000));
-
     // Handle unsupported request signal
     if (dsl.unsupported === true) {
-      console.log("generate-chart-dsl: unsupported request:", dsl.reason);
+      console.info(`${tag} generate-chart-dsl: "${String(question).slice(0, 80)}" (${days}d) → unsupported`);
       return new Response(JSON.stringify({ unsupported: true, reason: dsl.reason ?? "Request cannot be expressed in the chart DSL" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -303,6 +306,7 @@ serve(async (req) => {
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
+      console.info(`${tag} generate-chart-dsl: "${String(question).slice(0, 80)}" (${days}d) → options(${dsl.chartDSLOptions.length})`);
       return new Response(JSON.stringify({ chartDSLOptions: dsl.chartDSLOptions }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -316,6 +320,7 @@ serve(async (req) => {
       );
     }
 
+    console.info(`${tag} generate-chart-dsl: "${String(question).slice(0, 80)}" (${days}d) → DSL`);
     return new Response(JSON.stringify({ chartDSL: dsl }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
