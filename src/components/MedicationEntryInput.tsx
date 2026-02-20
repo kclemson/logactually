@@ -182,7 +182,7 @@ export function MedicationEntryInput({
           onChange={(e) => setDoseValue(e.target.value)}
           onKeyDown={handleKeyDown}
           className="h-9 w-24 text-sm"
-          autoFocus
+          
         />
         {unit && (
           <span className="text-sm text-muted-foreground shrink-0">{unit}</span>
