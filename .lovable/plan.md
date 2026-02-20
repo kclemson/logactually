@@ -1,56 +1,61 @@
 
-## Fix: Short names in lookup-upc
+## Fix: Stop the input section from flashing on swipe
 
-Two targeted changes to `supabase/functions/lookup-upc/index.ts` only. No changes to `prompts.ts`, `analyze-food`, or any other file.
+### What's happening
 
----
-
-### Change 1: Word-boundary truncation for Open Food Facts names
-
-Open Food Facts returns raw database strings like "Old-Fashioned Vanilla Farmstyle Greek Blended Lowfat Yogurt". No prompt can fix this — it's not going through an AI. A small helper trims at the last word boundary before 45 characters:
-
-```typescript
-function truncateProductName(name: string, maxChars = 45): string {
-  if (name.length <= maxChars) return name;
-  const truncated = name.slice(0, maxChars);
-  const lastSpace = truncated.lastIndexOf(' ');
-  return lastSpace > 15 ? truncated.slice(0, lastSpace) : truncated;
-}
-```
-
-Applied in two places:
-- Line ~104: `const productName = truncateProductName(product.product_name || 'Unknown product');`
-- Line ~183 (EAN-13 retry): same
-
-**Examples:**
-
-| Raw OFF name | After truncation |
-|---|---|
-| Old-Fashioned Vanilla Farmstyle Greek Blended Lowfat Yogurt (59) | "Old-Fashioned Vanilla Farmstyle Greek" (37) |
-| GOLD STANDARD 100% WHEY Double Rich Chocolate (46) | "GOLD STANDARD 100% WHEY Double Rich" (35) |
-| Greek Yogurt (12) | "Greek Yogurt" (unchanged) |
-| Bacon Egg & Cheese Sandwich (28) | "Bacon Egg & Cheese Sandwich" (unchanged) |
-
----
-
-### Change 2: Add max-length instruction to the AI fallback prompt
-
-The current prompt says `"name": "Product Name"` — no length guidance at all. Change it to match the same instruction already used in `analyze-food`:
+In all three pages, the slide animation is applied to a wrapper `div` that contains **everything** — the `LogInput` textarea, error messages, save suggestions, `DateNavigation`, and the entries list:
 
 ```
-// Before
-{"name": "Product Name", "serving": ...}
+<div className="animate-slide-in-from-right">   ← animates ALL of this
+  <section>
+    <LogInput ... />       ← textarea + buttons (date-independent, shouldn't move)
+    <SimilarEntryPrompt /> ← also date-independent
+  </section>
 
-// After
-{"name": "Short product name, max 25 characters", "serving": ...}
+  <div ref={swipeHandlers.ref} ...>   ← swipe zone
+    <DateNavigation />
+    <FoodItemsTable />                ← only this should animate
+  </div>
+</div>
 ```
 
-That's it — same phrasing as `FOOD_ITEM_FIELDS` already uses, just inlined into the `lookup-upc` prompt.
+The swipe zone `div` (already at line 776 in FoodLog, similar in the others) is already a natural boundary. The fix is to move the animation class from the outer wrapper down to the swipe zone `div`. The `LogInput` section stays completely still.
 
----
+### The change — three files, one line each
+
+**`src/pages/FoodLog.tsx`** — lines 693–697 and 776:
+```tsx
+// Before: animation on outer wrapper
+<div className={cn("space-y-4", mountDir === 'left' && 'animate-slide-in-from-right', ...)}>
+  <section><LogInput ... /></section>
+  <div ref={swipeHandlers.ref} ...>   ← no animation class here
+    <DateNavigation /><FoodItemsTable />
+  </div>
+</div>
+
+// After: animation moved to swipe zone only
+<div className="space-y-4">
+  <section><LogInput ... /></section>  ← completely still
+  <div ref={swipeHandlers.ref} className={cn(mountDir === 'left' && 'animate-slide-in-from-right', ...)} ...>
+    <DateNavigation /><FoodItemsTable />
+  </div>
+</div>
+```
+
+Same pattern in `WeightLog.tsx` and `OtherLog.tsx`.
+
+### What the user will see
+
+- Swipe left/right: the textarea and buttons stay perfectly still. Only the date nav row and the entries list below it slide in.
+- Arrow button presses: same — only the entries section animates (the textarea was always still for arrows too, since it was re-rendered in place — but this makes it consistent).
+- No structural refactoring, no prop changes, no new components.
 
 ### Files changed
 
 | File | Change |
 |---|---|
-| `supabase/functions/lookup-upc/index.ts` | Add `truncateProductName()` helper; apply to OFF product names in both lookup paths; update AI prompt `name` field description to "Short product name, max 25 characters" |
+| `src/pages/FoodLog.tsx` | Remove animation classes from outer `div`; add them to the swipe zone `div` (line 776) |
+| `src/pages/WeightLog.tsx` | Same — move animation to the swipe zone `div` |
+| `src/pages/OtherLog.tsx` | Same — move animation to the swipe zone `div` |
+
+That's the entire change. Three files, approximately two lines modified in each.
