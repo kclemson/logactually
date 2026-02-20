@@ -368,14 +368,14 @@ export function FoodItemsTable({
                         />
                       </div>
                     )}
-                    <div className={cn("flex-1 min-w-0 overflow-hidden max-h-[3rem] rounded pl-1 py-1 flex items-baseline gap-1 focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg", compact && "text-sm")}>
+                    <div className={cn("flex-1 min-w-0 overflow-hidden max-h-[3rem] rounded pl-1 py-1 flex items-baseline gap-1 flex-wrap focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg", compact && "text-sm")}>
                       <DescriptionCell
                         value={groupName}
                         onSave={(newName) => onUpdateGroupName?.(boundary.entryId, newName)}
                         readOnly={isReadOnly}
                         onReadOnlyAttempt={triggerOverlay}
                         title={groupName}
-                        className="truncate flex-1 min-w-0"
+                        className="min-w-0"
                       >
                         {(() => {
                           const cumulative = entryPortionMultipliers?.get(boundary.entryId) ?? 1.0;
@@ -548,14 +548,14 @@ export function FoodItemsTable({
                         />
                       </div>
                     )}
-                    <div className={cn("flex-1 min-w-0 overflow-hidden max-h-[3rem] rounded pl-1 py-1 flex items-baseline gap-1 focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg", compact && "text-sm")}>
+                    <div className={cn("flex-1 min-w-0 overflow-hidden max-h-[3rem] rounded pl-1 py-1 flex items-baseline gap-1 flex-wrap focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg", compact && "text-sm")}>
                       <DescriptionCell
                         value={groupName}
                         onSave={(newName) => onUpdateGroupName?.(boundary.entryId, newName)}
                         readOnly={isReadOnly}
                         onReadOnlyAttempt={triggerOverlay}
                         title={groupName}
-                        className="truncate flex-1 min-w-0"
+                        className="min-w-0"
                       >
                         {(() => {
                           const cumulative = entryPortionMultipliers?.get(boundary.entryId) ?? 1.0;
@@ -748,7 +748,7 @@ export function FoodItemsTable({
                   <div className={cn(
                     "flex-1 min-w-0 rounded pl-1 py-1",
                     "overflow-hidden max-h-[3rem]",
-                    "flex items-baseline gap-1",
+                    "flex items-baseline gap-1 flex-wrap",
                     "focus-within:ring-2 focus-within:ring-focus-ring focus-within:bg-focus-bg"
                   )}>
                     <DescriptionCell
@@ -757,7 +757,7 @@ export function FoodItemsTable({
                         onUpdateItem?.(index, 'description', desc);
                       }}
                       title={getItemTooltip(item)}
-                      className="truncate flex-1 min-w-0"
+                      className="min-w-0"
                     >
                       {item.portion && (
                         <button
@@ -789,10 +789,10 @@ export function FoodItemsTable({
                       ) : null}
                     </div>
                   )}
-                  <div className={cn("flex items-baseline gap-1 flex-1 min-w-0 pl-1 pr-0 py-1", compact && "text-sm")}>
+                  <div className={cn("flex items-baseline gap-1 flex-wrap flex-1 min-w-0 pl-1 pr-0 py-1", compact && "text-sm")}>
                     <span
                       title={getItemTooltip(item)}
-                      className="truncate flex-1 min-w-0"
+                      className="min-w-0"
                     >
                       {item.description}
                     </span>
