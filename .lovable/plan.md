@@ -1,50 +1,39 @@
 
-## Three changes across three files
+## Bug: `?date=undefined` crashes the Weight (and Food/Other) log page
 
-### 1. Edge function system prompt — `supabase/functions/ask-trends-ai/index.ts`
+### Root cause
 
-Replace the final sentence of the system prompt:
+When a URL like `/weights?date=undefined` is loaded, `searchParams.get('date')` returns the **literal string `"undefined"`** — not JS `undefined`. Because `"undefined"` is truthy, this line:
 
-**Current:**
-```
-Do not give medical advice — suggest consulting a professional for medical questions. If the data is insufficient to answer, say so.
-```
-
-**Updated:**
-```
-You can make general wellness observations and data-driven suggestions from the user's logs. Do not diagnose conditions, make clinical deficiency claims, prescribe specific supplements or therapeutic diets, or claim to treat or prevent any health condition. If the question is clearly clinical in nature, briefly note that the user should consult a healthcare professional or registered dietitian. If the data is insufficient to answer, say so.
+```ts
+const dateKey = dateParam || getStoredDate() || format(new Date(), 'yyyy-MM-dd');
 ```
 
----
+passes `"undefined"` straight through as `initialDate`. That string then reaches:
 
-### 2. Live response disclaimer — `src/components/AskTrendsAIDialog.tsx`
+- `parseISO("undefined")` → invalid Date object
+- `useWeightDatesWithData(calendarMonth)` → `format(invalidDate, ...)` → **`RangeError: Invalid time value`** → ErrorBoundary crash
 
-Add a static disclaimer line between the response div and the action buttons:
+This is a defensive-coding gap that exists in all three log pages identically. It was exposed by the recent swipe animation change, which added a `setSearchParams` call path that somehow serialised `undefined` as the string `"undefined"` in at least one navigation scenario.
 
-```tsx
-<p className="text-[10px] text-muted-foreground leading-snug">
-  Not medical advice — consult a healthcare professional or registered dietitian for personal health guidance.
-</p>
+### The fix — 3 lines across 3 files
+
+Add a guard that rejects the literal string `"undefined"` (and any other non-date-looking value) before it reaches `parseISO`. The cleanest approach is:
+
+```ts
+// Reject the literal string "undefined" that URLSearchParams can produce
+const validDateParam = dateParam && dateParam !== 'undefined' ? dateParam : null;
+const dateKey = validDateParam || getStoredDate() || format(new Date(), 'yyyy-MM-dd');
 ```
 
----
+This gracefully falls through to `getStoredDate()` or today when the param is absent, null, or the string `"undefined"`.
 
-### 3. Pinned chat expanded view — `src/components/PinnedChatsView.tsx`
+### Files changed
 
-Add the same disclaimer below the expanded response div, inside the `isExpanded` block:
+| File | Line | Change |
+|---|---|---|
+| `src/pages/WeightLog.tsx` | 38-39 | Add `validDateParam` guard before the `||` chain |
+| `src/pages/FoodLog.tsx` | 38-39 | Same guard |
+| `src/pages/OtherLog.tsx` | 33-34 | Same guard |
 
-```tsx
-<p className="text-[10px] text-muted-foreground mt-1 leading-snug">
-  Not medical advice — consult a healthcare professional or registered dietitian for personal health guidance.
-</p>
-```
-
----
-
-### Summary
-
-| File | Change |
-|---|---|
-| `supabase/functions/ask-trends-ai/index.ts` | Broaden system prompt disclaimer to cover diagnosis/prescription, not nutritional observations |
-| `src/components/AskTrendsAIDialog.tsx` | Add static "Not medical advice" disclaimer after the response div |
-| `src/components/PinnedChatsView.tsx` | Add same disclaimer below expanded pinned chat response |
+No logic changes, no new state, no component restructuring — purely defensive input sanitisation on three identical lines.
