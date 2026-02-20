@@ -1,120 +1,82 @@
 
-# Refined `dayClassification` DSL: handling intensity within cardio
+# Fix: dayClassification `only_keys` rule produces empty chart
 
-## The problem with the previous design
+## Root cause
 
-The previous `classify` rules (`any_strength`, `all_cardio`, `any_key`, `threshold`) treat all cardio as equivalent. But "rest day" semantics require distinguishing *intensity within cardio*: walking is low-intensity, running is not; leisure cycling might be, aggressive interval cycling is not.
+The bug is in the `only_keys` matching logic in `src/lib/chart-dsl.ts` (lines 415-430).
 
-The schema already encodes this nuance:
-- `exercise_key` distinguishes activity type (`walk_run`, `cycling`, `rowing`, etc.)
-- `exercise_subtype` distinguishes variants within a key (`walking`, `running`, `hiking` for `walk_run`)
-- Ad-hoc activities (gardening, etc.) are stored as free-form `exercise_key` values that won't match any canonical cardio key
-
-The missing rule is: **"this day contained only activities from a low-intensity allowlist"** — which is the inverse of `any_key`. We need `only_keys`: a day is TRUE if every exercise key (and optionally subtype) logged that day is within a specified allowlist.
-
-## Revised rule set
+`exerciseKeysByDate` stores BOTH plain key tokens AND compound tokens per day. For a day with `walk_run:walking`, the set contains:
 
 ```
-rule: "any_strength"   — day is TRUE if ANY exercise logged has isCardio=false
-rule: "all_cardio"     — day is TRUE if ALL exercises logged are cardio
-rule: "any_cardio"     — day is TRUE if ANY cardio exercise was logged
-rule: "any_key"        — day is TRUE if ANY of keys[] appears on that day
-rule: "only_keys"      — day is TRUE if EVERY exercise on that day is within keys[] (optionally matched by subtype too)
-rule: "threshold"      — day is TRUE if daily metric value meets thresholdOp + thresholdValue (food source)
+["walk_run", "walk_run:walking"]
 ```
 
-The new `only_keys` rule is what makes "rest day" semantics work correctly.
+The current `only_keys` check does `tokens.every(token => ...)` — meaning every token in the array must be covered by the allowlist. With allowlist `["walk_run:walking"]`:
 
-## How key+subtype matching works for `only_keys`
+- `"walk_run:walking"` — covered ✓
+- `"walk_run"` — NOT covered (the entry `"walk_run:walking"` has a colon, so the `!entry.includes(":")` guard blocks the plain-key fallback) ✗
 
-The `keys` array supports two formats:
-- `"walk_run"` — matches any `walk_run` entry regardless of subtype
-- `"walk_run:walking"` — matches only `walk_run` entries where `exercise_subtype = 'walking'`
-- `"walk_run:hiking"` — matches only hiking entries
+So `matches = false` for every day, producing zero results.
 
-So "your rest day" definition becomes:
+## The fix
 
-```json
-{
-  "classify": {
-    "rule": "only_keys",
-    "keys": ["walk_run:walking", "walk_run:hiking", "other"],
-    "trueLabel": "Rest Days",
-    "falseLabel": "Active Days"
-  }
-}
-```
+The plain key token (`"walk_run"`) is structurally redundant — it's already represented by its compound variants (`"walk_run:walking"`). When evaluating `only_keys`, we should **skip plain key tokens that have at least one compound variant present** in the token set, since the compound token will be evaluated instead.
 
-This correctly handles:
-- Walk logged with subtype `walking` → rest day ✓
-- Walk logged with subtype `running` → NOT a rest day ✓
-- `gardening` (ad-hoc key, not in allowlist) → NOT a rest day ✓
-- `bench_press` (strength) → NOT a rest day ✓
+More precisely, the check should be: only evaluate a token if it is either:
+1. A compound token (`key:subtype`) — always evaluate these
+2. A plain key token with NO compound variants in the set for that key — evaluate as-is (e.g., a day with a strength exercise that has no subtype)
 
-And for someone who considers moderate cycling a rest day:
+This preserves correct behavior for:
+- `"bench_press"` (no subtype ever) → evaluated as a plain key, correctly fails the `"walk_run:walking"` allowlist
+- `"walk_run"` with `"walk_run:walking"` present → skip the plain token, evaluate `"walk_run:walking"` instead → correctly covered
+- `"walk_run"` with `"walk_run:running"` present → skip the plain token, evaluate `"walk_run:running"` → NOT covered by `"walk_run:walking"` allowlist → correctly fails
 
-```json
-{
-  "classify": {
-    "rule": "only_keys",
-    "keys": ["walk_run:walking", "cycling"],
-    "trueLabel": "Rest Days",
-    "falseLabel": "Workout Days"
-  }
-}
-```
+## Technical change
 
-## What `exerciseKeysByDate` needs to store
+Single file: `src/lib/chart-dsl.ts`, `case "only_keys"` block (lines 415-430).
 
-The current `seenKeys` in `chart-data.ts` (line 253) stores just `exercise_key`. To support subtype matching, it needs to store **compound tokens** of the form `key` and `key:subtype` per day:
+Change from evaluating `tokens.every(...)` on all tokens, to:
 
 ```ts
-// For each row, add both the plain key AND the key:subtype variant (if subtype exists)
-seenKeys[date].add(row.exercise_key);               // e.g. "walk_run"
-if (row.exercise_subtype) {
-  seenKeys[date].add(`${row.exercise_key}:${row.exercise_subtype}`); // e.g. "walk_run:walking"
+case "only_keys": {
+  const allowlist = classify.keys ?? [];
+  const tokenSet = new Set(tokens);
+  // For each token, skip plain keys that have a compound variant present
+  // (the compound variant will be evaluated instead, which is more specific)
+  const tokensToEvaluate = tokens.filter(token => {
+    if (token.includes(":")) return true; // always evaluate compound tokens
+    // Skip this plain key if any "key:subtype" variant exists in the set
+    return !tokens.some(t => t.startsWith(`${token}:`));
+  });
+  matches = tokensToEvaluate.length > 0 && tokensToEvaluate.every(token => {
+    return allowlist.some(entry => {
+      if (entry === token) return true;
+      // Plain allowlist entry covers any compound variant of that key
+      if (!entry.includes(":") && token.startsWith(`${entry}:`)) return true;
+      return false;
+    });
+  });
+  break;
 }
 ```
 
-Then in `executeDSL`, the `only_keys` rule checks: for every token in that day's set, is it covered by the allowlist? An allowlist entry of `"walk_run"` covers any `walk_run` token (both `walk_run` and `walk_run:walking`). An allowlist entry of `"walk_run:walking"` covers ONLY `walk_run:walking`, not bare `walk_run` or `walk_run:running`.
+This is the minimal, surgical fix. No data fetching changes, no type changes, no prompt changes. One switch-case block changes in one file.
 
-## Full classification examples
+## Why `tokensToEvaluate.length > 0` matters
 
-| User query | AI-generated classify |
-|---|---|
-| "rest days vs workout days" (basic) | `rule: "any_strength"`, truLabel: "Workout", falseLabel: "Rest" |
-| "my rest days (only walking)" | `rule: "only_keys"`, keys: `["walk_run:walking", "walk_run:hiking"]`, true: "Rest", false: "Active" |
-| "days I only did cardio" | `rule: "all_cardio"`, true: "Cardio-only", false: "Included Strength" |
-| "leg day vs non-leg day" | `rule: "any_key"`, keys: `["squat","leg_press","leg_extension","leg_curl","romanian_deadlift","lunge","bulgarian_split_squat","hack_squat","step_up"]`, true: "Leg Day", false: "Non-Leg Day" |
-| "high protein days (≥150g)" | `rule: "threshold"`, thresholdValue: 150, thresholdOp: "gte", true: "High Protein", false: "Low Protein" |
-| "days I ran vs days I only walked" | Two separate `dayClassification` charts OR single chart with `rule: "any_key"`, keys: `["walk_run:running"]`, true: "Running Days", false: "Walking-only Days" |
+This keeps the existing guard that days with zero tokens (no exercise logged) are excluded from both buckets. An empty day won't accidentally count as a "rest day".
 
-## What the AI needs to know (prompt additions)
+## Verification
 
-The `generate-chart-dsl` system prompt needs a `DAY CLASSIFICATION` section that:
+After the fix, a day with `["walk_run", "walk_run:walking"]` and allowlist `["walk_run:walking"]`:
+- `tokensToEvaluate` = `["walk_run:walking"]` (plain `"walk_run"` skipped because `"walk_run:walking"` exists)
+- `"walk_run:walking"` covered by `"walk_run:walking"` → `matches = true` ✓
 
-1. Lists all six rules with concise definitions
-2. Explains the `key:subtype` notation for the `only_keys` allowlist
-3. Lists the known subtypes for `walk_run`: `walking`, `running`, `hiking`, `indoor`, `outdoor`
-4. Explains that ad-hoc/unknown exercise keys (like `gardening`) will NOT match any canonical key, so `only_keys` will correctly exclude them if they're not in the allowlist
-5. Clarifies that `only_keys` is the right rule when the user says "only", "nothing but", "just walked", "exclusively"
-6. Clarifies that `any_key` is right when the user says "at least one", "any day I did", "days that included"
-7. Notes that days with zero exercise are excluded from both buckets
+A mixed day with `["walk_run", "walk_run:walking", "bench_press"]` and same allowlist:
+- `tokensToEvaluate` = `["walk_run:walking", "bench_press"]`
+- `"walk_run:walking"` → covered ✓
+- `"bench_press"` → NOT in allowlist → `matches = false` ✓
 
-## Files changing
-
-| File | Change |
-|---|---|
-| `src/lib/chart-types.ts` | Add `"dayClassification"` to `groupBy` union; add `classify?` object to `ChartDSL`; add `exerciseKeysByDate?: Record<string, string[]>` to `DailyTotals` |
-| `src/lib/chart-data.ts` | In `fetchExerciseData`: always populate `exerciseKeysByDate` using compound `key` + `key:subtype` tokens from already-iterated rows (no new DB query) |
-| `src/lib/chart-dsl.ts` | Add `case "dayClassification"`: iterate `exerciseKeysByDate` or `food` by date, apply classify rule, return two labeled count bars |
-| `supabase/functions/generate-chart-dsl/index.ts` | Add `DAY CLASSIFICATION` section to SYSTEM_PROMPT documenting all 6 rules, `key:subtype` notation, known subtypes, and rule-selection guidance; remove "Gap or streak analysis" from UNSUPPORTED |
-
-No schema changes. No new DB queries. The subtype data is already fetched in the existing `weight_sets` select (line 158 of `chart-data.ts` already includes `exercise_subtype`).
-
-## What remains unsupported (unchanged)
-
-- Gap analysis / streak counting (consecutive days)
-- 3-way+ classification in one chart
-- Cross-source classification (days I hit protein goal AND worked out)
-- Food-side `only_keys` (not needed; threshold covers food classification)
+A day with only strength `["bench_press", "squat"]` and same allowlist:
+- `tokensToEvaluate` = `["bench_press", "squat"]` (no subtypes, so plain keys are evaluated)
+- Both fail → `matches = false` ✓
