@@ -288,6 +288,7 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
               { label: "calories", value: item.totalCalories },
               { label: "protein", value: item.totalProtein },
             ], dsl.metric === "entries" ? "entries" : dsl.metric === "calories" ? "calories" : dsl.metric === "protein" ? "protein" : undefined),
+            _samples: item.recentSamples ?? [],
           });
         }
       } else if (dsl.source === "exercise" && dailyTotals.exerciseByItem) {
@@ -315,6 +316,7 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
               { label: "calories_burned", value: item.totalCaloriesBurned },
               { label: "heart_rate", value: (item as any).heartRateCount > 0 ? Math.round((item as any).totalHeartRate / (item as any).heartRateCount) : null },
             ], dsl.metric === "sets" ? "sets" : dsl.metric === "duration_minutes" ? "duration_minutes" : dsl.metric === "calories_burned" ? "calories_burned" : dsl.metric === "heart_rate" ? "heart_rate" : undefined),
+            _samples: item.recentSamples ?? [],
           });
         }
       }

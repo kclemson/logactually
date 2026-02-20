@@ -66,7 +66,7 @@ async function fetchFoodData(
   const foodByItem: Record<string, {
     count: number; totalCalories: number; totalProtein: number; totalCarbs: number;
     totalFat: number; totalFiber: number; totalSugar: number; totalSaturatedFat: number;
-    totalSodium: number; totalCholesterol: number; uniqueDays: Set<string>;
+    totalSodium: number; totalCholesterol: number; uniqueDays: Set<string>; recentSamples: string[];
   }> | undefined = needsItem ? {} : undefined;
 
   for (const row of data ?? []) {
@@ -92,7 +92,7 @@ async function fetchFoodData(
         const existing = foodByItem[key] ?? {
           count: 0, totalCalories: 0, totalProtein: 0, totalCarbs: 0,
           totalFat: 0, totalFiber: 0, totalSugar: 0, totalSaturatedFat: 0,
-          totalSodium: 0, totalCholesterol: 0, uniqueDays: new Set<string>(),
+          totalSodium: 0, totalCholesterol: 0, uniqueDays: new Set<string>(), recentSamples: [],
         };
         existing.count += 1;
         existing.totalCalories += item.calories || 0;
@@ -105,6 +105,12 @@ async function fetchFoodData(
         existing.totalSodium += item.sodium || 0;
         existing.totalCholesterol += item.cholesterol || 0;
         existing.uniqueDays.add(row.eaten_date);
+        // Build recent sample string: "Feb 19 · 8:32 AM · yogurt and strawberries · 320 cal"
+        const dateLabel = format(new Date(`${row.eaten_date}T12:00:00`), "MMM d");
+        const timeLabel = row.created_at ? format(new Date(row.created_at), "h:mm a") : null;
+        const calStr = `${Math.round(item.calories || 0)} cal`;
+        const sampleParts = [dateLabel, timeLabel, item.description, calStr].filter(Boolean);
+        existing.recentSamples = [...existing.recentSamples, sampleParts.join(" · ")].slice(-3);
         foodByItem[key] = existing;
       }
     }
@@ -164,7 +170,7 @@ async function fetchExerciseData(
 
   const exercise: Record<string, ExerciseDayTotals> = {};
   const exerciseByHour: HourlyTotals<ExerciseDayTotals> | undefined = needsHourly ? {} : undefined;
-  const exerciseByItem: Record<string, { description: string; count: number; totalSets: number; totalDurationMinutes: number; totalDistanceMiles: number; totalCaloriesBurned: number; totalHeartRate: number; heartRateCount: number; uniqueDays: Set<string> }> | undefined =
+  const exerciseByItem: Record<string, { description: string; count: number; totalSets: number; totalDurationMinutes: number; totalDistanceMiles: number; totalCaloriesBurned: number; totalHeartRate: number; heartRateCount: number; uniqueDays: Set<string>; recentSamples: string[] }> | undefined =
     needsItem ? {} : undefined;
   const exerciseByCategory: Record<string, ExerciseDayTotals> | undefined =
     needsCategory ? {} : undefined;
@@ -201,7 +207,7 @@ async function fetchExerciseData(
             ? row.exercise_subtype.charAt(0).toUpperCase() + row.exercise_subtype.slice(1)
             : row.description)
         : row.description;
-      const existing = exerciseByItem[key] ?? { description: label, count: 0, totalSets: 0, totalDurationMinutes: 0, totalDistanceMiles: 0, totalCaloriesBurned: 0, totalHeartRate: 0, heartRateCount: 0, uniqueDays: new Set<string>() };
+      const existing = exerciseByItem[key] ?? { description: label, count: 0, totalSets: 0, totalDurationMinutes: 0, totalDistanceMiles: 0, totalCaloriesBurned: 0, totalHeartRate: 0, heartRateCount: 0, uniqueDays: new Set<string>(), recentSamples: [] };
       existing.count += 1;
       existing.totalSets += row.sets ?? 1;
       existing.totalDurationMinutes += row.duration_minutes ?? 0;
@@ -212,6 +218,14 @@ async function fetchExerciseData(
         existing.heartRateCount += 1;
       }
       existing.uniqueDays.add(row.logged_date);
+      // Build recent sample string: "Feb 19 · 8:32 AM · dog walk · 2.4 mi · 47 min"
+      const dateLabel = format(new Date(`${row.logged_date}T12:00:00`), "MMM d");
+      const timeLabel = row.created_at ? format(new Date(row.created_at), "h:mm a") : null;
+      const metricParts: string[] = [];
+      if (row.distance_miles) metricParts.push(`${row.distance_miles.toFixed(1)} mi`);
+      if (row.duration_minutes) metricParts.push(`${row.duration_minutes} min`);
+      const sampleParts = [dateLabel, timeLabel, row.description, ...metricParts].filter(Boolean);
+      existing.recentSamples = [...existing.recentSamples, sampleParts.join(" · ")].slice(-3);
       exerciseByItem[key] = existing;
     }
 
