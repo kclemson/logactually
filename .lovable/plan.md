@@ -1,110 +1,52 @@
 
-## Two concrete improvements: fix heart_rate in v2 + expand DSL coverage
+# Two issues with the category calories-burned chart
 
-### Clarification: v1 and v2 data layers are completely separate
+## Issue 1 — Strength bar is nearly zero (the real data problem)
 
-v1 calls `generate-chart` edge function → gets back `chartSpec` + `dailyTotals` as one server-side response. v2 calls `generate-chart-dsl` → gets a schema → runs `fetchChartData` client-side → runs `executeDSL`. These are entirely different code paths with no overlap.
+The `calories_burned` metric in the v2 pipeline reads from `exercise_metadata.calories_burned`, a field that is only populated when the AI explicitly extracted a calorie value from user text (e.g. "burned 300 calories"). For strength training this is almost never present — the app estimates calorie burn client-side in `useDailyCalorieBurn` via `estimateCalorieBurn()`, but that computation is separate from what gets written to `exercise_metadata`.
 
-The "Average heart rate by exercise" chip was tagged `mode: "v1"` intentionally, but it went to v1 because *we told it to* — not because v2 tried and failed. The question is whether it belongs there or can be promoted to v2.
+So the chart is technically correct given the raw data — it is showing stored calorie values only, not estimated ones. But that makes it misleading for most users who haven't manually logged calories burned.
 
----
+The cleanest fix is to add a note about this in the v2 system prompt so the AI can include a caveat in `aiNote`, **and** to surface this in the `UNSUPPORTED REQUEST` guidance — because for `calories_burned` specifically, the v2 DSL will give a misleading answer unless the user has manually logged calorie data.
 
-### Part 1 — Add heart_rate to the v2 data pipeline
+However, the deeper fix would be to fall back to v1 for any `metric: "calories_burned"` query, since v1 has access to the estimated totals computed server-side. This is the right call:
 
-Heart rate lives in `exercise_metadata` JSONB (e.g. `{ heart_rate: 142, effort: 7, ... }`). It's already fetched in `chart-data.ts` (line 151 selects `exercise_metadata`) but only `calories_burned` is extracted from it (line 189). The v2 engine can fully support heart rate with three small additions:
+- Add `calories_burned` to the `generate-chart-dsl` system prompt as a note: "Only reflects manually logged values; for most users this will be near zero. If the user is asking about calories burned, prefer the `unsupported` response so the server-side estimated path (v1) is used instead."
+- In the `UNSUPPORTED REQUEST` section of the system prompt, add calories burned as a case where the DSL cannot give an accurate answer.
 
-**`src/lib/chart-types.ts`**
-- Add `heart_rate: number` to `ExerciseDayTotals`
-- Add `heart_rate: number | null` to `exerciseByItem` shape
+This means the query will automatically fall back to v1 via the `usedFallback` path already implemented.
 
-**`src/lib/chart-data.ts`**
-- In `EMPTY_EXERCISE`, add `heart_rate: 0`
-- In the row loop, extract `meta?.heart_rate ?? 0` and accumulate it into the daily total alongside `calories_burned`
-- In `exerciseByItem`, add `totalHeartRate` accumulation
-- Track `heartRateCount` (number of rows that had a non-null heart rate) per exercise, so we can compute a true average in the DSL engine rather than a naive average-of-sums
+## Issue 2 — Time range is invisible to the user
 
-**`src/lib/chart-dsl.ts`**
-- Add `"heart_rate"` to `EXERCISE_METRICS`
-- In the `"item"` case for exercise, add `heart_rate` to the `metricValue` branches
-- In `buildDetails` for the `"date"` groupBy, include heart_rate when non-zero
+The `period` prop is passed through the chain (`CustomChartDialog` → `useGenerateChart` → `fetchChartData`) but is never shown anywhere in the UI. The user has no way to know if the chart covers 30 days, 90 days, or all time.
 
-**`supabase/functions/generate-chart-dsl/index.ts`** (system prompt)
-- Add `heart_rate` to the AVAILABLE METRICS list for exercise source
-- Note that it comes from `exercise_metadata.heart_rate` and should use `aggregation: "average"` since a single day's value is meaningless; the interesting view is average HR by exercise or by day
+The fix is straightforward: render a small muted time-range label inside the chart card, below the title, using the `period` value that's already available in `DynamicChart` as a prop.
 
-**`src/components/CustomChartDialog.tsx`**
-- Change the "Average heart rate by exercise" chip from `mode: "v1"` to `mode: "v2"`
+### Where to add it
 
----
-
-### Part 2 — Review which v1 chips can be promoted to v2
-
-Going through each v1-tagged chip against what the DSL actually supports:
-
-**"Which meals have the most calories?"**
-Status: Still v1-only. The DB has no "meal" concept — a `food_entries` row is the closest thing, and grouping by entry rather than by a semantic "meal name" requires natural language interpretation. Cannot be expressed in DSL without a schema change.
-
-**"My most common foods"**
-Status: Can be v2 now. `groupBy: "item"`, `metric: "entries"`, `aggregation: "count"`, `sort: "value_desc"`, `limit: 10` — the DSL already supports this fully. The only reason it was v1 was uncertainty. Re-tag to `mode: "v2"`.
-
-**"Average calories on workout days vs rest days"**
-Status: Buildable in v2 but requires a new DSL filter. We need a `hasExercise: boolean` filter in `fetchChartData` that intersects food entry dates with exercise dates, then `groupBy: "weekdayVsWeekend"` becomes `groupBy: "workoutVsRest"`. This is a meaningful addition but requires:
-- A new `groupBy` value: `"workoutVsRest"`
-- `fetchChartData` to always fetch both food and exercise date sets when this groupBy is active
-- The DSL engine to bucket by whether that date appears in exercise data
-
-This is worth building — defer to a follow-up, keep v1 for now.
-
-**"Average heart rate by exercise"**
-Status: Promotable to v2 after Part 1 above. `groupBy: "item"`, `source: "exercise"`, `metric: "heart_rate"`, `aggregation: "average"`.
-
-**"Rest days between workouts"**
-Status: Still v1-only. This requires computing gaps between exercise dates — a windowing/lag operation. The declarative DSL has no way to express "difference between consecutive dates in a sorted list." Keep v1.
-
----
-
-### Part 3 — Refine the "unsupported" signal scope in the system prompt
-
-Now that we have a clearer picture, the `unsupported` signal (from the previous plan) should be narrowly scoped to things that are *genuinely* out of scope for the DSL:
-
-- Semantic food description filtering (e.g. "candy", "fried foods") — no tag column exists
-- Gap/streak analysis (rest days between workouts, streaks) — requires windowing
-- Meal-level grouping — no meal schema
-
-Things previously listed as unsupported that are actually fine in v2:
-- Heart rate — now supported after Part 1
-- "Common foods" — already supported
-- Cross-domain join (workout vs rest days) — buildable but deferred
-
-The system prompt should say:
+`DynamicChart` already receives `spec` and renders `ChartCard`. We can derive a human-readable label from the `period` prop and pass it to `ChartCard` as a new optional `timeRange` prop:
 
 ```
-UNSUPPORTED REQUEST:
-
-If the user's request CANNOT be expressed using the available schema — specifically:
-- Filtering food by description content (e.g. "candy", "chocolate", "fried") since
-  there is no category or tag column on food items, only free-text descriptions
-- Gap or streak analysis (e.g. "rest days between workouts", "longest streak")
-  since this requires lag/window operations not expressible in the DSL
-- Meal-level grouping (e.g. "which meals have most calories") since there is no
-  meal entity in the schema
-
-...then respond with { "unsupported": true, "reason": "..." }
-
-Do NOT use this for heart rate, common foods, exercise frequency, or any query
-that maps cleanly to the available metrics, groupBy options, and filters above.
+period 30  → "Last 30 days"
+period 60  → "Last 60 days"
+period 90  → "Last 90 days"
+period 180 → "Last 6 months"
+period 365 → "Last year"
+anything else → "Last {n} days"
 ```
 
----
+`DynamicChart` already takes a `period?: number` prop — if it doesn't yet, we add it. `ChartCard` gets a new optional `timeRange?: string` prop rendered as a small muted line below the title (where `ChartSubtitle` used to live — same slot, but now populated with the time range instead of the AI subtitle).
 
-### Files changed
+This is useful in both:
+- The **creation dialog** (user sees what window the chart covers while building it)
+- The **Trends page** pinned charts (user understands the saved chart's scope at a glance)
+
+## Files changed
 
 | File | Change |
 |---|---|
-| `src/lib/chart-types.ts` | Add `heart_rate` to `ExerciseDayTotals`; add `totalHeartRate` + `heartRateCount` to `exerciseByItem` |
-| `src/lib/chart-data.ts` | Extract `heart_rate` from `exercise_metadata`; accumulate per-day and per-item; add `heartRateCount` tracking |
-| `src/lib/chart-dsl.ts` | Add `"heart_rate"` to `EXERCISE_METRICS`; handle it in the `"item"` and `"date"` groupBy cases |
-| `supabase/functions/generate-chart-dsl/index.ts` | Add `heart_rate` to AVAILABLE METRICS; add narrow `UNSUPPORTED REQUEST` section to system prompt |
-| `src/components/CustomChartDialog.tsx` | Promote "Average heart rate by exercise" and "My most common foods" chips from `mode: "v1"` to `mode: "v2"` |
-
-No database migrations needed — all data already exists in `exercise_metadata` JSONB.
+| `supabase/functions/generate-chart-dsl/index.ts` | In the `UNSUPPORTED REQUEST` section, add `calories_burned` as a case that should return `unsupported: true` since the stored values are sparsely populated and misleading; a note in the metric list warns the AI |
+| `src/components/trends/ChartCard.tsx` | Add optional `timeRange?: string` prop; render it as a small muted line below the title (reusing the slot where `ChartSubtitle` was before we removed it) |
+| `src/components/trends/DynamicChart.tsx` | Accept `period?: number` prop; derive a human-readable range string and pass it to `ChartCard` as `timeRange` |
+| `src/pages/Trends.tsx` | Pass `period` to `DynamicChart` when rendering pinned saved charts |
+| `src/components/CustomChartDialog.tsx` | Pass `period` to `DynamicChart` in the preview area |
