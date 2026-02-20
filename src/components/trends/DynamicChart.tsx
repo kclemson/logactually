@@ -52,6 +52,7 @@ interface DynamicChartProps {
   headerAction?: ReactNode;
   onContextMenu?: (e: React.MouseEvent) => void;
   period?: number;
+  timeRangeSuffix?: string;
 }
 
 function periodLabel(days?: number): string | undefined {
@@ -61,7 +62,7 @@ function periodLabel(days?: number): string | undefined {
   return `Last ${days} days`;
 }
 
-export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, period }: DynamicChartProps) {
+export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, period, timeRangeSuffix }: DynamicChartProps) {
   const { data, dataKey, color, chartType, xAxis, valueFormat, referenceLine } = spec;
 
   const interaction = useChartInteraction({
@@ -173,7 +174,7 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
       footer={footer}
       headerAction={headerAction}
       onContextMenu={onContextMenu}
-      timeRange={periodLabel(period)}
+      timeRange={[periodLabel(period), timeRangeSuffix].filter(Boolean).join(" ")}
     >
       <div className="h-24">
         <ResponsiveContainer width="100%" height="100%" style={{ overflow: "visible" }}>

@@ -379,6 +379,7 @@ const Trends = () => {
                 key={chart.id}
                 spec={chart.chart_spec}
                 period={selectedPeriod}
+                timeRangeSuffix={chart.chart_dsl ? "· v2" : "· v1"}
                 onNavigate={(date) => {
                   const ds = chart.chart_spec.dataSource;
                   const route = ds === "exercise" ? `/weights?date=${date}` : `/?date=${date}`;
