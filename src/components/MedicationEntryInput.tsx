@@ -98,15 +98,21 @@ export function MedicationEntryInput({
     if (e.key === 'Escape') onCancel();
   };
 
-  // Schedule summary: e.g. "2x/day · morning, evening"
-  const scheduleSummary = dosesPerDay === 0
-    ? null
-    : (() => {
-        const freq = `${dosesPerDay}x/day`;
-        const nonEmpty = doseTimes?.filter(t => t.trim()) ?? [];
-        const times = nonEmpty.length > 0 ? ` · ${nonEmpty.join(', ')}` : '';
-        return `${freq}${times}`;
-      })();
+  // Schedule summary: e.g. "200 mg · as needed" or "2x/day · morning, evening"
+  const scheduleSummary = (() => {
+    const dosePart = defaultDose != null && unit
+      ? `${defaultDose} ${unit}`
+      : unit || null;
+
+    if (dosesPerDay === 0) {
+      return dosePart ? `${dosePart} · as needed` : 'as needed';
+    }
+
+    const freq = `${dosesPerDay}x/day`;
+    const nonEmpty = doseTimes?.filter(t => t.trim()) ?? [];
+    const times = nonEmpty.length > 0 ? ` · ${nonEmpty.join(', ')}` : '';
+    return `${freq}${times}`;
+  })();
 
   // Dose count line — date-aware, with logged times inline
   // Swap the stored time of the entry being edited with the live timeValue so it updates dynamically
