@@ -15,28 +15,30 @@ interface CustomChartDialogProps {
   initialChart?: { id: string; question: string; chartSpec: ChartSpec; chartDsl?: unknown };
 }
 
-const ALL_CHIPS = [
-  // Basics — obvious but useful
-  "Daily fiber intake over time",
-  "Sodium intake trend",
-  "My highest calorie days",
-  // Meal timing & patterns
-  "Average calories by hour of day",
-  "Which day of the week do I tend to eat the most?",
-  "Which meals have the most calories?",
-  // Insights — deeper analysis
-  "Weekly calorie average trend",
-  "Protein per meal over time",
-  "My most common foods",
-  "Calorie comparison: weekdays vs weekends",
-  // Workout–nutrition correlation
-  "Average calories on workout days vs rest days",
-  "Cardio vs strength training split",
-  // Training insights
-  "Exercise frequency by day of week",
-  "Which exercises do I do most often?",
-  "Average heart rate by exercise",
-  "Rest days between workouts",
+interface Chip {
+  label: string;
+  mode: "v1" | "v2";
+}
+
+const ALL_CHIPS: Chip[] = [
+  // v2 — structured aggregations the DSL handles cleanly
+  { label: "Daily fiber intake over time", mode: "v2" },
+  { label: "Sodium intake trend", mode: "v2" },
+  { label: "My highest calorie days", mode: "v2" },
+  { label: "Average calories by hour of day", mode: "v2" },
+  { label: "Which day of the week do I tend to eat the most?", mode: "v2" },
+  { label: "Weekly calorie average trend", mode: "v2" },
+  { label: "Protein per meal over time", mode: "v2" },
+  { label: "Calorie comparison: weekdays vs weekends", mode: "v2" },
+  { label: "Cardio vs strength training split", mode: "v2" },
+  { label: "Exercise frequency by day of week", mode: "v2" },
+  { label: "Which exercises do I do most often?", mode: "v2" },
+  // v1 — requires AI to semantically interpret, join domains, or filter by description
+  { label: "Which meals have the most calories?", mode: "v1" },
+  { label: "My most common foods", mode: "v1" },
+  { label: "Average calories on workout days vs rest days", mode: "v1" },
+  { label: "Average heart rate by exercise", mode: "v1" },
+  { label: "Rest days between workouts", mode: "v1" },
 ];
 
 export function CustomChartDialog({ open, onOpenChange, initialChart, period }: CustomChartDialogProps) {
@@ -66,6 +68,7 @@ function CustomChartDialogInner({
   const [lastQuestion, setLastQuestion] = useState(initialChart?.question ?? "");
   const [showDebug, setShowDebug] = useState(false);
   const [refining, setRefining] = useState(false);
+  const [resultMode, setResultMode] = useState<"v1" | "v2" | null>(null);
 
   const editingIdRef = useRef<string | null>(initialChart?.id ?? null);
 
@@ -75,19 +78,19 @@ function CustomChartDialogInner({
   const seen = useRef<Set<string>>(new Set());
 
   const pickFresh = useCallback(() => {
-    let available = ALL_CHIPS.filter((c) => !seen.current.has(c));
+    let available = ALL_CHIPS.filter((c) => !seen.current.has(c.label));
     if (available.length < 6) {
       seen.current.clear();
       available = [...ALL_CHIPS];
     }
     const picked = [...available].sort(() => Math.random() - 0.5).slice(0, 6);
-    picked.forEach((c) => seen.current.add(c));
+    picked.forEach((c) => seen.current.add(c.label));
     return picked;
   }, []);
 
-  const [visibleChips, setVisibleChips] = useState(() => {
+  const [visibleChips, setVisibleChips] = useState<Chip[]>(() => {
     const picked = [...ALL_CHIPS].sort(() => Math.random() - 0.5).slice(0, 6);
-    picked.forEach((c) => seen.current.add(c));
+    picked.forEach((c) => seen.current.add(c.label));
     return picked;
   });
 
@@ -127,6 +130,7 @@ function CustomChartDialogInner({
         setChartDSL(result.chartDSL ?? null);
         setChartOptions(null);
         setVerification(mode === "v2" ? null : verifyChartData(result.chartSpec, result.dailyTotals));
+        setResultMode(mode);
       }
       setRefining(false);
     } catch (err) {
@@ -135,9 +139,10 @@ function CustomChartDialogInner({
   };
 
   // Fresh request — clears all state and submits as a brand-new conversation
-  const handleNewRequest = async (question: string) => {
+  const handleNewRequest = async (question: string, overrideMode?: "v1" | "v2") => {
     if (!question.trim() || generateChart.isPending) return;
 
+    const effectiveMode = overrideMode ?? mode;
     const trimmed = question.trim();
     const freshMessages = [{ role: "user" as const, content: trimmed }];
 
@@ -152,14 +157,19 @@ function CustomChartDialogInner({
     setRefining(false);
     setLastQuestion(trimmed);
     setInput("");
+    setResultMode(null);
     editingIdRef.current = null;
     generateChart.reset();
+
+    // Sync toggle to the engine we're actually using
+    setMode(effectiveMode);
+    localStorage.setItem("chart-mode", effectiveMode);
 
     try {
       const result = await generateChart.mutateAsync({
         messages: freshMessages,
         period,
-        mode,
+        mode: effectiveMode,
       });
       if (result.chartOptions && result.chartOptions.length > 1) {
         setChartOptions(result.chartOptions);
@@ -169,7 +179,8 @@ function CustomChartDialogInner({
         setDailyTotals(result.dailyTotals);
         setChartDSL(result.chartDSL ?? null);
         setChartOptions(null);
-        setVerification(mode === "v2" ? null : verifyChartData(result.chartSpec, result.dailyTotals));
+        setVerification(effectiveMode === "v2" ? null : verifyChartData(result.chartSpec, result.dailyTotals));
+        setResultMode(effectiveMode);
       }
     } catch (err) {
       console.error("[generate-chart] mutation error:", err);
@@ -278,12 +289,12 @@ function CustomChartDialogInner({
             <div className="flex flex-wrap gap-1.5 items-start">
               {visibleChips.map((chip) => (
                 <button
-                  key={chip}
-                  onClick={() => handleNewRequest(chip)}
+                  key={chip.label}
+                  onClick={() => handleNewRequest(chip.label, chip.mode)}
                   disabled={generateChart.isPending}
                   className="text-xs px-2.5 py-1 rounded-full border border-border bg-muted/50 text-foreground hover:bg-muted transition-colors text-left"
                 >
-                  {chip}
+                  {chip.label}
                 </button>
               ))}
             </div>
@@ -450,7 +461,7 @@ function CustomChartDialogInner({
                   onClick={() => setShowDebug((v) => !v)}
                   className="text-xs text-muted-foreground h-7 px-2"
                 >
-                  {mode === "v2"
+                  {resultMode === "v2"
                     ? showDebug
                       ? "Hide DSL"
                       : "Show DSL"
@@ -458,7 +469,7 @@ function CustomChartDialogInner({
                       ? "Hide debug JSON"
                       : "Show debug JSON"}
                 </Button>
-                {mode === "v1" && (
+                {resultMode === "v1" && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -533,7 +544,7 @@ function CustomChartDialogInner({
               {showDebug && (
                 <Textarea
                   readOnly
-                  value={JSON.stringify(mode === "v2" ? chartDSL : currentSpec, null, 2)}
+                  value={JSON.stringify(resultMode === "v2" ? chartDSL : currentSpec, null, 2)}
                   className="text-[10px] font-mono bg-muted/50 rounded p-2 min-h-[300px] resize-y"
                 />
               )}
