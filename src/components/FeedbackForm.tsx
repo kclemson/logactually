@@ -74,6 +74,7 @@ export function FeedbackForm() {
   const [followUp, setFollowUp] = useState("");
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   // On mount, pick up any screenshot that was captured during navigation
   useEffect(() => {
@@ -121,6 +122,7 @@ export function FeedbackForm() {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setAttachedFile(null);
     setPreviewUrl(null);
+    setLightboxOpen(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }, [previewUrl]);
 
@@ -306,11 +308,18 @@ export function FeedbackForm() {
         {/* Thumbnail preview */}
         {previewUrl && (
           <div className="relative inline-block">
-            <img
-              src={previewUrl}
-              alt="Attachment preview"
-              className="h-24 w-auto rounded border border-border object-cover"
-            />
+            <button
+              type="button"
+              onClick={() => setLightboxOpen(true)}
+              className="block focus:outline-none"
+              aria-label="View attachment full size"
+            >
+              <img
+                src={previewUrl}
+                alt="Attachment preview"
+                className="h-24 w-auto rounded border border-border object-cover cursor-zoom-in hover:opacity-90 transition-opacity"
+              />
+            </button>
             <button
               type="button"
               onClick={clearAttachment}
@@ -319,6 +328,29 @@ export function FeedbackForm() {
             >
               <X className="h-3 w-3" />
             </button>
+          </div>
+        )}
+
+        {/* Lightbox */}
+        {lightboxOpen && previewUrl && (
+          <div
+            className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center"
+            onClick={() => setLightboxOpen(false)}
+          >
+            <button
+              type="button"
+              onClick={() => setLightboxOpen(false)}
+              className="absolute top-4 right-4 bg-background/20 hover:bg-background/40 text-white rounded-full p-1.5 transition-colors"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <img
+              src={previewUrl}
+              alt="Attachment full size"
+              className="max-w-[90vw] max-h-[85vh] object-contain rounded shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            />
           </div>
         )}
 
