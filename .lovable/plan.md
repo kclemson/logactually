@@ -1,30 +1,33 @@
 
-## Expand swipe zone on History page to cover blank space below the calendar grid
+## Fix: Min-height on swipe zone should only apply on mobile
 
-### What's missing
+### Root cause
 
-The three log pages just got `min-h-[calc(100dvh-8rem)]` added to their swipe zone `div`. The History page has the same structure but was not included in that change.
+The class `min-h-[calc(100dvh-8rem)]` was added to the swipe zone `div` on all four pages (History, FoodLog, WeightLog, OtherLog) to make the blank space below entries/the calendar swipeable on mobile. On desktop there is no bottom nav overlapping content and the layout is different, so this forces the entire page to be at least `100dvh - 128px` tall — creating a large black void below the calendar and pushing the bottom nav off the bottom of the screen.
 
-Currently, the swipe zone `div` on History wraps only the calendar grid itself. On smaller phones or in landscape orientation — or simply when the calendar grid doesn't fill the screen — there's blank space below the grid that is outside the swipe zone entirely and won't respond to horizontal swipes.
+Tailwind is mobile-first, so `min-h-[calc(100dvh-8rem)]` applies at all breakpoints. It needs to be reset at the `md` breakpoint.
 
 ### The fix
 
-One-line addition to `src/pages/History.tsx`, line 325:
+Add `md:min-h-0` alongside the existing class on all four swipe zone divs. This keeps the expanded swipe zone on mobile but resets it to the natural content height on desktop (`md` = 768px and up).
 
+**Before:**
 ```tsx
-// Before
-<div ref={swipeHandlers.ref} onTouchStart={swipeHandlers.onTouchStart} onTouchEnd={swipeHandlers.onTouchEnd} style={{ touchAction: 'none' }}>
-
-// After
-<div ref={swipeHandlers.ref} onTouchStart={swipeHandlers.onTouchStart} onTouchEnd={swipeHandlers.onTouchEnd} style={{ touchAction: 'none' }} className="min-h-[calc(100dvh-8rem)]">
+className="min-h-[calc(100dvh-8rem)]"
 ```
 
-Note: History uses `touchAction: 'none'` (not `pan-y` like the log pages) because the calendar grid has no vertical scrolling — so no conflict there.
+**After:**
+```tsx
+className="min-h-[calc(100dvh-8rem)] md:min-h-0"
+```
 
 ### Files changed
 
 | File | Change |
 |---|---|
-| `src/pages/History.tsx` | Add `className="min-h-[calc(100dvh-8rem)]"` to swipe zone div at line 325 |
+| `src/pages/History.tsx` | Add `md:min-h-0` to swipe zone div |
+| `src/pages/FoodLog.tsx` | Same |
+| `src/pages/WeightLog.tsx` | Same |
+| `src/pages/OtherLog.tsx` | Same |
 
-One line. No logic changes.
+Four one-word additions. No logic changes.
