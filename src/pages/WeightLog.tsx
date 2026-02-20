@@ -701,9 +701,10 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
       </section>
 
       {/* Swipe zone: DateNavigation + entries (swipe left = next day, swipe right = prev day) */}
-      <div ref={swipeHandlers.ref} onTouchStart={swipeHandlers.onTouchStart} onTouchEnd={swipeHandlers.onTouchEnd} style={{ touchAction: 'pan-y' }} className={cn("min-h-[calc(100dvh-8rem)] md:min-h-0", mountDir === 'left' && 'animate-slide-in-from-right', mountDir === 'right' && 'animate-slide-in-from-left')}>
+      <div ref={swipeHandlers.ref} onTouchStart={swipeHandlers.onTouchStart} onTouchEnd={swipeHandlers.onTouchEnd} style={{ touchAction: 'pan-y' }} className="min-h-[calc(100dvh-8rem)] md:min-h-0">
         {/* Date Navigation */}
         <DateNavigation
+          mountDir={mountDir}
           selectedDate={selectedDate}
           isTodaySelected={isTodaySelected}
           calendarOpen={dateNav.calendarOpen}
@@ -719,62 +720,63 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
           weekStartDay={settings.weekStartDay}
         />
 
-        {/* Weight Items Table */}
-        {displayItems.length > 0 && (
-          <>
-            <WeightItemsTable
-              items={displayItems}
-              editable
-              onUpdateItem={handleItemUpdate}
-              onRemoveItem={handleItemRemove}
-              newEntryIds={newEntryIds}
-              entryBoundaries={entryBoundaries}
-              onDeleteEntry={handleDeleteEntry}
-              onDeleteAll={handleDeleteAll}
-              entryRawInputs={entryRawInputs}
-              expandedEntryIds={expandedEntryIds}
-              onToggleEntryExpand={handleToggleEntryExpand}
-              onSaveAsRoutine={handleSaveAsRoutine}
-              weightUnit={settings.weightUnit}
-              entryRoutineNames={entryRoutineNames}
-              entrySourceRoutineIds={entrySourceRoutineIds}
-              entryGroupNames={entryGroupNames}
-              onUpdateGroupName={handleUpdateGroupName}
-              distanceUnit={settings.distanceUnit}
-              calorieBurnSettings={settings.calorieBurnEnabled ? settings as CalorieBurnSettings : undefined}
-              totalCalorieBurnDisplay={settings.calorieBurnEnabled ? (() => {
-                const exercises: ExerciseInput[] = displayItems.map(item => ({
-                  exercise_key: item.exercise_key,
-                  exercise_subtype: item.exercise_subtype,
-                  sets: item.sets,
-                  reps: item.reps,
-                  weight_lbs: item.weight_lbs,
-                  duration_minutes: item.duration_minutes,
-                  distance_miles: item.distance_miles,
-                  exercise_metadata: item.exercise_metadata,
-                }));
-                const total = estimateTotalCalorieBurn(exercises, settings as CalorieBurnSettings);
-                const value = formatCalorieBurnValue(total);
-                return value ? `(${value} cal)` : undefined;
-              })() : undefined}
-              onShowDetails={handleShowDetails}
-              onUpdateCalorieBurn={handleUpdateCalorieBurn}
-              onCopyEntryToToday={!isTodaySelected && !isReadOnly ? handleCopyEntryToToday : undefined}
-            />
-          </>
-        )}
+        <div className={cn("mt-4", mountDir === 'left' && 'animate-slide-in-from-right', mountDir === 'right' && 'animate-slide-in-from-left')}>
+          {displayItems.length > 0 && (
+            <>
+              <WeightItemsTable
+                items={displayItems}
+                editable
+                onUpdateItem={handleItemUpdate}
+                onRemoveItem={handleItemRemove}
+                newEntryIds={newEntryIds}
+                entryBoundaries={entryBoundaries}
+                onDeleteEntry={handleDeleteEntry}
+                onDeleteAll={handleDeleteAll}
+                entryRawInputs={entryRawInputs}
+                expandedEntryIds={expandedEntryIds}
+                onToggleEntryExpand={handleToggleEntryExpand}
+                onSaveAsRoutine={handleSaveAsRoutine}
+                weightUnit={settings.weightUnit}
+                entryRoutineNames={entryRoutineNames}
+                entrySourceRoutineIds={entrySourceRoutineIds}
+                entryGroupNames={entryGroupNames}
+                onUpdateGroupName={handleUpdateGroupName}
+                distanceUnit={settings.distanceUnit}
+                calorieBurnSettings={settings.calorieBurnEnabled ? settings as CalorieBurnSettings : undefined}
+                totalCalorieBurnDisplay={settings.calorieBurnEnabled ? (() => {
+                  const exercises: ExerciseInput[] = displayItems.map(item => ({
+                    exercise_key: item.exercise_key,
+                    exercise_subtype: item.exercise_subtype,
+                    sets: item.sets,
+                    reps: item.reps,
+                    weight_lbs: item.weight_lbs,
+                    duration_minutes: item.duration_minutes,
+                    distance_miles: item.distance_miles,
+                    exercise_metadata: item.exercise_metadata,
+                  }));
+                  const total = estimateTotalCalorieBurn(exercises, settings as CalorieBurnSettings);
+                  const value = formatCalorieBurnValue(total);
+                  return value ? `(${value} cal)` : undefined;
+                })() : undefined}
+                onShowDetails={handleShowDetails}
+                onUpdateCalorieBurn={handleUpdateCalorieBurn}
+                onCopyEntryToToday={!isTodaySelected && !isReadOnly ? handleCopyEntryToToday : undefined}
+              />
+            </>
+          )}
 
-        {displayItems.length === 0 && isFetching && (
-          <div className="flex justify-center py-8">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          </div>
-        )}
+          {displayItems.length === 0 && isFetching && (
+            <div className="flex justify-center py-8">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            </div>
+          )}
 
-        {displayItems.length === 0 && !isFetching && !isAnalyzing && (
-          <div className="text-center text-muted-foreground py-8">
-            No exercises logged for this day
-          </div>
-        )}
+          {displayItems.length === 0 && !isFetching && !isAnalyzing && (
+            <div className="text-center text-muted-foreground py-8">
+              No exercises logged for this day
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Create Routine Dialog */}
