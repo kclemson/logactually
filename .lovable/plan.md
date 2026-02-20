@@ -1,85 +1,91 @@
 
-## Fix: Scanner misreads UPC-A (748927028669) as EAN-8 (74890286)
+## Fix: Portion button clipped on mobile — trim description to make room
 
-### What's happening
+### User preference
+Keep the layout exactly as-is (inline portion button on the same line as the description). Just ensure the description truncates sooner when a portion is present, so the portion button is never clipped off.
 
-The barcode on the Optimum Nutrition tub is a standard 12-digit UPC-A (`748927028669`). The ZXing decoder is finding a valid EAN-8 checksum pattern (`74890286`) embedded within the bars of the full barcode and returning that first — before it ever reads the full 12-digit code.
+### Root cause
+The container is `overflow-hidden max-h-[3rem]`, which is roughly 2 lines tall. `DescriptionCell` renders a `<span>` with the description text inline, followed by the portion button as a sibling. When the description wraps to 2 lines on mobile, the portion button becomes a third line and is silently clipped by `overflow-hidden`.
 
-This is a known ZXing behavior: when `TRY_HARDER` is enabled, it searches for any valid match. EAN-8 is a strict subset pattern that can match 8 consecutive bars within a larger barcode.
+### The fix: `line-clamp-1` on the description when a portion is present
 
-### The fix: EAN-8 confirmation pass
+Currently the editable `DescriptionCell` span has no explicit `line-clamp`. When a `portion` exists, add `line-clamp-1` via a `className` prop so the description truncates to one line with an ellipsis — keeping the portion button always visible on the same second "line" of the container.
 
-When `runDecodeLoop` (line 617) gets a result and the format is `EAN_8`, immediately attempt a **second decode** on the same canvas frame using a reader configured *without* EAN_8 in the format list. If this second pass finds a longer code (UPC-A or EAN-13), use that instead. If the second pass finds nothing, accept the EAN-8.
+There are two places to fix:
 
-This is a fast in-memory operation — no extra camera frames, no delay — because we reuse the already-drawn canvas.
+**1. Editable mode** (~line 751): Pass `className="line-clamp-1"` to `DescriptionCell` when `item.portion` is truthy. When there's no portion, leave it unclamped (current behaviour — description can wrap to 2 lines).
 
-```
-result = EAN_8 "74890286"
-  → retry canvas decode without EAN_8
-  → finds UPC_A "748927028669"
-  → use "748927028669" ✓
-```
+**2. Read-only mode** (~line 790): The `<span>` already has `line-clamp-2`. When `item.portion` is truthy, switch it to `line-clamp-1` so the portion fits inline.
 
-### Implementation details
+Both group header rows (~line 371 and ~line 550) use a group portion — same fix applies: clamp the group name to 1 line when a cumulative portion multiplier is displayed.
 
-**New constant** at the top of `BarcodeScanner.tsx`:
-```ts
-// Hints that prefer longer codes — used when EAN-8 is the initial read
-const DECODER_HINTS_NO_EAN8 = new Map<DecodeHintType, unknown>([
-  [DecodeHintType.TRY_HARDER, true],
-  [DecodeHintType.POSSIBLE_FORMATS, SUPPORTED_FORMATS.filter(f => f !== BarcodeFormat.EAN_8)],
-]);
-```
+### Technical details
 
-**New `BrowserMultiFormatReader` instance** held in a ref, pre-created alongside `readerRef` during scanner startup:
-```ts
-const readerNoEan8Ref = useRef<BrowserMultiFormatReader | null>(null);
-// ...in startScanner():
-readerNoEan8Ref.current = new BrowserMultiFormatReader(DECODER_HINTS_NO_EAN8);
+`DescriptionCell` already accepts a `className` prop that it passes to its inner `<span>`:
+
+```tsx
+// DescriptionCell.tsx — the span already forwards className
+<span
+  className={cn(
+    "border-0 bg-transparent focus:outline-none cursor-text hover:bg-muted/50",
+    className  // ← this is where we inject line-clamp-1
+  )}
+  ...
+/>
 ```
 
-**Confirmation logic** inserted in `runDecodeLoop` right after a result is found:
-```ts
-if (result) {
-  // If we got an EAN-8, try once more without EAN-8 to see if UPC-A/EAN-13 is present
-  if (result.format === 'EAN_8' && readerNoEan8Ref.current && canvasRef.current) {
-    try {
-      const luminanceSource = new HTMLCanvasElementLuminanceSource(canvasRef.current);
-      const binaryBitmap = new BinaryBitmap(new HybridBinarizer(luminanceSource));
-      const longerResult = readerNoEan8Ref.current.decodeBitmap(binaryBitmap);
-      if (longerResult) {
-        result = {
-          text: longerResult.getText(),
-          format: BarcodeFormat[longerResult.getBarcodeFormat()] || 'unknown',
-        };
-      }
-    } catch {
-      // No longer code found — accept the EAN-8
-    }
-  }
-  // ... existing success path
-}
+So the change is purely at the call-site in `FoodItemsTable.tsx` — no changes to `DescriptionCell` itself.
+
+### Change at individual item editable row (~line 751)
+
+```tsx
+// Before
+<DescriptionCell
+  value={item.description}
+  onSave={...}
+  title={...}
+>
+
+// After
+<DescriptionCell
+  value={item.description}
+  onSave={...}
+  title={...}
+  className={item.portion ? "line-clamp-1" : undefined}
+>
 ```
 
-The same confirmation logic is added to `handleManualCapture` for consistency.
+### Change at individual item read-only row (~line 790)
 
-### Cleanup
+```tsx
+// Before
+<span className={cn("pl-1 pr-0 py-1 line-clamp-2 shrink min-w-0", compact && "text-sm")}>
 
-`readerNoEan8Ref.current` is set to `null` alongside `readerRef.current` in the cleanup path (success timeout, unmount effect).
+// After
+<span className={cn("pl-1 pr-0 py-1 shrink min-w-0", item.portion ? "line-clamp-1" : "line-clamp-2", compact && "text-sm")}>
+```
+
+### Change at group header rows (~lines 372 and 552)
+
+Same pattern — both use a `DescriptionCell` for the group name. When a cumulative multiplier is displayed (i.e. when the portion button renders), add `className="line-clamp-1"`:
+
+```tsx
+<DescriptionCell
+  value={groupName}
+  ...
+  className={hasPortionButton ? "line-clamp-1" : undefined}
+>
+```
 
 ### Files changed
 
 | File | Change |
 |---|---|
-| `src/components/BarcodeScanner.tsx` | Add `DECODER_HINTS_NO_EAN8` constant, `readerNoEan8Ref`, pre-create the no-EAN-8 reader on scanner start, add confirmation re-decode in `runDecodeLoop` and `handleManualCapture` |
+| `src/components/FoodItemsTable.tsx` | In editable item row: add `className={item.portion ? "line-clamp-1" : undefined}` to `DescriptionCell`. In read-only item row: conditionally switch `line-clamp-2` to `line-clamp-1` when `item.portion` is truthy. In both group header rows: same pattern on the `DescriptionCell` when a portion multiplier button is shown. |
 
-### Expected outcome
+### Result
 
-Scanning the Optimum Nutrition tub:
-1. ZXing initially reads `74890286` (EAN_8)
-2. Confirmation pass re-decodes the same canvas frame without EAN_8 enabled
-3. Finds `748927028669` (UPC_A)
-4. `onScan("748927028669")` is called
-5. Lookup finds the product correctly in Open Food Facts with full nutritional data
-
-For genuine EAN-8 barcodes (small packaging), the confirmation pass will fail to find a longer code and the EAN-8 result is accepted normally — no regression.
+- Short descriptions with a portion: description fits on one line + portion visible beside it ✓
+- Long descriptions with a portion: description truncates with `…` on one line + portion visible beside it ✓  
+- Long descriptions without a portion: still wraps to 2 lines as today ✓
+- No layout restructuring, no extra vertical space ✓
