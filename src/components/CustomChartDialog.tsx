@@ -68,7 +68,9 @@ function CustomChartDialogInner({
   const [lastQuestion, setLastQuestion] = useState(initialChart?.question ?? "");
   const [showDebug, setShowDebug] = useState(false);
   const [refining, setRefining] = useState(false);
-  const [resultMode, setResultMode] = useState<"v1" | "v2" | null>(null);
+  const [resultMode, setResultMode] = useState<"v1" | "v2" | null>(
+    () => initialChart ? (initialChart.chartDsl ? "v2" : "v1") : null
+  );
 
   const editingIdRef = useRef<string | null>(initialChart?.id ?? null);
 
@@ -134,7 +136,7 @@ function CustomChartDialogInner({
         setDailyTotals(result.dailyTotals);
         setChartDSL(result.chartDSL ?? null);
         setChartOptions(null);
-        setVerification(actualMode === "v2" ? null : verifyChartData(result.chartSpec, result.dailyTotals));
+        setVerification(verifyChartData(result.chartSpec, result.dailyTotals));
         setResultMode(actualMode);
       }
       setRefining(false);
@@ -189,7 +191,7 @@ function CustomChartDialogInner({
         setDailyTotals(result.dailyTotals);
         setChartDSL(result.chartDSL ?? null);
         setChartOptions(null);
-        setVerification(actualMode === "v2" ? null : verifyChartData(result.chartSpec, result.dailyTotals));
+        setVerification(verifyChartData(result.chartSpec, result.dailyTotals));
         setResultMode(actualMode);
       }
     } catch (err) {

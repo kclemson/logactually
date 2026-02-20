@@ -457,7 +457,11 @@ serve(async (req) => {
       throw new Error("AI returned invalid JSON");
     }
 
-    console.log("generate_chart args:", JSON.stringify(args).slice(0, 2000));
+    const userId = claimsData.claims.sub;
+    const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
+    const tag = isAdmin ? '[dev]' : '[user]';
+    const question = messages.filter((m: any) => m.role === 'user').pop()?.content ?? '?';
+    console.info(`${tag} generate-chart ${mode ?? 'v1'}: "${String(question).slice(0, 80)}" (${days}d)`);
 
     // Serialize dailyTotals (needed for both modes)
     const serializedFoodTotals: Record<string, any> = {};
