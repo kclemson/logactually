@@ -367,6 +367,7 @@ const History = () => {
 
               const cellContent = (
                 <button
+                  data-swipe-exempt
                   key={index}
                   onClick={() => !isFutureDate && handleDayClick(day, index)}
                   disabled={isFutureDate}
