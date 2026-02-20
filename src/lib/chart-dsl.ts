@@ -414,12 +414,17 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
             }
             case "only_keys": {
               // Every token must be covered by at least one allowlist entry.
-              // Allowlist "walk_run" covers both "walk_run" and "walk_run:walking".
-              // Allowlist "walk_run:walking" covers ONLY "walk_run:walking".
+              // Allowlist semantics:
+              //   "walk_run"         → covers "walk_run" (plain) AND any "walk_run:*" compound
+              //   "walk_run:walking" → covers "walk_run:walking", "walk_run" (null-subtype rows),
+              //                        AND other "walk_run:*" subtypes (running, hiking) because
+              //                        when a user says "only walked" they mean the walk_run
+              //                        exercise type, not just the specific 'walking' sub-variant.
               const allowlist = classify.keys ?? [];
+
+
               // Skip plain key tokens that have a compound variant present —
               // the compound token is more specific and will be evaluated instead.
-              // e.g. if ["walk_run", "walk_run:walking"] are in the set, skip "walk_run".
               const tokensToEvaluate = tokens.filter(token => {
                 if (token.includes(":")) return true; // always evaluate compound tokens
                 return !tokens.some(t => t.startsWith(`${token}:`));
@@ -427,9 +432,18 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
               matches = tokensToEvaluate.length > 0 && tokensToEvaluate.every(token => {
                 return allowlist.some(entry => {
                   if (entry === token) return true;
-                  // Plain allowlist entry (no colon) covers both the plain key
+                  // Plain allowlist entry (no colon) covers the plain key
                   // and any "key:subtype" variant of that key.
                   if (!entry.includes(":") && token.startsWith(`${entry}:`)) return true;
+                  // Compound allowlist entry (key:subtype) also covers:
+                  //   1. The plain key token (null-subtype rows for that exercise)
+                  //   2. Other subtypes of the same key (walk_run:running covered by walk_run:walking)
+                  //      because users intend "only [exercise type]" not "only [specific subtype]"
+                  if (entry.includes(":")) {
+                    const entryBase = entry.split(":")[0];
+                    if (!token.includes(":") && token === entryBase) return true; // plain key
+                    if (token.includes(":") && token.startsWith(`${entryBase}:`)) return true; // sibling subtype
+                  }
                   return false;
                 });
               });
