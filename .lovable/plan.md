@@ -1,44 +1,74 @@
 
-# Fix: Verify accuracy runs immediately when opening an existing chart
+# Two fixes: "categorical" bug + v1/v2 annotation in debug output
 
-## Why `useEffect` is wrong here
+## Fix 1: The "categorical" false positive for date-based v2 charts
 
-The user is right. A `useEffect` that runs on mount is the wrong tool — it's hiding the real trigger, which is a concrete user event (clicking the edit button). Instead, we do the work in the event handler itself, pass the result in as a prop, and seed `useState` from it. No effect needed.
+### Root cause
 
-## Approach
-
-### 1. `Trends.tsx` — extract an async `openChartForEditing` handler
-
-Both edit triggers (inline pencil button and context menu) call `setEditingChart(...)` with the same shape. We replace them both with a single `openChartForEditing` async function that:
-
-1. Sets `editingChart` immediately so the dialog opens (the chart spec is already available — the user sees it right away)
-2. In the background, if `chart.chart_dsl` is present (v2 chart), calls `fetchChartData(supabase, chart.chart_dsl, period)` then `verifyChartData(chart.chart_spec, dt)`
-3. Sets a separate piece of state `editingChartVerification` with the result
-4. Passes that as `initialVerification` into `CustomChartDialog`
-
-The dialog opens instantly. The verification result populates a moment later when the DB query resolves (same latency as the first-time generation flow).
-
-### 2. `CustomChartDialog` — accept `initialVerification` prop and seed state
-
-Add `initialVerification?: VerificationResult` to `CustomChartDialogProps`. Thread it through the outer wrapper to `CustomChartDialogInner`, and use it to seed `useState`:
+In `verifyDeterministic` (line 324–328 of `chart-verification.ts`):
 
 ```ts
-const [verification, setVerification] = useState<VerificationResult | null>(initialVerification ?? null);
+const xField = spec.xAxis.field.toLowerCase();
+if (!xField.includes("date")) {
+  return { status: "unavailable", reason: "Verification isn't available for categorical charts" };
+}
 ```
 
-That's it. Because `CustomChartDialog` conditionally renders `CustomChartDialogInner` only when `open` is true (line 44-46), and `editingChart` and `editingChartVerification` are set in the same event handler, the inner component mounts with the verification already in state — or populates it shortly after if the DB query is still in flight. No `useEffect`, no mount logic.
+This guard checks whether the compiled `ChartSpec`'s `xAxis.field` contains the substring `"date"`. For v2 charts the DSL engine populates `xAxis.field` with `"label"` (the generic label property used for bar/line x-axis rendering), not `"date"` — even when `groupBy: "date"` was specified. So daily fiber intake, daily sodium, etc. all fail this check and get labeled "categorical" when they are not.
 
-For v1 charts (no `chartDsl`), `openChartForEditing` skips the fetch and passes `initialVerification: null` — same experience as today.
+The real intent of this guard is: **skip verification for charts grouped by non-date dimensions** (day-of-week, food item name, exercise type, hour-of-day, etc.). A cleaner signal than the field name is whether any data point has a `rawDate` property — which the v2 engine only attaches when `groupBy` is `"date"` or `"week"`. We already have that check two lines above (the `hasRawDate` guard). So the `xField.includes("date")` guard is **redundant and wrong** — if we passed the `hasRawDate` guard, we already know it's date-based.
+
+### Fix
+
+Remove the `xField.includes("date")` guard entirely. The `hasRawDate` guard immediately above it already covers this case correctly:
+
+```ts
+// REMOVE this block — hasRawDate above already handles it
+const xField = spec.xAxis.field.toLowerCase();
+if (!xField.includes("date")) {
+  return { status: "unavailable", reason: "Verification isn't available for categorical charts" };
+}
+```
+
+Also update the "no rawDate" message to make it clearer:
+
+```ts
+if (!hasRawDate) {
+  return { status: "unavailable", reason: "Verification isn't available for categorical charts (e.g. grouped by item, day-of-week, or hour)" };
+}
+```
+
+This is a one-block deletion in `chart-verification.ts`. All genuinely categorical charts (item, dayOfWeek, hourOfDay, category) will still correctly return "unavailable" because they don't attach `rawDate` to their data points.
+
+---
+
+## Fix 2: v1/v2 annotation in debug JSON output
+
+### What to add
+
+In `CustomChartDialog.tsx`, the debug textarea renders:
+
+```tsx
+value={JSON.stringify(resultMode === "v2" ? chartDSL : currentSpec, null, 2)}
+```
+
+Wrap the object in a thin annotated envelope before serialising:
+
+```ts
+const debugPayload = resultMode === "v2"
+  ? { _generator: "v2 · AI schema (DSL)", ...chartDSL as object }
+  : { _generator: "v1 · AI data (direct chart spec)", ...currentSpec as object };
+
+value={JSON.stringify(debugPayload, null, 2)}
+```
+
+The `_generator` key will appear at the top of the JSON output, giving instant visual confirmation of which path was used.
+
+---
 
 ## Files changed
 
 | File | Change |
 |---|---|
-| `src/pages/Trends.tsx` | Add `editingChartVerification` state; replace both `setEditingChart(...)` calls with an `openChartForEditing` async function; pass `initialVerification` to `CustomChartDialog` |
-| `src/components/CustomChartDialog.tsx` | Add `initialVerification?: VerificationResult` to props interface; thread through to inner component; seed `useState` from it |
-
-## What stays the same
-
-- Auto-verification after every AI generation (already works, untouched)
-- Verify button visibility and behaviour (untouched)
-- No `useEffect` added anywhere
+| `src/lib/chart-verification.ts` | Remove the redundant `xField.includes("date")` guard (3 lines deleted); improve the `hasRawDate` message to be accurate about what "categorical" means |
+| `src/components/CustomChartDialog.tsx` | Wrap debug JSON in a thin annotated object with a `_generator` field before serialising |
