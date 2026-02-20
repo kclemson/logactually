@@ -1,43 +1,45 @@
 
-## Fix: Dark theme screenshots render poorly with html2canvas
+## Match the changelog lightbox pattern: X button hugs the image corner
 
-### Root cause
+### What needs to change
 
-`html2canvas` renders the DOM by reading inline styles and computed styles, but it has known limitations with CSS custom properties (CSS variables) that are toggled via a class on `<html>` (the `dark` class used by Tailwind/next-themes).
+In `FeedbackForm.tsx`, the lightbox close button is positioned at `top-4 right-4` on the full-screen `fixed` overlay — meaning it floats in the top-right corner of the screen, far from the image.
 
-When the user is in dark mode, the `dark` class on `<html>` activates dark-theme CSS variables (`--background`, `--foreground`, etc.). `html2canvas` doesn't fully resolve these correctly — it either picks up the wrong variable values or defaults to transparent/black, producing a mostly-dark, near-unreadable screenshot as shown in the user's image.
+The Changelog lightbox wraps the image in an inner `relative` div, then positions the X at `-top-3 -right-3` on that wrapper, so the button sits directly at the image's top-right corner. That's the pattern to match.
 
-### The fix
+### Current lightbox structure (FeedbackForm)
 
-Before calling `html2canvas`, temporarily remove the `dark` class from `document.documentElement`, run the capture, then restore the class. This forces the page to render in light mode for the split second of capture, which html2canvas handles correctly.
-
-```ts
-// Before capture
-const htmlEl = document.documentElement;
-const wasDark = htmlEl.classList.contains("dark");
-if (wasDark) htmlEl.classList.remove("dark");
-
-// ... html2canvas call ...
-
-// After capture
-if (wasDark) htmlEl.classList.add("dark");
+```
+fixed inset-0 overlay
+  <button absolute top-4 right-4>  ← far from image
+  <img>
 ```
 
-This is safe because:
-- The class change is synchronous and instant — the user won't notice a visual flash since html2canvas is called right after
-- The restore always happens (in a `finally`-style block) so dark mode is never left disabled
-- No state or settings are modified — this only touches the DOM class for the duration of the capture
+### Target lightbox structure (Changelog)
 
-### Implementation details
+```
+fixed inset-0 overlay
+  <div relative>  ← wraps just the image
+    <button absolute -top-3 -right-3>  ← hugs the image corner
+    <img>
+  </div>
+```
 
-**`src/components/FeedbackForm.tsx`** — inside `handleCapturePage`:
+### Implementation
 
-1. After the 600ms navigation wait (so the route is fully rendered in dark mode), save whether `dark` class is present
-2. Remove `dark` class before calling `html2canvas`
-3. Restore `dark` class immediately after `html2canvas` resolves (in a try/finally block wrapping just the capture call)
+**`src/components/FeedbackForm.tsx`** — lightbox section (around lines 343–360):
+
+1. Inside the fixed overlay `<div>`, add an inner `<div className="relative">` wrapping the image.
+2. Move the `<button>` inside that wrapper and change its classes to match the changelog exactly:
+   - Position: `absolute -top-3 -right-3`
+   - Style: `bg-background rounded-full p-1 text-muted-foreground hover:text-foreground transition-colors shadow-md`
+3. Remove `e.stopPropagation()` from the image (since the button is now separate from the backdrop click zone) — the inner div should stop propagation to prevent the backdrop click from firing when clicking the image.
+4. Add `onClick={(e) => e.stopPropagation()}` to the inner `<div>` wrapper so clicking the image area doesn't close the lightbox.
+
+Also add an Escape key handler (matching the changelog) for keyboard accessibility.
 
 ### Files changed
 
 | File | Change |
 |---|---|
-| `src/components/FeedbackForm.tsx` | In `handleCapturePage`, temporarily remove `dark` class from `<html>` before the `html2canvas` call and restore it after |
+| `src/components/FeedbackForm.tsx` | Restructure lightbox to use inner relative wrapper with `-top-3 -right-3` X button, add Escape key handler |
