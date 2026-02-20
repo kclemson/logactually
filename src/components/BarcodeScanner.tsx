@@ -42,6 +42,12 @@ const DECODER_HINTS = new Map<DecodeHintType, unknown>([
   [DecodeHintType.POSSIBLE_FORMATS, SUPPORTED_FORMATS],
 ]);
 
+// Hints without EAN_8 — used to confirm if an EAN-8 read is actually a longer UPC-A/EAN-13
+const DECODER_HINTS_NO_EAN8 = new Map<DecodeHintType, unknown>([
+  [DecodeHintType.TRY_HARDER, true],
+  [DecodeHintType.POSSIBLE_FORMATS, SUPPORTED_FORMATS.filter(f => f !== BarcodeFormat.EAN_8)],
+]);
+
 interface DebugInfo {
   status: 'starting' | 'active' | 'error' | 'captured' | 'success';
   videoWidth: number;
@@ -238,6 +244,7 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
   const trackDimensionsRef = useRef<TrackDimensions>({ width: 0, height: 0 });
   const rotationNeededRef = useRef<number>(0);
   const decodeLoopRef = useRef<number | null>(null);
+  const readerNoEan8Ref = useRef<BrowserMultiFormatReader | null>(null);
 
   // Rotation-aware decode from video element
   const decodeWithRotation = useCallback((
@@ -343,6 +350,24 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
     }
 
     if (result) {
+      // EAN-8 confirmation pass: retry without EAN-8 to check for full UPC-A/EAN-13
+      if (result.format === 'EAN_8' && readerNoEan8Ref.current && canvasRef.current) {
+        try {
+          const luminanceSource = new HTMLCanvasElementLuminanceSource(canvasRef.current);
+          const binaryBitmap = new BinaryBitmap(new HybridBinarizer(luminanceSource));
+          const longerResult = readerNoEan8Ref.current.decodeBitmap(binaryBitmap);
+          if (longerResult) {
+            logger.log('EAN-8 confirmation pass (manual) found longer code:', longerResult.getText());
+            result = {
+              text: longerResult.getText(),
+              format: BarcodeFormat[longerResult.getBarcodeFormat()] || 'unknown',
+            };
+          }
+        } catch {
+          // No longer code found — accept the EAN-8
+        }
+      }
+
       logDebugEvents(sessionId, [{ 
         event: 'manual_capture_success',
         phase: 'capture',
@@ -372,6 +397,7 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
           streamRef.current.getTracks().forEach(track => track.stop());
         }
         readerRef.current = null;
+        readerNoEan8Ref.current = null;
         streamRef.current = null;
         onScan(result.text);
       }, 1200);
@@ -434,9 +460,10 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
           data: { environment }
         }]);
 
-        // Pre-create ZXing decoder (doesn't depend on video stream)
+        // Pre-create ZXing decoders (don't depend on video stream)
         const reader = new BrowserMultiFormatReader(DECODER_HINTS);
         readerRef.current = reader;
+        readerNoEan8Ref.current = new BrowserMultiFormatReader(DECODER_HINTS_NO_EAN8);
 
         // Wait for video element to be ready (poll with timeout)
         const maxWaitMs = 2000;
@@ -615,6 +642,26 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
           }
 
           if (result) {
+            // EAN-8 confirmation pass: if ZXing found EAN-8, retry without EAN-8 to
+            // check if the full UPC-A/EAN-13 is actually present (ZXing can misread
+            // the first 8 digits of a longer code as a valid EAN-8 checksum)
+            if (result.format === 'EAN_8' && readerNoEan8Ref.current && canvasRef.current) {
+              try {
+                const luminanceSource = new HTMLCanvasElementLuminanceSource(canvasRef.current);
+                const binaryBitmap = new BinaryBitmap(new HybridBinarizer(luminanceSource));
+                const longerResult = readerNoEan8Ref.current.decodeBitmap(binaryBitmap);
+                if (longerResult) {
+                  logger.log('EAN-8 confirmation pass found longer code:', longerResult.getText());
+                  result = {
+                    text: longerResult.getText(),
+                    format: BarcodeFormat[longerResult.getBarcodeFormat()] || 'unknown',
+                  };
+                }
+              } catch {
+                // No longer code found — the EAN-8 is genuine, accept it
+              }
+            }
+
             const layout = getLayoutInfo(dialogRef.current, video);
             
             logDebugEvents(sessionId, [{ 
@@ -639,6 +686,7 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
                 streamRef.current.getTracks().forEach(track => track.stop());
               }
               readerRef.current = null;
+              readerNoEan8Ref.current = null;
               streamRef.current = null;
               onScan(result.text);
             }, 1200);
@@ -791,6 +839,7 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
         readerRef.current.reset();
         readerRef.current = null;
       }
+      readerNoEan8Ref.current = null;
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
