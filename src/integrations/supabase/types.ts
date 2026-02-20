@@ -117,6 +117,7 @@ export type Database = {
           created_at: string
           feedback_id: number
           id: string
+          image_url: string | null
           message: string
           read_at: string | null
           resolved_at: string | null
@@ -129,6 +130,7 @@ export type Database = {
           created_at?: string
           feedback_id?: number
           id?: string
+          image_url?: string | null
           message: string
           read_at?: string | null
           resolved_at?: string | null
@@ -141,6 +143,7 @@ export type Database = {
           created_at?: string
           feedback_id?: number
           id?: string
+          image_url?: string | null
           message?: string
           read_at?: string | null
           resolved_at?: string | null
