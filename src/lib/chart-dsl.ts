@@ -417,7 +417,14 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
               // Allowlist "walk_run" covers both "walk_run" and "walk_run:walking".
               // Allowlist "walk_run:walking" covers ONLY "walk_run:walking".
               const allowlist = classify.keys ?? [];
-              matches = tokens.length > 0 && tokens.every(token => {
+              // Skip plain key tokens that have a compound variant present —
+              // the compound token is more specific and will be evaluated instead.
+              // e.g. if ["walk_run", "walk_run:walking"] are in the set, skip "walk_run".
+              const tokensToEvaluate = tokens.filter(token => {
+                if (token.includes(":")) return true; // always evaluate compound tokens
+                return !tokens.some(t => t.startsWith(`${token}:`));
+              });
+              matches = tokensToEvaluate.length > 0 && tokensToEvaluate.every(token => {
                 return allowlist.some(entry => {
                   if (entry === token) return true;
                   // Plain allowlist entry (no colon) covers both the plain key
