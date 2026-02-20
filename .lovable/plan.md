@@ -1,46 +1,36 @@
 
-## Remove DOSE_TIME_DEFAULTS from EditLogTypeDialog — always use empty strings + ghost text
+## Fix: dose count always shows a color when doses have been logged
 
-### What's wrong
+### Problem
 
-`EditLogTypeDialog.tsx` has a `DOSE_TIME_DEFAULTS` constant (lines 25–32) that pre-fills dose time inputs with real string values like `'6am'`, `'9am'`, `'12pm'` etc. When the user clicks a frequency button (e.g. 6), `handleDosesPerDayChange` pushes these strings into state — so the inputs render with white text as if the user typed those values, not as placeholder ghost text.
+`getDoseCountStyle` in `MedicationEntryInput.tsx` has this condition:
 
-`CreateMedicationDialog.tsx` already does this correctly with `Array(count).fill('')` — no defaults at all.
+```ts
+if (dosesPerDay === 0 || todayEntryCount === 0) return 'text-muted-foreground';
+```
+
+The `dosesPerDay === 0` case covers "as needed" medications. Since there's no target dose count, the function bails out early and returns muted grey — even when doses have actually been logged today. The user sees "3 doses logged today" in a flat, unnoticeable color.
 
 ### Fix
 
-Two changes to `EditLogTypeDialog.tsx`:
+Split the two conditions. Keep `todayEntryCount === 0` as muted (nothing logged = nothing to highlight). But when doses *have* been logged:
 
-**1. Remove `DOSE_TIME_DEFAULTS`** (lines 25–32) — the constant is deleted entirely.
-
-**2. Simplify `handleDosesPerDayChange`** (lines 54–68) to always use empty strings for new slots, preserving existing user-entered values when trimming up/down:
+- **`dosesPerDay > 0`** (scheduled): green if at or under target, red if over
+- **`dosesPerDay === 0`** (as needed): use amber — always colored when any doses are logged, since there's no target to compare against
 
 ```ts
-const handleDosesPerDayChange = (count: number) => {
-  setDosesPerDay(count);
-  if (count === 0) {
-    setDoseTimes([]);
-  } else {
-    setDoseTimes(prev => {
-      const next = prev.slice(0, count);
-      while (next.length < count) next.push('');
-      return next;
-    });
-  }
-};
+function getDoseCountStyle(todayEntryCount: number, dosesPerDay: number): string {
+  if (todayEntryCount === 0) return 'text-muted-foreground';
+  if (dosesPerDay === 0) return 'text-amber-500 dark:text-amber-400'; // as-needed: always amber
+  if (todayEntryCount <= dosesPerDay) return 'text-green-500 dark:text-green-400';
+  return 'text-red-500';
+}
 ```
 
-This means:
-- "As needed" → 6: all 6 inputs empty → show ghost placeholder text ✓
-- 2 → 6: inputs 1 & 2 keep whatever the user typed, inputs 3–6 are empty ✓  
-- 6 → 2: inputs 1 & 2 preserved, rest trimmed ✓
-
-The dose time inputs in the edit dialog already have the correct placeholder text (`"e.g. morning, 8am, with dinner, etc"`) and ghost styling (`placeholder:text-foreground/50 placeholder:italic`) — so once the values are empty strings, the ghost text will display correctly with no further changes needed.
+Amber is a natural fit here — it's attention-grabbing and neutral (not pass/fail), appropriate for "as needed" medications where the count is informational rather than a compliance indicator.
 
 ### Only file to change
 
 | File | Change |
 |---|---|
-| `src/components/EditLogTypeDialog.tsx` | Delete `DOSE_TIME_DEFAULTS` constant; replace `handleDosesPerDayChange` with the simplified version |
-
-No other files need touching — `CreateMedicationDialog.tsx` is already correct.
+| `src/components/MedicationEntryInput.tsx` | Update `getDoseCountStyle` to use amber for as-needed medications with at least one dose logged |
