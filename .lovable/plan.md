@@ -1,36 +1,67 @@
 
 
-# Shorten chart titles
+# Add Beta Role Toggle for Demo User in Admin Panel
 
-## Problem
+## What this does
+Adds a small toggle button next to the demo lock button in the admin panel, letting you grant or revoke the `beta` role for the demo account with one click -- identical UX to the existing lock/unlock toggle.
 
-Chart titles like "Walking-Only vs. Other Workout Days" and "Logging Consistency by Day of Week" wrap to two lines in the card layout. The only guidance in both prompts is `"title should be concise and descriptive"`.
+## Steps
 
-## Fix
+### 1. Database migration
+- Add `'beta'` to the `app_role` enum
+- Create a `toggle_demo_beta()` SECURITY DEFINER function that:
+  - Checks admin role (same pattern as `toggle_demo_read_only`)
+  - Looks up the demo user by email
+  - If the user has the `beta` role, deletes it; otherwise inserts it
+  - Returns the new boolean state
 
-Update the title guidance in both edge functions to enforce brevity:
+### 2. Admin page UI (`src/pages/Admin.tsx`)
+- Add a React Query fetch for the demo user's beta status (check `user_roles` for demo user + beta role)
+- Add state + handler for toggling (mirrors `handleToggleDemoLock`)
+- Render a small inline button next to the existing lock toggle, showing "Beta" with a colored indicator (green when enabled, muted when not)
 
-**`supabase/functions/generate-chart-dsl/index.ts` (line 167)**
+### Technical details
 
-Change:
+**New DB function:**
+```sql
+CREATE OR REPLACE FUNCTION public.toggle_demo_beta()
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+DECLARE
+  demo_uid uuid;
+  currently_beta boolean;
+BEGIN
+  IF NOT has_role(auth.uid(), 'admin') THEN
+    RAISE EXCEPTION 'Admin access required';
+  END IF;
+
+  SELECT p.id INTO demo_uid
+  FROM profiles p JOIN auth.users u ON u.id = p.id
+  WHERE u.email = 'demo@logactually.com'
+  LIMIT 1;
+
+  SELECT EXISTS (
+    SELECT 1 FROM user_roles
+    WHERE user_id = demo_uid AND role = 'beta'
+  ) INTO currently_beta;
+
+  IF currently_beta THEN
+    DELETE FROM user_roles WHERE user_id = demo_uid AND role = 'beta';
+  ELSE
+    INSERT INTO user_roles (user_id, role) VALUES (demo_uid, 'beta');
+  END IF;
+
+  RETURN NOT currently_beta;
+END;
+$$;
 ```
-- title should be concise and descriptive
-```
-To:
-```
-- title should be short (under 5 words) and descriptive
-```
 
-**`supabase/functions/generate-chart/index.ts` (line 145)**
-
-Same change:
-```
-- title should be short (under 5 words) and descriptive
-```
-
-## Why this works
-
-Titles like "Daily Fiber Intake", "Exercise Category Split", and "Weekly Average Calories" already fit on one line and are under 5 words. The problematic ones ("Walking-Only vs. Other Workout Days" = 6 words, "Logging Consistency by Day of Week" = 6 words, "Estimated Calories from Fast Food Items" = 7 words) would be guided toward shorter forms like "Walking vs Workout Days", "Logging by Weekday", "Fast Food Calories".
-
-Existing saved charts won't change -- this only affects newly generated titles.
+**UI addition** (next to lock button on line ~191):
+- A small button styled like the lock toggle: `"Beta"` label, green text when active, muted when inactive
+- Query key: `['demoBeta']`
+- Toggle handler calls `supabase.rpc('toggle_demo_beta')`
+- Cache update on success, same pattern as `demoReadOnly`
 
