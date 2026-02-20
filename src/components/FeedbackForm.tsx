@@ -118,6 +118,16 @@ export function FeedbackForm() {
     };
   }, [previewUrl]);
 
+  // Escape key closes lightbox
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setLightboxOpen(false);
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [lightboxOpen]);
+
   const clearAttachment = useCallback(() => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setAttachedFile(null);
@@ -345,20 +355,21 @@ export function FeedbackForm() {
             className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center"
             onClick={() => setLightboxOpen(false)}
           >
-            <button
-              type="button"
-              onClick={() => setLightboxOpen(false)}
-              className="absolute top-4 right-4 bg-background/20 hover:bg-background/40 text-white rounded-full p-1.5 transition-colors"
-              aria-label="Close"
-            >
-              <X className="h-5 w-5" />
-            </button>
-            <img
-              src={previewUrl}
-              alt="Attachment full size"
-              className="max-w-[90vw] max-h-[85vh] object-contain rounded shadow-xl"
-              onClick={(e) => e.stopPropagation()}
-            />
+            <div className="relative" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                onClick={() => setLightboxOpen(false)}
+                className="absolute -top-3 -right-3 bg-background rounded-full p-1 text-muted-foreground hover:text-foreground transition-colors shadow-md z-10"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+              <img
+                src={previewUrl}
+                alt="Attachment full size"
+                className="max-w-[90vw] max-h-[85vh] object-contain rounded shadow-xl"
+              />
+            </div>
           </div>
         )}
 
