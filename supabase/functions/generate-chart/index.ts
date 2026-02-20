@@ -142,7 +142,7 @@ RULES:
 - Choose the metric and grouping that best matches the user's intent
 - For bar charts showing categories, consider adding sort=value_desc
 - Use line charts for time series, bar charts for categories
-- title should be concise and descriptive
+- title should be short (under 5 words) and descriptive
 - Do NOT include any data values — only the schema`;
 
 serve(async (req) => {
