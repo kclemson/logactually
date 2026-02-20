@@ -1,12 +1,16 @@
 import { useRef, useCallback, useEffect } from 'react';
 import { setSwipeDirection } from '@/lib/selected-date';
 
-const MIN_SWIPE_X = 40;
-const MAX_SWIPE_Y_RATIO = 0.6;
+const MIN_SWIPE_X = 30;
+const MAX_SWIPE_Y_RATIO = 1.0;
 // Once the finger moves this many px horizontally, lock the gesture and prevent scroll
-const HORIZONTAL_LOCK_PX = 8;
+const HORIZONTAL_LOCK_PX = 10;
 // If vertical movement exceeds this before the horizontal lock, cancel
-const VERTICAL_CANCEL_PX = 10;
+const VERTICAL_CANCEL_PX = 15;
+// Horizontal must be 1.5× vertical to claim a swipe
+const HORIZONTAL_RATIO = 1.5;
+// Vertical must be 2.5× horizontal to cancel for scroll
+const VERTICAL_RATIO = 2.5;
 
 const INTERACTIVE_SELECTORS = 'input, button, select, textarea, [role="dialog"], [role="listbox"], [role="option"], a';
 
@@ -40,12 +44,12 @@ export function useSwipeNavigation(
     const dx = Math.abs(e.touches[0].clientX - startX.current);
     const dy = Math.abs(e.touches[0].clientY - startY.current);
 
-    if (dx >= HORIZONTAL_LOCK_PX && dx >= dy) {
-      // Horizontal intent confirmed — lock the gesture
+    if (dx >= HORIZONTAL_LOCK_PX && (dy === 0 || dx / dy > HORIZONTAL_RATIO)) {
+      // Clearly horizontal intent — lock and claim the gesture
       locked.current = true;
       e.preventDefault();
-    } else if (dy >= VERTICAL_CANCEL_PX && dy > dx) {
-      // Vertical intent confirmed — cancel gesture, let scroll through
+    } else if (dy >= VERTICAL_CANCEL_PX && (dx === 0 || dy / dx > VERTICAL_RATIO)) {
+      // Clearly vertical intent — cancel and let scroll through
       cancelled.current = true;
     }
     // Otherwise: still ambiguous, wait for more movement
