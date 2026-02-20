@@ -9,7 +9,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, isToday } from "date-fns";
-import { MessageSquare, FileSearch, ChevronDown, Lock, LockOpen } from "lucide-react";
+import { MessageSquare, FileSearch, ChevronDown, Lock, LockOpen, ImageIcon } from "lucide-react";
 import { truncate } from "@/lib/feedback-utils";
 import { FeedbackMessageBody } from "@/components/FeedbackMessageBody";
 import { cn } from "@/lib/utils";
@@ -465,6 +465,9 @@ export default function Admin() {
                   >
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
                       <span className="text-muted-foreground font-mono">#{f.feedback_id}</span>
+                      {f.image_url && (
+                        <ImageIcon className="h-3 w-3 text-muted-foreground/60 flex-shrink-0" />
+                      )}
                       <span className="text-muted-foreground">{format(parseISO(f.created_at), "MMM d")}</span>
                       <span className="text-muted-foreground">User #{f.user_number}</span>
                       {!f.response && (
@@ -586,6 +589,9 @@ export default function Admin() {
                   >
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
                       <span className="text-muted-foreground font-mono">#{f.feedback_id}</span>
+                      {f.image_url && (
+                        <ImageIcon className="h-3 w-3 text-muted-foreground/60 flex-shrink-0" />
+                      )}
                       <span className="text-muted-foreground">{format(parseISO(f.created_at), "MMM d")}</span>
                       <span className="text-muted-foreground">User #{f.user_number}</span>
                       {f.resolved_reason === 'fixed' ? (
