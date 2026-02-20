@@ -287,6 +287,9 @@ function AskTrendsAIDialogInner({ mode, onOpenChange, initialView }: { mode: Mod
                       })(),
                     }}
                   />
+                  <p className="text-[10px] text-muted-foreground leading-snug">
+                    Not medical advice — consult a healthcare professional or registered dietitian for personal health guidance.
+                  </p>
                   <div className="flex gap-2">
                     <Button
                       variant="outline"

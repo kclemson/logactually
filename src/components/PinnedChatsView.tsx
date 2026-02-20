@@ -89,28 +89,33 @@ export function PinnedChatsView({ pinnedChats, onUnpin, onBack }: PinnedChatsVie
               </button>
 
               {isExpanded && (
-                <div
-                  className="text-xs text-foreground whitespace-pre-wrap leading-snug p-2 mt-1.5 rounded bg-background max-h-[40vh] overflow-y-auto [&_strong]:font-semibold"
-                  dangerouslySetInnerHTML={{
-                    __html: (() => {
-                      const escaped = chat.answer
-                        .replace(/&/g, "&amp;")
-                        .replace(/</g, "&lt;")
-                        .replace(/>/g, "&gt;")
-                        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-                      return escaped.replace(/((?:^|\n)(?:[*\-] .+(?:\n|$))+)/g, (block) => {
-                        const items = block
-                          .trim()
-                          .split("\n")
-                          .map((line) => line.replace(/^[*\-] /, "").trim())
-                          .filter(Boolean)
-                          .map((item) => `<li>${item}</li>`)
-                          .join("");
-                        return `\n<ul class="list-disc ml-4 my-1">${items}</ul>\n`;
-                      });
-                    })(),
-                  }}
-                />
+                <>
+                  <div
+                    className="text-xs text-foreground whitespace-pre-wrap leading-snug p-2 mt-1.5 rounded bg-background max-h-[40vh] overflow-y-auto [&_strong]:font-semibold"
+                    dangerouslySetInnerHTML={{
+                      __html: (() => {
+                        const escaped = chat.answer
+                          .replace(/&/g, "&amp;")
+                          .replace(/</g, "&lt;")
+                          .replace(/>/g, "&gt;")
+                          .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+                        return escaped.replace(/((?:^|\n)(?:[*\-] .+(?:\n|$))+)/g, (block) => {
+                          const items = block
+                            .trim()
+                            .split("\n")
+                            .map((line) => line.replace(/^[*\-] /, "").trim())
+                            .filter(Boolean)
+                            .map((item) => `<li>${item}</li>`)
+                            .join("");
+                          return `\n<ul class="list-disc ml-4 my-1">${items}</ul>\n`;
+                        });
+                      })(),
+                    }}
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-1 leading-snug">
+                    Not medical advice — consult a healthcare professional or registered dietitian for personal health guidance.
+                  </p>
+                </>
               )}
             </div>
           );
