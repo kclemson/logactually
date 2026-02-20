@@ -401,11 +401,6 @@ function CustomChartDialogInner({
                     <div className="w-full pointer-events-none">
                       <DynamicChart spec={opt.chartSpec} />
                     </div>
-                    {opt.chartDSL.aiNote && (
-                      <p className="text-[10px] text-muted-foreground px-2 pb-2 text-center leading-tight">
-                        {opt.chartDSL.aiNote}
-                      </p>
-                    )}
                   </button>
                 ))}
               </div>
