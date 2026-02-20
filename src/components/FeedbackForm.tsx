@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { useReadOnlyContext } from "@/contexts/ReadOnlyContext";
 import { MessageSquare, Trash2, ChevronDown, Paperclip, Camera, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -73,7 +74,9 @@ export function FeedbackForm() {
   const [followUp, setFollowUp] = useState("");
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [isScreenshoting, setIsScreenshoting] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [showPagePicker, setShowPagePicker] = useState(false);
+  const navigate = useNavigate();
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
     try {
       const stored = localStorage.getItem("feedback-expanded-ids");
@@ -133,9 +136,21 @@ export function FeedbackForm() {
     [handleFileSelected],
   );
 
-  const handleScreenshot = useCallback(async () => {
-    setIsScreenshoting(true);
+  const CAPTURABLE_PAGES = [
+    { label: "Food Log", path: "/" },
+    { label: "Exercise Log", path: "/weights" },
+    { label: "Trends", path: "/trends" },
+    { label: "History", path: "/history" },
+    { label: "Custom Log", path: "/custom" },
+  ];
+
+  const handleCapturePage = useCallback(async (path: string) => {
+    setShowPagePicker(false);
+    setIsCapturing(true);
     try {
+      navigate(path);
+      // Wait for React Router to render the route + data to load
+      await new Promise((resolve) => setTimeout(resolve, 600));
       const html2canvas = (await import("html2canvas")).default;
       const target = document.querySelector("main") as HTMLElement;
       if (!target) throw new Error("No <main> element found");
@@ -153,9 +168,10 @@ export function FeedbackForm() {
     } catch (err) {
       console.error("Screenshot failed:", err);
     } finally {
-      setIsScreenshoting(false);
+      navigate("/help");
+      setIsCapturing(false);
     }
-  }, [previewUrl]);
+  }, [navigate, previewUrl]);
 
   const handleSubmit = async () => {
     if (!message.trim()) return;
@@ -247,18 +263,34 @@ export function FeedbackForm() {
             Attach photo
           </button>
           <span className="text-muted-foreground/40 text-xs">·</span>
-          <button
-            type="button"
-            disabled={isReadOnly || isScreenshoting}
-            onClick={handleScreenshot}
-            className={cn(
-              "flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors",
-              (isReadOnly || isScreenshoting) && "opacity-50 pointer-events-none",
+          <div className="relative">
+            <button
+              type="button"
+              disabled={isReadOnly || isCapturing}
+              onClick={() => setShowPagePicker((v) => !v)}
+              className={cn(
+                "flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors",
+                (isReadOnly || isCapturing) && "opacity-50 pointer-events-none",
+              )}
+            >
+              <Camera className="h-3.5 w-3.5" />
+              {isCapturing ? "Capturing…" : "Screenshot a page"}
+            </button>
+            {showPagePicker && (
+              <div className="absolute left-0 top-5 z-50 bg-popover border border-border rounded-md shadow-md py-1 min-w-[140px]">
+                {CAPTURABLE_PAGES.map((page) => (
+                  <button
+                    key={page.path}
+                    type="button"
+                    onClick={() => handleCapturePage(page.path)}
+                    className="w-full text-left px-3 py-1.5 text-xs hover:bg-accent hover:text-accent-foreground transition-colors"
+                  >
+                    {page.label}
+                  </button>
+                ))}
+              </div>
             )}
-          >
-            <Camera className="h-3.5 w-3.5" />
-            {isScreenshoting ? "Capturing…" : "Screenshot this page"}
-          </button>
+          </div>
         </div>
 
         {/* Thumbnail preview */}
