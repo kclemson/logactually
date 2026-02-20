@@ -57,7 +57,8 @@ async function fetchFoodData(
     .from("food_entries")
     .select("eaten_date, food_items, created_at")
     .gte("eaten_date", startDate)
-    .order("eaten_date", { ascending: true });
+    .order("eaten_date", { ascending: true })
+    .order("created_at", { ascending: true });
 
   if (error) throw error;
 
@@ -156,7 +157,8 @@ async function fetchExerciseData(
     .from("weight_sets")
     .select("logged_date, exercise_key, description, sets, duration_minutes, distance_miles, exercise_metadata, created_at, exercise_subtype, entry_id")
     .gte("logged_date", startDate)
-    .order("logged_date", { ascending: true });
+    .order("logged_date", { ascending: true })
+    .order("created_at", { ascending: true });
 
   if (exerciseKeyFilter) {
     query = query.eq("exercise_key", exerciseKeyFilter);
