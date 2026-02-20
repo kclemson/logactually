@@ -124,6 +124,14 @@ export default {
             boxShadow: "inset 2px -2px 0 0 transparent, inset -2px 0 0 0 transparent",
           },
         },
+        "slide-in-from-right": {
+          "0%": { opacity: "0", transform: "translateX(24px)" },
+          "100%": { opacity: "1", transform: "translateX(0)" },
+        },
+        "slide-in-from-left": {
+          "0%": { opacity: "0", transform: "translateX(-24px)" },
+          "100%": { opacity: "1", transform: "translateX(0)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -132,6 +140,8 @@ export default {
         "outline-fade-top": "outline-fade-top 2.5s ease-out forwards",
         "outline-fade-middle": "outline-fade-middle 2.5s ease-out forwards",
         "outline-fade-bottom": "outline-fade-bottom 2.5s ease-out forwards",
+        "slide-in-from-right": "slide-in-from-right 0.2s ease-out",
+        "slide-in-from-left": "slide-in-from-left 0.2s ease-out",
       },
     },
   },

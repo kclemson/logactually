@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
+import { cn } from '@/lib/utils';
 import { DetailDialog, buildFoodDetailFields, FOOD_HIDE_WHEN_ZERO } from '@/components/DetailDialog';
 import { useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
@@ -25,7 +26,7 @@ import { findSimilarEntry, SimilarEntryMatch } from '@/lib/text-similarity';
 import { detectHistoryReference, MIN_SIMILARITY_REQUIRED } from '@/lib/history-patterns';
 import { detectRepeatedFoodEntry, isDismissed, dismissSuggestion, shouldShowOptOutLink, FoodSaveSuggestion } from '@/lib/repeated-entry-detection';
 import { FoodItem, SavedMeal, calculateTotals } from '@/types/food';
-import { getStoredDate, setStoredDate } from '@/lib/selected-date';
+import { getStoredDate, setStoredDate, getSwipeDirection, setSwipeDirection } from '@/lib/selected-date';
 import { useGroupPortionScale } from '@/hooks/useGroupPortionScale';
 import { getEffectiveDailyTarget, getExerciseAdjustedTarget, usesActualExerciseBurns, getCalorieTargetComponents } from '@/lib/calorie-target';
 import { useDailyCalorieBurn } from '@/hooks/useDailyCalorieBurn';
@@ -47,6 +48,8 @@ interface FoodLogContentProps {
 }
 
 const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
+  const mountDir = useRef(getSwipeDirection()).current;
+  setSwipeDirection(null);
   const [, setSearchParams] = useSearchParams();
   const dateNav = useDateNavigation(initialDate, setSearchParams);
   const [expandedEntryIds, setExpandedEntryIds] = useState<Set<string>>(new Set());
@@ -687,7 +690,11 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   );
 
   return (
-    <div className="space-y-4">
+    <div className={cn(
+      "space-y-4",
+      mountDir === 'left' && 'animate-slide-in-from-right',
+      mountDir === 'right' && 'animate-slide-in-from-left',
+    )}>
       {/* Food Input Section - At top */}
       <section>
         <LogInput

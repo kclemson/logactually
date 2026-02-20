@@ -1,4 +1,5 @@
 import { useRef, useCallback } from 'react';
+import { setSwipeDirection } from '@/lib/selected-date';
 
 const MIN_SWIPE_X = 40;
 const MAX_SWIPE_Y_RATIO = 0.6;
@@ -51,8 +52,10 @@ export function useSwipeNavigation(
     if (absDY / absDX > MAX_SWIPE_Y_RATIO) return;
 
     if (deltaX < 0) {
+      setSwipeDirection('left');
       onSwipeLeft();
     } else {
+      setSwipeDirection('right');
       onSwipeRight();
     }
   }, [onSwipeLeft, onSwipeRight]);

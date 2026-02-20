@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
+import { cn } from '@/lib/utils';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useSearchParams } from 'react-router-dom';
 import { format, isToday, parseISO } from 'date-fns';
@@ -20,7 +21,7 @@ import { LogEntryInput } from '@/components/LogEntryInput';
 import { MedicationEntryInput } from '@/components/MedicationEntryInput';
 import { CustomLogEntriesView } from '@/components/CustomLogEntriesView';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
-import { getStoredDate } from '@/lib/selected-date';
+import { getStoredDate, getSwipeDirection, setSwipeDirection } from '@/lib/selected-date';
 import { LOG_TEMPLATES, getTemplateUnit } from '@/lib/log-templates';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { Button } from '@/components/ui/button';
@@ -47,6 +48,8 @@ function getStoredViewMode(): ViewMode {
 }
 
 const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
+  const mountDir = useRef(getSwipeDirection()).current;
+  setSwipeDirection(null);
   const [, setSearchParams] = useSearchParams();
   const dateNav = useDateNavigation(initialDate, setSearchParams);
   const [createTypeOpen, setCreateTypeOpen] = useState(false);
@@ -169,7 +172,11 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   );
 
   return (
-    <div className="space-y-4">
+    <div className={cn(
+      "space-y-4",
+      mountDir === 'left' && 'animate-slide-in-from-right',
+      mountDir === 'right' && 'animate-slide-in-from-left',
+    )}>
       {/* Top section: matches LogInput height on Food/Exercise pages */}
       <section className="min-h-[148px] flex flex-col justify-center space-y-3">
         {!isReadOnly && (
