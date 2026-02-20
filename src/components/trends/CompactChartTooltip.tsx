@@ -71,6 +71,16 @@ export const CompactChartTooltip = ({
           ))}
         </p>
       )}
+      {payload[0]?.payload?._samples?.length > 0 && (
+        <div className="mt-1 pt-1 border-t border-border/40">
+          <p className="text-[9px] text-muted-foreground font-medium mb-0.5">Recent</p>
+          {(payload[0].payload._samples as string[]).map((sample, i) => (
+            <p key={i} className="text-[9px] text-muted-foreground leading-snug">
+              {sample}
+            </p>
+          ))}
+        </div>
+      )}
       {isTouchDevice && onGoToDay && rawDate && (
         <button 
           onClick={(e) => {

@@ -62,9 +62,10 @@ export interface DailyTotals {
     totalSaturatedFat: number;
     totalSodium: number;
     totalCholesterol: number;
+    recentSamples: string[];
   }>;
   /** Populated when groupBy === "item" and source === "exercise" */
-  exerciseByItem?: Record<string, { description: string; count: number; totalSets: number; totalDurationMinutes: number; totalDistanceMiles: number; totalCaloriesBurned: number; totalHeartRate: number; heartRateCount: number; uniqueDays: Set<string> }>;
+  exerciseByItem?: Record<string, { description: string; count: number; totalSets: number; totalDurationMinutes: number; totalDistanceMiles: number; totalCaloriesBurned: number; totalHeartRate: number; heartRateCount: number; uniqueDays: Set<string>; recentSamples: string[] }>;
   /** Populated when groupBy === "category" and source === "exercise" */
   exerciseByCategory?: Record<string, ExerciseDayTotals>;
 }
