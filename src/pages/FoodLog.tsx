@@ -773,7 +773,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       </section>
 
       {/* Swipe zone: DateNavigation + entries (swipe left = next day, swipe right = prev day) */}
-      <div ref={swipeHandlers.ref} onTouchStart={swipeHandlers.onTouchStart} onTouchEnd={swipeHandlers.onTouchEnd} style={{ touchAction: 'pan-y' }} className="min-h-[calc(100dvh-8rem)]">
+      <div ref={swipeHandlers.ref} onTouchStart={swipeHandlers.onTouchStart} onTouchEnd={swipeHandlers.onTouchEnd} style={{ touchAction: 'pan-y' }} className="min-h-[calc(100dvh-8rem)] md:min-h-0">
         <DateNavigation
           selectedDate={selectedDate}
           isTodaySelected={isTodaySelected}
