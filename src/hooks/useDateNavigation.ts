@@ -15,8 +15,10 @@ export function useDateNavigation(initialDate: string, setSearchParams: SetURLSe
   };
 
   const goToNextDay = () => {
-    const nextDate = format(addDays(selectedDate, 1), 'yyyy-MM-dd');
     const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const currentStr = format(selectedDate, 'yyyy-MM-dd');
+    if (currentStr >= todayStr) return; // already on today or future — do nothing
+    const nextDate = format(addDays(selectedDate, 1), 'yyyy-MM-dd');
     setStoredDate(nextDate);
     if (nextDate === todayStr) {
       setSearchParams({}, { replace: true });
