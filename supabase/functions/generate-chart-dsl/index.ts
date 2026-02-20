@@ -186,7 +186,7 @@ Each option must be a complete DSL object with a distinct aiNote. Maximum 3 opti
 
 DAY CLASSIFICATION:
 
-Use groupBy "dayClassification" when the user wants to partition their logged days into two labeled groups and count days in each group. This produces a 2-bar chart showing the count of days in each bucket. Examples: "rest days vs workout days", "high protein days vs low protein days", "leg day vs non-leg day", "days I only walked vs days I did more".
+Use groupBy "dayClassification" when the user wants to partition their logged days into two labeled groups and count days in each group. This produces a 2-bar chart showing the count of days in each bucket.
 
 When using dayClassification:
 - metric must still be set (use "entries" for exercise classification, or the relevant food metric for threshold)
@@ -224,8 +224,7 @@ If the user's request CANNOT be expressed using the available schema — specifi
 - Calories burned comparisons (e.g. "calories burned: cardio vs strength", "total calories burned") because exercise_metadata.calories_burned is only populated when the user explicitly typed a calorie value — estimated burn is computed server-side and is NOT available in this schema. Using this metric will produce near-zero or misleading results for almost all users.
 
 ...then respond with: { "unsupported": true, "reason": "One concise sentence explaining what the DSL can't express" }
-
-Do NOT use this for heart rate, common foods, exercise frequency, cardio vs strength, rest day classification, or any query that maps cleanly to the available metrics, groupBy options, and filters above.`;
+`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
