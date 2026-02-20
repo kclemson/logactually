@@ -1,90 +1,82 @@
 
-## Fix: "Screenshot this page" on the Help page is always self-referential
+## Fix: Screenshot thumbnail disappears after navigating back to /help
 
-### The problem
+### Root cause
 
-`FeedbackForm` lives on `/help`. When a user clicks "Screenshot this page", `html2canvas` captures the `<main>` element — which is the Help & Feedback page itself. That screenshot is almost never what the user wants; they want to capture their food log, trends, or weight page.
+In `handleCapturePage`, the `finally` block runs `navigate("/help")` immediately after `setAttachedFile` and `setPreviewUrl`. The problem is a React + React Router timing issue:
 
-### The solution: a page picker
+- `navigate("/help")` causes React Router to unmount and remount `FeedbackForm` (since the component is mounted under the `/help` route)
+- This unmount/remount happens before React has flushed the state updates from `setAttachedFile` / `setPreviewUrl`
+- The newly-mounted `FeedbackForm` starts with clean state — no attached file, no preview URL
 
-Instead of auto-capturing the current page (which is always `/help`), show a small inline picker of the app's main pages so the user can say "screenshot my Food Log" or "screenshot my Trends". When they pick one, the app:
+The navigation back to `/help` is essentially destroying the component that holds the state we just set.
 
-1. Navigates a hidden iframe (or uses `history.pushState` + `html2canvas` on the live DOM) to that route
-2. Captures it
+### The fix
 
-**Simpler, better approach — navigate away, capture, come back:**
+Move `navigate("/help")` to **after** the state is set, with a minimal `await` to let React flush the state before triggering the navigation. Specifically:
 
-The cleanest UX is a dropdown/select of named pages. When the user picks one:
+```ts
+const handleCapturePage = useCallback(async (path: string) => {
+  setShowPagePicker(false);
+  setIsCapturing(true);
+  try {
+    navigate(path);
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    const html2canvas = (await import("html2canvas")).default;
+    const target = document.querySelector("main") as HTMLElement;
+    if (!target) throw new Error("No <main> element found");
+    const canvas = await html2canvas(target, { useCORS: true, allowTaint: false, scale: 1, logging: false });
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+    const compressed = await compressImageToFile(dataUrl);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    
+    // Navigate back FIRST, then set state after a tick
+    navigate("/help");
+    await new Promise((resolve) => setTimeout(resolve, 50)); // let /help mount
+    setAttachedFile(compressed);
+    setPreviewUrl(fileToPreviewUrl(compressed));
+  } catch (err) {
+    console.error("Screenshot failed:", err);
+    navigate("/help");
+  } finally {
+    setIsCapturing(false);
+  }
+}, [navigate, previewUrl]);
+```
 
-1. Use `window.history.pushState` to silently change the URL to the target route (e.g. `/`)
-2. Re-render triggers React Router to mount the target page's content in `<main>`
-3. Call `html2canvas` on `<main>` after a short `requestAnimationFrame` delay
-4. Use `window.history.pushState` to restore `/help`
+Wait — this still has the same problem since `/help` mounting creates a new `FeedbackForm` instance.
 
-This is actually elegant — React Router renders the route immediately, no iframes needed.
+### The real fix: store the result in a ref that survives remount, or use sessionStorage
 
-**Alternatively (even simpler):** Just rename and reframe the button. Show a labelled picker: `📷 Capture page` → dropdown with named options. On selection, navigate away briefly, capture, return. This is fully self-contained in `FeedbackForm.tsx`.
+The cleanest solution: write the captured image blob to `sessionStorage` (as a base64 data URL) **before** navigating back, then read it on mount in `FeedbackForm` via a `useEffect`/initial state.
 
-### The named pages available
+Flow:
+1. Capture canvas → compress → `dataUrl`
+2. `sessionStorage.setItem("feedback-screenshot", dataUrl)` 
+3. `navigate("/help")`
+4. On mount, `FeedbackForm` checks `sessionStorage` for a pending screenshot, converts it to a `File`, sets `attachedFile` and `previewUrl`, then clears the sessionStorage key
 
-From `App.tsx`:
-- `/` → Food Log
-- `/weights` → Exercise Log  
-- `/trends` → Trends
-- `/history` → History
-- `/custom` → Custom Log
+This is robust because sessionStorage persists across component unmount/remount within the same tab.
 
 ### Implementation details
 
 #### `src/components/FeedbackForm.tsx`
 
-1. Replace the plain "Screenshot this page" button with a small inline selector:
-   - A button labelled "Capture a page screenshot"
-   - On click, shows a compact list of 5 named page options (Food Log, Exercise Log, Trends, History, Custom Log)
-2. When a page option is selected:
-   - Use `useNavigate` from `react-router-dom` to navigate to the target route
-   - Wait one animation frame for React Router to render the new route's content in `<main>`
-   - Call `html2canvas` on `<main>` 
-   - Navigate back to `/help`
-   - Set the captured image as the attachment
-3. The picker dismisses after selection (or on clicking elsewhere)
+1. In `handleCapturePage`: after capture and compression, instead of calling `setAttachedFile`/`setPreviewUrl` directly:
+   - Convert the `File` back to a base64 data URL
+   - Store it in `sessionStorage` under the key `"feedback-pending-screenshot"`
+   - Then `navigate("/help")`
+   - Remove the `setAttachedFile`/`setPreviewUrl` calls from this function entirely
 
-#### State additions
-- `showPagePicker: boolean` — controls whether the page list is shown
-- `isCapturing: boolean` — replaces `isScreenshoting`, shows "Capturing…" during the async flow
+2. In the component's initial state for `attachedFile` / `previewUrl` — or in a `useEffect` that runs once on mount:
+   - Check `sessionStorage.getItem("feedback-pending-screenshot")`
+   - If present, call `compressImageToFile(dataUrl)` to get a `File`, then `setAttachedFile` + `setPreviewUrl`
+   - Clear the sessionStorage key immediately after reading it
 
-#### No new dependencies needed
-`useNavigate` is already available from `react-router-dom` (already installed). `html2canvas` is already installed.
+3. Remove `navigate("/help")` from the `finally` block (it belongs in the success path and error path only).
 
 ### Files changed
 
 | File | Change |
 |---|---|
-| `src/components/FeedbackForm.tsx` | Replace "Screenshot this page" with a page-picker flow using `useNavigate` + `html2canvas` |
-
-### UX flow
-
-```text
-User types feedback on /help
-  ↓
-Clicks "📷 Capture a page screenshot"
-  ↓
-Compact inline list appears:
-  • Food Log
-  • Exercise Log
-  • Trends
-  • History
-  • Custom Log
-  ↓
-User taps "Food Log"
-  ↓
-App navigates to /, waits one frame, captures <main>, navigates back to /help
-  ↓
-Thumbnail preview appears in form
-  ↓
-User sends feedback with screenshot attached
-```
-
-### Edge case: navigation delay
-
-Some pages (Food Log, Trends) load data asynchronously. To handle this, after navigating we wait ~400ms (a `setTimeout`) before capturing — long enough for the skeleton/loading state to pass in most cases, short enough to feel instant. We can also show "Capturing Food Log…" during this wait.
+| `src/components/FeedbackForm.tsx` | Store screenshot in sessionStorage before navigating, read it on mount |
