@@ -1,42 +1,67 @@
 
-## Tag Ask AI logs with [dev] vs [user]
+## Add "calories remaining" to the food log tooltip — today only
 
-### The problem
+### The user's feedback
 
-The edge function has no structured logging for incoming questions, so there's no way to tell from Supabase logs whether a given "Ask AI" call came from you (admin) or a real user.
+> "Should the food log and summaries tell you the delta between your consumption and goal? I find myself doing this math in my head to determine my budget."
 
-### The fix
+This is a great, low-effort improvement. The tooltip on the Total row of the food log already shows the calorie target math — adding a remaining line directly answers this without cluttering the main UI.
 
-Add a single `console.log` line in the edge function, just before the AI call, that emits the question alongside a `[dev]` or `[user]` tag — determined server-side by calling the existing `has_role` DB function.
+### What will change
 
-Example log output:
+A new line appears at the bottom of the daily section of the tooltip, **only when viewing today's date**:
+
 ```
-[user] food: "How has my diet changed over the past month?"
-[dev]  exercise: "What exercises should I do more often?"
-```
-
-### How it works
-
-After the userId is extracted from the JWT (line 40), add one DB call:
-
-```ts
-const { data: isAdmin } = await supabase
-  .rpc('has_role', { _user_id: userId, _role: 'admin' });
-const tag = isAdmin ? '[dev]' : '[user]';
+remaining:  122 cal
 ```
 
-Then, right before the AI gateway fetch (after the prompt is built), add:
+- If calories remaining is **negative** (over target), it shows in rose/red: `over by 122 cal`
+- If zero or positive, it shows in green: `122 cal remaining`
+- It sits below the target equation, separated by a subtle divider — before the weekly section
 
-```ts
-console.log(`${tag} ${mode}: "${question}"`);
+### Why "today only"
+
+- For past days, the day is done — "remaining" is meaningless (you can't eat more yesterday)
+- The History page tooltip already uses `label` (e.g., "Mon") to show the day, and doesn't need this
+- This matches how every fitness app handles it: remaining budget is a live, forward-looking number
+
+### Technical approach
+
+**Step 1 — `CalorieTargetTooltipContent.tsx`**
+
+Add an optional `showRemaining?: boolean` prop. When true, render a new block after the target equation:
+
+```tsx
+{showRemaining && target > 0 && (() => {
+  const remaining = target - intake;
+  const isOver = remaining < 0;
+  return (
+    <>
+      <div className="border-t border-border my-1 -mx-3" />
+      <div className={`tabular-nums ${isOver ? 'text-rose-400' : 'text-green-400'}`}>
+        {isOver
+          ? `over by ${Math.abs(remaining).toLocaleString()} cal`
+          : `${remaining.toLocaleString()} cal remaining`}
+      </div>
+    </>
+  );
+})()}
 ```
 
-That's it — two additions to `supabase/functions/ask-trends-ai/index.ts`. No client-side changes needed, no new tables, no trust issues (the tag is decided by the server using the same role check the Admin page uses).
+**Step 2 — `FoodItemsTable.tsx`**
 
-The logs are visible in the Supabase edge function logs for `ask-trends-ai`.
+Add an optional `isToday?: boolean` prop, and pass `showRemaining={isToday}` down to `CalorieTargetTooltipContent`.
+
+**Step 3 — `FoodLog.tsx`**
+
+Pass `isToday={isTodaySelected}` to the `FoodItemsTable` call (already has `isTodaySelected` in scope).
 
 ### Files changed
 
 | File | Change |
 |---|---|
-| `supabase/functions/ask-trends-ai/index.ts` | Check `has_role` after auth, store result as `tag`, add one `console.log` before the AI call |
+| `src/components/CalorieTargetTooltipContent.tsx` | Add `showRemaining` prop; render remaining/over line with color coding after the target equation |
+| `src/components/FoodItemsTable.tsx` | Add `isToday` prop; pass `showRemaining={isToday}` to tooltip |
+| `src/pages/FoodLog.tsx` | Pass `isToday={isTodaySelected}` to `FoodItemsTable` |
+
+No new hooks, no database changes, no new queries — all the data is already in the tooltip.
