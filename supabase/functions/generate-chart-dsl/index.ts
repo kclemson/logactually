@@ -39,7 +39,8 @@ You MUST respond with ONLY a valid JSON object (no markdown, no code fences). Th
   } or null,
 
   "sort": "label" | "value_asc" | "value_desc" or null,
-  "limit": <positive integer or null>
+  "limit": <positive integer or null>,
+  "window": <positive integer or null>
 }
 
 DATABASE SCHEMA (what the client can query):
@@ -100,6 +101,9 @@ GROUP BY OPTIONS:
 - "week": one point per ISO week
 - "item": one bucket per distinct food item (by description) or exercise (by exercise_key). Use for "most common foods", "top exercises", "what do I eat most", etc. Pair with aggregation=count for frequency, or sum for totals.
 - "category": EXERCISE SOURCE ONLY. Groups exercises into two buckets: "Cardio" and "Strength". Use for "cardio vs strength split", "cardio vs weights", "training type breakdown". Pair with sum for totals (e.g. total calories burned, total sets, total duration).
+
+ROLLING WINDOW:
+- "window": <positive integer or null> — ONLY valid when groupBy is "date" or "week". Applies a trailing N-period rolling average to smooth the data. Use whenever the user says "rolling average", "7-day average", "smoothed", "trend line", "moving average", or similar. Example: window=7 for a 7-day trailing average. Omit (or null) when the user wants raw daily/weekly values.
 
 FILTER OPTIONS:
 - exerciseKey: filter exercise data to a specific exercise_key (e.g. "bench_press")

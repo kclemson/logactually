@@ -178,6 +178,14 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
           _details: details,
         };
       });
+      // Apply rolling window if requested
+      if (dsl.window && dsl.window > 1) {
+        for (let i = 0; i < dataPoints.length; i++) {
+          const start = Math.max(0, i - dsl.window + 1);
+          const slice = dataPoints.slice(start, i + 1).map((p) => p.value);
+          dataPoints[i].value = Math.round(slice.reduce((a, b) => a + b, 0) / slice.length);
+        }
+      }
       break;
     }
     case "dayOfWeek": {
@@ -232,6 +240,14 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
           value: Math.round(aggregate(buckets[weekKey], dsl.aggregation)),
           _details: [{ label: "days", value: String(buckets[weekKey].length) }],
         });
+      }
+      // Apply rolling window if requested
+      if (dsl.window && dsl.window > 1) {
+        for (let i = 0; i < dataPoints.length; i++) {
+          const start = Math.max(0, i - dsl.window + 1);
+          const slice = dataPoints.slice(start, i + 1).map((p) => p.value);
+          dataPoints[i].value = Math.round(slice.reduce((a, b) => a + b, 0) / slice.length);
+        }
       }
       break;
     }
