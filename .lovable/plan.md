@@ -1,80 +1,78 @@
 
-## Two fixes: eliminate phantom scroll + improve swipe reliability on History
+## Fix swipe detection: ratio-based locking instead of pixel comparison
 
-### Problem 1: Phantom vertical scrollbar on the calendar page
+### Why the current logic fails
 
-Looking at your screenshot, there is a large empty area below the calendar grid. This blank space exists because:
+The current decision in `handleTouchMove` is:
 
-- `Layout.tsx` wraps everything in `<div className="min-h-screen">`, which is correct
-- But the `<main>` element inside has `pb-20` (bottom padding) for the bottom nav, and no `height` constraint
-- The browser considers the page taller than the viewport even when no real content overflows, so **scrolling is technically possible** — and the browser honours touch events as potential scrolls
-
-This phantom scrollability is the core reason swiping on the calendar is unreliable: the browser sees a scrollable page and competes with the horizontal swipe.
-
-**Fix**: Make the History page fill the viewport exactly — no more, no less. The page should not scroll at all. The approach is to give the History route a fixed-height layout that fills the available space between the header and the bottom nav, rather than using the default `min-h-screen` with padding approach.
-
-The cleanest way without reworking Layout globally is to:
-1. Give the outer `Layout` container `overflow-hidden` or `h-screen` on the History route
-2. Or — simpler and more targeted — constrain the `main` element on mobile so it doesn't overflow
-
-Actually the simplest and most contained fix: in `History.tsx`, add `touch-action: pan-y` override to `none` on the swipe container, and separately ensure the page body itself cannot scroll by using `overflow: hidden` on the `html`/`body` when on the History route — but that's invasive.
-
-**Better approach**: Use a CSS `touch-action` property. On the swipe container div, set `touch-action: pan-y` (which is what the browser defaults to) — but actually we want `touch-action: none` on this container so the browser doesn't even try to scroll and our JS handler has full control. This is the cleanest fix and it's supported on all modern mobile browsers.
-
-```tsx
-// In History.tsx, the swipe zone div:
-<div
-  ref={swipeHandlers.ref}
-  onTouchStart={swipeHandlers.onTouchStart}
-  onTouchEnd={swipeHandlers.onTouchEnd}
-  style={{ touchAction: 'none' }}  // ← browser yields all touch to JS
->
+```
+LOCK if: dx >= 8px AND dx >= dy        ← "horizontal is winning by any amount"
+CANCEL if: dy >= 10px AND dy > dx      ← "vertical is winning by any amount"
 ```
 
-`touch-action: none` tells the browser: "don't handle any default touch behaviours on this element (no scroll, no zoom) — JavaScript owns all of it." This is the standard approach used by every touch interaction library (Swiper, Framer Motion, react-use-gesture, etc.) and is more reliable than fighting with passive/non-passive listeners.
+On a real phone, the first few millimeters of finger movement are almost never perfectly horizontal. A typical horizontal swipe starts with a tiny diagonal drift — so at the moment `dx` first crosses 8px, `dy` might be 9px. The lock condition fails (`dx >= dy` is false). Then `dy` hits 10px, the cancel condition fires, and the swipe is gone — even though the user was clearly swiping sideways.
 
-### Problem 2: The phantom scroll area (empty space below calendar)
+The session replay confirms this: the clearly horizontal swipe (158px X / 34px Y overall) likely still failed because the *early* movement had more vertical drift before the horizontal direction was established.
 
-Separately from the swipe fix, the blank space below the calendar should be eliminated. This is because the `main` element in `Layout.tsx` renders with `min-h-screen` on the outer div, pushing its minimum height to the viewport size — but for the calendar view there's no content to fill it.
+### The fix: ratio-based intent detection
 
-The fix here is also simple: on the swipe container div in History, add `min-h-[calc(100dvh-10rem)]` or similar so the calendar fills the space and there's simply nothing to scroll to. Actually even simpler: set `overflow: hidden` on the page-level wrapper when content is shorter than the viewport.
+Instead of comparing raw `dx` vs `dy` at a single fixed pixel threshold, use the **angle of movement** — the ratio of `dx` to `dy`. This is insensitive to total distance traveled and accurately captures intent from the very start of the gesture.
 
-The cleanest solution for both problems combined: set `touch-action: none` on the swipe zone (solves swipe reliability) and add `overscroll-behavior: none` on the body (or the swipe container) to prevent the browser from activating scroll momentum. Together these completely eliminate the phantom scroll competition.
+```
+LOCK if: dx >= 10px AND dx/dy > 1.5   ← "moving at least 56° from vertical"
+CANCEL if: dy >= 15px AND dy/dx > 2.5 ← "moving at least 68° from horizontal"
+```
 
-### What changes
+In plain English:
+- If the finger has moved 10px sideways and the horizontal distance is 1.5× the vertical distance, it's a swipe — lock it immediately.
+- Only cancel for vertical scroll if the gesture is strongly vertical (2.5:1 ratio), giving swipes much more room to start slightly off-angle.
 
-**`src/pages/History.tsx`** — add `style={{ touchAction: 'none' }}` to the swipe zone `div`. This is a one-line change that gives JS full ownership of touch events within the calendar, completely bypassing the passive/non-passive listener battle.
+The asymmetry is intentional: we require a less strict ratio to claim a swipe (1.5:1) than to cancel one (2.5:1). This means swipes win ties.
 
-**`src/hooks/useSwipeNavigation.ts`** — the `touch-action: none` approach means `e.preventDefault()` in the non-passive `touchmove` listener becomes redundant (since the browser won't try to scroll in the first place), but keeping it is harmless and adds a belt-and-suspenders guarantee.
+### The `touchend` check also needs loosening
 
-**`src/pages/FoodLog.tsx`, `WeightLog.tsx`, `OtherLog.tsx`** — apply the same `touch-action: none` on their swipe zone divs for consistency and improved reliability on those pages too.
+The final check in `onTouchEnd` also rejects gestures where `absDY / absDX > 0.6`. This means if the total swipe was 100px horizontal and 62px vertical (a 31° angle), it still gets rejected. On a phone, a natural swipe can easily be that diagonal.
 
-### Technical details
+Change `MAX_SWIPE_Y_RATIO` from `0.6` to `1.0`. This allows swipes up to 45° off-horizontal, which is the standard used by most swipe libraries. The initial lock logic already ensures that very vertical gestures never reach this point.
 
-`touch-action: none` is distinct from `pointer-events: none` — it doesn't prevent clicks or taps, it only tells the browser not to handle scroll/zoom gestures natively. Buttons and taps within the swipe zone will continue to work perfectly.
+### All threshold changes at a glance
 
-The one thing `touch-action: none` prevents is the user scroll-overscrolling to refresh (pull-to-refresh from the OS). Since the History page has no content to scroll, this is desirable. On the day-log pages (Food/Weight/Other), the content can be long — but those pages have their own vertical scrollability through the normal browser mechanism because their swipe zones are just one section of the page rather than the full page.
+| Constant | Old value | New value | Reason |
+|---|---|---|---|
+| `HORIZONTAL_LOCK_PX` | 8px | 10px | Slightly more movement before locking, but ratio check means it's still fast |
+| `VERTICAL_CANCEL_PX` | 10px | 15px | Give more grace before cancelling — swipes often start a bit vertical |
+| `MIN_SWIPE_X` | 40px | 30px | Lower minimum so shorter deliberate swipes work |
+| `MAX_SWIPE_Y_RATIO` | 0.6 | 1.0 | Allow swipes up to 45° off-axis at touchend |
+| Horizontal lock ratio | `dx >= dy` (1:1) | `dx/dy > 1.5` | Require clear directional intent, not just winning by 1px |
+| Vertical cancel ratio | `dy > dx` (1:1) | `dy/dx > 2.5` | Only cancel if strongly vertical |
 
-Actually wait — for Food/Weight/Other, the entire page content is inside the swipe zone div. Setting `touch-action: none` there would break vertical scrolling on those pages when they have many entries. So for those pages, we should use `touch-action: pan-y` instead, which allows vertical scrolling but disables horizontal panning — meaning horizontal swipes go directly to our JS handler.
+### New `handleTouchMove` logic
 
-| Page | touch-action value | Effect |
-|---|---|---|
-| History (calendar) | `none` | Full JS control — no scroll competition |
-| FoodLog / WeightLog / OtherLog | `pan-y` | Vertical scroll still works, horizontal is JS-only |
+```ts
+const handleTouchMove = useCallback((e: TouchEvent) => {
+  if (cancelled.current) return;
+  if (locked.current) {
+    e.preventDefault();
+    return;
+  }
 
-`pan-y` is the ideal value for the day-log pages: it explicitly tells the browser "vertical scrolling is fine, but don't handle horizontal touch movement — give it to JS."
+  const dx = Math.abs(e.touches[0].clientX - startX.current);
+  const dy = Math.abs(e.touches[0].clientY - startY.current);
 
-### Summary of file changes
+  if (dx >= HORIZONTAL_LOCK_PX && (dy === 0 || dx / dy > HORIZONTAL_RATIO)) {
+    // Clearly horizontal intent — lock and claim the gesture
+    locked.current = true;
+    e.preventDefault();
+  } else if (dy >= VERTICAL_CANCEL_PX && (dx === 0 || dy / dx > VERTICAL_RATIO)) {
+    // Clearly vertical intent — cancel and let scroll through
+    cancelled.current = true;
+  }
+  // Otherwise: still ambiguous, keep waiting
+}, []);
+```
 
-| File | Change |
-|---|---|
-| `src/pages/History.tsx` | Add `style={{ touchAction: 'none' }}` to the swipe zone div |
-| `src/pages/FoodLog.tsx` | Add `style={{ touchAction: 'pan-y' }}` to the swipe zone div |
-| `src/pages/WeightLog.tsx` | Same |
-| `src/pages/OtherLog.tsx` | Same |
+The `dy === 0` guard prevents division by zero on a perfectly horizontal movement (which should immediately lock).
 
-That's it. Four one-line additions. No logic changes, no hook changes, no restructuring.
+### Files changed
 
-### Why this is safer and simpler than what was already done
-
-The previous fix (non-passive `touchmove` listener) correctly solves *part* of the problem — it lets `e.preventDefault()` actually work once horizontal intent is detected. But `touch-action` is applied *before* any JavaScript runs — it's a CSS hint to the browser's native compositor. It short-circuits the whole passive-listener problem at the source rather than fighting it in JS. Using both together is belt-and-suspenders and the combination is exactly what Framer Motion's `drag` and Swiper.js use internally.
+Only **one file** changes: `src/hooks/useSwipeNavigation.ts`. The four page files do not need any changes — `touch-action` stays exactly as it is.
