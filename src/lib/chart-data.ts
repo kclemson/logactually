@@ -176,6 +176,7 @@ async function fetchExerciseData(
     needsItem ? {} : undefined;
   const exerciseByCategory: Record<string, ExerciseDayTotals> | undefined =
     needsCategory ? {} : undefined;
+  // Always populated — stores plain keys AND "key:subtype" compound tokens per day
   const seenKeys: Record<string, Set<string>> = {};
   const seenEntries: Record<string, Set<string>> = {};
 
@@ -250,8 +251,12 @@ async function fetchExerciseData(
     existing.distance_miles += setTotals.distance_miles;
     existing.calories_burned += setTotals.calories_burned;
     if (rowHeartRate != null) existing.heart_rate += rowHeartRate;
-    (seenKeys[date] ??= new Set()).add(row.exercise_key);
-    existing.unique_exercises = seenKeys[date].size;
+    const keySet = (seenKeys[date] ??= new Set());
+    keySet.add(row.exercise_key);
+    if (row.exercise_subtype) {
+      keySet.add(`${row.exercise_key}:${row.exercise_subtype}`);
+    }
+    existing.unique_exercises = [...keySet].filter(k => !k.includes(":")).length;
     (seenEntries[date] ??= new Set()).add(row.entry_id);
     existing.entries = seenEntries[date].size;
     exercise[date] = existing;
@@ -263,5 +268,11 @@ async function fetchExerciseData(
     }
   }
 
-  return { food: {}, exercise, exerciseByHour, exerciseByItem, exerciseByCategory };
+  // Convert seenKeys Sets to plain arrays for serialization
+  const exerciseKeysByDate: Record<string, string[]> = {};
+  for (const [date, set] of Object.entries(seenKeys)) {
+    exerciseKeysByDate[date] = [...set];
+  }
+
+  return { food: {}, exercise, exerciseByHour, exerciseByItem, exerciseByCategory, exerciseKeysByDate };
 }

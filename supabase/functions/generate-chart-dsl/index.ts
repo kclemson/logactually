@@ -23,7 +23,7 @@ You MUST respond with ONLY a valid JSON object (no markdown, no code fences). Th
   "metric": "<metric key>",
   "derivedMetric": "<derived metric key or null>",
 
-  "groupBy": "date" | "dayOfWeek" | "hourOfDay" | "weekdayVsWeekend" | "week" | "item" | "category",
+  "groupBy": "date" | "dayOfWeek" | "hourOfDay" | "weekdayVsWeekend" | "week" | "item" | "category" | "dayClassification",
   "aggregation": "sum" | "average" | "max" | "min" | "count",
 
   "filter": {
@@ -36,6 +36,15 @@ You MUST respond with ONLY a valid JSON object (no markdown, no code fences). Th
   "compare": {
     "metric": "<metric key>",
     "source": "food" | "exercise"
+  } or null,
+
+  "classify": {
+    "rule": "any_strength" | "all_cardio" | "any_cardio" | "any_key" | "only_keys" | "threshold",
+    "keys": ["exerciseKey" or "exerciseKey:subtype", ...] or null,
+    "thresholdValue": <number> or null,
+    "thresholdOp": "gte" | "lte" | "gt" | "lt" or null,
+    "trueLabel": "Label for matching days",
+    "falseLabel": "Label for non-matching days"
   } or null,
 
   "sort": "label" | "value_asc" | "value_desc" or null,
@@ -175,17 +184,68 @@ Each option must be a complete DSL object with a distinct aiNote. Maximum 3 opti
 
 **Single-series constraint:** The DSL renders one data series only. When the user wants to compare two subtypes (e.g. "walking vs running"), only groupBy "item" can show them side by side — never offer groupBy "date" as an alternative interpretation, because it collapses both subtypes into a single line and loses the comparison.
 
+DAY CLASSIFICATION:
+
+Use groupBy "dayClassification" when the user wants to partition their logged days into two labeled groups and count days in each group. This produces a 2-bar chart showing the count of days in each bucket. Examples: "rest days vs workout days", "high protein days vs low protein days", "leg day vs non-leg day", "days I only walked vs days I did more".
+
+When using dayClassification:
+- metric must still be set (use "entries" for exercise classification, or the relevant food metric for threshold)
+- aggregation must be "count"
+- A "classify" object is required with:
+  - rule: one of the six rules below
+  - trueLabel: label for days matching the condition (e.g. "Workout Days")
+  - falseLabel: label for days NOT matching (e.g. "Rest Days")
+- Days with NO logged activity in the period are excluded from both buckets
+
+THE SIX CLASSIFICATION RULES (exercise source unless noted):
+
+1. "any_strength" — TRUE if ANY exercise logged that day has isCardio=false (i.e. it's a strength/weight exercise). Best universal definition of "workout day". Use when the user says "workout days", "training days", "days I lifted".
+
+2. "all_cardio" — TRUE if ALL exercises logged that day are cardio (no strength). Use when the user says "cardio-only days", "days I only did cardio".
+
+3. "any_cardio" — TRUE if ANY cardio exercise was logged that day. Use when the user says "days I did cardio", "days that included cardio".
+
+4. "any_key" — TRUE if ANY of the specified keys[] appears in that day's log. Use when the user says "at least one", "any day I did", "days that included", "days I did [exercise]". keys[] entries can be plain keys ("squat") or "key:subtype" tokens ("walk_run:running").
+
+5. "only_keys" — TRUE if EVERY exercise logged that day is within the keys[] allowlist. This is the inverse of any_key. Use when the user says "only", "nothing but", "exclusively", "just walked". This is the correct rule for defining "rest days" in terms of a low-intensity allowlist.
+   - keys[] supports two token formats:
+     - "walk_run" — matches any walk_run entry regardless of subtype
+     - "walk_run:walking" — matches ONLY walk_run entries where exercise_subtype = 'walking'
+     - "walk_run:hiking" — matches ONLY hiking entries
+   - A day is TRUE only if every single exercise token on that day is covered by an allowlist entry
+   - Known subtypes for walk_run: "walking", "running", "hiking"
+   - Known subtypes for cycling: "indoor", "outdoor"
+   - Ad-hoc/unknown exercise keys (like "gardening", "yard_work") will NOT match any canonical key, so they correctly fail the only_keys test unless explicitly included in keys[]
+   - Example for "my rest days = only walking or gardening": keys: ["walk_run:walking", "walk_run:hiking", "other"]
+
+6. "threshold" — TRUE if the daily food metric meets thresholdOp + thresholdValue. Source must be "food". Use for "high protein days", "days over my calorie goal", "low carb days". Requires thresholdValue (number) and thresholdOp ("gte" | "lte" | "gt" | "lt").
+
+RULE SELECTION GUIDE:
+- User says "only walking" / "exclusively" / "nothing but" → only_keys
+- User says "at least one [exercise]" / "any day I did" / "leg day" → any_key
+- User says "workout day" / "training day" / "day I lifted" → any_strength
+- User says "cardio only day" → all_cardio
+- User says "days I did cardio" → any_cardio
+- User says "high [food metric] days" / "over [number]g protein" → threshold (food source)
+
+CLASSIFICATION EXAMPLES:
+- "rest days vs workout days" → rule: "any_strength", trueLabel: "Workout Days", falseLabel: "Rest Days", source: "exercise"
+- "my rest days (I consider only walking to be rest)" → rule: "only_keys", keys: ["walk_run:walking", "walk_run:hiking"], trueLabel: "Rest Days", falseLabel: "Active Days", source: "exercise"
+- "high protein days vs low" → rule: "threshold", thresholdValue: 150, thresholdOp: "gte", trueLabel: "High Protein", falseLabel: "Low Protein", source: "food", metric: "protein"
+- "leg day vs non-leg day" → rule: "any_key", keys: ["squat","leg_press","leg_extension","leg_curl","romanian_deadlift","lunge","bulgarian_split_squat","hack_squat"], trueLabel: "Leg Days", falseLabel: "Non-Leg Days", source: "exercise"
+- "days I ran vs days I only walked" → rule: "any_key", keys: ["walk_run:running"], trueLabel: "Running Days", falseLabel: "Walking-only Days", source: "exercise"
+
 UNSUPPORTED REQUEST:
 
 If the user's request CANNOT be expressed using the available schema — specifically:
 - Filtering food by description content (e.g. "candy", "chocolate", "fried") since there is no category or tag column on food items, only free-text descriptions
-- Gap or streak analysis (e.g. "rest days between workouts", "longest streak") since this requires lag/window operations not expressible in the DSL
+- Streak counting / consecutive day analysis (e.g. "longest streak", "current streak") since this requires lag/window operations not expressible in the DSL
 - Meal-level grouping (e.g. "which meals have most calories") since there is no meal entity in the schema
 - Calories burned comparisons (e.g. "calories burned: cardio vs strength", "total calories burned") because exercise_metadata.calories_burned is only populated when the user explicitly typed a calorie value — estimated burn is computed server-side and is NOT available in this schema. Using this metric will produce near-zero or misleading results for almost all users.
 
 ...then respond with: { "unsupported": true, "reason": "One concise sentence explaining what the DSL can't express" }
 
-Do NOT use this for heart rate, common foods, exercise frequency, cardio vs strength, or any query that maps cleanly to the available metrics, groupBy options, and filters above.`;
+Do NOT use this for heart rate, common foods, exercise frequency, cardio vs strength, rest day classification, or any query that maps cleanly to the available metrics, groupBy options, and filters above.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
