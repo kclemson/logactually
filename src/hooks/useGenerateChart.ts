@@ -8,6 +8,15 @@ import { executeDSL } from "@/lib/chart-dsl";
 // Re-export types for backward compat
 export type { DailyTotals } from "@/lib/chart-types";
 
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms / 1000}s. Please try again.`)), ms)
+    ),
+  ]);
+}
+
 interface GenerateChartParams {
   messages: Array<{ role: "user" | "assistant"; content: string }>;
   period: number;
@@ -31,9 +40,11 @@ export function useGenerateChart() {
       // ── v2: lightweight DSL edge function + client-side data ──
       if (mode === "v2") {
         // Step 1: Get DSL from AI (no user data sent)
-        const { data: dslData, error: dslError } = await supabase.functions.invoke("generate-chart-dsl", {
-          body: { messages, period },
-        });
+        const { data: dslData, error: dslError } = await withTimeout(
+          supabase.functions.invoke("generate-chart-dsl", { body: { messages, period } }),
+          25_000,
+          "Chart schema generation"
+        );
 
         if (dslError) throw dslError;
         if (dslData?.error) throw new Error(dslData.error);
@@ -41,22 +52,29 @@ export function useGenerateChart() {
         // v2 self-reported unsupported — transparently fall back to v1
         if (dslData?.unsupported) {
           console.log("[generate-chart] v2 unsupported, falling back to v1:", dslData.reason);
-          const { data, error } = await supabase.functions.invoke("generate-chart", {
-            body: { messages, period },
-          });
+          const { data, error } = await withTimeout(
+            supabase.functions.invoke("generate-chart", { body: { messages, period } }),
+            30_000,
+            "Chart generation"
+          );
           if (error) throw error;
           if (data?.error) throw new Error(data.error);
           const dailyTotals = data.dailyTotals ?? { food: {}, exercise: {} };
           if (!data?.chartSpec) throw new Error("No chart specification returned");
           return { chartSpec: data.chartSpec as ChartSpec, dailyTotals, usedFallback: true };
         }
+
         // Multi-option (disambiguation) path
         if (dslData?.chartDSLOptions) {
           const options = dslData.chartDSLOptions as ChartDSL[];
           console.log("[generate-chart] v2 DSL options:", options);
           const resolved = await Promise.all(
             options.map(async (dsl) => {
-              const dt = await fetchChartData(supabase, dsl, period);
+              const dt = await withTimeout(
+                fetchChartData(supabase, dsl, period),
+                15_000,
+                "Chart data fetch"
+              );
               return { chartSpec: executeDSL(dsl, dt), chartDSL: dsl, dailyTotals: dt };
             })
           );
@@ -74,7 +92,11 @@ export function useGenerateChart() {
         console.log("[generate-chart] v2 DSL:", chartDSL);
 
         // Step 2: Fetch data client-side based on the DSL
-        const dailyTotals = await fetchChartData(supabase, chartDSL, period);
+        const dailyTotals = await withTimeout(
+          fetchChartData(supabase, chartDSL, period),
+          15_000,
+          "Chart data fetch"
+        );
 
         // Step 3: Execute DSL against local data
         const chartSpec = executeDSL(chartDSL, dailyTotals);
@@ -83,9 +105,11 @@ export function useGenerateChart() {
       }
 
       // ── v1: legacy edge function (unchanged) ──
-      const { data, error } = await supabase.functions.invoke("generate-chart", {
-        body: { messages, period },
-      });
+      const { data, error } = await withTimeout(
+        supabase.functions.invoke("generate-chart", { body: { messages, period } }),
+        30_000,
+        "Chart generation"
+      );
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
