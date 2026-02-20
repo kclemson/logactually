@@ -35,9 +35,9 @@ const ALL_CHIPS: Chip[] = [
   { label: "Which exercises do I do most often?", mode: "v2" },
   // v1 — requires AI to semantically interpret, join domains, or filter by description
   { label: "Which meals have the most calories?", mode: "v1" },
-  { label: "My most common foods", mode: "v1" },
+  { label: "My most common foods", mode: "v2" },
   { label: "Average calories on workout days vs rest days", mode: "v1" },
-  { label: "Average heart rate by exercise", mode: "v1" },
+  { label: "Average heart rate by exercise", mode: "v2" },
   { label: "Rest days between workouts", mode: "v1" },
 ];
 
@@ -125,12 +125,17 @@ function CustomChartDialogInner({
         setChartOptions(result.chartOptions);
         setCurrentSpec(null);
       } else {
+        const actualMode = result.usedFallback ? "v1" : mode;
+        if (result.usedFallback) {
+          setMode("v1");
+          localStorage.setItem("chart-mode", "v1");
+        }
         setCurrentSpec(result.chartSpec);
         setDailyTotals(result.dailyTotals);
         setChartDSL(result.chartDSL ?? null);
         setChartOptions(null);
-        setVerification(mode === "v2" ? null : verifyChartData(result.chartSpec, result.dailyTotals));
-        setResultMode(mode);
+        setVerification(actualMode === "v2" ? null : verifyChartData(result.chartSpec, result.dailyTotals));
+        setResultMode(actualMode);
       }
       setRefining(false);
     } catch (err) {
@@ -175,12 +180,17 @@ function CustomChartDialogInner({
         setChartOptions(result.chartOptions);
         setCurrentSpec(null);
       } else {
+        const actualMode = result.usedFallback ? "v1" : effectiveMode;
+        if (result.usedFallback) {
+          setMode("v1");
+          localStorage.setItem("chart-mode", "v1");
+        }
         setCurrentSpec(result.chartSpec);
         setDailyTotals(result.dailyTotals);
         setChartDSL(result.chartDSL ?? null);
         setChartOptions(null);
-        setVerification(effectiveMode === "v2" ? null : verifyChartData(result.chartSpec, result.dailyTotals));
-        setResultMode(effectiveMode);
+        setVerification(actualMode === "v2" ? null : verifyChartData(result.chartSpec, result.dailyTotals));
+        setResultMode(actualMode);
       }
     } catch (err) {
       console.error("[generate-chart] mutation error:", err);

@@ -21,6 +21,8 @@ export interface GenerateChartResult {
   chartDSL?: ChartDSL;
   /** Populated when AI returned multiple interpretations (v2 only) */
   chartOptions?: Array<{ chartSpec: ChartSpec; chartDSL: ChartDSL; dailyTotals: DailyTotals }>;
+  /** True when v2 was requested but fell back to v1 due to unsupported request */
+  usedFallback?: boolean;
 }
 
 export function useGenerateChart() {
@@ -35,6 +37,19 @@ export function useGenerateChart() {
 
         if (dslError) throw dslError;
         if (dslData?.error) throw new Error(dslData.error);
+
+        // v2 self-reported unsupported — transparently fall back to v1
+        if (dslData?.unsupported) {
+          console.log("[generate-chart] v2 unsupported, falling back to v1:", dslData.reason);
+          const { data, error } = await supabase.functions.invoke("generate-chart", {
+            body: { messages, period },
+          });
+          if (error) throw error;
+          if (data?.error) throw new Error(data.error);
+          const dailyTotals = data.dailyTotals ?? { food: {}, exercise: {} };
+          if (!data?.chartSpec) throw new Error("No chart specification returned");
+          return { chartSpec: data.chartSpec as ChartSpec, dailyTotals, usedFallback: true };
+        }
         // Multi-option (disambiguation) path
         if (dslData?.chartDSLOptions) {
           const options = dslData.chartDSLOptions as ChartDSL[];

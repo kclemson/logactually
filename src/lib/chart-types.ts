@@ -21,6 +21,7 @@ export interface ExerciseDayTotals {
   duration_minutes: number;
   distance_miles: number;
   calories_burned: number;
+  heart_rate: number;
   unique_exercises: number;
   entries: number;
 }
@@ -63,7 +64,7 @@ export interface DailyTotals {
     totalCholesterol: number;
   }>;
   /** Populated when groupBy === "item" and source === "exercise" */
-  exerciseByItem?: Record<string, { description: string; count: number; totalSets: number; totalDurationMinutes: number; totalCaloriesBurned: number }>;
+  exerciseByItem?: Record<string, { description: string; count: number; totalSets: number; totalDurationMinutes: number; totalDistanceMiles: number; totalCaloriesBurned: number; totalHeartRate: number; heartRateCount: number; uniqueDays: Set<string> }>;
   /** Populated when groupBy === "category" and source === "exercise" */
   exerciseByCategory?: Record<string, ExerciseDayTotals>;
 }
