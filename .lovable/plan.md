@@ -1,67 +1,63 @@
 
-## Add "calories remaining" to the food log tooltip — today only
+## Style fix: calories remaining line in the calorie tooltip
 
-### The user's feedback
+### What's wrong
 
-> "Should the food log and summaries tell you the delta between your consumption and goal? I find myself doing this math in my head to determine my budget."
+The current implementation renders the remaining line as a separate block with:
+- `font-medium` (bold weight)
+- `text-green-400` / `text-rose-400` at full brightness
+- A `border-t` divider above it, visually separating it into its own section
 
-This is a great, low-effort improvement. The tooltip on the Total row of the food log already shows the calorie target math — adding a remaining line directly answers this without cluttering the main UI.
+This makes it feel like a distinct call-out rather than a natural continuation of the equation.
 
-### What will change
+### What it should look like
 
-A new line appears at the bottom of the daily section of the tooltip, **only when viewing today's date**:
+A fourth row in the existing equation grid, directly below `= 1,500  adjusted daily calorie target`, matching the same `opacity-75 tabular-nums` style as the other rows:
 
 ```
-remaining:  122 cal
+  1,500  (daily calorie target)
++     0  (calories burned from exercise)
+= 1,500  adjusted daily calorie target
+    122  cal remaining
 ```
 
-- If calories remaining is **negative** (over target), it shows in rose/red: `over by 122 cal`
-- If zero or positive, it shows in green: `122 cal remaining`
-- It sits below the target equation, separated by a subtle divider — before the weekly section
+The number is right-aligned in column 1, the label is in column 2 in the same `text-[9px] italic opacity-60` style. The row can carry a subtle color (`text-green-400` or `text-rose-400`) without being bold, so it's readable but not dominant.
 
-### Why "today only"
+### Technical changes
 
-- For past days, the day is done — "remaining" is meaningless (you can't eat more yesterday)
-- The History page tooltip already uses `label` (e.g., "Mon") to show the day, and doesn't need this
-- This matches how every fitness app handles it: remaining budget is a live, forward-looking number
+**`src/components/CalorieTargetTooltipContent.tsx`**
 
-### Technical approach
+Two changes:
 
-**Step 1 — `CalorieTargetTooltipContent.tsx`**
+1. Remove the standalone `showRemaining` block (the one with `border-t`, `font-medium`, and the IIFE) from `CalorieTargetTooltipContent`.
 
-Add an optional `showRemaining?: boolean` prop. When true, render a new block after the target equation:
+2. Add `showRemaining` and `intake` as optional props to `TargetEquation`, and render the remaining row inside the existing `grid grid-cols-[auto_1fr]` div, after the `= target` line:
 
 ```tsx
-{showRemaining && target > 0 && (() => {
+{showRemaining && intake !== undefined && target > 0 && (() => {
   const remaining = target - intake;
   const isOver = remaining < 0;
   return (
     <>
-      <div className="border-t border-border my-1 -mx-3" />
-      <div className={`tabular-nums ${isOver ? 'text-rose-400' : 'text-green-400'}`}>
-        {isOver
-          ? `over by ${Math.abs(remaining).toLocaleString()} cal`
-          : `${remaining.toLocaleString()} cal remaining`}
+      <div className={`text-right ${isOver ? 'text-rose-400' : 'text-green-400'}`}>
+        {isOver ? `over ${Math.abs(remaining).toLocaleString()}` : remaining.toLocaleString()}
+      </div>
+      <div className={`text-[9px] italic opacity-60 ${isOver ? 'text-rose-400' : 'text-green-400'}`}>
+        {isOver ? 'cal over target' : 'cal remaining'}
       </div>
     </>
   );
 })()}
 ```
 
-**Step 2 — `FoodItemsTable.tsx`**
+This renders inside the same `grid grid-cols-[auto_1fr] gap-x-2 pl-2 opacity-75 tabular-nums` container, so alignment is automatic.
 
-Add an optional `isToday?: boolean` prop, and pass `showRemaining={isToday}` down to `CalorieTargetTooltipContent`.
-
-**Step 3 — `FoodLog.tsx`**
-
-Pass `isToday={isTodaySelected}` to the `FoodItemsTable` call (already has `isTodaySelected` in scope).
+Pass `showRemaining={showRemaining}` and `intake={intake}` from `CalorieTargetTooltipContent` into the `TargetEquation` call for the daily section only (not the weekly section, where "remaining" makes no sense).
 
 ### Files changed
 
 | File | Change |
 |---|---|
-| `src/components/CalorieTargetTooltipContent.tsx` | Add `showRemaining` prop; render remaining/over line with color coding after the target equation |
-| `src/components/FoodItemsTable.tsx` | Add `isToday` prop; pass `showRemaining={isToday}` to tooltip |
-| `src/pages/FoodLog.tsx` | Pass `isToday={isTodaySelected}` to `FoodItemsTable` |
+| `src/components/CalorieTargetTooltipContent.tsx` | Remove standalone remaining block; add `showRemaining` + `intake` props to `TargetEquation`; render remaining as a grid row inside the equation |
 
-No new hooks, no database changes, no new queries — all the data is already in the tooltip.
+No other files need changes — `FoodItemsTable` and `FoodLog` already pass `showRemaining={isToday}` correctly.
