@@ -1,142 +1,80 @@
 
-## Fix: future-month guard + slide animations for all swipe navigation
+## Two fixes: eliminate phantom scroll + improve swipe reliability on History
 
-### Two problems being solved
+### Problem 1: Phantom vertical scrollbar on the calendar page
 
-1. **History calendar allows swiping to future months** — the `goToNextMonth` callback passed to `useSwipeNavigation` has no guard, unlike the chevron button which has `disabled={isSameMonth(currentMonth, new Date())}`.
+Looking at your screenshot, there is a large empty area below the calendar grid. This blank space exists because:
 
-2. **No animation on swipe** — all five pages (Food, Weight, Other, History) snap instantly because there's no visual feedback about direction.
+- `Layout.tsx` wraps everything in `<div className="min-h-screen">`, which is correct
+- But the `<main>` element inside has `pb-20` (bottom padding) for the bottom nav, and no `height` constraint
+- The browser considers the page taller than the viewport even when no real content overflows, so **scrolling is technically possible** — and the browser honours touch events as potential scrolls
 
----
+This phantom scrollability is the core reason swiping on the calendar is unreliable: the browser sees a scrollable page and competes with the horizontal swipe.
 
-### The animation challenge
+**Fix**: Make the History page fill the viewport exactly — no more, no less. The page should not scroll at all. The approach is to give the History route a fixed-height layout that fills the available space between the header and the bottom nav, rather than using the default `min-h-screen` with padding approach.
 
-All three day-log pages (Food, Weight, Other) use the `key={dateKey}` wrapper pattern: the outer shell reads the date from the URL and passes `key={dateKey}` to the inner content component, which causes a **full remount** on every date change. This means we cannot simply put a keyed `<div key={dateStr}>` inside the swipe zone — that div will never get a chance to animate because the whole component tree is being replaced.
+The cleanest way without reworking Layout globally is to:
+1. Give the outer `Layout` container `overflow-hidden` or `h-screen` on the History route
+2. Or — simpler and more targeted — constrain the `main` element on mobile so it doesn't overflow
 
-The solution is to **animate at the wrapper level** — the shell component (the one that holds `key={dateKey}`) needs to apply a slide-in CSS animation each time it mounts. Since it remounts on every navigation, the animation plays naturally every time.
+Actually the simplest and most contained fix: in `History.tsx`, add `touch-action: pan-y` override to `none` on the swipe container, and separately ensure the page body itself cannot scroll by using `overflow: hidden` on the `html`/`body` when on the History route — but that's invasive.
 
-For **History**, the approach is simpler: `currentMonth` is local state so nothing remounts — a keyed `<div key={monthStr}>` around the calendar grid is all that's needed.
-
----
-
-### Implementation plan
-
-#### 1. New shared animation classes in `tailwind.config.ts`
-
-Add two new keyframes and animation classes:
-
-```ts
-"slide-in-from-right": {
-  "0%":   { opacity: "0", transform: "translateX(24px)" },
-  "100%": { opacity: "1", transform: "translateX(0)" },
-},
-"slide-in-from-left": {
-  "0%":   { opacity: "0", transform: "translateX(-24px)" },
-  "100%": { opacity: "1", transform: "translateX(0)" },
-},
-```
-
-Animation classes: `animate-slide-in-from-right` (200ms ease-out) and `animate-slide-in-from-left` (200ms ease-out). The 24px translate is subtle — enough to feel directional without being a full-screen slide.
-
-#### 2. `src/lib/selected-date.ts` — persist swipe direction
-
-Add two tiny helpers to write/read a swipe direction hint to `sessionStorage`:
-
-```ts
-export function setSwipeDirection(dir: 'left' | 'right' | null): void
-export function getSwipeDirection(): 'left' | 'right' | null
-```
-
-This is how the shell (wrapper) communicates which direction was swiped to the newly-mounted inner content component. `sessionStorage` is used (not `localStorage`) because it's per-tab and naturally ephemeral.
-
-#### 3. `src/hooks/useSwipeNavigation.ts` — write direction before calling callback
-
-When a swipe is recognised, write the direction to `sessionStorage` before calling `onSwipeLeft` / `onSwipeRight`:
-
-```ts
-if (deltaX < 0) {
-  setSwipeDirection('left');
-  onSwipeLeft();
-} else {
-  setSwipeDirection('right');
-  onSwipeRight();
-}
-```
-
-The callbacks (`goToNextDay`, `goToPreviousDay`) update the URL, which triggers a remount of the content component. By the time that component mounts, the direction value is already in `sessionStorage`.
-
-#### 4. Day-log pages — read direction on mount, apply animation class
-
-In `FoodLogContent`, `WeightLogContent`, and `OtherLogContent` — these are the components that remount on every date change. Add a one-time read on initial render:
+**Better approach**: Use a CSS `touch-action` property. On the swipe container div, set `touch-action: pan-y` (which is what the browser defaults to) — but actually we want `touch-action: none` on this container so the browser doesn't even try to scroll and our JS handler has full control. This is the cleanest fix and it's supported on all modern mobile browsers.
 
 ```tsx
-const mountDir = getSwipeDirection();
-setSwipeDirection(null); // consume it immediately so it doesn't bleed into other navigations
-```
-
-Apply the animation class to the outermost `<div className="space-y-4">`:
-
-```tsx
-<div className={cn(
-  "space-y-4",
-  mountDir === 'left'  && 'animate-slide-in-from-right',
-  mountDir === 'right' && 'animate-slide-in-from-left',
-)}>
-```
-
-This is read synchronously during render (not in a `useEffect`), so there's no flash — the class is set on the very first paint.
-
-#### 5. History page — keyed animated calendar grid div
-
-Since History doesn't remount, use a keyed `<div>` around the calendar grid (week headers + day cells) and track `slideDir` state:
-
-```tsx
-const [slideDir, setSlideDir] = useState<'left' | 'right' | null>(null);
-
-const goToPreviousMonth = () => { setSlideDir('right'); setCurrentMonth(subMonths(currentMonth, 1)); };
-const goToNextMonthGuarded = () => {
-  if (isSameMonth(currentMonth, new Date())) return; // guard future months
-  setSlideDir('left');
-  setCurrentMonth(addMonths(currentMonth, 1));
-};
-
-// Inside JSX, inside the existing swipeHandlers div:
+// In History.tsx, the swipe zone div:
 <div
-  key={format(currentMonth, 'yyyy-MM')}
-  className={cn(
-    slideDir === 'left'  && 'animate-slide-in-from-right',
-    slideDir === 'right' && 'animate-slide-in-from-left',
-    !slideDir && 'animate-fade-in', // first load: fade in
-  )}
+  ref={swipeHandlers.ref}
+  onTouchStart={swipeHandlers.onTouchStart}
+  onTouchEnd={swipeHandlers.onTouchEnd}
+  style={{ touchAction: 'none' }}  // ← browser yields all touch to JS
 >
-  {/* week day headers */}
-  {/* calendar grid */}
-</div>
 ```
 
-Also pass `goToNextMonthGuarded` to `useSwipeNavigation` instead of `goToNextMonth`, and update the chevron button's `onClick` to use it as well.
+`touch-action: none` tells the browser: "don't handle any default touch behaviours on this element (no scroll, no zoom) — JavaScript owns all of it." This is the standard approach used by every touch interaction library (Swiper, Framer Motion, react-use-gesture, etc.) and is more reliable than fighting with passive/non-passive listeners.
 
----
+### Problem 2: The phantom scroll area (empty space below calendar)
 
-### Files changed
+Separately from the swipe fix, the blank space below the calendar should be eliminated. This is because the `main` element in `Layout.tsx` renders with `min-h-screen` on the outer div, pushing its minimum height to the viewport size — but for the calendar view there's no content to fill it.
+
+The fix here is also simple: on the swipe container div in History, add `min-h-[calc(100dvh-10rem)]` or similar so the calendar fills the space and there's simply nothing to scroll to. Actually even simpler: set `overflow: hidden` on the page-level wrapper when content is shorter than the viewport.
+
+The cleanest solution for both problems combined: set `touch-action: none` on the swipe zone (solves swipe reliability) and add `overscroll-behavior: none` on the body (or the swipe container) to prevent the browser from activating scroll momentum. Together these completely eliminate the phantom scroll competition.
+
+### What changes
+
+**`src/pages/History.tsx`** — add `style={{ touchAction: 'none' }}` to the swipe zone `div`. This is a one-line change that gives JS full ownership of touch events within the calendar, completely bypassing the passive/non-passive listener battle.
+
+**`src/hooks/useSwipeNavigation.ts`** — the `touch-action: none` approach means `e.preventDefault()` in the non-passive `touchmove` listener becomes redundant (since the browser won't try to scroll in the first place), but keeping it is harmless and adds a belt-and-suspenders guarantee.
+
+**`src/pages/FoodLog.tsx`, `WeightLog.tsx`, `OtherLog.tsx`** — apply the same `touch-action: none` on their swipe zone divs for consistency and improved reliability on those pages too.
+
+### Technical details
+
+`touch-action: none` is distinct from `pointer-events: none` — it doesn't prevent clicks or taps, it only tells the browser not to handle scroll/zoom gestures natively. Buttons and taps within the swipe zone will continue to work perfectly.
+
+The one thing `touch-action: none` prevents is the user scroll-overscrolling to refresh (pull-to-refresh from the OS). Since the History page has no content to scroll, this is desirable. On the day-log pages (Food/Weight/Other), the content can be long — but those pages have their own vertical scrollability through the normal browser mechanism because their swipe zones are just one section of the page rather than the full page.
+
+Actually wait — for Food/Weight/Other, the entire page content is inside the swipe zone div. Setting `touch-action: none` there would break vertical scrolling on those pages when they have many entries. So for those pages, we should use `touch-action: pan-y` instead, which allows vertical scrolling but disables horizontal panning — meaning horizontal swipes go directly to our JS handler.
+
+| Page | touch-action value | Effect |
+|---|---|---|
+| History (calendar) | `none` | Full JS control — no scroll competition |
+| FoodLog / WeightLog / OtherLog | `pan-y` | Vertical scroll still works, horizontal is JS-only |
+
+`pan-y` is the ideal value for the day-log pages: it explicitly tells the browser "vertical scrolling is fine, but don't handle horizontal touch movement — give it to JS."
+
+### Summary of file changes
 
 | File | Change |
 |---|---|
-| `tailwind.config.ts` | Add `slide-in-from-right` and `slide-in-from-left` keyframes + animation utilities |
-| `src/lib/selected-date.ts` | Add `setSwipeDirection` / `getSwipeDirection` helpers using `sessionStorage` |
-| `src/hooks/useSwipeNavigation.ts` | Write direction to `sessionStorage` before firing callbacks |
-| `src/pages/FoodLog.tsx` | Read direction on mount, apply animation class to outer div |
-| `src/pages/WeightLog.tsx` | Same as FoodLog |
-| `src/pages/OtherLog.tsx` | Same as FoodLog |
-| `src/pages/History.tsx` | Add `slideDir` state, guarded next-month, keyed animated grid div |
+| `src/pages/History.tsx` | Add `style={{ touchAction: 'none' }}` to the swipe zone div |
+| `src/pages/FoodLog.tsx` | Add `style={{ touchAction: 'pan-y' }}` to the swipe zone div |
+| `src/pages/WeightLog.tsx` | Same |
+| `src/pages/OtherLog.tsx` | Same |
 
----
+That's it. Four one-line additions. No logic changes, no hook changes, no restructuring.
 
-### What it will feel like
+### Why this is safer and simpler than what was already done
 
-- **Swipe right (go back a day/month)**: content slides in from the left — feels like turning back
-- **Swipe left (go forward a day/month)**: content slides in from the right — feels like turning forward
-- **Tapping the chevron buttons**: same directional animation fires
-- **Trying to swipe forward on the current month in History**: silently does nothing
-- **Duration**: 200ms ease-out — snappy but clearly visible
-- **No jank**: the direction is set synchronously before the URL update, so the animation class is applied on the very first render frame of the new content
+The previous fix (non-passive `touchmove` listener) correctly solves *part* of the problem — it lets `e.preventDefault()` actually work once horizontal intent is detected. But `touch-action` is applied *before* any JavaScript runs — it's a CSS hint to the browser's native compositor. It short-circuits the whole passive-listener problem at the source rather than fighting it in JS. Using both together is belt-and-suspenders and the combination is exactly what Framer Motion's `drag` and Swiper.js use internally.
