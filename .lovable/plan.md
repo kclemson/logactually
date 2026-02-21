@@ -1,37 +1,84 @@
 
-# Fix: DetailDialog not showing calories burned + audit all calories_burned references
+
+# Fix: Only write back fields the user actually edited in DetailDialog
 
 ## Problem
-The DetailDialog's `flattenExerciseValues` function reads `item['calories_burned']` but the WeightSet property is `calories_burned_override`. Since `exercise_metadata` is now stripped of promoted keys, the JSONB fallback also returns nothing.
+When you open the detail dialog and toggle a unit (e.g. mi to km) without changing the number, the save logic still converts the displayed value back to storage units and writes it. The round-trip conversion (2dp display rounding, then 4dp back-conversion) introduces floating-point drift.
 
-## Changes
+## Insight
+The current code copies ALL values into `draft` when entering edit mode, then on save it compares every draft value against the original. For unit-toggle fields, the draft starts with a rounded converted value, so the comparison always detects a "change" even when the user didn't touch anything.
 
-### 1. DetailDialog.tsx -- flattenExerciseValues (line 798)
+The cleaner fix: track which fields the user actually typed into, and only write those back. This works uniformly for all fields, not just unit-toggle ones.
 
-Use the existing `META_KEY_TO_COLUMN` mapping to resolve the correct property name:
+## Why this is safe
+- All user input goes through `updateDraft()` (selects, text inputs, number inputs)
+- Unit toggling uses `setDraft()` directly -- it's a display-only recalculation, not a user edit
+- The initial `enterEditMode` / `enterItemEdit` also use `setDraft()` directly
+- So `updateDraft` is already the single funnel for real user edits
 
+## Technical Details
+
+**File: `src/components/DetailDialog.tsx`**
+
+### 1. Add a `dirtyKeys` state (next to the existing `draft` state, line 378)
 ```typescript
-// Before (line 798):
-flat[`_meta_${mk.key}`] = item[mk.key] ?? metadata[mk.key] ?? null;
-
-// After:
-const columnName = META_KEY_TO_COLUMN[mk.key] || mk.key;
-flat[`_meta_${mk.key}`] = item[columnName] ?? metadata[mk.key] ?? null;
+const [dirtyKeys, setDirtyKeys] = useState<Set<string>>(new Set());
 ```
 
-This is a one-line change. It correctly maps `calories_burned` to `calories_burned_override` while all other keys (effort, heart_rate, etc.) map to themselves.
+### 2. Update `updateDraft` to also record the key (line 543)
+```typescript
+const updateDraft = (key: string, value: any) => {
+  setDirtyKeys(prev => new Set(prev).add(key));
+  setDraft(prev => ({ ...prev, [key]: value }));
+};
+```
 
-### 2. Audit of all other calories_burned references
+### 3. Clear `dirtyKeys` alongside `draft` in all reset points
+Add `setDirtyKeys(new Set())` next to every `setDraft({})` call:
+- `handleOpenChange` (line 415)
+- `cancelEdit` (line 440)
+- `handleSave` (line 474)
+- `toggleExpanded` collapse branch (line 486)
+- `enterItemEdit` (line 506) -- reset before new edit
+- `cancelItemEdit` (line 513)
+- `saveItemEdit` (line 540)
 
-All other usages are already correct:
+### 4. In `handleSave`, skip non-dirty fields (line 446-448)
+```typescript
+for (const field of fieldsFlat) {
+  if (field.readOnly) continue;
+  if (!dirtyKeys.has(field.key)) continue;  // <-- new line
+  const edited = draft[field.key];
+  if (edited === undefined) continue;
+  // ... rest stays the same
+}
+```
 
-- **calorie-burn.ts** (line 348): reads `exercise.calories_burned_override` -- correct
-- **csv-export.ts** (line 191): reads `set.calories_burned_override` -- correct
-- **chart-data.ts** (line 205): reads `row.calories_burned_override` -- correct
-- **useWeightEntries.ts** (line 42): reads `row.calories_burned_override` -- correct
-- **useExportData.ts** (line 66): reads `row.calories_burned_override` -- correct
-- **exercise-metadata.ts** (line 305): `KNOWN_METADATA_KEYS` uses key `'calories_burned'` -- this is the UI/virtual key, not a DB column name, so it stays as-is
-- **chart-types.ts** (line 23): `ExerciseDayTotals.calories_burned` -- this is an aggregation field name, not a DB column, so it stays as-is
-- **calorie-burn.test.ts**: tests use `exercise_metadata: { calories_burned: 320 }` to test the JSONB fallback path -- correct and valuable to keep
+### 5. In `saveItemEdit`, same change (line 520-523)
+```typescript
+for (const field of itemFieldsFlat) {
+  if (field.readOnly) continue;
+  if (!dirtyKeys.has(field.key)) continue;  // <-- new line
+  const edited = draft[field.key];
+  if (edited === undefined) continue;
+  // ... rest stays the same
+}
+```
 
-No other files need changes beyond the one-line fix in DetailDialog.
+### 6. In the second loop of `handleSave` (line 463), also check dirtyKeys
+```typescript
+for (const [key, val] of Object.entries(draft)) {
+  if (key.startsWith('_')) continue;
+  if (!dirtyKeys.has(key)) continue;  // <-- new line
+  if (updates[key] !== undefined) continue;
+  if (val !== values[key]) {
+    updates[key] = val;
+  }
+}
+```
+
+## What this fixes
+- Unit toggling without editing no longer causes phantom writes
+- No floating-point drift from round-trip conversions
+- Works uniformly for all fields (distance, speed, weight, and any future unit-toggle fields)
+- Zero risk of breaking existing behavior since we're only skipping writes for things the user never touched
