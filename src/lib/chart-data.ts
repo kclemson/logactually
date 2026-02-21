@@ -167,7 +167,7 @@ async function fetchExerciseData(
 ): Promise<DailyTotals> {
   let query = supabase
     .from("weight_sets")
-    .select("logged_date, exercise_key, description, sets, duration_minutes, distance_miles, exercise_metadata, created_at, exercise_subtype, entry_id")
+    .select("logged_date, exercise_key, description, sets, duration_minutes, distance_miles, exercise_metadata, created_at, exercise_subtype, entry_id, calories_burned_override, calories_burned_estimate, heart_rate, effort, incline_pct, cadence_rpm, speed_mph")
     .gte("logged_date", startDate)
     .order("logged_date", { ascending: true })
     .order("created_at", { ascending: true });
@@ -202,15 +202,16 @@ async function fetchExerciseData(
 
     const date = row.logged_date;
     const meta = row.exercise_metadata as Record<string, any> | null;
-    const rowHeartRate = meta?.heart_rate ?? null;
+    const rowCaloriesBurned = row.calories_burned_override ?? meta?.calories_burned ?? 0;
+    const rowHeartRate = row.heart_rate ?? meta?.heart_rate ?? null;
 
     const setTotals: ExerciseDayTotals = {
       sets: 1,
       duration_minutes: row.duration_minutes ?? 0,
       distance_miles: row.distance_miles ?? 0,
-      calories_burned: (row as any).calories_burned_override ?? meta?.calories_burned ?? 0,
-      heart_rate: (row as any).heart_rate_col ?? rowHeartRate ?? 0,
-      calories_burned_estimate: (row as any).calories_burned_estimate ?? 0,
+      calories_burned: rowCaloriesBurned,
+      heart_rate: rowHeartRate ?? 0,
+      calories_burned_estimate: row.calories_burned_estimate ?? 0,
       unique_exercises: 0,
       entries: 0,
     };
@@ -228,7 +229,7 @@ async function fetchExerciseData(
       existing.totalSets += row.sets ?? 1;
       existing.totalDurationMinutes += row.duration_minutes ?? 0;
       existing.totalDistanceMiles += row.distance_miles ?? 0;
-      existing.totalCaloriesBurned += meta?.calories_burned ?? 0;
+      existing.totalCaloriesBurned += rowCaloriesBurned;
       if (rowHeartRate != null) {
         existing.totalHeartRate += rowHeartRate;
         existing.heartRateCount += 1;
@@ -238,7 +239,7 @@ async function fetchExerciseData(
       existing.valuesPerEntry!.sets.push(row.sets ?? 1);
       existing.valuesPerEntry!.duration_minutes.push(row.duration_minutes ?? 0);
       existing.valuesPerEntry!.distance_miles.push(row.distance_miles ?? 0);
-      existing.valuesPerEntry!.calories_burned.push(meta?.calories_burned ?? 0);
+      existing.valuesPerEntry!.calories_burned.push(rowCaloriesBurned);
       if (rowHeartRate != null) existing.valuesPerEntry!.heart_rate.push(rowHeartRate);
       // Build recent sample string: "Feb 19 · 8:32 AM · dog walk · 2.4 mi · 47 min"
       const dateLabel = format(new Date(`${row.logged_date}T12:00:00`), "MMM d");
@@ -258,7 +259,7 @@ async function fetchExerciseData(
       cat.sets += 1;
       cat.duration_minutes += row.duration_minutes ?? 0;
       cat.distance_miles += row.distance_miles ?? 0;
-      cat.calories_burned += meta?.calories_burned ?? 0;
+      cat.calories_burned += rowCaloriesBurned;
       cat.unique_exercises = 0; // not meaningful for category
       exerciseByCategory[catKey] = cat;
     }

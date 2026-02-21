@@ -42,7 +42,7 @@ export function useWeightTrends(days: number) {
 
       const { data, error } = await supabase
         .from('weight_sets')
-        .select('exercise_key, exercise_subtype, description, sets, reps, weight_lbs, logged_date, duration_minutes, distance_miles, exercise_metadata')
+        .select('exercise_key, exercise_subtype, description, sets, reps, weight_lbs, logged_date, duration_minutes, distance_miles, exercise_metadata, calories_burned_override, calories_burned_estimate, heart_rate, effort, incline_pct, cadence_rpm, speed_mph')
         .gte('logged_date', startDate)
         .order('logged_date', { ascending: true });
 
@@ -98,15 +98,15 @@ export function useWeightTrends(days: number) {
           existing.duration_minutes = (existing.duration_minutes || 0) + duration;
           existing.distance_miles = (existing.distance_miles || 0) + distance;
           // Merge exercise_metadata: sum calories_burned across aggregated entries
-          if (row.exercise_metadata && typeof row.exercise_metadata === 'object') {
-            const incoming = row.exercise_metadata as Record<string, number>;
-            if (incoming.calories_burned != null) {
+          const incomingCalBurned = row.calories_burned_override ?? (row.exercise_metadata as any)?.calories_burned ?? null;
+          if (incomingCalBurned != null) {
+            if (true) {
               if (!existing.exercise_metadata) {
-                existing.exercise_metadata = { calories_burned: incoming.calories_burned };
+                existing.exercise_metadata = { calories_burned: incomingCalBurned };
               } else {
                 existing.exercise_metadata = {
                   ...existing.exercise_metadata,
-                  calories_burned: (existing.exercise_metadata.calories_burned ?? 0) + incoming.calories_burned,
+                  calories_burned: (existing.exercise_metadata.calories_burned ?? 0) + incomingCalBurned,
                 };
               }
             }
@@ -126,7 +126,10 @@ export function useWeightTrends(days: number) {
             duration_minutes: duration > 0 ? duration : undefined,
             distance_miles: distance > 0 ? distance : undefined,
             repsPerSet: rowRepsPerSet,
-            exercise_metadata: row.exercise_metadata as Record<string, number> | null,
+            exercise_metadata: (() => {
+              const calBurned = row.calories_burned_override ?? (row.exercise_metadata as any)?.calories_burned ?? null;
+              return calBurned != null ? { calories_burned: calBurned } : (row.exercise_metadata as Record<string, number> | null);
+            })(),
           });
         }
       });
