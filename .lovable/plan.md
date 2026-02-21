@@ -1,24 +1,33 @@
 
-# Fix: Total calorie burn display ignoring calories_burned_override
 
-## Problem
-The "Total" row at the top of the exercise log computes its calorie burn display without passing `calories_burned_override` into the estimation function. So when you add or remove a manual calorie override via DetailDialog, the per-exercise inline display updates correctly (we just fixed that), but the total stays stale because it's computed from a different code path that has the same omission.
+# Add Duration and Distance columns to Exercise CSV Export
 
-## Root Cause
-In `src/pages/WeightLog.tsx` (lines 747-756), the `ExerciseInput[]` array passed to `estimateTotalCalorieBurn` maps each `displayItem` but omits `calories_burned_override`.
+## What's missing
+The exercise log CSV export currently omits two key cardio fields: **duration** (minutes) and **distance** (miles/km). These are stored in the database but never fetched or included in the export.
 
-## Fix
-Add `calories_burned_override` to the mapping on line 755, same one-line fix pattern as CalorieBurnInline:
+## Changes
 
-### File: `src/pages/WeightLog.tsx` (line 755)
+### 1. `src/hooks/useExportData.ts` -- fetch the columns
+Add `duration_minutes` and `distance_miles` to the SELECT query and the row mapping.
 
-```typescript
-// Before:
-exercise_metadata: item.exercise_metadata,
+### 2. `src/lib/csv-export.ts` -- export interface + CSV output
+- Add `duration_minutes` and `distance_miles` to the `WeightSetExport` interface.
+- Add two new header columns: `Duration (min)` and `Distance (mi)` (plus a `Distance (km)` converted column, matching the existing pattern for weight and speed).
+- Map the values into each row.
 
-// After:
-exercise_metadata: item.exercise_metadata,
-calories_burned_override: item.calories_burned_override,
-```
+### Column order
+The new columns will be inserted after `Weight (kg)` and before `Incline (%)`, producing:
 
-This ensures the total uses the override when present, and falls back to estimation when removed -- matching the per-exercise inline behavior.
+Date | Time | Exercise | Sets | Reps | Weight (lbs) | Weight (kg) | **Duration (min)** | **Distance (mi)** | **Distance (km)** | Incline (%) | Effort (1-10) | Calories Burned | Heart Rate (bpm) | Cadence (rpm) | Speed (mph) | Speed (km/h) | Raw Input
+
+## Technical details
+
+**`src/hooks/useExportData.ts`**
+- Add `duration_minutes, distance_miles` to the `.select(...)` string
+- Add to the row mapping: `duration_minutes: row.duration_minutes ?? null`, `distance_miles: row.distance_miles != null ? Number(row.distance_miles) : null`
+
+**`src/lib/csv-export.ts`**
+- Add to `WeightSetExport`: `duration_minutes?: number | null` and `distance_miles?: number | null`
+- Update `headers` array with the three new columns
+- In the row mapping, output `set.duration_minutes ?? ''`, `set.distance_miles ?? ''`, and the km conversion `distance_miles != null ? Number((distance_miles * MI_TO_KM).toFixed(2)) : ''`
+
