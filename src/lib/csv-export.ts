@@ -158,6 +158,13 @@ export interface WeightSetExport {
   reps: number;
   weight_lbs: number;
   raw_input: string | null;
+  // Promoted metadata columns
+  calories_burned_override?: number | null;
+  effort?: number | null;
+  heart_rate?: number | null;
+  incline_pct?: number | null;
+  cadence_rpm?: number | null;
+  speed_mph?: number | null;
   exercise_metadata?: Record<string, number> | null;
 }
 
@@ -177,23 +184,32 @@ export function exportWeightLog(sets: WeightSetExport[]) {
     return b.created_at.localeCompare(a.created_at);
   });
 
-  const rows = sorted.map((set) => [
-    set.logged_date,
-    format(new Date(set.created_at), 'HH:mm'),
-    set.description,
-    set.sets,
-    set.reps,
-    set.weight_lbs,
-    Math.round(set.weight_lbs * LBS_TO_KG),
-    set.exercise_metadata?.incline_pct ?? '',
-    set.exercise_metadata?.effort ?? '',
-    set.exercise_metadata?.calories_burned ?? '',
-    set.exercise_metadata?.heart_rate ?? '',
-    set.exercise_metadata?.cadence_rpm ?? '',
-    set.exercise_metadata?.speed_mph ?? '',
-    set.exercise_metadata?.speed_mph != null ? Number((set.exercise_metadata.speed_mph * MI_TO_KM).toFixed(1)) : '',
-    set.raw_input || '',
-  ]);
+  const rows = sorted.map((set) => {
+    // Column-first with JSONB fallback
+    const incline = set.incline_pct ?? set.exercise_metadata?.incline_pct ?? '';
+    const effortVal = set.effort ?? set.exercise_metadata?.effort ?? '';
+    const calBurned = set.calories_burned_override ?? set.exercise_metadata?.calories_burned ?? '';
+    const hr = set.heart_rate ?? set.exercise_metadata?.heart_rate ?? '';
+    const cadence = set.cadence_rpm ?? set.exercise_metadata?.cadence_rpm ?? '';
+    const speed = set.speed_mph ?? set.exercise_metadata?.speed_mph ?? null;
+    return [
+      set.logged_date,
+      format(new Date(set.created_at), 'HH:mm'),
+      set.description,
+      set.sets,
+      set.reps,
+      set.weight_lbs,
+      Math.round(set.weight_lbs * LBS_TO_KG),
+      incline,
+      effortVal,
+      calBurned,
+      hr,
+      cadence,
+      speed ?? '',
+      speed != null ? Number((speed * MI_TO_KM).toFixed(1)) : '',
+      set.raw_input || '',
+    ];
+  });
 
   const csv = [
     headers.join(','),

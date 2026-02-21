@@ -792,27 +792,44 @@ export function flattenExerciseValues(item: Record<string, any>): Record<string,
   flat._exercise_category = isCardioExercise(item.exercise_key)
     ? 'cardio'
     : (EXERCISE_MUSCLE_GROUPS[item.exercise_key] ? 'strength' : 'other');
+  // Read from promoted top-level fields first, fall back to exercise_metadata
   const metadata = item.exercise_metadata || {};
   for (const mk of KNOWN_METADATA_KEYS) {
-    flat[`_meta_${mk.key}`] = metadata[mk.key] ?? null;
+    flat[`_meta_${mk.key}`] = item[mk.key] ?? metadata[mk.key] ?? null;
   }
   return flat;
 }
 
+/**
+ * Map from _meta_ virtual field keys to their promoted DB column names.
+ * 'calories_burned' in JSONB maps to 'calories_burned_override' as a column.
+ */
+const META_KEY_TO_COLUMN: Record<string, string> = {
+  calories_burned: 'calories_burned_override',
+  effort: 'effort',
+  heart_rate: 'heart_rate',
+  incline_pct: 'incline_pct',
+  cadence_rpm: 'cadence_rpm',
+  speed_mph: 'speed_mph',
+};
+
 export function processExerciseSaveUpdates(
   updates: Record<string, any>,
   currentMetadata: Record<string, number> | null
-): { regularUpdates: Record<string, any>; newMetadata: Record<string, number> | null } {
+): { regularUpdates: Record<string, any>; metadataColumnUpdates: Record<string, any> } {
   const regularUpdates: Record<string, any> = {};
-  const metaChanges: Record<string, number | null> = {};
-  let hasMetaChanges = false;
+  const metadataColumnUpdates: Record<string, any> = {};
 
   for (const [key, value] of Object.entries(updates)) {
     if (key.startsWith('_')) {
       if (key.startsWith('_meta_')) {
         const metaKey = key.slice(6);
-        metaChanges[metaKey] = value === '' || value === null ? null : Number(value);
-        hasMetaChanges = true;
+        const columnName = META_KEY_TO_COLUMN[metaKey];
+        const numVal = value === '' || value === null ? null : Number(value);
+        if (columnName) {
+          // Write to promoted column
+          metadataColumnUpdates[columnName] = numVal === 0 || (numVal !== null && !isFinite(numVal)) ? null : numVal;
+        }
       }
       // Other virtual fields (like _exercise_category) are handled via
       // applyCategoryChange in FieldEditItem and produce real keys (exercise_key)
@@ -822,21 +839,5 @@ export function processExerciseSaveUpdates(
     }
   }
 
-  if (!hasMetaChanges) {
-    return { regularUpdates, newMetadata: currentMetadata };
-  }
-
-  const merged: Record<string, number> = { ...(currentMetadata || {}) };
-  for (const [key, value] of Object.entries(metaChanges)) {
-    if (value === null || value === 0 || !isFinite(value)) {
-      delete merged[key];
-    } else {
-      merged[key] = value;
-    }
-  }
-
-  return {
-    regularUpdates,
-    newMetadata: Object.keys(merged).length > 0 ? merged : null,
-  };
+  return { regularUpdates, metadataColumnUpdates };
 }

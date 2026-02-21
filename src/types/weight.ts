@@ -20,7 +20,15 @@ export interface WeightSet {
   weight_lbs: number;
   duration_minutes?: number | null;  // For cardio exercises
   distance_miles?: number | null;    // For cardio (future)
-  exercise_metadata?: Record<string, number> | null; // Optional metadata (incline, effort, calories_burned)
+  // Promoted metadata columns (top-level for direct querying)
+  calories_burned_override?: number | null; // User-entered or Apple Health calorie value
+  effort?: number | null;                   // 1-10 RPE scale
+  heart_rate?: number | null;               // BPM
+  incline_pct?: number | null;              // Treadmill/bike incline
+  cadence_rpm?: number | null;              // Cycling cadence
+  speed_mph?: number | null;                // Running/cycling speed
+  calories_burned_estimate?: number | null; // System-computed MET midpoint
+  exercise_metadata?: Record<string, number> | null; // Catch-all for future unknown fields
   rawInput?: string | null; // Only present on first set of entry
   sourceRoutineId?: string | null; // Links to saved_routines.id when entry originated from a routine
   groupName?: string | null; // Editable group name, stored on first set of entry
@@ -57,6 +65,13 @@ export interface WeightSetRow {
   weight_lbs: number;
   duration_minutes: number | null;
   distance_miles: number | null;
+  calories_burned_override: number | null;
+  effort: number | null;
+  heart_rate: number | null;
+  incline_pct: number | null;
+  cadence_rpm: number | null;
+  speed_mph: number | null;
+  calories_burned_estimate: number | null;
   exercise_metadata: Record<string, number> | null;
   raw_input: string | null;
   source_routine_id: string | null;
@@ -77,6 +92,12 @@ export interface AnalyzedExercise {
   weight_lbs: number;
   duration_minutes?: number | null;
   distance_miles?: number | null;
+  calories_burned_override?: number | null;
+  effort?: number | null;
+  heart_rate?: number | null;
+  incline_pct?: number | null;
+  cadence_rpm?: number | null;
+  speed_mph?: number | null;
   exercise_metadata?: Record<string, number> | null;
 }
 
@@ -92,6 +113,12 @@ export interface SavedExerciseSet {
   weight_lbs: number;
   duration_minutes?: number | null;
   distance_miles?: number | null;
+  calories_burned_override?: number | null;
+  effort?: number | null;
+  heart_rate?: number | null;
+  incline_pct?: number | null;
+  cadence_rpm?: number | null;
+  speed_mph?: number | null;
   exercise_metadata?: Record<string, number> | null;
 }
 

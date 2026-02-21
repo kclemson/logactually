@@ -39,6 +39,14 @@ export function useWeightEntries(date: string) {
         weight_lbs: Number(row.weight_lbs),
         duration_minutes: row.duration_minutes ?? null,
         distance_miles: row.distance_miles ?? null,
+        // Promoted metadata columns (column-first, JSONB fallback)
+        calories_burned_override: row.calories_burned_override ?? (row.exercise_metadata as any)?.calories_burned ?? null,
+        effort: row.effort ?? (row.exercise_metadata as any)?.effort ?? null,
+        heart_rate: row.heart_rate ?? (row.exercise_metadata as any)?.heart_rate ?? null,
+        incline_pct: row.incline_pct ?? (row.exercise_metadata as any)?.incline_pct ?? null,
+        cadence_rpm: row.cadence_rpm ?? (row.exercise_metadata as any)?.cadence_rpm ?? null,
+        speed_mph: row.speed_mph ?? (row.exercise_metadata as any)?.speed_mph ?? null,
+        calories_burned_estimate: row.calories_burned_estimate ?? null,
         exercise_metadata: row.exercise_metadata ?? null,
         rawInput: row.raw_input,
         sourceRoutineId: row.source_routine_id,
@@ -74,6 +82,14 @@ export function useWeightEntries(date: string) {
         weight_lbs: set.weight_lbs,
         duration_minutes: set.duration_minutes ?? null,
         distance_miles: set.distance_miles ?? null,
+        // Promoted metadata columns
+        calories_burned_override: set.calories_burned_override ?? (set.exercise_metadata as any)?.calories_burned ?? null,
+        effort: set.effort ?? (set.exercise_metadata as any)?.effort ?? null,
+        heart_rate: set.heart_rate ?? (set.exercise_metadata as any)?.heart_rate ?? null,
+        incline_pct: set.incline_pct ?? (set.exercise_metadata as any)?.incline_pct ?? null,
+        cadence_rpm: set.cadence_rpm ?? (set.exercise_metadata as any)?.cadence_rpm ?? null,
+        speed_mph: set.speed_mph ?? (set.exercise_metadata as any)?.speed_mph ?? null,
+        // Keep exercise_metadata for any non-promoted keys
         exercise_metadata: set.exercise_metadata ?? null,
         // Only store raw_input, source_routine_id, group_name on the first set
         raw_input: index === 0 ? params.raw_input : null,
@@ -94,13 +110,27 @@ export function useWeightEntries(date: string) {
       updates: Partial<Pick<WeightSet,
         'description' | 'sets' | 'reps' | 'weight_lbs' |
         'duration_minutes' | 'distance_miles' |
-        'exercise_key' | 'exercise_subtype' | 'exercise_metadata'
+        'exercise_key' | 'exercise_subtype' | 'exercise_metadata' |
+        'calories_burned_override' | 'effort' | 'heart_rate' |
+        'incline_pct' | 'cadence_rpm' | 'speed_mph' | 'calories_burned_estimate'
       >>;
     }) => {
       // Map camelCase to snake_case for DB columns that differ
       const dbUpdates: Record<string, any> = {};
+      // Promoted metadata column name mapping
+      const PROMOTED_COLUMNS: Record<string, string> = {
+        calories_burned_override: 'calories_burned_override',
+        effort: 'effort',
+        heart_rate: 'heart_rate',
+        incline_pct: 'incline_pct',
+        cadence_rpm: 'cadence_rpm',
+        speed_mph: 'speed_mph',
+        calories_burned_estimate: 'calories_burned_estimate',
+      };
       for (const [key, value] of Object.entries(params.updates)) {
-        if (key === 'exercise_metadata') {
+        if (PROMOTED_COLUMNS[key]) {
+          dbUpdates[PROMOTED_COLUMNS[key]] = value;
+        } else if (key === 'exercise_metadata') {
           dbUpdates.exercise_metadata = value;
         } else if (key === 'exercise_subtype') {
           dbUpdates.exercise_subtype = value;

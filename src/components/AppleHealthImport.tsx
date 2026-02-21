@@ -275,7 +275,7 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
         description: w.mapping.description,
         duration_minutes: w.durationMinutes,
         distance_miles: w.distanceMiles,
-        exercise_metadata: w.caloriesBurned ? { calories_burned: w.caloriesBurned } : null,
+        calories_burned_override: w.caloriesBurned ?? null,
         sets: 1,
         reps: 1,
         weight_lbs: 0,

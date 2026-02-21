@@ -315,6 +315,12 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
       weight_lbs: set.weight_lbs,
       duration_minutes: set.duration_minutes,
       distance_miles: set.distance_miles,
+      calories_burned_override: set.calories_burned_override,
+      effort: set.effort,
+      heart_rate: set.heart_rate,
+      incline_pct: set.incline_pct,
+      cadence_rpm: set.cadence_rpm,
+      speed_mph: set.speed_mph,
       exercise_metadata: set.exercise_metadata,
       entryId: newEntryId,
     }));
@@ -405,8 +411,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   const handleUpdateCalorieBurn = useCallback((id: string, calories: number) => {
     const item = displayItems.find(i => i.id === id);
     if (!item) return;
-    const newMetadata = { ...(item.exercise_metadata ?? {}), calories_burned: calories };
-    updateSet.mutate({ id, updates: { exercise_metadata: newMetadata } });
+    updateSet.mutate({ id, updates: { calories_burned_override: calories } });
   }, [displayItems, updateSet]);
 
   const handleDetailSave = useCallback((updates: Record<string, any>) => {
@@ -414,11 +419,8 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
     const item = displayItems[detailDialogItem.index];
     if (!item) return;
 
-    const { regularUpdates, newMetadata } = processExerciseSaveUpdates(updates, item.exercise_metadata ?? null);
-    const allUpdates: Record<string, any> = { ...regularUpdates };
-    if (newMetadata !== (item.exercise_metadata ?? null)) {
-      allUpdates.exercise_metadata = newMetadata;
-    }
+    const { regularUpdates, metadataColumnUpdates } = processExerciseSaveUpdates(updates, item.exercise_metadata ?? null);
+    const allUpdates: Record<string, any> = { ...regularUpdates, ...metadataColumnUpdates };
 
     if (Object.keys(allUpdates).length > 0) {
       updateSet.mutate({ id: item.id, updates: allUpdates });
@@ -432,11 +434,8 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
     const item = displayItems[globalIndex];
     if (!item) return;
 
-    const { regularUpdates, newMetadata } = processExerciseSaveUpdates(updates, item.exercise_metadata ?? null);
-    const allUpdates: Record<string, any> = { ...regularUpdates };
-    if (newMetadata !== (item.exercise_metadata ?? null)) {
-      allUpdates.exercise_metadata = newMetadata;
-    }
+    const { regularUpdates, metadataColumnUpdates } = processExerciseSaveUpdates(updates, item.exercise_metadata ?? null);
+    const allUpdates: Record<string, any> = { ...regularUpdates, ...metadataColumnUpdates };
 
     if (Object.keys(allUpdates).length > 0) {
       updateSet.mutate({ id: item.id, updates: allUpdates });
