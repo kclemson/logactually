@@ -1,41 +1,29 @@
 
-# Subtype-Aware Item Grouping for Unfiltered Exercise Charts
 
-## Problem
-When charting exercises grouped by item without an exercise filter (e.g., "average heart rate by exercise"), all subtypes of a parent key collapse into a single bar. Walking and running both become one "walk_run" bar, labeled by whichever description was processed first. This makes it look like walking data is missing when it's actually merged.
+# Add Beta Role Column to Admin User Table
 
-## Solution
-Change the item-level grouping key in `chart-data.ts` to always use the most specific identifier available -- the subtype when present, the exercise key otherwise. This gives walking and running separate bars regardless of whether an exercise filter is active.
+## What
+Add a column to the admin user stats table that shows which users have the beta role, making it easy to see at a glance.
 
 ## Changes
 
-### `src/lib/chart-data.ts` -- Item-level aggregation key and label (lines 206-212)
+### 1. Database: Update `get_user_stats` function
+Add an `is_beta` field to the query result by checking the `user_roles` table:
 
-Current logic:
-```
-const key = exerciseKeyFilter ? (row.exercise_subtype ?? row.exercise_key) : row.exercise_key;
-const label = exerciseKeyFilter
-  ? (row.exercise_subtype
-      ? row.exercise_subtype.charAt(0).toUpperCase() + row.exercise_subtype.slice(1)
-      : row.description)
-  : row.description;
+```sql
+(SELECT EXISTS (
+  SELECT 1 FROM user_roles ur
+  WHERE ur.user_id = p.id AND ur.role = 'beta'
+)) as is_beta
 ```
 
-Updated logic -- always prefer subtype when available:
-```
-const key = row.exercise_subtype
-  ? `${row.exercise_key}:${row.exercise_subtype}`
-  : row.exercise_key;
-const label = row.exercise_subtype
-  ? row.exercise_subtype.charAt(0).toUpperCase() + row.exercise_subtype.slice(1)
-  : row.description;
-```
+### 2. Frontend: Update `useAdminStats.ts`
+Add `is_beta: boolean` to the `UserStats` interface.
 
-This uses compound keys (`walk_run:walking`, `walk_run:running`) so subtypes never collapse, while exercises without subtypes (e.g., `bench_press`) keep using their description as the label.
+### 3. Frontend: Update `Admin.tsx`
+- Add a "B" (Beta) column header after the "Cs" column (or next to User name)
+- Show a green checkmark or indicator for users with the beta role
+- Compact styling consistent with existing columns
 
-### What does NOT change
-- No DSL schema changes
-- No edge function changes
-- No database changes
-- The `exerciseKeyFilter` branch for filtered charts still works because subtype-level grouping was already the intent there
-- The `uniqueDays` averaging logic is unaffected
+The beta indicator will appear as a small "B" column showing a checkmark for beta users, keeping the table compact.
+
