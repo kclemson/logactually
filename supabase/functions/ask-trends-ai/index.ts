@@ -74,7 +74,7 @@ serve(async (req) => {
         .order("eaten_date", { ascending: true }),
       supabase
         .from("weight_sets")
-        .select("logged_date, exercise_key, exercise_subtype, description, sets, reps, weight_lbs, duration_minutes, distance_miles, exercise_metadata")
+        .select("logged_date, exercise_key, exercise_subtype, description, sets, reps, weight_lbs, duration_minutes, distance_miles, effort, calories_burned_override")
         .gte("logged_date", startDate)
         .order("logged_date", { ascending: true }),
     ]);
@@ -125,11 +125,8 @@ serve(async (req) => {
         if (s.weight_lbs > 0) parts.push(`${s.weight_lbs} lbs`);
         if (s.duration_minutes) parts.push(`${s.duration_minutes} min`);
         if (s.distance_miles) parts.push(`${s.distance_miles} mi`);
-        const meta = s.exercise_metadata as Record<string, any> | null;
-        if (meta) {
-          if (meta.effort) parts.push(`effort: ${meta.effort}/10`);
-          if (meta.calories_burned) parts.push(`reported: ${meta.calories_burned} cal`);
-        }
+        if (s.effort) parts.push(`effort: ${s.effort}/10`);
+        if (s.calories_burned_override) parts.push(`reported: ${s.calories_burned_override} cal`);
         return parts.join(", ");
       });
       exerciseContext = `Exercise log (last 90 days, ${sets.length} entries):\n${lines.join("\n")}`;
