@@ -89,8 +89,15 @@ export function useWeightEntries(date: string) {
         incline_pct: set.incline_pct ?? (set.exercise_metadata as any)?.incline_pct ?? null,
         cadence_rpm: set.cadence_rpm ?? (set.exercise_metadata as any)?.cadence_rpm ?? null,
         speed_mph: set.speed_mph ?? (set.exercise_metadata as any)?.speed_mph ?? null,
-        // Keep exercise_metadata for any non-promoted keys
-        exercise_metadata: set.exercise_metadata ?? null,
+        // Strip promoted keys from exercise_metadata, keep only unknown future keys
+        exercise_metadata: (() => {
+          if (!set.exercise_metadata) return null;
+          const promoted = ['calories_burned', 'effort', 'heart_rate', 'incline_pct', 'cadence_rpm', 'speed_mph'];
+          const remaining = Object.fromEntries(
+            Object.entries(set.exercise_metadata).filter(([k]) => !promoted.includes(k))
+          );
+          return Object.keys(remaining).length > 0 ? remaining : null;
+        })(),
         // Only store raw_input, source_routine_id, group_name on the first set
         raw_input: index === 0 ? params.raw_input : null,
         source_routine_id: index === 0 ? (params.source_routine_id ?? null) : null,
