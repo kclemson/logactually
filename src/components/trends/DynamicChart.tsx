@@ -130,7 +130,7 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
       onGoToDay={interaction.handleGoToDay}
       rawDate={
         interaction.activeBarIndex !== null
-          ? ((chartData[interaction.activeBarIndex] as any)?.rawDate ?? chartData[interaction.activeBarIndex]?.[xAxis.field])
+          ? (chartData[interaction.activeBarIndex] as any)?.rawDate
           : undefined
       }
     />
