@@ -49,7 +49,7 @@ export function ChartCard({
         <div className="fixed inset-0 z-30" onClick={onDismiss} />
       )}
 
-      <div className="relative z-20">
+      <div className="relative z-40">
         <CardHeader className="p-2 pb-1">
           <div className="flex items-start justify-between gap-1">
             <div className="flex flex-col gap-0 min-w-0">
