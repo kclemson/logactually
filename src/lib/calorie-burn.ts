@@ -30,6 +30,13 @@ export interface ExerciseInput {
   weight_lbs: number;
   duration_minutes?: number | null;
   distance_miles?: number | null;
+  // Promoted metadata columns (read these first, fall back to exercise_metadata)
+  calories_burned_override?: number | null;
+  effort?: number | null;
+  heart_rate?: number | null;
+  incline_pct?: number | null;
+  cadence_rpm?: number | null;
+  speed_mph?: number | null;
   exercise_metadata?: Record<string, number> | null;
 }
 
@@ -337,8 +344,8 @@ export function estimateCalorieBurn(
   exercise: ExerciseInput,
   settings: CalorieBurnSettings,
 ): CalorieBurnResult {
-  // 1. If user-reported calories exist, use them directly
-  const reported = exercise.exercise_metadata?.calories_burned;
+  // 1. If user-reported calories exist, use them directly (column-first, JSONB fallback)
+  const reported = exercise.calories_burned_override ?? exercise.exercise_metadata?.calories_burned ?? null;
   if (reported != null && reported > 0) {
     return { type: 'exact', value: Math.round(reported) };
   }
@@ -346,15 +353,15 @@ export function estimateCalorieBurn(
   // 2. Get MET range
   let met = getMetRange(exercise.exercise_key, exercise.exercise_subtype);
 
-  // 3. Apply effort narrowing
-  const effort = exercise.exercise_metadata?.effort ?? null;
-  const effectiveEffort = effort ?? settings.defaultIntensity;
+  // 3. Apply effort narrowing (column-first, JSONB fallback)
+  const effortVal = exercise.effort ?? exercise.exercise_metadata?.effort ?? null;
+  const effectiveEffort = effortVal ?? settings.defaultIntensity;
   if (effectiveEffort != null) {
     met = narrowMetByEffort(met, effectiveEffort);
   }
 
-  // 4. Apply incline bonus
-  const incline = exercise.exercise_metadata?.incline_pct;
+  // 4. Apply incline bonus (column-first, JSONB fallback)
+  const incline = exercise.incline_pct ?? exercise.exercise_metadata?.incline_pct ?? null;
   if (incline != null && incline > 0) {
     met = applyInclineBonus(met, incline);
   }

@@ -24,7 +24,7 @@ const EMPTY_FOOD: FoodDayTotals = {
 };
 
 const EMPTY_EXERCISE: ExerciseDayTotals = {
-  sets: 0, duration_minutes: 0, distance_miles: 0, calories_burned: 0, heart_rate: 0, unique_exercises: 0, entries: 0,
+  sets: 0, duration_minutes: 0, distance_miles: 0, calories_burned: 0, heart_rate: 0, calories_burned_estimate: 0, unique_exercises: 0, entries: 0,
 };
 
 // ── Public API ──────────────────────────────────────────────
@@ -208,8 +208,9 @@ async function fetchExerciseData(
       sets: 1,
       duration_minutes: row.duration_minutes ?? 0,
       distance_miles: row.distance_miles ?? 0,
-      calories_burned: meta?.calories_burned ?? 0,
-      heart_rate: rowHeartRate ?? 0,
+      calories_burned: (row as any).calories_burned_override ?? meta?.calories_burned ?? 0,
+      heart_rate: (row as any).heart_rate_col ?? rowHeartRate ?? 0,
+      calories_burned_estimate: (row as any).calories_burned_estimate ?? 0,
       unique_exercises: 0,
       entries: 0,
     };

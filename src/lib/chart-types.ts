@@ -22,6 +22,7 @@ export interface ExerciseDayTotals {
   distance_miles: number;
   calories_burned: number;
   heart_rate: number;
+  calories_burned_estimate: number;
   unique_exercises: number;
   entries: number;
 }
