@@ -27,6 +27,7 @@ const ALL_CHIPS: Chip[] = [
   { label: "Daily fiber intake over time", mode: "v2" },
   { label: "Sodium intake trend", mode: "v2" },
   { label: "My highest calorie days", mode: "v2" },
+  { label: "My highest calorie food items", mode: "v2" },
   { label: "Average calories by hour of day", mode: "v2" },
   { label: "Which day of the week do I tend to eat the most?", mode: "v2" },
   { label: "Weekly calorie average trend", mode: "v2" },
