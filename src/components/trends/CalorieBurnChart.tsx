@@ -131,7 +131,7 @@ export const CalorieBurnChart = ({
         />
       )}
 
-      <div className="relative z-20">
+      <div className="relative z-40">
         <CardHeader className="p-2 pb-1">
           <div className="flex flex-col gap-0.5">
             <ChartTitle>{title}</ChartTitle>
