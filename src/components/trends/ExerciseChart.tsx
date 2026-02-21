@@ -207,7 +207,7 @@ export const ExerciseChart = ({ exercise, unit, onBarClick, distanceUnit = 'mi' 
         />
       )}
       
-      <div className="relative z-20">
+      <div className="relative z-40">
         <CardHeader 
           className={cn("p-2 pb-1", supportsSpeedToggle && "cursor-pointer")}
           onClick={handleHeaderClick}
