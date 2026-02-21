@@ -76,11 +76,44 @@ export function useSavedCharts() {
     },
   });
 
+  const reorderMutation = useMutation({
+    mutationFn: async (items: { id: string; sort_order: number }[]) => {
+      const updates = items.map(({ id, sort_order }) =>
+        supabase.from("saved_charts" as any).update({ sort_order } as any).eq("id", id)
+      );
+      const results = await Promise.all(updates);
+      const err = results.find(r => r.error);
+      if (err?.error) throw err.error;
+    },
+    onMutate: async (items) => {
+      await queryClient.cancelQueries({ queryKey: ["saved-charts"] });
+      const previous = queryClient.getQueryData<SavedChart[]>(["saved-charts"]);
+      if (previous) {
+        const orderMap = new Map(items.map(i => [i.id, i.sort_order]));
+        const updated = [...previous].map(c => ({
+          ...c,
+          sort_order: orderMap.get(c.id) ?? c.sort_order,
+        })).sort((a, b) => a.sort_order - b.sort_order || new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        queryClient.setQueryData(["saved-charts"], updated);
+      }
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["saved-charts"], context.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["saved-charts"] });
+    },
+  });
+
   return {
     savedCharts: query.data || [],
     isLoading: query.isLoading,
     saveMutation,
     updateMutation,
     deleteMutation,
+    reorderMutation,
   };
 }

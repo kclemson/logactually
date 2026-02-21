@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, ChartTitle, ChartSubtitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
-import { UtensilsCrossed, Dumbbell, ClipboardList, Pin, Plus, BarChart3, Pencil } from "lucide-react";
+import { UtensilsCrossed, Dumbbell, ClipboardList, Pin, Plus, BarChart3, Pencil, GripVertical } from "lucide-react";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { useWeightTrends, ExerciseTrend } from "@/hooks/useWeightTrends";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
@@ -98,9 +98,11 @@ const Trends = () => {
     }
   }, [selectedPeriod]);
 
-  const { savedCharts, deleteMutation } = useSavedCharts();
+  const { savedCharts, deleteMutation, reorderMutation } = useSavedCharts();
   const [deletePopoverId, setDeletePopoverId] = useState<string | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [contextMenu, setContextMenu] = useState<{ chartId: string; x: number; y: number } | null>(null);
   const handleExerciseBarClick = useCallback((date: string) => {
     navigate(`/weights?date=${date}`);
@@ -377,9 +379,50 @@ const Trends = () => {
           }
         >
           <div className="grid grid-cols-2 gap-2">
-            {savedCharts.map((chart) => (
-              <DynamicChart
+            {savedCharts.map((chart, index) => (
+              <div
                 key={chart.id}
+                draggable={isEditMode}
+                onDragStart={(e) => {
+                  setDragIndex(index);
+                  e.dataTransfer.effectAllowed = "move";
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                  setDragOverIndex(index);
+                }}
+                onDragLeave={() => setDragOverIndex(null)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (dragIndex === null || dragIndex === index) {
+                    setDragIndex(null);
+                    setDragOverIndex(null);
+                    return;
+                  }
+                  const reordered = [...savedCharts];
+                  const [moved] = reordered.splice(dragIndex, 1);
+                  reordered.splice(index, 0, moved);
+                  const items = reordered.map((c, i) => ({ id: c.id, sort_order: i }));
+                  reorderMutation.mutate(items);
+                  setDragIndex(null);
+                  setDragOverIndex(null);
+                }}
+                onDragEnd={() => {
+                  setDragIndex(null);
+                  setDragOverIndex(null);
+                }}
+                className={`transition-all ${
+                  isEditMode ? "cursor-grab active:cursor-grabbing" : ""
+                } ${
+                  dragIndex === index ? "opacity-40 scale-95" : ""
+                } ${
+                  dragOverIndex === index && dragIndex !== index
+                    ? "ring-2 ring-primary ring-offset-1 rounded-lg"
+                    : ""
+                }`}
+              >
+              <DynamicChart
                 spec={chart.chart_spec}
                 period={selectedPeriod}
                 timeRangeSuffix={chart.chart_dsl ? "· v2" : "· v1"}
@@ -393,6 +436,7 @@ const Trends = () => {
                 }}
                 headerAction={isEditMode ? (
                   <div className="flex items-center gap-0.5">
+                    <GripVertical className="h-3 w-3 text-muted-foreground cursor-grab" />
                     <button
                       onClick={() => openChartForEditing(chart)}
                       className="p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors"
@@ -411,6 +455,7 @@ const Trends = () => {
                   </div>
                 ) : undefined}
               />
+              </div>
             ))}
           </div>
 
