@@ -287,22 +287,30 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
     case "item": {
       if (dsl.source === "food" && dailyTotals.foodByItem) {
         const entries = Object.entries(dailyTotals.foodByItem);
+        const usePerEntry = dsl.aggregation === "max" || dsl.aggregation === "min";
         for (const [label, item] of entries) {
           const divisor = dsl.aggregation === "average"
             ? ((item as any).uniqueDays?.size || 1)
             : 1;
-          const metricValue =
-            dsl.metric === "entries"       ? item.count :
-            dsl.metric === "calories"      ? item.totalCalories / divisor :
-            dsl.metric === "protein"       ? item.totalProtein / divisor :
-            dsl.metric === "carbs"         ? item.totalCarbs / divisor :
-            dsl.metric === "fat"           ? item.totalFat / divisor :
-            dsl.metric === "fiber"         ? item.totalFiber / divisor :
-            dsl.metric === "sugar"         ? item.totalSugar / divisor :
-            dsl.metric === "saturated_fat" ? item.totalSaturatedFat / divisor :
-            dsl.metric === "sodium"        ? item.totalSodium / divisor :
-            dsl.metric === "cholesterol"   ? item.totalCholesterol / divisor :
-            item.count; // fallback for unknown metrics
+
+          let metricValue: number;
+          if (usePerEntry && item.valuesPerEntry?.[dsl.metric]) {
+            const vals = item.valuesPerEntry[dsl.metric];
+            metricValue = dsl.aggregation === "max" ? Math.max(...vals) : Math.min(...vals);
+          } else {
+            metricValue =
+              dsl.metric === "entries"       ? item.count :
+              dsl.metric === "calories"      ? item.totalCalories / divisor :
+              dsl.metric === "protein"       ? item.totalProtein / divisor :
+              dsl.metric === "carbs"         ? item.totalCarbs / divisor :
+              dsl.metric === "fat"           ? item.totalFat / divisor :
+              dsl.metric === "fiber"         ? item.totalFiber / divisor :
+              dsl.metric === "sugar"         ? item.totalSugar / divisor :
+              dsl.metric === "saturated_fat" ? item.totalSaturatedFat / divisor :
+              dsl.metric === "sodium"        ? item.totalSodium / divisor :
+              dsl.metric === "cholesterol"   ? item.totalCholesterol / divisor :
+              item.count;
+          }
           if (metricValue === 0) continue;
           dataPoints.push({
             label: label.length > 25 ? label.slice(0, 22) + "…" : label,
@@ -317,19 +325,26 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
         }
       } else if (dsl.source === "exercise" && dailyTotals.exerciseByItem) {
         const entries = Object.entries(dailyTotals.exerciseByItem);
+        const usePerEntry = dsl.aggregation === "max" || dsl.aggregation === "min";
         for (const [, item] of entries) {
           const divisor = dsl.aggregation === "average"
             ? ((item as any).uniqueDays?.size || 1)
             : 1;
-          // For heart_rate, average over rows that actually had heart rate data
           const heartRateDivisor = (item as any).heartRateCount > 0 ? (item as any).heartRateCount : 1;
-          const metricValue =
-            dsl.metric === "sets"             ? item.totalSets / divisor :
-            dsl.metric === "duration_minutes" ? item.totalDurationMinutes / divisor :
-            dsl.metric === "distance_miles"   ? ((item as any).totalDistanceMiles ?? 0) / divisor :
-            dsl.metric === "calories_burned"  ? item.totalCaloriesBurned / divisor :
-            dsl.metric === "heart_rate"       ? (item as any).totalHeartRate / heartRateDivisor :
-            item.count;
+
+          let metricValue: number;
+          if (usePerEntry && item.valuesPerEntry?.[dsl.metric]) {
+            const vals = item.valuesPerEntry[dsl.metric];
+            metricValue = dsl.aggregation === "max" ? Math.max(...vals) : Math.min(...vals);
+          } else {
+            metricValue =
+              dsl.metric === "sets"             ? item.totalSets / divisor :
+              dsl.metric === "duration_minutes" ? item.totalDurationMinutes / divisor :
+              dsl.metric === "distance_miles"   ? ((item as any).totalDistanceMiles ?? 0) / divisor :
+              dsl.metric === "calories_burned"  ? item.totalCaloriesBurned / divisor :
+              dsl.metric === "heart_rate"       ? (item as any).totalHeartRate / heartRateDivisor :
+              item.count;
+          }
           if (metricValue === 0) continue;
           dataPoints.push({
             label: item.description.length > 25 ? item.description.slice(0, 22) + "…" : item.description,

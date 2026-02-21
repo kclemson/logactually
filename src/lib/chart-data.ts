@@ -68,6 +68,7 @@ async function fetchFoodData(
     count: number; totalCalories: number; totalProtein: number; totalCarbs: number;
     totalFat: number; totalFiber: number; totalSugar: number; totalSaturatedFat: number;
     totalSodium: number; totalCholesterol: number; uniqueDays: Set<string>; recentSamples: string[];
+    valuesPerEntry: Record<string, number[]>;
   }> | undefined = needsItem ? {} : undefined;
 
   for (const row of data ?? []) {
@@ -94,6 +95,7 @@ async function fetchFoodData(
           count: 0, totalCalories: 0, totalProtein: 0, totalCarbs: 0,
           totalFat: 0, totalFiber: 0, totalSugar: 0, totalSaturatedFat: 0,
           totalSodium: 0, totalCholesterol: 0, uniqueDays: new Set<string>(), recentSamples: [],
+          valuesPerEntry: { calories: [], protein: [], carbs: [], fat: [], fiber: [], sugar: [], saturated_fat: [], sodium: [], cholesterol: [] },
         };
         existing.count += 1;
         existing.totalCalories += item.calories || 0;
@@ -106,6 +108,16 @@ async function fetchFoodData(
         existing.totalSodium += item.sodium || 0;
         existing.totalCholesterol += item.cholesterol || 0;
         existing.uniqueDays.add(row.eaten_date);
+        // Track per-entry values for max/min aggregation
+        existing.valuesPerEntry.calories.push(item.calories || 0);
+        existing.valuesPerEntry.protein.push(item.protein || 0);
+        existing.valuesPerEntry.carbs.push(item.carbs || 0);
+        existing.valuesPerEntry.fat.push(item.fat || 0);
+        existing.valuesPerEntry.fiber.push(item.fiber || 0);
+        existing.valuesPerEntry.sugar.push(item.sugar || 0);
+        existing.valuesPerEntry.saturated_fat.push(item.saturated_fat || 0);
+        existing.valuesPerEntry.sodium.push(item.sodium || 0);
+        existing.valuesPerEntry.cholesterol.push(item.cholesterol || 0);
         // Build recent sample string: "Feb 19 · 8:32 AM · yogurt and strawberries · 320 cal"
         const dateLabel = format(new Date(`${row.eaten_date}T12:00:00`), "MMM d");
         const timeLabel = row.created_at ? format(new Date(row.created_at), "h:mm a") : null;
@@ -172,7 +184,7 @@ async function fetchExerciseData(
 
   const exercise: Record<string, ExerciseDayTotals> = {};
   const exerciseByHour: HourlyTotals<ExerciseDayTotals> | undefined = needsHourly ? {} : undefined;
-  const exerciseByItem: Record<string, { description: string; count: number; totalSets: number; totalDurationMinutes: number; totalDistanceMiles: number; totalCaloriesBurned: number; totalHeartRate: number; heartRateCount: number; uniqueDays: Set<string>; recentSamples: string[] }> | undefined =
+  const exerciseByItem: Record<string, { description: string; count: number; totalSets: number; totalDurationMinutes: number; totalDistanceMiles: number; totalCaloriesBurned: number; totalHeartRate: number; heartRateCount: number; uniqueDays: Set<string>; recentSamples: string[]; valuesPerEntry: Record<string, number[]> }> | undefined =
     needsItem ? {} : undefined;
   const exerciseByCategory: Record<string, ExerciseDayTotals> | undefined =
     needsCategory ? {} : undefined;
@@ -210,7 +222,7 @@ async function fetchExerciseData(
       const label = row.exercise_subtype
         ? row.exercise_subtype.charAt(0).toUpperCase() + row.exercise_subtype.slice(1)
         : row.description;
-      const existing = exerciseByItem[key] ?? { description: label, count: 0, totalSets: 0, totalDurationMinutes: 0, totalDistanceMiles: 0, totalCaloriesBurned: 0, totalHeartRate: 0, heartRateCount: 0, uniqueDays: new Set<string>(), recentSamples: [] };
+      const existing = exerciseByItem[key] ?? { description: label, count: 0, totalSets: 0, totalDurationMinutes: 0, totalDistanceMiles: 0, totalCaloriesBurned: 0, totalHeartRate: 0, heartRateCount: 0, uniqueDays: new Set<string>(), recentSamples: [], valuesPerEntry: { sets: [], duration_minutes: [], distance_miles: [], calories_burned: [], heart_rate: [] } };
       existing.count += 1;
       existing.totalSets += row.sets ?? 1;
       existing.totalDurationMinutes += row.duration_minutes ?? 0;
@@ -221,6 +233,12 @@ async function fetchExerciseData(
         existing.heartRateCount += 1;
       }
       existing.uniqueDays.add(row.logged_date);
+      // Track per-entry values for max/min aggregation
+      existing.valuesPerEntry!.sets.push(row.sets ?? 1);
+      existing.valuesPerEntry!.duration_minutes.push(row.duration_minutes ?? 0);
+      existing.valuesPerEntry!.distance_miles.push(row.distance_miles ?? 0);
+      existing.valuesPerEntry!.calories_burned.push(meta?.calories_burned ?? 0);
+      if (rowHeartRate != null) existing.valuesPerEntry!.heart_rate.push(rowHeartRate);
       // Build recent sample string: "Feb 19 · 8:32 AM · dog walk · 2.4 mi · 47 min"
       const dateLabel = format(new Date(`${row.logged_date}T12:00:00`), "MMM d");
       const timeLabel = row.created_at ? format(new Date(row.created_at), "h:mm a") : null;
