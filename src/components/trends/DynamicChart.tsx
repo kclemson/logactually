@@ -53,6 +53,8 @@ interface DynamicChartProps {
   onContextMenu?: (e: React.MouseEvent) => void;
   period?: number;
   timeRangeSuffix?: string;
+  onTitleChange?: (title: string) => void;
+  onAiNoteChange?: (note: string) => void;
 }
 
 function periodLabel(days?: number): string | undefined {
@@ -62,7 +64,7 @@ function periodLabel(days?: number): string | undefined {
   return `Last ${days} days`;
 }
 
-export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, period, timeRangeSuffix }: DynamicChartProps) {
+export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, period, timeRangeSuffix, onTitleChange, onAiNoteChange }: DynamicChartProps) {
   const { data, dataKey, color, chartType, xAxis, valueFormat, referenceLine } = spec;
 
   const interaction = useChartInteraction({
@@ -159,10 +161,29 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
     height: 16,
   };
 
-  const footer = spec.aiNote ? (
-    <p className="text-[10px] italic text-muted-foreground mt-1 px-0.5 leading-tight">
-      {spec.aiNote}
-    </p>
+  const footer = spec.aiNote || onAiNoteChange ? (
+    onAiNoteChange ? (
+      <p
+        contentEditable
+        suppressContentEditableWarning
+        spellCheck={false}
+        onBlur={(e) => {
+          const newNote = (e.currentTarget.textContent ?? "").trim();
+          if (newNote !== (spec.aiNote ?? "")) onAiNoteChange(newNote || undefined as any);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") { e.preventDefault(); (e.target as HTMLElement).blur(); }
+          if (e.key === "Escape") { e.preventDefault(); e.currentTarget.textContent = spec.aiNote ?? ""; (e.target as HTMLElement).blur(); }
+        }}
+        className="text-[10px] italic text-muted-foreground mt-1 px-0.5 leading-tight outline-none border-b border-dashed border-muted-foreground/30 focus:border-primary cursor-text"
+      >
+        {spec.aiNote || "Add a note..."}
+      </p>
+    ) : (
+      <p className="text-[10px] italic text-muted-foreground mt-1 px-0.5 leading-tight">
+        {spec.aiNote}
+      </p>
+    )
   ) : undefined;
 
   return (
@@ -175,6 +196,7 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
       headerAction={headerAction}
       onContextMenu={onContextMenu}
       timeRange={[periodLabel(period), timeRangeSuffix].filter(Boolean).join(" ")}
+      onTitleChange={onTitleChange}
     >
       <div className="h-24">
         <ResponsiveContainer width="100%" height="100%" style={{ overflow: "visible" }}>
