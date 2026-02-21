@@ -1,36 +1,41 @@
 
-
-# Skip Zero-Value Items in Item-Grouped Charts
+# Subtype-Aware Item Grouping for Unfiltered Exercise Charts
 
 ## Problem
-When charting any metric grouped by item, items that don't track that metric appear as 0-value bars. This applies broadly:
-- Cardio exercises have 0 sets/reps/weight
-- Strength exercises have 0 distance/speed/cadence
-- Heart rate, calories_burned, duration, incline, effort, speed — all can be absent
-- Food items often have 0 for fiber, sugar, sodium, cholesterol, saturated_fat
-
-Maintaining separate "optional" vs "required" metric lists is fragile and will break as new metrics are added.
+When charting exercises grouped by item without an exercise filter (e.g., "average heart rate by exercise"), all subtypes of a parent key collapse into a single bar. Walking and running both become one "walk_run" bar, labeled by whichever description was processed first. This makes it look like walking data is missing when it's actually merged.
 
 ## Solution
-For `groupBy: "item"` only, skip any item where the computed `metricValue` rounds to 0. This is safe because:
-- An item cannot exist in the aggregation data with 0 entries/count
-- If a metric is 0 for an item, it means "not tracked" in virtually all cases
-- Time-series groupings (date, week, etc.) are unaffected — zero is valid data there
+Change the item-level grouping key in `chart-data.ts` to always use the most specific identifier available -- the subtype when present, the exercise key otherwise. This gives walking and running separate bars regardless of whether an exercise filter is active.
 
 ## Changes
 
-### `src/lib/chart-dsl.ts`
+### `src/lib/chart-data.ts` -- Item-level aggregation key and label (lines 206-212)
 
-Two one-line additions in the `groupBy: "item"` branch:
-
-1. **Food items** (around line 306, before `dataPoints.push`):
-```typescript
-if (metricValue === 0) continue;
+Current logic:
+```
+const key = exerciseKeyFilter ? (row.exercise_subtype ?? row.exercise_key) : row.exercise_key;
+const label = exerciseKeyFilter
+  ? (row.exercise_subtype
+      ? row.exercise_subtype.charAt(0).toUpperCase() + row.exercise_subtype.slice(1)
+      : row.description)
+  : row.description;
 ```
 
-2. **Exercise items** (around line 332, before `dataPoints.push`):
-```typescript
-if (metricValue === 0) continue;
+Updated logic -- always prefer subtype when available:
+```
+const key = row.exercise_subtype
+  ? `${row.exercise_key}:${row.exercise_subtype}`
+  : row.exercise_key;
+const label = row.exercise_subtype
+  ? row.exercise_subtype.charAt(0).toUpperCase() + row.exercise_subtype.slice(1)
+  : row.description;
 ```
 
-No "optional metrics" sets needed. No other files, schema, or edge function changes.
+This uses compound keys (`walk_run:walking`, `walk_run:running`) so subtypes never collapse, while exercises without subtypes (e.g., `bench_press`) keep using their description as the label.
+
+### What does NOT change
+- No DSL schema changes
+- No edge function changes
+- No database changes
+- The `exerciseKeyFilter` branch for filtered charts still works because subtype-level grouping was already the intent there
+- The `uniqueDays` averaging logic is unaffected
