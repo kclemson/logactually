@@ -1,24 +1,22 @@
 
 
-# Add Category, Type, and Subtype columns to Exercise CSV Export
+# Update ask-trends-ai to read from promoted columns
 
-## Summary
-Add three new columns -- **Category**, **Type**, **Subtype** -- to the left of the existing "Exercise" column in the exported CSV.
+## Problem
+The `ask-trends-ai` edge function reads `effort` and `calories_burned` from the `exercise_metadata` JSONB field. Since the client now strips these keys from JSONB on insert, new entries will have these values only in the promoted columns (`effort`, `calories_burned_override`), making them invisible to the AI.
 
-## New column order
-Date | Time | **Category** | **Type** | **Subtype** | Exercise | Sets | Reps | Weight (lbs) | Weight (kg) | Duration (min) | Distance (mi) | Distance (km) | Incline (%) | Effort (1-10) | Calories Burned | Heart Rate (bpm) | Cadence (rpm) | Speed (mph) | Speed (km/h) | Raw Input
+## Change
 
-## Technical changes
+### `supabase/functions/ask-trends-ai/index.ts`
 
-### 1. `src/hooks/useExportData.ts`
-- Add `exercise_key, exercise_subtype` to the `.select(...)` string
-- Add to row mapping: `exercise_key: row.exercise_key`, `exercise_subtype: row.exercise_subtype ?? null`
+1. Add `effort` and `calories_burned_override` to the `.select()` string for the `weight_sets` query.
 
-### 2. `src/lib/csv-export.ts`
-- Import `isCardioExercise` from `@/lib/exercise-metadata`
-- Add `exercise_key: string` and `exercise_subtype?: string | null` to `WeightSetExport` interface
-- Update `headers` array to insert `Category`, `Type`, `Subtype` before `Exercise`
-- In the row mapping, insert three values before `set.description`:
-  - Category: `isCardioExercise(set.exercise_key) ? 'Cardio' : set.exercise_key === 'other' ? 'Other' : 'Strength'`
-  - Type: `set.exercise_key`
-  - Subtype: `set.exercise_subtype ?? ''`
+2. Update the exercise context builder to read from the promoted columns instead of JSONB:
+   - `s.effort` instead of `meta.effort`
+   - `s.calories_burned_override` instead of `meta.calories_burned`
+
+3. Remove the `exercise_metadata` field from the select entirely (no longer needed for this function) and remove the `meta` variable and its conditional block.
+
+### Result
+The context lines will still produce the same output format (`effort: X/10`, `reported: Y cal`) but sourced from the promoted DB columns.
+
