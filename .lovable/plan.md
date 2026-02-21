@@ -1,43 +1,68 @@
 
 
-# Editable Chart Title and AI Note
+# Inline-Editable Chart Title and AI Note
 
-## What this does
-Adds two inline-editable text fields to the CustomChartDialog so users can customize the chart title (shown above the chart) and the AI note (shown below the chart as an italic footer). Works for both new charts and when editing saved charts.
+## Problem
+The current implementation adds separate Input fields that duplicate the title and note already rendered inside the chart preview. Users see each value twice.
 
-## UI placement
-The fields mirror where they appear in the rendered chart -- title above, note below:
-
-```text
-  "Daily fiber intake over time"
-
-  Title *  [Walking-Only vs. Other Workout Days___]
-
-  [========= chart preview =========]
-
-  Note     [Counts days where walk/run was the___]
-
-  [Regenerate] [Refine] [Save to Trends]
-```
-
-- **Title input**: placed between the question quote and the chart preview. Small text input, `text-sm font-medium`, placeholder "Chart title".
-- **Note input**: placed between the chart preview and the action buttons. Smaller text input, `text-xs text-muted-foreground`, placeholder "Note (optional)".
-
-This keeps the editing experience consistent with how the saved chart actually looks.
+## Solution
+Remove the separate Input fields and instead make the title and aiNote inside the chart itself editable when the dialog is in edit/create mode. This is done by passing optional `onTitleChange` and `onAiNoteChange` callbacks into `DynamicChart`, which forwards them to `ChartCard`. When these callbacks are present, the title and note render as `contentEditable` spans instead of plain text.
 
 ## Changes
 
-### `src/components/CustomChartDialog.tsx`
-1. Import the `Input` component from `@/components/ui/input`
-2. In the result section (where `showResult` is true):
-   - After the `lastQuestion` quote and before the chart preview div, add a Title input bound to `currentSpec.title`
-   - After the chart preview div and before the action buttons row, add a Note input bound to `currentSpec.aiNote`
-3. On change, update `currentSpec` via `setCurrentSpec(prev => ({ ...prev!, title: value }))` (same pattern for `aiNote`)
-4. Both inputs use `autoComplete="off"` and ghost-text placeholder styling per project standards
+### 1. Remove the duplicate Input fields from `CustomChartDialog.tsx`
+- Delete the two `<Input>` elements (title above chart, note below chart) that were just added
+- Keep the `Input` import removal if no longer needed
 
-### No other files change
-- No database migration needed
-- No changes to `useSavedCharts`, `DynamicChart`, `ChartCard`, or any other component
-- The existing `handleSave` already persists the full `currentSpec` object, so edits are saved automatically
-- Regenerating or refining overwrites both fields with new AI output; user can re-edit after
+### 2. Add edit callbacks to `DynamicChart`
+- Add optional props: `onTitleChange?: (title: string) => void` and `onAiNoteChange?: (note: string) => void`
+- When `onAiNoteChange` is provided, make the footer note a `contentEditable` element instead of plain text
+- Pass `onTitleChange` through to `ChartCard`
+
+### 3. Update `ChartCard` to support inline title editing
+- Add optional `onTitleChange?: (title: string) => void` prop
+- When present, render the `ChartTitle` content inside a `contentEditable` span with `onBlur` to commit the change
+- Style the editable state with a subtle underline or outline so users know it's clickable
+
+### 4. Wire it up in `CustomChartDialog.tsx`
+- Pass `onTitleChange` and `onAiNoteChange` to the `DynamicChart` in the result section
+- These callbacks update `currentSpec` state as before: `setCurrentSpec(prev => ({ ...prev!, title: newTitle }))`
+
+## Technical details
+
+**ChartCard changes:**
+- `onTitleChange` prop added to interface
+- When set, `ChartTitle` children wrapped in a `contentEditable` span:
+  ```tsx
+  <ChartTitle>
+    {onTitleChange ? (
+      <span
+        contentEditable
+        suppressContentEditableWarning
+        onBlur={(e) => onTitleChange(e.currentTarget.textContent ?? "")}
+        className="outline-none border-b border-dashed border-muted-foreground/30 focus:border-primary"
+      >
+        {title}
+      </span>
+    ) : title}
+  </ChartTitle>
+  ```
+
+**DynamicChart footer changes:**
+- When `onAiNoteChange` is provided, the footer renders a `contentEditable` paragraph with the same pattern
+- When not provided (normal Trends page view), behavior is unchanged
+
+**CustomChartDialog changes:**
+- Remove the two `<Input>` elements
+- Add callbacks to the existing `<DynamicChart>`:
+  ```tsx
+  <DynamicChart
+    spec={currentSpec}
+    period={period}
+    onTitleChange={(t) => setCurrentSpec(prev => ({ ...prev!, title: t }))}
+    onAiNoteChange={(n) => setCurrentSpec(prev => ({ ...prev!, aiNote: n }))}
+  />
+  ```
+
+This approach reuses the existing `contentEditable` pattern already established in the codebase (via `DescriptionCell`) and avoids any field duplication.
 
