@@ -303,6 +303,7 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
             dsl.metric === "sodium"        ? item.totalSodium / divisor :
             dsl.metric === "cholesterol"   ? item.totalCholesterol / divisor :
             item.count; // fallback for unknown metrics
+          if (metricValue === 0) continue;
           dataPoints.push({
             label: label.length > 25 ? label.slice(0, 22) + "…" : label,
             value: Math.round(dsl.aggregation === "count" ? item.count : metricValue),
@@ -329,6 +330,7 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
             dsl.metric === "calories_burned"  ? item.totalCaloriesBurned / divisor :
             dsl.metric === "heart_rate"       ? (item as any).totalHeartRate / heartRateDivisor :
             item.count;
+          if (metricValue === 0) continue;
           dataPoints.push({
             label: item.description.length > 25 ? item.description.slice(0, 22) + "…" : item.description,
             value: Math.round(dsl.aggregation === "count" ? item.count : metricValue),
