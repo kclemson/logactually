@@ -753,6 +753,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
                     duration_minutes: item.duration_minutes,
                     distance_miles: item.distance_miles,
                     exercise_metadata: item.exercise_metadata,
+                    calories_burned_override: item.calories_burned_override,
                   }));
                   const total = estimateTotalCalorieBurn(exercises, settings as CalorieBurnSettings);
                   const value = formatCalorieBurnValue(total);
