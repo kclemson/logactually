@@ -1,5 +1,6 @@
 import { FoodEntry } from '@/types/food';
 import { format } from 'date-fns';
+import { isCardioExercise } from '@/lib/exercise-metadata';
 
 /**
  * Escape a value for CSV (handle commas, quotes, newlines)
@@ -168,6 +169,8 @@ export interface WeightSetExport {
   exercise_metadata?: Record<string, number> | null;
   duration_minutes?: number | null;
   distance_miles?: number | null;
+  exercise_key: string;
+  exercise_subtype?: string | null;
 }
 
 /**
@@ -177,7 +180,7 @@ const LBS_TO_KG = 0.453592;
 const MI_TO_KM = 1.60934;
 
 export function exportWeightLog(sets: WeightSetExport[]) {
-  const headers = ['Date', 'Time', 'Exercise', 'Sets', 'Reps', 'Weight (lbs)', 'Weight (kg)', 'Duration (min)', 'Distance (mi)', 'Distance (km)', 'Incline (%)', 'Effort (1-10)', 'Calories Burned', 'Heart Rate (bpm)', 'Cadence (rpm)', 'Speed (mph)', 'Speed (km/h)', 'Raw Input'];
+  const headers = ['Date', 'Time', 'Category', 'Type', 'Subtype', 'Exercise', 'Sets', 'Reps', 'Weight (lbs)', 'Weight (kg)', 'Duration (min)', 'Distance (mi)', 'Distance (km)', 'Incline (%)', 'Effort (1-10)', 'Calories Burned', 'Heart Rate (bpm)', 'Cadence (rpm)', 'Speed (mph)', 'Speed (km/h)', 'Raw Input'];
 
   const sorted = [...sets].sort((a, b) => {
     if (a.logged_date !== b.logged_date) {
@@ -195,9 +198,13 @@ export function exportWeightLog(sets: WeightSetExport[]) {
     const cadence = set.cadence_rpm ?? set.exercise_metadata?.cadence_rpm ?? '';
     const speed = set.speed_mph ?? set.exercise_metadata?.speed_mph ?? null;
     const distMi = set.distance_miles;
+    const category = isCardioExercise(set.exercise_key) ? 'Cardio' : set.exercise_key === 'other' ? 'Other' : 'Strength';
     return [
       set.logged_date,
       format(new Date(set.created_at), 'HH:mm'),
+      category,
+      set.exercise_key,
+      set.exercise_subtype ?? '',
       set.description,
       set.sets,
       set.reps,

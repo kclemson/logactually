@@ -48,7 +48,7 @@ export function useExportData() {
   const fetchAllWeightSets = async (): Promise<WeightSetExport[]> => {
     const { data, error } = await supabase
       .from('weight_sets')
-      .select('logged_date, created_at, description, sets, reps, weight_lbs, raw_input, exercise_metadata, calories_burned_override, calories_burned_estimate, effort, heart_rate, incline_pct, cadence_rpm, speed_mph, duration_minutes, distance_miles')
+      .select('logged_date, created_at, description, sets, reps, weight_lbs, raw_input, exercise_metadata, calories_burned_override, calories_burned_estimate, effort, heart_rate, incline_pct, cadence_rpm, speed_mph, duration_minutes, distance_miles, exercise_key, exercise_subtype')
       .order('logged_date', { ascending: true })
       .order('created_at', { ascending: true });
 
@@ -72,6 +72,8 @@ export function useExportData() {
       speed_mph: row.speed_mph != null ? Number(row.speed_mph) : null,
       duration_minutes: row.duration_minutes != null ? Number(row.duration_minutes) : null,
       distance_miles: row.distance_miles != null ? Number(row.distance_miles) : null,
+      exercise_key: row.exercise_key,
+      exercise_subtype: row.exercise_subtype ?? null,
     }));
   };
 
