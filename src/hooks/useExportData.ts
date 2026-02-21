@@ -48,7 +48,7 @@ export function useExportData() {
   const fetchAllWeightSets = async (): Promise<WeightSetExport[]> => {
     const { data, error } = await supabase
       .from('weight_sets')
-      .select('logged_date, created_at, description, sets, reps, weight_lbs, raw_input, exercise_metadata')
+      .select('logged_date, created_at, description, sets, reps, weight_lbs, raw_input, exercise_metadata, calories_burned_override, calories_burned_estimate, effort, heart_rate, incline_pct, cadence_rpm, speed_mph')
       .order('logged_date', { ascending: true })
       .order('created_at', { ascending: true });
 
@@ -63,6 +63,13 @@ export function useExportData() {
       weight_lbs: Number(row.weight_lbs),
       raw_input: row.raw_input,
       exercise_metadata: row.exercise_metadata as Record<string, number> | null,
+      calories_burned_override: row.calories_burned_override != null ? Number(row.calories_burned_override) : null,
+      calories_burned_estimate: row.calories_burned_estimate != null ? Number(row.calories_burned_estimate) : null,
+      effort: row.effort != null ? Number(row.effort) : null,
+      heart_rate: row.heart_rate != null ? Number(row.heart_rate) : null,
+      incline_pct: row.incline_pct != null ? Number(row.incline_pct) : null,
+      cadence_rpm: row.cadence_rpm != null ? Number(row.cadence_rpm) : null,
+      speed_mph: row.speed_mph != null ? Number(row.speed_mph) : null,
     }));
   };
 
