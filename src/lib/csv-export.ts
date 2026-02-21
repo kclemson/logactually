@@ -166,6 +166,8 @@ export interface WeightSetExport {
   cadence_rpm?: number | null;
   speed_mph?: number | null;
   exercise_metadata?: Record<string, number> | null;
+  duration_minutes?: number | null;
+  distance_miles?: number | null;
 }
 
 /**
@@ -175,7 +177,7 @@ const LBS_TO_KG = 0.453592;
 const MI_TO_KM = 1.60934;
 
 export function exportWeightLog(sets: WeightSetExport[]) {
-  const headers = ['Date', 'Time', 'Exercise', 'Sets', 'Reps', 'Weight (lbs)', 'Weight (kg)', 'Incline (%)', 'Effort (1-10)', 'Calories Burned', 'Heart Rate (bpm)', 'Cadence (rpm)', 'Speed (mph)', 'Speed (km/h)', 'Raw Input'];
+  const headers = ['Date', 'Time', 'Exercise', 'Sets', 'Reps', 'Weight (lbs)', 'Weight (kg)', 'Duration (min)', 'Distance (mi)', 'Distance (km)', 'Incline (%)', 'Effort (1-10)', 'Calories Burned', 'Heart Rate (bpm)', 'Cadence (rpm)', 'Speed (mph)', 'Speed (km/h)', 'Raw Input'];
 
   const sorted = [...sets].sort((a, b) => {
     if (a.logged_date !== b.logged_date) {
@@ -192,6 +194,7 @@ export function exportWeightLog(sets: WeightSetExport[]) {
     const hr = set.heart_rate ?? set.exercise_metadata?.heart_rate ?? '';
     const cadence = set.cadence_rpm ?? set.exercise_metadata?.cadence_rpm ?? '';
     const speed = set.speed_mph ?? set.exercise_metadata?.speed_mph ?? null;
+    const distMi = set.distance_miles;
     return [
       set.logged_date,
       format(new Date(set.created_at), 'HH:mm'),
@@ -200,6 +203,9 @@ export function exportWeightLog(sets: WeightSetExport[]) {
       set.reps,
       set.weight_lbs,
       Math.round(set.weight_lbs * LBS_TO_KG),
+      set.duration_minutes ?? '',
+      distMi ?? '',
+      distMi != null ? Number((distMi * MI_TO_KM).toFixed(2)) : '',
       incline,
       effortVal,
       calBurned,
