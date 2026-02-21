@@ -795,7 +795,8 @@ export function flattenExerciseValues(item: Record<string, any>): Record<string,
   // Read from promoted top-level fields first, fall back to exercise_metadata
   const metadata = item.exercise_metadata || {};
   for (const mk of KNOWN_METADATA_KEYS) {
-    flat[`_meta_${mk.key}`] = item[mk.key] ?? metadata[mk.key] ?? null;
+    const columnName = META_KEY_TO_COLUMN[mk.key] || mk.key;
+    flat[`_meta_${mk.key}`] = item[columnName] ?? metadata[mk.key] ?? null;
   }
   return flat;
 }
