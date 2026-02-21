@@ -1,36 +1,37 @@
 
-# Fix: Strip promoted keys from exercise_metadata on write
+# Fix: DetailDialog not showing calories burned + audit all calories_burned references
 
 ## Problem
-When logging an exercise, the promoted metadata values (e.g., `calories_burned`, `heart_rate`) are correctly written to their new dedicated columns (`calories_burned_override`, `heart_rate`), but the original `exercise_metadata` JSONB is also stored unchanged -- resulting in duplicate data.
+The DetailDialog's `flattenExerciseValues` function reads `item['calories_burned']` but the WeightSet property is `calories_burned_override`. Since `exercise_metadata` is now stripped of promoted keys, the JSONB fallback also returns nothing.
 
-## Root Cause
-In `useWeightEntries.ts` line 93, `exercise_metadata: set.exercise_metadata ?? null` passes through the full JSONB object without removing keys that have been promoted to their own columns.
+## Changes
 
-## Fix
-In the `createEntry` mutation of `useWeightEntries.ts`, strip the 6 promoted keys (`calories_burned`, `effort`, `heart_rate`, `incline_pct`, `cadence_rpm`, `speed_mph`) from `exercise_metadata` before writing. If no keys remain, store `null` instead of an empty object.
+### 1. DetailDialog.tsx -- flattenExerciseValues (line 798)
 
-## Technical Details
+Use the existing `META_KEY_TO_COLUMN` mapping to resolve the correct property name:
 
-**File: `src/hooks/useWeightEntries.ts`**
-
-Replace line 92-93:
 ```typescript
-// Keep exercise_metadata for any non-promoted keys
-exercise_metadata: set.exercise_metadata ?? null,
+// Before (line 798):
+flat[`_meta_${mk.key}`] = item[mk.key] ?? metadata[mk.key] ?? null;
+
+// After:
+const columnName = META_KEY_TO_COLUMN[mk.key] || mk.key;
+flat[`_meta_${mk.key}`] = item[columnName] ?? metadata[mk.key] ?? null;
 ```
 
-With logic that strips promoted keys:
-```typescript
-// Strip promoted keys from exercise_metadata, keep only unknown future keys
-exercise_metadata: (() => {
-  if (!set.exercise_metadata) return null;
-  const promoted = ['calories_burned', 'effort', 'heart_rate', 'incline_pct', 'cadence_rpm', 'speed_mph'];
-  const remaining = Object.fromEntries(
-    Object.entries(set.exercise_metadata).filter(([k]) => !promoted.includes(k))
-  );
-  return Object.keys(remaining).length > 0 ? remaining : null;
-})(),
-```
+This is a one-line change. It correctly maps `calories_burned` to `calories_burned_override` while all other keys (effort, heart_rate, etc.) map to themselves.
 
-This is a single-file, ~6-line change. No migration needed -- existing rows with duplicate data are harmless since the read path already prioritizes the column over the JSONB fallback.
+### 2. Audit of all other calories_burned references
+
+All other usages are already correct:
+
+- **calorie-burn.ts** (line 348): reads `exercise.calories_burned_override` -- correct
+- **csv-export.ts** (line 191): reads `set.calories_burned_override` -- correct
+- **chart-data.ts** (line 205): reads `row.calories_burned_override` -- correct
+- **useWeightEntries.ts** (line 42): reads `row.calories_burned_override` -- correct
+- **useExportData.ts** (line 66): reads `row.calories_burned_override` -- correct
+- **exercise-metadata.ts** (line 305): `KNOWN_METADATA_KEYS` uses key `'calories_burned'` -- this is the UI/virtual key, not a DB column name, so it stays as-is
+- **chart-types.ts** (line 23): `ExerciseDayTotals.calories_burned` -- this is an aggregation field name, not a DB column, so it stays as-is
+- **calorie-burn.test.ts**: tests use `exercise_metadata: { calories_burned: 320 }` to test the JSONB fallback path -- correct and valuable to keep
+
+No other files need changes beyond the one-line fix in DetailDialog.
