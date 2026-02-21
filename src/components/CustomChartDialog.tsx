@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Loader2, BarChart3, RefreshCw, ShieldCheck } from "lucide-react";
 import { useGenerateChart, type DailyTotals, type GenerateChartResult } from "@/hooks/useGenerateChart";
 import { useSavedCharts } from "@/hooks/useSavedCharts";
@@ -400,11 +401,25 @@ function CustomChartDialogInner({
           {showResult && (
             <div className="space-y-3">
               {lastQuestion && <p className="text-xs text-muted-foreground italic">"{lastQuestion}"</p>}
+              <Input
+                value={currentSpec.title ?? ""}
+                onChange={(e) => setCurrentSpec(prev => ({ ...prev!, title: e.target.value }))}
+                placeholder="Chart title"
+                autoComplete="off"
+                className="text-sm font-medium h-8 placeholder:text-foreground/50 placeholder:italic"
+              />
               <div className="flex justify-center">
                 <div className="w-[50%] min-w-[220px] border border-border rounded-md overflow-hidden">
                   <DynamicChart spec={currentSpec} period={period} />
                 </div>
               </div>
+              <Input
+                value={currentSpec.aiNote ?? ""}
+                onChange={(e) => setCurrentSpec(prev => ({ ...prev!, aiNote: e.target.value }))}
+                placeholder="Note (optional)"
+                autoComplete="off"
+                className="text-xs text-muted-foreground h-7 placeholder:text-foreground/50 placeholder:italic"
+              />
 
               <div className="flex gap-2 justify-end">
                 <Button
