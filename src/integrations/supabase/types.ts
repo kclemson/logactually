@@ -455,61 +455,82 @@ export type Database = {
       }
       weight_sets: {
         Row: {
+          cadence_rpm: number | null
+          calories_burned_estimate: number | null
+          calories_burned_override: number | null
           created_at: string
           description: string
           distance_miles: number | null
           duration_minutes: number | null
+          effort: number | null
           entry_id: string
           exercise_key: string
           exercise_metadata: Json | null
           exercise_subtype: string | null
           group_name: string | null
+          heart_rate: number | null
           id: string
+          incline_pct: number | null
           logged_date: string
           raw_input: string | null
           reps: number
           sets: number
           source_routine_id: string | null
+          speed_mph: number | null
           updated_at: string
           user_id: string
           weight_lbs: number
         }
         Insert: {
+          cadence_rpm?: number | null
+          calories_burned_estimate?: number | null
+          calories_burned_override?: number | null
           created_at?: string
           description: string
           distance_miles?: number | null
           duration_minutes?: number | null
+          effort?: number | null
           entry_id: string
           exercise_key: string
           exercise_metadata?: Json | null
           exercise_subtype?: string | null
           group_name?: string | null
+          heart_rate?: number | null
           id?: string
+          incline_pct?: number | null
           logged_date?: string
           raw_input?: string | null
           reps?: number
           sets?: number
           source_routine_id?: string | null
+          speed_mph?: number | null
           updated_at?: string
           user_id: string
           weight_lbs?: number
         }
         Update: {
+          cadence_rpm?: number | null
+          calories_burned_estimate?: number | null
+          calories_burned_override?: number | null
           created_at?: string
           description?: string
           distance_miles?: number | null
           duration_minutes?: number | null
+          effort?: number | null
           entry_id?: string
           exercise_key?: string
           exercise_metadata?: Json | null
           exercise_subtype?: string | null
           group_name?: string | null
+          heart_rate?: number | null
           id?: string
+          incline_pct?: number | null
           logged_date?: string
           raw_input?: string | null
           reps?: number
           sets?: number
           source_routine_id?: string | null
+          speed_mph?: number | null
           updated_at?: string
           user_id?: string
           weight_lbs?: number
