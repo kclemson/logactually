@@ -31,6 +31,7 @@ export function CalorieBurnInline({ exercises, settings, onSave }: CalorieBurnIn
       duration_minutes: ex.duration_minutes,
       distance_miles: ex.distance_miles,
       exercise_metadata: ex.exercise_metadata,
+      calories_burned_override: ex.calories_burned_override,
     }, settings),
   }));
 
