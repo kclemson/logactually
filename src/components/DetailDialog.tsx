@@ -376,6 +376,7 @@ export function DetailDialog({
   // Single-item mode state
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Record<string, any>>({});
+  const [dirtyKeys, setDirtyKeys] = useState<Set<string>>(new Set());
   
 
   // Multi-item mode state
@@ -413,6 +414,7 @@ export function DetailDialog({
     if (!next) {
       setEditing(false);
       setDraft({});
+      setDirtyKeys(new Set());
       setExpandedIndices(new Set());
       setEditingIndex(null);
       setActiveUnits(defaultUnits || {});
@@ -438,12 +440,14 @@ export function DetailDialog({
   const cancelEdit = () => {
     setEditing(false);
     setDraft({});
+    setDirtyKeys(new Set());
   };
 
   const handleSave = () => {
     const updates: Record<string, any> = {};
     for (const field of fieldsFlat) {
       if (field.readOnly) continue;
+      if (!dirtyKeys.has(field.key)) continue;
       const edited = draft[field.key];
       if (edited === undefined) continue;
       let saveVal = edited;
@@ -462,6 +466,7 @@ export function DetailDialog({
     // (e.g. applyCategoryChange sets exercise_key when _exercise_category changes)
     for (const [key, val] of Object.entries(draft)) {
       if (key.startsWith('_')) continue;
+      if (!dirtyKeys.has(key)) continue;
       if (updates[key] !== undefined) continue;
       if (val !== values[key]) {
         updates[key] = val;
@@ -472,6 +477,7 @@ export function DetailDialog({
     }
     setEditing(false);
     setDraft({});
+    setDirtyKeys(new Set());
     onOpenChange(false);
   };
 
@@ -484,6 +490,7 @@ export function DetailDialog({
         if (editingIndex === idx) {
           setEditingIndex(null);
           setDraft({});
+          setDirtyKeys(new Set());
         }
       } else {
         next.add(idx);
@@ -504,6 +511,7 @@ export function DetailDialog({
       }
     }
     setDraft(d);
+    setDirtyKeys(new Set());
     setEditingIndex(idx);
     setExpandedIndices(new Set([idx]));
   };
@@ -511,6 +519,7 @@ export function DetailDialog({
   const cancelItemEdit = () => {
     setEditingIndex(null);
     setDraft({});
+    setDirtyKeys(new Set());
   };
 
   const saveItemEdit = () => {
@@ -519,6 +528,7 @@ export function DetailDialog({
     const updates: Record<string, any> = {};
     for (const field of itemFieldsFlat) {
       if (field.readOnly) continue;
+      if (!dirtyKeys.has(field.key)) continue;
       const edited = draft[field.key];
       if (edited === undefined) continue;
       let saveVal = edited;
@@ -538,9 +548,11 @@ export function DetailDialog({
     }
     setEditingIndex(null);
     setDraft({});
+    setDirtyKeys(new Set());
   };
 
   const updateDraft = (key: string, value: any) => {
+    setDirtyKeys(prev => new Set(prev).add(key));
     setDraft(prev => ({ ...prev, [key]: value }));
   };
 
