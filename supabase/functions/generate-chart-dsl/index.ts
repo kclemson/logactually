@@ -341,7 +341,7 @@ serve(async (req) => {
 
     // Handle unsupported request signal
     if (dsl.unsupported === true) {
-      console.info(`${tag} generate-chart-dsl: "${String(question).slice(0, 80)}" (${days}d) → unsupported`);
+      console.info(`${tag} generate-chart-dsl: "${String(question).slice(0, 400)}" (${days}d) → unsupported`);
       return new Response(JSON.stringify({ unsupported: true, reason: dsl.reason ?? "Request cannot be expressed in the chart DSL" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -355,7 +355,7 @@ serve(async (req) => {
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
-      console.info(`${tag} generate-chart-dsl: "${String(question).slice(0, 80)}" (${days}d) → options(${dsl.chartDSLOptions.length})`);
+      console.info(`${tag} generate-chart-dsl: "${String(question).slice(0, 400)}" (${days}d) → options(${dsl.chartDSLOptions.length})`);
       return new Response(JSON.stringify({ chartDSLOptions: dsl.chartDSLOptions }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -369,7 +369,7 @@ serve(async (req) => {
       );
     }
 
-    console.info(`${tag} generate-chart-dsl: "${String(question).slice(0, 80)}" (${days}d) → DSL`);
+    console.info(`${tag} generate-chart-dsl: "${String(question).slice(0, 400)}" (${days}d) → DSL`);
     return new Response(JSON.stringify({ chartDSL: dsl }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

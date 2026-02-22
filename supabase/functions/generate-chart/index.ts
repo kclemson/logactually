@@ -455,7 +455,7 @@ serve(async (req) => {
     const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
     const tag = isAdmin ? '[dev]' : '[user]';
     const question = messages.filter((m: any) => m.role === 'user').pop()?.content ?? '?';
-    console.info(`${tag} generate-chart ${mode ?? 'v1'}: "${String(question).slice(0, 80)}" (${days}d)`);
+    console.info(`${tag} generate-chart ${mode ?? 'v1'}: "${String(question).slice(0, 400)}" (${days}d)`);
 
     // Serialize dailyTotals (needed for both modes)
     const serializedFoodTotals: Record<string, any> = {};
