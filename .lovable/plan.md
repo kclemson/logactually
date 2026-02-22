@@ -1,30 +1,42 @@
 
 
-# Fix: Use estimated calorie burn as fallback in chart data
+# Add compare breakdown to chart tooltips
 
 ## Problem
-The compare subtraction code is working correctly, but the exercise `calories_burned` daily totals are always 0 for most entries. This is because `rowCaloriesBurned` on line 218 of `chart-data.ts` uses:
+When a chart uses `compare` (e.g., Net Daily Calories = food calories - exercise calories burned), the tooltip only shows the final net value. There's no way to see the two component values, making it hard to verify the math.
 
-```
-calories_burned_override ?? meta?.calories_burned ?? 0
-```
+## Solution
+Attach a `_compareBreakdown` object to each data point during DSL execution, then render it in the tooltip.
 
-It never falls back to `calories_burned_estimate`, which is the auto-computed value that exists for virtually all entries. So the subtraction `foodCalories - 0 = foodCalories` changes nothing.
+## Technical Details
 
-## Fix
+**File: `src/lib/chart-dsl.ts`**
 
-**File: `src/lib/chart-data.ts` (line 218)**
-
-Change the fallback chain to include the estimate column:
+In the `date` groupBy case (lines 173-206), when `dsl.compare` is active, attach breakdown metadata to the data point:
 
 ```typescript
-const rowCaloriesBurned = row.calories_burned_override ?? row.calories_burned_estimate ?? meta?.calories_burned ?? 0;
+// After computing finalValue and cmpVal:
+_compareBreakdown: dsl.compare ? {
+  primary: Math.round(value),
+  primaryLabel: dsl.derivedMetric || dsl.metric,
+  compare: cmpVal !== null ? Math.round(cmpVal) : null,
+  compareLabel: cmpMetric,
+} : undefined,
 ```
 
-This prefers manual overrides when present, falls back to the auto-computed estimate, and only uses the legacy JSONB metadata field as a last resort.
+Same pattern for the `week` groupBy case -- but since values are bucketed before aggregation, we'll aggregate the primary and compare sums separately and attach the breakdown to each week bucket.
 
-## Impact
-- "Net Daily Calories" charts will now correctly subtract exercise calories
-- All other exercise calorie charts will also show more complete data (estimates instead of just manual values)
-- No breaking changes: manual overrides still take priority
+**File: `src/components/trends/CompactChartTooltip.tsx`**
 
+Add a new section that renders when `_compareBreakdown` exists on the payload data:
+
+```
+Eaten: 217 cal
+Burned: 321 cal
+```
+
+This appears between the main value line and the existing `_details` section. Uses the same compact `text-[9px]` styling as details.
+
+## Files modified
+- `src/lib/chart-dsl.ts` -- attach `_compareBreakdown` to data points in `date` and `week` cases
+- `src/components/trends/CompactChartTooltip.tsx` -- render the breakdown when present
