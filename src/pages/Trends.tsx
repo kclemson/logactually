@@ -17,6 +17,7 @@ import { CustomChartDialog } from "@/components/CustomChartDialog";
 import { useSavedCharts } from "@/hooks/useSavedCharts";
 import { DynamicChart, type ChartSpec } from "@/components/trends/DynamicChart";
 import { fetchChartData } from "@/lib/chart-data";
+import { executeDSL } from "@/lib/chart-dsl";
 import { verifyChartData, type VerificationResult } from "@/lib/chart-verification";
 import type { ChartDSL } from "@/lib/chart-types";
 import { DeleteConfirmPopover } from "@/components/DeleteConfirmPopover";
@@ -99,6 +100,40 @@ const Trends = () => {
   }, [selectedPeriod]);
 
   const { savedCharts, deleteMutation, reorderMutation } = useSavedCharts();
+
+  // Re-execute v2 saved charts with live data
+  const v2ChartIds = useMemo(
+    () => savedCharts.filter(c => c.chart_dsl).map(c => c.id),
+    [savedCharts]
+  );
+  const { data: liveSpecs } = useQuery({
+    queryKey: ["saved-charts-live", v2ChartIds, selectedPeriod],
+    enabled: v2ChartIds.length > 0,
+    queryFn: async () => {
+      const results = new Map<string, ChartSpec>();
+      await Promise.all(
+        savedCharts
+          .filter(c => c.chart_dsl)
+          .map(async (chart) => {
+            try {
+              const dsl = chart.chart_dsl as ChartDSL;
+              const freshData = await fetchChartData(supabase, dsl, selectedPeriod);
+              const freshSpec = executeDSL(dsl, freshData);
+              // Preserve saved visual overrides (title, aiNote) but use fresh data
+              results.set(chart.id, {
+                ...freshSpec,
+                title: chart.chart_spec.title,
+                aiNote: chart.chart_spec.aiNote,
+              });
+            } catch (err) {
+              console.warn(`[saved-charts-live] Failed to refresh chart ${chart.id}:`, err);
+            }
+          })
+      );
+      return results;
+    },
+    staleTime: 60_000,
+  });
   const [deletePopoverId, setDeletePopoverId] = useState<string | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -423,7 +458,7 @@ const Trends = () => {
                 }`}
               >
               <DynamicChart
-                spec={chart.chart_spec}
+                spec={liveSpecs?.get(chart.id) ?? chart.chart_spec}
                 period={selectedPeriod}
                 timeRangeSuffix={chart.chart_dsl ? "· v2" : "· v1"}
                 onNavigate={(date) => {
