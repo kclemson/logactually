@@ -1,32 +1,26 @@
 
 
-# Fix clipped X-axis labels on categorical charts
+# Pass live data to edit dialog for v2 charts
 
 ## Problem
-On charts grouped by category (like "Average Heart Rate by Exercise"), multi-word labels such as "Indoor bike" are truncated to just "Indoor". The tooltip correctly shows the full name, but the axis label is clipped because the X-axis has a fixed height of 16px and Recharts skips or truncates labels that don't fit.
+When opening a saved v2 chart for editing, the dialog receives the stale `chart_spec` stored in the database. The Trends page itself now re-executes the DSL for live data (the fix from earlier), but the edit dialog still initializes with the old stored spec. Hitting "Regenerate" works because that triggers a fresh DSL execution.
 
 ## Solution
-Use a custom tick renderer for the X-axis that wraps long labels into multiple lines (one word per line) when the chart uses categorical grouping. This keeps the compact font size while ensuring all words are visible.
+In `openChartForEditing` (inside `src/pages/Trends.tsx`), after fetching fresh data for verification, also run `executeDSL` to produce a refreshed `ChartSpec` and pass that to the dialog instead of the stale stored one.
 
 ## Technical Details
 
-**File: `src/components/trends/DynamicChart.tsx`**
+**File: `src/pages/Trends.tsx`** (lines 88-100)
 
-1. Detect categorical charts: check if `xAxis.field` is something like `label` (non-date grouping) or if `spec.chartType` data contains non-date x values. A simpler heuristic: if the data has a `label` field (categorical DSL uses `label` as the x-axis field), treat it as categorical.
+Currently `openChartForEditing` already calls `fetchChartData` for verification purposes but discards the fresh spec. The change:
 
-2. For categorical charts, replace the default tick with a custom SVG `<text>` renderer that splits the label on spaces and renders each word as a separate `<tspan>` with a `dy` offset. This produces stacked multi-line labels.
+1. After `fetchChartData`, call `executeDSL(dsl, freshData)` to get a refreshed chart spec.
+2. Merge saved visual overrides (title, aiNote) from the stored spec onto the fresh spec (same pattern already used by the live-specs query).
+3. Pass the refreshed spec as `chartSpec` in `setEditingChart` instead of `chart.chart_spec`.
 
-3. Increase the X-axis `height` from 16 to ~28 for categorical charts to accommodate up to 2 lines of text.
-
-4. Set `interval={0}` for categorical charts so no labels are skipped (there are typically few categories).
-
-```
-Before: "Indoor" (clipped)
-After:  "Indoor"
-        "bike"   (two lines, fully visible)
-```
+This means the `setEditingChart` call moves inside the try block (for v2 charts), so the dialog opens with live data. For v1 charts (no DSL), the stale spec continues to be used since there is no way to refresh without calling the AI.
 
 | File | Change |
 |---|---|
-| `src/components/trends/DynamicChart.tsx` | Add custom multi-line tick renderer for categorical X-axis; increase axis height and force interval=0 when categorical |
+| `src/pages/Trends.tsx` | Re-execute DSL in `openChartForEditing` and pass fresh spec to edit dialog |
 
