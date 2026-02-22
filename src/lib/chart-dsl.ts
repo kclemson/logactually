@@ -203,7 +203,7 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
           rawDate: date,
           label: format(new Date(`${date}T12:00:00`), "MMM d"),
           value: Math.round(finalValue),
-          _details: details,
+          _details: dsl.compare ? [] : details,
           _compareBreakdown: dsl.compare ? {
             primary: Math.round(value),
             primaryLabel: dsl.derivedMetric || dsl.metric,
@@ -281,7 +281,7 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
           rawDate: weekDates[weekKey],
           label: weekKey,
           value: Math.round(aggregate(buckets[weekKey], dsl.aggregation)),
-          _details: [{ label: "days", value: String(buckets[weekKey].length) }],
+          _details: dsl.compare ? [] : [{ label: "days", value: String(buckets[weekKey].length) }],
           _compareBreakdown: dsl.compare ? {
             primary: Math.round(primarySum),
             primaryLabel: dsl.derivedMetric || dsl.metric,
