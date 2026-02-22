@@ -1,26 +1,45 @@
 
 
-# Pass live data to edit dialog for v2 charts
+# Fix categorical X-axis detection using DSL `groupBy`
 
 ## Problem
-When opening a saved v2 chart for editing, the dialog receives the stale `chart_spec` stored in the database. The Trends page itself now re-executes the DSL for live data (the fix from earlier), but the edit dialog still initializes with the old stored spec. Hitting "Regenerate" works because that triggers a fresh DSL execution.
+The current `isCategorical` check (`xAxis.field === "label"`) is always true for DSL-generated charts because `executeDSL` sets `field: "label"` for every `groupBy` type. This means date-based charts get forced `interval: 0` (showing every label) and multi-line ticks, while the actual categorical charts (like "by exercise") still clip.
 
 ## Solution
-In `openChartForEditing` (inside `src/pages/Trends.tsx`), after fetching fresh data for verification, also run `executeDSL` to produce a refreshed `ChartSpec` and pass that to the dialog instead of the stale stored one.
+Pass the `groupBy` value from the DSL through to `ChartSpec` so `DynamicChart` can deterministically know whether the X-axis is categorical. Only `"item"` and `"category"` are truly categorical; everything else (`"date"`, `"week"`, `"dayOfWeek"`, `"hourOfDay"`, `"weekdayVsWeekend"`, `"dayClassification"`) uses fixed/ordered labels.
 
 ## Technical Details
 
-**File: `src/pages/Trends.tsx`** (lines 88-100)
+### 1. `src/components/trends/DynamicChart.tsx` -- Add `groupBy` to `ChartSpec` and use it
 
-Currently `openChartForEditing` already calls `fetchChartData` for verification purposes but discards the fresh spec. The change:
+Add an optional `groupBy` field to the `ChartSpec` interface:
 
-1. After `fetchChartData`, call `executeDSL(dsl, freshData)` to get a refreshed chart spec.
-2. Merge saved visual overrides (title, aiNote) from the stored spec onto the fresh spec (same pattern already used by the live-specs query).
-3. Pass the refreshed spec as `chartSpec` in `setEditingChart` instead of `chart.chart_spec`.
+```typescript
+groupBy?: "date" | "dayOfWeek" | "hourOfDay" | "weekdayVsWeekend" | "week" | "item" | "category" | "dayClassification";
+```
 
-This means the `setEditingChart` call moves inside the try block (for v2 charts), so the dialog opens with live data. For v1 charts (no DSL), the stale spec continues to be used since there is no way to refresh without calling the AI.
+Replace the broken heuristic:
+
+```typescript
+// Before (always true for DSL charts):
+const isCategorical = xAxis.field === "label";
+
+// After (deterministic):
+const isCategorical = spec.groupBy === "item" || spec.groupBy === "category";
+```
+
+Keep the `MultiLineTick` renderer and conditional axis props as-is -- they will now only activate for actual categorical charts.
+
+### 2. `src/lib/chart-dsl.ts` -- Emit `groupBy` in ChartSpec
+
+In the returned `ChartSpec` object (~line 558), add:
+
+```typescript
+groupBy: dsl.groupBy,
+```
 
 | File | Change |
 |---|---|
-| `src/pages/Trends.tsx` | Re-execute DSL in `openChartForEditing` and pass fresh spec to edit dialog |
+| `src/components/trends/DynamicChart.tsx` | Add optional `groupBy` to `ChartSpec`; replace `xAxis.field === "label"` with `groupBy === "item" or "category"` |
+| `src/lib/chart-dsl.ts` | Pass `dsl.groupBy` through to the returned `ChartSpec` |
 
