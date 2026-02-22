@@ -1,95 +1,48 @@
 
 
-# Persist admin reply draft to localStorage on unmount
+# Fix: Implement `compare` support in the Chart DSL engine
 
 ## Problem
-When writing a reply to a user's feedback in the admin panel, switching tabs (e.g. to check something) and coming back causes the textarea content to be lost because `replyText` is plain React state that resets when the component unmounts.
+The AI correctly generates a DSL with a `compare` field (`{ metric: "calories_burned", source: "exercise" }`) to create a "Net Daily Calories" chart (food calories minus exercise calories burned). However, the `executeDSL` engine in `chart-dsl.ts` never reads `dsl.compare` -- it only processes the primary `source` and `metric`. The chart therefore shows raw food calories instead of net calories.
 
-## Approach
-Save the draft to localStorage on component unmount, and restore it on mount. This avoids writing on every keystroke while still preserving work-in-progress text.
+## Solution
+After computing the primary `value` for each data point (in the `date` and `week` groupBy cases), subtract the compare metric's value from it. This is a small addition to the existing engine logic.
 
-Specifically:
-- On **unmount**: if there's an active reply (`replyingToId` is set and `replyText` is non-empty), save `{ id, text, mode }` to `localStorage` under a key like `admin-reply-draft`.
-- On **mount**: check localStorage for a saved draft. If found, restore `replyingToId`, `replyText`, and `replyMode`, then expand that feedback item. Clear the stored draft.
-- On **successful send** or **cancel**: clear the localStorage draft (already handled by the state resets, but we explicitly remove the key too).
+## Technical Details
 
-## Technical details
+**File: `src/lib/chart-dsl.ts`**
 
-**File: `src/pages/Admin.tsx`**
-
-1. Add a cleanup effect that saves draft on unmount:
+In the `case "date"` block (around line 173), after computing the primary value, look up the compare metric and subtract it:
 
 ```typescript
-// Use refs so the unmount effect always sees current values
-const replyingToIdRef = useRef(replyingToId);
-const replyTextRef = useRef(replyText);
-const replyModeRef = useRef(replyMode);
-replyingToIdRef.current = replyingToId;
-replyTextRef.current = replyText;
-replyModeRef.current = replyMode;
-
-useEffect(() => {
-  return () => {
-    if (replyingToIdRef.current && replyTextRef.current.trim()) {
-      localStorage.setItem('admin-reply-draft', JSON.stringify({
-        id: replyingToIdRef.current,
-        text: replyTextRef.current,
-        mode: replyModeRef.current,
-      }));
-    }
-  };
-}, []);
-```
-
-2. Initialize state from localStorage on mount:
-
-```typescript
-const [replyingToId, setReplyingToId] = useState<string | null>(() => {
-  try {
-    const draft = localStorage.getItem('admin-reply-draft');
-    if (draft) return JSON.parse(draft).id;
-  } catch {}
-  return null;
-});
-
-const [replyText, setReplyText] = useState(() => {
-  try {
-    const draft = localStorage.getItem('admin-reply-draft');
-    if (draft) return JSON.parse(draft).text ?? "";
-  } catch {}
-  return "";
-});
-
-const [replyMode, setReplyMode] = useState<'edit' | 'new'>(() => {
-  try {
-    const draft = localStorage.getItem('admin-reply-draft');
-    if (draft) return JSON.parse(draft).mode ?? 'new';
-  } catch {}
-  return 'new';
-});
-```
-
-3. Add a one-time effect to expand the restored feedback item and clear the draft from storage:
-
-```typescript
-useEffect(() => {
-  const draft = localStorage.getItem('admin-reply-draft');
-  if (draft) {
-    try {
-      const { id } = JSON.parse(draft);
-      if (id) setExpandedFeedbackIds(prev => new Set(prev).add(id));
-    } catch {}
-    localStorage.removeItem('admin-reply-draft');
+// Inside the date case, when building each data point:
+let primaryValue = value;
+if (dsl.compare) {
+  const compareSource = dsl.compare.source ?? dsl.source;
+  const compareMetric = METRIC_COMPAT[dsl.compare.metric] ?? dsl.compare.metric;
+  const compareVal = extractValue(compareSource, compareMetric, undefined, dailyTotals, date);
+  if (compareVal !== null) {
+    primaryValue -= compareVal;
   }
-}, []);
+}
+// Use primaryValue instead of value for Math.round(...)
 ```
 
-4. Clear draft in `handleCancelReply` and `handleSendReply`:
+The same pattern applies to the `case "week"` block where values are bucketed before aggregation -- the compare subtraction should happen per-date before bucketing.
 
-```typescript
-localStorage.removeItem('admin-reply-draft');
-```
+**File: `src/lib/chart-data.ts`**
 
-## Files modified
-- `src/pages/Admin.tsx` -- persist/restore reply draft via localStorage on unmount/mount
+The `fetchChartData` function likely only fetches data for the primary `source`. When `compare` references a different source (e.g., primary is `food` but compare is `exercise`), we need to ensure both sources' data is fetched. This requires checking if `dsl.compare?.source` differs from `dsl.source` and fetching both.
+
+## Changes summary
+
+| File | Change |
+|---|---|
+| `src/lib/chart-dsl.ts` | Apply `compare` subtraction in `date` and `week` groupBy cases |
+| `src/lib/chart-data.ts` | Ensure data for the compare source is fetched when it differs from the primary source |
+
+## Edge cases
+- If the compare source has no data for a given date, the primary value is used as-is (no subtraction)
+- Negative net values are valid and should display correctly (e.g., ate less than burned)
+- The `compare` field is optional, so all existing charts are unaffected
 
