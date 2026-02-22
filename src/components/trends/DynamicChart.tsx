@@ -8,6 +8,17 @@ import { useChartInteraction } from "@/hooks/useChartInteraction";
 import { getLabelInterval } from "@/lib/chart-label-interval";
 import { type ReactNode } from "react";
 
+function MultiLineTick({ x, y, payload }: any) {
+  const words = String(payload?.value ?? "").split(" ");
+  return (
+    <text x={x} y={y} textAnchor="middle" fontSize={8} fill="hsl(var(--muted-foreground))">
+      {words.map((w: string, i: number) => (
+        <tspan x={x} dy={i === 0 ? 0 : 10} key={i}>{w}</tspan>
+      ))}
+    </text>
+  );
+}
+
 export interface ChartSpec {
   chartType: "bar" | "line";
   title: string;
@@ -66,6 +77,7 @@ function periodLabel(days?: number): string | undefined {
 
 export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, period, timeRangeSuffix, onTitleChange, onAiNoteChange }: DynamicChartProps) {
   const { data, dataKey, color, chartType, xAxis, valueFormat, referenceLine } = spec;
+  const isCategorical = xAxis.field === "label";
 
   const interaction = useChartInteraction({
     dataLength: data.length,
@@ -154,11 +166,11 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
 
   const sharedXAxisProps = {
     dataKey: xAxis.field,
-    tick: { fontSize: 8 },
+    tick: isCategorical ? <MultiLineTick /> : { fontSize: 8 },
     stroke: "hsl(var(--muted-foreground))",
-    interval: "preserveStartEnd" as const,
+    interval: isCategorical ? (0 as const) : ("preserveStartEnd" as const),
     tickMargin: 2,
-    height: 16,
+    height: isCategorical ? 28 : 16,
   };
 
   const footer = spec.aiNote || onAiNoteChange ? (
