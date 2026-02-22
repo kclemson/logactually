@@ -1,33 +1,61 @@
 
 
-# Re-execute saved chart DSL on mount for live data
+# Add constant offset support to Chart DSL
 
 ## Problem
-Saved/pinned charts store the full `chart_spec` (including the `data` array) in the database at save time. When the Trends page renders these charts, it passes the stored spec directly to `DynamicChart`, which just renders whatever data it receives. The tooltip and chart values are frozen from when the chart was first created -- showing stale data days or weeks old.
+The user wants charts like "Food Calories - Exercise Calories Burned - 1486 (TDEE)" but the DSL only supports subtracting another data source metric via `compare`. There's no way to subtract a fixed number. The AI generates a DSL that mentions the constant in the title/aiNote but never actually applies it.
 
 ## Solution
-For v2 saved charts (those with a stored `chart_dsl`), re-execute the DSL client-side when the Trends page mounts. This fetches fresh data from the database and runs `executeDSL` locally, replacing the stale `data` array with live values while keeping the saved title, colors, and other visual config.
-
-v1 charts (no DSL) will continue showing their saved data since there is no lightweight way to refresh them without calling the AI again.
+Add an `offset` field to the ChartDSL schema. The engine subtracts this constant from each data point's value after the compare subtraction (if any). The AI prompt is updated so it knows to use `offset` when the user provides a fixed number to add or subtract.
 
 ## Technical Details
 
-**File: `src/pages/Trends.tsx`**
+### 1. `src/lib/chart-types.ts` -- Add `offset` to ChartDSL
 
-Add a new mechanism to hydrate saved v2 charts with live data:
+```typescript
+// Add after the compare field:
+/** Fixed constant subtracted from each data point (e.g., TDEE baseline). Applied after compare. */
+offset?: number;
+```
 
-1. Create a state map to hold refreshed chart specs keyed by chart ID: `Map<string, ChartSpec>`
-2. When `savedCharts` loads (or `selectedPeriod` changes), loop through charts that have `chart_dsl`. For each one, call `fetchChartData(supabase, chartDsl, selectedPeriod)` then `executeDSL(chartDsl, freshData)` to produce an updated `ChartSpec`.
-3. Store the refreshed specs in the state map.
-4. When rendering `DynamicChart`, prefer the refreshed spec over the stored one: `spec={liveSpecs.get(chart.id) ?? chart.chart_spec}`
+### 2. `src/lib/chart-dsl.ts` -- Apply offset in `executeDSL`
 
-This will be implemented as a `useQuery` or a standalone async function triggered when the saved charts list and period are available. Using a query with a composite key like `["saved-charts-live", savedChartIds, selectedPeriod]` ensures automatic refresh when the period changes and avoids redundant fetches.
+In the `date` case (~line 181), after the compare subtraction:
 
-The refresh runs in parallel for all v2 charts using `Promise.all`, with individual error handling so one failing chart does not block others -- failed charts simply fall back to their saved spec.
+```typescript
+if (dsl.offset) finalValue -= dsl.offset;
+```
 
-**No other files need changes.** `fetchChartData` and `executeDSL` are already exported and used by the chart generation flow.
+Same in the `week` case for weekly buckets.
+
+Also include the offset in `_compareBreakdown` so the tooltip can show it:
+
+```typescript
+_compareBreakdown: (dsl.compare || dsl.offset) ? {
+  primary: Math.round(value),
+  primaryLabel: dsl.derivedMetric || dsl.metric,
+  compare: cmpVal !== null ? Math.round(cmpVal) : null,
+  compareLabel: cmpMetric,
+  offset: dsl.offset ?? null,
+} : undefined,
+```
+
+### 3. `src/components/trends/CompactChartTooltip.tsx` -- Show offset in tooltip
+
+When `_compareBreakdown.offset` is present, render it as an additional line:
+
+```
+calories: 2100 . calories_burned: 321 . baseline: -1486
+```
+
+### 4. `supabase/functions/generate-chart-dsl/index.ts` -- Update AI prompt
+
+Add `offset` to the DSL schema description so the AI knows to use it when users mention a fixed number to subtract or add.
 
 | File | Change |
 |---|---|
-| `src/pages/Trends.tsx` | Add live DSL re-execution for saved v2 charts on mount / period change |
+| `src/lib/chart-types.ts` | Add optional `offset?: number` field |
+| `src/lib/chart-dsl.ts` | Apply offset after compare; include in breakdown metadata |
+| `src/components/trends/CompactChartTooltip.tsx` | Render offset in tooltip |
+| `supabase/functions/generate-chart-dsl/index.ts` | Add offset to DSL schema in AI prompt |
 
