@@ -87,15 +87,21 @@ const Trends = () => {
 
   const openChartForEditing = useCallback(async (chart: { id: string; question: string; chart_spec: ChartSpec; chart_dsl?: unknown }) => {
     setEditingChartVerification(null);
-    setEditingChart({ id: chart.id, question: chart.question, chartSpec: chart.chart_spec, chartDsl: chart.chart_dsl });
     if (chart.chart_dsl) {
       try {
-        const dt = await fetchChartData(supabase, chart.chart_dsl as ChartDSL, selectedPeriod);
-        const result = verifyChartData(chart.chart_spec, dt);
-        setEditingChartVerification(result);
+        const dsl = chart.chart_dsl as ChartDSL;
+        const freshData = await fetchChartData(supabase, dsl, selectedPeriod);
+        const freshSpec = executeDSL(dsl, freshData);
+        // Preserve saved visual overrides but use fresh data
+        const liveSpec = { ...freshSpec, title: chart.chart_spec.title, aiNote: chart.chart_spec.aiNote };
+        setEditingChart({ id: chart.id, question: chart.question, chartSpec: liveSpec, chartDsl: chart.chart_dsl });
+        setEditingChartVerification(verifyChartData(liveSpec, freshData));
       } catch (err) {
-        console.error("[openChartForEditing] verification fetch failed:", err);
+        console.error("[openChartForEditing] live refresh failed, using stored spec:", err);
+        setEditingChart({ id: chart.id, question: chart.question, chartSpec: chart.chart_spec, chartDsl: chart.chart_dsl });
       }
+    } else {
+      setEditingChart({ id: chart.id, question: chart.question, chartSpec: chart.chart_spec, chartDsl: chart.chart_dsl });
     }
   }, [selectedPeriod]);
 
