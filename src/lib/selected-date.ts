@@ -1,4 +1,4 @@
-import { format, parseISO, isFuture, isValid } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 
 const STORAGE_KEY = 'selectedDate';
 const SWIPE_DIR_KEY = 'swipeDirection';
@@ -12,7 +12,7 @@ export function getStoredDate(): string | null {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return null;
     const parsed = parseISO(stored);
-    if (!isValid(parsed) || isFuture(parsed)) return null;
+    if (!isValid(parsed)) return null;
     return stored;
   } catch {
     return null;

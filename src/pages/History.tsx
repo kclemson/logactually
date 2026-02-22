@@ -238,7 +238,6 @@ const History = () => {
 
   const goToPreviousMonth = () => { setSlideDir('right'); setCurrentMonth(subMonths(currentMonth, 1)); };
   const goToNextMonthGuarded = () => {
-    if (isSameMonth(currentMonth, new Date())) return;
     setSlideDir('left');
     setCurrentMonth(addMonths(currentMonth, 1));
   };
@@ -300,7 +299,7 @@ const History = () => {
           variant="ghost" 
           size="icon" 
           onClick={goToNextMonthGuarded}
-          disabled={isSameMonth(currentMonth, new Date())}
+          disabled={false}
           aria-label="Next month"
         >
           <ChevronRight className="h-5 w-5" />
@@ -352,7 +351,7 @@ const History = () => {
               const summary = summaryByDate.get(dateStr);
               const isCurrentMonth = isSameMonth(day, currentMonth);
               const isTodayDate = isToday(day);
-              const isFutureDate = day > new Date();
+              const isFutureDate = false;
               const hasEntries = !!summary;
               const weightData = weightByDate.get(dateStr);
               const hasWeights = showWeights && !!weightData;

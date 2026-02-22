@@ -1,4 +1,4 @@
-import { format, isToday, isFuture, startOfMonth } from 'date-fns';
+import { format, isToday, startOfMonth } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -84,7 +84,7 @@ export function DateNavigation({
             selected={selectedDate}
             onSelect={onDateSelect}
             onMonthChange={onCalendarMonthChange}
-            disabled={(date) => isFuture(date)}
+            disabled={() => false}
             modifiers={{ hasData: datesWithData }}
             modifiersClassNames={{ hasData: highlightClassName }}
             weekStartsOn={weekStartDay}
@@ -98,7 +98,7 @@ export function DateNavigation({
         variant="ghost"
         size="icon"
         onClick={onNextDay}
-        disabled={isTodaySelected}
+        disabled={false}
         className="h-11 w-11"
         aria-label="Next day"
       >
