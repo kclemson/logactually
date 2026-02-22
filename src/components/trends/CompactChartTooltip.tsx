@@ -61,6 +61,14 @@ export const CompactChartTooltip = ({
               </p>
             );
           })}
+      {payload[0]?.payload?._compareBreakdown && (
+        <div className="text-[9px] text-muted-foreground mt-0.5">
+          <span>{payload[0].payload._compareBreakdown.primaryLabel}: {payload[0].payload._compareBreakdown.primary}</span>
+          {payload[0].payload._compareBreakdown.compare != null && (
+            <span> · {payload[0].payload._compareBreakdown.compareLabel}: {payload[0].payload._compareBreakdown.compare}</span>
+          )}
+        </div>
+      )}
       {payload[0]?.payload?._details?.length > 0 && (
         <p className="text-[9px] text-muted-foreground mt-0.5">
           {payload[0].payload._details.map((d: { label: string; value: string }, i: number) => (

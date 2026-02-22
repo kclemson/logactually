@@ -172,10 +172,12 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
     case "date": {
       dataPoints = dateValues.map(({ date, value }) => {
         let finalValue = value;
+        let cmpVal: number | null = null;
+        let cmpMetric: string | undefined;
         if (dsl.compare) {
           const cmpSource = dsl.compare.source ?? dsl.source;
-          const cmpMetric = METRIC_COMPAT[dsl.compare.metric] ?? dsl.compare.metric;
-          const cmpVal = extractValue(cmpSource, cmpMetric, undefined, dailyTotals, date);
+          cmpMetric = METRIC_COMPAT[dsl.compare.metric] ?? dsl.compare.metric;
+          cmpVal = extractValue(cmpSource, cmpMetric, undefined, dailyTotals, date);
           if (cmpVal !== null) finalValue -= cmpVal;
         }
         const foodDay = dailyTotals.food[date];
@@ -202,6 +204,12 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
           label: format(new Date(`${date}T12:00:00`), "MMM d"),
           value: Math.round(finalValue),
           _details: details,
+          _compareBreakdown: dsl.compare ? {
+            primary: Math.round(value),
+            primaryLabel: dsl.derivedMetric || dsl.metric,
+            compare: cmpVal !== null ? Math.round(cmpVal) : null,
+            compareLabel: cmpMetric,
+          } : undefined,
         };
       });
       if (dsl.window && dsl.window > 1) applyWindow(dataPoints, dsl.window);
@@ -244,28 +252,42 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
     }
     case "week": {
       const buckets: Record<string, number[]> = {};
+      const primaryBuckets: Record<string, number[]> = {};
+      const compareBuckets: Record<string, number[]> = {};
       const weekDates: Record<string, string> = {};
+      let weekCmpMetric: string | undefined;
       for (const { date, value } of dateValues) {
         let finalValue = value;
+        let cmpVal: number | null = null;
         if (dsl.compare) {
           const cmpSource = dsl.compare.source ?? dsl.source;
-          const cmpMetric = METRIC_COMPAT[dsl.compare.metric] ?? dsl.compare.metric;
-          const cmpVal = extractValue(cmpSource, cmpMetric, undefined, dailyTotals, date);
+          weekCmpMetric = METRIC_COMPAT[dsl.compare.metric] ?? dsl.compare.metric;
+          cmpVal = extractValue(cmpSource, weekCmpMetric, undefined, dailyTotals, date);
           if (cmpVal !== null) finalValue -= cmpVal;
         }
         const d = new Date(`${date}T12:00:00`);
         const weekKey = `${getISOWeekYear(d)}-W${String(getISOWeek(d)).padStart(2, "0")}`;
         (buckets[weekKey] ??= []).push(finalValue);
+        (primaryBuckets[weekKey] ??= []).push(value);
+        (compareBuckets[weekKey] ??= []).push(cmpVal !== null ? cmpVal : 0);
         if (!weekDates[weekKey] || date > weekDates[weekKey]) {
           weekDates[weekKey] = date;
         }
       }
       for (const weekKey of Object.keys(buckets).sort()) {
+        const primarySum = primaryBuckets[weekKey]?.reduce((a, b) => a + b, 0) ?? 0;
+        const compareSum = compareBuckets[weekKey]?.reduce((a, b) => a + b, 0) ?? 0;
         dataPoints.push({
           rawDate: weekDates[weekKey],
           label: weekKey,
           value: Math.round(aggregate(buckets[weekKey], dsl.aggregation)),
           _details: [{ label: "days", value: String(buckets[weekKey].length) }],
+          _compareBreakdown: dsl.compare ? {
+            primary: Math.round(primarySum),
+            primaryLabel: dsl.derivedMetric || dsl.metric,
+            compare: Math.round(compareSum),
+            compareLabel: weekCmpMetric,
+          } : undefined,
         });
       }
       if (dsl.window && dsl.window > 1) applyWindow(dataPoints, dsl.window);
