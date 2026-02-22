@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
+import { useRecomputeEstimates } from './useRecomputeEstimates';
+import type { CalorieBurnSettings } from '@/lib/calorie-burn';
 import type { WeightUnit, DistanceUnit } from '@/lib/weight-units';
 
 export interface UserSettings {
@@ -57,7 +59,9 @@ const DEFAULT_SETTINGS: UserSettings = {
 export function useUserSettings() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { recompute } = useRecomputeEstimates();
 
+  const BODY_STAT_KEYS = new Set(['bodyWeightLbs', 'heightInches', 'age', 'bodyComposition', 'defaultIntensity']);
   const { data: settings = DEFAULT_SETTINGS, isLoading } = useQuery({
     queryKey: ['user-settings', user?.id],
     queryFn: async () => {
@@ -97,7 +101,7 @@ export function useUserSettings() {
         .eq('id', user.id);
 
       if (error) throw error;
-      return newSettings;
+      return { newSettings, updates };
     },
     onMutate: async (updates) => {
       await queryClient.cancelQueries({ queryKey: ['user-settings', user?.id] });
@@ -110,9 +114,25 @@ export function useUserSettings() {
       
       return { previous };
     },
-    onError: (err, updates, context) => {
+    onError: (err, _updates, context) => {
       queryClient.setQueryData(['user-settings', user?.id], context?.previous);
       logger.error('Failed to save settings:', err);
+    },
+    onSuccess: (result) => {
+      if (!result) return;
+      const { newSettings, updates } = result;
+      const hasBodyStatChange = Object.keys(updates).some(k => BODY_STAT_KEYS.has(k));
+      if (hasBodyStatChange) {
+        const burnSettings: CalorieBurnSettings = {
+          calorieBurnEnabled: newSettings.calorieBurnEnabled,
+          bodyWeightLbs: newSettings.bodyWeightLbs,
+          heightInches: newSettings.heightInches,
+          age: newSettings.age,
+          bodyComposition: newSettings.bodyComposition,
+          defaultIntensity: newSettings.defaultIntensity,
+        };
+        recompute(burnSettings);
+      }
     },
   });
 
