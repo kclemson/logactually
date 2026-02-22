@@ -565,6 +565,7 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
     data: dataPoints,
     dataKey: "value",
     dataSource: dsl.source,
+    groupBy: dsl.groupBy,
   };
 
   return chartSpec;

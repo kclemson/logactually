@@ -31,6 +31,7 @@ export interface ChartSpec {
   valueFormat?: "integer" | "decimal1" | "duration_mmss" | "none";
   referenceLine?: { value: number; label?: string };
   dataSource?: "food" | "exercise" | "custom" | "mixed";
+  groupBy?: "date" | "dayOfWeek" | "hourOfDay" | "weekdayVsWeekend" | "week" | "item" | "category" | "dayClassification";
   verification?: {
     type: "daily" | "aggregate";
     source: "food" | "exercise";
@@ -77,7 +78,7 @@ function periodLabel(days?: number): string | undefined {
 
 export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, period, timeRangeSuffix, onTitleChange, onAiNoteChange }: DynamicChartProps) {
   const { data, dataKey, color, chartType, xAxis, valueFormat, referenceLine } = spec;
-  const isCategorical = xAxis.field === "label";
+  const isCategorical = spec.groupBy === "item" || spec.groupBy === "category";
 
   const interaction = useChartInteraction({
     dataLength: data.length,
