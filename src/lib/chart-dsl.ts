@@ -19,7 +19,7 @@ const METRIC_COMPAT: Record<string, string> = {
 // ── Known metrics ─────────────────────────────────────────
 
 const FOOD_METRICS = ["calories", "protein", "carbs", "fat", "fiber", "sugar", "saturated_fat", "sodium", "cholesterol", "entries"] as const;
-const EXERCISE_METRICS = ["sets", "duration_minutes", "distance_miles", "calories_burned", "heart_rate", "unique_exercises", "entries"] as const;
+const EXERCISE_METRICS = ["sets", "reps", "weight_lbs", "duration_minutes", "distance_miles", "calories_burned", "heart_rate", "unique_exercises", "entries"] as const;
 
 // Derived formulas compute from raw food daily totals
 const DERIVED_FORMULAS: Record<string, (t: Record<string, number>) => number> = {
@@ -379,6 +379,8 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
           } else {
             metricValue =
               dsl.metric === "sets"             ? item.totalSets / divisor :
+              dsl.metric === "reps"             ? ((item as any).totalReps ?? 0) / divisor :
+              dsl.metric === "weight_lbs"       ? ((item as any).totalWeightLbs ?? 0) / divisor :
               dsl.metric === "duration_minutes" ? item.totalDurationMinutes / divisor :
               dsl.metric === "distance_miles"   ? ((item as any).totalDistanceMiles ?? 0) / divisor :
               dsl.metric === "calories_burned"  ? item.totalCaloriesBurned / divisor :
@@ -407,6 +409,8 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
         for (const [label, totals] of Object.entries(dailyTotals.exerciseByCategory)) {
           const metricValue =
             dsl.metric === "sets" ? totals.sets :
+            dsl.metric === "reps" ? totals.reps :
+            dsl.metric === "weight_lbs" ? totals.weight_lbs :
             dsl.metric === "duration_minutes" ? totals.duration_minutes :
             dsl.metric === "distance_miles" ? totals.distance_miles :
             dsl.metric === "calories_burned" ? totals.calories_burned :

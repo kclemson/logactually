@@ -18,6 +18,8 @@ export interface FoodDayTotals {
 
 export interface ExerciseDayTotals {
   sets: number;
+  reps: number;
+  weight_lbs: number;
   duration_minutes: number;
   distance_miles: number;
   calories_burned: number;

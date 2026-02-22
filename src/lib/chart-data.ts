@@ -24,7 +24,7 @@ const EMPTY_FOOD: FoodDayTotals = {
 };
 
 const EMPTY_EXERCISE: ExerciseDayTotals = {
-  sets: 0, duration_minutes: 0, distance_miles: 0, calories_burned: 0, heart_rate: 0, calories_burned_estimate: 0, unique_exercises: 0, entries: 0,
+  sets: 0, reps: 0, weight_lbs: 0, duration_minutes: 0, distance_miles: 0, calories_burned: 0, heart_rate: 0, calories_burned_estimate: 0, unique_exercises: 0, entries: 0,
 };
 
 // ── Public API ──────────────────────────────────────────────
@@ -180,7 +180,7 @@ async function fetchExerciseData(
 ): Promise<DailyTotals> {
   let query = supabase
     .from("weight_sets")
-    .select("logged_date, exercise_key, description, sets, duration_minutes, distance_miles, exercise_metadata, created_at, exercise_subtype, entry_id, calories_burned_override, calories_burned_estimate, heart_rate, effort, incline_pct, cadence_rpm, speed_mph")
+    .select("logged_date, exercise_key, description, sets, reps, weight_lbs, duration_minutes, distance_miles, exercise_metadata, created_at, exercise_subtype, entry_id, calories_burned_override, calories_burned_estimate, heart_rate, effort, incline_pct, cadence_rpm, speed_mph")
     .gte("logged_date", startDate)
     .order("logged_date", { ascending: true })
     .order("created_at", { ascending: true });
@@ -197,7 +197,7 @@ async function fetchExerciseData(
 
   const exercise: Record<string, ExerciseDayTotals> = {};
   const exerciseByHour: HourlyTotals<ExerciseDayTotals> | undefined = needsHourly ? {} : undefined;
-  const exerciseByItem: Record<string, { description: string; count: number; totalSets: number; totalDurationMinutes: number; totalDistanceMiles: number; totalCaloriesBurned: number; totalHeartRate: number; heartRateCount: number; uniqueDays: Set<string>; recentSamples: string[]; valuesPerEntry: Record<string, number[]> }> | undefined =
+  const exerciseByItem: Record<string, { description: string; count: number; totalSets: number; totalReps: number; totalWeightLbs: number; totalDurationMinutes: number; totalDistanceMiles: number; totalCaloriesBurned: number; totalHeartRate: number; heartRateCount: number; uniqueDays: Set<string>; recentSamples: string[]; valuesPerEntry: Record<string, number[]> }> | undefined =
     needsItem ? {} : undefined;
   const exerciseByCategory: Record<string, ExerciseDayTotals> | undefined =
     needsCategory ? {} : undefined;
@@ -220,6 +220,8 @@ async function fetchExerciseData(
 
     const setTotals: ExerciseDayTotals = {
       sets: 1,
+      reps: row.reps ?? 0,
+      weight_lbs: row.weight_lbs ?? 0,
       duration_minutes: row.duration_minutes ?? 0,
       distance_miles: row.distance_miles ?? 0,
       calories_burned: rowCaloriesBurned,
@@ -237,9 +239,11 @@ async function fetchExerciseData(
       const label = row.exercise_subtype
         ? row.exercise_subtype.charAt(0).toUpperCase() + row.exercise_subtype.slice(1)
         : row.description;
-      const existing = exerciseByItem[key] ?? { description: label, count: 0, totalSets: 0, totalDurationMinutes: 0, totalDistanceMiles: 0, totalCaloriesBurned: 0, totalHeartRate: 0, heartRateCount: 0, uniqueDays: new Set<string>(), recentSamples: [], valuesPerEntry: { sets: [], duration_minutes: [], distance_miles: [], calories_burned: [], heart_rate: [] } };
+      const existing = exerciseByItem[key] ?? { description: label, count: 0, totalSets: 0, totalReps: 0, totalWeightLbs: 0, totalDurationMinutes: 0, totalDistanceMiles: 0, totalCaloriesBurned: 0, totalHeartRate: 0, heartRateCount: 0, uniqueDays: new Set<string>(), recentSamples: [], valuesPerEntry: { sets: [], reps: [], weight_lbs: [], duration_minutes: [], distance_miles: [], calories_burned: [], heart_rate: [] } };
       existing.count += 1;
       existing.totalSets += row.sets ?? 1;
+      existing.totalReps += row.reps ?? 0;
+      existing.totalWeightLbs += row.weight_lbs ?? 0;
       existing.totalDurationMinutes += row.duration_minutes ?? 0;
       existing.totalDistanceMiles += row.distance_miles ?? 0;
       existing.totalCaloriesBurned += rowCaloriesBurned;
@@ -250,6 +254,8 @@ async function fetchExerciseData(
       existing.uniqueDays.add(row.logged_date);
       // Track per-entry values for max/min aggregation
       existing.valuesPerEntry!.sets.push(row.sets ?? 1);
+      existing.valuesPerEntry!.reps.push(row.reps ?? 0);
+      existing.valuesPerEntry!.weight_lbs.push(row.weight_lbs ?? 0);
       existing.valuesPerEntry!.duration_minutes.push(row.duration_minutes ?? 0);
       existing.valuesPerEntry!.distance_miles.push(row.distance_miles ?? 0);
       existing.valuesPerEntry!.calories_burned.push(rowCaloriesBurned);
@@ -270,6 +276,8 @@ async function fetchExerciseData(
       const catKey = isCardioExercise(row.exercise_key) ? "Cardio" : "Strength";
       const cat = exerciseByCategory[catKey] ?? { ...EMPTY_EXERCISE };
       cat.sets += 1;
+      cat.reps += row.reps ?? 0;
+      cat.weight_lbs += row.weight_lbs ?? 0;
       cat.duration_minutes += row.duration_minutes ?? 0;
       cat.distance_miles += row.distance_miles ?? 0;
       cat.calories_burned += rowCaloriesBurned;
@@ -279,9 +287,11 @@ async function fetchExerciseData(
 
     // Daily aggregation
     const existing = exercise[date] ?? { ...EMPTY_EXERCISE };
-    existing.sets += 1;
-    existing.duration_minutes += setTotals.duration_minutes;
-    existing.distance_miles += setTotals.distance_miles;
+      existing.sets += 1;
+      existing.reps += setTotals.reps;
+      existing.weight_lbs += setTotals.weight_lbs;
+      existing.duration_minutes += setTotals.duration_minutes;
+      existing.distance_miles += setTotals.distance_miles;
     existing.calories_burned += setTotals.calories_burned;
     if (rowHeartRate != null) existing.heart_rate += rowHeartRate;
     const keySet = (seenKeys[date] ??= new Set());
