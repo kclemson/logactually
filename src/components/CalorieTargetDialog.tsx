@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -47,6 +47,24 @@ export function CalorieTargetDialog({
   settings,
   updateSettings,
 }: CalorieTargetDialogProps) {
+  const [draft, setDraft] = useState<Partial<UserSettings>>({});
+  const merged = useMemo(() => ({ ...settings, ...draft }), [settings, draft]);
+  const isDirty = Object.keys(draft).length > 0;
+
+  const handleOpenChange = useCallback((nextOpen: boolean) => {
+    if (nextOpen) setDraft({});
+    onOpenChange(nextOpen);
+  }, [onOpenChange]);
+
+  const handleDraftChange = useCallback((updates: Partial<UserSettings>) => {
+    setDraft(prev => ({ ...prev, ...updates }));
+  }, []);
+
+  const handleSave = useCallback(() => {
+    if (isDirty) updateSettings(draft);
+    onOpenChange(false);
+  }, [isDirty, draft, updateSettings, onOpenChange]);
+
   const { data: dailyBurnData } = useDailyCalorieBurn(30, { force: true });
   const { data: dailyFoodData = [] } = useDailyFoodTotals(30);
 
@@ -60,11 +78,10 @@ export function CalorieTargetDialog({
   }, [dailyBurnData]);
 
   const exampleData = useMemo(() => {
-    if (!settings.dailyCalorieTarget || dailyBurnData.length === 0 || dailyFoodData.length === 0) return null;
+    if (!merged.dailyCalorieTarget || dailyBurnData.length === 0 || dailyFoodData.length === 0) return null;
 
     const burnByDate = new Map(dailyBurnData.map(d => [d.date, d]));
 
-    // dailyFoodData is sorted descending; skip today since it's incomplete
     const todayStr = format(new Date(), 'yyyy-MM-dd');
     for (const food of dailyFoodData) {
       if (food.date >= todayStr) continue;
@@ -72,44 +89,41 @@ export function CalorieTargetDialog({
       if (burn) {
         const burnCals = Math.round((burn.low + burn.high) / 2);
         const net = food.totalCalories - burnCals;
-        const dotColorClass = getTargetDotColor(net, settings.dailyCalorieTarget);
+        const dotColorClass = getTargetDotColor(net, merged.dailyCalorieTarget);
         const dateFormatted = format(parseISO(food.date), 'MMMM do');
         return { dateFormatted, foodCals: food.totalCalories, burnCals, dotColorClass };
       }
     }
     return null;
-  }, [dailyBurnData, dailyFoodData, settings.dailyCalorieTarget]);
+  }, [dailyBurnData, dailyFoodData, merged.dailyCalorieTarget]);
 
   const equationData = useMemo(() => {
-    if (settings.calorieTargetMode !== 'body_stats') return null;
+    if (merged.calorieTargetMode !== 'body_stats') return null;
 
-    const isLogged = settings.activityLevel === 'logged';
+    const isLogged = merged.activityLevel === 'logged';
 
-    // Display weight in user's preferred unit
-    const weightDisplay = settings.bodyWeightLbs
-      ? settings.weightUnit === 'kg'
-        ? `${Math.round(settings.bodyWeightLbs * 0.453592)} kg`
-        : `${Math.round(settings.bodyWeightLbs)} lbs`
+    const weightDisplay = merged.bodyWeightLbs
+      ? merged.weightUnit === 'kg'
+        ? `${Math.round(merged.bodyWeightLbs * 0.453592)} kg`
+        : `${Math.round(merged.bodyWeightLbs)} lbs`
       : null;
 
-    // Display height in user's preferred unit
-    const heightDisplay = settings.heightInches
-      ? settings.heightUnit === 'cm'
-        ? `${Math.round(settings.heightInches * 2.54)} cm`
-        : formatInchesAsFeetInches(settings.heightInches)
+    const heightDisplay = merged.heightInches
+      ? merged.heightUnit === 'cm'
+        ? `${Math.round(merged.heightInches * 2.54)} cm`
+        : formatInchesAsFeetInches(merged.heightInches)
       : null;
 
-    const age = settings.age;
-    const profile = settings.bodyComposition;
-    const bmr = computeAbsoluteBMR(settings);
-    // For 'logged' mode, hardcode sedentary multiplier (1.2) as baseline
+    const age = merged.age;
+    const profile = merged.bodyComposition;
+    const bmr = computeAbsoluteBMR(merged);
     const multiplier = isLogged
       ? ACTIVITY_MULTIPLIERS.sedentary
-      : (settings.activityLevel ? ACTIVITY_MULTIPLIERS[settings.activityLevel as MultiplierActivityLevel] : null);
-    const deficit = settings.dailyDeficit ?? 0;
+      : (merged.activityLevel ? ACTIVITY_MULTIPLIERS[merged.activityLevel as MultiplierActivityLevel] : null);
+    const deficit = merged.dailyDeficit ?? 0;
     const tdee = bmr != null && multiplier != null ? Math.round(bmr * multiplier) : null;
     const target = isLogged
-      ? tdee // for logged, the base target is just the sedentary TDEE (exercise added downstream)
+      ? tdee
       : (tdee != null ? Math.round(tdee - deficit) : null);
 
     return {
@@ -120,7 +134,7 @@ export function CalorieTargetDialog({
       tdee: tdee != null ? Math.round(tdee) : null,
       target: target != null && target > 0 ? target : null,
     };
-  }, [settings]);
+  }, [merged]);
 
   const loggedExerciseExamples = useMemo(() => {
     if (!equationData?.isLogged || equationData.tdee == null) return [];
@@ -141,8 +155,9 @@ export function CalorieTargetDialog({
       });
   }, [equationData, dailyBurnData]);
 
+  // Toggle saves immediately (deliberate single action)
   const handleToggle = () => {
-    if (settings.calorieTargetEnabled) {
+    if (merged.calorieTargetEnabled) {
       updateSettings({
         calorieTargetEnabled: false,
         dailyCalorieTarget: null,
@@ -151,16 +166,18 @@ export function CalorieTargetDialog({
         dailyDeficit: null,
         ...buildBiometricsClearUpdates(settings, 'target'),
       });
+      setDraft({});
       onOpenChange(false);
     } else {
       updateSettings({ calorieTargetEnabled: true });
+      setDraft({});
     }
   };
 
   const inputClass = "w-20 h-8 text-center text-sm rounded-md border border-input bg-background px-2 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className="left-2 right-2 top-12 translate-x-0 translate-y-0 w-auto max-w-[calc(100vw-16px)] max-h-[85vh] max-h-[85dvh] overflow-y-auto p-4 sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md"
         onInteractOutside={(e) => e.preventDefault()}
@@ -183,13 +200,13 @@ export function CalorieTargetDialog({
               onClick={handleToggle}
               className={cn(
                 "w-12 h-6 rounded-full transition-colors relative border",
-                settings.calorieTargetEnabled ? "bg-primary border-primary" : "bg-muted border-border"
+                merged.calorieTargetEnabled ? "bg-primary border-primary" : "bg-muted border-border"
               )}
             >
               <span
                 className={cn(
                   "absolute left-0 top-0.5 w-5 h-5 rounded-full shadow transition-transform",
-                  settings.calorieTargetEnabled
+                  merged.calorieTargetEnabled
                     ? "translate-x-6 bg-primary-foreground"
                     : "translate-x-0.5 bg-white"
                 )}
@@ -201,7 +218,7 @@ export function CalorieTargetDialog({
           <div
             className={cn(
               "grid transition-[grid-template-rows] duration-300 ease-in-out",
-              settings.calorieTargetEnabled ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+              merged.calorieTargetEnabled ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
             )}
           >
             <div className="overflow-hidden">
@@ -210,12 +227,12 @@ export function CalorieTargetDialog({
                 <div className="flex items-center justify-between overflow-visible">
                   <p className="text-xs text-muted-foreground">Mode</p>
                   <Select
-                    value={settings.calorieTargetMode}
-                    onValueChange={(val) => updateSettings({ calorieTargetMode: val as CalorieTargetMode })}
+                    value={merged.calorieTargetMode}
+                    onValueChange={(val) => handleDraftChange({ calorieTargetMode: val as CalorieTargetMode })}
                   >
                     <SelectTrigger className="w-[280px] h-8 text-xs">
                       <SelectValue>
-                        {TARGET_MODE_OPTIONS.find(o => o.value === settings.calorieTargetMode)?.label}
+                        {TARGET_MODE_OPTIONS.find(o => o.value === merged.calorieTargetMode)?.label}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
@@ -232,17 +249,17 @@ export function CalorieTargetDialog({
                 </div>
 
                 {/* Static mode: number input */}
-                {settings.calorieTargetMode === 'static' && (
+                {merged.calorieTargetMode === 'static' && (
                   <div className="flex items-center justify-between">
                     <p className="text-xs text-muted-foreground">Target</p>
                     <div className="flex items-center gap-1.5">
                       <input
                         type="number"
                         placeholder="Not set"
-                        value={settings.dailyCalorieTarget ?? ''}
+                        value={merged.dailyCalorieTarget ?? ''}
                         onChange={(e) => {
                           const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
-                          updateSettings({ dailyCalorieTarget: val });
+                          handleDraftChange({ dailyCalorieTarget: val });
                         }}
                         className={inputClass}
                         min={0}
@@ -254,14 +271,14 @@ export function CalorieTargetDialog({
                 )}
 
                 {/* Body stats mode */}
-                {settings.calorieTargetMode === 'body_stats' && (
+                {merged.calorieTargetMode === 'body_stats' && (
                   <div className="space-y-3">
                     {/* Activity level */}
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-xs text-muted-foreground">Activity level</p>
                       <Select
-                        value={settings.activityLevel ?? ''}
-                        onValueChange={(val) => updateSettings({ activityLevel: val as ActivityLevel })}
+                        value={merged.activityLevel ?? ''}
+                        onValueChange={(val) => handleDraftChange({ activityLevel: val as ActivityLevel })}
                       >
                         <SelectTrigger className="w-[200px] h-8 text-xs">
                           <SelectValue placeholder="Select..." />
@@ -280,20 +297,20 @@ export function CalorieTargetDialog({
                     </div>
 
                     {/* Activity hint (hide for 'logged' mode) */}
-                    {activityHint && settings.activityLevel !== 'logged' && (
+                    {activityHint && merged.activityLevel !== 'logged' && (
                       <p className="text-[10px] text-muted-foreground/70 italic">
                         Your logged exercise burned an average of ~{activityHint.avgDailyBurn} calories/day over {activityHint.activeDays} active days. This is closest to "{activityHint.label}."
                       </p>
                     )}
 
                     {/* Calorie burn disabled warning for 'logged' mode */}
-                    {settings.activityLevel === 'logged' && !settings.calorieBurnEnabled && (
+                    {merged.activityLevel === 'logged' && !merged.calorieBurnEnabled && (
                       <p className="text-[10px] text-amber-500 dark:text-amber-400 italic">
                         Exercise calorie burn estimation is currently disabled. Enable it in Estimated Calorie Burn settings for this mode to work.
                       </p>
                     )}
 
-                    <BiometricsInputs settings={settings} updateSettings={updateSettings} showEffectHints={false} />
+                    <BiometricsInputs settings={merged} updateSettings={updateSettings} onChange={handleDraftChange} showEffectHints={false} />
 
                     {/* Daily deficit */}
                     <div className="flex items-center justify-between gap-2">
@@ -303,10 +320,10 @@ export function CalorieTargetDialog({
                         <input
                           type="number"
                           placeholder="0"
-                          value={settings.dailyDeficit ?? ''}
+                          value={merged.dailyDeficit ?? ''}
                           onChange={(e) => {
                             const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
-                            updateSettings({ dailyDeficit: val });
+                            handleDraftChange({ dailyDeficit: val });
                           }}
                           className="w-16 h-8 text-center text-sm rounded-md border border-input bg-background px-2 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           min={0}
@@ -390,9 +407,9 @@ export function CalorieTargetDialog({
                 )}
 
                 {/* Exercise adjusted mode */}
-                {settings.calorieTargetMode === 'exercise_adjusted' && (
+                {merged.calorieTargetMode === 'exercise_adjusted' && (
                   <div className="space-y-3">
-                    {!settings.calorieBurnEnabled ? (
+                    {!merged.calorieBurnEnabled ? (
                       <p className="text-[10px] text-amber-500 dark:text-amber-400 italic">
                         Exercise calorie burn estimation is currently disabled. Enable it in Estimated Calorie Burn settings for this mode to work.
                       </p>
@@ -404,10 +421,10 @@ export function CalorieTargetDialog({
                             <input
                               type="number"
                               placeholder="Not set"
-                              value={settings.dailyCalorieTarget ?? ''}
+                              value={merged.dailyCalorieTarget ?? ''}
                               onChange={(e) => {
                                 const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
-                                updateSettings({ dailyCalorieTarget: val });
+                                handleDraftChange({ dailyCalorieTarget: val });
                               }}
                               className={inputClass}
                               min={0}
@@ -421,7 +438,7 @@ export function CalorieTargetDialog({
                           Calories burned from logged exercises are subtracted from your food intake before comparing to this target — so active days give you more room.
                         </p>
 
-                        {exampleData && settings.dailyCalorieTarget && (
+                        {exampleData && merged.dailyCalorieTarget && (
                           <p className="text-[10px] text-muted-foreground/70">
                             For example, on {exampleData.dateFormatted} you logged{' '}
                             {exampleData.foodCals.toLocaleString()} calories in food and
@@ -429,11 +446,23 @@ export function CalorieTargetDialog({
                             exercising, which would show up{' '}
                             <span className={exampleData.dotColorClass}>●</span> with a
                             daily calorie target of{' '}
-                            {settings.dailyCalorieTarget.toLocaleString()} calories.
+                            {merged.dailyCalorieTarget.toLocaleString()} calories.
                           </p>
                         )}
                       </>
                     )}
+                  </div>
+                )}
+
+                {/* Save button */}
+                {isDirty && (
+                  <div className="sticky bottom-0 pt-2 pb-1 bg-background">
+                    <button
+                      onClick={handleSave}
+                      className="w-full h-10 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+                    >
+                      Save
+                    </button>
                   </div>
                 )}
               </div>

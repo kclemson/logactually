@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -81,6 +81,26 @@ export function CalorieBurnDialog({
   updateSettings,
 }: CalorieBurnDialogProps) {
   const { user } = useAuth();
+  const [draft, setDraft] = useState<Partial<UserSettings>>({});
+
+  // Merge draft on top of saved settings for live preview
+  const merged = useMemo(() => ({ ...settings, ...draft }), [settings, draft]);
+  const isDirty = Object.keys(draft).length > 0;
+
+  // Reset draft when dialog opens
+  const handleOpenChange = useCallback((nextOpen: boolean) => {
+    if (nextOpen) setDraft({});
+    onOpenChange(nextOpen);
+  }, [onOpenChange]);
+
+  const handleDraftChange = useCallback((updates: Partial<UserSettings>) => {
+    setDraft(prev => ({ ...prev, ...updates }));
+  }, []);
+
+  const handleSave = useCallback(() => {
+    if (isDirty) updateSettings(draft);
+    onOpenChange(false);
+  }, [isDirty, draft, updateSettings, onOpenChange]);
 
   // Fetch user's top exercises via RPC (2 cardio + 2 strength by frequency)
   const { data: userExercises } = useQuery({
@@ -120,45 +140,48 @@ export function CalorieBurnDialog({
     return { previewExercises: [...cardio, ...strength], isUsingSamples: usedSamples };
   }, [userExercises]);
 
-  // Compute live estimates from current settings
+  // Compute live estimates from merged (draft) settings
   const burnSettings: CalorieBurnSettings = useMemo(() => ({
-    calorieBurnEnabled: settings.calorieBurnEnabled,
-    bodyWeightLbs: settings.bodyWeightLbs,
-    heightInches: settings.heightInches,
-    age: settings.age,
-    bodyComposition: settings.bodyComposition,
-    defaultIntensity: settings.defaultIntensity,
-  }), [settings.calorieBurnEnabled, settings.bodyWeightLbs, settings.heightInches, settings.age, settings.bodyComposition, settings.defaultIntensity]);
+    calorieBurnEnabled: merged.calorieBurnEnabled,
+    bodyWeightLbs: merged.bodyWeightLbs,
+    heightInches: merged.heightInches,
+    age: merged.age,
+    bodyComposition: merged.bodyComposition,
+    defaultIntensity: merged.defaultIntensity,
+  }), [merged.calorieBurnEnabled, merged.bodyWeightLbs, merged.heightInches, merged.age, merged.bodyComposition, merged.defaultIntensity]);
 
   const previews = useMemo(() => {
     return previewExercises.map((ex) => {
       const result = estimateCalorieBurn(ex, burnSettings);
-      const label = exerciseLabel(ex, settings.weightUnit, settings.distanceUnit);
+      const label = exerciseLabel(ex, merged.weightUnit, merged.distanceUnit);
       const value = formatCalorieBurnValue(result);
       return { label, estimate: value ? `${value} cal` : '' };
     });
-  }, [previewExercises, burnSettings, settings.weightUnit]);
+  }, [previewExercises, burnSettings, merged.weightUnit]);
 
+  // Toggle saves immediately (deliberate single action)
   const handleToggle = () => {
-    if (settings.calorieBurnEnabled) {
+    if (merged.calorieBurnEnabled) {
       updateSettings({
         calorieBurnEnabled: false,
         defaultIntensity: null,
         ...buildBiometricsClearUpdates(settings, 'burn'),
       });
+      setDraft({});
     } else {
       updateSettings({ calorieBurnEnabled: true });
+      setDraft({});
     }
   };
 
   const handleIntensityChange = (val: string) => {
     if (val === '') {
-      updateSettings({ defaultIntensity: null });
+      handleDraftChange({ defaultIntensity: null });
       return;
     }
     const num = parseInt(val, 10);
     if (!isNaN(num) && num >= 1 && num <= 10) {
-      updateSettings({ defaultIntensity: num });
+      handleDraftChange({ defaultIntensity: num });
     }
   };
 
@@ -166,7 +189,7 @@ export function CalorieBurnDialog({
   const rightColClass = "flex items-center gap-1 justify-start w-[8.5rem]";
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="left-2 right-2 translate-x-0 w-auto max-w-[calc(100vw-16px)] max-h-[85vh] max-h-[85dvh] overflow-y-auto p-4 sm:left-[50%] sm:right-auto sm:translate-x-[-50%] sm:w-full sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>
         <div className="space-y-5">
           <DialogTitle className="text-sm font-medium sr-only">Calorie Burn Settings</DialogTitle>
@@ -177,13 +200,13 @@ export function CalorieBurnDialog({
               onClick={handleToggle}
               className={cn(
                 "w-12 h-6 rounded-full transition-colors relative border",
-                settings.calorieBurnEnabled ? "bg-primary border-primary" : "bg-muted border-border"
+                merged.calorieBurnEnabled ? "bg-primary border-primary" : "bg-muted border-border"
               )}
             >
               <span
                 className={cn(
                   "absolute left-0 top-0.5 w-5 h-5 rounded-full shadow transition-transform",
-                  settings.calorieBurnEnabled
+                  merged.calorieBurnEnabled
                     ? "translate-x-6 bg-primary-foreground"
                     : "translate-x-0.5 bg-white"
                 )}
@@ -194,7 +217,7 @@ export function CalorieBurnDialog({
           <div
             className={cn(
               "grid transition-[grid-template-rows] duration-300 ease-in-out",
-              settings.calorieBurnEnabled ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+              merged.calorieBurnEnabled ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
             )}
           >
             <div className="overflow-hidden">
@@ -217,7 +240,7 @@ export function CalorieBurnDialog({
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Your info</p>
                 <p className="text-[11px] text-muted-foreground/70 -mt-1">These details help narrow the estimated calorie burn range.</p>
 
-                <BiometricsInputs settings={settings} updateSettings={updateSettings} />
+                <BiometricsInputs settings={merged} updateSettings={updateSettings} onChange={handleDraftChange} />
               </div>
 
               {/* Workout defaults */}
@@ -233,7 +256,7 @@ export function CalorieBurnDialog({
                     <input
                       type="number"
                       placeholder="—"
-                      value={settings.defaultIntensity ?? ''}
+                      value={merged.defaultIntensity ?? ''}
                       onChange={(e) => handleIntensityChange(e.target.value)}
                       className={inputClass}
                       min={1}
@@ -256,6 +279,18 @@ export function CalorieBurnDialog({
                   use that number directly.
                 </p>
               </div>
+
+              {/* Save button */}
+              {isDirty && (
+                <div className="sticky bottom-0 pt-2 pb-1 bg-background">
+                  <button
+                    onClick={handleSave}
+                    className="w-full h-10 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+                  >
+                    Save
+                  </button>
+                </div>
+              )}
               </div>
             </div>
           </div>
