@@ -39,10 +39,23 @@ export async function fetchChartData(
   const needsItem = dsl.groupBy === "item";
   const needsCategory = dsl.groupBy === "category";
 
+  const compareSource = dsl.compare?.source;
+  const needsBothSources = compareSource && compareSource !== dsl.source;
+
   if (dsl.source === "food") {
-    return fetchFoodData(supabase, startDate, needsHourly, needsItem);
+    const foodData = await fetchFoodData(supabase, startDate, needsHourly, needsItem);
+    if (needsBothSources) {
+      const exerciseData = await fetchExerciseData(supabase, startDate, false);
+      return { ...foodData, exercise: exerciseData.exercise };
+    }
+    return foodData;
   }
-  return fetchExerciseData(supabase, startDate, needsHourly, dsl.filter?.exerciseKey, needsItem, needsCategory, dsl.filter?.category, dsl.filter?.exerciseSubtype);
+  const exerciseData = await fetchExerciseData(supabase, startDate, needsHourly, dsl.filter?.exerciseKey, needsItem, needsCategory, dsl.filter?.category, dsl.filter?.exerciseSubtype);
+  if (needsBothSources) {
+    const foodData = await fetchFoodData(supabase, startDate, false);
+    return { ...exerciseData, food: foodData.food };
+  }
+  return exerciseData;
 }
 
 // ── Food fetcher ────────────────────────────────────────────

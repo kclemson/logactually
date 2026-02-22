@@ -171,6 +171,13 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
   switch (dsl.groupBy) {
     case "date": {
       dataPoints = dateValues.map(({ date, value }) => {
+        let finalValue = value;
+        if (dsl.compare) {
+          const cmpSource = dsl.compare.source ?? dsl.source;
+          const cmpMetric = METRIC_COMPAT[dsl.compare.metric] ?? dsl.compare.metric;
+          const cmpVal = extractValue(cmpSource, cmpMetric, undefined, dailyTotals, date);
+          if (cmpVal !== null) finalValue -= cmpVal;
+        }
         const foodDay = dailyTotals.food[date];
         const exDay = dailyTotals.exercise[date];
         const details = dsl.source === "food"
@@ -193,7 +200,7 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
         return {
           rawDate: date,
           label: format(new Date(`${date}T12:00:00`), "MMM d"),
-          value: Math.round(value),
+          value: Math.round(finalValue),
           _details: details,
         };
       });
@@ -239,9 +246,16 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
       const buckets: Record<string, number[]> = {};
       const weekDates: Record<string, string> = {};
       for (const { date, value } of dateValues) {
+        let finalValue = value;
+        if (dsl.compare) {
+          const cmpSource = dsl.compare.source ?? dsl.source;
+          const cmpMetric = METRIC_COMPAT[dsl.compare.metric] ?? dsl.compare.metric;
+          const cmpVal = extractValue(cmpSource, cmpMetric, undefined, dailyTotals, date);
+          if (cmpVal !== null) finalValue -= cmpVal;
+        }
         const d = new Date(`${date}T12:00:00`);
         const weekKey = `${getISOWeekYear(d)}-W${String(getISOWeek(d)).padStart(2, "0")}`;
-        (buckets[weekKey] ??= []).push(value);
+        (buckets[weekKey] ??= []).push(finalValue);
         if (!weekDates[weekKey] || date > weekDates[weekKey]) {
           weekDates[weekKey] = date;
         }
