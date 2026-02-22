@@ -59,6 +59,7 @@ export function useSavedCharts() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["saved-charts"] });
+      queryClient.invalidateQueries({ queryKey: ["saved-charts-live"] });
     },
   });
 
