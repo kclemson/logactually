@@ -38,6 +38,8 @@ You MUST respond with ONLY a valid JSON object (no markdown, no code fences). Th
     "source": "food" | "exercise"
   } or null,
 
+  "offset": <number or null>,
+
   "classify": {
     "rule": "any_strength" | "all_cardio" | "any_cardio" | "any_key" | "only_keys" | "threshold",
     "keys": ["exerciseKey" or "exerciseKey:subtype", ...] or null,
@@ -117,6 +119,9 @@ ROLLING WINDOW:
 
 CUMULATIVE TRANSFORM:
 - "transform": "cumulative" or null — ONLY valid when groupBy is "date" or "week". Converts each data point to a running total (prefix sum) so the line only ever goes up. Example: "total miles run this month so far" → groupBy="date", metric="distance_miles", transform="cumulative". Do NOT combine with window — they are contradictory intents. Omit (or null) for all other requests.
+
+CONSTANT OFFSET:
+- "offset": <number or null> — A fixed constant subtracted from each data point's value AFTER the compare subtraction (if any). Use when the user provides a specific number to subtract (e.g. TDEE, BMR, calorie budget, daily target). Example: "calories minus exercise burned minus 1486" → source="food", metric="calories", compare={metric:"calories_burned", source:"exercise"}, offset=1486. The offset is always subtracted; use a negative number if the user wants to ADD a constant. Only valid when groupBy is "date" or "week".
 
 FILTER OPTIONS:
 - exerciseKey: filter exercise data to a specific exercise_key (e.g. "bench_press")
