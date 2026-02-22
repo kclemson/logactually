@@ -67,6 +67,9 @@ export const CompactChartTooltip = ({
           {payload[0].payload._compareBreakdown.compare != null && (
             <span> · {payload[0].payload._compareBreakdown.compareLabel}: {payload[0].payload._compareBreakdown.compare}</span>
           )}
+          {payload[0].payload._compareBreakdown.offset != null && payload[0].payload._compareBreakdown.offset !== 0 && (
+            <span> · baseline: {payload[0].payload._compareBreakdown.offset > 0 ? '-' : '+'}{Math.abs(payload[0].payload._compareBreakdown.offset)}</span>
+          )}
         </div>
       )}
       {payload[0]?.payload?._details?.length > 0 && (

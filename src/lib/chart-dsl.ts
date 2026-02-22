@@ -180,6 +180,7 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
           cmpVal = extractValue(cmpSource, cmpMetric, undefined, dailyTotals, date);
           if (cmpVal !== null) finalValue -= cmpVal;
         }
+        if (dsl.offset) finalValue -= dsl.offset;
         const foodDay = dailyTotals.food[date];
         const exDay = dailyTotals.exercise[date];
         const details = dsl.source === "food"
@@ -203,12 +204,13 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
           rawDate: date,
           label: format(new Date(`${date}T12:00:00`), "MMM d"),
           value: Math.round(finalValue),
-          _details: dsl.compare ? [] : details,
-          _compareBreakdown: dsl.compare ? {
+          _details: (dsl.compare || dsl.offset) ? [] : details,
+          _compareBreakdown: (dsl.compare || dsl.offset) ? {
             primary: Math.round(value),
             primaryLabel: dsl.derivedMetric || dsl.metric,
             compare: cmpVal !== null ? Math.round(cmpVal) : null,
             compareLabel: cmpMetric,
+            offset: dsl.offset ?? null,
           } : undefined,
         };
       });
@@ -265,6 +267,7 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
           cmpVal = extractValue(cmpSource, weekCmpMetric, undefined, dailyTotals, date);
           if (cmpVal !== null) finalValue -= cmpVal;
         }
+        if (dsl.offset) finalValue -= dsl.offset;
         const d = new Date(`${date}T12:00:00`);
         const weekKey = `${getISOWeekYear(d)}-W${String(getISOWeek(d)).padStart(2, "0")}`;
         (buckets[weekKey] ??= []).push(finalValue);
@@ -282,11 +285,12 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
           label: weekKey,
           value: Math.round(aggregate(buckets[weekKey], dsl.aggregation)),
           _details: dsl.compare ? [] : [{ label: "days", value: String(buckets[weekKey].length) }],
-          _compareBreakdown: dsl.compare ? {
+          _compareBreakdown: (dsl.compare || dsl.offset) ? {
             primary: Math.round(primarySum),
             primaryLabel: dsl.derivedMetric || dsl.metric,
             compare: Math.round(compareSum),
             compareLabel: weekCmpMetric,
+            offset: dsl.offset ?? null,
           } : undefined,
         });
       }

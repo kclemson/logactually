@@ -127,6 +127,9 @@ export interface ChartDSL {
     source?: "food" | "exercise";
   };
 
+  /** Fixed constant subtracted from each data point (e.g., TDEE baseline). Applied after compare. */
+  offset?: number;
+
   sort?: "label" | "value_asc" | "value_desc";
   limit?: number;
   /** Trailing N-period rolling average. Only valid when groupBy is "date" or "week". */
