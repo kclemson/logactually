@@ -1,45 +1,27 @@
 
 
-# Fix categorical X-axis detection using DSL `groupBy`
+# Fix: Edited chart title not reflected after save
 
 ## Problem
-The current `isCategorical` check (`xAxis.field === "label"`) is always true for DSL-generated charts because `executeDSL` sets `field: "label"` for every `groupBy` type. This means date-based charts get forced `interval: 0` (showing every label) and multi-line ticks, while the actual categorical charts (like "by exercise") still clip.
+When you edit a chart title in the CustomChartDialog and save, the title updates in the database but the Trends page continues showing the old title. This happens because the `liveSpecs` query (which re-executes DSL for fresh data) has `staleTime: 60_000` and its query key (`["saved-charts-live", v2ChartIds, selectedPeriod]`) doesn't change when only the chart content (title/aiNote) is updated -- same IDs, same period. So React Query serves the cached result with the old title.
 
 ## Solution
-Pass the `groupBy` value from the DSL through to `ChartSpec` so `DynamicChart` can deterministically know whether the X-axis is categorical. Only `"item"` and `"category"` are truly categorical; everything else (`"date"`, `"week"`, `"dayOfWeek"`, `"hourOfDay"`, `"weekdayVsWeekend"`, `"dayClassification"`) uses fixed/ordered labels.
+Invalidate the `["saved-charts-live"]` query whenever saved charts are updated. This ensures the live specs are re-fetched (with the new title from `chart.chart_spec.title`) immediately after a save.
 
 ## Technical Details
 
-### 1. `src/components/trends/DynamicChart.tsx` -- Add `groupBy` to `ChartSpec` and use it
-
-Add an optional `groupBy` field to the `ChartSpec` interface:
+**File: `src/hooks/useSavedCharts.ts`** -- in the `updateMutation.onSuccess` callback, add invalidation of the live specs query alongside the existing saved-charts invalidation:
 
 ```typescript
-groupBy?: "date" | "dayOfWeek" | "hourOfDay" | "weekdayVsWeekend" | "week" | "item" | "category" | "dayClassification";
+onSuccess: () => {
+  queryClient.invalidateQueries({ queryKey: ["saved-charts"] });
+  queryClient.invalidateQueries({ queryKey: ["saved-charts-live"] });
+},
 ```
 
-Replace the broken heuristic:
-
-```typescript
-// Before (always true for DSL charts):
-const isCategorical = xAxis.field === "label";
-
-// After (deterministic):
-const isCategorical = spec.groupBy === "item" || spec.groupBy === "category";
-```
-
-Keep the `MultiLineTick` renderer and conditional axis props as-is -- they will now only activate for actual categorical charts.
-
-### 2. `src/lib/chart-dsl.ts` -- Emit `groupBy` in ChartSpec
-
-In the returned `ChartSpec` object (~line 558), add:
-
-```typescript
-groupBy: dsl.groupBy,
-```
+This is a one-line addition. When the update succeeds, both caches are cleared, so the Trends page re-fetches saved charts (with new title) and then re-executes DSL (reading the new title from the fresh data).
 
 | File | Change |
 |---|---|
-| `src/components/trends/DynamicChart.tsx` | Add optional `groupBy` to `ChartSpec`; replace `xAxis.field === "label"` with `groupBy === "item" or "category"` |
-| `src/lib/chart-dsl.ts` | Pass `dsl.groupBy` through to the returned `ChartSpec` |
+| `src/hooks/useSavedCharts.ts` | Add `invalidateQueries(["saved-charts-live"])` to `updateMutation.onSuccess` |
 
