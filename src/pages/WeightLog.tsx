@@ -87,12 +87,23 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   const isTodaySelected = isToday(selectedDate);
   
   const queryClient = useQueryClient();
-  const { weightSets, isFetching, createEntry, updateSet, deleteSet, deleteEntry, deleteAllByDate, updateGroupName } = useWeightEntries(dateStr);
+  const { settings, updateSettings } = useUserSettings();
+
+  // Extract CalorieBurnSettings for useWeightEntries
+  const calorieBurnSettings = useMemo((): CalorieBurnSettings => ({
+    calorieBurnEnabled: settings.calorieBurnEnabled,
+    bodyWeightLbs: settings.bodyWeightLbs,
+    heightInches: settings.heightInches,
+    age: settings.age,
+    bodyComposition: settings.bodyComposition,
+    defaultIntensity: settings.defaultIntensity,
+  }), [settings.calorieBurnEnabled, settings.bodyWeightLbs, settings.heightInches, settings.age, settings.bodyComposition, settings.defaultIntensity]);
+
+  const { weightSets, isFetching, createEntry, updateSet, deleteSet, deleteEntry, deleteAllByDate, updateGroupName } = useWeightEntries(dateStr, calorieBurnSettings);
   const { data: datesWithWeights = [] } = useWeightDatesWithData(dateNav.calendarMonth);
   const { analyzeWeights, isAnalyzing, error: analyzeError, warning: analyzeWarning } = useAnalyzeWeights();
   const saveRoutineMutation = useSaveRoutine();
   const updateSavedRoutine = useUpdateSavedRoutine();
-  const { settings, updateSettings } = useUserSettings();
   const { data: savedRoutines } = useSavedRoutines();
   const { data: recentWeightEntries } = useRecentWeightEntries(90);
   const { isReadOnly } = useReadOnlyContext();
