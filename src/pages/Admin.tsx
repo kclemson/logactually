@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Navigate } from "react-router-dom";
 import { useAdminStats, useAdminUserStats } from "@/hooks/useAdminStats";
 import { useLoginCount } from "@/hooks/useLoginCount";
@@ -23,12 +23,63 @@ import { AppleHealthExplorer } from "@/components/AppleHealthExplorer";
 
 
 export default function Admin() {
-  const [replyingToId, setReplyingToId] = useState<string | null>(null);
-  const [replyText, setReplyText] = useState("");
-  const [replyMode, setReplyMode] = useState<'edit' | 'new'>('new');
+  const [replyingToId, setReplyingToId] = useState<string | null>(() => {
+    try {
+      const draft = localStorage.getItem('admin-reply-draft');
+      if (draft) return JSON.parse(draft).id;
+    } catch {}
+    return null;
+  });
+  const [replyText, setReplyText] = useState(() => {
+    try {
+      const draft = localStorage.getItem('admin-reply-draft');
+      if (draft) return JSON.parse(draft).text ?? "";
+    } catch {}
+    return "";
+  });
+  const [replyMode, setReplyMode] = useState<'edit' | 'new'>(() => {
+    try {
+      const draft = localStorage.getItem('admin-reply-draft');
+      if (draft) return JSON.parse(draft).mode ?? 'new';
+    } catch {}
+    return 'new';
+  });
   const [showPopulateDialog, setShowPopulateDialog] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [expandedFeedbackIds, setExpandedFeedbackIds] = useState<Set<string>>(new Set());
+
+  // Refs for unmount draft persistence
+  const replyingToIdRef = useRef(replyingToId);
+  const replyTextRef = useRef(replyText);
+  const replyModeRef = useRef(replyMode);
+  replyingToIdRef.current = replyingToId;
+  replyTextRef.current = replyText;
+  replyModeRef.current = replyMode;
+
+  // Save draft on unmount
+  useEffect(() => {
+    return () => {
+      if (replyingToIdRef.current && replyTextRef.current.trim()) {
+        localStorage.setItem('admin-reply-draft', JSON.stringify({
+          id: replyingToIdRef.current,
+          text: replyTextRef.current,
+          mode: replyModeRef.current,
+        }));
+      }
+    };
+  }, []);
+
+  // Restore: expand the feedback item and clear storage
+  useEffect(() => {
+    const draft = localStorage.getItem('admin-reply-draft');
+    if (draft) {
+      try {
+        const { id } = JSON.parse(draft);
+        if (id) setExpandedFeedbackIds(prev => new Set(prev).add(id));
+      } catch {}
+      localStorage.removeItem('admin-reply-draft');
+    }
+  }, []);
 
   // All hooks must be called before any conditional returns
   const { data: isAdmin, isLoading: isAdminLoading } = useIsAdmin();
@@ -165,6 +216,7 @@ export default function Admin() {
     setReplyingToId(null);
     setReplyText("");
     setReplyMode('new');
+    localStorage.removeItem('admin-reply-draft');
   };
 
   const toggleFeedbackExpand = (id: string) => {
@@ -194,6 +246,7 @@ export default function Admin() {
       setReplyingToId(null);
       setReplyText("");
       setReplyMode('new');
+      localStorage.removeItem('admin-reply-draft');
     } catch (error) {
       console.error("Failed to send reply:", error);
     }
