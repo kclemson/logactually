@@ -92,6 +92,7 @@ export function useUserSettings() {
   const { mutate: updateSettings } = useMutation({
     mutationFn: async (updates: Partial<UserSettings>) => {
       if (!user) throw new Error('No user');
+      if (isLoading) throw new Error('Settings not loaded yet');
       
       const newSettings = { ...settings, ...updates };
       
