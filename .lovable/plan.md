@@ -1,33 +1,33 @@
 
 
-# Suppress generic details on compare charts, promote compare breakdown
+# Re-execute saved chart DSL on mount for live data
 
 ## Problem
-When a chart uses `compare` (like "Net Daily Calories"), the tooltip shows:
-1. The net value (correct)
-2. The compare breakdown line (correct, but small)
-3. Generic daily metadata like "117 protein, 178 carbs, 65 fat..." (not useful here)
-
-The generic `_details` row is a fallback for any date-axis chart. For compare charts, it adds noise and distracts from the actual breakdown the user cares about.
+Saved/pinned charts store the full `chart_spec` (including the `data` array) in the database at save time. When the Trends page renders these charts, it passes the stored spec directly to `DynamicChart`, which just renders whatever data it receives. The tooltip and chart values are frozen from when the chart was first created -- showing stale data days or weeks old.
 
 ## Solution
-When `dsl.compare` is active, skip the generic `_details` entirely. The compare breakdown already tells the user everything relevant. This is a one-line change in the date case and a similar one in the week case.
+For v2 saved charts (those with a stored `chart_dsl`), re-execute the DSL client-side when the Trends page mounts. This fetches fresh data from the database and runs `executeDSL` locally, replacing the stale `data` array with live values while keeping the saved title, colors, and other visual config.
+
+v1 charts (no DSL) will continue showing their saved data since there is no lightweight way to refresh them without calling the AI again.
 
 ## Technical Details
 
-**File: `src/lib/chart-dsl.ts`**
+**File: `src/pages/Trends.tsx`**
 
-In the `date` case (~line 206), change the `_details` assignment to skip when compare is active:
+Add a new mechanism to hydrate saved v2 charts with live data:
 
-```typescript
-_details: dsl.compare ? [] : details,
-```
+1. Create a state map to hold refreshed chart specs keyed by chart ID: `Map<string, ChartSpec>`
+2. When `savedCharts` loads (or `selectedPeriod` changes), loop through charts that have `chart_dsl`. For each one, call `fetchChartData(supabase, chartDsl, selectedPeriod)` then `executeDSL(chartDsl, freshData)` to produce an updated `ChartSpec`.
+3. Store the refreshed specs in the state map.
+4. When rendering `DynamicChart`, prefer the refreshed spec over the stored one: `spec={liveSpecs.get(chart.id) ?? chart.chart_spec}`
 
-In the `week` case, same pattern -- set `_details` to only show the "days" count (which is still useful context for weekly buckets), but omit the generic food/exercise metadata.
+This will be implemented as a `useQuery` or a standalone async function triggered when the saved charts list and period are available. Using a query with a composite key like `["saved-charts-live", savedChartIds, selectedPeriod]` ensures automatic refresh when the period changes and avoids redundant fetches.
 
-No changes needed in `CompactChartTooltip.tsx` since it already renders `_compareBreakdown` when present and skips empty `_details`.
+The refresh runs in parallel for all v2 charts using `Promise.all`, with individual error handling so one failing chart does not block others -- failed charts simply fall back to their saved spec.
+
+**No other files need changes.** `fetchChartData` and `executeDSL` are already exported and used by the chart generation flow.
 
 | File | Change |
 |---|---|
-| `src/lib/chart-dsl.ts` | Set `_details` to empty array when `dsl.compare` is active (date and week cases) |
+| `src/pages/Trends.tsx` | Add live DSL re-execution for saved v2 charts on mount / period change |
 
