@@ -265,6 +265,7 @@ export default function Admin() {
                 <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">SW</th>
                 <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">C</th>
                 <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">Cs</th>
+                <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">B</th>
               </tr>
             </thead>
             <tbody>
@@ -428,6 +429,11 @@ export default function Admin() {
                     className={`text-center py-0.5 pr-1 ${(user.custom_log_entries_count ?? 0) === 0 ? "text-teal-400/50" : "text-teal-500"}`}
                   >
                     {user.custom_log_entries_count ?? 0}
+                  </td>
+                  <td
+                    className={`text-center py-0.5 pr-1 ${user.is_beta ? "text-green-500" : "text-muted-foreground/50"}`}
+                  >
+                    {user.is_beta ? "✓" : "—"}
                   </td>
                 </tr>
               ))}

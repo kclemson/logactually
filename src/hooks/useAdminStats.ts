@@ -59,6 +59,7 @@ interface UserStats {
   saved_routine_names: string[] | null;
   custom_logs_enabled: boolean;
   custom_log_entries_count: number;
+  is_beta: boolean;
 }
 
 export function useAdminStats() {
