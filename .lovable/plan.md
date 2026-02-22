@@ -1,61 +1,32 @@
 
 
-# Add constant offset support to Chart DSL
+# Fix clipped X-axis labels on categorical charts
 
 ## Problem
-The user wants charts like "Food Calories - Exercise Calories Burned - 1486 (TDEE)" but the DSL only supports subtracting another data source metric via `compare`. There's no way to subtract a fixed number. The AI generates a DSL that mentions the constant in the title/aiNote but never actually applies it.
+On charts grouped by category (like "Average Heart Rate by Exercise"), multi-word labels such as "Indoor bike" are truncated to just "Indoor". The tooltip correctly shows the full name, but the axis label is clipped because the X-axis has a fixed height of 16px and Recharts skips or truncates labels that don't fit.
 
 ## Solution
-Add an `offset` field to the ChartDSL schema. The engine subtracts this constant from each data point's value after the compare subtraction (if any). The AI prompt is updated so it knows to use `offset` when the user provides a fixed number to add or subtract.
+Use a custom tick renderer for the X-axis that wraps long labels into multiple lines (one word per line) when the chart uses categorical grouping. This keeps the compact font size while ensuring all words are visible.
 
 ## Technical Details
 
-### 1. `src/lib/chart-types.ts` -- Add `offset` to ChartDSL
+**File: `src/components/trends/DynamicChart.tsx`**
 
-```typescript
-// Add after the compare field:
-/** Fixed constant subtracted from each data point (e.g., TDEE baseline). Applied after compare. */
-offset?: number;
-```
+1. Detect categorical charts: check if `xAxis.field` is something like `label` (non-date grouping) or if `spec.chartType` data contains non-date x values. A simpler heuristic: if the data has a `label` field (categorical DSL uses `label` as the x-axis field), treat it as categorical.
 
-### 2. `src/lib/chart-dsl.ts` -- Apply offset in `executeDSL`
+2. For categorical charts, replace the default tick with a custom SVG `<text>` renderer that splits the label on spaces and renders each word as a separate `<tspan>` with a `dy` offset. This produces stacked multi-line labels.
 
-In the `date` case (~line 181), after the compare subtraction:
+3. Increase the X-axis `height` from 16 to ~28 for categorical charts to accommodate up to 2 lines of text.
 
-```typescript
-if (dsl.offset) finalValue -= dsl.offset;
-```
-
-Same in the `week` case for weekly buckets.
-
-Also include the offset in `_compareBreakdown` so the tooltip can show it:
-
-```typescript
-_compareBreakdown: (dsl.compare || dsl.offset) ? {
-  primary: Math.round(value),
-  primaryLabel: dsl.derivedMetric || dsl.metric,
-  compare: cmpVal !== null ? Math.round(cmpVal) : null,
-  compareLabel: cmpMetric,
-  offset: dsl.offset ?? null,
-} : undefined,
-```
-
-### 3. `src/components/trends/CompactChartTooltip.tsx` -- Show offset in tooltip
-
-When `_compareBreakdown.offset` is present, render it as an additional line:
+4. Set `interval={0}` for categorical charts so no labels are skipped (there are typically few categories).
 
 ```
-calories: 2100 . calories_burned: 321 . baseline: -1486
+Before: "Indoor" (clipped)
+After:  "Indoor"
+        "bike"   (two lines, fully visible)
 ```
-
-### 4. `supabase/functions/generate-chart-dsl/index.ts` -- Update AI prompt
-
-Add `offset` to the DSL schema description so the AI knows to use it when users mention a fixed number to subtract or add.
 
 | File | Change |
 |---|---|
-| `src/lib/chart-types.ts` | Add optional `offset?: number` field |
-| `src/lib/chart-dsl.ts` | Apply offset after compare; include in breakdown metadata |
-| `src/components/trends/CompactChartTooltip.tsx` | Render offset in tooltip |
-| `supabase/functions/generate-chart-dsl/index.ts` | Add offset to DSL schema in AI prompt |
+| `src/components/trends/DynamicChart.tsx` | Add custom multi-line tick renderer for categorical X-axis; increase axis height and force interval=0 when categorical |
 
