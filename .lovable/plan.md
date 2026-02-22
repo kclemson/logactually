@@ -1,37 +1,95 @@
 
 
-# Fix: Guard `updateSettings` against unloaded settings
+# Persist admin reply draft to localStorage on unmount
 
 ## Problem
-When `updateSettings` fires before the settings query has resolved (e.g. after an overnight session expiry), `settings` is still `DEFAULT_SETTINGS`. The mutation then does `{ ...DEFAULT_SETTINGS, ...updates }` and writes that to the database, wiping the user's real preferences.
+When writing a reply to a user's feedback in the admin panel, switching tabs (e.g. to check something) and coming back causes the textarea content to be lost because `replyText` is plain React state that resets when the component unmounts.
 
-## Solution
-Add a simple guard in the `mutationFn`: check whether the settings query has successfully loaded real data before allowing a write. If it hasn't, reject the mutation.
+## Approach
+Save the draft to localStorage on component unmount, and restore it on mount. This avoids writing on every keystroke while still preserving work-in-progress text.
 
-## Change
+Specifically:
+- On **unmount**: if there's an active reply (`replyingToId` is set and `replyText` is non-empty), save `{ id, text, mode }` to `localStorage` under a key like `admin-reply-draft`.
+- On **mount**: check localStorage for a saved draft. If found, restore `replyingToId`, `replyText`, and `replyMode`, then expand that feedback item. Clear the stored draft.
+- On **successful send** or **cancel**: clear the localStorage draft (already handled by the state resets, but we explicitly remove the key too).
 
-**File: `src/hooks/useUserSettings.ts`**
+## Technical details
 
-In the `mutationFn` (around line 93), after the `if (!user)` check, add a guard that checks whether the query has finished loading. We can use the query's `isSuccess` status (exposed via the `useQuery` return) or, more simply, check if `isLoading` is true:
+**File: `src/pages/Admin.tsx`**
+
+1. Add a cleanup effect that saves draft on unmount:
 
 ```typescript
-mutationFn: async (updates: Partial<UserSettings>) => {
-  if (!user) throw new Error('No user');
-  if (isLoading) throw new Error('Settings not loaded yet');
-  // ... rest unchanged
-},
+// Use refs so the unmount effect always sees current values
+const replyingToIdRef = useRef(replyingToId);
+const replyTextRef = useRef(replyText);
+const replyModeRef = useRef(replyMode);
+replyingToIdRef.current = replyingToId;
+replyTextRef.current = replyText;
+replyModeRef.current = replyMode;
+
+useEffect(() => {
+  return () => {
+    if (replyingToIdRef.current && replyTextRef.current.trim()) {
+      localStorage.setItem('admin-reply-draft', JSON.stringify({
+        id: replyingToIdRef.current,
+        text: replyTextRef.current,
+        mode: replyModeRef.current,
+      }));
+    }
+  };
+}, []);
 ```
 
-This is a one-line addition. If `updateSettings` is called before the settings query has resolved, the mutation throws, the optimistic update is rolled back by `onError`, and nothing is written to the database.
+2. Initialize state from localStorage on mount:
 
-The `isLoading` variable is already defined on line 65 from the `useQuery` return, and it's already in scope for the mutation closure.
+```typescript
+const [replyingToId, setReplyingToId] = useState<string | null>(() => {
+  try {
+    const draft = localStorage.getItem('admin-reply-draft');
+    if (draft) return JSON.parse(draft).id;
+  } catch {}
+  return null;
+});
 
-## Why this is sufficient
+const [replyText, setReplyText] = useState(() => {
+  try {
+    const draft = localStorage.getItem('admin-reply-draft');
+    if (draft) return JSON.parse(draft).text ?? "";
+  } catch {}
+  return "";
+});
 
-- The race condition requires `settings` to equal `DEFAULT_SETTINGS` at the time of the write. That only happens when `isLoading` is true (query hasn't resolved yet) or on query error (which also returns `DEFAULT_SETTINGS`).
-- For the error case: we could additionally check `isError`, but query errors are already logged and `staleTime: Infinity` means once loaded, the cache persists for the session. The loading guard covers the primary scenario (session expiry causing a re-fetch).
-- This matches the "dirty state" pattern you mentioned -- we're simply refusing to write when we don't have confirmed clean data to merge against.
+const [replyMode, setReplyMode] = useState<'edit' | 'new'>(() => {
+  try {
+    const draft = localStorage.getItem('admin-reply-draft');
+    if (draft) return JSON.parse(draft).mode ?? 'new';
+  } catch {}
+  return 'new';
+});
+```
+
+3. Add a one-time effect to expand the restored feedback item and clear the draft from storage:
+
+```typescript
+useEffect(() => {
+  const draft = localStorage.getItem('admin-reply-draft');
+  if (draft) {
+    try {
+      const { id } = JSON.parse(draft);
+      if (id) setExpandedFeedbackIds(prev => new Set(prev).add(id));
+    } catch {}
+    localStorage.removeItem('admin-reply-draft');
+  }
+}, []);
+```
+
+4. Clear draft in `handleCancelReply` and `handleSendReply`:
+
+```typescript
+localStorage.removeItem('admin-reply-draft');
+```
 
 ## Files modified
-- `src/hooks/useUserSettings.ts` -- add one guard line in `mutationFn`
+- `src/pages/Admin.tsx` -- persist/restore reply draft via localStorage on unmount/mount
 
