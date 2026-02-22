@@ -18,6 +18,7 @@ import {
 interface BiometricsInputsProps {
   settings: UserSettings;
   updateSettings: (updates: Partial<UserSettings>) => void;
+  onChange?: (updates: Partial<UserSettings>) => void;
   showEffectHints?: boolean;
 }
 
@@ -61,7 +62,8 @@ const compositionOptions = [
   { value: 'male', label: 'Male' },
 ];
 
-export function BiometricsInputs({ settings, updateSettings, showEffectHints = true }: BiometricsInputsProps) {
+export function BiometricsInputs({ settings, updateSettings, onChange, showEffectHints = true }: BiometricsInputsProps) {
+  const save = onChange ?? updateSettings;
   const [bodyWeightUnit, setBodyWeightUnit] = useState<WeightUnit>(settings.weightUnit);
 
   const effectiveHeightUnit = (settings.heightUnit === 'cm' ? 'cm' : 'ft') as 'ft' | 'cm';
@@ -76,13 +78,13 @@ export function BiometricsInputs({ settings, updateSettings, showEffectHints = t
 
   const handleWeightChange = (val: string) => {
     if (val === '') {
-      updateSettings({ bodyWeightLbs: null });
+      save({ bodyWeightLbs: null });
       return;
     }
     const num = parseFloat(val);
     if (!isNaN(num) && num > 0) {
       const lbs = bodyWeightUnit === 'kg' ? num * 2.20462 : num;
-      updateSettings({ bodyWeightLbs: Math.round(lbs) });
+      save({ bodyWeightLbs: Math.round(lbs) });
     }
   };
 
@@ -97,25 +99,25 @@ export function BiometricsInputs({ settings, updateSettings, showEffectHints = t
   const handleBodyWeightUnitChange = (unit: WeightUnit) => {
     if (bodyWeightUnit === unit) return;
     setBodyWeightUnit(unit);
-    updateSettings({ weightUnit: unit });
+    save({ weightUnit: unit });
   };
 
   const handleHeightChange = (val: string) => {
     setHeightDisplay(val);
     if (val === '') {
-      updateSettings({ heightInches: null });
+      save({ heightInches: null });
       return;
     }
     if (effectiveHeightUnit === 'ft') {
       const inches = parseFeetInchesInput(val);
       if (inches != null) {
-        updateSettings({ heightInches: Math.round(inches * 10) / 10 });
+        save({ heightInches: Math.round(inches * 10) / 10 });
       }
     } else {
       const num = parseFloat(val);
       if (!isNaN(num) && num > 0) {
         const inches = cmToInches(num);
-        updateSettings({ heightInches: Math.round(inches * 10) / 10 });
+        save({ heightInches: Math.round(inches * 10) / 10 });
       }
     }
   };
@@ -134,17 +136,17 @@ export function BiometricsInputs({ settings, updateSettings, showEffectHints = t
         setHeightDisplay(formatInchesAsFeetInches(inches));
       }
     }
-    updateSettings({ heightUnit: unit });
+    save({ heightUnit: unit });
   };
 
   const handleAgeChange = (val: string) => {
     if (val === '') {
-      updateSettings({ age: null });
+      save({ age: null });
       return;
     }
     const num = parseInt(val, 10);
     if (!isNaN(num) && num > 0 && num < 150) {
-      updateSettings({ age: num });
+      save({ age: num });
     }
   };
 
@@ -251,7 +253,7 @@ export function BiometricsInputs({ settings, updateSettings, showEffectHints = t
         <div className={rightColClass}>
           <Select
             value={settings.bodyComposition ?? 'unspecified'}
-            onValueChange={(v) => updateSettings({ bodyComposition: v === 'unspecified' ? null : v as 'female' | 'male' })}
+            onValueChange={(v) => save({ bodyComposition: v === 'unspecified' ? null : v as 'female' | 'male' })}
           >
             <SelectTrigger className="h-8 text-xs w-full">
               <SelectValue />
