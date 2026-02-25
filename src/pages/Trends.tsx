@@ -51,6 +51,7 @@ const periods = [
   { label: "7 days", days: 7 },
   { label: "30 days", days: 30 },
   { label: "90 days", days: 90 },
+  { label: "All time", days: 0 },
 ];
 
 const LBS_TO_KG = 0.453592;
@@ -62,7 +63,7 @@ const Trends = () => {
   const navigate = useNavigate();
   const [selectedPeriod, setSelectedPeriod] = useState(() => {
     const saved = localStorage.getItem("trends-period");
-    return saved && [7, 30, 90].includes(Number(saved)) ? Number(saved) : 30;
+    return saved && [7, 30, 90, 0].includes(Number(saved)) ? Number(saved) : 30;
   });
   const [visibleExerciseCount, setVisibleExerciseCount] = useState(4);
   const [dismissedDuplicates, setDismissedDuplicates] = useState<string[]>(() => {
@@ -152,13 +153,14 @@ const Trends = () => {
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ["food-entries-trends", selectedPeriod],
     queryFn: async () => {
-      const startDate = format(subDays(startOfDay(new Date()), selectedPeriod - 1), "yyyy-MM-dd");
+      const startDate = selectedPeriod === 0 ? "2000-01-01" : format(subDays(startOfDay(new Date()), selectedPeriod - 1), "yyyy-MM-dd");
 
       const { data, error } = await supabase
         .from("food_entries")
         .select("eaten_date, total_calories, total_protein, total_carbs, total_fat")
         .gte("eaten_date", startDate)
-        .order("eaten_date", { ascending: true });
+        .order("eaten_date", { ascending: true })
+        .limit(10000);
 
       if (error) throw error;
       return data || [];
@@ -251,8 +253,12 @@ const Trends = () => {
   // Calorie burn chart data (range bars)
   const calorieBurnChartData = useMemo(() => {
     const lookup = new Map(dailyCalorieBurn.map(d => [d.date, d]));
+    // For "All time", derive range from actual data instead of fixed lookback
+    const rangeStart = selectedPeriod === 0
+      ? (dailyCalorieBurn.length > 0 ? new Date(`${dailyCalorieBurn[0].date}T12:00:00`) : startOfDay(new Date()))
+      : subDays(startOfDay(new Date()), selectedPeriod - 1);
     const fullRange = eachDayOfInterval({
-      start: subDays(startOfDay(new Date()), selectedPeriod - 1),
+      start: rangeStart,
       end: startOfDay(new Date()),
     });
 

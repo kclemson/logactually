@@ -34,7 +34,7 @@ export async function fetchChartData(
   dsl: ChartDSL,
   period: number,
 ): Promise<DailyTotals> {
-  const startDate = format(subDays(new Date(), period), "yyyy-MM-dd");
+  const startDate = period === 0 ? "2000-01-01" : format(subDays(new Date(), period), "yyyy-MM-dd");
   const needsHourly = dsl.groupBy === "hourOfDay";
   const needsItem = dsl.groupBy === "item";
   const needsCategory = dsl.groupBy === "category";
@@ -71,7 +71,8 @@ async function fetchFoodData(
     .select("eaten_date, food_items, created_at")
     .gte("eaten_date", startDate)
     .order("eaten_date", { ascending: true })
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .limit(10000);
 
   if (error) throw error;
 
@@ -183,7 +184,8 @@ async function fetchExerciseData(
     .select("logged_date, exercise_key, description, sets, reps, weight_lbs, duration_minutes, distance_miles, exercise_metadata, created_at, exercise_subtype, entry_id, calories_burned_override, calories_burned_estimate, heart_rate, effort, incline_pct, cadence_rpm, speed_mph")
     .gte("logged_date", startDate)
     .order("logged_date", { ascending: true })
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .limit(10000);
 
   if (exerciseKeyFilter) {
     query = query.eq("exercise_key", exerciseKeyFilter);
