@@ -28,7 +28,7 @@ function MultiLineTick({ x, y, payload }: any) {
   return (
     <text x={x} y={y} textAnchor="middle" fontSize={8} fill="hsl(var(--muted-foreground))">
       {words.map((w: string, i: number) => (
-        <tspan x={x} dy={i === 0 ? 0 : 10} key={i}>{w}</tspan>
+        <tspan x={x} dy={i === 0 ? 4 : 10} key={i}>{w}</tspan>
       ))}
     </text>
   );
