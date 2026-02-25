@@ -1,43 +1,55 @@
 
 
-# Backfill missing heart_rate from raw input
+# Add heart rate and speed/pace to Apple Health import
 
-## What happened
+## Summary
 
-The AI model wasn't reliably extracting heart rate when you used "bpm" shorthand (e.g., "101bpm", "107 bpm") in entries before ~Feb 17. It worked when you wrote "heart rate" or "avg hr", but bare "bpm" values were dropped during parsing. The prompt was already correct — this was inconsistent AI model behavior that has since stabilized.
+Two new fields will be extracted from Apple Health workout XML blocks and stored during import: average heart rate and average speed (converted to mph).
 
-## Affected data
+## Current state
 
-15 entries (Feb 10–17) have heart rate clearly stated in the raw input but not stored. Mix of dog walks, treadmill runs, and one indoor bike entry.
+The import already parses these `WorkoutStatistics` child elements:
+- `HKQuantityTypeIdentifierDistanceWalkingRunning` / `DistanceCycling` / `DistanceSwimming` → distance
+- `HKQuantityTypeIdentifierActiveEnergyBurned` → calories
 
-## Fix
+It does **not** parse:
+- `HKQuantityTypeIdentifierHeartRate` → has an `average` attribute
+- `HKQuantityTypeIdentifierRunningSpeed` → has an `average` attribute (in m/s or km/h)
 
-**One-time database migration** to backfill `heart_rate` from `raw_input` text using regex extraction:
-
-1. Extract the number before "bpm" (e.g., "101bpm" → 101, "107 bpm" → 107)
-2. Extract the number after "heart rate" (e.g., "avg heart rate 105" → 105)  
-3. Update the `heart_rate` column for the 15 affected rows
-4. Also update `exercise_metadata` to add the `heart_rate` key for backward compatibility
-
-No code changes needed — this is purely a data backfill via SQL.
-
-## Migration SQL (single UPDATE)
-
-```sql
-UPDATE weight_sets
-SET heart_rate = COALESCE(
-  (regexp_matches(raw_input, '(\d{2,3})\s*bpm', 'i'))[1]::int,
-  (regexp_matches(raw_input, 'heart rate\s*(\d{2,3})', 'i'))[1]::int
-)
-WHERE heart_rate IS NULL
-  AND (exercise_metadata->>'heart_rate') IS NULL
-  AND (
-    raw_input ~ '\d{2,3}\s*bpm'
-    OR raw_input ~* 'heart rate\s*\d{2,3}'
-  );
-```
+## Changes
 
 | File | Change |
 |---|---|
-| DB migration | Backfill `heart_rate` column from `raw_input` regex for 15 rows |
+| `src/lib/apple-health-mapping.ts` | Add `parseAverageHeartRate()` — extracts `average` from `HKQuantityTypeIdentifierHeartRate`. Add `parseAverageSpeedMph()` — extracts `average` from `RunningSpeed` or `WalkingSpeed`, converts km/h to mph. Add `heartRate` and `speedMph` to `ParsedWorkout` interface. Update `parseWorkoutBlock()` to call both. |
+| `src/components/AppleHealthImport.tsx` | Add `heart_rate: w.heartRate` and `speed_mph: w.speedMph` to the insert row mapping (line ~217). Both columns already exist on `weight_sets`. |
+
+## Technical detail
+
+**New parser functions** in `apple-health-mapping.ts`:
+
+```typescript
+export function parseAverageHeartRate(xml: string): number | null {
+  const re = /type="HKQuantityTypeIdentifierHeartRate"[^>]*?average="([^"]+)"/i;
+  const match = xml.match(re);
+  if (!match) return null;
+  const hr = parseFloat(match[1]);
+  return isNaN(hr) ? null : Math.round(hr);
+}
+
+export function parseAverageSpeedMph(xml: string): number | null {
+  // Apple exports speed in km/hr for RunningSpeed / WalkingSpeed / CyclingSpeed
+  const re = /type="HKQuantityTypeIdentifier(?:RunningSpeed|WalkingSpeed|CyclingSpeed)"[^>]*?average="([^"]+)"/i;
+  const match = xml.match(re);
+  if (!match) return null;
+  const kmh = parseFloat(match[1]);
+  if (isNaN(kmh) || kmh <= 0) return null;
+  return Math.round(kmh * 0.621371 * 100) / 100;
+}
+```
+
+**ParsedWorkout** gets two new nullable fields: `heartRate: number | null`, `speedMph: number | null`.
+
+**Insert row** adds: `heart_rate: w.heartRate`, `speed_mph: w.speedMph`.
+
+No database changes needed — both `heart_rate` and `speed_mph` columns already exist on `weight_sets`.
 
