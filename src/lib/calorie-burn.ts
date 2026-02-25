@@ -337,6 +337,40 @@ export function getBmrScalingFactor(settings: CalorieBurnSettings): number {
 }
 
 // ---------------------------------------------------------------------------
+// Distance-based duration estimation for cardio
+// ---------------------------------------------------------------------------
+
+/**
+ * Estimate duration (in hours) from distance using typical speed ranges.
+ * Returns null for exercise types without reasonable speed assumptions.
+ */
+function estimateCardioDurationFromDistance(
+  exerciseKey: string,
+  subtype: string | null | undefined,
+  distanceMiles: number,
+): { low: number; high: number } | null {
+  // Speed ranges in mph: [low, high]
+  let speedRange: [number, number];
+
+  if (exerciseKey === 'walk_run') {
+    if (subtype === 'running') speedRange = [5.0, 8.0];
+    else if (subtype === 'hiking') speedRange = [2.0, 3.0];
+    else if (subtype === 'walking') speedRange = [2.5, 3.5];
+    else speedRange = [2.5, 5.0]; // unknown subtype
+  } else if (exerciseKey === 'cycling') {
+    speedRange = [10.0, 16.0];
+  } else {
+    return null; // no reasonable speed assumption
+  }
+
+  // Low speed → longer duration (more calories), high speed → shorter duration
+  return {
+    low: distanceMiles / speedRange[1],
+    high: distanceMiles / speedRange[0],
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Main estimation function
 // ---------------------------------------------------------------------------
 
@@ -379,6 +413,16 @@ export function estimateCalorieBurn(
     const est = estimateStrengthDuration(exercise.sets, exercise.reps, exercise.weight_lbs);
     durationLow = est.low;
     durationHigh = est.high;
+  } else if (isCardio && exercise.distance_miles != null && exercise.distance_miles > 0) {
+    const est = estimateCardioDurationFromDistance(
+      exercise.exercise_key, exercise.exercise_subtype, exercise.distance_miles,
+    );
+    if (est) {
+      durationLow = est.low;
+      durationHigh = est.high;
+    } else {
+      return { type: 'range', low: 0, high: 0 };
+    }
   } else {
     return { type: 'range', low: 0, high: 0 };
   }
