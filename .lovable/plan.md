@@ -1,32 +1,34 @@
 
 
-# Add saved charts count and custom log types count to admin user table
+# Rename W → E and SW → SE in admin user table
 
-## Scope
-Two new columns in the admin user stats table: number of saved charts and number of custom log types per user.
+Rename two column headers to reflect "Exercise" instead of the legacy "Weights" label. Combined with the tooltip task from the previous plan.
 
 ## Changes
 
-### 1. Database migration — update `get_user_stats` function
-Add two subqueries to the existing function:
-- `saved_charts_count`: `SELECT COUNT(*) FROM saved_charts sc WHERE sc.user_id = p.id`
-- `custom_log_types_count`: `SELECT COUNT(*) FROM custom_log_types clt WHERE clt.user_id = p.id`
-
-The function already follows this exact pattern for `saved_meals_count` and `saved_routines_count`, so it's a straightforward addition.
-
-### 2. TypeScript type — `src/hooks/useAdminStats.ts`
-Add to the `UserStats` interface:
-- `saved_charts_count: number`
-- `custom_log_types_count: number`
-
-### 3. Admin page — `src/pages/Admin.tsx`
-Add two columns to the user stats table for "Charts" and "Log Types" (or similar short headers), displaying the new counts.
-
-## Files
-
 | File | Change |
 |---|---|
-| DB migration | Add `saved_charts_count` and `custom_log_types_count` subqueries to `get_user_stats` |
-| `src/hooks/useAdminStats.ts` | Add two fields to `UserStats` interface |
-| `src/pages/Admin.tsx` | Add two table columns |
+| `src/pages/Admin.tsx` | Line 310: `W2d` → `E2d` |
+| `src/pages/Admin.tsx` | Line 313: `W` → `E` |
+| `src/pages/Admin.tsx` | Line 314: `SW` → `SE` |
+
+Plus wrap all 13 column headers in `Tooltip` components (from the already-approved plan), using these labels:
+
+| Header | Tooltip |
+|--------|---------|
+| User | User number |
+| Last | Last active date |
+| F2d | Food entries today |
+| E2d | Exercise entries today |
+| F | Total food entries |
+| SF | Saved meals |
+| E | Total exercise entries |
+| SE | Saved routines |
+| SC | Saved charts |
+| C | Custom logs enabled |
+| Lt | Custom log types |
+| Cs | Custom log entries |
+| B | Beta user |
+
+Single file change, no database or dependency changes.
 
