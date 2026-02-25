@@ -184,12 +184,14 @@ serve(async (req) => {
       );
     }
 
-    const days = typeof period === "number" && [7, 30, 90].includes(period) ? period : 30;
+    const days = typeof period === "number" && [7, 30, 90, 0].includes(period) ? period : 30;
 
     // Fetch data for the period
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
-    const startDateStr = startDate.toISOString().split("T")[0];
+    const startDateStr = days === 0 ? "2000-01-01" : (() => {
+      const d = new Date();
+      d.setDate(d.getDate() - days);
+      return d.toISOString().split("T")[0];
+    })();
 
     const [foodResult, exerciseResult, customLogResult, customTypeResult] = await Promise.all([
       supabase

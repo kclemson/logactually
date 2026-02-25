@@ -274,7 +274,7 @@ serve(async (req) => {
       );
     }
 
-    const days = typeof period === "number" && [7, 30, 90].includes(period) ? period : 30;
+    const days = typeof period === "number" && [7, 30, 90, 0].includes(period) ? period : 30;
     const question = Array.isArray(messages) ? (messages.filter((m: any) => m.role === 'user').pop()?.content ?? '?') : '?';
 
     // Build AI messages — NO user data, just schema context
@@ -282,7 +282,9 @@ serve(async (req) => {
       { role: "system", content: SYSTEM_PROMPT },
       {
         role: "user",
-        content: `The user has data spanning the last ${days} days. Interpret their request and return the DSL.\n\nConversation:`,
+        content: days === 0
+          ? `The user has selected "All time" — their data spans their entire history with no date limit. Interpret their request and return the DSL.\n\nConversation:`
+          : `The user has data spanning the last ${days} days. Interpret their request and return the DSL.\n\nConversation:`,
       },
       ...messages,
     ];

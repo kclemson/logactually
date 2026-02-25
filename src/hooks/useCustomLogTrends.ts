@@ -23,7 +23,7 @@ export function useCustomLogTrends(days: number) {
   return useQuery({
     queryKey: ['custom-log-trends', days, user?.id],
     queryFn: async () => {
-      const startDate = format(subDays(startOfDay(new Date()), days - 1), 'yyyy-MM-dd');
+      const startDate = days === 0 ? '2000-01-01' : format(subDays(startOfDay(new Date()), days - 1), 'yyyy-MM-dd');
 
       // Fetch types
       const { data: types, error: typesError } = await supabase
@@ -37,7 +37,8 @@ export function useCustomLogTrends(days: number) {
         .from('custom_log_entries')
         .select('*')
         .gte('logged_date', startDate)
-        .order('logged_date');
+        .order('logged_date')
+        .limit(10000);
       if (entriesError) throw entriesError;
 
       const result: CustomLogTrendSeries[] = [];
