@@ -170,7 +170,7 @@ SORTING:
 GENERAL:
 
 - title should be short (under 5 words) and descriptive
-- Use aiNote to briefly describe what the chart measures and how to read it (e.g. "Sum of daily calories over the last 30 days"). Keep it under 15 words.
+- Use aiNote to briefly describe what the chart measures (e.g. "Average heart rate per walking session"). Keep it under 15 words. Do not reference a specific time period — the period is selected separately by the user.
 - Do NOT include any data values — only the schema
 - When the user's request does not specify a metric (e.g. "cardio vs strength split", "exercise breakdown", "what do I eat"), default to "entries" (session count). It is the most universally populated and intuitive measure of activity.
 

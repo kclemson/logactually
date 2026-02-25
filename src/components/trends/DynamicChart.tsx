@@ -70,6 +70,7 @@ interface DynamicChartProps {
 }
 
 function periodLabel(days?: number): string | undefined {
+  if (days === 0) return "All time";
   if (!days) return undefined;
   if (days === 365) return "Last year";
   if (days === 180) return "Last 6 months";
