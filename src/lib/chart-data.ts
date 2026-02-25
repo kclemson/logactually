@@ -204,6 +204,7 @@ async function fetchExerciseData(
   // Always populated — stores plain keys AND "key:subtype" compound tokens per day
   const seenKeys: Record<string, Set<string>> = {};
   const seenEntries: Record<string, Set<string>> = {};
+  const heartRateCountByDate: Record<string, number> = {};
 
   for (const row of data ?? []) {
     // Category filter: skip rows that don't match
@@ -293,7 +294,10 @@ async function fetchExerciseData(
       existing.duration_minutes += setTotals.duration_minutes;
       existing.distance_miles += setTotals.distance_miles;
     existing.calories_burned += setTotals.calories_burned;
-    if (rowHeartRate != null) existing.heart_rate += rowHeartRate;
+    if (rowHeartRate != null) {
+      existing.heart_rate += rowHeartRate;
+      heartRateCountByDate[date] = (heartRateCountByDate[date] ?? 0) + 1;
+    }
     const keySet = (seenKeys[date] ??= new Set());
     keySet.add(row.exercise_key);
     if (row.exercise_subtype) {
@@ -308,6 +312,13 @@ async function fetchExerciseData(
     if (exerciseByHour && row.created_at) {
       const hour = new Date(row.created_at).getHours();
       (exerciseByHour[hour] ??= []).push(setTotals);
+    }
+  }
+
+  // Post-process: convert heart_rate sums to averages
+  for (const [date, count] of Object.entries(heartRateCountByDate)) {
+    if (count > 1 && exercise[date]) {
+      exercise[date].heart_rate = Math.round(exercise[date].heart_rate / count);
     }
   }
 
