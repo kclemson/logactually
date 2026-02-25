@@ -359,6 +359,10 @@ function estimateCardioDurationFromDistance(
     else speedRange = [2.5, 5.0]; // unknown subtype
   } else if (exerciseKey === 'cycling') {
     speedRange = [10.0, 16.0];
+  } else if (exerciseKey === 'rowing') {
+    speedRange = [4.0, 7.5]; // ~2:30–1:20 per 500m
+  } else if (exerciseKey === 'swimming') {
+    speedRange = [1.5, 2.5]; // ~2:30–1:30 per 100m
   } else {
     return null; // no reasonable speed assumption
   }
