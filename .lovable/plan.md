@@ -1,25 +1,20 @@
 
 
-## Two Changes
+## Fix: Categorical X-axis labels overlapping tick marks
 
-### 1. Tooltip shows "value: 106" instead of the metric name
+The `MultiLineTick` component renders label text starting at the exact `y` position passed by Recharts, which is the same position as the tick line. For categorical charts (like "Average Heart Rate by Exercise"), the multi-word labels (e.g., "Running", "Indoor") overlap the vertical tick marks beneath each bar.
 
-Recharts auto-generates tooltip payload using the `dataKey` as the display name. Since `dataKey` is always `"value"`, the tooltip says "value: 106" on desktop hover. The touch path already overrides this correctly (line 158 sets `name: spec.yAxis.label`), but desktop relies on Recharts defaults.
+**Fix in `src/components/trends/DynamicChart.tsx`**: Shift the first `tspan` down by adding a `dy` offset so the text clears the tick mark.
 
-**Fix**: Add `name={spec.yAxis.label}` to both `<Line>` and `<Bar>` in `DynamicChart.tsx`. This makes Recharts use the metric name (e.g., "heart_rate") as the tooltip label for both touch and desktop.
+```typescript
+// Before (line 31):
+<tspan x={x} dy={i === 0 ? 0 : 10} key={i}>{w}</tspan>
 
-Additionally, the raw field names like `heart_rate` and `duration_minutes` should be humanized in the display. I'll add a small label map to format these (e.g., "heart rate", "duration (min)").
+// After:
+<tspan x={x} dy={i === 0 ? 4 : 10} key={i}>{w}</tspan>
+```
 
-### 2. Remove generic `_details` for date-grouped charts
+A 4px downward nudge on the first line gives enough clearance from the tick mark while keeping the label compact. Single-word labels (like "Running" or "Walking") also benefit since they currently sit right on the tick line.
 
-The current tooltip shows a dump of all daily metrics (sets, duration_minutes, distance_miles, calories_burned, entries) regardless of relevance. The user wants to remove this generic fallback entirely for date-grouped charts — the tooltip should just show the date, the primary metric value, and the "Go to day" link on mobile.
-
-**Fix**: In `chart-dsl.ts`, set `_details: []` for the `"date"` groupBy case (lines 186–202) instead of building details from all daily metrics. Other groupBy modes (dayOfWeek, item, category, etc.) keep their details since those are curated and contextually relevant.
-
-### Files changed
-
-| File | Change |
-|------|--------|
-| `src/components/trends/DynamicChart.tsx` | Add `name={spec.yAxis.label}` to `<Line>` and `<Bar>`; add a label humanizer for the formatter |
-| `src/lib/chart-dsl.ts` | Set `_details: []` for `groupBy: "date"` case (both food and exercise) |
+One file, one number change.
 
