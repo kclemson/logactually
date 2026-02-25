@@ -37,6 +37,12 @@ interface TypeSummary {
   description: string;
 }
 
+interface ExistingSummary {
+  count: number;
+  minDate: string;
+  maxDate: string;
+}
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
@@ -51,13 +57,56 @@ function defaultFromDate(lastImportDate: string | null): Date {
   return d;
 }
 
+/** Date picker row used for "since" and "through" */
+function DatePickerRow({
+  label,
+  date,
+  onSelect,
+}: {
+  label: string;
+  date: Date | undefined;
+  onSelect: (d: Date | undefined) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            className={cn(
+              "h-8 text-sm justify-start text-left font-normal",
+              !date && "text-muted-foreground"
+            )}
+          >
+            <CalendarIcon className="h-3.5 w-3.5 mr-1" />
+            {date ? format(date, "MMM d, yyyy") : "Pick a date"}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="end">
+          <Calendar
+            mode="single"
+            selected={date}
+            onSelect={onSelect}
+            initialFocus
+            className={cn("p-3 pointer-events-auto")}
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
 /** The dialog content with all import workflow logic. Resets on unmount. */
 function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
   const { user } = useAuth();
 
   // Config phase
   const [fromDate, setFromDate] = useState<Date | undefined>();
+  const [toDate, setToDate] = useState<Date | undefined>(new Date());
   const [lastImportLoaded, setLastImportLoaded] = useState(false);
+  const [existingSummary, setExistingSummary] = useState<ExistingSummary | null>(null);
 
   // Scanning
   const [phase, setPhase] = useState<Phase>("config");
@@ -70,18 +119,18 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
   const [allWorkouts, setAllWorkouts] = useState<ParsedWorkout[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
 
-
-  // Import
-
   // Import
   const [importProgress, setImportProgress] = useState({ done: 0, total: 0 });
   const [importedCount, setImportedCount] = useState(0);
+  const [updatedCount, setUpdatedCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [showInstructions, setShowInstructions] = useState(false);
 
-  // Load last import date on mount
+  // Load last import date + existing summary on mount
   if (!lastImportLoaded && user) {
     setLastImportLoaded(true);
+
+    // Fetch last import date for default "since"
     supabase
       .from("weight_sets")
       .select("logged_date")
@@ -93,9 +142,26 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
         const lastDate = data?.[0]?.logged_date ?? null;
         setFromDate(defaultFromDate(lastDate));
       });
+
+    // Fetch existing import summary (count + date range)
+    supabase
+      .from("weight_sets")
+      .select("logged_date")
+      .eq("user_id", user.id)
+      .eq("raw_input", APPLE_HEALTH_RAW_INPUT)
+      .order("logged_date", { ascending: true })
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setExistingSummary({
+            count: data.length,
+            minDate: data[0].logged_date,
+            maxDate: data[data.length - 1].logged_date,
+          });
+        }
+      });
   }
 
-  const scan = useCallback(async (file: File, cutoffDate: string) => {
+  const scan = useCallback(async (file: File, cutoffDate: string, endDate: string) => {
     setPhase("scanning");
     setError(null);
     abortRef.current = false;
@@ -103,6 +169,7 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
     setTypeSummaries({});
 
     const cutoff = new Date(cutoffDate);
+    const endCutoff = new Date(endDate + "T23:59:59");
     const decoder = new TextDecoder("utf-8");
     const workouts: ParsedWorkout[] = [];
     const types: Record<string, TypeSummary> = {};
@@ -160,6 +227,8 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
             if (parsed) {
               if (parsed.startDate < cutoff) {
                 oldestInChunk = parsed.startDate;
+              } else if (parsed.startDate > endCutoff) {
+                // After the "through" date — skip but don't stop scanning
               } else {
                 chunkWorkouts.push(parsed);
               }
@@ -211,7 +280,9 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && fromDate) scan(file, format(fromDate, "yyyy-MM-dd"));
+    if (file && fromDate && toDate) {
+      scan(file, format(fromDate, "yyyy-MM-dd"), format(toDate, "yyyy-MM-dd"));
+    }
   };
 
   const toggleType = (type: string) => {
@@ -228,44 +299,58 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
     [allWorkouts, selectedTypes]
   );
 
-
   const handleImport = async () => {
     if (!user) return;
     setPhase("importing");
     setError(null);
 
-    let toImport = selectedWorkouts;
+    const toProcess = selectedWorkouts;
 
-    {
-      const exerciseKeys = [...new Set(toImport.map((w) => w.mapping.exercise_key))];
-      const dates = toImport.map((w) => w.loggedDate);
-      const minDate = dates.reduce((a, b) => (a < b ? a : b), dates[0]);
-      const maxDate = dates.reduce((a, b) => (a > b ? a : b), dates[0]);
+    // Fetch existing Apple Health entries with their IDs for upsert
+    const exerciseKeys = [...new Set(toProcess.map((w) => w.mapping.exercise_key))];
+    const dates = toProcess.map((w) => w.loggedDate);
+    const minDate = dates.reduce((a, b) => (a < b ? a : b), dates[0]);
+    const maxDate = dates.reduce((a, b) => (a > b ? a : b), dates[0]);
 
-      const { data: existing } = await supabase
-        .from("weight_sets")
-        .select("exercise_key, logged_date, duration_minutes")
-        .eq("user_id", user.id)
-        .eq("raw_input", APPLE_HEALTH_RAW_INPUT)
-        .in("exercise_key", exerciseKeys)
-        .gte("logged_date", minDate)
-        .lte("logged_date", maxDate);
+    const { data: existing } = await supabase
+      .from("weight_sets")
+      .select("id, exercise_key, logged_date, duration_minutes")
+      .eq("user_id", user.id)
+      .eq("raw_input", APPLE_HEALTH_RAW_INPUT)
+      .in("exercise_key", exerciseKeys)
+      .gte("logged_date", minDate)
+      .lte("logged_date", maxDate);
 
-      const existingSet = new Set(
-        (existing ?? []).map((e) => `${e.exercise_key}|${e.logged_date}|${Math.round(Number(e.duration_minutes) || 0)}`)
-      );
-
-      toImport = toImport.filter((w) => {
-        const key = `${w.mapping.exercise_key}|${w.loggedDate}|${Math.round(w.durationMinutes || 0)}`;
-        return !existingSet.has(key);
-      });
+    // Build map: dedupKey → existing row id
+    const existingMap = new Map<string, string>();
+    for (const e of existing ?? []) {
+      const key = `${e.exercise_key}|${e.logged_date}|${Math.round(Number(e.duration_minutes) || 0)}`;
+      existingMap.set(key, e.id);
     }
 
-    setImportProgress({ done: 0, total: toImport.length });
+    // Split into insert vs update
+    const toInsert: ParsedWorkout[] = [];
+    const toUpdate: { workout: ParsedWorkout; existingId: string }[] = [];
 
-    let imported = 0;
-    for (let i = 0; i < toImport.length; i += BATCH_SIZE) {
-      const batch = toImport.slice(i, i + BATCH_SIZE);
+    for (const w of toProcess) {
+      const key = `${w.mapping.exercise_key}|${w.loggedDate}|${Math.round(w.durationMinutes || 0)}`;
+      const existingId = existingMap.get(key);
+      if (existingId) {
+        toUpdate.push({ workout: w, existingId });
+      } else {
+        toInsert.push(w);
+      }
+    }
+
+    const totalOps = toInsert.length + toUpdate.length;
+    setImportProgress({ done: 0, total: totalOps });
+
+    let inserted = 0;
+    let updated = 0;
+
+    // Batch insert new entries
+    for (let i = 0; i < toInsert.length; i += BATCH_SIZE) {
+      const batch = toInsert.slice(i, i + BATCH_SIZE);
       const rows = batch.map((w) => ({
         user_id: user.id,
         entry_id: crypto.randomUUID(),
@@ -286,15 +371,44 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
 
       const { error: insertErr } = await supabase.from("weight_sets").insert(rows);
       if (insertErr) {
-        setError(`Import failed at batch ${Math.floor(i / BATCH_SIZE) + 1}: ${insertErr.message}`);
+        setError(`Insert failed at batch ${Math.floor(i / BATCH_SIZE) + 1}: ${insertErr.message}`);
         break;
       }
 
-      imported += batch.length;
-      setImportProgress({ done: imported, total: toImport.length });
+      inserted += batch.length;
+      setImportProgress({ done: inserted + updated, total: totalOps });
     }
 
-    setImportedCount(imported);
+    // Batch update existing entries
+    for (let i = 0; i < toUpdate.length; i += BATCH_SIZE) {
+      const batch = toUpdate.slice(i, i + BATCH_SIZE);
+
+      const results = await Promise.all(
+        batch.map(({ workout: w, existingId }) =>
+          supabase
+            .from("weight_sets")
+            .update({
+              heart_rate: w.heartRate,
+              speed_mph: w.speedMph,
+              distance_miles: w.distanceMiles,
+              calories_burned_override: w.caloriesBurned,
+            })
+            .eq("id", existingId)
+        )
+      );
+
+      const firstError = results.find((r) => r.error);
+      if (firstError?.error) {
+        setError(`Update failed at batch ${Math.floor(i / BATCH_SIZE) + 1}: ${firstError.error.message}`);
+        break;
+      }
+
+      updated += batch.length;
+      setImportProgress({ done: inserted + updated, total: totalOps });
+    }
+
+    setImportedCount(inserted);
+    setUpdatedCount(updated);
     setPhase("done");
   };
 
@@ -308,6 +422,14 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
   const sortedTypes = Object.entries(typeSummaries)
     .filter(([_, info]) => info.mapped)
     .sort((a, b) => b[1].count - a[1].count);
+
+  // Build done message
+  const doneParts: string[] = [];
+  if (importedCount > 0) doneParts.push(`${importedCount} new`);
+  if (updatedCount > 0) doneParts.push(`${updatedCount} updated`);
+  const doneMessage = doneParts.length > 0
+    ? `✓ Imported ${doneParts.join(", ")}`
+    : "✓ No changes needed — everything was already up to date";
 
   return (
     <div className="space-y-4">
@@ -339,37 +461,27 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
         </div>
       )}
 
+      {/* Existing import summary */}
+      {phase === "config" && existingSummary && (
+        <p className="text-xs text-muted-foreground bg-muted/30 rounded-lg px-3 py-2">
+          You have {existingSummary.count} imported workout{existingSummary.count !== 1 ? "s" : ""} from{" "}
+          {format(new Date(existingSummary.minDate + "T00:00:00"), "MMM d, yyyy")} –{" "}
+          {format(new Date(existingSummary.maxDate + "T00:00:00"), "MMM d, yyyy")}.
+          {" "}Re-importing will update existing entries with latest data.
+        </p>
+      )}
+      {phase === "config" && lastImportLoaded && !existingSummary && (
+        <p className="text-xs text-muted-foreground bg-muted/30 rounded-lg px-3 py-2">
+          No Apple Health imports yet.
+        </p>
+      )}
+
       {/* Config phase */}
       {phase === "config" && (
         <>
-          {/* Date picker */}
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">Import workouts since</p>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={cn(
-                    "h-8 text-sm justify-start text-left font-normal",
-                    !fromDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="h-3.5 w-3.5 mr-1" />
-                  {fromDate ? format(fromDate, "MMM d, yyyy") : "Pick a date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
-                <Calendar
-                  mode="single"
-                  selected={fromDate}
-                  onSelect={setFromDate}
-                  initialFocus
-                  className={cn("p-3 pointer-events-auto")}
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
+          {/* Date pickers */}
+          <DatePickerRow label="Import workouts since" date={fromDate} onSelect={setFromDate} />
+          <DatePickerRow label="through" date={toDate} onSelect={setToDate} />
 
           {/* Styled file picker */}
           <div className="flex justify-center">
@@ -384,7 +496,7 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
               variant="outline"
               size="sm"
               onClick={() => fileInputRef.current?.click()}
-              disabled={!fromDate}
+              disabled={!fromDate || !toDate}
               className="text-xs"
             >
               <Upload className="h-3.5 w-3.5 mr-1" />
@@ -467,9 +579,7 @@ function AppleHealthImportDialog({ onClose }: { onClose: () => void }) {
       {phase === "done" && (
         <div className="space-y-3">
           <div className="p-3 border border-border rounded-lg bg-muted/30">
-            <p className="text-sm font-medium">
-              ✓ Imported {importedCount} workout{importedCount !== 1 ? "s" : ""}
-            </p>
+            <p className="text-sm font-medium">{doneMessage}</p>
           </div>
           <Button size="sm" variant="ghost" onClick={onClose} className="text-xs">
             Close
