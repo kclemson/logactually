@@ -1,51 +1,38 @@
 
 
-# Analysis: Cardio calorie burn coverage gaps
+# Revised approach: Generic distance approximation guidance
 
-## Current state
+## Problem with the swimming-specific approach
+Adding explicit "1 lap = 50m" conversion logic to the prompt risks biasing the model toward swimming interpretations for ambiguous inputs. It's also brittle — we'd need to keep adding sport-specific rules as new cases appear.
 
-The distance-based duration estimator (`estimateCardioDurationFromDistance`) handles two of seven cardio types:
+## Better approach
+Instead of sport-specific conversion rules, add a general instruction near the `distance_miles` field that encourages the model to approximate distance from common units when it can do so confidently. The model already knows that a swimming lap is ~50m and that a rowing "500m piece" is 500m — it just needs permission to convert.
 
-| Cardio type | Has distance fallback | Typical no-duration log |
-|---|---|---|
-| walk_run | Yes | "2 mile walk" |
-| cycling | Yes | "10 mile bike ride" |
-| rowing | **No** | "rowed 2000m" |
-| swimming | **No** | "swam 1500m", "swam 30 laps" |
-| elliptical | N/A | Usually logged with duration |
-| stair_climber | N/A | Usually logged with duration |
-| jump_rope | N/A | Usually logged with duration |
+### Change
 
-## Realistic gaps
+**`supabase/functions/_shared/prompts.ts`** — In both the default and experimental prompt templates, update the `distance_miles` line from:
 
-**Rowing** and **swimming** are the two where a user might plausibly log distance without duration:
-- Rowing: typical pace 2:00–2:30/500m → speed ~6–7.5 mph equivalent
-- Swimming: typical pace 1:30–2:30/100m → speed ~1.5–2.5 mph equivalent
-
-Elliptical, stair climber, and jump rope don't have a meaningful "distance" concept, so there's no reasonable fallback — but users almost always include a duration for these ("20 min jump rope"), so the gap is minimal.
-
-## Recommendation
-
-Add rowing and swimming to `estimateCardioDurationFromDistance`. No changes needed for elliptical, stair climber, or jump rope.
-
-### Changes: `src/lib/calorie-burn.ts`
-
-Add two branches to the speed lookup in `estimateCardioDurationFromDistance`:
-
-```typescript
-} else if (exerciseKey === 'rowing') {
-  speedRange = [4.0, 7.5]; // ~2:30–1:20 per 500m
-} else if (exerciseKey === 'swimming') {
-  speedRange = [1.5, 2.5]; // ~2:30–1:30 per 100m
-}
+```
+- distance_miles: distance in miles (number), if relevant. Convert km to miles (1km = 0.621mi).
 ```
 
-Also update `hasDistanceTracking` in `exercise-metadata.ts` to include rowing and swimming so the UI allows distance input for those exercises (currently only walk_run and cycling).
+to:
+
+```
+- distance_miles: distance in miles (number), if relevant. Convert km to miles (1km = 0.621mi). If the user provides distance in another common unit (e.g., laps, meters, yards), convert to miles using standard assumptions.
+```
+
+This appears in two places (default prompt and experimental prompt). Both get the same update.
+
+### Why this works
+- The model already has world knowledge about lap distances, meter conversions, etc.
+- "Standard assumptions" gives it latitude without over-specifying
+- No sport-specific language that could bias unrelated inputs
+- Covers rowing meters, swimming laps/yards, and any future unit naturally
 
 ### Files
 
 | File | Change |
 |---|---|
-| `src/lib/calorie-burn.ts` | Add rowing and swimming speed ranges to `estimateCardioDurationFromDistance` |
-| `src/lib/exercise-metadata.ts` | Add `rowing` and `swimming` to `hasDistanceTracking` |
+| `supabase/functions/_shared/prompts.ts` | Update `distance_miles` description in both prompt templates (2 occurrences) |
 
