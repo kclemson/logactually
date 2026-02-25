@@ -148,7 +148,7 @@ For cardio or duration-based exercises, provide:
 - exercise_key: a canonical snake_case identifier from the reference below
 - description: a user-friendly, context-specific name (e.g., "Treadmill Jog", "Morning Walk", "5K Run", "Spin Class")
 - duration_minutes: duration in minutes (number), if relevant. Parse "mm:ss" as minutes:seconds (e.g., "12:30" = 12.5 minutes) and "h:mm:ss" as hours (e.g., "1:15:00" = 75 minutes).
-- distance_miles: distance in miles (number), if relevant. Convert km to miles (1km = 0.621mi).
+- distance_miles: distance in miles (number), if relevant. Convert km to miles (1km = 0.621mi). If the user provides distance in another common unit (e.g., laps, meters, yards), convert to miles using standard assumptions.
 
 If the user provides two values that allow calculating a third (e.g., speed + duration → distance, duration + distance → speed), perform the calculation and include the derived value.
 
@@ -217,7 +217,7 @@ For cardio or duration-based exercises, provide:
 - exercise_key: a canonical snake_case identifier from the reference below
 - description: a user-friendly, context-specific name (e.g., "Treadmill Jog", "Morning Walk", "5K Run", "Spin Class")
 - duration_minutes: duration in minutes (number), if relevant. Parse "mm:ss" as minutes:seconds (e.g., "12:30" = 12.5 minutes) and "h:mm:ss" as hours (e.g., "1:15:00" = 75 minutes).
-- distance_miles: distance in miles (number), if relevant. Convert km to miles (1km = 0.621mi).
+- distance_miles: distance in miles (number), if relevant. Convert km to miles (1km = 0.621mi). If the user provides distance in another common unit (e.g., laps, meters, yards), convert to miles using standard assumptions.
 
 If the user provides two values that allow calculating a third (e.g., speed + duration → distance, duration + distance → speed), perform the calculation and include the derived value.
 
