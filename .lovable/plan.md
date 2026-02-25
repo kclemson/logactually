@@ -1,40 +1,25 @@
 
 
-## Fix: weight_lbs double-counting on multi-entry days
+## Two Changes
 
-### Root cause
+### 1. Tooltip shows "value: 106" instead of the metric name
 
-In `chart-data.ts` line 295, the exercise daily aggregation unconditionally **sums** `weight_lbs` across all rows for the day:
+Recharts auto-generates tooltip payload using the `dataKey` as the display name. Since `dataKey` is always `"value"`, the tooltip says "value: 106" on desktop hover. The touch path already overrides this correctly (line 158 sets `name: spec.yAxis.label`), but desktop relies on Recharts defaults.
 
-```typescript
-existing.weight_lbs += setTotals.weight_lbs;  // 170 + 160 = 330
-```
+**Fix**: Add `name={spec.yAxis.label}` to both `<Line>` and `<Bar>` in `DynamicChart.tsx`. This makes Recharts use the metric name (e.g., "heart_rate") as the tooltip label for both touch and desktop.
 
-So on Jan 31 with two leg press entries (170 lbs and 160 lbs), the daily total becomes 330. Then when the DSL engine applies `aggregation: "max"` on a date-grouped series, there's only one value per day — `max([330]) = 330`. The spike in the chart.
+Additionally, the raw field names like `heart_rate` and `duration_minutes` should be humanized in the display. I'll add a small label map to format these (e.g., "heart rate", "duration (min)").
 
-Summed `weight_lbs` is never meaningful as a daily metric. Unlike sets, reps, duration, or distance (which accumulate), "total pounds lifted" is what volume (sets × reps × weight) is for. The raw `weight_lbs` field should represent the **heaviest weight used that day**.
+### 2. Remove generic `_details` for date-grouped charts
 
-### Fix
+The current tooltip shows a dump of all daily metrics (sets, duration_minutes, distance_miles, calories_burned, entries) regardless of relevance. The user wants to remove this generic fallback entirely for date-grouped charts — the tooltip should just show the date, the primary metric value, and the "Go to day" link on mobile.
 
-**File: `src/lib/chart-data.ts`** — change the daily `weight_lbs` aggregation from sum to max:
+**Fix**: In `chart-dsl.ts`, set `_details: []` for the `"date"` groupBy case (lines 186–202) instead of building details from all daily metrics. Other groupBy modes (dayOfWeek, item, category, etc.) keep their details since those are curated and contextually relevant.
 
-```typescript
-// Before:
-existing.weight_lbs += setTotals.weight_lbs;
+### Files changed
 
-// After:
-existing.weight_lbs = Math.max(existing.weight_lbs, setTotals.weight_lbs);
-```
-
-One line, one file. This makes Jan 31 show `170` (the heavier of the two entries) instead of `330`.
-
-### Why max, not average
-
-The user asked about averaging, but for this metric specifically, max is the standard convention — "what's the heaviest weight I moved today" is the canonical meaning of a weight trend line, and it's what the DSL already requests (`aggregation: "max"`). An average of 170 and 160 = 165 would understate the actual working weight.
-
-### Impact check
-
-- **Volume charts** are unaffected — volume is computed as `sets × reps × weight` per entry, not from the daily `weight_lbs` total
-- **Item-level charts** (`groupBy: "item"`) use `exerciseByItem` which has its own separate aggregation — unaffected
-- **DSL `sum` aggregation on `weight_lbs`** across multiple days would now sum the daily maxes rather than daily sums — this is actually more meaningful (sum of working weights across sessions)
+| File | Change |
+|------|--------|
+| `src/components/trends/DynamicChart.tsx` | Add `name={spec.yAxis.label}` to `<Line>` and `<Bar>`; add a label humanizer for the formatter |
+| `src/lib/chart-dsl.ts` | Set `_details: []` for `groupBy: "date"` case (both food and exercise) |
 
