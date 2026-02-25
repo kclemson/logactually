@@ -1,20 +1,24 @@
 
 
-## Fix: Categorical X-axis labels overlapping tick marks
+## Fix: Categorical charts misaligned with row neighbors
 
-The `MultiLineTick` component renders label text starting at the exact `y` position passed by Recharts, which is the same position as the tick line. For categorical charts (like "Average Heart Rate by Exercise"), the multi-word labels (e.g., "Running", "Indoor") overlap the vertical tick marks beneath each bar.
+The chart container is a fixed `h-24` (96px) for all charts. Categorical charts (like "Average Heart Rate by Exercise" and "Distance Walked vs Run") have a taller XAxis (`height: 28` vs `height: 16` for date charts — a 12px difference). Since the total container height is the same, the bars get squeezed shorter, causing visual misalignment with adjacent date-based charts in the same grid row.
 
-**Fix in `src/components/trends/DynamicChart.tsx`**: Shift the first `tspan` down by adding a `dy` offset so the text clears the tick mark.
+### Fix
+
+**File: `src/components/trends/DynamicChart.tsx`, line 230**
+
+Make the container height conditional — categorical charts get the extra 12px:
 
 ```typescript
-// Before (line 31):
-<tspan x={x} dy={i === 0 ? 0 : 10} key={i}>{w}</tspan>
+// Before:
+<div className="h-24">
 
 // After:
-<tspan x={x} dy={i === 0 ? 4 : 10} key={i}>{w}</tspan>
+<div className={isCategorical ? "h-[108px]" : "h-24"}>
 ```
 
-A 4px downward nudge on the first line gives enough clearance from the tick mark while keeping the label compact. Single-word labels (like "Running" or "Walking") also benefit since they currently sit right on the tick line.
+This gives categorical charts 108px total (96 + 12), so the actual bar/plotting area remains the same size as date-based charts. The rows align because the bars are the same height — the extra container space accommodates the taller axis labels.
 
-One file, one number change.
+One file, one line.
 
