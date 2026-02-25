@@ -68,6 +68,25 @@ export function parseTotalCalories(xml: string): number | null {
   return isNaN(cal) ? null : Math.round(cal);
 }
 
+/** Extract average heart rate from WorkoutStatistics */
+export function parseAverageHeartRate(xml: string): number | null {
+  const re = /type="HKQuantityTypeIdentifierHeartRate"[^>]*?average="([^"]+)"/i;
+  const match = xml.match(re);
+  if (!match) return null;
+  const hr = parseFloat(match[1]);
+  return isNaN(hr) ? null : Math.round(hr);
+}
+
+/** Extract average speed and convert from km/h to mph */
+export function parseAverageSpeedMph(xml: string): number | null {
+  const re = /type="HKQuantityTypeIdentifier(?:RunningSpeed|WalkingSpeed|CyclingSpeed)"[^>]*?average="([^"]+)"/i;
+  const match = xml.match(re);
+  if (!match) return null;
+  const kmh = parseFloat(match[1]);
+  if (isNaN(kmh) || kmh <= 0) return null;
+  return Math.round(kmh * 0.621371 * 100) / 100;
+}
+
 /** Format a date as YYYY-MM-DD for logged_date */
 export function toLoggedDate(d: Date): string {
   return d.toISOString().split("T")[0];
@@ -85,6 +104,8 @@ export interface ParsedWorkout {
   durationMinutes: number | null;
   distanceMiles: number | null;
   caloriesBurned: number | null;
+  heartRate: number | null;
+  speedMph: number | null;
   mapping: ActivityMapping;
 }
 
@@ -103,6 +124,8 @@ export function parseWorkoutBlock(xml: string): ParsedWorkout | null {
     durationMinutes: parseDuration(xml),
     distanceMiles: parseTotalDistanceMiles(xml),
     caloriesBurned: parseTotalCalories(xml),
+    heartRate: parseAverageHeartRate(xml),
+    speedMph: parseAverageSpeedMph(xml),
     mapping: ACTIVITY_MAP[activityType],
   };
 }
