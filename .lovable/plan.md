@@ -1,86 +1,63 @@
 
 
-# Fix: Support `weight_lbs` and `reps` as exercise metrics in the chart engine
+# Fix: `demoBeta` query checks wrong user
 
 ## Problem
-The AI correctly generates a DSL with `metric: "weight_lbs"` for "show working weight over time for leg press," but the chart engine has no awareness of `weight_lbs` (or `reps`). It is not fetched from the database, not accumulated in daily totals, and not listed as a valid exercise metric. The result is an empty chart.
-
-The AI prompt lists `sets, reps, weight_lbs` as database columns, so the model reasonably uses them -- but the client-side engine only supports `sets` (as a count), not `reps` or `weight_lbs` as chartable metrics.
+The `demoBeta` query (line 143-155) checks `user_roles` for *any* user with `role = 'beta'`, not specifically the demo account. If the admin also has beta, it always returns true.
 
 ## Solution
-Add `weight_lbs` and `reps` to the exercise data pipeline so they can be charted like any other metric.
+1. Create an `is_demo_beta()` RPC (SECURITY DEFINER, admin-only) that looks up the demo user by email and checks their beta role specifically.
+2. Replace the client-side query with a call to this RPC.
 
-## Technical Details
+## Changes
 
-### 1. Type: `src/lib/chart-types.ts`
-Add `weight_lbs` and `reps` to `ExerciseDayTotals`:
+### 1. New database migration: `is_demo_beta()` function
+
+```sql
+CREATE OR REPLACE FUNCTION public.is_demo_beta()
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+DECLARE
+  demo_uid uuid;
+BEGIN
+  IF NOT has_role(auth.uid(), 'admin') THEN
+    RAISE EXCEPTION 'Admin access required';
+  END IF;
+
+  SELECT p.id INTO demo_uid
+  FROM profiles p
+  JOIN auth.users u ON u.id = p.id
+  WHERE u.email = 'demo@logactually.com'
+  LIMIT 1;
+
+  RETURN EXISTS (
+    SELECT 1 FROM user_roles
+    WHERE user_id = demo_uid AND role = 'beta'
+  );
+END;
+$$;
+```
+
+### 2. `src/pages/Admin.tsx` (lines 143-155)
+Replace the `demoBeta` query:
+
 ```typescript
-export interface ExerciseDayTotals {
-  sets: number;
-  reps: number;           // NEW
-  weight_lbs: number;     // NEW
-  duration_minutes: number;
-  distance_miles: number;
-  calories_burned: number;
-  heart_rate: number;
-  calories_burned_estimate: number;
-  unique_exercises: number;
-  entries: number;
-}
+const { data: demoBeta } = useQuery({
+  queryKey: ['demoBeta'],
+  queryFn: async () => {
+    const { data, error } = await supabase.rpc('is_demo_beta' as any);
+    if (error) return false;
+    return data === true;
+  },
+  staleTime: 60_000,
+});
 ```
-
-### 2. Data fetching: `src/lib/chart-data.ts`
-
-a) Add `reps, weight_lbs` to the `.select()` column list (line 183).
-
-b) Include them in the `setTotals` object (line 221-230):
-```typescript
-const setTotals: ExerciseDayTotals = {
-  sets: 1,
-  reps: row.reps ?? 0,             // NEW
-  weight_lbs: row.weight_lbs ?? 0, // NEW
-  duration_minutes: row.duration_minutes ?? 0,
-  ...
-};
-```
-
-c) Accumulate in daily aggregation (line 280-295):
-```typescript
-existing.reps += setTotals.reps;
-existing.weight_lbs += setTotals.weight_lbs;
-```
-
-d) Add to `exerciseByItem.valuesPerEntry` tracking for accurate max/min:
-```typescript
-existing.valuesPerEntry!.reps.push(row.reps ?? 0);
-existing.valuesPerEntry!.weight_lbs.push(row.weight_lbs ?? 0);
-```
-
-e) Update the `EMPTY_EXERCISE`-like spread to include `reps: 0, weight_lbs: 0` (check where `EMPTY_EXERCISE` is defined or inlined).
-
-f) Update category aggregation similarly.
-
-### 3. DSL engine: `src/lib/chart-dsl.ts`
-Add to the `EXERCISE_METRICS` array (line 22):
-```typescript
-const EXERCISE_METRICS = ["sets", "reps", "weight_lbs", "duration_minutes", ...] as const;
-```
-
-No other engine changes needed -- `extractValue` already reads `(day as any)[metric]` dynamically.
-
-### 4. Edge function prompt (optional but recommended): `supabase/functions/generate-chart-dsl/index.ts`
-Add `reps` and `weight_lbs` to the "Available Metrics" section for exercise source so the AI knows these are supported:
-```
-- Exercise source: sets, reps, weight_lbs, duration_minutes, ...
-```
-(The prompt already mentions these as DB columns but not as chartable metrics.)
-
-### Aggregation note
-For daily aggregation, `weight_lbs` sums all set weights in a day. With `aggregation: "max"`, the DSL engine picks the highest daily total. However, the user likely wants the max single-set weight, not the sum. This is already handled for item-level charts via `valuesPerEntry`, but for date-grouped charts the engine aggregates daily sums then applies max across days. This means "max weight for leg press by date" will show the heaviest day's total, which for a single-exercise filter with one set logged per row, equals the single-set max. For multi-set days it sums -- but this is the same behavior as `sets` (which counts total sets per day). This is acceptable for now.
 
 | File | Change |
 |---|---|
-| `src/lib/chart-types.ts` | Add `reps` and `weight_lbs` to `ExerciseDayTotals` |
-| `src/lib/chart-data.ts` | Fetch, accumulate, and track `reps` and `weight_lbs` in all aggregation paths |
-| `src/lib/chart-dsl.ts` | Add `reps` and `weight_lbs` to `EXERCISE_METRICS` |
-| `supabase/functions/generate-chart-dsl/index.ts` | Add `reps` and `weight_lbs` to the available metrics documentation in the prompt |
+| New migration | Add `is_demo_beta()` RPC |
+| `src/pages/Admin.tsx` | Replace client-side `user_roles` query with `is_demo_beta()` RPC call |
+
