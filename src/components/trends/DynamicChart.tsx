@@ -187,7 +187,7 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
     stroke: "hsl(var(--muted-foreground))",
     interval: isCategorical ? (0 as const) : ("preserveStartEnd" as const),
     tickMargin: 2,
-    height: isCategorical ? 28 : 16,
+    height: isCategorical ? 20 : 16,
   };
 
   const footer = spec.aiNote || onAiNoteChange ? (
