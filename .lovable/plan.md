@@ -1,24 +1,42 @@
 
 
-## Fix: Categorical charts misaligned with row neighbors
+## Fix: Desktop click-to-navigate broken on Line charts
 
-The chart container is a fixed `h-24` (96px) for all charts. Categorical charts (like "Average Heart Rate by Exercise" and "Distance Walked vs Run") have a taller XAxis (`height: 28` vs `height: 16` for date charts — a 12px difference). Since the total container height is the same, the bars get squeezed shorter, causing visual misalignment with adjacent date-based charts in the same grid row.
+### Root cause
+
+The `<Bar>` component has an `onClick` handler (line 276) that calls `interaction.handleBarClick`, which navigates on desktop. But the `<Line>` component (line 245) has **no onClick handler at all**. So clicking a data point on a line chart does nothing — the click falls through to the tooltip wrapper (which has `pointerEvents: "auto"`), causing text selection.
 
 ### Fix
 
-**File: `src/components/trends/DynamicChart.tsx`, line 230**
+**File: `src/components/trends/DynamicChart.tsx`**
 
-Make the container height conditional — categorical charts get the extra 12px:
+Add an `onClick` handler to the `<LineChart>` component itself (since individual `<Line>` doesn't support `onClick` the same way `<Bar>` does). Recharts `<LineChart>` accepts an `onClick` prop that receives the chart event with `activePayload` and `activeTooltipIndex`.
 
 ```typescript
-// Before:
-<div className="h-24">
-
-// After:
-<div className={isCategorical ? "h-[108px]" : "h-24"}>
+// Add onClick to <LineChart> (around line 232)
+<LineChart
+  data={chartData}
+  margin={{ top: 16, right: 4, left: 0, bottom: 0 }}
+  onClick={(state: any) => {
+    if (state?.activeTooltipIndex != null && state?.activePayload?.[0]?.payload) {
+      interaction.handleBarClick(state.activePayload[0].payload, state.activeTooltipIndex);
+    }
+  }}
+>
 ```
 
-This gives categorical charts 108px total (96 + 12), so the actual bar/plotting area remains the same size as date-based charts. The rows align because the bars are the same height — the extra container space accommodates the taller axis labels.
+Also add the same `onClick` to `<BarChart>` for consistency (currently it relies on the `<Bar>` onClick, but having it at chart level is more robust). Actually, `<Bar>` onClick already works, so we only need to add it to `<LineChart>`.
 
-One file, one line.
+Additionally, add `user-select: none` to the tooltip wrapper to prevent text selection on click:
+
+```typescript
+// In sharedTooltipProps.wrapperStyle (line 169)
+wrapperStyle: { pointerEvents: "auto" as const, zIndex: 50, userSelect: "none" as const },
+```
+
+### Summary
+
+| File | Change |
+|------|--------|
+| `src/components/trends/DynamicChart.tsx` | Add `onClick` to `<LineChart>` for navigation; add `userSelect: "none"` to tooltip wrapper |
 
