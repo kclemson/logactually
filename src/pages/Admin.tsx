@@ -312,7 +312,9 @@ export default function Admin() {
                 <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">SF</th>
                 <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">W</th>
                 <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">SW</th>
+                <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">SC</th>
                 <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">C</th>
+                <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">Lt</th>
                 <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">Cs</th>
                 <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">B</th>
               </tr>
@@ -470,9 +472,19 @@ export default function Admin() {
                     )}
                   </Tooltip>
                   <td
+                    className={`text-center py-0.5 pr-1 ${(user.saved_charts_count ?? 0) === 0 ? "text-blue-400/50" : "text-blue-500"}`}
+                  >
+                    {user.saved_charts_count ?? 0}
+                  </td>
+                  <td
                     className={`text-center py-0.5 pr-1 ${user.custom_logs_enabled ? "text-teal-500" : "text-muted-foreground/50"}`}
                   >
                     {user.custom_logs_enabled ? "✓" : "—"}
+                  </td>
+                  <td
+                    className={`text-center py-0.5 pr-1 ${(user.custom_log_types_count ?? 0) === 0 ? "text-teal-400/50" : "text-teal-500"}`}
+                  >
+                    {user.custom_log_types_count ?? 0}
                   </td>
                   <td
                     className={`text-center py-0.5 pr-1 ${(user.custom_log_entries_count ?? 0) === 0 ? "text-teal-400/50" : "text-teal-500"}`}
