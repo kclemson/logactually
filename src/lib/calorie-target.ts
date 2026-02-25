@@ -11,7 +11,7 @@ export const DAILY_GREEN_MAX = 2.5;
 export const DAILY_AMBER_MAX = 10;
 
 // Weekly/rollup target dot thresholds (percent over target)
-export const ROLLUP_GREEN_MAX = 0;
+export const ROLLUP_GREEN_MAX = 0.05;
 export const ROLLUP_AMBER_MAX = 5;
 
 export function getTargetDotColor(calories: number, target: number): string {

@@ -17,7 +17,7 @@ function RollupLegend({ label }: { label: string }) {
   return (
     <div className="text-[10px] tabular-nums grid grid-cols-[auto_auto_auto_auto] gap-x-2 items-center">
       <div>{label}:</div>
-      <div><span className="text-green-400">●</span> {ROLLUP_GREEN_MAX === 0 ? 'under' : `≤${ROLLUP_GREEN_MAX}%`}</div>
+      <div><span className="text-green-400">●</span> ≤{ROLLUP_GREEN_MAX}%</div>
       <div><span className="text-amber-400">●</span> ≤{ROLLUP_AMBER_MAX}%</div>
       <div><span className="text-rose-400">●</span> &gt;{ROLLUP_AMBER_MAX}%</div>
     </div>
