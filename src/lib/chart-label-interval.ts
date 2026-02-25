@@ -13,7 +13,10 @@ export function getLabelInterval(dataLength: number): number {
   if (dataLength <= 35) return 4;
   if (dataLength <= 50) return 5;
   if (dataLength <= 70) return 7;
-  return 10;
+  if (dataLength <= 120) return 14;
+  if (dataLength <= 180) return 21;
+  if (dataLength <= 365) return 30;
+  return 60;
 }
 
 /** Full-width charts (~100% viewport): more generous thresholds since there's more horizontal space. */
@@ -23,7 +26,10 @@ export function getFullWidthLabelInterval(dataLength: number): number {
   if (dataLength <= 42) return 3;
   if (dataLength <= 70) return 4;
   if (dataLength <= 90) return 5;
-  return 7;
+  if (dataLength <= 120) return 7;
+  if (dataLength <= 180) return 14;
+  if (dataLength <= 365) return 21;
+  return 30;
 }
 
 /**
@@ -37,5 +43,8 @@ export function getExerciseLabelInterval(dataLength: number): number {
   if (dataLength <= 50) return 6;
   if (dataLength <= 70) return 10;
   if (dataLength <= 90) return 15;
-  return 20;
+  if (dataLength <= 150) return 21;
+  if (dataLength <= 250) return 30;
+  if (dataLength <= 400) return 45;
+  return 60;
 }
