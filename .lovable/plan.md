@@ -1,45 +1,42 @@
 
 
-## Add "All Time" Period Option
+## Problem
 
-### What changes
+All three label interval functions were designed for a maximum of ~90 data points. With "All time" enabled, charts can have 200-400+ data points, and the current fallback returns intervals that are far too dense (every 10th, 7th, or 20th label), resulting in the cramped x-axis visible in the screenshot.
 
-**Label choice:** "All time" reads well in the dropdown alongside "7 days", "30 days", "90 days". Clean and self-explanatory.
+## Fix
 
-### Technical approach
+**File: `src/lib/chart-label-interval.ts`** — extend all three functions with higher-range tiers.
 
-Use a sentinel value (e.g. `0`) to represent "all time." When `period === 0`, compute the start date from the user's earliest database entry instead of `subDays(new Date(), period)`.
+### `getLabelInterval` (half-width charts)
+Current max return: `10`. Add tiers for longer ranges:
 
-### Files to change
+| Data length | Interval | Approx labels shown |
+|---|---|---|
+| ≤ 120 | 14 | ~9 |
+| ≤ 180 | 21 | ~9 |
+| ≤ 365 | 30 | ~12 |
+| > 365 | 60 | ~6-8 |
 
-**1. `src/pages/Trends.tsx`**
-- Add `{ label: "All time", days: 0 }` to the `periods` array
-- Update the `useState` initializer whitelist: `[7, 30, 90, 0].includes(...)`
-- The rest flows automatically — `selectedPeriod` is already threaded through every hook and component
+### `getFullWidthLabelInterval` (full-width charts)
+Current max return: `7`. Add tiers:
 
-**2. `src/lib/chart-data.ts`** (the DSL v2 data fetcher)
-- When `period === 0`, set `startDate` to a far-past value like `"2000-01-01"` instead of computing `subDays(new Date(), 0)` (which would mean "today only")
-- Add `.limit(10000)` to both the food and exercise queries as a safety net against unbounded result sets (default Supabase limit is 1,000 rows, which active users on "all time" will exceed)
+| Data length | Interval | Approx labels shown |
+|---|---|---|
+| ≤ 120 | 7 | ~17 |
+| ≤ 180 | 14 | ~13 |
+| ≤ 365 | 21 | ~17 |
+| > 365 | 30 | ~12+ |
 
-**3. `src/hooks/useWeightTrends.ts`** (built-in exercise charts)
-- Same pattern: when `days === 0`, use `"2000-01-01"` as start date
-- Add `.limit(10000)` safety net
+### `getExerciseLabelInterval` (exercise charts)
+Current max return: `20`. Add tiers:
 
-**4. `src/pages/Trends.tsx` food query** (~line 155)
-- Same far-past date treatment for `period === 0`
-- Add `.limit(10000)`
+| Data length | Interval | Approx labels shown |
+|---|---|---|
+| ≤ 150 | 21 | ~7 |
+| ≤ 250 | 30 | ~8 |
+| ≤ 400 | 45 | ~9 |
+| > 400 | 60 | ~7+ |
 
-**5. `src/hooks/useDailyCalorieBurn.ts`** and **`src/hooks/useCustomLogTrends.ts`**
-- Same pattern for any `subDays` usage
-
-**6. `supabase/functions/generate-chart-dsl/index.ts`** (edge function)
-- Update whitelist: `[7, 30, 90, 0].includes(period)`
-- When `days === 0`, pass "all available data (no date limit)" to the AI prompt instead of "last 0 days"
-
-**7. `supabase/functions/generate-chart/index.ts`** (v1 fallback)
-- Same whitelist and date handling update
-
-### Risk mitigation
-
-The main risk is exceeding Supabase's default 1,000-row query limit on long histories. Adding explicit `.limit(10000)` on all queries prevents silent data truncation. For context, even a very active user logging 5 food entries and 3 exercises daily for 2 years would produce ~3,650 food rows and ~2,190 exercise rows — well within 10,000.
+This is a single-file change (~12 lines added). The intervals use month-friendly numbers (7, 14, 21, 30, 60) so labels land on roughly evenly-spaced dates rather than arbitrary positions.
 
