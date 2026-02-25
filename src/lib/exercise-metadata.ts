@@ -283,7 +283,7 @@ export function applyCategoryChange(
 
 // Check if an exercise tracks distance (mph toggle supported)
 export function hasDistanceTracking(exerciseKey: string): boolean {
-  return ['walk_run', 'cycling'].includes(exerciseKey);
+  return ['walk_run', 'cycling', 'rowing', 'swimming'].includes(exerciseKey);
 }
 
 // ============================================================================
