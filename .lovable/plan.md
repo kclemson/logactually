@@ -1,42 +1,40 @@
 
 
-## Problem
+## Two Issues, Two Small Fixes
 
-All three label interval functions were designed for a maximum of ~90 data points. With "All time" enabled, charts can have 200-400+ data points, and the current fallback returns intervals that are far too dense (every 10th, 7th, or 20th label), resulting in the cramped x-axis visible in the screenshot.
+### 1. Missing "All time" subtitle
 
-## Fix
+In `DynamicChart.tsx`, `periodLabel` treats `0` as falsy and returns `undefined`:
 
-**File: `src/lib/chart-label-interval.ts`** — extend all three functions with higher-range tiers.
+```typescript
+function periodLabel(days?: number): string | undefined {
+  if (!days) return undefined;  // 0 is falsy → no label
+```
 
-### `getLabelInterval` (half-width charts)
-Current max return: `10`. Add tiers for longer ranges:
+**Fix**: Add an explicit check for `days === 0` returning `"All time"` before the falsy guard.
 
-| Data length | Interval | Approx labels shown |
-|---|---|---|
-| ≤ 120 | 14 | ~9 |
-| ≤ 180 | 21 | ~9 |
-| ≤ 365 | 30 | ~12 |
-| > 365 | 60 | ~6-8 |
+### 2. AI note bakes in a specific time range
 
-### `getFullWidthLabelInterval` (full-width charts)
-Current max return: `7`. Add tiers:
+The system prompt on line 173 of `generate-chart-dsl/index.ts` includes this example:
 
-| Data length | Interval | Approx labels shown |
-|---|---|---|
-| ≤ 120 | 7 | ~17 |
-| ≤ 180 | 14 | ~13 |
-| ≤ 365 | 21 | ~17 |
-| > 365 | 30 | ~12+ |
+> `"Sum of daily calories over the last 30 days"`
 
-### `getExerciseLabelInterval` (exercise charts)
-Current max return: `20`. Add tiers:
+This teaches the AI to embed a specific period into `aiNote`. But the DSL is period-agnostic — once saved, the same chart can be viewed at 7 days, 90 days, or all time. The note becomes stale/wrong.
 
-| Data length | Interval | Approx labels shown |
-|---|---|---|
-| ≤ 150 | 21 | ~7 |
-| ≤ 250 | 30 | ~8 |
-| ≤ 400 | 45 | ~9 |
-| > 400 | 60 | ~7+ |
+**Fix**: Replace that single aiNote guideline line with one that tells the AI the note should describe *what* the chart measures, not *when*. No list of prohibitions needed — just reframe the example:
 
-This is a single-file change (~12 lines added). The intervals use month-friendly numbers (7, 14, 21, 30, 60) so labels land on roughly evenly-spaced dates rather than arbitrary positions.
+```
+- Use aiNote to briefly describe what the chart measures (e.g. "Average heart rate per walking session"). Keep it under 15 words. Do not reference a specific time period — the period is selected separately by the user.
+```
+
+This is semantic guidance (tell it what to do, with a good example) rather than a prohibition list. The example itself contains no time reference, which naturally steers the model away from including one.
+
+### Files changed
+
+| File | Change |
+|------|--------|
+| `src/components/trends/DynamicChart.tsx` | Add `if (days === 0) return "All time"` to `periodLabel` |
+| `supabase/functions/generate-chart-dsl/index.ts` | Replace line 173's aiNote guidance with period-agnostic instruction |
+
+Two single-line edits total.
 
