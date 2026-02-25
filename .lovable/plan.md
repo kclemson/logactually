@@ -1,63 +1,51 @@
 
 
-# Fix: `demoBeta` query checks wrong user
+# Analysis: Cardio calorie burn coverage gaps
 
-## Problem
-The `demoBeta` query (line 143-155) checks `user_roles` for *any* user with `role = 'beta'`, not specifically the demo account. If the admin also has beta, it always returns true.
+## Current state
 
-## Solution
-1. Create an `is_demo_beta()` RPC (SECURITY DEFINER, admin-only) that looks up the demo user by email and checks their beta role specifically.
-2. Replace the client-side query with a call to this RPC.
+The distance-based duration estimator (`estimateCardioDurationFromDistance`) handles two of seven cardio types:
 
-## Changes
+| Cardio type | Has distance fallback | Typical no-duration log |
+|---|---|---|
+| walk_run | Yes | "2 mile walk" |
+| cycling | Yes | "10 mile bike ride" |
+| rowing | **No** | "rowed 2000m" |
+| swimming | **No** | "swam 1500m", "swam 30 laps" |
+| elliptical | N/A | Usually logged with duration |
+| stair_climber | N/A | Usually logged with duration |
+| jump_rope | N/A | Usually logged with duration |
 
-### 1. New database migration: `is_demo_beta()` function
+## Realistic gaps
 
-```sql
-CREATE OR REPLACE FUNCTION public.is_demo_beta()
-RETURNS boolean
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
-DECLARE
-  demo_uid uuid;
-BEGIN
-  IF NOT has_role(auth.uid(), 'admin') THEN
-    RAISE EXCEPTION 'Admin access required';
-  END IF;
+**Rowing** and **swimming** are the two where a user might plausibly log distance without duration:
+- Rowing: typical pace 2:00–2:30/500m → speed ~6–7.5 mph equivalent
+- Swimming: typical pace 1:30–2:30/100m → speed ~1.5–2.5 mph equivalent
 
-  SELECT p.id INTO demo_uid
-  FROM profiles p
-  JOIN auth.users u ON u.id = p.id
-  WHERE u.email = 'demo@logactually.com'
-  LIMIT 1;
+Elliptical, stair climber, and jump rope don't have a meaningful "distance" concept, so there's no reasonable fallback — but users almost always include a duration for these ("20 min jump rope"), so the gap is minimal.
 
-  RETURN EXISTS (
-    SELECT 1 FROM user_roles
-    WHERE user_id = demo_uid AND role = 'beta'
-  );
-END;
-$$;
-```
+## Recommendation
 
-### 2. `src/pages/Admin.tsx` (lines 143-155)
-Replace the `demoBeta` query:
+Add rowing and swimming to `estimateCardioDurationFromDistance`. No changes needed for elliptical, stair climber, or jump rope.
+
+### Changes: `src/lib/calorie-burn.ts`
+
+Add two branches to the speed lookup in `estimateCardioDurationFromDistance`:
 
 ```typescript
-const { data: demoBeta } = useQuery({
-  queryKey: ['demoBeta'],
-  queryFn: async () => {
-    const { data, error } = await supabase.rpc('is_demo_beta' as any);
-    if (error) return false;
-    return data === true;
-  },
-  staleTime: 60_000,
-});
+} else if (exerciseKey === 'rowing') {
+  speedRange = [4.0, 7.5]; // ~2:30–1:20 per 500m
+} else if (exerciseKey === 'swimming') {
+  speedRange = [1.5, 2.5]; // ~2:30–1:30 per 100m
+}
 ```
+
+Also update `hasDistanceTracking` in `exercise-metadata.ts` to include rowing and swimming so the UI allows distance input for those exercises (currently only walk_run and cycling).
+
+### Files
 
 | File | Change |
 |---|---|
-| New migration | Add `is_demo_beta()` RPC |
-| `src/pages/Admin.tsx` | Replace client-side `user_roles` query with `is_demo_beta()` RPC call |
+| `src/lib/calorie-burn.ts` | Add rowing and swimming speed ranges to `estimateCardioDurationFromDistance` |
+| `src/lib/exercise-metadata.ts` | Add `rowing` and `swimming` to `hasDistanceTracking` |
 
