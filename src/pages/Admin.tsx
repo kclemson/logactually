@@ -143,13 +143,9 @@ export default function Admin() {
   const { data: demoBeta } = useQuery({
     queryKey: ['demoBeta'],
     queryFn: async () => {
-      const { data } = await supabase
-        .from('user_roles')
-        .select('id')
-        .eq('role', 'beta' as any)
-        .limit(1)
-        .maybeSingle();
-      return !!data;
+      const { data, error } = await supabase.rpc('is_demo_beta' as any);
+      if (error) return false;
+      return data === true;
     },
     staleTime: 60_000,
   });
