@@ -8,6 +8,21 @@ import { useChartInteraction } from "@/hooks/useChartInteraction";
 import { getLabelInterval } from "@/lib/chart-label-interval";
 import { type ReactNode } from "react";
 
+/** Turn snake_case metric keys into readable labels */
+function humanizeLabel(key: string): string {
+  const MAP: Record<string, string> = {
+    heart_rate: "heart rate",
+    duration_minutes: "duration (min)",
+    distance_miles: "distance (mi)",
+    calories_burned: "calories burned",
+    calories_burned_estimate: "est. calories burned",
+    weight_lbs: "weight (lbs)",
+    saturated_fat: "saturated fat",
+    unique_exercises: "unique exercises",
+  };
+  return MAP[key] ?? key.replace(/_/g, " ");
+}
+
 function MultiLineTick({ x, y, payload }: any) {
   const words = String(payload?.value ?? "").split(" ");
   return (
@@ -230,6 +245,7 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
               <Line
                 type="monotone"
                 dataKey={dataKey}
+                name={humanizeLabel(spec.yAxis.label)}
                 stroke={color}
                 strokeWidth={1.5}
                 dot={{ r: 2, fill: color }}
@@ -254,6 +270,7 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
               <Tooltip {...sharedTooltipProps} />
               <Bar
                 dataKey={dataKey}
+                name={humanizeLabel(spec.yAxis.label)}
                 fill={color}
                 radius={[2, 2, 0, 0]}
                 onClick={(data: any, index: number) => interaction.handleBarClick(data, index)}

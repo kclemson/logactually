@@ -183,23 +183,7 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
         if (dsl.offset) finalValue -= dsl.offset;
         const foodDay = dailyTotals.food[date];
         const exDay = dailyTotals.exercise[date];
-        const details = dsl.source === "food"
-          ? buildDetails([
-              { label: "calories", value: foodDay?.calories },
-              { label: "protein", value: foodDay?.protein },
-              { label: "carbs", value: foodDay?.carbs },
-              { label: "fat", value: foodDay?.fat },
-              { label: "fiber", value: foodDay?.fiber },
-              { label: "entries", value: foodDay?.entries },
-            ], dsl.derivedMetric || dsl.metric)
-          : buildDetails([
-              { label: "sets", value: exDay?.sets },
-              { label: "duration_minutes", value: exDay?.duration_minutes },
-              { label: "distance_miles", value: exDay?.distance_miles },
-              { label: "calories_burned", value: exDay?.calories_burned },
-              { label: "heart_rate", value: exDay?.heart_rate },
-              { label: "entries", value: exDay?.entries },
-            ], dsl.metric);
+        const details: { label: string; value: string }[] = [];
         return {
           rawDate: date,
           label: format(new Date(`${date}T12:00:00`), "MMM d"),
