@@ -304,19 +304,33 @@ export default function Admin() {
           <table className="w-auto text-xs">
             <thead>
               <tr className="border-b">
-                <th className="text-left py-0.5 pr-2 font-medium text-muted-foreground whitespace-nowrap">User</th>
-                <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">Last</th>
-                <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">F2d</th>
-                <th className="text-center py-0.5 pr-2 font-medium text-muted-foreground">W2d</th>
-                <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">F</th>
-                <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">SF</th>
-                <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">W</th>
-                <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">SW</th>
-                <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">SC</th>
-                <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">C</th>
-                <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">Lt</th>
-                <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">Cs</th>
-                <th className="text-center py-0.5 pr-1 font-medium text-muted-foreground">B</th>
+                {[
+                  { label: "User", tip: "User number", align: "left", pr: "pr-2", extra: " whitespace-nowrap" },
+                  { label: "Last", tip: "Last active date", pr: "pr-2" },
+                  { label: "F2d", tip: "Food entries today", pr: "pr-2" },
+                  { label: "E2d", tip: "Exercise entries today", pr: "pr-2" },
+                  { label: "F", tip: "Total food entries", pr: "pr-1" },
+                  { label: "SF", tip: "Saved meals", pr: "pr-1" },
+                  { label: "E", tip: "Total exercise entries", pr: "pr-1" },
+                  { label: "SE", tip: "Saved routines", pr: "pr-1" },
+                  { label: "SC", tip: "Saved charts", pr: "pr-1" },
+                  { label: "C", tip: "Custom logs enabled", pr: "pr-1" },
+                  { label: "Lt", tip: "Custom log types", pr: "pr-1" },
+                  { label: "Cs", tip: "Custom log entries", pr: "pr-1" },
+                  { label: "B", tip: "Beta user", pr: "pr-1" },
+                ].map(({ label, tip, align, pr, extra }) => (
+                  <th key={label} className={`text-${align ?? "center"} py-0.5 ${pr} font-medium text-muted-foreground${extra ?? ""}`}>
+                    <Tooltip open={!hasHover ? activeTooltip === `hdr-${label}` : undefined}>
+                      <TooltipTrigger
+                        asChild
+                        {...(!hasHover ? { onClick: (e: React.MouseEvent) => { e.stopPropagation(); setActiveTooltip(activeTooltip === `hdr-${label}` ? null : `hdr-${label}`); } } : {})}
+                      >
+                        <span className="cursor-help">{label}</span>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">{tip}</TooltipContent>
+                    </Tooltip>
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
