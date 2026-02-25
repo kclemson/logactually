@@ -1,24 +1,30 @@
 
 
-## Fix: Blank space below categorical charts
+## Fix: Blank gap below categorical charts
 
 ### Problem
-
-The `h-[108px]` we added for categorical charts makes the chart container 12px taller than date-based charts. This extra height creates visible blank space between the chart and the AI note below it. It also makes the card taller than its row neighbor, which defeats the original alignment goal — CSS grid stretches the row to fit the tallest card, leaving the shorter neighbor with dead space too.
+The `sharedXAxisProps` sets `height: 28` for categorical charts vs `height: 16` for date charts. Both render inside the same `h-24` (96px) container. The extra 12px of XAxis height means:
+1. The actual bar plotting area is 12px shorter in categorical charts → bars look shorter than their date-based neighbors → **misalignment**
+2. The XAxis reserves 28px but single-word labels (Running, Pool, Walking) only need ~14-16px → **visible blank gap** between the axis and the AI note
 
 ### Fix
 
-Revert to `h-24` for all charts. The cards will have identical heights, so they align perfectly in their grid row. Categorical charts will have slightly shorter bars (because their XAxis labels are taller), but this is visually acceptable and eliminates the blank gap.
+**File: `src/components/trends/DynamicChart.tsx`, line 190**
 
-**File: `src/components/trends/DynamicChart.tsx`, line 230**
+Reduce categorical XAxis height from 28 to 20. Single-word labels need ~12px (8px font + 4px dy offset). Two-word labels need ~22px but are rare — 20px is a good compromise that eliminates most of the gap while still fitting typical labels.
 
 ```typescript
 // Before:
-<div className={isCategorical ? "h-[108px]" : "h-24"}>
+height: isCategorical ? 28 : 16,
 
 // After:
-<div className="h-24">
+height: isCategorical ? 20 : 16,
 ```
 
-One line change.
+This reduces the height difference from 12px to 4px, which:
+- Nearly eliminates the visible blank gap below categorical charts
+- Makes the bar plotting area only 4px shorter than date charts (visually negligible)
+- Still provides enough room for single-word and most two-word categorical labels
+
+One line, one file.
 
