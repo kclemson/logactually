@@ -292,7 +292,7 @@ async function fetchExerciseData(
     const existing = exercise[date] ?? { ...EMPTY_EXERCISE };
       existing.sets += 1;
       existing.reps += setTotals.reps;
-      existing.weight_lbs += setTotals.weight_lbs;
+      existing.weight_lbs = Math.max(existing.weight_lbs, setTotals.weight_lbs);
       existing.duration_minutes += setTotals.duration_minutes;
       existing.distance_miles += setTotals.distance_miles;
     existing.calories_burned += setTotals.calories_burned;
