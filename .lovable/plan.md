@@ -1,84 +1,36 @@
 
 
-# Upsert-based Apple Health import with date range and existing data summary
+## The "Intensity Metric Summing" Trap
 
-## Summary
+You're right to ask — heart rate isn't the only metric affected. Here's the full audit:
 
-Three enhancements to the Apple Health import dialog:
+### Metrics that are currently summed but should be averaged
 
-1. **Upsert instead of skip** — matched existing entries get their `heart_rate`, `speed_mph`, `distance_miles`, and `calories_burned_override` updated rather than being silently skipped.
-2. **"Through" date picker** — add an upper-bound date so you can exclude recent dates where you've been logging manually.
-3. **Existing import summary** — on dialog open, query the user's existing Apple Health imports and display the date range and count (e.g. "You have 142 imported workouts from Nov 28, 2024 – Feb 8, 2025").
+In `chart-data.ts` daily aggregation (lines 288-305), **every** field on `ExerciseDayTotals` is accumulated via `+=`. For additive/cumulative metrics (sets, reps, weight_lbs, duration_minutes, distance_miles, calories_burned), summing is correct. But for **intensity/rate metrics**, summing produces nonsense values:
 
-## Changes
+| Metric | Current behavior | Correct behavior | Impact |
+|--------|-----------------|-------------------|--------|
+| `heart_rate` | Summed | **Averaged** (across entries with HR data) | Two walks at 110 bpm → shows 220 |
+| `effort` | Not aggregated into daily totals (fetched but unused) | Would need averaging if added | Not currently broken, but a latent trap |
+| `incline_pct` | Not aggregated (fetched but unused) | Would need averaging | Same — latent |
+| `cadence_rpm` | Not aggregated (fetched but unused) | Would need averaging | Same — latent |
+| `speed_mph` | Not aggregated (fetched but unused) | Would need averaging | Same — latent |
 
-| File | Change |
-|---|---|
-| `src/components/AppleHealthImport.tsx` | All three features below |
+So **heart_rate is the only actively broken case today**. The other intensity columns (`effort`, `incline_pct`, `cadence_rpm`, `speed_mph`) are fetched from the database but never accumulated into `ExerciseDayTotals`, so they don't hit this bug yet — but they would the moment someone adds them to the daily aggregation.
 
-### 1. Show existing Apple Health import summary
+### Proposed fix
 
-On dialog mount (alongside the existing last-import-date query), fetch a summary of existing Apple Health imports:
+**File: `src/lib/chart-data.ts`**
 
-```sql
-SELECT MIN(logged_date), MAX(logged_date), COUNT(*)
-FROM weight_sets
-WHERE user_id = ? AND raw_input = 'apple-health-import'
-```
+1. Track a per-day heart rate count (`heartRateCountByDate`) alongside the sum
+2. After the main loop, post-process each day's `heart_rate` to be `sum / count` (a true average)
+3. No changes needed to `ExerciseDayTotals` type — the field stays `number`, it just holds an average instead of a sum
 
-Display this in the config phase as a small info line: "You have 142 imported workouts from Nov 28 – Feb 8" (or "No Apple Health imports yet"). This gives you confidence about what's already in the database before deciding on dates.
+This is a ~10-line change confined to `fetchExerciseData`. The DSL engine (`chart-dsl.ts`) and all chart components consume the value as-is, so fixing the data layer fixes everything downstream.
 
-### 2. Add "through" date picker
+### Not affected
 
-- Add `toDate` state, defaulting to today.
-- Render a second date picker row labeled "through" below the existing "since" row.
-- Pass `toDate` to the `scan()` function. In the scan loop, skip any workout where `parsed.startDate > toDateCutoff`.
-- Also filter in the `selectedWorkouts` memo as a safety net.
-
-The two pickers read naturally: "Import workouts **since** Nov 28 **through** Feb 8".
-
-### 3. Upsert: update existing entries instead of skipping
-
-Rework the import phase (lines 239-262):
-
-**Current flow**: Fetch existing Apple Health entries by dedup key → filter out matches → insert only new ones.
-
-**New flow**:
-1. Fetch existing entries but also select `id` (the row UUID).
-2. Build a `Map<dedupKey, existingRowId>` instead of a `Set`.
-3. Split parsed workouts into two arrays:
-   - `toInsert` — no matching key (new workouts, insert as before)
-   - `toUpdate` — matching key exists, pair with the existing row `id`
-4. Batch insert `toInsert` (unchanged).
-5. Batch update `toUpdate` — for each matched row, update `heart_rate`, `speed_mph`, `distance_miles`, `calories_burned_override`.
-6. Done phase shows: "Imported 12 new, updated 84 existing" instead of just a single count.
-
-**Update approach**: Use `Promise.all` within each batch for the individual update calls (since each row has different values, they must be separate queries). Batch size of 50 keeps this manageable.
-
-```typescript
-// Per-row update
-await supabase
-  .from("weight_sets")
-  .update({
-    heart_rate: w.heartRate,
-    speed_mph: w.speedMph,
-    distance_miles: w.distanceMiles,
-    calories_burned_override: w.caloriesBurned,
-  })
-  .eq("id", existingId);
-```
-
-### UI in done phase
-
-Change from:
-> ✓ Imported 12 workouts
-
-To:
-> ✓ Imported 12 new, updated 84 existing
-
-(If either count is 0, only show the non-zero one.)
-
-## No database changes needed
-
-All columns (`heart_rate`, `speed_mph`, `distance_miles`, `calories_burned_override`, `id`) already exist on `weight_sets`.
+- **Food metrics**: All food metrics (calories, protein, carbs, etc.) are additive per day — summing is correct
+- **Exercise item-level aggregation**: Already handles heart rate correctly via `totalHeartRate / heartRateCount`
+- **Category aggregation**: Doesn't include heart_rate currently
 
