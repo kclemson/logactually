@@ -1,42 +1,24 @@
 
 
-## Fix: Desktop click-to-navigate broken on Line charts
+## Fix: Blank space below categorical charts
 
-### Root cause
+### Problem
 
-The `<Bar>` component has an `onClick` handler (line 276) that calls `interaction.handleBarClick`, which navigates on desktop. But the `<Line>` component (line 245) has **no onClick handler at all**. So clicking a data point on a line chart does nothing — the click falls through to the tooltip wrapper (which has `pointerEvents: "auto"`), causing text selection.
+The `h-[108px]` we added for categorical charts makes the chart container 12px taller than date-based charts. This extra height creates visible blank space between the chart and the AI note below it. It also makes the card taller than its row neighbor, which defeats the original alignment goal — CSS grid stretches the row to fit the tallest card, leaving the shorter neighbor with dead space too.
 
 ### Fix
 
-**File: `src/components/trends/DynamicChart.tsx`**
+Revert to `h-24` for all charts. The cards will have identical heights, so they align perfectly in their grid row. Categorical charts will have slightly shorter bars (because their XAxis labels are taller), but this is visually acceptable and eliminates the blank gap.
 
-Add an `onClick` handler to the `<LineChart>` component itself (since individual `<Line>` doesn't support `onClick` the same way `<Bar>` does). Recharts `<LineChart>` accepts an `onClick` prop that receives the chart event with `activePayload` and `activeTooltipIndex`.
-
-```typescript
-// Add onClick to <LineChart> (around line 232)
-<LineChart
-  data={chartData}
-  margin={{ top: 16, right: 4, left: 0, bottom: 0 }}
-  onClick={(state: any) => {
-    if (state?.activeTooltipIndex != null && state?.activePayload?.[0]?.payload) {
-      interaction.handleBarClick(state.activePayload[0].payload, state.activeTooltipIndex);
-    }
-  }}
->
-```
-
-Also add the same `onClick` to `<BarChart>` for consistency (currently it relies on the `<Bar>` onClick, but having it at chart level is more robust). Actually, `<Bar>` onClick already works, so we only need to add it to `<LineChart>`.
-
-Additionally, add `user-select: none` to the tooltip wrapper to prevent text selection on click:
+**File: `src/components/trends/DynamicChart.tsx`, line 230**
 
 ```typescript
-// In sharedTooltipProps.wrapperStyle (line 169)
-wrapperStyle: { pointerEvents: "auto" as const, zIndex: 50, userSelect: "none" as const },
+// Before:
+<div className={isCategorical ? "h-[108px]" : "h-24"}>
+
+// After:
+<div className="h-24">
 ```
 
-### Summary
-
-| File | Change |
-|------|--------|
-| `src/components/trends/DynamicChart.tsx` | Add `onClick` to `<LineChart>` for navigation; add `userSelect: "none"` to tooltip wrapper |
+One line change.
 
