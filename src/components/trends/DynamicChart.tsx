@@ -227,7 +227,7 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
       timeRange={[periodLabel(period), timeRangeSuffix].filter(Boolean).join(" ")}
       onTitleChange={onTitleChange}
     >
-      <div className={isCategorical ? "h-[108px]" : "h-24"}>
+      <div className="h-24">
         <ResponsiveContainer width="100%" height="100%" style={{ overflow: "visible" }}>
           {chartType === "line" ? (
             <LineChart data={chartData} margin={{ top: 16, right: 4, left: 0, bottom: 0 }} onClick={(state: any) => {
