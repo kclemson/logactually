@@ -50,6 +50,8 @@ interface UserStats {
   weight_today: number;
   saved_meals_count: number;
   saved_routines_count: number;
+  saved_charts_count: number;
+  custom_log_types_count: number;
   last_active: string | null;
   login_count: number;
   logins_today: number;
