@@ -586,6 +586,7 @@ export type Database = {
         Returns: boolean
       }
       increment_login_count: { Args: { user_id: string }; Returns: undefined }
+      is_demo_beta: { Args: never; Returns: boolean }
       is_read_only_user: { Args: { _user_id: string }; Returns: boolean }
       toggle_demo_beta: { Args: never; Returns: boolean }
       toggle_demo_read_only: { Args: never; Returns: boolean }
