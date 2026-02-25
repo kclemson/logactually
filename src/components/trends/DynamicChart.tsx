@@ -166,7 +166,7 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
   );
 
   const sharedTooltipProps = {
-    wrapperStyle: { pointerEvents: "auto" as const, zIndex: 50 },
+    wrapperStyle: { pointerEvents: "auto" as const, zIndex: 50, userSelect: "none" as const },
     active: interaction.isTouchDevice ? interaction.isTooltipActive : undefined,
     payload:
       interaction.isTouchDevice && interaction.activeBarIndex !== null
@@ -230,7 +230,11 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
       <div className={isCategorical ? "h-[108px]" : "h-24"}>
         <ResponsiveContainer width="100%" height="100%" style={{ overflow: "visible" }}>
           {chartType === "line" ? (
-            <LineChart data={chartData} margin={{ top: 16, right: 4, left: 0, bottom: 0 }}>
+            <LineChart data={chartData} margin={{ top: 16, right: 4, left: 0, bottom: 0 }} onClick={(state: any) => {
+              if (state?.activeTooltipIndex != null && state?.activePayload?.[0]?.payload) {
+                interaction.handleBarClick(state.activePayload[0].payload, state.activeTooltipIndex);
+              }
+            }}>
               <XAxis {...sharedXAxisProps} />
               {referenceLine && (
                 <ReferenceLine
