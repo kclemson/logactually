@@ -10,11 +10,12 @@ interface LogEntryInputProps {
   onSubmit: (params: { numeric_value?: number | null; numeric_value_2?: number | null; text_value?: string | null }) => void;
   onCancel?: () => void;
   isLoading?: boolean;
+  disabled?: boolean;
   label?: string;
   unit?: string | null;
 }
 
-export function LogEntryInput({ valueType, onSubmit, onCancel, isLoading, label, unit }: LogEntryInputProps) {
+export function LogEntryInput({ valueType, onSubmit, onCancel, isLoading, disabled, label, unit }: LogEntryInputProps) {
   const [numericValue, setNumericValue] = useState('');
   const [numericValue2, setNumericValue2] = useState('');
   const [textValue, setTextValue] = useState('');
@@ -110,7 +111,7 @@ export function LogEntryInput({ valueType, onSubmit, onCancel, isLoading, label,
           )}
         </div>
       )}
-      <Button type="submit" variant="ghost" size="sm" className="h-8 shrink-0 text-sm" disabled={isLoading}>
+      <Button type="submit" variant="ghost" size="sm" className="h-8 shrink-0 text-sm" disabled={isLoading || disabled}>
         Save
       </Button>
       {onCancel && (
