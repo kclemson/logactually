@@ -171,8 +171,9 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   const hasLogTypes = !isLoading && sortedLogTypes.length > 0;
 
   // Today's entries for the selected medication (used in dialog)
-  const todayDateStr = format(new Date(), 'yyyy-MM-dd');
-  const todayMedEntries = typeEntries.filter((e) => e.logged_date === dateStr);
+  const todayMedEntries = dialogType
+    ? entries.filter((e) => e.log_type_id === dialogType.id)
+    : [];
 
   const swipeHandlers = useSwipeNavigation(
     dateNav.goToNextDay,
