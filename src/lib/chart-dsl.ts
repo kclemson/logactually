@@ -24,6 +24,9 @@ const EXERCISE_METRICS = ["sets", "reps", "weight_lbs", "duration_minutes", "dis
 // Metrics that need decimal precision (not rounded to integers)
 const DECIMAL_METRICS = new Set(["distance_miles"]);
 
+// Intensity metrics where 0 means "no data", not "zero activity" — skip calendar gap filling
+const INTENSITY_METRICS = new Set(["heart_rate", "effort", "speed_mph", "cadence_rpm", "incline_pct"]);
+
 // Derived formulas compute from raw food daily totals
 const DERIVED_FORMULAS: Record<string, (t: Record<string, number>) => number> = {
   protein_pct: (t) => {
@@ -205,7 +208,8 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
       });
 
       // Fill calendar gaps for accurate rolling windows on sparse data
-      if (dsl.window && dsl.window > 1 && dataPoints.length >= 2) {
+      // Skip for intensity metrics (heart_rate, effort, etc.) where 0 ≠ "no activity"
+      if (dsl.window && dsl.window > 1 && dataPoints.length >= 2 && !INTENSITY_METRICS.has(dsl.metric)) {
         const filled: Array<Record<string, any>> = [];
         const byDate = new Map(dataPoints.map(p => [p.rawDate as string, p]));
         const startDate = new Date(`${dataPoints[0].rawDate}T12:00:00`);
