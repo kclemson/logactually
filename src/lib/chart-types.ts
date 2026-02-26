@@ -75,6 +75,8 @@ export interface DailyTotals {
   exerciseByItem?: Record<string, { description: string; count: number; totalSets: number; totalDurationMinutes: number; totalDistanceMiles: number; totalCaloriesBurned: number; totalHeartRate: number; heartRateCount: number; uniqueDays: Set<string>; recentSamples: string[]; /** Per-entry metric values for accurate max/min aggregation */ valuesPerEntry?: Record<string, number[]> }>;
   /** Populated when groupBy === "category" and source === "exercise" */
   exerciseByCategory?: Record<string, ExerciseDayTotals>;
+  /** Per-date totals from only rows where the charted metric was non-zero (unfiltered date charts only) */
+  exerciseMetricContributors?: Record<string, ExerciseDayTotals & { contributorCount: number }>;
 }
 
 // ── DSL schema ─────────────────────────────────────────────
