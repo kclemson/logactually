@@ -255,14 +255,16 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
               details.push(...buildDetails(secondaryPairs, dsl.metric));
             }
           } else {
-            const day = dailyTotals.exercise[date];
+            // Prefer contributor-filtered totals (only rows where the charted metric > 0)
+            const contributor = dailyTotals.exerciseMetricContributors?.[date];
+            const day = contributor ?? dailyTotals.exercise[date];
             if (day) {
               const secondaryPairs: Array<{ label: string; value: number | null }> = [
                 { label: "sets", value: day.sets },
                 { label: "duration_minutes", value: day.duration_minutes },
                 { label: "distance_miles", value: day.distance_miles },
                 { label: "calories_burned", value: day.calories_burned || day.calories_burned_estimate },
-                { label: "entries", value: day.entries },
+                { label: "entries", value: contributor ? (contributor as any).contributorCount : day.entries },
               ];
               details.push(...buildDetails(secondaryPairs, dsl.metric));
             }

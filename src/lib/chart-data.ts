@@ -39,6 +39,12 @@ export async function fetchChartData(
   const needsItem = dsl.groupBy === "item";
   const needsCategory = dsl.groupBy === "category";
 
+  // Only track metric contributors for unfiltered date-grouped exercise charts
+  const needsContributors = dsl.source === "exercise"
+    && dsl.groupBy === "date"
+    && !dsl.filter?.exerciseKey
+    && !dsl.filter?.category;
+
   const compareSource = dsl.compare?.source;
   const needsBothSources = compareSource && compareSource !== dsl.source;
 
@@ -50,7 +56,7 @@ export async function fetchChartData(
     }
     return foodData;
   }
-  const exerciseData = await fetchExerciseData(supabase, startDate, needsHourly, dsl.filter?.exerciseKey, needsItem, needsCategory, dsl.filter?.category, dsl.filter?.exerciseSubtype);
+  const exerciseData = await fetchExerciseData(supabase, startDate, needsHourly, dsl.filter?.exerciseKey, needsItem, needsCategory, dsl.filter?.category, dsl.filter?.exerciseSubtype, needsContributors ? dsl.metric : undefined);
   if (needsBothSources) {
     const foodData = await fetchFoodData(supabase, startDate, false);
     return { ...exerciseData, food: foodData.food };
@@ -178,6 +184,7 @@ async function fetchExerciseData(
   needsCategory: boolean = false,
   categoryFilter?: "Cardio" | "Strength",
   exerciseSubtypeFilter?: string,
+  primaryMetric?: string,
 ): Promise<DailyTotals> {
   let query = supabase
     .from("weight_sets")
@@ -207,6 +214,10 @@ async function fetchExerciseData(
   const seenKeys: Record<string, Set<string>> = {};
   const seenEntries: Record<string, Set<string>> = {};
   const heartRateCountByDate: Record<string, number> = {};
+  // Metric-contributor tracking: only rows where the primary metric > 0
+  const contributors: Record<string, ExerciseDayTotals & { contributorCount: number }> | undefined =
+    primaryMetric ? {} : undefined;
+  const contributorHRCount: Record<string, number> = {};
 
   for (const row of data ?? []) {
     // Category filter: skip rows that don't match
@@ -310,6 +321,27 @@ async function fetchExerciseData(
     existing.entries = seenEntries[date].size;
     exercise[date] = existing;
 
+    // Contributor tracking: accumulate only rows where the charted metric is non-zero
+    if (contributors && primaryMetric) {
+      const metricVal = primaryMetric === "calories_burned" ? rowCaloriesBurned
+        : (row as any)[primaryMetric] ?? 0;
+      if (metricVal > 0) {
+        const c = contributors[date] ?? { ...EMPTY_EXERCISE, contributorCount: 0 };
+        c.sets += 1;
+        c.reps += setTotals.reps;
+        c.weight_lbs = Math.max(c.weight_lbs, setTotals.weight_lbs);
+        c.duration_minutes += setTotals.duration_minutes;
+        c.distance_miles += setTotals.distance_miles;
+        c.calories_burned += setTotals.calories_burned;
+        if (rowHeartRate != null) {
+          c.heart_rate += rowHeartRate;
+          contributorHRCount[date] = (contributorHRCount[date] ?? 0) + 1;
+        }
+        c.contributorCount += 1;
+        contributors[date] = c;
+      }
+    }
+
     // Hourly aggregation
     if (exerciseByHour && row.created_at) {
       const hour = new Date(row.created_at).getHours();
@@ -324,11 +356,20 @@ async function fetchExerciseData(
     }
   }
 
+  // Post-process contributor heart rates too
+  if (contributors) {
+    for (const [date, count] of Object.entries(contributorHRCount)) {
+      if (count > 1 && contributors[date]) {
+        contributors[date].heart_rate = Math.round(contributors[date].heart_rate / count);
+      }
+    }
+  }
+
   // Convert seenKeys Sets to plain arrays for serialization
   const exerciseKeysByDate: Record<string, string[]> = {};
   for (const [date, set] of Object.entries(seenKeys)) {
     exerciseKeysByDate[date] = [...set];
   }
 
-  return { food: {}, exercise, exerciseByHour, exerciseByItem, exerciseByCategory, exerciseKeysByDate };
+  return { food: {}, exercise, exerciseByHour, exerciseByItem, exerciseByCategory, exerciseKeysByDate, exerciseMetricContributors: contributors };
 }
