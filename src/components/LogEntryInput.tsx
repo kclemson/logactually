@@ -52,6 +52,7 @@ export function LogEntryInput({ valueType, onSubmit, onCancel, isLoading, label,
           onChange={(e) => setTextValue(e.target.value)}
           placeholder={valueType === 'text_numeric' ? 'Label' : 'Enter text...'}
           className="h-8 text-sm flex-1"
+          autoComplete="off"
           autoFocus
         />
       )}
@@ -61,6 +62,7 @@ export function LogEntryInput({ valueType, onSubmit, onCancel, isLoading, label,
           onChange={(e) => setTextValue(e.target.value)}
           placeholder="Enter text..."
           className="w-full min-w-0 min-h-[60px] rounded-md border border-input bg-background px-2 py-1 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y"
+          autoComplete="off"
           autoFocus
         />
       )}
@@ -73,6 +75,7 @@ export function LogEntryInput({ valueType, onSubmit, onCancel, isLoading, label,
             onChange={(e) => setNumericValue(e.target.value)}
             placeholder="120"
             className="h-8 text-sm w-16"
+            autoComplete="off"
             autoFocus
           />
           <span className="text-sm text-muted-foreground">/</span>
@@ -83,6 +86,7 @@ export function LogEntryInput({ valueType, onSubmit, onCancel, isLoading, label,
             onChange={(e) => setNumericValue2(e.target.value)}
             placeholder="80"
             className="h-8 text-sm w-16"
+            autoComplete="off"
           />
           {unit && (
             <span className="text-xs text-muted-foreground shrink-0">{unit}</span>
@@ -98,6 +102,7 @@ export function LogEntryInput({ valueType, onSubmit, onCancel, isLoading, label,
             onChange={(e) => setNumericValue(e.target.value)}
             placeholder="Value"
             className="h-8 text-sm w-20"
+            autoComplete="off"
             autoFocus={valueType === 'numeric'}
           />
           {unit && (
