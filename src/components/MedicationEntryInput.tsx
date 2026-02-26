@@ -29,6 +29,7 @@ interface MedicationEntryInputProps {
   }) => void;
   onCancel: () => void;
   isLoading: boolean;
+  disabled?: boolean;
 }
 
 function getCurrentTimeValue() {
@@ -66,6 +67,7 @@ export function MedicationEntryInput({
   onSubmit,
   onCancel,
   isLoading,
+  disabled,
 }: MedicationEntryInputProps) {
   const [timeValue, setTimeValue] = useState(initialTime ?? getCurrentTimeValue());
   const [doseValue, setDoseValue] = useState(
@@ -193,7 +195,7 @@ export function MedicationEntryInput({
           size="sm"
           className="h-9 bg-teal-500 hover:bg-teal-600 text-white border-teal-500 ml-auto"
           onClick={handleSubmit}
-          disabled={!canSubmit || isLoading}
+          disabled={!canSubmit || isLoading || disabled}
         >
           Save
         </Button>

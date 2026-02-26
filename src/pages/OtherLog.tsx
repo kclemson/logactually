@@ -184,10 +184,10 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
     <div className="space-y-4">
       {/* Top section: matches LogInput height on Food/Exercise pages */}
       <section className="min-h-[148px] flex flex-col justify-center space-y-3">
-        {!isReadOnly && (
+        {(
           <div className="flex items-center justify-start gap-2">
-            {!isLoading && sortedLogTypes.length === 0 ? (
-              /* Onboarding: no log types yet */
+            {!isReadOnly && !isLoading && sortedLogTypes.length === 0 ? (
+              /* Onboarding: no log types yet — hidden in read-only */
               <div className="flex flex-col items-center gap-3 w-full max-w-sm mx-auto">
                 <div className="grid grid-cols-2 gap-2 w-full">
                   {LOG_TEMPLATES.filter(t => !t.group).map((t) => (
@@ -221,7 +221,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                   Create your own
                 </button>
               </div>
-            ) : (
+            ) : hasLogTypes ? (
               /* Has log types: stable view-mode select + mode-specific controls */
               <>
                 {/* Always-stable view-mode select — never unmounts on mode switch */}
@@ -288,17 +288,19 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                           Log {lt.name}
                         </SelectItem>
                       ))}
-                      <SelectItem value="__create_new__" className="pl-3 [&>span:first-child]:hidden text-primary">
-                        <span className="flex items-center gap-1.5">
-                          <Plus className="h-3 w-3" />
-                          New Custom Log Type
-                        </span>
-                      </SelectItem>
+                      {!isReadOnly && (
+                        <SelectItem value="__create_new__" className="pl-3 [&>span:first-child]:hidden text-primary">
+                          <span className="flex items-center gap-1.5">
+                            <Plus className="h-3 w-3" />
+                            New Custom Log Type
+                          </span>
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 )}
               </>
-            )}
+            ) : null}
           </div>
         )}
       </section>
@@ -340,7 +342,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
       </div>
 
       {/* Entry form as modal dialog — used by By Date, By Type, and By Meds modes */}
-      {dialogType && !isReadOnly && (
+      {dialogType && (
         <Dialog open={showInputDialog} onOpenChange={(open) => { if (!open) setShowInputDialog(false); }}>
           <DialogContent className="max-w-sm p-0 gap-0 border-0 bg-transparent shadow-none [&>button]:hidden">
             {dialogType.value_type === 'medication' ? (
@@ -383,6 +385,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                   if (viewMode === 'medication') setSelectedMedTypeId(null);
                 }}
                 isLoading={effectiveViewMode === 'date' ? createEntry.isPending : createTypeEntry.isPending}
+                disabled={isReadOnly}
               />
             ) : (
               <div className="rounded-lg border border-border bg-card p-3">
@@ -412,6 +415,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                   }}
                   onCancel={() => setShowInputDialog(false)}
                   isLoading={effectiveViewMode === 'date' ? createEntry.isPending : createTypeEntry.isPending}
+                  disabled={isReadOnly}
                 />
                 {inlineTrend && (
                   <div className="mt-3 border-t border-border pt-3">
