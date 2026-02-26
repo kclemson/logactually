@@ -21,6 +21,9 @@ const METRIC_COMPAT: Record<string, string> = {
 const FOOD_METRICS = ["calories", "protein", "carbs", "fat", "fiber", "sugar", "saturated_fat", "sodium", "cholesterol", "entries"] as const;
 const EXERCISE_METRICS = ["sets", "reps", "weight_lbs", "duration_minutes", "distance_miles", "calories_burned", "heart_rate", "unique_exercises", "entries"] as const;
 
+// Metrics that need decimal precision (not rounded to integers)
+const DECIMAL_METRICS = new Set(["distance_miles"]);
+
 // Derived formulas compute from raw food daily totals
 const DERIVED_FORMULAS: Record<string, (t: Record<string, number>) => number> = {
   protein_pct: (t) => {
@@ -119,11 +122,12 @@ function aggregate(values: number[], method: ChartDSL["aggregation"]): number {
 
 // ── Post-processing helpers ────────────────────────────────
 
-function applyWindow(dataPoints: Array<Record<string, any>>, window: number): void {
+function applyWindow(dataPoints: Array<Record<string, any>>, window: number, useDecimal = false): void {
   for (let i = 0; i < dataPoints.length; i++) {
     const start = Math.max(0, i - window + 1);
     const slice = dataPoints.slice(start, i + 1).map((p) => p.value);
-    dataPoints[i].value = Math.round(slice.reduce((a, b) => a + b, 0) / slice.length);
+    const avg = slice.reduce((a: number, b: number) => a + b, 0) / slice.length;
+    dataPoints[i].value = useDecimal ? Math.round(avg * 10) / 10 : Math.round(avg);
   }
 }
 
@@ -170,6 +174,9 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
 
   switch (dsl.groupBy) {
     case "date": {
+      const isDecimal = DECIMAL_METRICS.has(dsl.metric);
+      const roundVal = (v: number) => isDecimal ? Math.round(v * 10) / 10 : Math.round(v);
+
       dataPoints = dateValues.map(({ date, value }) => {
         let finalValue = value;
         let cmpVal: number | null = null;
@@ -181,24 +188,51 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
           if (cmpVal !== null) finalValue -= cmpVal;
         }
         if (dsl.offset) finalValue -= dsl.offset;
-        const foodDay = dailyTotals.food[date];
-        const exDay = dailyTotals.exercise[date];
         const details: { label: string; value: string }[] = [];
         return {
           rawDate: date,
           label: format(new Date(`${date}T12:00:00`), "MMM d"),
-          value: Math.round(finalValue),
+          value: roundVal(finalValue),
           _details: (dsl.compare || dsl.offset) ? [] : details,
           _compareBreakdown: (dsl.compare || dsl.offset) ? {
-            primary: Math.round(value),
+            primary: roundVal(value),
             primaryLabel: dsl.derivedMetric || dsl.metric,
-            compare: cmpVal !== null ? Math.round(cmpVal) : null,
+            compare: cmpVal !== null ? roundVal(cmpVal) : null,
             compareLabel: cmpMetric,
             offset: dsl.offset ?? null,
           } : undefined,
         };
       });
-      if (dsl.window && dsl.window > 1) applyWindow(dataPoints, dsl.window);
+
+      // Fill calendar gaps for accurate rolling windows on sparse data
+      if (dsl.window && dsl.window > 1 && dataPoints.length >= 2) {
+        const filled: Array<Record<string, any>> = [];
+        const byDate = new Map(dataPoints.map(p => [p.rawDate as string, p]));
+        const startDate = new Date(`${dataPoints[0].rawDate}T12:00:00`);
+        const endDate = new Date(`${dataPoints[dataPoints.length - 1].rawDate}T12:00:00`);
+        const cur = new Date(startDate);
+        while (cur <= endDate) {
+          const ds = format(cur, "yyyy-MM-dd");
+          if (byDate.has(ds)) {
+            filled.push(byDate.get(ds)!);
+          } else {
+            filled.push({
+              rawDate: ds,
+              label: format(cur, "MMM d"),
+              value: 0,
+              _details: [],
+              _calendarFill: true,
+            });
+          }
+          cur.setDate(cur.getDate() + 1);
+        }
+        applyWindow(filled, dsl.window, isDecimal);
+        // Strip filler days that had no original data
+        dataPoints = filled.filter(p => !p._calendarFill);
+      } else if (dsl.window && dsl.window > 1) {
+        applyWindow(dataPoints, dsl.window, isDecimal);
+      }
+
       if (dsl.transform === "cumulative") applyCumulative(dataPoints);
       break;
     }
@@ -278,7 +312,7 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
           } : undefined,
         });
       }
-      if (dsl.window && dsl.window > 1) applyWindow(dataPoints, dsl.window);
+      if (dsl.window && dsl.window > 1) applyWindow(dataPoints, dsl.window, DECIMAL_METRICS.has(dsl.metric));
       if (dsl.transform === "cumulative") applyCumulative(dataPoints);
       break;
     }
@@ -554,6 +588,7 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
     dataKey: "value",
     dataSource: dsl.source,
     groupBy: dsl.groupBy,
+    ...(DECIMAL_METRICS.has(dsl.metric) ? { valueFormat: "decimal1" as const } : {}),
   };
 
   return chartSpec;
