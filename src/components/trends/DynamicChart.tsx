@@ -98,7 +98,7 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
 
   const interaction = useChartInteraction({
     dataLength: data.length,
-    onNavigate,
+    onNavigate: isCategorical ? undefined : onNavigate,
   });
 
   const labelInterval = getLabelInterval(data.length);
