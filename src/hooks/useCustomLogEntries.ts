@@ -60,6 +60,7 @@ export function useCustomLogEntries(dateStr: string) {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['custom-log-entries', data.logged_date] });
       queryClient.invalidateQueries({ queryKey: ['custom-log-dates'] });
+      queryClient.invalidateQueries({ queryKey: ['custom-log-trend-single'] });
     },
   });
 
@@ -93,6 +94,7 @@ export function useCustomLogEntries(dateStr: string) {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['custom-log-entries', dateStr] });
+      queryClient.invalidateQueries({ queryKey: ['custom-log-trend-single'] });
     },
   });
 
@@ -107,6 +109,7 @@ export function useCustomLogEntries(dateStr: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['custom-log-entries', dateStr] });
       queryClient.invalidateQueries({ queryKey: ['custom-log-dates'] });
+      queryClient.invalidateQueries({ queryKey: ['custom-log-trend-single'] });
     },
   });
 
