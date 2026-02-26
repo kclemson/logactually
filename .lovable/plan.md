@@ -1,19 +1,26 @@
 
 
-## Fix: Disable click-to-navigate on categorical charts
+## Refined: Add inline trend chart to custom log entry input
 
-### Problem
-Clicking a bar on a categorical chart (like "Exercise days vs rest days" with "Only Walking" / "Other Sessions" on the X axis) navigates to a random date — whatever `rawDate` happens to be on that data point. Navigation to a specific day only makes sense when the X axis represents dates.
+### Guard: chartable types
 
-### Fix
+Only `numeric` and `dual_numeric` log types get the inline chart. Medication and text types are excluded — medication has no trend chart support, and text charts aren't useful in this context.
 
-**File: `src/components/trends/DynamicChart.tsx`**
+### Changes
 
-Pass `onNavigate` to `useChartInteraction` only when the chart is date-based. The `isCategorical` flag already exists on line 97.
+**1. New hook: `src/hooks/useCustomLogTrendSingle.ts`**
+- Accepts `logTypeId` and `valueType`
+- Only enabled when `valueType` is `numeric` or `dual_numeric`
+- Queries `custom_log_entries` for that single type (all time, no date filter)
+- Returns a single `CustomLogTrendSeries` matching the existing format from `useCustomLogTrends`
 
-| Line | Before | After |
-|------|--------|-------|
-| 101 | `onNavigate,` | `onNavigate: isCategorical ? undefined : onNavigate,` |
+**2. Edit: `src/pages/OtherLog.tsx`**
+- Import the new hook and `CustomLogTrendChart`
+- Below `<LogEntryInput>` / `<MedicationEntryInput>`, render `<CustomLogTrendChart>` if:
+  - `dialogType.value_type` is `numeric` or `dual_numeric`
+  - The hook returned at least one data point
+- Pass `onNavigate` as no-op (chart is view-only in this context)
+- Small `mt-3 border-t pt-3` container
 
-One line. Categorical charts will still show tooltips on tap (touch) and on hover (desktop), but clicking won't navigate anywhere. The "Go to day →" link in touch tooltips will also be suppressed automatically since `onNavigate` will be undefined.
+No changes to existing components. Additive only.
 
