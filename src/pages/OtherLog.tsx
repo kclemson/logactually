@@ -26,6 +26,8 @@ import { LOG_TEMPLATES, getTemplateUnit } from '@/lib/log-templates';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { Button } from '@/components/ui/button';
 import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
+import { useCustomLogTrendSingle } from '@/hooks/useCustomLogTrendSingle';
+import { CustomLogTrendChart } from '@/components/trends/CustomLogTrendChart';
 
 // Wrapper: extracts date from URL, forces remount via key
 const OtherLog = () => {
@@ -89,6 +91,11 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
 
   const effectiveTypeId = selectedTypeId ?? sortedLogTypes[0]?.id ?? null;
   const selectedType = logTypes.find((t) => t.id === effectiveTypeId);
+  const { data: inlineTrend } = useCustomLogTrendSingle(
+    effectiveTypeId,
+    selectedType?.name,
+    selectedType?.value_type,
+  );
 
   // Medication types and By Meds eligibility
   const medicationTypes = useMemo(
@@ -405,6 +412,11 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                   onCancel={() => setShowInputDialog(false)}
                   isLoading={effectiveViewMode === 'date' ? createEntry.isPending : createTypeEntry.isPending}
                 />
+                {inlineTrend && (
+                  <div className="mt-3 border-t border-border pt-3">
+                    <CustomLogTrendChart trend={inlineTrend} onNavigate={() => {}} />
+                  </div>
+                )}
               </div>
             )}
           </DialogContent>
