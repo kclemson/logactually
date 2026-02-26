@@ -52,6 +52,7 @@ export function useCustomLogEntriesForType(logTypeId: string | null) {
       queryClient.invalidateQueries({ queryKey: ['custom-log-entries-for-type', data.log_type_id] });
       queryClient.invalidateQueries({ queryKey: ['custom-log-entries', data.logged_date] });
       queryClient.invalidateQueries({ queryKey: ['custom-log-dates'] });
+      queryClient.invalidateQueries({ queryKey: ['custom-log-trend-single'] });
     },
   });
 
@@ -67,6 +68,7 @@ export function useCustomLogEntriesForType(logTypeId: string | null) {
       queryClient.invalidateQueries({ queryKey: ['custom-log-entries-for-type', logTypeId] });
       queryClient.invalidateQueries({ queryKey: ['custom-log-entries'] });
       queryClient.invalidateQueries({ queryKey: ['custom-log-dates'] });
+      queryClient.invalidateQueries({ queryKey: ['custom-log-trend-single'] });
     },
   });
 

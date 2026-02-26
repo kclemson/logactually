@@ -140,6 +140,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
       queryClient.invalidateQueries({ queryKey: ['custom-log-entries-all-meds'] });
       queryClient.invalidateQueries({ queryKey: ['custom-log-entries-for-type'] });
       queryClient.invalidateQueries({ queryKey: ['custom-log-entries', dateStr] });
+      queryClient.invalidateQueries({ queryKey: ['custom-log-trend-single'] });
       setEditingEntry(null);
     },
   });
