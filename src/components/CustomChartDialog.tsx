@@ -331,7 +331,7 @@ function CustomChartDialogInner({
           {/* Loading — only shown for first-ever request (no existing content) */}
           {generateChart.isPending && !hasExistingContent && (
             <div className="space-y-3">
-              {lastQuestion && <p className="text-xs text-muted-foreground italic">"{lastQuestion}"</p>}
+              {lastQuestion && <p className="text-xs text-muted-foreground italic">{lastQuestion}</p>}
               <div className="flex justify-end">
                 <Button size="sm" disabled className="h-9">
                   <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
@@ -351,7 +351,7 @@ function CustomChartDialogInner({
           {/* Disambiguation picker */}
           {showDisambiguation && (
             <div className="space-y-3">
-              {lastQuestion && <p className="text-xs text-muted-foreground italic">"{lastQuestion}"</p>}
+              {lastQuestion && <p className="text-xs text-muted-foreground italic">{lastQuestion}</p>}
               <p className="text-xs font-medium text-foreground">Which did you mean?</p>
               <div className="flex gap-2">
                 {chartOptions!.map((opt, i) => (
@@ -401,7 +401,7 @@ function CustomChartDialogInner({
           {/* Result section */}
           {showResult && (
             <div className="space-y-3">
-              {lastQuestion && <p className="text-xs text-muted-foreground italic">"{lastQuestion}"</p>}
+              {lastQuestion && <p className="text-xs text-muted-foreground italic">{lastQuestion}</p>}
               <div className="flex justify-center">
                 <div className="w-[50%] min-w-[220px] border border-border rounded-md overflow-hidden">
                   <DynamicChart
