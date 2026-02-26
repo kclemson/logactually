@@ -169,6 +169,7 @@ export function MedicationEntryInput({
           value={timeValue}
           onChange={(e) => setTimeValue(e.target.value)}
           onKeyDown={handleKeyDown}
+          autoComplete="off"
           className={cn(
             "h-9 rounded-md border border-input bg-background px-2 py-1 text-sm",
             "focus:outline-none focus:ring-2 focus:ring-ring"
@@ -181,6 +182,7 @@ export function MedicationEntryInput({
           value={doseValue}
           onChange={(e) => setDoseValue(e.target.value)}
           onKeyDown={handleKeyDown}
+          autoComplete="off"
           className="h-9 w-24 text-sm"
           
         />
@@ -213,6 +215,7 @@ export function MedicationEntryInput({
           if (e.key === 'Escape') onCancel();
         }}
         spellCheck={false}
+        autoComplete="off"
         className="min-h-[60px] text-sm resize-y"
       />
     </div>
