@@ -1,26 +1,16 @@
 
 
-## Refined: Add inline trend chart to custom log entry input
+## Bug: Inline trend chart shows stale data
 
-### Guard: chartable types
+The new `useCustomLogTrendSingle` query (key: `custom-log-trend-single`) is never invalidated by any mutation. When you delete or create an entry, the existing `onSuccess` handlers only invalidate `custom-log-entries`, `custom-log-dates`, etc. — but not the new trend query.
 
-Only `numeric` and `dual_numeric` log types get the inline chart. Medication and text types are excluded — medication has no trend chart support, and text charts aren't useful in this context.
+### Fix
 
-### Changes
+Add `queryClient.invalidateQueries({ queryKey: ['custom-log-trend-single'] })` to the `onSuccess` callbacks in:
 
-**1. New hook: `src/hooks/useCustomLogTrendSingle.ts`**
-- Accepts `logTypeId` and `valueType`
-- Only enabled when `valueType` is `numeric` or `dual_numeric`
-- Queries `custom_log_entries` for that single type (all time, no date filter)
-- Returns a single `CustomLogTrendSeries` matching the existing format from `useCustomLogTrends`
+1. **`src/hooks/useCustomLogEntries.ts`** — `createEntry` (line 62), `deleteEntry` (line 108), and `updateEntry` (line 95)
+2. **`src/hooks/useCustomLogEntriesForType.ts`** — `createEntry` (line 54) and `deleteEntry` (line 69)
+3. **`src/pages/OtherLog.tsx`** — `updateMedEntry` (line 140)
 
-**2. Edit: `src/pages/OtherLog.tsx`**
-- Import the new hook and `CustomLogTrendChart`
-- Below `<LogEntryInput>` / `<MedicationEntryInput>`, render `<CustomLogTrendChart>` if:
-  - `dialogType.value_type` is `numeric` or `dual_numeric`
-  - The hook returned at least one data point
-- Pass `onNavigate` as no-op (chart is view-only in this context)
-- Small `mt-3 border-t pt-3` container
-
-No changes to existing components. Additive only.
+Six one-line additions total. No other changes needed.
 
