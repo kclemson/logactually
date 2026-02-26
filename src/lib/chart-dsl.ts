@@ -48,6 +48,42 @@ const DERIVED_FORMULAS: Record<string, (t: Record<string, number>) => number> = 
 
 // ── Helpers ───────────────────────────────────────────────
 
+/** Convert raw metric keys to compact human-readable labels */
+function humanizeMetricLabel(key: string): string {
+  const MAP: Record<string, string> = {
+    calories: "cal",
+    protein: "protein",
+    carbs: "carbs",
+    fat: "fat",
+    fiber: "fiber",
+    sugar: "sugar",
+    saturated_fat: "sat fat",
+    sodium: "sodium",
+    cholesterol: "chol",
+    sets: "sets",
+    reps: "reps",
+    weight_lbs: "lbs",
+    duration_minutes: "min",
+    distance_miles: "mi",
+    calories_burned: "cal burned",
+    calories_burned_estimate: "est cal burned",
+    heart_rate: "bpm",
+    entries: "entries",
+    unique_exercises: "exercises",
+    days: "days",
+  };
+  return MAP[key] ?? key.replace(/_/g, " ");
+}
+
+/** Format a number compactly: use toLocaleString for ≥1000, 1 decimal for small decimals, else round */
+function fmtNum(v: number, forceDecimal = false): string {
+  if (forceDecimal || (v > 0 && v < 10 && v !== Math.round(v))) {
+    return (Math.round(v * 10) / 10).toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  }
+  const rounded = Math.round(v);
+  return rounded >= 1000 ? rounded.toLocaleString("en-US") : String(rounded);
+}
+
 type DetailPair = { label: string; value: string };
 
 /** Build a compact secondary-details array, filtering out zeros and the primary metric */
@@ -58,11 +94,22 @@ function buildDetails(
   return pairs
     .filter((p) => p.label !== excludeLabel && p.value != null && p.value !== 0)
     .map((p) => ({
-      label: p.label,
+      label: humanizeMetricLabel(p.label),
       value: typeof p.value === "number"
-        ? (p.value >= 1000 ? p.value.toLocaleString("en-US", { maximumFractionDigits: 0 }) : String(Math.round(p.value!)))
+        ? fmtNum(p.value!)
         : String(p.value),
     }));
+}
+
+/** Build a range string like "1,820–2,340" from an array of values */
+function rangeStr(values: number[], unit?: string): string {
+  if (values.length === 0) return "";
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const isDecimal = min < 10 && min !== Math.round(min);
+  const suffix = unit ? ` ${unit}` : "";
+  if (min === max) return `${fmtNum(min, isDecimal)}${suffix}`;
+  return `${fmtNum(min, isDecimal)}–${fmtNum(max, isDecimal)}${suffix}`;
 }
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -191,7 +238,37 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
           if (cmpVal !== null) finalValue -= cmpVal;
         }
         if (dsl.offset) finalValue -= dsl.offset;
-        const details: { label: string; value: string }[] = [];
+
+        // Build secondary details for non-compare date charts
+        const details: DetailPair[] = [];
+        if (!dsl.compare && !dsl.offset) {
+          if (dsl.source === "food") {
+            const day = dailyTotals.food[date];
+            if (day) {
+              const secondaryPairs: Array<{ label: string; value: number | null }> = [
+                { label: "protein", value: day.protein },
+                { label: "carbs", value: day.carbs },
+                { label: "fat", value: day.fat },
+                { label: "fiber", value: day.fiber },
+                { label: "entries", value: day.entries },
+              ];
+              details.push(...buildDetails(secondaryPairs, dsl.metric));
+            }
+          } else {
+            const day = dailyTotals.exercise[date];
+            if (day) {
+              const secondaryPairs: Array<{ label: string; value: number | null }> = [
+                { label: "sets", value: day.sets },
+                { label: "duration_minutes", value: day.duration_minutes },
+                { label: "distance_miles", value: day.distance_miles },
+                { label: "calories_burned", value: day.calories_burned || day.calories_burned_estimate },
+                { label: "entries", value: day.entries },
+              ];
+              details.push(...buildDetails(secondaryPairs, dsl.metric));
+            }
+          }
+        }
+
         return {
           rawDate: date,
           label: format(new Date(`${date}T12:00:00`), "MMM d"),
@@ -247,13 +324,18 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
         (buckets[dow] ??= []).push(value);
       }
       const dayOrder = [1, 2, 3, 4, 5, 6, 0];
+      const unit = humanizeMetricLabel(dsl.metric);
       for (const dow of dayOrder) {
         const vals = buckets[dow];
         if (!vals || vals.length === 0) continue;
+        const details: DetailPair[] = [{ label: "days", value: String(vals.length) }];
+        if (vals.length > 1) {
+          details.push({ label: "range", value: rangeStr(vals, unit) });
+        }
         dataPoints.push({
           label: DAY_NAMES[dow],
           value: Math.round(aggregate(vals, dsl.aggregation)),
-          _details: [{ label: "days", value: String(vals.length) }],
+          _details: details,
         });
       }
       break;
@@ -266,11 +348,14 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
         if (dow === 0 || dow === 6) weekend.push(value);
         else weekday.push(value);
       }
-      if (weekday.length > 0) {
-        dataPoints.push({ label: "Weekdays", value: Math.round(aggregate(weekday, dsl.aggregation)), _details: [{ label: "days", value: String(weekday.length) }] });
-      }
-      if (weekend.length > 0) {
-        dataPoints.push({ label: "Weekends", value: Math.round(aggregate(weekend, dsl.aggregation)), _details: [{ label: "days", value: String(weekend.length) }] });
+      const wUnit = humanizeMetricLabel(dsl.metric);
+      for (const [lbl, vals] of [["Weekdays", weekday], ["Weekends", weekend]] as const) {
+        if (vals.length === 0) continue;
+        const details: DetailPair[] = [{ label: "days", value: String(vals.length) }];
+        if (vals.length > 1) {
+          details.push({ label: "range", value: rangeStr(vals, wUnit) });
+        }
+        dataPoints.push({ label: lbl, value: Math.round(aggregate(vals, dsl.aggregation)), _details: details });
       }
       break;
     }
@@ -299,14 +384,26 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
           weekDates[weekKey] = date;
         }
       }
+      const wkUnit = humanizeMetricLabel(dsl.metric);
+      const isWkDecimal = DECIMAL_METRICS.has(dsl.metric);
       for (const weekKey of Object.keys(buckets).sort()) {
         const primarySum = primaryBuckets[weekKey]?.reduce((a, b) => a + b, 0) ?? 0;
         const compareSum = compareBuckets[weekKey]?.reduce((a, b) => a + b, 0) ?? 0;
+        const dayCount = buckets[weekKey].length;
+        const aggValue = aggregate(buckets[weekKey], dsl.aggregation);
+        const details: DetailPair[] = [];
+        if (!dsl.compare) {
+          details.push({ label: "days", value: String(dayCount) });
+          if (dayCount > 0 && dsl.aggregation === "sum") {
+            const avg = aggValue / dayCount;
+            details.push({ label: "avg/day", value: `${fmtNum(avg, isWkDecimal)} ${wkUnit}` });
+          }
+        }
         dataPoints.push({
           rawDate: weekDates[weekKey],
           label: weekKey,
-          value: Math.round(aggregate(buckets[weekKey], dsl.aggregation)),
-          _details: dsl.compare ? [] : [{ label: "days", value: String(buckets[weekKey].length) }],
+          value: Math.round(aggValue),
+          _details: details,
           _compareBreakdown: (dsl.compare || dsl.offset) ? {
             primary: Math.round(primarySum),
             primaryLabel: dsl.derivedMetric || dsl.metric,
@@ -327,6 +424,7 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
 
       if (!hourlySource) break;
 
+      const hUnit = humanizeMetricLabel(dsl.metric);
       for (let hour = 0; hour < 24; hour++) {
         const entries = hourlySource[hour];
         if (!entries || entries.length === 0) continue;
@@ -338,10 +436,15 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
           return (entry as any)[dsl.metric] ?? 0;
         });
 
+        const details: DetailPair[] = [{ label: "entries", value: String(entries.length) }];
+        if (values.length > 1) {
+          details.push({ label: "range", value: rangeStr(values, hUnit) });
+        }
+
         dataPoints.push({
           label: HOUR_LABELS[hour],
           value: Math.round(aggregate(values, dsl.aggregation)),
-          _details: [{ label: "entries", value: String(entries.length) }],
+          _details: details,
         });
       }
       break;
@@ -374,14 +477,21 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
               item.count;
           }
           if (metricValue === 0) continue;
+          // Build enriched details with per-entry average
+          const foodItemDetails = buildDetails([
+            { label: "entries", value: item.count },
+            { label: "calories", value: item.totalCalories },
+            { label: "protein", value: item.totalProtein },
+          ], dsl.metric === "entries" ? "entries" : dsl.metric === "calories" ? "calories" : dsl.metric === "protein" ? "protein" : undefined);
+          // Add per-entry average for sums
+          if (dsl.aggregation === "sum" && item.count > 1 && metricValue > 0) {
+            const avg = metricValue / item.count;
+            foodItemDetails.push({ label: "avg each", value: `${fmtNum(avg)} ${humanizeMetricLabel(dsl.metric)}` });
+          }
           dataPoints.push({
             label: label.length > 25 ? label.slice(0, 22) + "…" : label,
             value: Math.round(dsl.aggregation === "count" ? item.count : metricValue),
-            _details: buildDetails([
-              { label: "entries", value: item.count },
-              { label: "calories", value: item.totalCalories },
-              { label: "protein", value: item.totalProtein },
-            ], dsl.metric === "entries" ? "entries" : dsl.metric === "calories" ? "calories" : dsl.metric === "protein" ? "protein" : undefined),
+            _details: foodItemDetails,
             _samples: item.recentSamples ?? [],
           });
         }
@@ -410,16 +520,31 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
               item.count;
           }
           if (metricValue === 0) continue;
+          // Build enriched details: entries first, then per-entry range, then secondary metrics
+          const exItemDetails: DetailPair[] = [];
+          exItemDetails.push({ label: "entries", value: String(item.count) });
+          // Per-entry range for the primary metric
+          const perEntryVals = item.valuesPerEntry?.[dsl.metric];
+          if (perEntryVals && perEntryVals.length > 1) {
+            exItemDetails.push({ label: "each", value: rangeStr(perEntryVals, humanizeMetricLabel(dsl.metric)) });
+          } else if (dsl.aggregation === "sum" && item.count > 1 && metricValue > 0) {
+            const avg = metricValue / item.count;
+            exItemDetails.push({ label: "avg each", value: `${fmtNum(avg, DECIMAL_METRICS.has(dsl.metric))} ${humanizeMetricLabel(dsl.metric)}` });
+          }
+          // Secondary metrics (excluding primary)
+          const exSecondary = buildDetails([
+            { label: "sets", value: item.totalSets },
+            { label: "duration_minutes", value: item.totalDurationMinutes },
+            { label: "distance_miles", value: (item as any).totalDistanceMiles },
+            { label: "calories_burned", value: item.totalCaloriesBurned },
+            { label: "heart_rate", value: (item as any).heartRateCount > 0 ? Math.round((item as any).totalHeartRate / (item as any).heartRateCount) : null },
+          ], dsl.metric === "sets" ? "sets" : dsl.metric === "duration_minutes" ? "duration_minutes" : dsl.metric === "calories_burned" ? "calories_burned" : dsl.metric === "distance_miles" ? "distance_miles" : dsl.metric === "heart_rate" ? "heart_rate" : undefined);
+          exItemDetails.push(...exSecondary);
+
           dataPoints.push({
             label: item.description.length > 25 ? item.description.slice(0, 22) + "…" : item.description,
             value: Math.round(dsl.aggregation === "count" ? item.count : metricValue),
-            _details: buildDetails([
-              { label: "entries", value: item.count },
-              { label: "sets", value: item.totalSets },
-              { label: "duration_minutes", value: item.totalDurationMinutes },
-              { label: "calories_burned", value: item.totalCaloriesBurned },
-              { label: "heart_rate", value: (item as any).heartRateCount > 0 ? Math.round((item as any).totalHeartRate / (item as any).heartRateCount) : null },
-            ], dsl.metric === "sets" ? "sets" : dsl.metric === "duration_minutes" ? "duration_minutes" : dsl.metric === "calories_burned" ? "calories_burned" : dsl.metric === "heart_rate" ? "heart_rate" : undefined),
+            _details: exItemDetails,
             _samples: item.recentSamples ?? [],
           });
         }
@@ -437,15 +562,18 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
             dsl.metric === "distance_miles" ? totals.distance_miles :
             dsl.metric === "calories_burned" ? totals.calories_burned :
             totals.sets;
+          // Reorder: entries first, then secondary metrics, cal burned last
           dataPoints.push({
             label,
             value: Math.round(metricValue),
             _details: buildDetails([
+              { label: "entries", value: totals.entries },
               { label: "sets", value: totals.sets },
+              { label: "reps", value: totals.reps },
               { label: "duration_minutes", value: totals.duration_minutes },
               { label: "distance_miles", value: totals.distance_miles },
+              { label: "weight_lbs", value: totals.weight_lbs },
               { label: "calories_burned", value: totals.calories_burned },
-              { label: "entries", value: totals.entries },
             ], dsl.metric),
           });
         }
@@ -458,6 +586,8 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
 
       let trueCount = 0;
       let falseCount = 0;
+      const trueValues: number[] = [];
+      const falseValues: number[] = [];
 
       if (classify.rule === "threshold" && dsl.source === "food") {
         // Food threshold: partition food days by metric value
@@ -469,12 +599,13 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
             thresholdOp === "lte" ? val <= thresholdValue :
             thresholdOp === "gt"  ? val > thresholdValue :
             thresholdOp === "lt"  ? val < thresholdValue : false;
-          if (matches) trueCount++; else falseCount++;
+          if (matches) { trueCount++; trueValues.push(val); }
+          else { falseCount++; falseValues.push(val); }
         }
       } else {
         // Exercise-based classification
         const keysByDate = dailyTotals.exerciseKeysByDate ?? {};
-        for (const [, tokens] of Object.entries(keysByDate)) {
+        for (const [date, tokens] of Object.entries(keysByDate)) {
           const tokenSet = new Set(tokens);
           // Derive plain keys (no colon) for cardio checks
           const plainKeys = tokens.filter(t => !t.includes(":"));
@@ -496,36 +627,19 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
               break;
             }
             case "only_keys": {
-              // Every token must be covered by at least one allowlist entry.
-              // Allowlist semantics:
-              //   "walk_run"         → covers "walk_run" (plain) AND any "walk_run:*" compound
-              //   "walk_run:walking" → covers "walk_run:walking", "walk_run" (null-subtype rows),
-              //                        AND other "walk_run:*" subtypes (running, hiking) because
-              //                        when a user says "only walked" they mean the walk_run
-              //                        exercise type, not just the specific 'walking' sub-variant.
               const allowlist = classify.keys ?? [];
-
-
-              // Skip plain key tokens that have a compound variant present —
-              // the compound token is more specific and will be evaluated instead.
               const tokensToEvaluate = tokens.filter(token => {
-                if (token.includes(":")) return true; // always evaluate compound tokens
+                if (token.includes(":")) return true;
                 return !tokens.some(t => t.startsWith(`${token}:`));
               });
               matches = tokensToEvaluate.length > 0 && tokensToEvaluate.every(token => {
                 return allowlist.some(entry => {
                   if (entry === token) return true;
-                  // Plain allowlist entry (no colon) covers the plain key
-                  // and any "key:subtype" variant of that key.
                   if (!entry.includes(":") && token.startsWith(`${entry}:`)) return true;
-                  // Compound allowlist entry (key:subtype) also covers:
-                  //   1. The plain key token (null-subtype rows for that exercise)
-                  //   2. Other subtypes of the same key (walk_run:running covered by walk_run:walking)
-                  //      because users intend "only [exercise type]" not "only [specific subtype]"
                   if (entry.includes(":")) {
                     const entryBase = entry.split(":")[0];
-                    if (!token.includes(":") && token === entryBase) return true; // plain key
-                    if (token.includes(":") && token.startsWith(`${entryBase}:`)) return true; // sibling subtype
+                    if (!token.includes(":") && token === entryBase) return true;
+                    if (token.includes(":") && token.startsWith(`${entryBase}:`)) return true;
                   }
                   return false;
                 });
@@ -540,11 +654,26 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
         }
       }
 
+      const totalDays = trueCount + falseCount;
+      const buildClassDetails = (count: number, vals: number[]): DetailPair[] => {
+        const details: DetailPair[] = [];
+        if (totalDays > 0) {
+          const pct = Math.round((count / totalDays) * 100);
+          details.push({ label: `of ${fmtNum(totalDays)} days`, value: `${pct}%` });
+        }
+        // For threshold, show avg on matching days
+        if (classify.rule === "threshold" && vals.length > 0) {
+          const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+          details.push({ label: `avg ${humanizeMetricLabel(dsl.metric)}`, value: fmtNum(avg) });
+        }
+        return details;
+      };
+
       if (trueCount > 0) {
-        dataPoints.push({ label: classify.trueLabel, value: trueCount });
+        dataPoints.push({ label: classify.trueLabel, value: trueCount, _details: buildClassDetails(trueCount, trueValues) });
       }
       if (falseCount > 0) {
-        dataPoints.push({ label: classify.falseLabel, value: falseCount });
+        dataPoints.push({ label: classify.falseLabel, value: falseCount, _details: buildClassDetails(falseCount, falseValues) });
       }
       break;
     }
