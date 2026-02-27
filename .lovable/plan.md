@@ -1,40 +1,31 @@
 
 
-## Replace fuzzy matching with substring matching
+## Use a generic `labelDetail` field instead of `portion`
+
+The `TypeaheadCandidate` interface is domain-agnostic. Instead of adding `portion`, add a generic optional field that any domain can use for secondary inline text.
 
 ### Changes
 
-**`src/lib/text-similarity.ts`**
-
-1. Replace `isFuzzyMatch` (lines 177-182) with a substring check:
+**`src/hooks/useTypeaheadSuggestions.ts`** — add to `TypeaheadCandidate` interface:
 ```typescript
-function isSubstringMatch(word1: string, word2: string): boolean {
-  if (word1 === word2) return true;
-  if (word1.length < 3 || word2.length < 3) return false;
-  return word1.includes(word2) || word2.includes(word1);
-}
+/** Optional detail rendered inline after the label in smaller text (e.g. portion size) */
+labelDetail?: string;
 ```
 
-2. Replace `fuzzySetHas` (lines 187-192) to use `isSubstringMatch`:
-```typescript
-function substringSetHas(word: string, targetSet: Set<string>): boolean {
-  for (const target of targetSet) {
-    if (isSubstringMatch(word, target)) return true;
-  }
-  return false;
-}
+**`src/components/TypeaheadSuggestions.tsx`** (~line 84) — render it:
+```tsx
+<span className="truncate">
+  <span className="font-medium">{candidate.label}</span>
+  {candidate.labelDetail && (
+    <span className="ml-1 text-xs text-muted-foreground">({candidate.labelDetail})</span>
+  )}
+</span>
 ```
 
-3. Update both call sites in `hybridSimilarityScore` (lines 255, 262) from `fuzzySetHas` → `substringSetHas`.
+**`src/pages/FoodLog.tsx`** (~line 162) — populate it from the food-specific `portion` field when building candidates:
+```typescript
+labelDetail: item.portion || undefined,
+```
 
-4. Remove `levenshteinDistance` (lines 139-169) — no longer used.
-
-**`src/lib/text-similarity.test.ts`**
-
-- Update the "fuzzy matches close spellings" test — `"chiken"` will no longer match `"chicken"` (not a substring). Change to test substring behavior instead (e.g., `"lemon"` matches `"lemonade"`).
-
-### Behavior changes
-- "chia" no longer matches "chip" ✓
-- "lemon" matches "lemonade" ✓
-- "chiken" no longer matches "chicken" (acceptable trade-off — typo tolerance removed)
+This keeps TypeaheadSuggestions generic — it just renders an optional detail string. The food layer decides what goes in it.
 
