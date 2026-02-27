@@ -1,26 +1,20 @@
 
 
-## Fix prefix match direction in isSubstringMatch
+## Shrink calories and time-ago text in typeahead suggestions
 
-**`src/lib/text-similarity.ts`** — change `isSubstringMatch` to only match when the **input word** is a prefix of the **target word**, not vice versa. Since the function doesn't know which argument is input vs target, push the directionality into `substringSetHas` instead:
+The label, calories, and time-ago are all `text-xs` (12px). Shrink the right-side metadata (calories + time ago) to `text-[10px]` so the food name gets more room before truncating.
 
-1. Remove the bidirectional logic from `isSubstringMatch` — make it a simple one-directional prefix check: `target.startsWith(query)`
-2. Rename/refactor `isSubstringMatch(word1, word2)` → `isPrefixOf(query, target)` for clarity
-3. Update `substringSetHas` accordingly: check if the query is a prefix of any word in the target set
+**`src/components/TypeaheadSuggestions.tsx`** line 90:
 
-**`src/lib/text-similarity.test.ts`** — add a test case:
+Change the right-side span from `text-xs` to `text-[10px]`:
 
-```typescript
-it('does not match when target word is prefix of input word', () => {
-  // "oatm" should NOT match "oat" (target is prefix of input, wrong direction)
-  const score = hybridSimilarityScore(['oatm'], 'oat honey protein granola');
-  expect(score).toBe(0);
-});
+```tsx
+<span className="flex shrink-0 items-center gap-2 text-[10px] text-muted-foreground">
+```
 
-it('matches when input word is prefix of target word', () => {
-  // "oatm" SHOULD match "oatmeal"
-  const score = hybridSimilarityScore(['oatm'], 'protein oatmeal');
-  expect(score).toBeGreaterThan(0);
-});
+The `labelDetail` portion size (line 87) also competes for space — shrink it too from `text-xs` to `text-[10px]`:
+
+```tsx
+<span className="ml-1 text-[10px] text-muted-foreground">({candidate.labelDetail})</span>
 ```
 
