@@ -1,26 +1,31 @@
 
 
-## Include raw_input in searchText for single-item entries only
+## Add saved meals as typeahead candidates
 
-### Problem
-When the AI strips brand names (e.g. "Chobani" → "Zero Sugar Vanilla Yogurt"), the typeahead can't match the brand. But blindly adding `raw_input` to all individual items would cause cross-matches in multi-item entries (e.g. "bacon eggs coffee" would make typing "coffee" surface the bacon item).
-
-### Solution
-
-**`src/pages/FoodLog.tsx`** (~line 163) — only include `raw_input` when the entry has exactly one food item (so `raw_input` and `item.description` refer to the same food):
+**`src/pages/FoodLog.tsx`** — after the recent-entries loop (line 174), add a second loop over `savedMeals` to insert them as candidates. Update the `useMemo` dependency array to include `savedMeals`.
 
 ```tsx
-// Line 163, change:
-searchText: item.description,
+// After line 173 (closing brace of the recent-entries loop), add:
 
-// To:
-searchText: entry.food_items.length === 1
-  ? [entry.raw_input, item.description].filter(Boolean).join(' ')
-  : item.description,
+// Add saved meals as candidates so meal names are searchable
+if (savedMeals?.length) {
+  for (const meal of savedMeals) {
+    const key = `saved-meal:${meal.id}`;
+    if (candidates.has(key)) continue;
+    const totalCal = meal.food_items.reduce((sum, i) => sum + (i.calories || 0), 0);
+    candidates.set(key, {
+      label: meal.name,
+      searchText: [meal.name, meal.original_input, ...meal.food_items.map(i => i.description)].filter(Boolean).join(' '),
+      subtitle: `${Math.round(totalCal)} cal`,
+      timestamp: meal.last_used_at ?? meal.created_at,
+      frequency: Math.max(1, meal.use_count ?? 1),
+      items: meal.food_items,
+    });
+  }
+}
 ```
 
-This preserves brand names and colloquial terms for single-item logs (the common case for "chobani yogurt") while avoiding false matches in multi-item entries.
+Update the `useMemo` dependency (line 186) from `[recentEntries]` to `[recentEntries, savedMeals]`.
 
-### What about `group_name` / `useRecentFoodEntries`?
-No changes needed. Grouped entries (multi-item with `group_name`) already include `raw_input` in their `searchText` (line 143), which is correct because they represent the whole entry as one candidate. And `useRecentFoodEntries` already fetches `raw_input` — the field is available, just not used for individual items currently.
+No other files need changes — the existing `handleSelectTypeahead` already handles multi-item payloads correctly.
 
