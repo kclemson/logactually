@@ -156,10 +156,16 @@ describe('hybridSimilarityScore', () => {
     expect(score).toBe(0);
   });
 
-  it('fuzzy matches close spellings', () => {
-    // "chiken" is 1 edit from "chicken"
-    const score = hybridSimilarityScore(['chiken'], 'chicken breast');
+  it('matches via substring containment', () => {
+    // "lemon" is a substring of "lemonade"
+    const score = hybridSimilarityScore(['lemon'], 'lemonade iced tea');
     expect(score).toBeGreaterThan(0);
+  });
+
+  it('does not match unrelated short words', () => {
+    // "chia" is not a substring of "chip"
+    const score = hybridSimilarityScore(['chia'], 'chocolate chip cookie');
+    expect(score).toBe(0);
   });
 
   it('containment is weighted higher than Jaccard', () => {
