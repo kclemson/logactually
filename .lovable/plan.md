@@ -1,9 +1,26 @@
 
 
-## Shrink typeahead suggestion font size
+## Fix prefix match direction in isSubstringMatch
 
-**`src/components/TypeaheadSuggestions.tsx`** — reduce the font size of suggestion rows from `text-sm` to `text-xs`, keeping the layout and touch targets intact:
+**`src/lib/text-similarity.ts`** — change `isSubstringMatch` to only match when the **input word** is a prefix of the **target word**, not vice versa. Since the function doesn't know which argument is input vs target, push the directionality into `substringSetHas` instead:
 
-- Change the button's `text-sm` class to `text-xs` (line ~76)
-- This keeps the row height/padding unchanged (still tappable) but fits longer descriptions like "Brown Sugar Cinnamon Protein Bar" without truncation
+1. Remove the bidirectional logic from `isSubstringMatch` — make it a simple one-directional prefix check: `target.startsWith(query)`
+2. Rename/refactor `isSubstringMatch(word1, word2)` → `isPrefixOf(query, target)` for clarity
+3. Update `substringSetHas` accordingly: check if the query is a prefix of any word in the target set
+
+**`src/lib/text-similarity.test.ts`** — add a test case:
+
+```typescript
+it('does not match when target word is prefix of input word', () => {
+  // "oatm" should NOT match "oat" (target is prefix of input, wrong direction)
+  const score = hybridSimilarityScore(['oatm'], 'oat honey protein granola');
+  expect(score).toBe(0);
+});
+
+it('matches when input word is prefix of target word', () => {
+  // "oatm" SHOULD match "oatmeal"
+  const score = hybridSimilarityScore(['oatm'], 'protein oatmeal');
+  expect(score).toBeGreaterThan(0);
+});
+```
 
