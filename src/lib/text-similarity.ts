@@ -138,55 +138,23 @@ export function jaccardSimilarity(a: string, b: string): number {
 // =============================================================================
 
 /**
- * Calculate Levenshtein edit distance between two strings.
- * Returns the minimum number of single-character edits needed.
- */
-function levenshteinDistance(a: string, b: string): number {
-  if (a.length === 0) return b.length;
-  if (b.length === 0) return a.length;
-
-  const matrix: number[][] = [];
-
-  for (let i = 0; i <= b.length; i++) {
-    matrix[i] = [i];
-  }
-  for (let j = 0; j <= a.length; j++) {
-    matrix[0][j] = j;
-  }
-
-  for (let i = 1; i <= b.length; i++) {
-    for (let j = 1; j <= a.length; j++) {
-      const cost = a[j - 1] === b[i - 1] ? 0 : 1;
-      matrix[i][j] = Math.min(
-        matrix[i - 1][j] + 1,      // deletion
-        matrix[i][j - 1] + 1,      // insertion
-        matrix[i - 1][j - 1] + cost // substitution
-      );
-    }
-  }
-
-  return matrix[b.length][a.length];
-}
-
-/**
- * Check if two words are a fuzzy match.
+ * Check if two words match via substring containment.
  * - Exact match always succeeds
- * - Short words (≤5 chars): allow 1 edit
- * - Longer words: allow 2 edits
+ * - Words shorter than 3 chars require exact match (too ambiguous otherwise)
+ * - Otherwise checks if either word contains the other
  */
-function isFuzzyMatch(word1: string, word2: string): boolean {
+function isSubstringMatch(word1: string, word2: string): boolean {
   if (word1 === word2) return true;
-  const minLen = Math.min(word1.length, word2.length);
-  const maxDistance = minLen <= 5 ? 1 : 2;
-  return levenshteinDistance(word1, word2) <= maxDistance;
+  if (word1.length < 3 || word2.length < 3) return false;
+  return word1.includes(word2) || word2.includes(word1);
 }
 
 /**
- * Check if a word fuzzy-matches any word in a set.
+ * Check if a word substring-matches any word in a set.
  */
-function fuzzySetHas(word: string, targetSet: Set<string>): boolean {
+function substringSetHas(word: string, targetSet: Set<string>): boolean {
   for (const target of targetSet) {
-    if (isFuzzyMatch(word, target)) return true;
+    if (isSubstringMatch(word, target)) return true;
   }
   return false;
 }
@@ -252,14 +220,14 @@ export function hybridSimilarityScore(
   // Containment: what fraction of input words appear in target (fuzzy)
   let matchedCount = 0;
   for (const word of candidateFoodWords) {
-    if (fuzzySetHas(word, targetSet)) matchedCount++;
+    if (substringSetHas(word, targetSet)) matchedCount++;
   }
   const containment = matchedCount / candidateFoodWords.length;
   
   // Jaccard: intersection over union (fuzzy matching for ranking)
   let intersectionCount = 0;
   for (const word of inputSet) {
-    if (fuzzySetHas(word, targetSet)) intersectionCount++;
+    if (substringSetHas(word, targetSet)) intersectionCount++;
   }
   const unionSize = inputSet.size + targetSet.size - intersectionCount;
   const union = new Set([...inputSet, ...targetSet]);
