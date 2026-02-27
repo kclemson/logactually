@@ -22,7 +22,7 @@ type ChangelogEntry = {
 
 // prettier-ignore
 const CHANGELOG_ENTRIES: ChangelogEntry[] = [
-{ date: "Feb-27", text: "Saved meals and brand names are now searchable in the typeahead — type part of a saved meal name or brand and it'll appear as a suggestion.", image: "typeahead-saved-meals.png" },
+{ date: "Feb-27", text: "Easily re-log some food that you've logged before, just start typing and it'll show a dropdown with matching items or saved meals.", image: "typeahead-saved-meals.png" },
 { date: "Feb-19", text: "Updated the feedback form on the Help page — you can now attach a photo from your gallery or take a screenshot of any page in the app directly from the feedback form.", image: "feedback-attachments.png" },
 { date: "Feb-18", text: "Added the ability to pin AI responses from 'Ask AI' to refer to later.", image: "pinned-chats.png" },
 { date: "Feb-18", text: "Added 'Copy to today' — expand any past food or exercise entry and tap the link to copy it to today's log.", image: "copy-to-today.png" },
@@ -77,7 +77,6 @@ export default function Changelog() {
 
   return (
     <div className="flex flex-col h-screen bg-background">
-
       {/* Sticky header row */}
       <div className="flex-shrink-0 border-b border-border">
         <div className="mx-auto max-w-2xl px-4 py-4 flex items-start justify-between">
@@ -147,10 +146,7 @@ export default function Changelog() {
           className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center"
           onClick={() => setLightboxSrc(null)}
         >
-          <div
-            className="relative max-w-3xl w-auto mx-4 bg-background p-2"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="relative max-w-3xl w-auto mx-4 bg-background p-2" onClick={(e) => e.stopPropagation()}>
             <button
               className="absolute -top-3 -right-3 bg-background rounded-full p-1 text-muted-foreground hover:text-foreground transition-colors shadow-md"
               onClick={() => setLightboxSrc(null)}
