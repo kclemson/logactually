@@ -18,6 +18,8 @@ export interface TypeaheadCandidate {
   timestamp: string;
   /** Pre-computed frequency (how many times this pattern was logged) */
   frequency?: number;
+  /** Optional detail rendered inline after the label in smaller text (e.g. portion size) */
+  labelDetail?: string;
   /** Opaque data passed back on selection */
   payload: unknown;
 }
