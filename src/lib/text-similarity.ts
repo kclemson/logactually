@@ -146,7 +146,9 @@ export function jaccardSimilarity(a: string, b: string): number {
 function isSubstringMatch(word1: string, word2: string): boolean {
   if (word1 === word2) return true;
   if (word1.length < 3 || word2.length < 3) return false;
-  return word1.includes(word2) || word2.includes(word1);
+  // Only match if the shorter word is a prefix of the longer one
+  const [shorter, longer] = word1.length <= word2.length ? [word1, word2] : [word2, word1];
+  return longer.startsWith(shorter);
 }
 
 /**

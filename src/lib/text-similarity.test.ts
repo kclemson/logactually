@@ -168,6 +168,16 @@ describe('hybridSimilarityScore', () => {
     expect(score).toBe(0);
   });
 
+  it('does not match mid-word substrings', () => {
+    const score = hybridSimilarityScore(['chi'], 'zucchini parmesan');
+    expect(score).toBe(0);
+  });
+
+  it('matches prefix substrings', () => {
+    const score = hybridSimilarityScore(['chi'], 'chicken breast');
+    expect(score).toBeGreaterThan(0);
+  });
+
   it('containment is weighted higher than Jaccard', () => {
     // 1 word matching 1 of 1 candidate → high containment
     const score = hybridSimilarityScore(['tilapia'], 'grilled tilapia with lemon');
