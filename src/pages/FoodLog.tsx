@@ -5,7 +5,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { format, isToday, parseISO } from 'date-fns';
 import { useFoodDatesWithData } from '@/hooks/useDatesWithData';
-import { LogInput, LogInputRef } from '@/components/LogInput';
+import { LogInput, LogInputRef, TypeaheadCandidate } from '@/components/LogInput';
 import { DateNavigation } from '@/components/DateNavigation';
 import { useDateNavigation } from '@/hooks/useDateNavigation';
 import { FoodItemsTable } from '@/components/FoodItemsTable';
@@ -22,10 +22,10 @@ import { useEditableFoodItems } from '@/hooks/useEditableItems';
 import { useSavedMeals, useSaveMeal, useLogSavedMeal } from '@/hooks/useSavedMeals';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
-import { findSimilarEntry, SimilarEntryMatch } from '@/lib/text-similarity';
+import { findSimilarEntry, SimilarEntryMatch, createItemsSignature, preprocessText } from '@/lib/text-similarity';
 import { detectHistoryReference, MIN_SIMILARITY_REQUIRED } from '@/lib/history-patterns';
-import { detectRepeatedFoodEntry, isDismissed, dismissSuggestion, shouldShowOptOutLink, FoodSaveSuggestion } from '@/lib/repeated-entry-detection';
-import { FoodItem, SavedMeal, calculateTotals } from '@/types/food';
+import { detectRepeatedFoodEntry, isDismissed, dismissSuggestion, shouldShowOptOutLink, FoodSaveSuggestion, hashSignature } from '@/lib/repeated-entry-detection';
+import { FoodItem, SavedMeal, calculateTotals, FoodEntry } from '@/types/food';
 import { getStoredDate, setStoredDate, getSwipeDirection, setSwipeDirection } from '@/lib/selected-date';
 import { useGroupPortionScale } from '@/hooks/useGroupPortionScale';
 import { getEffectiveDailyTarget, getExerciseAdjustedTarget, usesActualExerciseBurns, getCalorieTargetComponents } from '@/lib/calorie-target';
@@ -118,7 +118,61 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     return Math.round((entry.low + entry.high) / 2);
   }, [dailyBurnData, dateStr, usesBurns]);
 
-  
+
+  // Build typeahead candidates from recent entries (deduplicated by items signature)
+  const typeaheadCandidates = useMemo((): TypeaheadCandidate[] | undefined => {
+    if (!recentEntries?.length) return undefined;
+
+    // Group by items signature → dedup identical meals
+    const groups = new Map<string, { label: string; searchText: string; subtitle: string; timestamp: string; frequency: number; items: FoodItem[] }>();
+
+    for (const entry of recentEntries) {
+      // Skip entries from saved meals (users have the Saved button for those)
+      if (entry.source_meal_id) continue;
+
+      const sig = createItemsSignature(entry.food_items);
+      const sigHash = hashSignature(sig);
+      const existing = groups.get(sigHash);
+
+      if (existing) {
+        existing.frequency += 1;
+        // Keep most recent timestamp
+        if (entry.eaten_date > existing.timestamp) {
+          existing.timestamp = entry.eaten_date;
+        }
+      } else {
+        const label = entry.food_items.length === 1
+          ? entry.food_items[0].description
+          : (entry.group_name || entry.raw_input || entry.food_items[0].description);
+        const searchText = [
+          entry.raw_input || '',
+          ...entry.food_items.map(i => i.description),
+        ].join(' ');
+
+        groups.set(sigHash, {
+          label,
+          searchText,
+          subtitle: `${Math.round(entry.total_calories)} cal`,
+          timestamp: entry.eaten_date,
+          frequency: 1,
+          items: entry.food_items,
+        });
+      }
+    }
+
+    return [...groups.entries()].map(([id, g]) => ({
+      id,
+      label: g.label,
+      searchText: g.searchText,
+      subtitle: g.subtitle,
+      timestamp: g.timestamp,
+      frequency: g.frequency,
+      payload: g.items,
+    }));
+  }, [recentEntries]);
+
+  // handleSelectTypeahead declared after createEntryFromItems below
+
   const foodInputRef = useRef<LogInputRef>(null);
 
 
@@ -260,6 +314,13 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       // Error already logged by mutation's onError
     }
   }, [createEntry, dateStr, queryClient, markEntryAsNew, isReadOnly, settings.suggestMealSaves, recentEntries]);
+
+  // Handle typeahead selection — bypass AI, log directly
+  const handleSelectTypeahead = useCallback((candidate: TypeaheadCandidate) => {
+    const items = candidate.payload as FoodItem[];
+    const groupName = items.length >= 2 ? candidate.label : null;
+    createEntryFromItems(items, candidate.label, undefined, groupName, undefined, true);
+  }, [createEntryFromItems]);
 
   // Copy an entry to today's date
   const handleCopyEntryToToday = useCallback((entryId: string) => {
@@ -702,7 +763,8 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
           onPhotoSubmit={handlePhotoSubmit}
           onLogSavedMeal={handleLogSavedMeal}
           onCreateNewMeal={() => setCreateMealDialogOpen(true)}
-          
+          typeaheadCandidates={typeaheadCandidates}
+          onSelectTypeahead={handleSelectTypeahead}
           isLoading={isAnalyzing || isAnalyzingPhoto || createEntry.isPending}
         />
         {analyzeError && (

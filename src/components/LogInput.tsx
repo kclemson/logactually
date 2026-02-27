@@ -13,6 +13,8 @@ import { extractUpcFromText, SCANNED_BARCODE_PREFIX } from "@/lib/upc-utils";
 import { FoodItem } from "@/types/food";
 import { SavedExerciseSet } from "@/types/weight";
 import type { WeightUnit } from "@/lib/weight-units";
+import { useTypeaheadSuggestions, TypeaheadCandidate } from "@/hooks/useTypeaheadSuggestions";
+import { TypeaheadSuggestions } from "@/components/TypeaheadSuggestions";
 
 // Mode-specific configurations
 export type LogMode = 'food' | 'weights';
@@ -103,7 +105,13 @@ interface LogInputProps {
   placeholder?: string;
   /** Weights mode: user's preferred weight unit for placeholder examples */
   weightUnit?: WeightUnit;
+  /** Typeahead candidates for inline suggestions (generic, mode-agnostic) */
+  typeaheadCandidates?: TypeaheadCandidate[];
+  /** Handler when user selects a typeahead suggestion */
+  onSelectTypeahead?: (candidate: TypeaheadCandidate) => void;
 }
+
+export type { TypeaheadCandidate };
 
 export interface LogInputRef {
   clear: () => void;
@@ -125,7 +133,7 @@ const getCameraSupport = (): boolean => {
 };
 
 export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput(
-  { mode, onSubmit, isLoading, onScanResult, onPhotoSubmit, onLogSavedMeal, onCreateNewMeal, onLogSavedRoutine, onCreateNewRoutine, placeholder: customPlaceholder, weightUnit },
+  { mode, onSubmit, isLoading, onScanResult, onPhotoSubmit, onLogSavedMeal, onCreateNewMeal, onLogSavedRoutine, onCreateNewRoutine, placeholder: customPlaceholder, weightUnit, typeaheadCandidates, onSelectTypeahead },
   ref,
 ) {
   const config = MODE_CONFIGS[mode];
@@ -153,6 +161,17 @@ export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput
   const cameraSupported = getCameraSupport();
 
   const { lookupUpc, createFoodItemFromScan, isScanning } = useScanBarcode();
+  
+  // Typeahead suggestions
+  const typeaheadMatches = useTypeaheadSuggestions(text, typeaheadCandidates);
+  const [typeaheadDismissed, setTypeaheadDismissed] = useState(false);
+  // Reset dismissed state when text changes
+  const prevTextRef = useRef(text);
+  if (prevTextRef.current !== text) {
+    prevTextRef.current = text;
+    if (typeaheadDismissed) setTypeaheadDismissed(false);
+  }
+  // showTypeahead computed after isBusy declaration below
 
   // Expose clear method to parent
   useImperativeHandle(ref, () => ({
@@ -297,6 +316,7 @@ export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput
   }, [onPhotoSubmit]);
 
   const isBusy = isLoading || isScanning;
+  const showTypeahead = !isBusy && !typeaheadDismissed && typeaheadMatches.length > 0 && !!onSelectTypeahead;
   const showBarcode = config.showBarcodeScanner && cameraSupported && mode === 'food';
   const showPhoto = mode === 'food' && onPhotoSubmit;
   const showSaved = config.showSavedButton && (mode === 'food' ? onLogSavedMeal : onLogSavedRoutine);
@@ -317,6 +337,16 @@ export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput
           }
         }}
       />
+      {showTypeahead && (
+        <TypeaheadSuggestions
+          matches={typeaheadMatches}
+          onSelect={(candidate) => {
+            onSelectTypeahead!(candidate);
+            setText("");
+          }}
+          onDismiss={() => setTypeaheadDismissed(true)}
+        />
+      )}
       <div className="flex items-center gap-2">
         {voiceSupported && (
           <Button
