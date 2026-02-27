@@ -158,7 +158,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
           } else {
             candidates.set(key, {
               label: item.description,
-              searchText: [entry.raw_input || '', item.description].join(' '),
+              searchText: item.description,
               subtitle: `${Math.round(item.calories)} cal`,
               timestamp: entry.eaten_date,
               frequency: 1,
