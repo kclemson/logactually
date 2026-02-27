@@ -143,7 +143,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       } else {
         const label = entry.food_items.length === 1
           ? entry.food_items[0].description
-          : (entry.group_name || entry.raw_input || entry.food_items[0].description);
+          : (entry.group_name || entry.food_items.map(i => i.description).join(', '));
         const searchText = [
           entry.raw_input || '',
           ...entry.food_items.map(i => i.description),
