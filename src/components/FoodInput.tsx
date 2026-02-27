@@ -195,6 +195,7 @@ export const FoodInput = forwardRef<FoodInputRef, FoodInputProps>(function FoodI
         placeholder={placeholderText}
         aria-label="Describe what you ate"
         className="min-h-[80px] resize-none"
+        spellCheck={false}
         disabled={isBusy}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey) {
