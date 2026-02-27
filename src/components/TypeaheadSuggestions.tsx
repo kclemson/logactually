@@ -81,7 +81,12 @@ export function TypeaheadSuggestions({ matches, onSelect, onDismiss }: Typeahead
             onClick={() => onSelect(candidate)}
             onMouseEnter={() => setActiveIndex(index)}
           >
-            <span className="truncate font-medium">{candidate.label}</span>
+            <span className="truncate">
+              <span className="font-medium">{candidate.label}</span>
+              {candidate.labelDetail && (
+                <span className="ml-1 text-xs text-muted-foreground">({candidate.labelDetail})</span>
+              )}
+            </span>
             <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
               {candidate.subtitle && <span>{candidate.subtitle}</span>}
               <span className="text-muted-foreground/60">{timeAgo}</span>

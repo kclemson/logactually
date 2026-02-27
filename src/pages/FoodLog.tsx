@@ -176,6 +176,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       label: g.label,
       searchText: g.searchText,
       subtitle: g.subtitle,
+      labelDetail: g.items.length === 1 ? (g.items[0].portion || undefined) : undefined,
       timestamp: g.timestamp,
       frequency: g.frequency,
       payload: g.items,
