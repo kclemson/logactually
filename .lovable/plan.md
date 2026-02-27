@@ -1,12 +1,13 @@
 
 
-## Upgrade vite-plugin-pwa
+## Plan: Remove unused validate-invite edge function
 
-Update `vite-plugin-pwa` from `^1.2.0` to the latest version in `package.json`. The current latest is **1.2.1**.
+**What's changing**: The `validate-invite` edge function is dead code from the app's early invite-gated signup. We'll delete it entirely and clean up the security finding.
 
-| File | Change |
-|------|--------|
-| `package.json` | Change `vite-plugin-pwa` version from `^1.2.0` to `^1.2.1` |
+### Steps
 
-No code changes needed — the plugin API is unchanged between patch versions.
+1. **Delete** `supabase/functions/validate-invite/index.ts`
+2. **Remove** the `[functions.validate-invite]` block from `supabase/config.toml`
+3. **Delete** the deployed edge function from the backend
+4. **Delete** the `validate_invite_open` security finding
 
