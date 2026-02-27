@@ -10,7 +10,7 @@ const HELP_CONTENT = {
     title: "Tips",
     items: [
       {
-        text: "This app is under active development and new features are released regularly, sometimes multiple times a week — see the changelog for the latest.",
+        text: "This app is under active development and new features are released regularly - see the changelog for the latest.",
         highlights: ["changelog"],
         link: "/changelog",
       },
