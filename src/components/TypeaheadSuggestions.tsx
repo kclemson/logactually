@@ -84,10 +84,10 @@ export function TypeaheadSuggestions({ matches, onSelect, onDismiss }: Typeahead
             <span className="truncate">
               <span className="font-medium">{candidate.label}</span>
               {candidate.labelDetail && (
-                <span className="ml-1 text-xs text-muted-foreground">({candidate.labelDetail})</span>
+                <span className="ml-1 text-[10px] text-muted-foreground">({candidate.labelDetail})</span>
               )}
             </span>
-            <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+            <span className="flex shrink-0 items-center gap-2 text-[10px] text-muted-foreground">
               {candidate.subtitle && <span>{candidate.subtitle}</span>}
               <span className="text-muted-foreground/60">{timeAgo}</span>
             </span>
