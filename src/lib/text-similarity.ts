@@ -143,20 +143,19 @@ export function jaccardSimilarity(a: string, b: string): number {
  * - Words shorter than 3 chars require exact match (too ambiguous otherwise)
  * - Otherwise checks if either word contains the other
  */
-function isSubstringMatch(word1: string, word2: string): boolean {
-  if (word1 === word2) return true;
-  if (word1.length < 3 || word2.length < 3) return false;
-  // Only match if the shorter word is a prefix of the longer one
-  const [shorter, longer] = word1.length <= word2.length ? [word1, word2] : [word2, word1];
-  return longer.startsWith(shorter);
+function isPrefixOf(query: string, target: string): boolean {
+  if (query === target) return true;
+  if (query.length < 3) return false;
+  // query must be a prefix of target (not the reverse)
+  return target.startsWith(query);
 }
 
 /**
- * Check if a word substring-matches any word in a set.
+ * Check if a query word prefix-matches any word in a target set.
  */
-function substringSetHas(word: string, targetSet: Set<string>): boolean {
+function queryMatchesTargetSet(query: string, targetSet: Set<string>): boolean {
   for (const target of targetSet) {
-    if (isSubstringMatch(word, target)) return true;
+    if (isPrefixOf(query, target)) return true;
   }
   return false;
 }
@@ -222,14 +221,14 @@ export function hybridSimilarityScore(
   // Containment: what fraction of input words appear in target (fuzzy)
   let matchedCount = 0;
   for (const word of candidateFoodWords) {
-    if (substringSetHas(word, targetSet)) matchedCount++;
+    if (queryMatchesTargetSet(word, targetSet)) matchedCount++;
   }
   const containment = matchedCount / candidateFoodWords.length;
   
   // Jaccard: intersection over union (fuzzy matching for ranking)
   let intersectionCount = 0;
   for (const word of inputSet) {
-    if (substringSetHas(word, targetSet)) intersectionCount++;
+    if (queryMatchesTargetSet(word, targetSet)) intersectionCount++;
   }
   const unionSize = inputSet.size + targetSet.size - intersectionCount;
   const union = new Set([...inputSet, ...targetSet]);

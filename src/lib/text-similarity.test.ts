@@ -178,6 +178,18 @@ describe('hybridSimilarityScore', () => {
     expect(score).toBeGreaterThan(0);
   });
 
+  it('does not match when target word is prefix of input word', () => {
+    // "oatm" should NOT match "oat" (target is prefix of input, wrong direction)
+    const score = hybridSimilarityScore(['oatm'], 'oat honey protein granola');
+    expect(score).toBe(0);
+  });
+
+  it('matches when input word is prefix of target word', () => {
+    // "oatm" SHOULD match "oatmeal"
+    const score = hybridSimilarityScore(['oatm'], 'protein oatmeal');
+    expect(score).toBeGreaterThan(0);
+  });
+
   it('containment is weighted higher than Jaccard', () => {
     // 1 word matching 1 of 1 candidate → high containment
     const score = hybridSimilarityScore(['tilapia'], 'grilled tilapia with lemon');
