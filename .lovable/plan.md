@@ -1,27 +1,40 @@
 
 
-## Not a boundary issue — it's the description normalization
+## Replace fuzzy matching with substring matching
 
-The calories are fine: 160 cal → bucket 22, 170 cal → bucket 22 (same bucket). The problem is the descriptions:
+### Changes
 
-- `"Bacon Egg Cheese Pita"` → normalized: `"bacon egg cheese pita"`
-- `"Bacon egg & cheese pita"` → normalized: `"bacon egg & cheese pita"`
+**`src/lib/text-similarity.ts`**
 
-The `&` isn't stripped by the current regex (which only removes parentheticals). So they produce different Map keys despite being the same food.
-
-### Fix
-
-On line 153, add punctuation stripping to the normalization — remove all non-alphanumeric, non-space characters:
-
+1. Replace `isFuzzyMatch` (lines 177-182) with a substring check:
 ```typescript
-// Current:
-const normDesc = item.description.toLowerCase().trim().replace(/\s*\(.*?\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
-
-// New — also strip punctuation like &, commas, hyphens:
-const normDesc = item.description.toLowerCase().trim().replace(/\s*\(.*?\)\s*/g, ' ').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
+function isSubstringMatch(word1: string, word2: string): boolean {
+  if (word1 === word2) return true;
+  if (word1.length < 3 || word2.length < 3) return false;
+  return word1.includes(word2) || word2.includes(word1);
+}
 ```
 
-Adding `.replace(/[^\w\s]/g, ' ')` strips `&`, commas, hyphens, etc. so both descriptions become `"bacon egg cheese pita"` → same key → merged.
+2. Replace `fuzzySetHas` (lines 187-192) to use `isSubstringMatch`:
+```typescript
+function substringSetHas(word: string, targetSet: Set<string>): boolean {
+  for (const target of targetSet) {
+    if (isSubstringMatch(word, target)) return true;
+  }
+  return false;
+}
+```
 
-One regex added to line 153.
+3. Update both call sites in `hybridSimilarityScore` (lines 255, 262) from `fuzzySetHas` → `substringSetHas`.
+
+4. Remove `levenshteinDistance` (lines 139-169) — no longer used.
+
+**`src/lib/text-similarity.test.ts`**
+
+- Update the "fuzzy matches close spellings" test — `"chiken"` will no longer match `"chicken"` (not a substring). Change to test substring behavior instead (e.g., `"lemon"` matches `"lemonade"`).
+
+### Behavior changes
+- "chia" no longer matches "chip" ✓
+- "lemon" matches "lemonade" ✓
+- "chiken" no longer matches "chicken" (acceptable trade-off — typo tolerance removed)
 
