@@ -1,31 +1,14 @@
 
 
-## Add saved meals as typeahead candidates
+## Add changelog entry and update settings date
 
-**`src/pages/FoodLog.tsx`** — after the recent-entries loop (line 174), add a second loop over `savedMeals` to insert them as candidates. Update the `useMemo` dependency array to include `savedMeals`.
+### 1. `src/pages/Changelog.tsx`
+- Add new entry at top of `CHANGELOG_ENTRIES`:
+  ```tsx
+  { date: "Feb-27", text: "Saved meals and brand names are now searchable in the typeahead — type part of a saved meal name or brand and it'll appear as a suggestion.", image: undefined },
+  ```
+- Update `LAST_UPDATED` from `"Feb-19-26"` to `"Feb-27-26"`.
 
-```tsx
-// After line 173 (closing brace of the recent-entries loop), add:
-
-// Add saved meals as candidates so meal names are searchable
-if (savedMeals?.length) {
-  for (const meal of savedMeals) {
-    const key = `saved-meal:${meal.id}`;
-    if (candidates.has(key)) continue;
-    const totalCal = meal.food_items.reduce((sum, i) => sum + (i.calories || 0), 0);
-    candidates.set(key, {
-      label: meal.name,
-      searchText: [meal.name, meal.original_input, ...meal.food_items.map(i => i.description)].filter(Boolean).join(' '),
-      subtitle: `${Math.round(totalCal)} cal`,
-      timestamp: meal.last_used_at ?? meal.created_at,
-      frequency: Math.max(1, meal.use_count ?? 1),
-      items: meal.food_items,
-    });
-  }
-}
-```
-
-Update the `useMemo` dependency (line 186) from `[recentEntries]` to `[recentEntries, savedMeals]`.
-
-No other files need changes — the existing `handleSelectTypeahead` already handles multi-item payloads correctly.
+### 2. `src/components/settings/AboutSection.tsx`
+- Update changelog link text from `"Changelog (last updated Feb-19)"` to `"Changelog (last updated Feb-27)"`.
 
