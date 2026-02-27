@@ -1,42 +1,27 @@
 
 
-## Analysis: Bucketing vs Linear Scan
+## Not a boundary issue — it's the description normalization
 
-You're right to reconsider. The Map/key constraint is real, and linear scan over the full candidate list on every new item is unnecessary complexity for what's essentially a dedup pass.
+The calories are fine: 160 cal → bucket 22, 170 cal → bucket 22 (same bucket). The problem is the descriptions:
 
-**Logarithmic bucketing** is actually the clean solution here — it naturally produces percentage-based grouping without the awkward `step` calculation:
+- `"Bacon Egg Cheese Pita"` → normalized: `"bacon egg cheese pita"`
+- `"Bacon egg & cheese pita"` → normalized: `"bacon egg & cheese pita"`
 
-```typescript
-const calBucket = item.calories <= 0 ? 0 : Math.round(Math.log2(item.calories) * 3);
-```
+The `&` isn't stripped by the current regex (which only removes parentheticals). So they produce different Map keys despite being the same food.
 
-Each bucket boundary is ~26% apart (2^(1/3) ≈ 1.26), so items within roughly 25% of each other land in the same bucket. No step math, no linear scan, just a Map key.
+### Fix
 
-- 2 cal → bucket 3, 5 cal → bucket 7... these are close but won't merge (they're 150% apart — genuinely different)
-- 5 cal → bucket 7, 8 cal → bucket 9... also won't merge
-- 100 cal → bucket 20, 115 cal → bucket 21... might not merge
-
-Hmm — the boundary problem still exists. Two items at 99 and 101 calories could land in different buckets.
-
-**Practical take:** For typeahead dedup, boundary edge cases are rare and low-impact (worst case: you see two nearly-identical suggestions instead of one). The `step`-based approach from before had the same boundary issue. Both are "good enough."
-
-### Recommendation
-
-Use logarithmic bucketing — it's one line, O(1) per item, percentage-based by nature, and the boundary edge case is acceptable for a suggestion list. Combined with parenthetical stripping on the description, it covers the cases you showed.
-
-### Plan
-
-In `src/pages/FoodLog.tsx`, update the individual-item dedup key (~line 153):
+On line 153, add punctuation stripping to the normalization — remove all non-alphanumeric, non-space characters:
 
 ```typescript
 // Current:
-const key = `item:${item.description.toLowerCase().trim()}`;
-
-// New:
 const normDesc = item.description.toLowerCase().trim().replace(/\s*\(.*?\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
-const calBucket = item.calories <= 0 ? 0 : Math.round(Math.log2(item.calories) * 3);
-const key = `item:${normDesc}:${calBucket}`;
+
+// New — also strip punctuation like &, commas, hyphens:
+const normDesc = item.description.toLowerCase().trim().replace(/\s*\(.*?\)\s*/g, ' ').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
 ```
 
-One import-free change, ~3 lines modified.
+Adding `.replace(/[^\w\s]/g, ' ')` strips `&`, commas, hyphens, etc. so both descriptions become `"bacon egg cheese pita"` → same key → merged.
+
+One regex added to line 153.
 
