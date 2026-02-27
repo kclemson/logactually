@@ -150,7 +150,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       } else {
         // Explode into individual items
         for (const item of entry.food_items) {
-          const normDesc = item.description.toLowerCase().trim().replace(/\s*\(.*?\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
+          const normDesc = item.description.toLowerCase().trim().replace(/\s*\(.*?\)\s*/g, ' ').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
           const calBucket = item.calories <= 0 ? 0 : Math.round(Math.log2(item.calories) * 3);
           const key = `item:${normDesc}:${calBucket}`;
           const existing = candidates.get(key);
