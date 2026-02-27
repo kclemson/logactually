@@ -329,6 +329,7 @@ export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput
         placeholder={placeholderText}
         aria-label={mode === 'food' ? 'Describe what you ate' : 'Describe your workout'}
         className="min-h-[100px] resize-none"
+        spellCheck={false}
         disabled={isBusy}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey) {
