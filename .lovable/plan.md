@@ -1,46 +1,26 @@
 
 
-## Plan: Match individual food items instead of whole multi-item entries
+## Plan: Use only the item's own description for searchText in exploded items
 
-The current approach groups all items from a multi-item entry into one typeahead candidate, producing overwhelming labels like "Black Coffee, Whole Milk, Ground Cinnamon, Zero Sugar...". Instead, we should explode multi-item entries into individual item-level candidates.
+### Problem
+
+Line 161 in `src/pages/FoodLog.tsx` sets `searchText` to `[entry.raw_input || '', item.description].join(' ')`. This means every exploded item inherits the parent entry's `raw_input`, so typing "coffee" matches "Bacon" because the original input was something like "coffee and bacon".
 
 ### Change
 
-In `src/pages/FoodLog.tsx`, update the candidate-building logic to:
-
-1. **Iterate over individual `food_items`** rather than whole entries
-2. **Deduplicate by individual item description** (normalized/lowercased) instead of by items signature
-3. **Each candidate represents a single food item** — label is just the item description, subtitle is its calories, payload is a single-item array `[item]`
-4. **Keep multi-item entries with a `group_name` as grouped candidates** — these represent intentional groups (saved meals, photo logs) and should stay as one candidate
-
-### Logic sketch
+In `src/pages/FoodLog.tsx` line 161, change:
 
 ```typescript
-for (const entry of recentEntries) {
-  if (entry.source_meal_id) continue;
-
-  // Entries WITH a group_name → keep as single grouped candidate
-  if (entry.group_name && entry.food_items.length > 1) {
-    // dedup by group_name, candidate label = group_name
-    // payload = all items
-  } else {
-    // Explode into individual items
-    for (const item of entry.food_items) {
-      // dedup by normalized description
-      // candidate label = item.description
-      // payload = [item] (single-item array)
-    }
-  }
-}
+searchText: [entry.raw_input || '', item.description].join(' '),
 ```
 
-This way:
-- Typing "coffee" shows "Black Coffee" as a clean single-item match
-- Intentional groups (with `group_name`) still appear as grouped entries
-- Legacy pre-grouping entries get exploded into individual items, avoiding the long comma-separated labels
-- Selecting a match logs just that single item (or the full group if it was a named group)
+to:
 
-### Files changed
+```typescript
+searchText: item.description,
+```
 
-- `src/pages/FoodLog.tsx` — rewrite the `typeaheadCandidates` useMemo block (~lines 122–172)
+For exploded individual items, the search should only match against that item's own description — not the original multi-item input string. Named groups (line 143) keep the full searchText since they represent intentional groupings.
+
+One line changed.
 
