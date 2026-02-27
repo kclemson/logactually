@@ -173,6 +173,23 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       }
     }
 
+    // Add saved meals as candidates so meal names are searchable
+    if (savedMeals?.length) {
+      for (const meal of savedMeals) {
+        const key = `saved-meal:${meal.id}`;
+        if (candidates.has(key)) continue;
+        const totalCal = meal.food_items.reduce((sum, i) => sum + (i.calories || 0), 0);
+        candidates.set(key, {
+          label: meal.name,
+          searchText: [meal.name, meal.original_input, ...meal.food_items.map(i => i.description)].filter(Boolean).join(' '),
+          subtitle: `${Math.round(totalCal)} cal`,
+          timestamp: meal.last_used_at ?? meal.created_at,
+          frequency: Math.max(1, meal.use_count ?? 1),
+          items: meal.food_items,
+        });
+      }
+    }
+
     return [...candidates.entries()].map(([id, g]) => ({
       id,
       label: g.label,
@@ -183,7 +200,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       frequency: g.frequency,
       payload: g.items,
     }));
-  }, [recentEntries]);
+  }, [recentEntries, savedMeals]);
 
   // handleSelectTypeahead declared after createEntryFromItems below
 
