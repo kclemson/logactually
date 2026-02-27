@@ -75,7 +75,7 @@ export function TypeaheadSuggestions({ matches, onSelect, onDismiss }: Typeahead
             key={candidate.id}
             role="option"
             aria-selected={isActive}
-            className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors
+            className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs transition-colors
               ${isActive ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'}
             `}
             onClick={() => onSelect(candidate)}
