@@ -119,48 +119,57 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   }, [dailyBurnData, dateStr, usesBurns]);
 
 
-  // Build typeahead candidates from recent entries (deduplicated by items signature)
+  // Build typeahead candidates from recent entries
+  // Named groups stay as single candidates; ungrouped entries are exploded into individual items
   const typeaheadCandidates = useMemo((): TypeaheadCandidate[] | undefined => {
     if (!recentEntries?.length) return undefined;
 
-    // Group by items signature → dedup identical meals
-    const groups = new Map<string, { label: string; searchText: string; subtitle: string; timestamp: string; frequency: number; items: FoodItem[] }>();
+    const candidates = new Map<string, { label: string; searchText: string; subtitle: string; timestamp: string; frequency: number; items: FoodItem[] }>();
 
     for (const entry of recentEntries) {
       // Skip entries from saved meals (users have the Saved button for those)
       if (entry.source_meal_id) continue;
 
-      const sig = createItemsSignature(entry.food_items);
-      const sigHash = hashSignature(sig);
-      const existing = groups.get(sigHash);
-
-      if (existing) {
-        existing.frequency += 1;
-        // Keep most recent timestamp
-        if (entry.eaten_date > existing.timestamp) {
-          existing.timestamp = entry.eaten_date;
+      // Named groups (intentional groupings) → keep as single candidate
+      if (entry.group_name && entry.food_items.length > 1) {
+        const key = `group:${entry.group_name.toLowerCase().trim()}`;
+        const existing = candidates.get(key);
+        if (existing) {
+          existing.frequency += 1;
+          if (entry.eaten_date > existing.timestamp) existing.timestamp = entry.eaten_date;
+        } else {
+          candidates.set(key, {
+            label: entry.group_name,
+            searchText: [entry.raw_input || '', ...entry.food_items.map(i => i.description)].join(' '),
+            subtitle: `${Math.round(entry.total_calories)} cal`,
+            timestamp: entry.eaten_date,
+            frequency: 1,
+            items: entry.food_items,
+          });
         }
       } else {
-        const label = entry.food_items.length === 1
-          ? entry.food_items[0].description
-          : (entry.group_name || entry.food_items.map(i => i.description).join(', '));
-        const searchText = [
-          entry.raw_input || '',
-          ...entry.food_items.map(i => i.description),
-        ].join(' ');
-
-        groups.set(sigHash, {
-          label,
-          searchText,
-          subtitle: `${Math.round(entry.total_calories)} cal`,
-          timestamp: entry.eaten_date,
-          frequency: 1,
-          items: entry.food_items,
-        });
+        // Explode into individual items
+        for (const item of entry.food_items) {
+          const key = `item:${item.description.toLowerCase().trim()}`;
+          const existing = candidates.get(key);
+          if (existing) {
+            existing.frequency += 1;
+            if (entry.eaten_date > existing.timestamp) existing.timestamp = entry.eaten_date;
+          } else {
+            candidates.set(key, {
+              label: item.description,
+              searchText: [entry.raw_input || '', item.description].join(' '),
+              subtitle: `${Math.round(item.calories)} cal`,
+              timestamp: entry.eaten_date,
+              frequency: 1,
+              items: [item],
+            });
+          }
+        }
       }
     }
 
-    return [...groups.entries()].map(([id, g]) => ({
+    return [...candidates.entries()].map(([id, g]) => ({
       id,
       label: g.label,
       searchText: g.searchText,
