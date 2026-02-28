@@ -190,6 +190,15 @@ describe('hybridSimilarityScore', () => {
     expect(score).toBeGreaterThan(0);
   });
 
+  it('rejects when not all input words match target', () => {
+    // "sour crea" → words ["sour", "crea"], target "cream cheese" only matches "crea"
+    expect(hybridSimilarityScore(['sour', 'crea'], 'cream cheese')).toBe(0);
+  });
+
+  it('rejects partial phrase overlap', () => {
+    expect(hybridSimilarityScore(['sour', 'cream', 'onion', 'chips'], 'sour cream 1 tbsp')).toBe(0);
+  });
+
   it('containment is weighted higher than Jaccard', () => {
     // 1 word matching 1 of 1 candidate → high containment
     const score = hybridSimilarityScore(['tilapia'], 'grilled tilapia with lemon');

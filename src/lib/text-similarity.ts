@@ -225,6 +225,10 @@ export function hybridSimilarityScore(
   }
   const containment = matchedCount / candidateFoodWords.length;
   
+  // Every input word must match something in the target.
+  // Prevents "sour crea" from matching "cream cheese" (only 1 of 2 words match).
+  if (containment < 1.0) return 0;
+  
   // Jaccard: intersection over union (fuzzy matching for ranking)
   let intersectionCount = 0;
   for (const word of inputSet) {
