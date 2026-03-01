@@ -1,18 +1,28 @@
 
 
-## Remove `log-scanner-debug` edge function and all references
+## Remove remaining dead code from BarcodeScanner.tsx
 
-The debug logging endpoint was temporary scaffolding for barcode scanner diagnostics. Here's the cleanup:
+After the debug logging cleanup, several artifacts are still present but unused:
 
-### 1. Delete the edge function
-- Delete `supabase/functions/log-scanner-debug/index.ts`
-- Remove the `[functions.log-scanner-debug]` block from `supabase/config.toml`
+### Deletions
 
-### 2. Strip debug logging from `src/components/BarcodeScanner.tsx`
-- Remove the `import { supabase }` line (line 18) — only used for debug logging
-- Delete the `logDebugEvents` function definition (lines 195–213)
-- Remove all ~15 `logDebugEvents(...)` call sites throughout the file (lines 358, 398, 444, 467, 509, 578, 594, 658, 717, 745, 782, 793, 820). Each is a standalone statement that can be deleted without affecting surrounding logic.
+**`src/components/BarcodeScanner.tsx`**
 
-### 3. Security finding
-Already dismissed the `log_scanner_debug_no_auth` finding.
+1. **`computeFrameStats` function** (lines 77-128) — 50-line image analysis helper, was only used in debug logging. Delete entirely.
+
+2. **`DebugInfo` interface** (lines 45-53) — type definition for debug state that's no longer rendered. Delete.
+
+3. **`debugInfo` state + all `setDebugInfo` calls** — the state (lines 135-143) and every `setDebugInfo(...)` call throughout the file (~10 occurrences). The value is never read in JSX. Delete the state declaration and all setter calls.
+
+4. **`decodeStartTimeRef`** (line 151) — set on lines 289 and 411 but never read. Delete ref and both assignments.
+
+5. **`errorCountsRef`** (line 152) — set on lines 290 and 476 but never read. Delete ref and all assignments.
+
+6. **`dialogRef`** (line 146) — passed to `DialogContent` ref prop but never used for measurement or scrolling. Delete ref and remove `ref={dialogRef}` from JSX.
+
+7. **`usedRotation` variable** (line 423) — assigned but never read. Delete.
+
+8. **`logger` import** (line 18) — check if any `logger.log` calls remain after cleanup. If the only remaining ones are the EAN-8 streak logs (lines 444, 450) and manual capture (line 245), those are legitimate operational logs — keep. Otherwise remove import.
+
+All changes are mechanical deletions with no behavioral impact.
 
