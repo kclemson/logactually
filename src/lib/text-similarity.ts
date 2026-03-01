@@ -146,16 +146,26 @@ export function jaccardSimilarity(a: string, b: string): number {
 function isPrefixOf(query: string, target: string): boolean {
   if (query === target) return true;
   if (query.length < 3) return false;
-  // query must be a prefix of target (not the reverse)
   return target.startsWith(query);
 }
 
-/**
- * Check if a query word prefix-matches any word in a target set.
- */
+/** Relaxed variant: allows 2-char prefixes (for the word currently being typed). */
+function isPrefixOfRelaxed(query: string, target: string): boolean {
+  if (query === target) return true;
+  if (query.length < 2) return false;
+  return target.startsWith(query);
+}
+
 function queryMatchesTargetSet(query: string, targetSet: Set<string>): boolean {
   for (const target of targetSet) {
     if (isPrefixOf(query, target)) return true;
+  }
+  return false;
+}
+
+function queryMatchesTargetSetRelaxed(query: string, targetSet: Set<string>): boolean {
+  for (const target of targetSet) {
+    if (isPrefixOfRelaxed(query, target)) return true;
   }
   return false;
 }
@@ -219,9 +229,17 @@ export function hybridSimilarityScore(
   const targetSet = new Set(targetWords);
   
   // Containment: what fraction of input words appear in target (fuzzy)
+  // Last word uses relaxed matching (≥2 chars) since it's actively being typed;
+  // all prior words use strict matching (≥3 chars).
   let matchedCount = 0;
-  for (const word of candidateFoodWords) {
-    if (queryMatchesTargetSet(word, targetSet)) matchedCount++;
+  const lastIdx = candidateFoodWords.length - 1;
+  for (let i = 0; i < candidateFoodWords.length; i++) {
+    const word = candidateFoodWords[i];
+    if (i === lastIdx
+      ? queryMatchesTargetSetRelaxed(word, targetSet)
+      : queryMatchesTargetSet(word, targetSet)) {
+      matchedCount++;
+    }
   }
   const containment = matchedCount / candidateFoodWords.length;
   
