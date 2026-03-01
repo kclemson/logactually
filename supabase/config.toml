@@ -9,13 +9,6 @@ verify_jwt = false
 [functions.lookup-upc]
 verify_jwt = false
 
-[functions.log-scanner-debug]
-verify_jwt = false
-
-[functions.run-prompt-tests]
-verify_jwt = false
-
-
 [functions.delete-account]
 verify_jwt = false
 
