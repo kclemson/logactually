@@ -11,7 +11,7 @@ import { useDateNavigation } from '@/hooks/useDateNavigation';
 import { FoodItemsTable } from '@/components/FoodItemsTable';
 import { SaveMealDialog } from '@/components/SaveMealDialog';
 import { CreateMealDialog } from '@/components/CreateMealDialog';
-import { SimilarEntryPrompt } from '@/components/SimilarEntryPrompt';
+
 import { SaveSuggestionPrompt } from '@/components/SaveSuggestionPrompt';
 import { DemoPreviewDialog } from '@/components/DemoPreviewDialog';
 import { useAnalyzeFood } from '@/hooks/useAnalyzeFood';
@@ -22,8 +22,7 @@ import { useEditableFoodItems } from '@/hooks/useEditableItems';
 import { useSavedMeals, useSaveMeal, useLogSavedMeal } from '@/hooks/useSavedMeals';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
-import { findSimilarEntry, SimilarEntryMatch, createItemsSignature, preprocessText } from '@/lib/text-similarity';
-import { detectHistoryReference, MIN_SIMILARITY_REQUIRED } from '@/lib/history-patterns';
+import { createItemsSignature, preprocessText } from '@/lib/text-similarity';
 import { detectRepeatedFoodEntry, isDismissed, dismissSuggestion, shouldShowOptOutLink, FoodSaveSuggestion, hashSignature } from '@/lib/repeated-entry-detection';
 import { FoodItem, SavedMeal, calculateTotals, FoodEntry } from '@/types/food';
 import { getStoredDate, setStoredDate, getSwipeDirection, setSwipeDirection } from '@/lib/selected-date';
@@ -68,12 +67,6 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   const [createMealDialogOpen, setCreateMealDialogOpen] = useState(false);
 
 
-  // State for similar entry prompt (from history reference detection)
-  const [pendingEntryMatch, setPendingEntryMatch] = useState<{
-    match: SimilarEntryMatch;
-    originalInput: string;
-  } | null>(null);
-  const [dismissedMatchText, setDismissedMatchText] = useState<string | null>(null);
 
   // Demo preview state (for read-only demo users)
   const [demoPreviewOpen, setDemoPreviewOpen] = useState(false);
@@ -102,7 +95,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   const { analyzeFood, isAnalyzing, error: analyzeError, warning: analyzeWarning } = useAnalyzeFood();
   const { analyzePhoto, isAnalyzing: isAnalyzingPhoto, error: photoError } = useAnalyzeFoodPhoto();
   const { data: savedMeals } = useSavedMeals();
-  const { data: recentEntries } = useRecentFoodEntries(90); // 90 days for history matching
+  const { data: recentEntries } = useRecentFoodEntries(90);
   const saveMeal = useSaveMeal();
   const logSavedMeal = useLogSavedMeal();
   const { settings, updateSettings } = useUserSettings();
@@ -369,28 +362,6 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   }, [entries, createEntryFromItems]);
 
   const handleSubmit = async (text: string) => {
-    // 1. Check for history reference patterns BEFORE AI call (skip for demo mode)
-    // Skip similarity check if user already cancelled this exact input
-    if (dismissedMatchText === text) {
-      setDismissedMatchText(null);
-      // fall through to AI analysis below
-    } else if (!isReadOnly && recentEntries?.length) {
-      const historyRef = detectHistoryReference(text);
-      
-      if (historyRef.hasReference) {
-        const minSimilarity = MIN_SIMILARITY_REQUIRED[historyRef.confidence];
-        const match = findSimilarEntry(text, recentEntries, minSimilarity);
-        
-        if (match) {
-          // Found a match above threshold - show prompt instead of calling AI
-          setPendingEntryMatch({ match, originalInput: text });
-          return;
-        }
-        // No match found above threshold - fall through to AI analysis
-      }
-    }
-
-    // 2. No entry match (or no history reference) - call AI
     const result = await analyzeFood(text);
     if (result) {
       // Demo mode: show preview instead of saving
@@ -470,38 +441,6 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     setSaveSuggestionItems(items);
   }, []);
 
-  // Similar entry prompt handlers (for history reference detection)
-  const handleUsePastEntry = useCallback(async () => {
-    if (!pendingEntryMatch) return;
-    
-    // Await the entry creation to prevent race conditions with sequential prompts
-    await createEntryFromItems(
-      pendingEntryMatch.match.entry.food_items, 
-      pendingEntryMatch.originalInput
-    );
-    
-    setPendingEntryMatch(null);
-    foodInputRef.current?.clear();
-  }, [pendingEntryMatch, createEntryFromItems]);
-
-  const dismissEntryMatch = useCallback(async () => {
-    if (!pendingEntryMatch) return;
-    
-    // User chose "Log as new" - fall back to AI analysis
-    const text = pendingEntryMatch.originalInput;
-    setPendingEntryMatch(null);
-    
-    const result = await analyzeFood(text);
-    if (result) {
-      createEntryFromItems(result.food_items, text);
-    }
-  }, [pendingEntryMatch, analyzeFood, createEntryFromItems]);
-
-  const handleCancelEntryMatch = useCallback(() => {
-    if (!pendingEntryMatch) return;
-    setDismissedMatchText(pendingEntryMatch.originalInput);
-    setPendingEntryMatch(null);
-  }, [pendingEntryMatch]);
 
   // Handle direct scan results (when barcode lookup succeeds)
   const handleScanResult = async (foodItem: Omit<FoodItem, 'uid' | 'entryId'>, originalInput: string) => {
@@ -814,18 +753,6 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
           </div>
         )}
         
-        {/* Similar Entry Prompt (from history reference detection) */}
-        {pendingEntryMatch && (
-          <div className="mt-3">
-            <SimilarEntryPrompt
-              match={pendingEntryMatch.match}
-              onUsePastEntry={handleUsePastEntry}
-              onDismiss={dismissEntryMatch}
-              onCancel={handleCancelEntryMatch}
-              isLoading={isAnalyzing || createEntry.isPending}
-            />
-          </div>
-        )}
 
         
         {/* Save Suggestion Prompt (for repeated entries) */}
