@@ -2,8 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   preprocessText,
   jaccardSimilarity,
-  extractCandidateFoodWords,
-  hybridSimilarityScore,
   createItemsSignature,
 } from './text-similarity';
 
@@ -93,126 +91,6 @@ describe('jaccardSimilarity', () => {
   it('returns 0 when one string is empty', () => {
     expect(jaccardSimilarity('chicken', '')).toBe(0);
     expect(jaccardSimilarity('', 'chicken')).toBe(0);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// extractCandidateFoodWords
-// ---------------------------------------------------------------------------
-
-describe('extractCandidateFoodWords', () => {
-  it('strips history reference words', () => {
-    const result = extractCandidateFoodWords('another tilapia like from yesterday');
-    expect(result).toContain('tilapia');
-    expect(result).not.toContain('another');
-    expect(result).not.toContain('yesterday');
-    expect(result).not.toContain('like');
-  });
-
-  it('strips meal references', () => {
-    const result = extractCandidateFoodWords('the pasta from lunch');
-    expect(result).toContain('pasta');
-    expect(result).not.toContain('lunch');
-  });
-
-  it('keeps food words', () => {
-    const result = extractCandidateFoodWords('grilled chicken breast');
-    expect(result).toContain('grilled');
-    expect(result).toContain('chicken');
-    expect(result).toContain('breast');
-  });
-
-  it('removes numbers', () => {
-    const result = extractCandidateFoodWords('2 eggs from yesterday');
-    expect(result).toContain('eggs');
-    expect(result).not.toContain('2');
-  });
-
-  it('expands abbreviations before filtering', () => {
-    const result = extractCandidateFoodWords('pb toast from earlier');
-    expect(result).toContain('peanut');
-    expect(result).toContain('butter');
-    expect(result).toContain('toast');
-    expect(result).not.toContain('earlier');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// hybridSimilarityScore
-// ---------------------------------------------------------------------------
-
-describe('hybridSimilarityScore', () => {
-  it('returns 0 for empty candidate words', () => {
-    expect(hybridSimilarityScore([], 'chicken breast')).toBe(0);
-  });
-
-  it('returns high score when all candidate words match', () => {
-    const score = hybridSimilarityScore(['chicken', 'breast'], 'Grilled chicken breast with rice');
-    expect(score).toBeGreaterThan(0.5);
-  });
-
-  it('returns low score when no candidate words match', () => {
-    const score = hybridSimilarityScore(['pizza', 'pepperoni'], 'Grilled chicken breast');
-    expect(score).toBe(0);
-  });
-
-  it('matches via substring containment', () => {
-    // "lemon" is a substring of "lemonade"
-    const score = hybridSimilarityScore(['lemon'], 'lemonade iced tea');
-    expect(score).toBeGreaterThan(0);
-  });
-
-  it('does not match unrelated short words', () => {
-    // "chia" is not a substring of "chip"
-    const score = hybridSimilarityScore(['chia'], 'chocolate chip cookie');
-    expect(score).toBe(0);
-  });
-
-  it('does not match mid-word substrings', () => {
-    const score = hybridSimilarityScore(['chi'], 'zucchini parmesan');
-    expect(score).toBe(0);
-  });
-
-  it('matches prefix substrings', () => {
-    const score = hybridSimilarityScore(['chi'], 'chicken breast');
-    expect(score).toBeGreaterThan(0);
-  });
-
-  it('matches 2-character prefix on last word (in-progress typing)', () => {
-    const score = hybridSimilarityScore(['mac', 'ch'], 'annie mac and cheese 1 package');
-    expect(score).toBeGreaterThan(0);
-  });
-
-  it('rejects 2-character prefix on non-last word', () => {
-    expect(hybridSimilarityScore(['ch', 'mac'], 'annie mac and cheese')).toBe(0);
-  });
-
-  it('does not match when target word is prefix of input word', () => {
-    // "oatm" should NOT match "oat" (target is prefix of input, wrong direction)
-    const score = hybridSimilarityScore(['oatm'], 'oat honey protein granola');
-    expect(score).toBe(0);
-  });
-
-  it('matches when input word is prefix of target word', () => {
-    // "oatm" SHOULD match "oatmeal"
-    const score = hybridSimilarityScore(['oatm'], 'protein oatmeal');
-    expect(score).toBeGreaterThan(0);
-  });
-
-  it('rejects when not all input words match target', () => {
-    // "sour crea" → words ["sour", "crea"], target "cream cheese" only matches "crea"
-    expect(hybridSimilarityScore(['sour', 'crea'], 'cream cheese')).toBe(0);
-  });
-
-  it('rejects partial phrase overlap', () => {
-    expect(hybridSimilarityScore(['sour', 'cream', 'onion', 'chips'], 'sour cream 1 tbsp')).toBe(0);
-  });
-
-  it('containment is weighted higher than Jaccard', () => {
-    // 1 word matching 1 of 1 candidate → high containment
-    const score = hybridSimilarityScore(['tilapia'], 'grilled tilapia with lemon');
-    // containment = 1.0 (1/1), Jaccard lower
-    expect(score).toBeGreaterThan(0.7 * 1.0); // at least the containment portion
   });
 });
 

@@ -42,7 +42,7 @@ const CHANGELOG_ENTRIES: ChangelogEntry[] = [
 { date: "Feb-09", text: "Set a daily calorie target in Settings and see color-coded indicators on the Calendar view — green when you're on track, amber when slightly over, and red when well above your goal.", image: "calorie-target-indicators.png" },
 { date: "Feb-05", text: "The 'Save as Meal' and 'Save as Routine' shortcuts now let you include other items logged on the same day. Also added color-coded 'Add' buttons—blue for food, purple for exercise—to make it easier to tell which page you're on.", image: "save-meal-select-items.png" },
 { date: "Feb-04", text: "Log similar items 3+ times, and you'll see a prompt to save them as a meal or routine. If you already have one saved, update it with the latest values in one step.", images: ["save-suggestion-food.png", "save-suggestion-routine.png"] },
-{ date: "Feb-03", text: "Added smart detection for similar past food entries - when logging something you've had before, it'll suggest using your previous entry.", image: "similar-entry.png" },
+
 { date: "Feb-01", text: "Updated demo mode so you can see a preview of what would be logged based on the input you entered." },
   { date: "Jan-31", text: "Added support for Google authentication, and this changelog page." },
   { date: "Jan-30", text: "Added (minimal) support for cardio exercises - instead of erroring out, it will now log the items and show a 'cardio' label, with simple charts for cardio exercises on the Trends page. Running/walking/cycling charts also support switching between time-based view and mph-based view." },

@@ -1,4 +1,4 @@
-import { FoodItem, FoodEntry } from '@/types/food';
+import { FoodItem } from '@/types/food';
 
 const STOP_WORDS = new Set([
   'a', 'an', 'the', 'with', 'of', 'from', 'and', 'at', 'in', 'on', 'for',
@@ -170,15 +170,6 @@ function queryMatchesTargetSetRelaxed(query: string, targetSet: Set<string>): bo
   return false;
 }
 
-// =============================================================================
-// Similar Entry Matching (for history reference detection)
-// =============================================================================
-
-export interface SimilarEntryMatch {
-  entry: FoodEntry;
-  score: number;
-  matchType: 'input' | 'items';
-}
 
 /**
  * Extract candidate food words by removing known noise (history references, stop words).
@@ -260,77 +251,3 @@ export function hybridSimilarityScore(
   return (containment * 0.7) + (jaccard * 0.3);
 }
 
-/**
- * Helper: returns true if candidate should replace current best match.
- * When scores are within tolerance, prefer more recent entries.
- */
-function isBetterMatch(
-  candidateScore: number,
-  candidateDate: string,
-  bestScore: number,
-  bestDate: string,
-  tolerance = 0.05
-): boolean {
-  const scoreDiff = candidateScore - bestScore;
-  
-  // Clear winner by score
-  if (scoreDiff > tolerance) return true;
-  if (scoreDiff < -tolerance) return false;
-  
-  // Scores within tolerance → prefer more recent
-  return new Date(candidateDate) > new Date(bestDate);
-}
-
-/**
- * Find the best matching past entry using hybrid similarity.
- * 
- * Uses word containment (70%) + Jaccard (30%) scoring:
- * - Containment ensures short inputs like "tilapia" match long descriptions
- * - Jaccard helps rank between multiple viable matches
- * 
- * When scores are within 0.05 tolerance, prefers more recent entries.
- * 
- * @param inputText - User's current input
- * @param recentEntries - Entries from the last N days
- * @param minSimilarityRequired - Minimum hybrid score to consider a match
- * @returns Best matching entry above threshold, or null
- */
-export function findSimilarEntry(
-  inputText: string,
-  recentEntries: FoodEntry[],
-  minSimilarityRequired: number
-): SimilarEntryMatch | null {
-  // Extract only candidate food words (strips "yesterday", "another", etc.)
-  const candidateFoodWords = extractCandidateFoodWords(inputText);
-  
-  // If no candidate food words remain, can't match
-  if (candidateFoodWords.length === 0) return null;
-  
-  let bestMatch: SimilarEntryMatch | null = null;
-  
-  for (const entry of recentEntries) {
-    // Build combined description from all food items
-    const itemsDescription = entry.food_items
-      .map(item => item.description)
-      .join(' ');
-    
-    // Calculate hybrid score against food items
-    const itemsScore = hybridSimilarityScore(candidateFoodWords, itemsDescription);
-    
-    if (itemsScore >= minSimilarityRequired && 
-        (!bestMatch || isBetterMatch(itemsScore, entry.eaten_date, bestMatch.score, bestMatch.entry.eaten_date))) {
-      bestMatch = { entry, score: itemsScore, matchType: 'items' };
-    }
-    
-    // Also check raw_input (skip scanned entries - their raw_input is just barcodes)
-    if (entry.raw_input && !entry.raw_input.startsWith('Scanned:')) {
-      const rawScore = hybridSimilarityScore(candidateFoodWords, entry.raw_input);
-      if (rawScore >= minSimilarityRequired && 
-          (!bestMatch || isBetterMatch(rawScore, entry.eaten_date, bestMatch.score, bestMatch.entry.eaten_date))) {
-        bestMatch = { entry, score: rawScore, matchType: 'input' };
-      }
-    }
-  }
-  
-  return bestMatch;
-}
