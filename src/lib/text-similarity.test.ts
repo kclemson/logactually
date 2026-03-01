@@ -178,6 +178,15 @@ describe('hybridSimilarityScore', () => {
     expect(score).toBeGreaterThan(0);
   });
 
+  it('matches 2-character prefix on last word (in-progress typing)', () => {
+    const score = hybridSimilarityScore(['mac', 'ch'], 'annie mac and cheese 1 package');
+    expect(score).toBeGreaterThan(0);
+  });
+
+  it('rejects 2-character prefix on non-last word', () => {
+    expect(hybridSimilarityScore(['ch', 'mac'], 'annie mac and cheese')).toBe(0);
+  });
+
   it('does not match when target word is prefix of input word', () => {
     // "oatm" should NOT match "oat" (target is prefix of input, wrong direction)
     const score = hybridSimilarityScore(['oatm'], 'oat honey protein granola');
