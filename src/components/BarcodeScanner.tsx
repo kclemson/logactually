@@ -41,17 +41,6 @@ const DECODER_HINTS = new Map<DecodeHintType, unknown>([
   [DecodeHintType.POSSIBLE_FORMATS, SUPPORTED_FORMATS],
 ]);
 
-
-interface DebugInfo {
-  status: 'starting' | 'active' | 'error' | 'captured' | 'success';
-  videoWidth: number;
-  videoHeight: number;
-  decodeAttempts: number;
-  lastError: string | null;
-  captureResult: string | null;
-  rotationApplied: number;
-}
-
 interface SuccessState {
   code: string;
   format: string;
@@ -67,64 +56,10 @@ function detectRotationNeeded(track: TrackDimensions, video: HTMLVideoElement): 
   const trackIsLandscape = track.width > track.height;
   const videoIsLandscape = video.videoWidth > video.videoHeight;
   
-  // If orientations don't match, we need 90° rotation
   if (trackIsLandscape !== videoIsLandscape) {
     return 90;
   }
   return 0;
-}
-
-// Compute simple image quality metrics from canvas
-function computeFrameStats(canvas: HTMLCanvasElement): Record<string, number> {
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return {};
-  
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const data = imageData.data;
-  
-  let totalLuminance = 0;
-  let pixelCount = 0;
-  
-  for (let i = 0; i < data.length; i += 16) {
-    const r = data[i];
-    const g = data[i + 1];
-    const b = data[i + 2];
-    const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
-    totalLuminance += luminance;
-    pixelCount++;
-  }
-  
-  const meanLuminance = totalLuminance / pixelCount;
-  
-  let variance = 0;
-  for (let i = 0; i < data.length; i += 16) {
-    const r = data[i];
-    const g = data[i + 1];
-    const b = data[i + 2];
-    const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
-    variance += (luminance - meanLuminance) ** 2;
-  }
-  const stdDev = Math.sqrt(variance / pixelCount);
-  
-  let edgeSum = 0;
-  let edgeCount = 0;
-  const width = canvas.width;
-  for (let i = 4; i < data.length - 4; i += 16) {
-    if ((i / 4) % width === 0) continue;
-    const left = 0.299 * data[i - 4] + 0.587 * data[i - 3] + 0.114 * data[i - 2];
-    const right = 0.299 * data[i + 4] + 0.587 * data[i + 5] + 0.114 * data[i + 6];
-    edgeSum += Math.abs(right - left);
-    edgeCount++;
-  }
-  const edgeDensity = edgeCount > 0 ? edgeSum / edgeCount : 0;
-  
-  return {
-    meanLuminance: Math.round(meanLuminance * 10) / 10,
-    contrastStdDev: Math.round(stdDev * 10) / 10,
-    edgeDensity: Math.round(edgeDensity * 10) / 10,
-    sampleWidth: canvas.width,
-    sampleHeight: canvas.height,
-  };
 }
 
 export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
@@ -132,24 +67,12 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
   const [isStarting, setIsStarting] = useState(false);
   const [successState, setSuccessState] = useState<SuccessState | null>(null);
   const [streamReady, setStreamReady] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<DebugInfo>({
-    status: 'starting',
-    videoWidth: 0,
-    videoHeight: 0,
-    decodeAttempts: 0,
-    lastError: null,
-    captureResult: null,
-    rotationApplied: 0,
-  });
   
   const videoRef = useRef<HTMLVideoElement>(null);
-  const dialogRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const decodeAttemptsRef = useRef(0);
-  const decodeStartTimeRef = useRef<number>(0);
-  const errorCountsRef = useRef<Map<string, number>>(new Map());
   const trackDimensionsRef = useRef<TrackDimensions>({ width: 0, height: 0 });
   const rotationNeededRef = useRef<number>(0);
   const decodeLoopRef = useRef<number | null>(null);
@@ -163,7 +86,6 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
     reader: BrowserMultiFormatReader,
     rotation: number
   ): { text: string; format: string } | null => {
-    // Ensure canvas exists
     if (!canvasRef.current) {
       canvasRef.current = document.createElement('canvas');
     }
@@ -176,7 +98,6 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
     
     if (vw === 0 || vh === 0) return null;
 
-    // Set canvas size based on rotation
     if (rotation === 90 || rotation === 270) {
       canvas.width = vh;
       canvas.height = vw;
@@ -185,7 +106,6 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
       canvas.height = vh;
     }
 
-    // Draw with rotation
     ctx.save();
     if (rotation === 90) {
       ctx.translate(canvas.width, 0);
@@ -200,7 +120,6 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
     ctx.drawImage(video, 0, 0);
     ctx.restore();
 
-    // Decode from canvas
     try {
       const luminanceSource = new HTMLCanvasElementLuminanceSource(canvas);
       const binaryBitmap = new BinaryBitmap(new HybridBinarizer(luminanceSource));
@@ -216,48 +135,34 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
 
   // Manual capture function
   const handleManualCapture = useCallback(() => {
-    if (!readerRef.current || !videoRef.current) {
-      setDebugInfo(prev => ({ ...prev, captureResult: 'No reader/video available' }));
-      return;
-    }
+    if (!readerRef.current || !videoRef.current) return;
 
     const video = videoRef.current;
     const reader = readerRef.current;
     const rotation = rotationNeededRef.current;
 
-    setDebugInfo(prev => ({ ...prev, captureResult: 'Capturing...', status: 'captured' }));
-
-    // Try multiple rotations if needed
     const rotationsToTry = rotation !== 0 ? [rotation, 0, 180, 270] : [0, 90, 180, 270];
     let result: { text: string; format: string } | null = null;
 
     for (const rot of rotationsToTry) {
       result = decodeWithRotation(video, reader, rot);
-      if (result) {
-        break;
-      }
+      if (result) break;
     }
 
     if (result) {
-      // For manual capture we only have a single frame — reject EAN-8 since it may be a
-      // misread of a longer UPC-A. Ask the user to try again via the continuous loop.
+      // For manual capture reject EAN-8 since it may be a misread of a longer UPC-A
       if (result.format === 'EAN_8') {
         logger.log('Manual capture: EAN-8 rejected on single frame, continuing scan');
-        setDebugInfo(prev => ({ ...prev, captureResult: 'EAN-8 detected — try again', status: 'active' }));
         return;
       }
 
-      // Stop decode loop but keep stream for success overlay
       if (decodeLoopRef.current) {
         cancelAnimationFrame(decodeLoopRef.current);
         decodeLoopRef.current = null;
       }
       
-      // Show success state
       setSuccessState({ code: result.text, format: result.format });
-      setDebugInfo(prev => ({ ...prev, status: 'success' }));
       
-      // Delay before calling onScan to show success feedback
       setTimeout(() => {
         if (streamRef.current) {
           streamRef.current.getTracks().forEach(track => track.stop());
@@ -267,16 +172,6 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
         streamRef.current = null;
         onScan(result.text);
       }, 1200);
-    } else {
-      setDebugInfo(prev => ({ 
-        ...prev, 
-        captureResult: 'No barcode found',
-        status: 'active'
-      }));
-      
-      setTimeout(() => {
-        setDebugInfo(prev => ({ ...prev, captureResult: null }));
-      }, 2000);
     }
   }, [onScan, decodeWithRotation]);
 
@@ -286,30 +181,17 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
     setError(null);
     setIsStarting(true);
     decodeAttemptsRef.current = 0;
-    decodeStartTimeRef.current = Date.now();
-    errorCountsRef.current = new Map();
     rotationNeededRef.current = 0;
     setSuccessState(null);
     setStreamReady(false);
-    setDebugInfo({
-      status: 'starting',
-      videoWidth: 0,
-      videoHeight: 0,
-      decodeAttempts: 0,
-      lastError: null,
-      captureResult: null,
-      rotationApplied: 0,
-    });
 
     let mounted = true;
 
     const startScanner = async () => {
       try {
-        // Pre-create ZXing decoder (doesn't depend on video stream)
         const reader = new BrowserMultiFormatReader(DECODER_HINTS);
         readerRef.current = reader;
 
-        // Wait for video element to be ready (poll with timeout)
         const maxWaitMs = 2000;
         const pollIntervalMs = 50;
         let waited = 0;
@@ -327,15 +209,13 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
           return;
         }
 
-        const requestedConstraints = {
-          facingMode: 'environment',
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-          aspectRatio: { ideal: 16/9 }
-        };
-
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: requestedConstraints
+          video: {
+            facingMode: 'environment',
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            aspectRatio: { ideal: 16/9 }
+          }
         });
 
         if (!mounted) {
@@ -349,7 +229,6 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
         const videoTrack = stream.getVideoTracks()[0];
         const trackSettings = videoTrack?.getSettings?.() ?? {};
         
-        // Store track dimensions for rotation detection
         trackDimensionsRef.current = {
           width: trackSettings.width || 0,
           height: trackSettings.height || 0,
@@ -388,27 +267,14 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
 
         if (!mounted) return;
 
-        // Show UI immediately now that video is playing
         setIsStarting(false);
 
         const video = videoRef.current;
-        const videoWidth = video.videoWidth;
-        const videoHeight = video.videoHeight;
 
-        // Detect rotation mismatch
         const rotation = detectRotationNeeded(trackDimensionsRef.current, video);
         rotationNeededRef.current = rotation;
 
-        setDebugInfo(prev => ({
-          ...prev,
-          status: 'active',
-          videoWidth,
-          videoHeight,
-          rotationApplied: rotation,
-        }));
         setStreamReady(true);
-
-        decodeStartTimeRef.current = Date.now();
 
         // Custom decode loop with rotation support
         const runDecodeLoop = () => {
@@ -418,21 +284,13 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
           const video = videoRef.current;
           const currentRotation = rotationNeededRef.current;
           
-          // Try decode with detected rotation first, then fallback
           let result = decodeWithRotation(video, readerRef.current, currentRotation);
-          let usedRotation = currentRotation;
           
-          // If primary rotation fails and we're supposed to rotate, also try 0
           if (!result && currentRotation !== 0) {
             result = decodeWithRotation(video, readerRef.current, 0);
-            usedRotation = 0;
           }
 
           if (result) {
-            // EAN-8 streak guard: don't accept EAN-8 immediately — it may be a misread of
-            // a longer UPC-A. Require 5 consecutive identical EAN-8 reads before accepting.
-            // Any frame that decodes as UPC-A/EAN-13 instead will break out of the streak
-            // and be accepted immediately.
             if (result.format === 'EAN_8') {
               if (ean8StreakRef.current.code === result.text) {
                 ean8StreakRef.current.count++;
@@ -446,19 +304,14 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
                 return;
               }
 
-              // 5 identical reads — genuinely an EAN-8 barcode
               logger.log('EAN-8 confirmed as genuine after 5 frames:', result.text);
               ean8StreakRef.current = { code: '', count: 0 };
             } else {
-              // Non-EAN-8 found — reset streak
               ean8StreakRef.current = { code: '', count: 0 };
             }
 
-            // Show success state with delay
             setSuccessState({ code: result.text, format: result.format });
-            setDebugInfo(prev => ({ ...prev, status: 'success' }));
             
-            // Delay before calling onScan to show success feedback
             setTimeout(() => {
               if (streamRef.current) {
                 streamRef.current.getTracks().forEach(track => track.stop());
@@ -471,30 +324,13 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
             return;
           }
 
-          // Track errors
-          const errKey = 'NotFoundException';
-          errorCountsRef.current.set(errKey, (errorCountsRef.current.get(errKey) || 0) + 1);
-
-          // Update UI periodically
-          if (decodeAttemptsRef.current <= 3 || decodeAttemptsRef.current % 30 === 0) {
-            setDebugInfo(prev => ({
-              ...prev,
-              decodeAttempts: decodeAttemptsRef.current,
-              lastError: 'No barcode detected',
-            }));
-          }
-
-          // Continue loop
           decodeLoopRef.current = requestAnimationFrame(runDecodeLoop);
         };
 
-        // Start decode loop
         decodeLoopRef.current = requestAnimationFrame(runDecodeLoop);
 
       } catch (err) {
         console.error('Scanner error:', err);
-        
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
 
         if (mounted) {
           if (err instanceof Error) {
@@ -508,7 +344,6 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
           } else {
             setError('Could not start camera. Please try again.');
           }
-          setDebugInfo(prev => ({ ...prev, status: 'error', lastError: errorMessage }));
           setIsStarting(false);
         }
       }
@@ -556,7 +391,6 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
       <DialogContent 
-        ref={dialogRef}
         className="fixed left-4 right-4 top-1/2 -translate-y-1/2 translate-x-0 w-auto max-w-none sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-full sm:max-w-md"
       >
         <DialogHeader>
@@ -586,11 +420,9 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
                   playsInline
                   muted
                 />
-                {/* Scan region indicator - corner brackets for 1D barcodes */}
                 {!successState && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div className="w-[85%] h-[100px] relative">
-                      {/* Corner brackets */}
                       <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-primary" />
                       <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-primary" />
                       <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-primary" />
@@ -599,7 +431,6 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
                   </div>
                 )}
                 
-                {/* Success overlay */}
                 {successState && (
                   <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center animate-fade-in">
                     <div className="bg-green-500/20 rounded-full p-4 mb-3 animate-scale-in">
@@ -611,9 +442,7 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
                 )}
               </div>
 
-
-              {/* Manual Capture Button */}
-              {!isStarting && debugInfo.status === 'active' && (
+              {!isStarting && !successState && (
                 <Button 
                   onClick={handleManualCapture}
                   variant="secondary"
