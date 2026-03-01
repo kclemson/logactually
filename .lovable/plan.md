@@ -1,63 +1,54 @@
 
 
-## Problem
+## Allow shorter prefix for the word currently being typed
 
-Typing "sour crea" produces two candidate words: `["sour", "crea"]`. The containment check asks "what fraction of these words match the target?" — so a candidate like "Cream Cheese" matches `crea` (prefix of `cream`) giving 1/2 = 50% containment, which combined with Jaccard easily clears the 0.25 threshold. The word "sour" doesn't need to match at all.
+**Insight**: When the user types "mac and ch", the word "ch" is the one *actively being typed*. Earlier words like "mac" are already committed. We should be strict about completed words (≥3 chars for prefix) but lenient with the last word (≥2 chars), since the preceding words already provide enough context to avoid false positives.
 
-The fix from the previous plan (containment ≥ 0.75 gate) would catch "sour cream and onion chips" (2/4 = 50%) but NOT "sour crea" (1/2 = 50% — right at the boundary). However, it's still the right approach — we just need to set the gate correctly.
+### Changes
 
-With a 0.75 gate: 1/2 = 0.50 < 0.75 → blocked ✓. But we should also consider edge cases:
-- "sour cream" (2 words, both match) → 2/2 = 1.0 ✓
-- "chicken" (1 word) → 1/1 = 1.0 ✓  
-- "chicken breast" → needs both to match: 2/2 ✓, or 1/2 = 0.5 < 0.75 → blocked ✓
-- "sour cream and onion chips" → 2/4 = 0.5 < 0.75 → blocked ✓
+**`src/lib/text-similarity.ts`**
 
-A containment gate of **1.0** (ALL input words must match) is actually ideal for typeahead. The user is typing something specific — every word they typed should appear in the candidate. This is different from the similar-entry detection which uses a lower threshold.
-
-## Changes
-
-### `src/lib/text-similarity.ts`
-In `hybridSimilarityScore`, after computing `containment` (line 226), add an early return:
+1. Add a new helper `isPrefixOfRelaxed` that allows 2-char prefixes (for the in-progress word):
 
 ```ts
-const containment = matchedCount / candidateFoodWords.length;
-
-// Every input word must match something in the target.
-// Prevents "sour crea" from matching "cream cheese" (only 1 of 2 words match).
-if (containment < 1.0) return 0;
+function isPrefixOfRelaxed(query: string, target: string): boolean {
+  if (query === target) return true;
+  if (query.length < 2) return false;
+  return target.startsWith(query);
+}
 ```
 
-**Wait** — this would also affect `findSimilarEntry` which shares the same function. For similar-entry detection, we want slightly looser matching (e.g., "another tilapia like yesterday" after stripping → `["tilapia"]` which is fine, but longer inputs might suffer).
+2. In `hybridSimilarityScore`, treat the **last** word in `candidateFoodWords` as the in-progress word and use relaxed matching for it, strict matching for the rest:
 
-Actually, `findSimilarEntry` calls `extractCandidateFoodWords` first which strips noise words aggressively, so the remaining words ARE all food words that should all match. A 1.0 gate is appropriate there too.
-
-But to be safe and keep the concerns separate, I'll add the gate only in the **typeahead hook** rather than in the shared scoring function.
-
-### `src/hooks/useTypeaheadSuggestions.ts`
-In the scoring loop (~line 95), after computing `similarity`, add a containment pre-check:
-
-Actually, the cleanest approach: add an optional `minContainment` parameter to `hybridSimilarityScore` defaulting to 0 (backward compatible), and pass 1.0 from typeahead.
-
-**Simpler**: Just do the containment check inline in the typeahead hook before calling `hybridSimilarityScore`. But that duplicates logic.
-
-**Simplest correct fix**: Add the containment ≥ 1.0 gate directly in `hybridSimilarityScore`. Both consumers (typeahead and similar-entry) benefit — if you typed food words, they should all match.
-
-### Plan
-
-**`src/lib/text-similarity.ts`** — line 226, after `const containment = ...`, add:
 ```ts
-if (containment < 1.0) return 0;
+// All words except the last must match strictly (≥3 char prefix)
+// The last word (actively being typed) uses relaxed matching (≥2 char prefix)
+let matchedCount = 0;
+const lastIdx = candidateFoodWords.length - 1;
+for (let i = 0; i < candidateFoodWords.length; i++) {
+  const word = candidateFoodWords[i];
+  if (i === lastIdx
+    ? queryMatchesTargetSetRelaxed(word, targetSet)
+    : queryMatchesTargetSet(word, targetSet)) {
+    matchedCount++;
+  }
+}
 ```
 
-**`src/lib/text-similarity.test.ts`** — add two test cases to `hybridSimilarityScore`:
+3. Add `queryMatchesTargetSetRelaxed` that uses `isPrefixOfRelaxed`.
+
+**`src/lib/text-similarity.test.ts`**
+
+Add test:
 ```ts
-it('rejects when not all input words match target', () => {
-  // "sour crea" → words ["sour", "crea"], target "cream cheese" only matches "crea"
-  expect(hybridSimilarityScore(['sour', 'crea'], 'cream cheese')).toBe(0);
+it('matches 2-character prefix on last word only', () => {
+  // "ch" is the last (in-progress) word → relaxed prefix match
+  expect(hybridSimilarityScore(['mac', 'ch'], 'annie mac and cheese')).toBeGreaterThan(0);
 });
 
-it('rejects partial phrase overlap', () => {
-  expect(hybridSimilarityScore(['sour', 'cream', 'onion', 'chips'], 'sour cream 1 tbsp')).toBe(0);
+it('rejects 2-character prefix on non-last word', () => {
+  // "ch" is the first word, not in-progress → strict 3-char minimum
+  expect(hybridSimilarityScore(['ch', 'mac'], 'annie mac and cheese')).toBe(0);
 });
 ```
 
