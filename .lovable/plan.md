@@ -1,28 +1,59 @@
 
 
-## Remove remaining dead code from BarcodeScanner.tsx
+## UX changes from removing the "Similar Entry" feature
 
-After the debug logging cleanup, several artifacts are still present but unused:
+### What happens today
 
-### Deletions
+When you type something like **"leftover pizza from yesterday"** into the food input and hit Log:
 
-**`src/components/BarcodeScanner.tsx`**
+1. **Input is intercepted** — the system scans your text for ~30 natural language patterns (e.g. "leftover", "yesterday", "same as", "other half", "from Monday")
+2. **History search runs** — if a pattern is detected, it searches your last 90 days of food entries for a text similarity match
+3. **A prompt card appears** below the input showing:
+   - The matched past entry's date ("Looks like your entry from Wed, Feb 5")
+   - A match confidence percentage ("87% match")
+   - A preview table of that entry's food items with macros
+   - Three buttons: **Use past entry** · **Log as new** · **Cancel**
+4. **Your input is blocked** — nothing goes to the AI until you pick one of those three options
+5. If you hit **Cancel** and re-submit the same text, it remembers you dismissed it and skips straight to AI
 
-1. **`computeFrameStats` function** (lines 77-128) — 50-line image analysis helper, was only used in debug logging. Delete entirely.
+### What changes after removal
 
-2. **`DebugInfo` interface** (lines 45-53) — type definition for debug state that's no longer rendered. Delete.
+Typing the same input (**"leftover pizza from yesterday"**) and hitting Log:
 
-3. **`debugInfo` state + all `setDebugInfo` calls** — the state (lines 135-143) and every `setDebugInfo(...)` call throughout the file (~10 occurrences). The value is never read in JSX. Delete the state declaration and all setter calls.
+1. **Input goes directly to AI analysis** — no interception, no prompt card, no delay
+2. The AI returns nutritional estimates as usual
+3. The typeahead dropdown (already live) covers the "I want to repeat a past entry" use case — you see matching suggestions *as you type*, before you even hit Log
 
-4. **`decodeStartTimeRef`** (line 151) — set on lines 289 and 411 but never read. Delete ref and both assignments.
+### Visual diff
 
-5. **`errorCountsRef`** (line 152) — set on lines 290 and 476 but never read. Delete ref and all assignments.
+```text
+BEFORE                              AFTER
+┌─────────────────────┐             ┌─────────────────────┐
+│ [leftover pizza   ] │             │ [leftover pizza   ] │
+│ [Log]               │             │ [Log]               │
+├─────────────────────┤             └─────────────────────┘
+│ Looks like your     │                      │
+│ entry from Wed,     │                      ▼
+│ Feb 5 (87% match):  │             AI analysis runs
+│ ┌─────────────────┐ │             immediately, entry
+│ │ Pizza  450 cal  │ │             logged as usual
+│ └─────────────────┘ │
+│ [Use past] [New]    │
+│ [Cancel]            │
+└─────────────────────┘
+         │
+    User must pick
+    an option first
+```
 
-6. **`dialogRef`** (line 146) — passed to `DialogContent` ref prop but never used for measurement or scrolling. Delete ref and remove `ref={dialogRef}` from JSX.
+### What stays the same
 
-7. **`usedRotation` variable** (line 423) — assigned but never read. Delete.
+- **Typeahead suggestions** — the dropdown that shows previously logged items as you type remains and handles the "repeat a past entry" workflow
+- **Save Suggestion prompt** — the "You've logged this 3 times, save as a meal?" prompt is a separate feature and stays
+- **AI analysis** — all food analysis behavior is unchanged
+- **Saved meals/routines** — unaffected
 
-8. **`logger` import** (line 18) — check if any `logger.log` calls remain after cleanup. If the only remaining ones are the EAN-8 streak logs (lines 444, 450) and manual capture (line 245), those are legitimate operational logs — keep. Otherwise remove import.
+### Summary
 
-All changes are mechanical deletions with no behavioral impact.
+The only user-visible change: the interstitial prompt card that appears *after* hitting Log (showing a past entry match) will no longer appear. Instead, input always proceeds to AI. Typeahead handles repeat-entry discovery *before* submission.
 
