@@ -110,13 +110,13 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
   }));
 
   const barLabelRenderer = (props: any) => {
-    const { x, y, width, value, index } = props;
+    const { x, y, width, height, value, index } = props;
     if (!chartData[index]?._showLabel) return null;
     if (value == null || typeof x !== "number" || typeof width !== "number") return null;
     return (
       <text
         x={x + width / 2}
-        y={y - 4}
+        y={Math.min(y, y + height) - 4}
         fill={color}
         textAnchor="middle"
         fontSize={7}
