@@ -389,8 +389,8 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
               {!secondSeries!.useRightAxis && <YAxis yAxisId="right" hide />}
               {referenceLineEl}
               <Tooltip {...sharedTooltipProps} />
-              {renderSeriesA()}
-              {renderSeriesB()}
+              {chartType === "line" ? renderSeriesB() : renderSeriesA()}
+              {chartType === "line" ? renderSeriesA() : renderSeriesB()}
             </ComposedChart>
           ) : chartType === "line" ? (
             <LineChart data={chartData} margin={{ top: 16, right: 4, left: 0, bottom: 0 }} onClick={handleChartClick}>
