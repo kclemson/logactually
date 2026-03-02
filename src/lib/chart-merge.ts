@@ -72,7 +72,7 @@ export function mergeChartSpecs(
       value: a?.[specA.dataKey] ?? null,
       value2: b?.[specB.dataKey] ?? null,
     };
-  }).filter(d => d.value != null && d.value2 != null);
+  }).filter(d => d.value != null && d.value !== 0 && d.value2 != null && d.value2 !== 0);
 
   // Auto-detect whether to use dual axis
   const valuesA = mergedData.map((d) => d.value).filter((v): v is number => v != null && v !== 0);
