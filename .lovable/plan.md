@@ -1,15 +1,12 @@
 
 
-## Fix: negative bar labels overlapping bars
+## Fix: header transparency when charts scroll underneath
 
-The issue is that for negative bars, Recharts may set `y` at the bar's bottom tip (not the zero line), making `y - 4` position the label deep inside or below the bar. The fix is to use `height` to always find the topmost edge of the bar.
+The header uses `bg-background/95` with `backdrop-blur`, dropping to `bg-background/60` when backdrop-filter is supported. Charts in `ChartCard` use `z-40` on their inner content, which matches the header's `z-40`, causing overlap where chart content renders on top of the semi-transparent header.
 
-### Change in `src/components/trends/DynamicChart.tsx`
+### Change in `src/components/Header.tsx`
 
-- **`barLabelRenderer`** (line 113): Re-add `height` to destructuring
-- **`barLabelRenderer`** (line 119): Change `y={y - 4}` to `y={Math.min(y, y + height) - 4}`
-  - For positive bars: `y` is bar top, `height` positive → `Math.min = y` → same as before
-  - For negative bars: regardless of how Recharts reports `y`/`height`, this always picks the edge closest to zero (the higher pixel position) and places the label 4px above it
+- Increase header `z-index` from `z-40` to `z-50` so it always sits above chart content (which uses `z-40`)
 
-One-line change plus re-adding `height` to destructuring. Line renderer stays unchanged since line dots have a single `y` at the data point.
+One-line change on the `<header>` element's className.
 
