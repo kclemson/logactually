@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
@@ -8,6 +8,11 @@ import { executeDSL, FOOD_METRICS, EXERCISE_METRICS } from "@/lib/chart-dsl";
 import { mergeChartSpecs } from "@/lib/chart-merge";
 import { DynamicChart, type ChartSpec } from "@/components/trends/DynamicChart";
 import type { ChartDSL } from "@/lib/chart-types";
+
+const SOURCE_DEFAULT_COLORS: Record<string, string> = {
+  food: "#3B82F6",
+  exercise: "#8B5CF6",
+};
 
 function humanizeMetric(key: string): string {
   const MAP: Record<string, string> = {
@@ -37,6 +42,7 @@ interface SeriesConfig {
   source: "food" | "exercise";
   metric: string;
   chartType: "bar" | "line";
+  color: string;
 }
 
 interface CompareChartBuilderProps {
@@ -52,12 +58,14 @@ export function CompareChartBuilder({ period, onSave, isSaving, initialDsl, init
     source: initialDsl?.source ?? "food",
     metric: initialDsl?.metric ?? "calories",
     chartType: (initialDsl?.chartType as "bar" | "line") ?? "bar",
+    color: SOURCE_DEFAULT_COLORS[initialDsl?.source ?? "food"],
   }));
 
   const [seriesB, setSeriesB] = useState<SeriesConfig>(() => ({
     source: initialDsl2?.source ?? "exercise",
     metric: initialDsl2?.metric ?? "duration_minutes",
     chartType: (initialDsl2?.chartType as "bar" | "line") ?? "line",
+    color: SOURCE_DEFAULT_COLORS[initialDsl2?.source ?? "exercise"],
   }));
 
   const [groupBy, setGroupBy] = useState<"date" | "week">(
@@ -69,6 +77,12 @@ export function CompareChartBuilder({ period, onSave, isSaving, initialDsl, init
   const [dslB, setDslB] = useState<ChartDSL | null>(initialDsl2 ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   const handleGenerate = useCallback(async () => {
     setLoading(true);
@@ -93,17 +107,26 @@ export function CompareChartBuilder({ period, onSave, isSaving, initialDsl, init
 
       const spec1 = executeDSL(d1, data1);
       const spec2 = executeDSL(d2, data2);
-      const merged = mergeChartSpecs(spec1, spec2);
+      const merged = mergeChartSpecs(spec1, spec2, {
+        colorOverrides: { colorA: seriesA.color, colorB: seriesB.color },
+      });
 
+      if (!mountedRef.current) return;
       setPreview(merged);
       setDslA(d1);
       setDslB(d2);
     } catch (err: any) {
+      if (!mountedRef.current) return;
       setError(err.message || "Failed to generate chart");
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }, [seriesA, seriesB, groupBy, period]);
+
+  // Auto-preview on any config change
+  useEffect(() => {
+    handleGenerate();
+  }, [handleGenerate]);
 
   const handleSave = () => {
     if (!preview || !dslA || !dslB) return;
@@ -113,6 +136,20 @@ export function CompareChartBuilder({ period, onSave, isSaving, initialDsl, init
 
   const metricsFor = (source: "food" | "exercise") =>
     source === "food" ? FOOD_METRICS : EXERCISE_METRICS;
+
+  const handleSourceChange = (
+    config: SeriesConfig,
+    newSource: "food" | "exercise",
+    onChange: (c: SeriesConfig) => void,
+  ) => {
+    const metrics = metricsFor(newSource);
+    onChange({
+      ...config,
+      source: newSource,
+      metric: metrics[0],
+      color: SOURCE_DEFAULT_COLORS[newSource],
+    });
+  };
 
   const SeriesRow = ({
     label,
@@ -125,12 +162,8 @@ export function CompareChartBuilder({ period, onSave, isSaving, initialDsl, init
   }) => (
     <div className="space-y-1.5">
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <div className="flex gap-1.5">
-        <Select value={config.source} onValueChange={(v) => {
-          const newSource = v as "food" | "exercise";
-          const metrics = metricsFor(newSource);
-          onChange({ ...config, source: newSource, metric: metrics[0] });
-        }}>
+      <div className="flex gap-1.5 items-center">
+        <Select value={config.source} onValueChange={(v) => handleSourceChange(config, v as "food" | "exercise", onChange)}>
           <SelectTrigger className="h-8 text-xs flex-1 min-w-0">
             <SelectValue />
           </SelectTrigger>
@@ -158,6 +191,13 @@ export function CompareChartBuilder({ period, onSave, isSaving, initialDsl, init
             <SelectItem value="line">Line</SelectItem>
           </SelectContent>
         </Select>
+        <input
+          type="color"
+          value={config.color}
+          onChange={(e) => onChange({ ...config, color: e.target.value })}
+          className="w-6 h-6 rounded-full border border-border cursor-pointer p-0 bg-transparent [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-none [&::-moz-color-swatch]:rounded-full [&::-moz-color-swatch]:border-none"
+          title={`${label} color`}
+        />
       </div>
     </div>
   );
@@ -180,19 +220,23 @@ export function CompareChartBuilder({ period, onSave, isSaving, initialDsl, init
         </Select>
       </div>
 
-      <div className="flex gap-2 justify-end">
-        <Button size="sm" onClick={handleGenerate} disabled={loading} className="h-8">
-          {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
-          Preview
-        </Button>
-      </div>
-
       {error && (
         <p className="text-xs text-destructive">{error}</p>
       )}
 
+      {loading && !preview && (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      )}
+
       {preview && (
-        <div className="space-y-2">
+        <div className="space-y-2 relative">
+          {loading && (
+            <div className="absolute top-2 right-2 z-10">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+            </div>
+          )}
           <div className="border border-border rounded-md overflow-hidden">
             <DynamicChart
               spec={preview}
