@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Navigate } from "react-router-dom";
 import { useAdminStats, useAdminUserStats } from "@/hooks/useAdminStats";
 import { useLoginCount } from "@/hooks/useLoginCount";
@@ -19,7 +19,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { PopulateDemoDataDialog } from "@/components/PopulateDemoDataDialog";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { AppleHealthExplorer } from "@/components/AppleHealthExplorer";
-
+import { useUserActivityDates, formatActivityDates } from "@/hooks/useUserActivityDates";
 
 
 export default function Admin() {
@@ -47,6 +47,7 @@ export default function Admin() {
   const [showPopulateDialog, setShowPopulateDialog] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [expandedFeedbackIds, setExpandedFeedbackIds] = useState<Set<string>>(new Set());
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
 
   // Refs for unmount draft persistence
   const replyingToIdRef = useRef(replyingToId);
@@ -90,6 +91,7 @@ export default function Admin() {
   const resolveFeedback = useResolveFeedback();
   const hasHover = useHasHover();
   const isMobile = useIsMobile();
+  const { data: activityDates, isLoading: isActivityLoading } = useUserActivityDates(expandedUserId);
 
   const activeUserStats = userStats?.filter(user => {
     if (!user.last_active) return false;
@@ -335,7 +337,11 @@ export default function Admin() {
             </thead>
             <tbody>
               {activeUserStats.map((user) => (
-                <tr key={user.user_id} className="border-b border-border/50">
+                <React.Fragment key={user.user_id}>
+                <tr
+                  className={cn("border-b border-border/50 cursor-pointer", expandedUserId === user.user_id && "bg-muted/30")}
+                  onClick={() => setExpandedUserId(expandedUserId === user.user_id ? null : user.user_id)}
+                >
                   <td
                     className={`py-0.5 pr-2 whitespace-nowrap ${
                       user.entries_today > 0 ||
@@ -511,6 +517,20 @@ export default function Admin() {
                     {user.is_beta ? "✓" : "—"}
                   </td>
                 </tr>
+                {expandedUserId === user.user_id && (
+                  <tr className="border-b border-border/50">
+                    <td colSpan={13} className="py-1 px-2 text-xs text-muted-foreground">
+                      {isActivityLoading ? (
+                        <span className="animate-pulse">Loading…</span>
+                      ) : activityDates && activityDates.length > 0 ? (
+                        <span>{formatActivityDates(activityDates)}</span>
+                      ) : (
+                        <span>No activity in last 90 days</span>
+                      )}
+                    </td>
+                  </tr>
+                )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>

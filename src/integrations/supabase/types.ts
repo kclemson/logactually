@@ -572,6 +572,12 @@ export type Database = {
             Args: { include_read_only?: boolean; user_timezone?: string }
             Returns: Json
           }
+      get_user_activity_dates: {
+        Args: { target_user_id: string }
+        Returns: {
+          activity_date: string
+        }[]
+      }
       get_user_stats:
         | { Args: { exclude_user_id?: string }; Returns: Json }
         | {
