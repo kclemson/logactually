@@ -1,19 +1,20 @@
 
 
-## Filter dual-series charts to intersection dates only
+## Fix: treat zero as "no data" in dual-series intersection filter
+
+### Problem
+
+The `chart-merge.ts` filter currently checks `d.value != null && d.value2 != null`, but exercise metrics like "weight (lbs)" return `0` on rest days rather than `null`. So the filter keeps those rows.
 
 ### Change
 
-**`src/lib/chart-merge.ts`** — After building the merged data array, filter out any entry where either `value` or `value2` is `null`. This ensures only dates with data from both series are shown.
+**`src/lib/chart-merge.ts`** — Update the intersection filter on line 75 to also exclude zero values:
 
 ```ts
-// Current: allKeys includes union of both date sets
-// Add: filter merged data to intersection
-const mergedData = allKeys.map(...)
-  .filter(d => d.value != null && d.value2 != null);
+.filter(d => d.value != null && d.value !== 0 && d.value2 != null && d.value2 !== 0);
 ```
 
-One-line change in `mergeChartSpecs`. The `connectNulls` and null-dot-skipping logic from the previous fix remains as a safety net but won't be needed for merged charts since there won't be null entries.
+This ensures days where either metric is zero (meaning no activity was logged) are excluded from the comparison view. Single-series charts are unaffected since they don't go through `mergeChartSpecs`.
 
-No other files change — the filtering happens before anything downstream sees the data.
+One line change, no other files affected.
 
