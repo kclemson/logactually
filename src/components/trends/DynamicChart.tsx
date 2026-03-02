@@ -1,6 +1,6 @@
 import {
-  BarChart, Bar, LineChart, Line, XAxis, Tooltip, ResponsiveContainer,
-  LabelList, ReferenceLine,
+  BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  LabelList, ReferenceLine, ComposedChart, Legend,
 } from "recharts";
 import { ChartCard } from "./ChartCard";
 import { CompactChartTooltip } from "./CompactChartTooltip";
@@ -54,6 +54,14 @@ export interface ChartSpec {
     method?: "sum" | "average" | "count" | "max" | "min";
     breakdown?: Array<{ label: string; dates: string[] }>;
   } | null;
+  secondSeries?: {
+    dataKey: string;
+    chartType: "bar" | "line";
+    color: string;
+    label: string;
+    valueFormat?: "integer" | "decimal1" | "duration_mmss" | "none";
+    useRightAxis: boolean;
+  };
 }
 
 function formatValue(value: number, format?: string): string {
@@ -93,8 +101,9 @@ function periodLabel(days?: number): string | undefined {
 }
 
 export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, period, timeRangeSuffix, onTitleChange, onAiNoteChange }: DynamicChartProps) {
-  const { data, dataKey, color, chartType, xAxis, valueFormat, referenceLine } = spec;
+  const { data, dataKey, color, chartType, xAxis, valueFormat, referenceLine, secondSeries } = spec;
   const isCategorical = spec.groupBy === "item" || spec.groupBy === "category";
+  const isDualSeries = !!secondSeries;
 
   const interaction = useChartInteraction({
     dataLength: data.length,
@@ -109,52 +118,61 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
     _showLabel: (data.length - 1 - i) % labelInterval === 0,
   }));
 
-  const barLabelRenderer = (props: any) => {
-    const { x, y, width, height, value, index } = props;
-    if (!chartData[index]?._showLabel) return null;
-    if (value == null || typeof x !== "number" || typeof width !== "number") return null;
-    return (
-      <text
-        x={x + width / 2}
-        y={Math.min(y, y + height) - 4}
-        fill={color}
-        textAnchor="middle"
-        fontSize={7}
-        fontWeight={500}
-      >
-        {formatValue(Number(value), valueFormat)}
-      </text>
-    );
+  const makeLabelRenderer = (seriesColor: string, seriesDataKey: string, seriesFormat?: string) => {
+    const barRenderer = (props: any) => {
+      const { x, y, width, height, value, index } = props;
+      if (!chartData[index]?._showLabel) return null;
+      if (value == null || typeof x !== "number" || typeof width !== "number") return null;
+      return (
+        <text
+          x={x + width / 2}
+          y={Math.min(y, y + height) - 4}
+          fill={seriesColor}
+          textAnchor="middle"
+          fontSize={7}
+          fontWeight={500}
+        >
+          {formatValue(Number(value), seriesFormat)}
+        </text>
+      );
+    };
+
+    const lineRenderer = (props: any) => {
+      const { viewBox, value, index } = props;
+      if (!chartData[index]?._showLabel) return null;
+      if (value == null || value === 0) return null;
+      const { x, y, width } = viewBox ?? {};
+      if (typeof x !== "number" || typeof y !== "number") return null;
+      return (
+        <text
+          x={x + (width ?? 0) / 2}
+          y={y - 4}
+          fill={seriesColor}
+          textAnchor="middle"
+          fontSize={7}
+          fontWeight={500}
+        >
+          {formatValue(Number(value), seriesFormat)}
+        </text>
+      );
+    };
+
+    return { barRenderer, lineRenderer };
   };
 
-  const lineLabelRenderer = (props: any) => {
-    const { viewBox, value, index } = props;
-    if (!chartData[index]?._showLabel) return null;
-    if (value == null || value === 0) return null;
-    const { x, y, width } = viewBox ?? {};
-    if (typeof x !== "number" || typeof y !== "number") return null;
-    return (
-      <text
-        x={x + (width ?? 0) / 2}
-        y={y - 4}
-        fill={color}
-        textAnchor="middle"
-        fontSize={7}
-        fontWeight={500}
-      >
-        {formatValue(Number(value), valueFormat)}
-      </text>
-    );
-  };
-
-  const tooltipFormatter = (value: any) => {
-    if (typeof value !== "number") return String(value);
-    return formatValue(value, valueFormat);
-  };
+  const seriesA = makeLabelRenderer(color, dataKey, valueFormat);
+  const seriesB = secondSeries ? makeLabelRenderer(secondSeries.color, secondSeries.dataKey, secondSeries.valueFormat) : null;
 
   const tooltipContent = (
     <CompactChartTooltip
-      formatter={(v, name) => `${name}: ${tooltipFormatter(v)}`}
+      formatter={(v, name) => {
+        if (typeof v !== "number") return `${name}: ${String(v)}`;
+        // Determine format based on which series this value belongs to
+        const fmt = (secondSeries && name === humanizeLabel(secondSeries.label))
+          ? secondSeries.valueFormat
+          : valueFormat;
+        return `${name}: ${formatValue(v, fmt)}`;
+      }}
       isTouchDevice={interaction.isTouchDevice}
       onGoToDay={interaction.handleGoToDay}
       rawDate={
@@ -165,13 +183,23 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
     />
   );
 
+  const touchPayload: any[] | undefined =
+    interaction.isTouchDevice && interaction.activeBarIndex !== null
+      ? [
+          { payload: chartData[interaction.activeBarIndex], name: humanizeLabel(spec.yAxis.label), value: chartData[interaction.activeBarIndex]?.[dataKey], color },
+          ...(secondSeries ? [{
+            payload: chartData[interaction.activeBarIndex],
+            name: humanizeLabel(secondSeries.label),
+            value: chartData[interaction.activeBarIndex]?.[secondSeries.dataKey],
+            color: secondSeries.color,
+          }] : []),
+        ]
+      : undefined;
+
   const sharedTooltipProps = {
     wrapperStyle: { pointerEvents: "auto" as const, zIndex: 50, userSelect: "none" as const },
     active: interaction.isTouchDevice ? interaction.isTooltipActive : undefined,
-    payload:
-      interaction.isTouchDevice && interaction.activeBarIndex !== null
-        ? [{ payload: chartData[interaction.activeBarIndex], name: spec.yAxis.label, value: chartData[interaction.activeBarIndex]?.[dataKey], color }]
-        : undefined,
+    payload: touchPayload,
     label:
       interaction.isTouchDevice && interaction.activeBarIndex !== null
         ? chartData[interaction.activeBarIndex]?.[xAxis.field]
@@ -215,13 +243,117 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
     )
   ) : undefined;
 
+  // Compact legend for dual-series
+  const dualLegend = isDualSeries ? (
+    <div className="flex items-center justify-center gap-3 mt-0.5">
+      <span className="flex items-center gap-1 text-[9px] text-muted-foreground">
+        <span className="inline-block w-2 h-2 rounded-sm" style={{ backgroundColor: color }} />
+        {humanizeLabel(spec.yAxis.label)}
+      </span>
+      <span className="flex items-center gap-1 text-[9px] text-muted-foreground">
+        <span className="inline-block w-2 h-2 rounded-sm" style={{ backgroundColor: secondSeries!.color }} />
+        {humanizeLabel(secondSeries!.label)}
+      </span>
+    </div>
+  ) : undefined;
+
+  const combinedFooter = dualLegend || footer ? (
+    <>
+      {dualLegend}
+      {footer}
+    </>
+  ) : undefined;
+
+  const handleChartClick = (state: any) => {
+    if (state?.activeTooltipIndex != null && state?.activePayload?.[0]?.payload) {
+      interaction.handleBarClick(state.activePayload[0].payload, state.activeTooltipIndex);
+    }
+  };
+
+  const referenceLineEl = referenceLine ? (
+    <ReferenceLine
+      y={referenceLine.value}
+      stroke="hsl(var(--muted-foreground))"
+      strokeDasharray="4 3"
+      strokeWidth={1}
+      ifOverflow="extendDomain"
+    />
+  ) : null;
+
+  // Render Series A element
+  const renderSeriesA = () => {
+    const yAxisId = isDualSeries ? "left" : undefined;
+    if (chartType === "line") {
+      return (
+        <Line
+          type="monotone"
+          dataKey={dataKey}
+          name={humanizeLabel(spec.yAxis.label)}
+          stroke={color}
+          strokeWidth={1.5}
+          dot={{ r: 2, fill: color }}
+          activeDot={{ r: 3 }}
+          className="cursor-pointer"
+          yAxisId={yAxisId}
+        >
+          {!isDualSeries && <LabelList dataKey={dataKey} content={seriesA.lineRenderer} />}
+        </Line>
+      );
+    }
+    return (
+      <Bar
+        dataKey={dataKey}
+        name={humanizeLabel(spec.yAxis.label)}
+        fill={color}
+        radius={[2, 2, 0, 0]}
+        onClick={(data: any, index: number) => interaction.handleBarClick(data, index)}
+        className="cursor-pointer"
+        yAxisId={yAxisId}
+      >
+        {!isDualSeries && <LabelList dataKey={dataKey} content={seriesA.barRenderer} />}
+      </Bar>
+    );
+  };
+
+  // Render Series B element
+  const renderSeriesB = () => {
+    if (!secondSeries) return null;
+    const yAxisId = secondSeries.useRightAxis ? "right" : "left";
+    if (secondSeries.chartType === "line") {
+      return (
+        <Line
+          type="monotone"
+          dataKey={secondSeries.dataKey}
+          name={humanizeLabel(secondSeries.label)}
+          stroke={secondSeries.color}
+          strokeWidth={1.5}
+          dot={{ r: 2, fill: secondSeries.color }}
+          activeDot={{ r: 3 }}
+          className="cursor-pointer"
+          yAxisId={yAxisId}
+        />
+      );
+    }
+    return (
+      <Bar
+        dataKey={secondSeries.dataKey}
+        name={humanizeLabel(secondSeries.label)}
+        fill={secondSeries.color}
+        radius={[2, 2, 0, 0]}
+        onClick={(data: any, index: number) => interaction.handleBarClick(data, index)}
+        className="cursor-pointer"
+        yAxisId={yAxisId}
+      />
+    );
+  };
+
   return (
     <ChartCard
       title={spec.title}
       isTooltipActive={interaction.isTooltipActive}
       isTouchDevice={interaction.isTouchDevice}
       onDismiss={interaction.dismiss}
-      footer={footer}
+      footer={combinedFooter}
       headerAction={headerAction}
       onContextMenu={onContextMenu}
       timeRange={[periodLabel(period), timeRangeSuffix].filter(Boolean).join(" ")}
@@ -229,48 +361,38 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
     >
       <div className="h-24">
         <ResponsiveContainer width="100%" height="100%" style={{ overflow: "visible" }}>
-          {chartType === "line" ? (
-            <LineChart data={chartData} margin={{ top: 16, right: 4, left: 0, bottom: 0 }} onClick={(state: any) => {
-              if (state?.activeTooltipIndex != null && state?.activePayload?.[0]?.payload) {
-                interaction.handleBarClick(state.activePayload[0].payload, state.activeTooltipIndex);
-              }
-            }}>
+          {isDualSeries ? (
+            <ComposedChart data={chartData} margin={{ top: 16, right: secondSeries!.useRightAxis ? 24 : 4, left: 0, bottom: 0 }} onClick={handleChartClick}>
               <XAxis {...sharedXAxisProps} />
-              {referenceLine && (
-                <ReferenceLine
-                  y={referenceLine.value}
-                  stroke="hsl(var(--muted-foreground))"
-                  strokeDasharray="4 3"
-                  strokeWidth={1}
-                  ifOverflow="extendDomain"
+              <YAxis yAxisId="left" hide />
+              {secondSeries!.useRightAxis && (
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  tick={{ fontSize: 7 }}
+                  stroke={secondSeries!.color}
+                  width={28}
+                  tickLine={false}
+                  axisLine={false}
                 />
               )}
+              {!secondSeries!.useRightAxis && <YAxis yAxisId="right" hide />}
+              {referenceLineEl}
               <Tooltip {...sharedTooltipProps} />
-              <Line
-                type="monotone"
-                dataKey={dataKey}
-                name={humanizeLabel(spec.yAxis.label)}
-                stroke={color}
-                strokeWidth={1.5}
-                dot={{ r: 2, fill: color }}
-                activeDot={{ r: 3 }}
-                className="cursor-pointer"
-              >
-                <LabelList dataKey={dataKey} content={lineLabelRenderer} />
-              </Line>
+              {renderSeriesA()}
+              {renderSeriesB()}
+            </ComposedChart>
+          ) : chartType === "line" ? (
+            <LineChart data={chartData} margin={{ top: 16, right: 4, left: 0, bottom: 0 }} onClick={handleChartClick}>
+              <XAxis {...sharedXAxisProps} />
+              {referenceLineEl}
+              <Tooltip {...sharedTooltipProps} />
+              {renderSeriesA()}
             </LineChart>
           ) : (
             <BarChart data={chartData} margin={{ top: 16, right: 0, left: 0, bottom: 0 }}>
               <XAxis {...sharedXAxisProps} />
-              {referenceLine && (
-                <ReferenceLine
-                  y={referenceLine.value}
-                  stroke="hsl(var(--muted-foreground))"
-                  strokeDasharray="4 3"
-                  strokeWidth={1}
-                  ifOverflow="extendDomain"
-                />
-              )}
+              {referenceLineEl}
               <Tooltip {...sharedTooltipProps} />
               <Bar
                 dataKey={dataKey}
@@ -280,7 +402,7 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
                 onClick={(data: any, index: number) => interaction.handleBarClick(data, index)}
                 className="cursor-pointer"
               >
-                <LabelList dataKey={dataKey} content={barLabelRenderer} />
+                <LabelList dataKey={dataKey} content={seriesA.barRenderer} />
               </Bar>
             </BarChart>
           )}

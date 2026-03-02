@@ -18,8 +18,8 @@ const METRIC_COMPAT: Record<string, string> = {
 
 // ── Known metrics ─────────────────────────────────────────
 
-const FOOD_METRICS = ["calories", "protein", "carbs", "fat", "fiber", "sugar", "saturated_fat", "sodium", "cholesterol", "entries"] as const;
-const EXERCISE_METRICS = ["sets", "reps", "weight_lbs", "duration_minutes", "distance_miles", "calories_burned", "heart_rate", "unique_exercises", "entries"] as const;
+export const FOOD_METRICS = ["calories", "protein", "carbs", "fat", "fiber", "sugar", "saturated_fat", "sodium", "cholesterol", "entries"] as const;
+export const EXERCISE_METRICS = ["sets", "reps", "weight_lbs", "duration_minutes", "distance_miles", "calories_burned", "heart_rate", "unique_exercises", "entries"] as const;
 
 // Metrics that need decimal precision (not rounded to integers)
 const DECIMAL_METRICS = new Set(["distance_miles"]);

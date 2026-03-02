@@ -8,12 +8,14 @@ import { useGenerateChart, type DailyTotals, type GenerateChartResult } from "@/
 import { useSavedCharts } from "@/hooks/useSavedCharts";
 import { DynamicChart, type ChartSpec } from "@/components/trends/DynamicChart";
 import { verifyChartData, type VerificationResult } from "@/lib/chart-verification";
+import { CompareChartBuilder } from "@/components/CompareChartBuilder";
+import type { ChartDSL } from "@/lib/chart-types";
 
 interface CustomChartDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   period: number;
-  initialChart?: { id: string; question: string; chartSpec: ChartSpec; chartDsl?: unknown };
+  initialChart?: { id: string; question: string; chartSpec: ChartSpec; chartDsl?: unknown; chartDsl2?: unknown };
   initialVerification?: VerificationResult | null;
 }
 
@@ -57,9 +59,12 @@ function CustomChartDialogInner({
 }: {
   onOpenChange: (open: boolean) => void;
   period: number;
-  initialChart?: { id: string; question: string; chartSpec: ChartSpec; chartDsl?: unknown };
+  initialChart?: { id: string; question: string; chartSpec: ChartSpec; chartDsl?: unknown; chartDsl2?: unknown };
   initialVerification?: VerificationResult | null;
 }) {
+  const [dialogMode, setDialogMode] = useState<"single" | "compare">(
+    () => initialChart?.chartDsl2 ? "compare" : "single",
+  );
   const [input, setInput] = useState("");
   const [mode, setMode] = useState<"v1" | "v2">("v2");
   const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>(
@@ -200,7 +205,7 @@ function CustomChartDialogInner({
 
     if (editingIdRef.current) {
       updateMutation.mutate(
-        { id: editingIdRef.current, question: lastQuestion, chartSpec: currentSpec, chartDsl: chartDSL ?? undefined },
+        { id: editingIdRef.current, question: lastQuestion, chartSpec: currentSpec, chartDsl: chartDSL ?? undefined, chartDsl2: initialChart?.chartDsl2 ?? undefined },
         { onSuccess: () => onOpenChange(false) },
       );
     } else {
@@ -251,8 +256,52 @@ function CustomChartDialogInner({
           )}
         </DialogTitle>
 
+        {/* Mode toggle: Single vs Compare */}
+        <div className="flex gap-1 mt-2 mb-1">
+          <button
+            onClick={() => setDialogMode("single")}
+            className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+              dialogMode === "single"
+                ? "border-primary bg-primary/10 text-primary font-medium"
+                : "border-border text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            Single
+          </button>
+          <button
+            onClick={() => setDialogMode("compare")}
+            className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+              dialogMode === "compare"
+                ? "border-primary bg-primary/10 text-primary font-medium"
+                : "border-border text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            Compare
+          </button>
+        </div>
 
-        <div className="space-y-3 mt-2 relative">
+        {dialogMode === "compare" ? (
+          <CompareChartBuilder
+            period={period}
+            onSave={({ question, chartSpec, chartDsl, chartDsl2 }) => {
+              if (editingIdRef.current) {
+                updateMutation.mutate(
+                  { id: editingIdRef.current, question, chartSpec, chartDsl, chartDsl2 },
+                  { onSuccess: () => onOpenChange(false) },
+                );
+              } else {
+                saveMutation.mutate(
+                  { question, chartSpec, chartDsl, chartDsl2 },
+                  { onSuccess: () => onOpenChange(false) },
+                );
+              }
+            }}
+            isSaving={saveMutation.isPending || updateMutation.isPending}
+            initialDsl={initialChart?.chartDsl2 ? (initialChart.chartDsl as ChartDSL) : undefined}
+            initialDsl2={initialChart?.chartDsl2 as ChartDSL | undefined}
+          />
+        ) : (
+        <div className="space-y-3 relative">
           {/* Loading overlay — covers existing content instead of collapsing */}
           {showOverlay && (
             <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-md">
@@ -544,6 +593,7 @@ function CustomChartDialogInner({
             </div>
           )}
         </div>
+        )}
       </DialogContent>
     </Dialog>
   );

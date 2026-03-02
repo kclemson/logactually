@@ -19,6 +19,7 @@ import { DynamicChart, type ChartSpec } from "@/components/trends/DynamicChart";
 import { fetchChartData } from "@/lib/chart-data";
 import { executeDSL } from "@/lib/chart-dsl";
 import { verifyChartData, type VerificationResult } from "@/lib/chart-verification";
+import { mergeChartSpecs } from "@/lib/chart-merge";
 import type { ChartDSL } from "@/lib/chart-types";
 import { DeleteConfirmPopover } from "@/components/DeleteConfirmPopover";
 import { ChartContextMenu } from "@/components/trends/ChartContextMenu";
@@ -83,26 +84,35 @@ const Trends = () => {
   const [exerciseInitialView, setExerciseInitialView] = useState<"ask" | "pinned">("ask");
   const { pinCount } = usePinnedChats();
   const [createChartOpen, setCreateChartOpen] = useState(false);
-  const [editingChart, setEditingChart] = useState<{ id: string; question: string; chartSpec: ChartSpec; chartDsl?: unknown } | null>(null);
+  const [editingChart, setEditingChart] = useState<{ id: string; question: string; chartSpec: ChartSpec; chartDsl?: unknown; chartDsl2?: unknown } | null>(null);
   const [editingChartVerification, setEditingChartVerification] = useState<VerificationResult | null>(null);
 
-  const openChartForEditing = useCallback(async (chart: { id: string; question: string; chart_spec: ChartSpec; chart_dsl?: unknown }) => {
+  const openChartForEditing = useCallback(async (chart: { id: string; question: string; chart_spec: ChartSpec; chart_dsl?: unknown; chart_dsl_2?: unknown }) => {
     setEditingChartVerification(null);
     if (chart.chart_dsl) {
       try {
         const dsl = chart.chart_dsl as ChartDSL;
         const freshData = await fetchChartData(supabase, dsl, selectedPeriod);
-        const freshSpec = executeDSL(dsl, freshData);
+        let freshSpec = executeDSL(dsl, freshData);
+
+        // Handle dual-series: execute second DSL and merge
+        if (chart.chart_dsl_2) {
+          const dsl2 = chart.chart_dsl_2 as ChartDSL;
+          const freshData2 = await fetchChartData(supabase, dsl2, selectedPeriod);
+          const freshSpec2 = executeDSL(dsl2, freshData2);
+          freshSpec = mergeChartSpecs(freshSpec, freshSpec2);
+        }
+
         // Preserve saved visual overrides but use fresh data
         const liveSpec = { ...freshSpec, title: chart.chart_spec.title, aiNote: chart.chart_spec.aiNote };
-        setEditingChart({ id: chart.id, question: chart.question, chartSpec: liveSpec, chartDsl: chart.chart_dsl });
+        setEditingChart({ id: chart.id, question: chart.question, chartSpec: liveSpec, chartDsl: chart.chart_dsl, chartDsl2: chart.chart_dsl_2 });
         setEditingChartVerification(verifyChartData(liveSpec, freshData));
       } catch (err) {
         console.error("[openChartForEditing] live refresh failed, using stored spec:", err);
-        setEditingChart({ id: chart.id, question: chart.question, chartSpec: chart.chart_spec, chartDsl: chart.chart_dsl });
+        setEditingChart({ id: chart.id, question: chart.question, chartSpec: chart.chart_spec, chartDsl: chart.chart_dsl, chartDsl2: chart.chart_dsl_2 });
       }
     } else {
-      setEditingChart({ id: chart.id, question: chart.question, chartSpec: chart.chart_spec, chartDsl: chart.chart_dsl });
+      setEditingChart({ id: chart.id, question: chart.question, chartSpec: chart.chart_spec, chartDsl: chart.chart_dsl, chartDsl2: chart.chart_dsl_2 });
     }
   }, [selectedPeriod]);
 
@@ -125,7 +135,16 @@ const Trends = () => {
             try {
               const dsl = chart.chart_dsl as ChartDSL;
               const freshData = await fetchChartData(supabase, dsl, selectedPeriod);
-              const freshSpec = executeDSL(dsl, freshData);
+              let freshSpec = executeDSL(dsl, freshData);
+
+              // Handle dual-series: execute second DSL and merge
+              if (chart.chart_dsl_2) {
+                const dsl2 = chart.chart_dsl_2 as ChartDSL;
+                const freshData2 = await fetchChartData(supabase, dsl2, selectedPeriod);
+                const freshSpec2 = executeDSL(dsl2, freshData2);
+                freshSpec = mergeChartSpecs(freshSpec, freshSpec2);
+              }
+
               // Preserve saved visual overrides (title, aiNote) but use fresh data
               results.set(chart.id, {
                 ...freshSpec,

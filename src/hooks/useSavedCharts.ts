@@ -9,6 +9,7 @@ interface SavedChart {
   question: string;
   chart_spec: ChartSpec;
   chart_dsl?: unknown;
+  chart_dsl_2?: unknown;
   sort_order: number;
 }
 
@@ -30,7 +31,7 @@ export function useSavedCharts() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: async ({ question, chartSpec, chartDsl }: { question: string; chartSpec: ChartSpec; chartDsl?: unknown }) => {
+    mutationFn: async ({ question, chartSpec, chartDsl, chartDsl2 }: { question: string; chartSpec: ChartSpec; chartDsl?: unknown; chartDsl2?: unknown }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
@@ -39,6 +40,7 @@ export function useSavedCharts() {
         question,
         chart_spec: chartSpec as any,
         chart_dsl: chartDsl ?? null,
+        chart_dsl_2: chartDsl2 ?? null,
       } as any);
 
       if (error) throw error;
@@ -49,10 +51,10 @@ export function useSavedCharts() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, question, chartSpec, chartDsl }: { id: string; question: string; chartSpec: ChartSpec; chartDsl?: unknown }) => {
+    mutationFn: async ({ id, question, chartSpec, chartDsl, chartDsl2 }: { id: string; question: string; chartSpec: ChartSpec; chartDsl?: unknown; chartDsl2?: unknown }) => {
       const { error } = await supabase
         .from("saved_charts" as any)
-        .update({ question, chart_spec: chartSpec as any, chart_dsl: chartDsl ?? null } as any)
+        .update({ question, chart_spec: chartSpec as any, chart_dsl: chartDsl ?? null, chart_dsl_2: chartDsl2 ?? null } as any)
         .eq("id", id);
 
       if (error) throw error;
