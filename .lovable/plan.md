@@ -1,15 +1,18 @@
 
 
-## Fix bar/line labels for negative values
+## Fix: revert negative-value label positioning
 
-The label renderers always position text at `y - 4` (above the bar top). For negative values, the bar grows downward from the zero line, so `y` is at the zero line and the label overlaps or sits above it instead of below the bar.
+The original `y - 4` is correct for **both** positive and negative bars because:
+- SVG y-axis is inverted (0 = top, increasing = downward)
+- `y - 4` = 4px **above** the bar top
+- For negative bars, Recharts sets `y` at the zero line, so `y - 4` = above zero line ✓
 
-### Change
+The previous change (`y + height + 10`) pushed labels below the bar bottom, off the visible area.
 
-**`src/components/trends/DynamicChart.tsx`**
+### Changes in `src/components/trends/DynamicChart.tsx`
 
-- **`barLabelRenderer`** (line 119): Check if `value < 0`. If so, position at `y + height + 10` (below the bar bottom) instead of `y - 4`.
-- **`lineLabelRenderer`** (line 139): Check if `value < 0`. If so, position at `y + 14` (below the dot) instead of `y - 4`.
+- **`barLabelRenderer`** (~line 120): Revert to `y={y - 4}` for all values, remove `height` destructure
+- **`lineLabelRenderer`** (~line 139): Revert to `y={y - 4}` for all values
 
-This is a two-line change — add a conditional for the `y` coordinate in each renderer based on the sign of `value`.
+This is a straight revert of the last diff.
 
