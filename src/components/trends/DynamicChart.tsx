@@ -291,8 +291,13 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
           name={humanizeLabel(spec.yAxis.label)}
           stroke={color}
           strokeWidth={1.5}
-          dot={{ r: 2, fill: color }}
+          dot={(props: any) => {
+            const val = props.payload?.[dataKey];
+            if (val == null || val === 0) return <g key={props.key} />;
+            return <circle key={props.key} cx={props.cx} cy={props.cy} r={2} fill={color} />;
+          }}
           activeDot={{ r: 3 }}
+          connectNulls
           className="cursor-pointer"
           yAxisId={yAxisId}
         >
@@ -327,8 +332,13 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
           name={humanizeLabel(secondSeries.label)}
           stroke={secondSeries.color}
           strokeWidth={1.5}
-          dot={{ r: 2, fill: secondSeries.color }}
+          dot={(props: any) => {
+            const val = props.payload?.[secondSeries.dataKey];
+            if (val == null || val === 0) return <g key={props.key} />;
+            return <circle key={props.key} cx={props.cx} cy={props.cy} r={2} fill={secondSeries.color} />;
+          }}
           activeDot={{ r: 3 }}
+          connectNulls
           className="cursor-pointer"
           yAxisId={yAxisId}
         />
