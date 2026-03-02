@@ -1,36 +1,24 @@
 
 
-## Better default colors, color pickers, and auto-preview
+## Add background-colored stroke outline to line series
 
-Three changes to `CompareChartBuilder`:
+Recharts' `Line` component doesn't support a native outline/stroke effect, but SVG has a clean trick: render the same line path twice — first as a thicker "shadow" line in the background color, then the actual colored line on top. This creates a halo/knockout effect that makes the line pop over bars.
 
-### 1. Better default colors
+### Approach
 
-Replace the current hard-coded blue/orange with softer colors that match the app's thematic palette. Series A will inherit from the metric's existing color map in `chart-dsl.ts` (blue family for food, purple for exercise). Series B will use a complementary muted tone picked from the same map. The `DUAL_SERIES_COLORS` fallback palette in `chart-merge.ts` will also be updated to softer, more harmonious options.
+**`DynamicChart.tsx`** — For every `Line` element (both Series A and Series B), render a duplicate "outline" `Line` immediately before it:
 
-**Default palette update (`chart-merge.ts`):**
-- Replace the current vivid `DUAL_SERIES_COLORS` (`#E11D48`, `#F59E0B`, etc.) with muted alternatives that fit the app's zinc/blue/purple aesthetic — e.g., `#6366F1` (indigo), `#14B8A6` (teal), `#F59E0B` (amber, kept but used sparingly), `#EC4899` (pink), `#8B5CF6` (violet).
+- Same `dataKey`, `type`, `connectNulls`, `yAxisId`
+- `stroke="hsl(var(--card))"` — uses the card background color from the user's theme (works in both light and dark mode)
+- `strokeWidth={4}` (the visible line is 1.5, so a 4px stroke underneath creates a ~1.25px halo on each side)
+- `dot={false}`, `activeDot={false}`, `isAnimationActive={false}`, no `LabelList`
+- `legendType="none"` and `name=""` so it doesn't appear in tooltips or legends
 
-### 2. Color picker per series
+The actual colored line renders after (on top in SVG z-order) with its existing 1.5px stroke and dots.
 
-Add a color `<input type="color">` swatch to each `SeriesRow`, stored as part of `SeriesConfig`. The chosen color flows into the DSL build and overrides the auto-picked color in the merged spec.
+This applies to both `renderSeriesA()` and `renderSeriesB()` whenever they produce a Line. The outline line is only added when `isDualSeries` is true (single-series line charts don't need it since there are no bars underneath).
 
-**`CompareChartBuilder.tsx` changes:**
-- Add `color: string` to `SeriesConfig`, defaulting to theme-appropriate colors based on source (food → `#3B82F6`, exercise → `#8B5CF6`).
-- Add a small circular `<input type="color" />` at the end of each `SeriesRow` flex row, styled as a 24px circle with the current color as background.
-- When source changes, reset color to the new source default.
-- Pass `colorA` and `colorB` through to the merge step, overriding the auto-pick logic.
+Dots on the colored line also get a subtle outline via the SVG `stroke` property on the `<circle>` — add `stroke="hsl(var(--card))"` and `strokeWidth={1.5}` to the dot render functions.
 
-**`chart-merge.ts` changes:**
-- Add optional `colorOverrides?: { colorA?: string; colorB?: string }` parameter to `mergeChartSpecs`.
-- Use `colorOverrides.colorA` for `spec.color` and `colorOverrides.colorB` for `secondSeries.color` when provided, falling back to current logic.
-
-### 3. Auto-preview on any config change
-
-Remove the explicit "Preview" button. Instead, trigger `handleGenerate` automatically whenever `seriesA`, `seriesB`, `groupBy`, or `period` change.
-
-**`CompareChartBuilder.tsx` changes:**
-- Replace the manual button click with a `useEffect` that calls `handleGenerate()` on mount and whenever the config deps change. This is an appropriate use of `useEffect` — it's synchronizing React state with an external system (fetching data from the database).
-- Remove the "Preview" button from the UI.
-- Show a small inline loading spinner near the chart area instead.
+No other files affected.
 
