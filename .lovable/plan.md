@@ -1,20 +1,28 @@
 
 
-## Fix: treat zero as "no data" in dual-series intersection filter
+## Ensure Line series always renders above Bar series in dual-series charts
 
-### Problem
-
-The `chart-merge.ts` filter currently checks `d.value != null && d.value2 != null`, but exercise metrics like "weight (lbs)" return `0` on rest days rather than `null`. So the filter keeps those rows.
+In Recharts, SVG render order determines z-order — elements rendered later appear on top. Currently `renderSeriesA()` is always called before `renderSeriesB()`, so if Series A is a Bar and Series B is a Line, the line renders on top (good). But if Series A is a Line and Series B is a Bar, the bars cover the line (bad — as shown in your second screenshot).
 
 ### Change
 
-**`src/lib/chart-merge.ts`** — Update the intersection filter on line 75 to also exclude zero values:
+**`DynamicChart.tsx`** (lines 391-393) — In the `ComposedChart` block, render bars first, then lines, regardless of which is Series A or B:
 
-```ts
-.filter(d => d.value != null && d.value !== 0 && d.value2 != null && d.value2 !== 0);
+```tsx
+// Instead of fixed order:
+//   {renderSeriesA()}
+//   {renderSeriesB()}
+
+// Render bars first, lines second:
+const aIsLine = chartType === "line";
+const bIsLine = secondSeries?.chartType === "line";
+
+// Bars go first (rendered behind), lines go last (rendered in front)
+{aIsLine ? renderSeriesB() : renderSeriesA()}
+{aIsLine ? renderSeriesA() : renderSeriesB()}
 ```
 
-This ensures days where either metric is zero (meaning no activity was logged) are excluded from the comparison view. Single-series charts are unaffected since they don't go through `mergeChartSpecs`.
+If both are the same type (both bars or both lines), order doesn't matter, so the fallback keeps Series A first. This ensures the line is always visually on top of the bars regardless of which series the user assigned each chart type to.
 
-One line change, no other files affected.
+One small change in `DynamicChart.tsx`, no other files affected.
 
