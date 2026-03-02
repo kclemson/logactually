@@ -285,24 +285,41 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
     const yAxisId = isDualSeries ? "left" : undefined;
     if (chartType === "line") {
       return (
-        <Line
-          type="monotone"
-          dataKey={dataKey}
-          name={humanizeLabel(spec.yAxis.label)}
-          stroke={color}
-          strokeWidth={1.5}
-          dot={(props: any) => {
-            const val = props.payload?.[dataKey];
-            if (val == null || val === 0) return <g key={props.key} />;
-            return <circle key={props.key} cx={props.cx} cy={props.cy} r={2} fill={color} />;
-          }}
-          activeDot={{ r: 3 }}
-          connectNulls
-          className="cursor-pointer"
-          yAxisId={yAxisId}
-        >
-          {!isDualSeries && <LabelList dataKey={dataKey} content={seriesA.lineRenderer} />}
-        </Line>
+        <>
+          {isDualSeries && (
+            <Line
+              type="monotone"
+              dataKey={dataKey}
+              stroke="hsl(var(--card))"
+              strokeWidth={4}
+              dot={false}
+              activeDot={false}
+              isAnimationActive={false}
+              legendType="none"
+              name=""
+              connectNulls
+              yAxisId={yAxisId}
+            />
+          )}
+          <Line
+            type="monotone"
+            dataKey={dataKey}
+            name={humanizeLabel(spec.yAxis.label)}
+            stroke={color}
+            strokeWidth={1.5}
+            dot={(props: any) => {
+              const val = props.payload?.[dataKey];
+              if (val == null || val === 0) return <g key={props.key} />;
+              return <circle key={props.key} cx={props.cx} cy={props.cy} r={2} fill={color} stroke="hsl(var(--card))" strokeWidth={1.5} />;
+            }}
+            activeDot={{ r: 3 }}
+            connectNulls
+            className="cursor-pointer"
+            yAxisId={yAxisId}
+          >
+            {!isDualSeries && <LabelList dataKey={dataKey} content={seriesA.lineRenderer} />}
+          </Line>
+        </>
       );
     }
     return (
@@ -326,22 +343,37 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
     const yAxisId = secondSeries.useRightAxis ? "right" : "left";
     if (secondSeries.chartType === "line") {
       return (
-        <Line
-          type="monotone"
-          dataKey={secondSeries.dataKey}
-          name={humanizeLabel(secondSeries.label)}
-          stroke={secondSeries.color}
-          strokeWidth={1.5}
-          dot={(props: any) => {
-            const val = props.payload?.[secondSeries.dataKey];
-            if (val == null || val === 0) return <g key={props.key} />;
-            return <circle key={props.key} cx={props.cx} cy={props.cy} r={2} fill={secondSeries.color} />;
-          }}
-          activeDot={{ r: 3 }}
-          connectNulls
-          className="cursor-pointer"
-          yAxisId={yAxisId}
-        />
+        <>
+          <Line
+            type="monotone"
+            dataKey={secondSeries.dataKey}
+            stroke="hsl(var(--card))"
+            strokeWidth={4}
+            dot={false}
+            activeDot={false}
+            isAnimationActive={false}
+            legendType="none"
+            name=""
+            connectNulls
+            yAxisId={yAxisId}
+          />
+          <Line
+            type="monotone"
+            dataKey={secondSeries.dataKey}
+            name={humanizeLabel(secondSeries.label)}
+            stroke={secondSeries.color}
+            strokeWidth={1.5}
+            dot={(props: any) => {
+              const val = props.payload?.[secondSeries.dataKey];
+              if (val == null || val === 0) return <g key={props.key} />;
+              return <circle key={props.key} cx={props.cx} cy={props.cy} r={2} fill={secondSeries.color} stroke="hsl(var(--card))" strokeWidth={1.5} />;
+            }}
+            activeDot={{ r: 3 }}
+            connectNulls
+            className="cursor-pointer"
+            yAxisId={yAxisId}
+          />
+        </>
       );
     }
     return (
