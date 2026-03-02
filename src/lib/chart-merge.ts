@@ -1,7 +1,7 @@
 import type { ChartSpec } from "@/components/trends/DynamicChart";
 
 // Contrasting palette for Series B — picks the first that differs from Series A
-const DUAL_SERIES_COLORS = ["#E11D48", "#F59E0B", "#10B981", "#8B5CF6", "#EC4899"];
+const DUAL_SERIES_COLORS = ["#6366F1", "#14B8A6", "#F59E0B", "#EC4899", "#8B5CF6"];
 
 /** Simple hex → perceived brightness (0-255) */
 function hexBrightness(hex: string): number {
@@ -43,7 +43,7 @@ export interface MergeResult {
 export function mergeChartSpecs(
   specA: ChartSpec,
   specB: ChartSpec,
-  options?: { titleOverride?: string },
+  options?: { titleOverride?: string; colorOverrides?: { colorA?: string; colorB?: string } },
 ): ChartSpec {
   // Build lookup maps by rawDate (or label for weekly)
   const keyField = "rawDate";
@@ -82,8 +82,9 @@ export function mergeChartSpecs(
   const ratio = maxA > 0 && maxB > 0 ? Math.max(maxA / maxB, maxB / maxA) : 1;
   const useRightAxis = ratio > 3;
 
-  // Pick Series B color
-  const colorB = pickContrastColor(specA.color);
+  // Pick colors — use overrides when provided
+  const colorA = options?.colorOverrides?.colorA ?? specA.color;
+  const colorB = options?.colorOverrides?.colorB ?? pickContrastColor(colorA);
 
   const title = options?.titleOverride ?? `${specA.title} vs ${specB.title}`;
 
@@ -92,7 +93,7 @@ export function mergeChartSpecs(
     title,
     xAxis: specA.xAxis,
     yAxis: specA.yAxis,
-    color: specA.color,
+    color: colorA,
     data: mergedData,
     dataKey: "value",
     valueFormat: specA.valueFormat,
