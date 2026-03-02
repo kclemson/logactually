@@ -1,16 +1,19 @@
 
 
-## Skip null/zero data points in dual-series charts
+## Filter dual-series charts to intersection dates only
 
-The fix is straightforward: in `chart-merge.ts`, use `null` (not `0`) for missing data points — which is already happening. The issue is in `DynamicChart.tsx` where Recharts renders dots/bars at `null` values as `0`.
+### Change
 
-### Changes
+**`src/lib/chart-merge.ts`** — After building the merged data array, filter out any entry where either `value` or `value2` is `null`. This ensures only dates with data from both series are shown.
 
-**`DynamicChart.tsx`** — For both `Line` and `Bar` components in dual-series mode:
-- On `Line`: add `connectNulls={true}` so the line skips gaps, and filter dots so they don't render at null values
-- On `Bar`: Recharts naturally skips `null` bars, but we need to ensure the data uses `null` not `0`
+```ts
+// Current: allKeys includes union of both date sets
+// Add: filter merged data to intersection
+const mergedData = allKeys.map(...)
+  .filter(d => d.value != null && d.value2 != null);
+```
 
-**`chart-merge.ts`** — The merge already sets `null` for missing values, which is correct. No changes needed here.
+One-line change in `mergeChartSpecs`. The `connectNulls` and null-dot-skipping logic from the previous fix remains as a safety net but won't be needed for merged charts since there won't be null entries.
 
-The key rendering fix is adding `connectNulls` to Line components and ensuring null values aren't coerced to 0 anywhere in the pipeline. This way, days without strength training simply show no dot/bar for that series while the other series renders normally.
+No other files change — the filtering happens before anything downstream sees the data.
 
