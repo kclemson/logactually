@@ -1,0 +1,1 @@
+ALTER TABLE saved_charts ADD COLUMN chart_dsl_2 jsonb DEFAULT NULL;
