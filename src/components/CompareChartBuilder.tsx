@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchChartData } from "@/lib/chart-data";
@@ -8,6 +8,14 @@ import { executeDSL, FOOD_METRICS, EXERCISE_METRICS } from "@/lib/chart-dsl";
 import { mergeChartSpecs } from "@/lib/chart-merge";
 import { DynamicChart, type ChartSpec } from "@/components/trends/DynamicChart";
 import type { ChartDSL } from "@/lib/chart-types";
+import { EXERCISE_GROUPS, getExerciseDisplayName, getSubtypeDisplayName } from "@/lib/exercise-metadata";
+
+// Exercises that support subtypes
+const EXERCISE_SUBTYPES: Record<string, string[]> = {
+  walk_run: ["walking", "running", "hiking"],
+  cycling: ["indoor", "outdoor"],
+  swimming: ["pool", "open_water"],
+};
 
 const SOURCE_DEFAULT_COLORS: Record<string, string> = {
   food: "#3B82F6",
@@ -43,6 +51,8 @@ interface SeriesConfig {
   metric: string;
   chartType: "bar" | "line";
   color: string;
+  exerciseKey?: string;
+  exerciseSubtype?: string;
 }
 
 interface CompareChartBuilderProps {
@@ -59,6 +69,8 @@ export function CompareChartBuilder({ period, onSave, isSaving, initialDsl, init
     metric: initialDsl?.metric ?? "calories",
     chartType: (initialDsl?.chartType as "bar" | "line") ?? "bar",
     color: SOURCE_DEFAULT_COLORS[initialDsl?.source ?? "food"],
+    exerciseKey: initialDsl?.filter?.exerciseKey,
+    exerciseSubtype: initialDsl?.filter?.exerciseSubtype,
   }));
 
   const [seriesB, setSeriesB] = useState<SeriesConfig>(() => ({
@@ -66,6 +78,8 @@ export function CompareChartBuilder({ period, onSave, isSaving, initialDsl, init
     metric: initialDsl2?.metric ?? "duration_minutes",
     chartType: (initialDsl2?.chartType as "bar" | "line") ?? "line",
     color: SOURCE_DEFAULT_COLORS[initialDsl2?.source ?? "exercise"],
+    exerciseKey: initialDsl2?.filter?.exerciseKey,
+    exerciseSubtype: initialDsl2?.filter?.exerciseSubtype,
   }));
 
   const [groupBy, setGroupBy] = useState<"date" | "week">(
@@ -95,6 +109,7 @@ export function CompareChartBuilder({ period, onSave, isSaving, initialDsl, init
         metric: s.metric,
         groupBy,
         aggregation: "sum",
+        filter: s.exerciseKey ? { exerciseKey: s.exerciseKey, exerciseSubtype: s.exerciseSubtype } : undefined,
       });
 
       const d1 = buildDsl(seriesA);
@@ -130,9 +145,18 @@ export function CompareChartBuilder({ period, onSave, isSaving, initialDsl, init
 
   const handleSave = () => {
     if (!preview || !dslA || !dslB) return;
-    const question = `${humanizeMetric(seriesA.metric)} vs ${humanizeMetric(seriesB.metric)}`;
+    const question = `${seriesLabel(seriesA)} vs ${seriesLabel(seriesB)}`;
     onSave({ question, chartSpec: preview, chartDsl: dslA, chartDsl2: dslB });
   };
+
+  /** Build a human label for a series including any exercise filter */
+  function seriesLabel(s: SeriesConfig): string {
+    const base = humanizeMetric(s.metric);
+    if (!s.exerciseKey) return base;
+    const subLabel = s.exerciseSubtype ? getSubtypeDisplayName(s.exerciseSubtype) : null;
+    const exLabel = subLabel || getExerciseDisplayName(s.exerciseKey);
+    return `${base} (${exLabel})`;
+  }
 
   const metricsFor = (source: "food" | "exercise") =>
     source === "food" ? FOOD_METRICS : EXERCISE_METRICS;
@@ -148,6 +172,8 @@ export function CompareChartBuilder({ period, onSave, isSaving, initialDsl, init
       source: newSource,
       metric: metrics[0],
       color: SOURCE_DEFAULT_COLORS[newSource],
+      exerciseKey: undefined,
+      exerciseSubtype: undefined,
     });
   };
 
@@ -159,48 +185,98 @@ export function CompareChartBuilder({ period, onSave, isSaving, initialDsl, init
     label: string;
     config: SeriesConfig;
     onChange: (c: SeriesConfig) => void;
-  }) => (
-    <div className="space-y-1.5">
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <div className="flex gap-1.5 items-center">
-        <Select value={config.source} onValueChange={(v) => handleSourceChange(config, v as "food" | "exercise", onChange)}>
-          <SelectTrigger className="h-8 text-xs flex-1 min-w-0">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="food">Food</SelectItem>
-            <SelectItem value="exercise">Exercise</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={config.metric} onValueChange={(v) => onChange({ ...config, metric: v })}>
-          <SelectTrigger className="h-8 text-xs flex-[2] min-w-0">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {metricsFor(config.source).map((m) => (
-              <SelectItem key={m} value={m}>{humanizeMetric(m)}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={config.chartType} onValueChange={(v) => onChange({ ...config, chartType: v as "bar" | "line" })}>
-          <SelectTrigger className="h-8 text-xs w-[70px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="bar">Bar</SelectItem>
-            <SelectItem value="line">Line</SelectItem>
-          </SelectContent>
-        </Select>
-        <input
-          type="color"
-          value={config.color}
-          onChange={(e) => onChange({ ...config, color: e.target.value })}
-          className="w-6 h-6 rounded-full border border-border cursor-pointer p-0 bg-transparent [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-none [&::-moz-color-swatch]:rounded-full [&::-moz-color-swatch]:border-none"
-          title={`${label} color`}
-        />
+  }) => {
+    const subtypes = config.exerciseKey ? EXERCISE_SUBTYPES[config.exerciseKey] : undefined;
+
+    return (
+      <div className="space-y-1.5">
+        <p className="text-xs font-medium text-muted-foreground">{label}</p>
+        <div className="flex gap-1.5 items-center">
+          <Select value={config.source} onValueChange={(v) => handleSourceChange(config, v as "food" | "exercise", onChange)}>
+            <SelectTrigger className="h-8 text-xs flex-1 min-w-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="food">Food</SelectItem>
+              <SelectItem value="exercise">Exercise</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={config.metric} onValueChange={(v) => onChange({ ...config, metric: v })}>
+            <SelectTrigger className="h-8 text-xs flex-[2] min-w-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {metricsFor(config.source).map((m) => (
+                <SelectItem key={m} value={m}>{humanizeMetric(m)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={config.chartType} onValueChange={(v) => onChange({ ...config, chartType: v as "bar" | "line" })}>
+            <SelectTrigger className="h-8 text-xs w-[70px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="bar">Bar</SelectItem>
+              <SelectItem value="line">Line</SelectItem>
+            </SelectContent>
+          </Select>
+          <input
+            type="color"
+            value={config.color}
+            onChange={(e) => onChange({ ...config, color: e.target.value })}
+            className="w-6 h-6 rounded-full border border-border cursor-pointer p-0 bg-transparent [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-none [&::-moz-color-swatch]:rounded-full [&::-moz-color-swatch]:border-none"
+            title={`${label} color`}
+          />
+        </div>
+        {config.source === "exercise" && (
+          <div className="flex gap-1.5 items-center pl-0">
+            <Select
+              value={config.exerciseKey ?? "__all__"}
+              onValueChange={(v) => onChange({
+                ...config,
+                exerciseKey: v === "__all__" ? undefined : v,
+                exerciseSubtype: undefined,
+              })}
+            >
+              <SelectTrigger className="h-7 text-xs flex-1 min-w-0">
+                <SelectValue placeholder="All exercises" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All exercises</SelectItem>
+                {EXERCISE_GROUPS.map((g) => (
+                  <SelectGroup key={g.label}>
+                    <SelectLabel className="text-[10px] text-muted-foreground px-2 py-1">{g.label}</SelectLabel>
+                    {g.keys.map((k) => (
+                      <SelectItem key={k} value={k}>{getExerciseDisplayName(k)}</SelectItem>
+                    ))}
+                  </SelectGroup>
+                ))}
+              </SelectContent>
+            </Select>
+            {subtypes && (
+              <Select
+                value={config.exerciseSubtype ?? "__all__"}
+                onValueChange={(v) => onChange({
+                  ...config,
+                  exerciseSubtype: v === "__all__" ? undefined : v,
+                })}
+              >
+                <SelectTrigger className="h-7 text-xs flex-1 min-w-0">
+                  <SelectValue placeholder="All subtypes" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All subtypes</SelectItem>
+                  {subtypes.map((st) => (
+                    <SelectItem key={st} value={st}>{getSubtypeDisplayName(st)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="space-y-3">
