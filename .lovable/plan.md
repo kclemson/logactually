@@ -1,10 +1,34 @@
 
 
-## Remove dots from line series in dual-series charts
+## Add exercise filter to Compare Chart Builder
 
-The outline/halo SVG trick works well for the line path itself, but the dots (circles at each data point) break the clean look — they create visual clutter and the outline around each dot doesn't look as polished as the line outline. Since the tooltip already shows the exact value on hover/tap, the dots aren't needed for readability.
+The ChartDSL already supports `filter.exerciseKey` and `filter.exerciseSubtype`, and `fetchChartData` already applies these filters to queries. The compare builder simply doesn't expose them in the UI.
 
-### Change
+### Approach: conditional exercise picker per series
 
-**`src/components/trends/DynamicChart.tsx`** — In both `renderSeriesA()` and `renderSeriesB()`, when rendering a line in dual-series mode (`isDualSeries`), set `dot={false}` on the main colored `Line` component. Keep `activeDot={{ r: 3 }}` so a dot still appears on hover to indicate which point the tooltip refers to. Single-series line charts keep their existing dot behavior unchanged.
+When a series has `source === "exercise"`, show an optional "Exercise" dropdown that lets the user scope to a specific exercise (e.g., walk_run) and an optional "Subtype" dropdown (e.g., walking, running). When left on "All", no filter is applied — same as today.
+
+### Changes
+
+**`src/components/CompareChartBuilder.tsx`**:
+
+1. Expand `SeriesConfig` to include optional `exerciseKey?: string` and `exerciseSubtype?: string`.
+
+2. In `SeriesRow`, when `config.source === "exercise"`, render an additional "Exercise" select after the metric picker. Options: "All" (no filter) plus the list of known exercise keys from `EXERCISE_KEYS` (imported from `exercise-metadata.ts`). When an exercise with subtypes is selected (e.g., `walk_run`), show a second "Subtype" select with options like "All", "walking", "running", "hiking".
+
+3. In `handleGenerate`, pass the filter into the built DSL:
+   ```ts
+   filter: s.exerciseKey ? { exerciseKey: s.exerciseKey, exerciseSubtype: s.exerciseSubtype } : undefined
+   ```
+
+4. Update the auto-generated title to include the exercise/subtype name when filtered (e.g., "Heart rate (walking) vs Heart rate (running)").
+
+5. When source changes away from "exercise", clear `exerciseKey` and `exerciseSubtype`.
+
+**Data source for exercise list**: Import the canonical exercise registry from `exercise-metadata.ts` to populate the dropdown. Need to check what's exported there.
+
+### What this enables
+
+- Case #2: HR on walks vs HR on runs — Series A: exercise / heart_rate / filter walk_run:walking, Series B: exercise / heart_rate / filter walk_run:running
+- Case #9: Run distance vs run duration — Series A: exercise / distance_miles / filter walk_run:running, Series B: exercise / duration_minutes / filter walk_run:running
 
