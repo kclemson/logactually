@@ -229,8 +229,8 @@ async function fetchExerciseData(
 
     const date = row.logged_date;
     const meta = row.exercise_metadata as Record<string, any> | null;
-    const rowCaloriesBurned = row.calories_burned_override ?? row.calories_burned_estimate ?? meta?.calories_burned ?? 0;
-    const rowHeartRate = row.heart_rate ?? meta?.heart_rate ?? null;
+    const rowCaloriesBurned = Number(row.calories_burned_override ?? row.calories_burned_estimate ?? meta?.calories_burned ?? 0) || 0;
+    const rowHeartRate = Number(row.heart_rate ?? meta?.heart_rate ?? null) || null;
 
     const setTotals: ExerciseDayTotals = {
       sets: 1,
