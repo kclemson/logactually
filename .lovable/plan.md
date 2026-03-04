@@ -1,34 +1,53 @@
 
 
-## Add exercise filter to Compare Chart Builder
+## Single-Series Chart Builder
 
-The ChartDSL already supports `filter.exerciseKey` and `filter.exerciseSubtype`, and `fetchChartData` already applies these filters to queries. The compare builder simply doesn't expose them in the UI.
+Replace the AI text prompt as the **default** single-series creation path with a deterministic form UI — same pattern as `CompareChartBuilder`. The AI prompt becomes an optional "Ask AI" escape hatch for complex requests.
 
-### Approach: conditional exercise picker per series
+### UI Layout (inside `CustomChartDialog` when `dialogMode === "single"`)
 
-When a series has `source === "exercise"`, show an optional "Exercise" dropdown that lets the user scope to a specific exercise (e.g., walk_run) and an optional "Subtype" dropdown (e.g., walking, running). When left on "All", no filter is applied — same as today.
+New component: `SingleChartBuilder` — mirrors `CompareChartBuilder`'s auto-preview pattern.
 
-### Changes
+**Controls (top to bottom):**
 
-**`src/components/CompareChartBuilder.tsx`**:
+1. **Source** — Food / Exercise (select)
+2. **Metric** — from `FOOD_METRICS` or `EXERCISE_METRICS` (select)
+3. **Exercise filter** — Exercise key + optional subtype (conditional, same as compare builder)
+4. **Chart type** — Bar / Line / Area (select)
+5. **Group by** — Daily / Weekly / Day of week / Hour of day / By item / By category (select)
+6. **Aggregation** — Sum / Average / Max / Min / Count (select, default: sum)
+7. **Rolling average** — None / 3 / 5 / 7 / 14 / 30 (select, only visible when group by is date or week)
+8. **Color** — color picker dot (same as compare builder)
 
-1. Expand `SeriesConfig` to include optional `exerciseKey?: string` and `exerciseSubtype?: string`.
+Auto-preview regenerates on any change (same `useCallback` + `useEffect` pattern). Save button below the preview.
 
-2. In `SeriesRow`, when `config.source === "exercise"`, render an additional "Exercise" select after the metric picker. Options: "All" (no filter) plus the list of known exercise keys from `EXERCISE_KEYS` (imported from `exercise-metadata.ts`). When an exercise with subtypes is selected (e.g., `walk_run`), show a second "Subtype" select with options like "All", "walking", "running", "hiking".
+**"Ask AI" escape hatch**: Small text link below the builder controls — "Or describe a chart with AI" — switches to the current text prompt + chips UI. This covers `classify`, `cumulative`, `offset`, `compare`, `derivedMetric`, and other advanced DSL features.
 
-3. In `handleGenerate`, pass the filter into the built DSL:
-   ```ts
-   filter: s.exerciseKey ? { exerciseKey: s.exerciseKey, exerciseSubtype: s.exerciseSubtype } : undefined
-   ```
+### Technical approach
 
-4. Update the auto-generated title to include the exercise/subtype name when filtered (e.g., "Heart rate (walking) vs Heart rate (running)").
+- **New file**: `src/components/SingleChartBuilder.tsx`
+- Props match `CompareChartBuilder`: `period`, `onSave`, `isSaving`, plus optional `initialDsl` for editing
+- Builds a `ChartDSL` from the form state, calls `fetchChartData` + `executeDSL` client-side (no AI call)
+- `onSave` returns `{ question: string, chartSpec, chartDsl }` (auto-generated question from selections)
 
-5. When source changes away from "exercise", clear `exerciseKey` and `exerciseSubtype`.
+### Changes to `CustomChartDialog.tsx`
 
-**Data source for exercise list**: Import the canonical exercise registry from `exercise-metadata.ts` to populate the dropdown. Need to check what's exported there.
+- When `dialogMode === "single"`, render a new layout with two sub-modes:
+  - **"Builder"** (default) — renders `SingleChartBuilder`
+  - **"Ask AI"** — renders the existing text prompt + chips UI (current code, extracted as-is)
+- Toggle between them via a small link/button, not a prominent toggle
+- When editing an existing chart that has a `chartDsl`, pre-populate the builder from it
+- When editing a chart without `chartDsl` (v1), open in "Ask AI" mode
 
-### What this enables
+### What this does NOT cover (left to "Ask AI")
 
-- Case #2: HR on walks vs HR on runs — Series A: exercise / heart_rate / filter walk_run:walking, Series B: exercise / heart_rate / filter walk_run:running
-- Case #9: Run distance vs run duration — Series A: exercise / distance_miles / filter walk_run:running, Series B: exercise / duration_minutes / filter walk_run:running
+- `classify` / `dayClassification` grouping
+- `derivedMetric` (protein_pct, net_carbs, etc.)
+- `transform: "cumulative"`
+- `offset` (TDEE baseline subtraction)
+- `compare` (second metric on same chart — that's the Compare tab)
+- `filter.dayOfWeek` and `filter.category`
+- `sort` / `limit`
+
+These are the ~20% of cases where natural language genuinely helps.
 
