@@ -29,22 +29,22 @@ export function useFoodEntries(date?: string) {
         const rawItems = Array.isArray(entry.food_items) ? (entry.food_items as unknown as any[]) : [];
         // Migrate legacy name+portion to description, assign UIDs
         const itemsWithIds: FoodItem[] = rawItems.map((item) => {
-          const fiber = item.fiber || 0;
-          const carbs = item.carbs || 0;
+          const fiber = Number(item.fiber) || 0;
+          const carbs = Number(item.carbs) || 0;
           return {
             // Migrate legacy format: if 'description' exists use it, else merge name+portion
             description: item.description || (item.portion ? `${item.name} (${item.portion})` : (item.name || '')),
             portion: item.portion,
-            calories: item.calories || 0,
-            protein: item.protein || 0,
+            calories: Number(item.calories) || 0,
+            protein: Number(item.protein) || 0,
             carbs: carbs,
             fiber: fiber,
-            net_carbs: item.net_carbs ?? Math.max(0, carbs - fiber),
-            sugar: item.sugar || 0,
-            fat: item.fat || 0,
-            saturated_fat: item.saturated_fat || 0,
-            sodium: item.sodium || 0,
-            cholesterol: item.cholesterol || 0,
+            net_carbs: item.net_carbs != null ? Number(item.net_carbs) : Math.max(0, carbs - fiber),
+            sugar: Number(item.sugar) || 0,
+            fat: Number(item.fat) || 0,
+            saturated_fat: Number(item.saturated_fat) || 0,
+            sodium: Number(item.sodium) || 0,
+            cholesterol: Number(item.cholesterol) || 0,
             uid: item.uid || crypto.randomUUID(),
             entryId: entry.id,
             editedFields: item.editedFields,

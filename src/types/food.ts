@@ -89,15 +89,15 @@ export function scaleMacrosByCalories(
 export function calculateTotals(items: FoodItem[]): DailyTotals {
   return items.reduce(
     (acc, item) => ({
-      calories: acc.calories + (item.calories || 0),
-      protein: acc.protein + (item.protein || 0),
-      carbs: acc.carbs + (item.carbs || 0),
-      fiber: acc.fiber + (item.fiber || 0),
-      sugar: acc.sugar + (item.sugar || 0),
-      fat: acc.fat + (item.fat || 0),
-      saturated_fat: acc.saturated_fat + (item.saturated_fat || 0),
-      sodium: acc.sodium + (item.sodium || 0),
-      cholesterol: acc.cholesterol + (item.cholesterol || 0),
+      calories: acc.calories + Number(item.calories || 0),
+      protein: acc.protein + Number(item.protein || 0),
+      carbs: acc.carbs + Number(item.carbs || 0),
+      fiber: acc.fiber + Number(item.fiber || 0),
+      sugar: acc.sugar + Number(item.sugar || 0),
+      fat: acc.fat + Number(item.fat || 0),
+      saturated_fat: acc.saturated_fat + Number(item.saturated_fat || 0),
+      sodium: acc.sodium + Number(item.sodium || 0),
+      cholesterol: acc.cholesterol + Number(item.cholesterol || 0),
     }),
     { calories: 0, protein: 0, carbs: 0, fiber: 0, sugar: 0, fat: 0, saturated_fat: 0, sodium: 0, cholesterol: 0 }
   );
