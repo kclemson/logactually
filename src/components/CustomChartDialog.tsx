@@ -9,6 +9,7 @@ import { useSavedCharts } from "@/hooks/useSavedCharts";
 import { DynamicChart, type ChartSpec } from "@/components/trends/DynamicChart";
 import { verifyChartData, type VerificationResult } from "@/lib/chart-verification";
 import { CompareChartBuilder } from "@/components/CompareChartBuilder";
+import { SingleChartBuilder } from "@/components/SingleChartBuilder";
 import type { ChartDSL } from "@/lib/chart-types";
 
 interface CustomChartDialogProps {
@@ -64,6 +65,14 @@ function CustomChartDialogInner({
 }) {
   const [dialogMode, setDialogMode] = useState<"single" | "compare">(
     () => initialChart?.chartDsl2 ? "compare" : "single",
+  );
+  // Sub-mode for single: "builder" (default) or "ai" (text prompt)
+  const [singleSubMode, setSingleSubMode] = useState<"builder" | "ai">(
+    () => {
+      // If editing an existing chart without a DSL (v1 legacy), default to AI mode
+      if (initialChart && !initialChart.chartDsl) return "ai";
+      return "builder";
+    },
   );
   const [input, setInput] = useState("");
   const [mode, setMode] = useState<"v1" | "v2">("v2");
@@ -245,7 +254,7 @@ function CustomChartDialogInner({
         <DialogTitle className="text-sm font-medium flex items-center gap-1.5">
           <BarChart3 className="h-4 w-4" />
           {isEditing ? "Edit Chart" : "Create Chart"}
-          {showChips && (
+          {showChips && singleSubMode === "ai" && dialogMode === "single" && (
             <button
               onClick={refreshChips}
               className="absolute right-12 top-3.5 p-1.5 rounded-full border border-border bg-muted/50 hover:bg-muted active:scale-75 transition-all duration-150"
@@ -300,8 +309,42 @@ function CustomChartDialogInner({
             initialDsl={initialChart?.chartDsl2 ? (initialChart.chartDsl as ChartDSL) : undefined}
             initialDsl2={initialChart?.chartDsl2 as ChartDSL | undefined}
           />
+        ) : singleSubMode === "builder" ? (
+          <div className="space-y-2.5">
+            <SingleChartBuilder
+              period={period}
+              onSave={({ question, chartSpec, chartDsl }) => {
+                if (editingIdRef.current) {
+                  updateMutation.mutate(
+                    { id: editingIdRef.current, question, chartSpec, chartDsl },
+                    { onSuccess: () => onOpenChange(false) },
+                  );
+                } else {
+                  saveMutation.mutate(
+                    { question, chartSpec, chartDsl },
+                    { onSuccess: () => onOpenChange(false) },
+                  );
+                }
+              }}
+              isSaving={saveMutation.isPending || updateMutation.isPending}
+              initialDsl={initialChart?.chartDsl && !initialChart.chartDsl2 ? (initialChart.chartDsl as ChartDSL) : undefined}
+            />
+            <button
+              onClick={() => setSingleSubMode("ai")}
+              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+            >
+              Or describe a chart with AI
+            </button>
+          </div>
         ) : (
         <div className="space-y-3 relative">
+          <button
+            onClick={() => setSingleSubMode("builder")}
+            className="text-[11px] text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+          >
+            ← Back to chart builder
+          </button>
+
           {/* Loading overlay — covers existing content instead of collapsing */}
           {showOverlay && (
             <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-md">
