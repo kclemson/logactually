@@ -1,42 +1,31 @@
 
 
-## Fix: String-typed numbers in food macro totals
+## Fix: Heart rate double-counting in chart aggregation
 
 ### Root cause
 
-The AI model occasionally returns JSON with string-typed numbers (e.g., `"protein": "25"` instead of `"protein": 25`). The `useAnalyzeFood` hook spreads the AI response items verbatim — no numeric coercion. These strings get saved to the `food_items` JSONB column. When `calculateTotals()` sums them, JavaScript's `+` operator concatenates strings instead of adding numbers: `0 + "25" + "31" + "5"` → `"025315"`.
-
-### Fix (three layers)
-
-**1. `src/hooks/useAnalyzeFood.ts`** — Coerce at ingestion (prevents bad data from being written)
-
-When mapping AI response items (line 57), explicitly `Number()` all numeric fields instead of spreading raw:
-
+In `chart-data.ts` line 233:
 ```ts
-const itemsWithIds = data.food_items.map((item) => ({
-  description: item.description || '',
-  portion: item.portion,
-  calories: Number(item.calories) || 0,
-  protein: Number(item.protein) || 0,
-  carbs: Number(item.carbs) || 0,
-  // ... all numeric fields
-  uid: crypto.randomUUID(),
-}));
+const rowHeartRate = row.heart_rate ?? meta?.heart_rate ?? null;
 ```
 
-**2. `src/types/food.ts` — `calculateTotals()`** — Defense-in-depth for any data already stored as strings
+When `row.heart_rate` is NULL (column not populated), it falls back to `meta?.heart_rate` from the JSONB. JSONB values can be strings (e.g., `"114"`). When a string heart rate is added to a numeric sum (`114 + "114"` → `"114114"`), JavaScript string concatenation corrupts the entire day's total. The post-processing division then produces astronomically wrong averages.
 
-Wrap each accumulator addition with `Number()`:
+There's at least 1 walking entry in the current data where the column is NULL but the JSONB has the value.
+
+### Fix
+
+**`src/lib/chart-data.ts`** — Coerce `rowHeartRate` to a number:
 
 ```ts
-protein: acc.protein + Number(item.protein || 0),
+const rowHeartRate = Number(row.heart_rate ?? meta?.heart_rate ?? null) || null;
 ```
 
-**3. `src/hooks/useFoodEntries.ts` and `src/hooks/useRecentFoodEntries.ts`** — Coerce during JSONB parsing
+This ensures the JSONB fallback value is always numeric. `Number(null)` → 0, caught by `|| null`. `Number("114")` → 114. This is the same defensive pattern we just applied to food macros.
 
-Both hooks parse raw JSONB items. Change `item.protein || 0` to `Number(item.protein) || 0` for all numeric fields. This fixes display for any existing bad data already in the database.
+Also apply the same `Number()` coercion to all other JSONB fallback reads in this function (`rowCaloriesBurned` at line 232) as defense-in-depth.
 
 ### Scope
 
-Four files, small changes each. No DB migration needed — the stored JSONB strings will be correctly interpreted going forward.
+One file, two lines changed.
 
