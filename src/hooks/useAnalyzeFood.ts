@@ -54,8 +54,21 @@ export function useAnalyzeFood() {
       }
 
       // Assign unique IDs to each food item for reliable change tracking
-      const itemsWithIds = data.food_items.map((item: Omit<FoodItem, 'uid'>) => ({
-        ...item,
+      const itemsWithIds = data.food_items.map((item: any) => ({
+        description: item.description || '',
+        portion: item.portion,
+        calories: Number(item.calories) || 0,
+        protein: Number(item.protein) || 0,
+        carbs: Number(item.carbs) || 0,
+        fiber: Number(item.fiber) || 0,
+        net_carbs: Number(item.net_carbs) || 0,
+        sugar: Number(item.sugar) || 0,
+        fat: Number(item.fat) || 0,
+        saturated_fat: Number(item.saturated_fat) || 0,
+        sodium: Number(item.sodium) || 0,
+        cholesterol: Number(item.cholesterol) || 0,
+        confidence: item.confidence,
+        source_note: item.source_note,
         uid: crypto.randomUUID(),
       }));
 
