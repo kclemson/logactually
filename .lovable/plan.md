@@ -1,46 +1,47 @@
 
 
-## Customizable Macro Display Slots — Phase 1
+## Issue: Calorie-edit preview doesn't use `displayMacros`
 
-Make the hardcoded protein/carbs/fat display dynamic via a `displayMacros` setting that defaults to `['protein', 'carbs', 'fat']`. No UI to change it yet — Phase 1 just wires the plumbing so we can test for regressions before adding customizability.
+### What's wrong
 
-### Key architectural decision: Trends page data availability
+Line 843-844 in `FoodItemsTable.tsx`:
+```ts
+previewMacros 
+  ? `${previewMacros.protein}/${previewMacros.carbs}/${previewMacros.fat}`
+  : displayMacros.map(key => Math.round(getMacroValue(item, key))).join('/')
+```
 
-The `food_entries` table only has `total_calories`, `total_protein`, `total_carbs`, `total_fat` as columns. Fiber, sugar, sodium, etc. live only inside the `food_items` JSONB array.
+The non-editing path (line 845) correctly uses `displayMacros`. But the editing preview path (line 844) hardcodes `protein/carbs/fat` from the `ScaledMacros` type. If a user later configures `['protein', 'fiber', 'fat']`, the preview during calorie editing would show carbs instead of fiber.
 
-- **FoodLog page**: Already works — `calculateTotals(displayItems)` computes all 9 macros from JSONB items.
-- **Trends page**: Queries only the 4 top-level columns. For non-P/C/F macros, we'd need to fetch `food_items` JSONB and sum client-side.
+### The deeper question: should calorie scaling affect non-P/C/F macros?
 
-**Phase 1 approach**: Default is P/C/F, so no Trends query change yet. We parameterize the chart definitions so they read from `displayMacros`, but the data pipeline stays the same. Phase 2 (settings UI) will also handle fetching `food_items` in the Trends query when non-standard macros are selected.
+`scaleMacrosByCalories` proportionally scales protein, carbs, and fat because those are the calorie-contributing macronutrients. Fiber, sodium, cholesterol don't contribute to calories — scaling them proportionally when calories change would be scientifically incorrect.
 
----
+**Decision**: When editing calories, the preview should still show the *user's chosen display macros*, but only the P/C/F values should actually change. Non-caloric macros (fiber, sodium, etc.) stay at their original values in the preview.
 
-### New file: `src/lib/macro-display.ts`
+### Fix (one file)
 
-Metadata map, default tuple, and a `getMacroValue(item, key)` helper (handles `net_carbs = carbs - fiber` derivation). Available keys: `protein`, `carbs`, `fat`, `fiber`, `sugar`, `net_carbs`, `saturated_fat`, `sodium`, `cholesterol`.
+**`src/components/FoodItemsTable.tsx`** — Change the preview rendering (line 843-844) to:
 
-### Files to modify (6 files)
+```ts
+previewMacros 
+  ? displayMacros.map(key => {
+      // scaleMacrosByCalories only scales P/C/F — use scaled value if available, original otherwise
+      if (key in previewMacros) return Math.round((previewMacros as any)[key]);
+      return Math.round(getMacroValue(item, key));
+    }).join('/')
+  : displayMacros.map(key => Math.round(getMacroValue(item, key))).join('/')
+```
 
-| File | Change |
-|------|--------|
-| **`useUserSettings.ts`** | Add `displayMacros: [MacroKey, MacroKey, MacroKey]` field, default `['protein', 'carbs', 'fat']` |
-| **`MacroSummary.tsx`** | Accept optional `displayMacros` prop; build items array dynamically via `getMacroValue` + `MACRO_META`. Calories row stays first (not configurable). |
-| **`FoodItemsTable.tsx`** | Accept optional `displayMacros` prop. **7 locations** updated: (1) header "Protein/Carbs/Fat" → joined labels, (2) mini header "P/C/F" → joined short labels, (3) TotalsRow values, (4) TotalsRow percentages — hidden when not standard P/C/F, (5–6) two collapsed group row displays, (7) per-item rows (editable + read-only). Prop is optional, defaults to `DEFAULT_DISPLAY_MACROS`. |
-| **`FoodEntryCard.tsx`** | Read `displayMacros` from `useUserSettings`, pass to `MacroSummary` and `FoodItemsTable` |
-| **`FoodLog.tsx`** | Read `settings.displayMacros`, pass to `FoodItemsTable` |
-| **`Trends.tsx`** | Build mini-chart `charts` array from `displayMacros` instead of hardcoding. The macro % chart and stacked chart stay hardcoded to P/C/F (calorie-composition only makes sense for the big 3). |
+This shows the user's chosen macros, uses the scaled value for protein/carbs/fat, and shows original values for non-caloric macros.
 
-### Callers that DON'T need changes
+Similarly, the `onSaveNumeric` callback (lines 139-147) saves only P/C/F updates regardless of display — this is correct behavior and doesn't need changing. The display macros are a *view* concern; the underlying data model always stores all macros.
 
-`SaveMealDialog`, `SavedMealRow`, `CreateMealDialog`, `DemoPreviewDialog` — these use `FoodItemsTable` in preview contexts where P/C/F is always appropriate. The prop is optional and falls back to the default.
+### Impact on Phase 1
 
-### Design details
-
-- **`scaleMacrosByCalories`**: No change needed. It operates on P/C/F for calorie proportion math. The display layer just picks the right 3 values to show.
-- **Percentage row**: Uses cal-per-gram (P×4, C×4, F×9) which only makes sense for the standard trio. When `displayMacros` differs from default, the percentage row is hidden (already controlled by `showMacroPercentages`).
-- **`Settings.test.tsx`**: Add `displayMacros` to mock settings so tests don't break.
+With the default `['protein', 'carbs', 'fat']`, every key is in `previewMacros`, so behavior is identical to today. No regression risk, but the code is now correct for Phase 2.
 
 ### Scope
 
-1 new file, 6 modified files. Display-layer only — no database migration.
+One file, one code block changed (~5 lines).
 
