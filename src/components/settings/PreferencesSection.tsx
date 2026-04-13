@@ -8,6 +8,7 @@ import { CalorieBurnDialog } from '@/components/CalorieBurnDialog';
 import { CalorieTargetDialog } from '@/components/CalorieTargetDialog';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import type { UserSettings } from '@/hooks/useUserSettings';
+import { MACRO_META, MacroKey, DEFAULT_DISPLAY_MACROS, isStandardMacros } from '@/lib/macro-display';
 
 
 interface PreferencesSectionProps {
