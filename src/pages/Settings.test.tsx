@@ -29,6 +29,7 @@ let mockSettings = {
   bodyComposition: null,
   defaultIntensity: null,
   weekStartDay: 0 as const,
+  displayMacros: ['protein', 'carbs', 'fat'] as const,
 };
 
 vi.mock('@/hooks/useAuth', () => ({
@@ -149,6 +150,7 @@ describe('Settings smoke test', () => {
       bodyComposition: null,
       defaultIntensity: null,
       weekStartDay: 0,
+      displayMacros: ['protein', 'carbs', 'fat'],
     };
   });
 
