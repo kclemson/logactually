@@ -310,7 +310,7 @@ export function FoodItemsTable({
           {selectable && <span></span>}
           <span className={cn("px-1", showEntryDividers && "pl-4")}></span>
           <span className="px-1 text-center">Calories</span>
-          <span className="px-1 text-center">{displayMacros.map(key => MACRO_META[key].label).join('/')}</span>
+          <span className="px-1 text-center"><span className="px-1 text-center">{displayMacros.map(key => MACRO_META[key].headerLabel).join('/')}</span></span>
           {hasDeleteColumn && <span></span>}
         </div>
       )}
