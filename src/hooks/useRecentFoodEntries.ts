@@ -45,7 +45,7 @@ export function useRecentFoodEntries(daysBack = 90) {
             protein: Number(item.protein) || 0,
             carbs: carbs,
             fiber: fiber,
-            net_carbs: item.net_carbs != null ? Number(item.net_carbs) : Math.max(0, carbs - fiber),
+            net_carbs: Math.max(0, carbs - fiber),
             sugar: Number(item.sugar) || 0,
             fat: Number(item.fat) || 0,
             saturated_fat: Number(item.saturated_fat) || 0,
