@@ -22,6 +22,7 @@ type ChangelogEntry = {
 
 // prettier-ignore
 const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+{ date: "Apr-13", text: "Added configurable display macros — choose which 3 macros (protein, carbs, fat, fiber, sugar, net carbs, saturated fat, sodium) appear in your food tables and charts. Set your preference in Settings under Display Macros.", image: "display-macros.png" },
 { date: "Feb-27", text: "Easily re-log some food that you've logged before, just start typing and it'll show a dropdown with matching items or saved meals.", image: "typeahead-saved-meals.png" },
 { date: "Feb-19", text: "Updated the feedback form on the Help page — you can now attach a photo from your gallery or take a screenshot of any page in the app directly from the feedback form.", image: "feedback-attachments.png" },
 { date: "Feb-18", text: "Added the ability to pin AI responses from 'Ask AI' to refer to later.", image: "pinned-chats.png" },
