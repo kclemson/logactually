@@ -534,10 +534,8 @@ export function FoodItemsTable({
           if (groupHeader && isCurrentExpanded) {
             const { boundary, groupName } = groupHeader;
             const groupItems = items.slice(boundary.startIndex, boundary.endIndex + 1);
-            const groupCalories = groupItems.reduce((sum, gi) => sum + gi.calories, 0);
-            const groupProtein = groupItems.reduce((sum, gi) => sum + gi.protein, 0);
-            const groupCarbs = groupItems.reduce((sum, gi) => sum + gi.carbs, 0);
-            const groupFat = groupItems.reduce((sum, gi) => sum + gi.fat, 0);
+            const groupTotals = calculateTotals(groupItems);
+            const groupCalories = groupTotals.calories;
             const entryIsNew = isEntryNew(currentEntryId, newEntryIds);
             const highlightClasses = getEntryHighlightClasses(entryIsNew, true, false);
 
@@ -584,7 +582,7 @@ export function FoodItemsTable({
                     {Math.round(groupCalories)}
                   </span>
                   <span className={cn("px-1 py-1 text-center text-muted-foreground", compact && "text-xs")}>
-                    {Math.round(groupProtein)}/{Math.round(groupCarbs)}/{Math.round(groupFat)}
+                    {displayMacros.map(key => Math.round(getMacroValue(groupTotals, key))).join('/')}
                   </span>
                   {hasDeleteColumn && (
                     <AlertDialog>
