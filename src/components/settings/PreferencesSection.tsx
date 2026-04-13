@@ -209,10 +209,10 @@ export function PreferencesSection({ settings, updateSettings }: PreferencesSect
           </div>
 
           {/* Display Macros */}
-          <div className="space-y-2">
+          <div className="flex items-start justify-between">
             <div>
               <p className="text-xs text-muted-foreground">Display macros</p>
-              <p className="text-[10px] text-muted-foreground/70">Customize the 3 values shown in food tables and charts</p>
+              <p className="text-[10px] text-muted-foreground/70">Values shown in tables & charts</p>
             </div>
             <div className="flex flex-col gap-1.5 items-end">
               {settings.displayMacros.map((selected, slotIndex) => {
@@ -247,7 +247,7 @@ export function PreferencesSection({ settings, updateSettings }: PreferencesSect
               {!isStandardMacros(settings.displayMacros) && (
                 <button
                   onClick={() => updateSettings({ displayMacros: [...DEFAULT_DISPLAY_MACROS] })}
-                  className="text-[10px] text-primary hover:underline self-end"
+                  className="text-[10px] text-primary hover:underline"
                 >
                   Reset to default
                 </button>
