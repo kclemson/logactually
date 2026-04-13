@@ -8,6 +8,7 @@ import { stepMultiplier, scaleItemByMultiplier, scalePortion } from '@/lib/porti
 import { Minus, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { type DisplayMacros, DEFAULT_DISPLAY_MACROS, MACRO_META, getMacroValue, isStandardMacros } from '@/lib/macro-display';
 import {
   AlertDialog,
   AlertDialogAction,
