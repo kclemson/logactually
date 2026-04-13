@@ -400,7 +400,7 @@ export function FoodItemsTable({
                       </DescriptionCell>
                     </div>
                   </div>
-                  <span className={cn("px-1 py-1 text-center", compact ? "text-xs" : "")}>
+                  <span className={cn("px-1 py-1 text-center", compact ? "text-xs" : "text-heading")}>
                     {Math.round(groupCalories)}
                   </span>
                   <span className={cn("px-1 py-1 text-center text-muted-foreground", compact && "text-xs")}>
