@@ -1,38 +1,32 @@
 
 
-## Phase 2: Add macro display picker to Settings
+## Move "Reset to default" to right-aligned below dropdowns
 
-### What to build
+### Change
 
-A new row in PreferencesSection with 3 inline `Select` dropdowns that let the user choose which macros appear in the 3 display slots. A "Reset" link appears when non-default values are selected.
+In `PreferencesSection.tsx`, move the "Reset to default" button from the left-side label area into the right-side dropdown column, positioned below the 3 selects and right-aligned.
 
-### UI design
+### Layout (before → after)
 
 ```text
-Display macros                    [Protein ▾] [Carbs ▾] [Fat ▾]
-Customize the 3 values shown
-in food tables and charts                          Reset to default
-```
+BEFORE:
+Display macros              [Protein] [Carbs] [Fiber]
+Customize the 3 values...
+Reset to default
 
-- Label + subtitle on the left, 3 compact selects on the right stacked in a column or row depending on space
-- Each select shows all 9 macro options from `MACRO_META`
-- Duplicate prevention: each select excludes values already chosen in the other two slots
-- "Reset to default" text link appears only when current selection differs from `['protein', 'carbs', 'fat']`
-- Saving is immediate per-slot (same as all other settings — calls `updateSettings` on change)
+AFTER:
+Display macros              [Protein] [Carbs] [Fiber]
+Customize the 3 values...              Reset to default
+```
 
 ### Implementation
 
-**One file changed: `src/components/settings/PreferencesSection.tsx`**
+**One file: `src/components/settings/PreferencesSection.tsx`**
 
-Add a new settings row after "Daily Calorie Target" (or after "First day of week" — placement is flexible). The row contains:
-- 3 `Select` components, each bound to `settings.displayMacros[0]`, `[1]`, `[2]`
-- On change of any slot, call `updateSettings({ displayMacros: [newSlot0, newSlot1, newSlot2] })`
-- Filter each select's options to exclude the other two selected values (no duplicates)
-- Conditional "Reset to default" button that sets `displayMacros` back to `DEFAULT_DISPLAY_MACROS`
+- Remove the `{!isStandardMacros(...) && <button>}` block from the left `<div>` (lines 216-223)
+- Wrap the right-side dropdowns `<div>` in a flex-col container
+- Add the "Reset to default" button below the dropdowns row, with `text-right` alignment
+- Keep the same styling (`text-[10px] text-primary hover:underline`)
 
-Import `MACRO_META`, `MacroKey`, `DEFAULT_DISPLAY_MACROS`, `isStandardMacros` from `@/lib/macro-display`.
-
-### Scope
-
-One file, ~40 lines added.
+~5 lines moved, no new logic.
 
