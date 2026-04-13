@@ -1,14 +1,19 @@
 
 
-## Remove cholesterol from display macros
+## Updated changelog entry — remove net carbs sentence
 
-### Change
+### Changes
 
-**`src/lib/macro-display.ts`**
+**1. Copy uploaded screenshot**
+`user-uploads://image-1776118110.png` → `public/changelog/display-macros.png`
 
-Remove the `cholesterol` entry from the `MACRO_META` record and remove `'cholesterol'` from the `MacroKey` type union. This single change propagates everywhere: the settings picker won't show it, and no other code references cholesterol independently.
+**2. `src/pages/Changelog.tsx`**
+- Add entry at top of `CHANGELOG_ENTRIES`:
+```ts
+{ date: "Apr-13", text: "Added configurable display macros — choose which 3 macros (protein, carbs, fat, fiber, sugar, net carbs, saturated fat, sodium) appear in your food tables and charts. Set your preference in Settings under Display Macros.", image: "display-macros.png" },
+```
+- Update `LAST_UPDATED` to `"Apr-13-26"`
 
-If any user currently has `cholesterol` selected in their `displayMacros`, add a migration guard in `useUserSettings.ts` (inside the query parse, next to the existing `'deficit'` migration) that replaces any `'cholesterol'` slot with `'fat'` (or the first available macro not already selected).
-
-Two files, ~5 lines changed.
+**3. `src/components/settings/AboutSection.tsx`**
+- Update changelog link text to `Changelog (last updated Apr-13)`
 
