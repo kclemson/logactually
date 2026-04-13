@@ -38,12 +38,20 @@ import { useDailyCalorieBurn } from "@/hooks/useDailyCalorieBurn";
 import { useCustomLogTrends } from "@/hooks/useCustomLogTrends";
 import { getLabelInterval, getFullWidthLabelInterval } from "@/lib/chart-label-interval";
 
+import { MACRO_META } from '@/lib/macro-display';
+
 // Chart color palette (hex RGB format for easy editing)
-const CHART_COLORS = {
+const CHART_COLORS: Record<string, string> = {
   calories: "#2563EB",
   protein: "#115E83",
   carbs: "#00B4D8",
   fat: "#90E0EF",
+  fiber: "#22C55E",
+  sugar: "#F59E0B",
+  net_carbs: "#06B6D4",
+  saturated_fat: "#EF4444",
+  sodium: "#8B5CF6",
+  cholesterol: "#EC4899",
   trainingVolume: "hsl(262 83% 58%)",
   calorieBurn: "#2563EB",
 } as const;
@@ -393,9 +401,11 @@ const Trends = () => {
 
   const charts = [
     { key: "calories", label: "Calories", color: CHART_COLORS.calories },
-    { key: "protein", label: "Protein", color: CHART_COLORS.protein },
-    { key: "carbs", label: "Carbs", color: CHART_COLORS.carbs },
-    { key: "fat", label: "Fat", color: CHART_COLORS.fat },
+    ...settings.displayMacros.map(key => ({
+      key,
+      label: MACRO_META[key].label,
+      color: CHART_COLORS[key] || "#6B7280",
+    })),
   ];
 
   return (

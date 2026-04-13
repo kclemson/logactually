@@ -8,6 +8,7 @@ import { stepMultiplier, scaleItemByMultiplier, scalePortion } from '@/lib/porti
 import { Minus, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { type DisplayMacros, DEFAULT_DISPLAY_MACROS, MACRO_META, getMacroValue, isStandardMacros } from '@/lib/macro-display';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -84,6 +85,8 @@ interface FoodItemsTableProps {
   onShowDetails?: (entryId: string, startIndex: number, endIndex?: number) => void;
   /** Callback to copy an entry to today's date */
   onCopyEntryToToday?: (entryId: string) => void;
+  /** Which 3 macros to show in the combined column (default: protein/carbs/fat) */
+  displayMacros?: DisplayMacros;
 }
 
 export function FoodItemsTable({
@@ -124,6 +127,7 @@ export function FoodItemsTable({
   onUpdateGroupName,
   onShowDetails,
   onCopyEntryToToday,
+  displayMacros = DEFAULT_DISPLAY_MACROS,
 }: FoodItemsTableProps) {
   // Read-only mode blocks saves
   const { isReadOnly, triggerOverlay } = useReadOnlyContext();
@@ -267,8 +271,8 @@ export function FoodItemsTable({
           );
         })()}
         <span className={cn("px-1 text-center", compact ? "text-xs" : "text-heading")}>
-          <div>{Math.round(totals.protein)}/{Math.round(totals.carbs)}/{Math.round(totals.fat)}</div>
-          {showMacroPercentages && (
+          <div>{displayMacros.map(key => Math.round(getMacroValue(totals, key))).join('/')}</div>
+          {showMacroPercentages && isStandardMacros(displayMacros) && (
             <div className={cn("text-muted-foreground font-normal", compact ? "text-[8px]" : "text-[9px]")}>
               {proteinPct}%/{carbsPct}%/{fatPct}%
             </div>
@@ -306,7 +310,7 @@ export function FoodItemsTable({
           {selectable && <span></span>}
           <span className={cn("px-1", showEntryDividers && "pl-4")}></span>
           <span className="px-1 text-center">Calories</span>
-          <span className="px-1 text-center">Protein/Carbs/Fat</span>
+          <span className="px-1 text-center">{displayMacros.map(key => MACRO_META[key].label).join('/')}</span>
           {hasDeleteColumn && <span></span>}
         </div>
       )}
@@ -317,7 +321,7 @@ export function FoodItemsTable({
           {selectable && <span></span>}
           <span></span>
           <span className="px-1 text-center">Cal</span>
-          <span className="px-1 text-center">P/C/F</span>
+          <span className="px-1 text-center">{displayMacros.map(key => MACRO_META[key].shortLabel).join('/')}</span>
           {hasDeleteColumn && <span></span>}
         </div>
       )}
@@ -353,9 +357,7 @@ export function FoodItemsTable({
             const { boundary, groupName } = collapsedHeader;
             const groupItems = items.slice(boundary.startIndex, boundary.endIndex + 1);
             const groupCalories = groupItems.reduce((sum, gi) => sum + gi.calories, 0);
-            const groupProtein = groupItems.reduce((sum, gi) => sum + gi.protein, 0);
-            const groupCarbs = groupItems.reduce((sum, gi) => sum + gi.carbs, 0);
-            const groupFat = groupItems.reduce((sum, gi) => sum + gi.fat, 0);
+            const groupTotals = calculateTotals(groupItems);
             const entryIsNew = isEntryNew(boundary.entryId, newEntryIds);
             const highlightClasses = getEntryHighlightClasses(entryIsNew, true, true);
 
@@ -402,7 +404,7 @@ export function FoodItemsTable({
                     {Math.round(groupCalories)}
                   </span>
                   <span className={cn("px-1 py-1 text-center text-muted-foreground", compact && "text-xs")}>
-                    {Math.round(groupProtein)}/{Math.round(groupCarbs)}/{Math.round(groupFat)}
+                    {displayMacros.map(key => Math.round(getMacroValue(groupTotals, key))).join('/')}
                   </span>
                   {hasDeleteColumn && (
                     <AlertDialog>
@@ -840,7 +842,7 @@ export function FoodItemsTable({
                   )}>
                     {previewMacros 
                       ? `${previewMacros.protein}/${previewMacros.carbs}/${previewMacros.fat}`
-                      : `${Math.round(item.protein)}/${Math.round(item.carbs)}/${Math.round(item.fat)}`
+                      : displayMacros.map(key => Math.round(getMacroValue(item, key))).join('/')
                     }
                   </span>
                 </>
@@ -850,7 +852,7 @@ export function FoodItemsTable({
                     {item.calories}
                   </span>
                   <span className={cn("px-1 py-1 text-muted-foreground text-center", compact && "text-xs")}>
-                    {Math.round(item.protein)}/{Math.round(item.carbs)}/{Math.round(item.fat)}
+                    {displayMacros.map(key => Math.round(getMacroValue(item, key))).join('/')}
                   </span>
                 </>
               )}

@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MacroSummary } from './MacroSummary';
 import { FoodItemsTable } from './FoodItemsTable';
+import { useUserSettings } from '@/hooks/useUserSettings';
 
 interface FoodEntryCardProps {
   entry: FoodEntry;
@@ -13,6 +14,7 @@ interface FoodEntryCardProps {
 
 export function FoodEntryCard({ entry, onDelete }: FoodEntryCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const { settings } = useUserSettings();
 
   const totals = {
     calories: entry.total_calories,
@@ -44,7 +46,7 @@ export function FoodEntryCard({ entry, onDelete }: FoodEntryCardProps) {
             <p className="text-muted-foreground line-clamp-1">
               {entry.raw_input || 'No description'}
             </p>
-            <MacroSummary totals={totals} size="sm" />
+            <MacroSummary totals={totals} size="sm" displayMacros={settings.displayMacros} />
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -71,6 +73,7 @@ export function FoodEntryCard({ entry, onDelete }: FoodEntryCardProps) {
               editable={false}
               showHeader={true}
               showTotals={false}
+              displayMacros={settings.displayMacros}
             />
           </div>
         )}

@@ -111,6 +111,7 @@ const baseSettings: UserSettings = {
   bodyComposition: 'male',
   defaultIntensity: null,
   weekStartDay: 0,
+  displayMacros: ['protein', 'carbs', 'fat'],
 };
 
 describe('getEffectiveDailyTarget', () => {

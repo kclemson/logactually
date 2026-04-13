@@ -855,6 +855,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
               }}
               onShowDetails={handleShowDetails}
               onCopyEntryToToday={!isTodaySelected && !isReadOnly ? handleCopyEntryToToday : undefined}
+              displayMacros={settings.displayMacros}
             />
           )}
 
