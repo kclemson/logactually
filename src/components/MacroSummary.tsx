@@ -1,16 +1,20 @@
 import { DailyTotals } from '@/types/food';
+import { type DisplayMacros, DEFAULT_DISPLAY_MACROS, MACRO_META, getMacroValue } from '@/lib/macro-display';
 
 interface MacroSummaryProps {
   totals: DailyTotals;
   size?: 'sm' | 'lg';
+  displayMacros?: DisplayMacros;
 }
 
-export function MacroSummary({ totals, size = 'lg' }: MacroSummaryProps) {
+export function MacroSummary({ totals, size = 'lg', displayMacros = DEFAULT_DISPLAY_MACROS }: MacroSummaryProps) {
   const items = [
     { label: 'Calories', value: Math.round(totals.calories), unit: '' },
-    { label: 'Protein', value: Math.round(totals.protein), unit: 'g' },
-    { label: 'Carbs', value: Math.round(totals.carbs), unit: 'g' },
-    { label: 'Fat', value: Math.round(totals.fat), unit: 'g' },
+    ...displayMacros.map(key => ({
+      label: MACRO_META[key].label,
+      value: Math.round(getMacroValue(totals, key)),
+      unit: MACRO_META[key].unit,
+    })),
   ];
 
   if (size === 'sm') {
