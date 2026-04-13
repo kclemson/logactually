@@ -214,7 +214,7 @@ export function PreferencesSection({ settings, updateSettings }: PreferencesSect
               <p className="text-xs text-muted-foreground">Display macros</p>
               <p className="text-[10px] text-muted-foreground/70">Customize the 3 values shown in food tables and charts</p>
             </div>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5 items-end">
               {settings.displayMacros.map((selected, slotIndex) => {
                 const otherSelected = settings.displayMacros.filter((_, i) => i !== slotIndex);
                 return (
@@ -227,7 +227,7 @@ export function PreferencesSection({ settings, updateSettings }: PreferencesSect
                       updateSettings({ displayMacros: next });
                     }}
                   >
-                    <SelectTrigger className="w-full h-8 text-xs">
+                    <SelectTrigger className="w-[150px] h-8 text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
