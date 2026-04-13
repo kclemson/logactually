@@ -582,7 +582,7 @@ export function FoodItemsTable({
                     {Math.round(groupCalories)}
                   </span>
                   <span className={cn("px-1 py-1 text-center text-muted-foreground", compact && "text-xs")}>
-                    {Math.round(groupProtein)}/{Math.round(groupCarbs)}/{Math.round(groupFat)}
+                    {displayMacros.map(key => Math.round(getMacroValue(groupTotals, key))).join('/')}
                   </span>
                   {hasDeleteColumn && (
                     <AlertDialog>
