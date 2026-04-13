@@ -5,7 +5,7 @@ import { logger } from '@/lib/logger';
 import { useRecomputeEstimates } from './useRecomputeEstimates';
 import type { CalorieBurnSettings } from '@/lib/calorie-burn';
 import type { WeightUnit, DistanceUnit } from '@/lib/weight-units';
-import { type DisplayMacros, DEFAULT_DISPLAY_MACROS } from '@/lib/macro-display';
+import { type DisplayMacros, DEFAULT_DISPLAY_MACROS, MACRO_META } from '@/lib/macro-display';
 
 export interface UserSettings {
   theme: 'light' | 'dark' | 'system';
