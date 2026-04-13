@@ -18,20 +18,21 @@ export type MacroKey =
 
 export interface MacroMeta {
   label: string;
+  headerLabel: string;
   shortLabel: string;
   unit: string;
 }
 
 export const MACRO_META: Record<MacroKey, MacroMeta> = {
-  protein:       { label: 'Protein',     shortLabel: 'P',  unit: 'g' },
-  carbs:         { label: 'Carbs',       shortLabel: 'C',  unit: 'g' },
-  fat:           { label: 'Fat',         shortLabel: 'F',  unit: 'g' },
-  fiber:         { label: 'Fiber',       shortLabel: 'Fi', unit: 'g' },
-  sugar:         { label: 'Sugar',       shortLabel: 'Su', unit: 'g' },
-  net_carbs:     { label: 'Net Carbs',   shortLabel: 'NC', unit: 'g' },
-  saturated_fat: { label: 'Sat. Fat',    shortLabel: 'SF', unit: 'g' },
-  sodium:        { label: 'Sodium',      shortLabel: 'Na', unit: 'mg' },
-  cholesterol:   { label: 'Cholesterol', shortLabel: 'Ch', unit: 'mg' },
+  protein:       { label: 'Protein',     headerLabel: 'Protein',  shortLabel: 'P',  unit: 'g' },
+  carbs:         { label: 'Carbs',       headerLabel: 'Carbs',    shortLabel: 'C',  unit: 'g' },
+  fat:           { label: 'Fat',         headerLabel: 'Fat',      shortLabel: 'F',  unit: 'g' },
+  fiber:         { label: 'Fiber',       headerLabel: 'Fiber',    shortLabel: 'Fi', unit: 'g' },
+  sugar:         { label: 'Sugar',       headerLabel: 'Sugar',    shortLabel: 'Su', unit: 'g' },
+  net_carbs:     { label: 'Net Carbs',   headerLabel: 'NetCarbs', shortLabel: 'NC', unit: 'g' },
+  saturated_fat: { label: 'Sat. Fat',    headerLabel: 'SatFat',   shortLabel: 'SF', unit: 'g' },
+  sodium:        { label: 'Sodium',      headerLabel: 'Sodium',   shortLabel: 'Na', unit: 'mg' },
+  cholesterol:   { label: 'Cholesterol', headerLabel: 'Chol',     shortLabel: 'Ch', unit: 'mg' },
 };
 
 export type DisplayMacros = [MacroKey, MacroKey, MacroKey];
