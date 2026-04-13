@@ -5,7 +5,7 @@ import { logger } from '@/lib/logger';
 import { useRecomputeEstimates } from './useRecomputeEstimates';
 import type { CalorieBurnSettings } from '@/lib/calorie-burn';
 import type { WeightUnit, DistanceUnit } from '@/lib/weight-units';
-import { type DisplayMacros, DEFAULT_DISPLAY_MACROS } from '@/lib/macro-display';
+import { type DisplayMacros, DEFAULT_DISPLAY_MACROS, MACRO_META } from '@/lib/macro-display';
 
 export interface UserSettings {
   theme: 'light' | 'dark' | 'system';
@@ -85,6 +85,15 @@ export function useUserSettings() {
       // Migrate legacy 'deficit' key to 'body_stats'
       if ((merged.calorieTargetMode as string) === 'deficit') {
         merged.calorieTargetMode = 'body_stats';
+      }
+      // Migrate removed macro keys (e.g. cholesterol)
+      const validKeys = new Set(Object.keys(MACRO_META));
+      const dm = merged.displayMacros;
+      for (let i = 0; i < dm.length; i++) {
+        if (!validKeys.has(dm[i])) {
+          const fallback = DEFAULT_DISPLAY_MACROS.find(k => !dm.includes(k)) ?? 'fat';
+          dm[i] = fallback as any;
+        }
       }
       return merged;
     },
