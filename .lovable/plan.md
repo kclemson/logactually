@@ -1,16 +1,27 @@
 
 
-## Fix macro dropdowns to match other settings dropdowns
+## Fix Display Macros to match other settings rows
 
 ### Problem
-The three macro `Select` dropdowns use `w-full`, making them span the entire row width. They should match the `w-[150px]` width used by Theme, Weight Units, Distance Units, and First day of week dropdowns, and be right-aligned.
+The Display Macros section uses a vertical stacked layout that breaks the visual pattern every other row follows (`flex justify-between` with label left, control right).
 
 ### Change — `src/components/settings/PreferencesSection.tsx`
 
-Change the flex container from `flex flex-col gap-1.5` to `flex flex-col gap-1.5 items-end` so dropdowns right-align, and change each `SelectTrigger` from `w-full` to `w-[150px]` to match the other settings selects.
+Switch back to the standard row pattern used everywhere else:
 
-- Line 217: `<div className="flex flex-col gap-1.5">` → `<div className="flex flex-col gap-1.5 items-end">`
-- Line 230: `<SelectTrigger className="w-full h-8 text-xs">` → `<SelectTrigger className="w-[150px] h-8 text-xs">`
+```text
+Display macros              [Net Carbs ▾]
+Values shown in tables      [Carbs      ▾]
+  & charts                  [Fiber      ▾]
+                           Reset to default
+```
 
-Two tiny edits in one file.
+- Outer wrapper: `flex items-start justify-between` (same as toggle rows)
+- Left side: label + shortened subtitle ("Values shown in tables & charts")
+- Right side: `flex flex-col gap-1.5 items-end` with the 3 `Select` dropdowns + conditional reset link
+- Dropdowns stay `w-[150px] h-8 text-xs`
+
+This matches exactly how "Enable Custom logging" and "Daily Calorie Target" rows are structured — label+subtitle left, controls right.
+
+One file, ~10 lines changed. No new logic.
 
