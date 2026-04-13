@@ -841,7 +841,10 @@ export function FoodItemsTable({
                     isCaloriesEditing ? "text-focus-ring" : "text-muted-foreground"
                   )}>
                     {previewMacros 
-                      ? `${previewMacros.protein}/${previewMacros.carbs}/${previewMacros.fat}`
+                      ? displayMacros.map(key => {
+                          if (key in previewMacros) return Math.round((previewMacros as any)[key]);
+                          return Math.round(getMacroValue(item, key));
+                        }).join('/')
                       : displayMacros.map(key => Math.round(getMacroValue(item, key))).join('/')
                     }
                   </span>
