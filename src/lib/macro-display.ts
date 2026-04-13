@@ -14,7 +14,6 @@ export type MacroKey =
   | 'net_carbs'
   | 'saturated_fat'
   | 'sodium'
-  | 'cholesterol';
 
 export interface MacroMeta {
   label: string;
@@ -32,7 +31,6 @@ export const MACRO_META: Record<MacroKey, MacroMeta> = {
   net_carbs:     { label: 'Net Carbs',   headerLabel: 'NetCarbs', shortLabel: 'NC', unit: 'g' },
   saturated_fat: { label: 'Sat. Fat',    headerLabel: 'SatFat',   shortLabel: 'SF', unit: 'g' },
   sodium:        { label: 'Sodium',      headerLabel: 'Sodium',   shortLabel: 'Na', unit: 'mg' },
-  cholesterol:   { label: 'Cholesterol', headerLabel: 'Chol',     shortLabel: 'Ch', unit: 'mg' },
 };
 
 export type DisplayMacros = [MacroKey, MacroKey, MacroKey];

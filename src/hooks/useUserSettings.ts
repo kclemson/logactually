@@ -86,6 +86,15 @@ export function useUserSettings() {
       if ((merged.calorieTargetMode as string) === 'deficit') {
         merged.calorieTargetMode = 'body_stats';
       }
+      // Migrate removed macro keys (e.g. cholesterol)
+      const validKeys = new Set(Object.keys(MACRO_META));
+      const dm = merged.displayMacros;
+      for (let i = 0; i < dm.length; i++) {
+        if (!validKeys.has(dm[i])) {
+          const fallback = DEFAULT_DISPLAY_MACROS.find(k => !dm.includes(k)) ?? 'fat';
+          dm[i] = fallback as any;
+        }
+      }
       return merged;
     },
     enabled: !!user,
