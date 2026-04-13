@@ -534,10 +534,8 @@ export function FoodItemsTable({
           if (groupHeader && isCurrentExpanded) {
             const { boundary, groupName } = groupHeader;
             const groupItems = items.slice(boundary.startIndex, boundary.endIndex + 1);
-            const groupCalories = groupItems.reduce((sum, gi) => sum + gi.calories, 0);
-            const groupProtein = groupItems.reduce((sum, gi) => sum + gi.protein, 0);
-            const groupCarbs = groupItems.reduce((sum, gi) => sum + gi.carbs, 0);
-            const groupFat = groupItems.reduce((sum, gi) => sum + gi.fat, 0);
+            const groupTotals = calculateTotals(groupItems);
+            const groupCalories = groupTotals.calories;
             const entryIsNew = isEntryNew(currentEntryId, newEntryIds);
             const highlightClasses = getEntryHighlightClasses(entryIsNew, true, false);
 
