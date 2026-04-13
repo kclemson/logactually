@@ -1,25 +1,26 @@
 
 
-## Add read-only Net Carbs field to food detail view
+## Always derive net_carbs from carbs − fiber
 
-### Problem
-The Detail Dialog for food items doesn't show "Net Carbs" at all. Since net carbs is derived (carbs − fiber), it should appear as a **read-only computed field** — no editable input, no sync complexity.
+### Evidence
+- 329 of 2,354 items with stored `net_carbs` have values wildly inconsistent with `carbs - fiber` (e.g., Orange Soda: stored 44g net carbs but only 1g carbs)
+- 54% of items have no fiber data — in those cases `net_carbs = carbs`, which is the correct nutritional convention
+- Stored values come from external sources (Open Food Facts, AI) and are unreliable
 
-### Changes
+### Change
 
-**`src/components/DetailDialog.tsx`** — `buildFoodDetailFields` function (line 671)
-
-Add a `net_carbs` field with `readOnly: true`. Place it after `carbs`/`sugar` in the interleaved layout. The field config already supports `readOnly` — it renders as plain text and is skipped during save.
-
+**`src/hooks/useFoodEntries.ts`** — line 38: change from conditional to always-compute:
 ```ts
-{ key: 'net_carbs', label: 'Net Carbs', type: 'number', unit: 'g', readOnly: true },
+// Before
+net_carbs: item.net_carbs != null ? Number(item.net_carbs) : Math.max(0, carbs - fiber),
+// After
+net_carbs: Math.max(0, carbs - fiber),
 ```
 
-The value is already present on food items (computed during query parsing in `useFoodEntries`), so it will display automatically. Since it's `readOnly`, editing carbs or fiber won't cause stale display — the saved value recalculates on next query fetch.
+**`src/hooks/useRecentFoodEntries.ts`** — line 42: same change (duplicate parsing logic):
+```ts
+net_carbs: Math.max(0, carbs - fiber),
+```
 
-**Field order** (interleaved left/right after normalizeToLayout):
-- Left: Calories, Protein, Carbs, Fat, Sat. Fat
-- Right: Sodium, Fiber, Sugar, Cholesterol, Net Carbs
-
-One line added, one file changed.
+Two lines changed, two files. No UI or schema changes needed.
 
