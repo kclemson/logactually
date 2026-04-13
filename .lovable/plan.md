@@ -1,20 +1,25 @@
 
 
-## Fix expanded group header to respect display macros
+## Add read-only Net Carbs field to food detail view
 
 ### Problem
-Only one location is affected: **line 587** in `src/components/FoodItemsTable.tsx`. The collapsed group header (line 407) already correctly uses `displayMacros.map(key => getMacroValue(groupTotals, key))`. No other files have hardcoded macro references that need updating.
+The Detail Dialog for food items doesn't show "Net Carbs" at all. Since net carbs is derived (carbs − fiber), it should appear as a **read-only computed field** — no editable input, no sync complexity.
 
-### Change — `src/components/FoodItemsTable.tsx`
+### Changes
 
-1. **Lines 537-540**: Replace the 3 manual reduce calls (`groupProtein`, `groupCarbs`, `groupFat`) with `calculateTotals(groupItems)` assigned to a `groupTotals` variable (same pattern the collapsed path uses).
+**`src/components/DetailDialog.tsx`** — `buildFoodDetailFields` function (line 671)
 
-2. **Line 587**: Replace `{Math.round(groupProtein)}/{Math.round(groupCarbs)}/{Math.round(groupFat)}` with:
-   ```tsx
-   {displayMacros.map(key => Math.round(getMacroValue(groupTotals, key))).join('/')}
-   ```
+Add a `net_carbs` field with `readOnly: true`. Place it after `carbs`/`sugar` in the interleaved layout. The field config already supports `readOnly` — it renders as plain text and is skipped during save.
 
-3. Keep `groupCalories` (line 537) since it's used independently on line ~583.
+```ts
+{ key: 'net_carbs', label: 'Net Carbs', type: 'number', unit: 'g', readOnly: true },
+```
 
-One file, ~5 lines changed. No other hardcoded references exist.
+The value is already present on food items (computed during query parsing in `useFoodEntries`), so it will display automatically. Since it's `readOnly`, editing carbs or fiber won't cause stale display — the saved value recalculates on next query fetch.
+
+**Field order** (interleaved left/right after normalizeToLayout):
+- Left: Calories, Protein, Carbs, Fat, Sat. Fat
+- Right: Sodium, Fiber, Sugar, Cholesterol, Net Carbs
+
+One line added, one file changed.
 
