@@ -401,9 +401,11 @@ const Trends = () => {
 
   const charts = [
     { key: "calories", label: "Calories", color: CHART_COLORS.calories },
-    { key: "protein", label: "Protein", color: CHART_COLORS.protein },
-    { key: "carbs", label: "Carbs", color: CHART_COLORS.carbs },
-    { key: "fat", label: "Fat", color: CHART_COLORS.fat },
+    ...settings.displayMacros.map(key => ({
+      key,
+      label: MACRO_META[key].label,
+      color: CHART_COLORS[key] || "#6B7280",
+    })),
   ];
 
   return (
