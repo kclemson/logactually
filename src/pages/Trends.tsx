@@ -302,6 +302,10 @@ const Trends = () => {
     });
   }, [dailyCalorieBurn, selectedPeriod]);
 
+  // Visible exercises (load more pattern)
+  const visibleExercises = weightExercises.slice(0, visibleExerciseCount);
+  const hasMoreExercises = weightExercises.length > visibleExerciseCount;
+
   // Aggregate by date from fetchChartData pipeline
   const chartData = useMemo(() => {
     const foodByDate = foodTotals?.food ?? {};
