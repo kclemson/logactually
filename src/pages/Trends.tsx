@@ -177,21 +177,13 @@ const Trends = () => {
     navigate(`/weights?date=${date}`);
   }, [navigate]);
 
-  const { data: entries = [], isLoading } = useQuery({
-    queryKey: ["food-entries-trends", selectedPeriod],
-    queryFn: async () => {
-      const startDate = selectedPeriod === 0 ? "2000-01-01" : format(subDays(startOfDay(new Date()), selectedPeriod - 1), "yyyy-MM-dd");
-
-      const { data, error } = await supabase
-        .from("food_entries")
-        .select("eaten_date, total_calories, total_protein, total_carbs, total_fat")
-        .gte("eaten_date", startDate)
-        .order("eaten_date", { ascending: true })
-        .limit(10000);
-
-      if (error) throw error;
-      return data || [];
-    },
+  const { data: foodTotals, isLoading } = useQuery({
+    queryKey: ["food-trends-v2", selectedPeriod],
+    queryFn: () => fetchChartData(supabase, {
+      source: "food", metric: "calories", groupBy: "date",
+      chartType: "bar", title: "", aggregation: "sum",
+    }, selectedPeriod),
+    staleTime: 60_000,
   });
 
   // Weight trends query
