@@ -1,27 +1,26 @@
 
 
-## Fix Display Macros to match other settings rows
+## Use medium-length `headerLabel` for food table column headers
 
-### Problem
-The Display Macros section uses a vertical stacked layout that breaks the visual pattern every other row follows (`flex justify-between` with label left, control right).
+### Changes
 
-### Change — `src/components/settings/PreferencesSection.tsx`
+**`src/lib/macro-display.ts`**
+- Add `headerLabel: string` to the `MacroMeta` interface
+- Populate for each key:
 
-Switch back to the standard row pattern used everywhere else:
+| Key | label (settings) | headerLabel (table) |
+|-----|----------|-------------|
+| protein | Protein | Protein |
+| carbs | Carbs | Carbs |
+| fat | Fat | Fat |
+| fiber | Fiber | Fiber |
+| sugar | Sugar | Sugar |
+| net_carbs | Net Carbs | NetCarbs |
+| saturated_fat | Sat. Fat | SatFat |
+| sodium | Sodium | Sodium |
+| cholesterol | Cholesterol | Chol |
 
-```text
-Display macros              [Net Carbs ▾]
-Values shown in tables      [Carbs      ▾]
-  & charts                  [Fiber      ▾]
-                           Reset to default
-```
+**`src/components/FoodItemsTable.tsx`** — Line 313: `.label` → `.headerLabel`
 
-- Outer wrapper: `flex items-start justify-between` (same as toggle rows)
-- Left side: label + shortened subtitle ("Values shown in tables & charts")
-- Right side: `flex flex-col gap-1.5 items-end` with the 3 `Select` dropdowns + conditional reset link
-- Dropdowns stay `w-[150px] h-8 text-xs`
-
-This matches exactly how "Enable Custom logging" and "Daily Calorie Target" rows are structured — label+subtitle left, controls right.
-
-One file, ~10 lines changed. No new logic.
+Two files, minimal changes.
 
