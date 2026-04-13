@@ -85,6 +85,8 @@ interface FoodItemsTableProps {
   onShowDetails?: (entryId: string, startIndex: number, endIndex?: number) => void;
   /** Callback to copy an entry to today's date */
   onCopyEntryToToday?: (entryId: string) => void;
+  /** Which 3 macros to show in the combined column (default: protein/carbs/fat) */
+  displayMacros?: DisplayMacros;
 }
 
 export function FoodItemsTable({
