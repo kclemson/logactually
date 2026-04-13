@@ -5,6 +5,7 @@ import { logger } from '@/lib/logger';
 import { useRecomputeEstimates } from './useRecomputeEstimates';
 import type { CalorieBurnSettings } from '@/lib/calorie-burn';
 import type { WeightUnit, DistanceUnit } from '@/lib/weight-units';
+import { type DisplayMacros, DEFAULT_DISPLAY_MACROS } from '@/lib/macro-display';
 
 export interface UserSettings {
   theme: 'light' | 'dark' | 'system';
@@ -30,6 +31,7 @@ export interface UserSettings {
   bodyComposition: 'female' | 'male' | null;
   defaultIntensity: number | null;
   weekStartDay: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+  displayMacros: DisplayMacros;
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
@@ -54,6 +56,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   bodyComposition: null,
   defaultIntensity: null,
   weekStartDay: 0,
+  displayMacros: DEFAULT_DISPLAY_MACROS,
 };
 
 export function useUserSettings() {
