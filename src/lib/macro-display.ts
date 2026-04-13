@@ -28,9 +28,9 @@ export const MACRO_META: Record<MacroKey, MacroMeta> = {
   fat:           { label: 'Fat',         headerLabel: 'Fat',      shortLabel: 'F',  unit: 'g' },
   fiber:         { label: 'Fiber',       headerLabel: 'Fiber',    shortLabel: 'Fi', unit: 'g' },
   sugar:         { label: 'Sugar',       headerLabel: 'Sugar',    shortLabel: 'Su', unit: 'g' },
-  net_carbs:     { label: 'Net Carbs',   headerLabel: 'NetCarbs', shortLabel: 'NC', unit: 'g' },
+  net_carbs:     { label: 'Net Carbs',   headerLabel: 'NetCrb', shortLabel: 'NC', unit: 'g' },
   saturated_fat: { label: 'Sat. Fat',    headerLabel: 'SatFat',   shortLabel: 'SF', unit: 'g' },
-  sodium:        { label: 'Sodium',      headerLabel: 'Sodium',   shortLabel: 'Na', unit: 'mg' },
+  sodium:        { label: 'Sodium',      headerLabel: 'Sod',   shortLabel: 'Na', unit: 'mg' },
 };
 
 export type DisplayMacros = [MacroKey, MacroKey, MacroKey];
