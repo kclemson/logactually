@@ -51,7 +51,7 @@ const CHART_COLORS: Record<string, string> = {
   net_carbs: "#06B6D4",
   saturated_fat: "#EF4444",
   sodium: "#8B5CF6",
-  cholesterol: "#EC4899",
+  
   trainingVolume: "hsl(262 83% 58%)",
   calorieBurn: "#2563EB",
 } as const;
@@ -177,21 +177,13 @@ const Trends = () => {
     navigate(`/weights?date=${date}`);
   }, [navigate]);
 
-  const { data: entries = [], isLoading } = useQuery({
-    queryKey: ["food-entries-trends", selectedPeriod],
-    queryFn: async () => {
-      const startDate = selectedPeriod === 0 ? "2000-01-01" : format(subDays(startOfDay(new Date()), selectedPeriod - 1), "yyyy-MM-dd");
-
-      const { data, error } = await supabase
-        .from("food_entries")
-        .select("eaten_date, total_calories, total_protein, total_carbs, total_fat")
-        .gte("eaten_date", startDate)
-        .order("eaten_date", { ascending: true })
-        .limit(10000);
-
-      if (error) throw error;
-      return data || [];
-    },
+  const { data: foodTotals, isLoading } = useQuery({
+    queryKey: ["food-trends-v2", selectedPeriod],
+    queryFn: () => fetchChartData(supabase, {
+      source: "food", metric: "calories", groupBy: "date",
+      chartType: "bar", title: "", aggregation: "sum",
+    }, selectedPeriod),
+    staleTime: 60_000,
   });
 
   // Weight trends query
@@ -314,43 +306,42 @@ const Trends = () => {
   const visibleExercises = weightExercises.slice(0, visibleExerciseCount);
   const hasMoreExercises = weightExercises.length > visibleExerciseCount;
 
-  // Aggregate by date
+  // Aggregate by date from fetchChartData pipeline
   const chartData = useMemo(() => {
-    const byDate: Record<string, { calories: number; protein: number; carbs: number; fat: number }> = {};
+    const foodByDate = foodTotals?.food ?? {};
 
-    entries.forEach((entry) => {
-      const date = entry.eaten_date;
-      if (!byDate[date]) {
-        byDate[date] = { calories: 0, protein: 0, carbs: 0, fat: 0 };
-      }
-      byDate[date].calories += entry.total_calories;
-      byDate[date].protein += Number(entry.total_protein);
-      byDate[date].carbs += Number(entry.total_carbs);
-      byDate[date].fat += Number(entry.total_fat);
-    });
+    const data = Object.entries(foodByDate)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, totals]) => {
+        const proteinCals = totals.protein * 4;
+        const carbsCals = totals.carbs * 4;
+        const fatCals = totals.fat * 9;
+        const totalMacroCals = proteinCals + carbsCals + fatCals;
 
-    const data = Object.entries(byDate).map(([date, totals]) => {
-      const proteinCals = totals.protein * 4;
-      const carbsCals = totals.carbs * 4;
-      const fatCals = totals.fat * 9;
-      const totalMacroCals = proteinCals + carbsCals + fatCals;
+        const proteinPct = totalMacroCals > 0 ? Math.round((proteinCals / totalMacroCals) * 100) : 0;
+        const carbsPct = totalMacroCals > 0 ? Math.round((carbsCals / totalMacroCals) * 100) : 0;
+        const fatPct = totalMacroCals > 0 ? Math.round((fatCals / totalMacroCals) * 100) : 0;
 
-      const proteinPct = totalMacroCals > 0 ? Math.round((proteinCals / totalMacroCals) * 100) : 0;
-      const carbsPct = totalMacroCals > 0 ? Math.round((carbsCals / totalMacroCals) * 100) : 0;
-      const fatPct = totalMacroCals > 0 ? Math.round((fatCals / totalMacroCals) * 100) : 0;
-
-      return {
-        rawDate: date,
-        date: format(new Date(`${date}T12:00:00`), "MMM d"),
-        ...totals,
-        proteinCals,
-        carbsCals,
-        fatCals,
-        proteinPct,
-        carbsPct,
-        fatPct,
-      };
-    });
+        return {
+          rawDate: date,
+          date: format(new Date(`${date}T12:00:00`), "MMM d"),
+          calories: totals.calories,
+          protein: totals.protein,
+          carbs: totals.carbs,
+          fat: totals.fat,
+          fiber: totals.fiber,
+          sugar: totals.sugar,
+          net_carbs: Math.max(0, totals.carbs - totals.fiber),
+          saturated_fat: totals.saturated_fat,
+          sodium: totals.sodium,
+          proteinCals,
+          carbsCals,
+          fatCals,
+          proteinPct,
+          carbsPct,
+          fatPct,
+        };
+      });
 
     const dataLength = data.length;
     const labelInterval = getLabelInterval(dataLength);
@@ -364,39 +355,29 @@ const Trends = () => {
         showLabelFullWidth: distanceFromEnd % labelIntervalFullWidth === 0,
       };
     });
-  }, [entries]);
+  }, [foodTotals]);
 
-  // Calculate averages
+  // Calculate averages — dynamic for all macro keys
   const averages = useMemo(() => {
-    if (chartData.length === 0) return { calories: 0, protein: 0, carbs: 0, fat: 0 };
-
-    const sum = chartData.reduce(
-      (acc, day) => ({
-        calories: acc.calories + day.calories,
-        protein: acc.protein + day.protein,
-        carbs: acc.carbs + day.carbs,
-        fat: acc.fat + day.fat,
-      }),
-      { calories: 0, protein: 0, carbs: 0, fat: 0 },
-    );
-
-    return {
-      calories: Math.round(sum.calories / chartData.length),
-      protein: Math.round(sum.protein / chartData.length),
-      carbs: Math.round(sum.carbs / chartData.length),
-      fat: Math.round(sum.fat / chartData.length),
-    };
+    if (chartData.length === 0) return {} as Record<string, number>;
+    const keys = ["calories", "protein", "carbs", "fat", "fiber", "sugar", "net_carbs", "saturated_fat", "sodium"] as const;
+    const sums: Record<string, number> = {};
+    for (const k of keys) sums[k] = 0;
+    for (const day of chartData) {
+      for (const k of keys) sums[k] += (day as any)[k] ?? 0;
+    }
+    const result: Record<string, number> = {};
+    for (const k of keys) result[k] = Math.round(sums[k] / chartData.length);
+    return result;
   }, [chartData]);
 
   const todayValues = useMemo(() => {
     const todayStr = format(new Date(), 'yyyy-MM-dd');
     const todayEntry = chartData.find(d => d.rawDate === todayStr);
-    return {
-      protein: Math.round(todayEntry?.protein || 0),
-      carbs: Math.round(todayEntry?.carbs || 0),
-      fat: Math.round(todayEntry?.fat || 0),
-      calories: Math.round(todayEntry?.calories || 0),
-    };
+    const keys = ["calories", "protein", "carbs", "fat", "fiber", "sugar", "net_carbs", "saturated_fat", "sodium"] as const;
+    const result: Record<string, number> = {};
+    for (const k of keys) result[k] = Math.round((todayEntry as any)?.[k] ?? 0);
+    return result;
   }, [chartData]);
 
   const charts = [
