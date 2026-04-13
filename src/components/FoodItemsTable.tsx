@@ -127,6 +127,7 @@ export function FoodItemsTable({
   onUpdateGroupName,
   onShowDetails,
   onCopyEntryToToday,
+  displayMacros = DEFAULT_DISPLAY_MACROS,
 }: FoodItemsTableProps) {
   // Read-only mode blocks saves
   const { isReadOnly, triggerOverlay } = useReadOnlyContext();
