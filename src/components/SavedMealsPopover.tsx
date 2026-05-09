@@ -117,17 +117,16 @@ export function SavedMealsPopover({ onSelectMeal, onClose, onCreateNew }: SavedM
                 key={meal.id}
                 onClick={() => handleSelectMeal(meal)}
                 disabled={logMeal.isPending}
-                className="w-full text-left px-3 py-2 hover:bg-accent transition-colors border-b last:border-b-0 disabled:opacity-50"
+                className="w-full text-left px-3 py-1.5 hover:bg-accent transition-colors border-b last:border-b-0 disabled:opacity-50 flex items-center gap-2"
               >
-                <div className="flex items-center justify-between">
-                  <span className="font-medium truncate">{meal.name}</span>
-                  {isLogging && (
-                    <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                  )}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {meal.food_items.length} item{meal.food_items.length !== 1 ? 's' : ''} • {Math.round(totals.calories)} cal
-                </div>
+                <span className="font-medium text-xs truncate flex-1 min-w-0">{meal.name}</span>
+                {isLogging ? (
+                  <Loader2 className="h-3 w-3 animate-spin text-muted-foreground shrink-0" />
+                ) : (
+                  <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">
+                    {meal.food_items.length} item{meal.food_items.length !== 1 ? 's' : ''} · {Math.round(totals.calories)} cal
+                  </span>
+                )}
               </button>
             );
           })

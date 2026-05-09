@@ -117,17 +117,16 @@ export function SavedRoutinesPopover({ onSelectRoutine, onClose, onCreateNew }: 
                 key={routine.id}
                 onClick={() => handleSelectRoutine(routine)}
                 disabled={logRoutine.isPending}
-                className="w-full text-left px-3 py-2 hover:bg-accent transition-colors border-b last:border-b-0 disabled:opacity-50"
+                className="w-full text-left px-3 py-1.5 hover:bg-accent transition-colors border-b last:border-b-0 disabled:opacity-50 flex items-center gap-2"
               >
-                <div className="flex items-center justify-between">
-                  <span className="font-medium truncate">{routine.name}</span>
-                  {isLogging && (
-                    <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                  )}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {exerciseCount} exercise{exerciseCount !== 1 ? 's' : ''}
-                </div>
+                <span className="font-medium text-xs truncate flex-1 min-w-0">{routine.name}</span>
+                {isLogging ? (
+                  <Loader2 className="h-3 w-3 animate-spin text-muted-foreground shrink-0" />
+                ) : (
+                  <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">
+                    {exerciseCount} exercise{exerciseCount !== 1 ? 's' : ''}
+                  </span>
+                )}
               </button>
             );
           })
