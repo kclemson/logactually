@@ -61,9 +61,11 @@ interface CompareChartBuilderProps {
   isSaving: boolean;
   initialDsl?: ChartDSL;
   initialDsl2?: ChartDSL;
+  initialTitle?: string;
+  initialNote?: string;
 }
 
-export function CompareChartBuilder({ period, onSave, isSaving, initialDsl, initialDsl2 }: CompareChartBuilderProps) {
+export function CompareChartBuilder({ period, onSave, isSaving, initialDsl, initialDsl2, initialTitle, initialNote }: CompareChartBuilderProps) {
   const [seriesA, setSeriesA] = useState<SeriesConfig>(() => ({
     source: initialDsl?.source ?? "food",
     metric: initialDsl?.metric ?? "calories",
@@ -89,6 +91,8 @@ export function CompareChartBuilder({ period, onSave, isSaving, initialDsl, init
   const [preview, setPreview] = useState<ChartSpec | null>(null);
   const [dslA, setDslA] = useState<ChartDSL | null>(initialDsl ?? null);
   const [dslB, setDslB] = useState<ChartDSL | null>(initialDsl2 ?? null);
+  const [customTitle, setCustomTitle] = useState<string | undefined>(initialTitle);
+  const [customNote, setCustomNote] = useState<string | undefined>(initialNote);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
