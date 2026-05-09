@@ -414,7 +414,7 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
         }
         dataPoints.push({
           rawDate: weekDates[weekKey],
-          label: weekKey,
+          label: format(new Date(`${weekDates[weekKey]}T12:00:00`), "MMM d"),
           value: Math.round(aggValue),
           _details: details,
           _compareBreakdown: (dsl.compare || dsl.offset) ? {
