@@ -30,7 +30,7 @@ import { computeAbsoluteBMR } from "@/lib/calorie-burn";
 import { useMergeExercises } from "@/hooks/useMergeExercises";
 import { DuplicateExercisePrompt, type DuplicateGroup } from "@/components/DuplicateExercisePrompt";
 
-import { FoodChart, StackedMacroChart, VolumeChart } from "@/components/trends/FoodChart";
+import { FoodChart, StackedMacroChart } from "@/components/trends/FoodChart";
 import { CalorieBurnChart } from "@/components/trends/CalorieBurnChart";
 import { ExerciseChart } from "@/components/trends/ExerciseChart";
 import { CustomLogTrendChart } from "@/components/trends/CustomLogTrendChart";
