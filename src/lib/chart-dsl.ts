@@ -175,10 +175,16 @@ function aggregate(values: number[], method: ChartDSL["aggregation"]): number {
 function applyWindow(dataPoints: Array<Record<string, any>>, window: number, useDecimal = false): void {
   // Snapshot raw values up-front; otherwise each iteration would read already-averaged
   // predecessors and produce accidental exponential smoothing instead of a true trailing mean.
-  const raw = dataPoints.map((p) => p.value as number);
+  // null values mean "no data for that day" (e.g. unlogged food day) and are excluded from the
+  // average rather than treated as zero.
+  const raw = dataPoints.map((p) => p.value as number | null);
   for (let i = 0; i < dataPoints.length; i++) {
     const start = Math.max(0, i - window + 1);
-    const slice = raw.slice(start, i + 1);
+    const slice = raw.slice(start, i + 1).filter((v): v is number => v !== null && !Number.isNaN(v));
+    if (slice.length === 0) {
+      dataPoints[i].value = null;
+      continue;
+    }
     const avg = slice.reduce((a: number, b: number) => a + b, 0) / slice.length;
     dataPoints[i].value = useDecimal ? Math.round(avg * 10) / 10 : Math.round(avg);
   }
@@ -305,7 +311,9 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
             filled.push({
               rawDate: ds,
               label: format(cur, "MMM d"),
-              value: 0,
+              // For food, an unlogged day = "no data" (excluded from rolling avg).
+              // For exercise, an unlogged day = genuine 0 (rest day).
+              value: dsl.source === "food" ? null : 0,
               _details: [],
               _calendarFill: true,
             });
