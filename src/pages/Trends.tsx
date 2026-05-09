@@ -229,44 +229,6 @@ const Trends = () => {
     setDismissedDuplicates(updated);
   };
 
-  // Aggregate total volume by day across all exercises
-  const volumeByDay = useMemo(() => {
-    const byDate: Record<string, number> = {};
-
-    weightExercises.forEach((exercise) => {
-      exercise.weightData.forEach((point) => {
-        if (point.weight === 0) return;
-        byDate[point.date] = (byDate[point.date] || 0) + point.volume;
-      });
-    });
-
-    const data = Object.entries(byDate)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, volumeLbs]) => {
-        const volume = settings.weightUnit === "kg" 
-          ? Math.round(volumeLbs * LBS_TO_KG) 
-          : Math.round(volumeLbs);
-        return {
-          rawDate: date,
-          date: format(new Date(`${date}T12:00:00`), "MMM d"),
-          volume,
-          label: `${Math.round(volume / 1000)}k`,
-        };
-      });
-
-    const dataLength = data.length;
-    const labelInterval = getLabelInterval(dataLength);
-    const labelIntervalFullWidth = getFullWidthLabelInterval(dataLength);
-
-    return data.map((d, index) => {
-      const distanceFromEnd = dataLength - 1 - index;
-      return {
-        ...d,
-        showLabel: distanceFromEnd % labelInterval === 0,
-        showLabelFullWidth: distanceFromEnd % labelIntervalFullWidth === 0,
-      };
-    });
-  }, [weightExercises, settings.weightUnit]);
 
   // Calorie burn chart data (range bars)
   const calorieBurnChartData = useMemo(() => {
