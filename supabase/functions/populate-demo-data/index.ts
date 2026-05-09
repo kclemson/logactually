@@ -1126,6 +1126,54 @@ async function doPopulationWork(
     let foodEntriesCreated = 0;
     let weightSetsCreated = 0;
 
+    // ========================================================================
+    // INSERT SAVED ROUTINES UP-FRONT (so daily logs can reference them)
+    // ========================================================================
+    interface RoutinePoolEntry {
+      id: string;
+      name: string;
+      original_input: string;
+      exercise_sets: GeneratedExercise[];
+      is_cardio: boolean;
+    }
+    const routinePool: RoutinePoolEntry[] = [];
+    const routineUsage = new Map<string, number>(); // id -> daily-use count
+    let savedRoutinesCreated = 0;
+
+    if (savedRoutinesCount > 0) {
+      const savedRoutines = generateSavedRoutines(savedRoutinesCount);
+      for (const routine of savedRoutines) {
+        const { data, error: routineError } = await serviceClient
+          .from('saved_routines')
+          .insert({
+            user_id: demoUserId,
+            name: routine.name,
+            original_input: routine.original_input,
+            exercise_sets: routine.exercise_sets,
+            use_count: routine.use_count,
+            is_auto_named: routine.is_auto_named,
+            last_used_at: new Date(Date.now() - randomInt(1, 14) * 24 * 60 * 60 * 1000).toISOString(),
+          })
+          .select('id')
+          .single();
+
+        if (routineError) {
+          console.error('Error inserting saved routine:', routineError);
+        } else if (data?.id) {
+          savedRoutinesCreated++;
+          const isCardio = routine.exercise_sets.every(s => (s.duration_minutes ?? 0) > 0 && (s.sets ?? 0) === 0);
+          routinePool.push({
+            id: data.id,
+            name: routine.name,
+            original_input: routine.original_input,
+            exercise_sets: routine.exercise_sets,
+            is_cardio: isCardio,
+          });
+        }
+      }
+    }
+    const strengthRoutines = routinePool.filter(r => !r.is_cardio);
+
     // Pre-compute calorie index for budget-aware selection
     const calorieIndex = buildCalorieIndex(parsedCache);
 
