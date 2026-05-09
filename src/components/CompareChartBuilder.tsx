@@ -130,6 +130,10 @@ export function CompareChartBuilder({ period, onSave, isSaving, initialDsl, init
         colorOverrides: { colorA: seriesA.color, colorB: seriesB.color },
       });
 
+      // Re-apply user metadata so config tweaks don't wipe custom title/note
+      if (customTitle) merged.title = customTitle;
+      if (customNote) merged.aiNote = customNote;
+
       if (!mountedRef.current) return;
       setPreview(merged);
       setDslA(d1);
@@ -150,7 +154,12 @@ export function CompareChartBuilder({ period, onSave, isSaving, initialDsl, init
   const handleSave = () => {
     if (!preview || !dslA || !dslB) return;
     const question = `${seriesLabel(seriesA)} vs ${seriesLabel(seriesB)}`;
-    onSave({ question, chartSpec: preview, chartDsl: dslA, chartDsl2: dslB });
+    const chartSpec = {
+      ...preview,
+      title: customTitle ?? preview.title,
+      aiNote: customNote ?? preview.aiNote,
+    };
+    onSave({ question, chartSpec, chartDsl: dslA, chartDsl2: dslB });
   };
 
   /** Build a human label for a series including any exercise filter */
