@@ -180,7 +180,7 @@ const LBS_TO_KG = 0.453592;
 const MI_TO_KM = 1.60934;
 
 export function exportWeightLog(sets: WeightSetExport[]) {
-  const headers = ['Date', 'Time', 'Category', 'Type', 'Subtype', 'Exercise', 'Sets', 'Reps', 'Weight (lbs)', 'Weight (kg)', 'Duration (min)', 'Distance (mi)', 'Distance (km)', 'Incline (%)', 'Effort (1-10)', 'Calories Burned', 'Heart Rate (bpm)', 'Cadence (rpm)', 'Speed (mph)', 'Speed (km/h)', 'Raw Input'];
+  const headers = ['Date', 'Time', 'Category', 'Type', 'Subtype', 'Exercise', 'Sets', 'Reps', 'Weight (lbs)', 'Weight (kg)', 'Duration (min)', 'Distance (mi)', 'Distance (km)', 'Incline (%)', 'Effort (1-10)', 'Calories Burned', 'Calories Burned (Estimated)', 'Heart Rate (bpm)', 'Cadence (rpm)', 'Speed (mph)', 'Speed (km/h)', 'Raw Input'];
 
   const sorted = [...sets].sort((a, b) => {
     if (a.logged_date !== b.logged_date) {
