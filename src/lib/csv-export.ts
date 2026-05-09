@@ -161,6 +161,7 @@ export interface WeightSetExport {
   raw_input: string | null;
   // Promoted metadata columns
   calories_burned_override?: number | null;
+  calories_burned_estimate?: number | null;
   effort?: number | null;
   heart_rate?: number | null;
   incline_pct?: number | null;
@@ -180,7 +181,7 @@ const LBS_TO_KG = 0.453592;
 const MI_TO_KM = 1.60934;
 
 export function exportWeightLog(sets: WeightSetExport[]) {
-  const headers = ['Date', 'Time', 'Category', 'Type', 'Subtype', 'Exercise', 'Sets', 'Reps', 'Weight (lbs)', 'Weight (kg)', 'Duration (min)', 'Distance (mi)', 'Distance (km)', 'Incline (%)', 'Effort (1-10)', 'Calories Burned', 'Heart Rate (bpm)', 'Cadence (rpm)', 'Speed (mph)', 'Speed (km/h)', 'Raw Input'];
+  const headers = ['Date', 'Time', 'Category', 'Type', 'Subtype', 'Exercise', 'Sets', 'Reps', 'Weight (lbs)', 'Weight (kg)', 'Duration (min)', 'Distance (mi)', 'Distance (km)', 'Incline (%)', 'Effort (1-10)', 'Calories Burned', 'Calories Burned (Estimated)', 'Heart Rate (bpm)', 'Cadence (rpm)', 'Speed (mph)', 'Speed (km/h)', 'Raw Input'];
 
   const sorted = [...sets].sort((a, b) => {
     if (a.logged_date !== b.logged_date) {
@@ -194,6 +195,7 @@ export function exportWeightLog(sets: WeightSetExport[]) {
     const incline = set.incline_pct ?? set.exercise_metadata?.incline_pct ?? '';
     const effortVal = set.effort ?? set.exercise_metadata?.effort ?? '';
     const calBurned = set.calories_burned_override ?? set.exercise_metadata?.calories_burned ?? '';
+    const calBurnedEstimate = set.calories_burned_estimate ?? '';
     const hr = set.heart_rate ?? set.exercise_metadata?.heart_rate ?? '';
     const cadence = set.cadence_rpm ?? set.exercise_metadata?.cadence_rpm ?? '';
     const speed = set.speed_mph ?? set.exercise_metadata?.speed_mph ?? null;
@@ -216,6 +218,7 @@ export function exportWeightLog(sets: WeightSetExport[]) {
       incline,
       effortVal,
       calBurned,
+      calBurnedEstimate,
       hr,
       cadence,
       speed ?? '',
