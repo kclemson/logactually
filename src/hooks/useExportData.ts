@@ -67,15 +67,16 @@ export function useExportData() {
   };
 
   const fetchAllWeightSets = async (): Promise<WeightSetExport[]> => {
-    const { data, error } = await supabase
-      .from('weight_sets')
-      .select('logged_date, created_at, description, sets, reps, weight_lbs, raw_input, exercise_metadata, calories_burned_override, calories_burned_estimate, effort, heart_rate, incline_pct, cadence_rpm, speed_mph, duration_minutes, distance_miles, exercise_key, exercise_subtype')
-      .order('logged_date', { ascending: true })
-      .order('created_at', { ascending: true });
+    const data = await fetchAllPages<any>((from, to) =>
+      supabase
+        .from('weight_sets')
+        .select('logged_date, created_at, description, sets, reps, weight_lbs, raw_input, exercise_metadata, calories_burned_override, calories_burned_estimate, effort, heart_rate, incline_pct, cadence_rpm, speed_mph, duration_minutes, distance_miles, exercise_key, exercise_subtype')
+        .order('logged_date', { ascending: true })
+        .order('created_at', { ascending: true })
+        .range(from, to)
+    );
 
-    if (error) throw error;
-
-    return (data || []).map((row) => ({
+    return data.map((row) => ({
       logged_date: row.logged_date,
       created_at: row.created_at,
       description: row.description,
