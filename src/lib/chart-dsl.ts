@@ -311,7 +311,9 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
             filled.push({
               rawDate: ds,
               label: format(cur, "MMM d"),
-              value: 0,
+              // For food, an unlogged day = "no data" (excluded from rolling avg).
+              // For exercise, an unlogged day = genuine 0 (rest day).
+              value: dsl.source === "food" ? null : 0,
               _details: [],
               _calendarFill: true,
             });
