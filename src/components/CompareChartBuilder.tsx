@@ -337,7 +337,7 @@ export function CompareChartBuilder({ period, onSave, isSaving, initialDsl, init
           <div className="flex justify-end">
             <Button size="sm" onClick={handleSave} disabled={isSaving} className="h-8">
               {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
-              Save to Trends
+              Save
             </Button>
           </div>
         </div>

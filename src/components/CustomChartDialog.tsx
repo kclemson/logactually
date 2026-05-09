@@ -533,7 +533,7 @@ function CustomChartDialogInner({
                   disabled={isSaving || generateChart.isPending}
                 >
                   {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
-                  {editingIdRef.current ? "Save Changes" : "Save to Trends"}
+                  Save
                 </Button>
               </div>
 
