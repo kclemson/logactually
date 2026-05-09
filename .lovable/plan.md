@@ -1,18 +1,32 @@
-## Add estimated calorie burn to exercise CSV export
+## Fix truncated exports caused by 1000-row query limit
 
 ### Problem
-The exercise CSV export's "Calories Burned" column only shows manually entered values (`calories_burned_override`). The system-calculated `calories_burned_estimate` (already fetched in `useExportData.fetchAllWeightSets`) is dropped on the floor.
+`useExportData` fetches each table with a single `.select()` and no pagination. Supabase caps results at 1000 rows by default. The exercise export sorts ascending by date, so once a user has >1000 weight_sets the most recent dates silently disappear from the CSV. The same latent bug exists for food and custom log exports — it just hasn't surfaced because those users haven't crossed 1000 rows yet.
 
-### Change — `src/lib/csv-export.ts`
+### Fix — `src/hooks/useExportData.ts`
 
-Split into two columns to preserve the distinction between user-entered and system-estimated values.
+Add a small generic pagination helper, then use it in all three fetchers (`fetchAllEntries`, `fetchAllWeightSets`, `fetchAllCustomLogEntries`) so any user can export their full history.
 
-1. **Headers** (line ~178): Replace `'Calories Burned'` with `'Calories Burned', 'Calories Burned (Estimated)'`.
+```ts
+async function fetchAllPages<T>(
+  buildQuery: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: any }>,
+  pageSize = 1000,
+): Promise<T[]> {
+  const all: T[] = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await buildQuery(from, from + pageSize - 1);
+    if (error) throw error;
+    const rows = data ?? [];
+    all.push(...rows);
+    if (rows.length < pageSize) break;
+    from += pageSize;
+  }
+  return all;
+}
+```
 
-2. **Row mapping** (lines 196, 218): 
-   - Keep `calBurned` as override-only: `set.calories_burned_override ?? set.exercise_metadata?.calories_burned ?? ''` (the JSONB fallback is for legacy override values).
-   - Add `calBurnedEstimate = set.calories_burned_estimate ?? ''`.
-   - Insert `calBurnedEstimate` into the row immediately after `calBurned`.
+Refactor each fetcher to call `fetchAllPages`, applying its existing `.select(...).order(...)` plus `.range(from, to)`. Sort order, column lists, and the existing post-processing (food_items mapping, Number coercions for weight sets, type aliasing for custom logs) all stay identical.
 
-### Result
-CSV now has 22 columns. Manual overrides stay in "Calories Burned"; system estimates appear in "Calories Burned (Estimated)". Empty cells where the relevant value isn't present.
+### Out of scope
+No UI changes; export buttons stay the same. No memory updates needed (the existing core memory already calls out the 1000-row default).

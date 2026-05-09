@@ -4,20 +4,41 @@ import { logger } from '@/lib/logger';
 import { FoodEntry, FoodItem } from '@/types/food';
 import { exportFoodLog, exportWeightLog as exportWeightLogCSV, exportCustomLog, WeightSetExport, CustomLogExportRow } from '@/lib/csv-export';
 
+const PAGE_SIZE = 1000;
+
+async function fetchAllPages<T>(
+  buildQuery: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+): Promise<T[]> {
+  const all: T[] = [];
+  let from = 0;
+  // Loop until a partial page indicates we've exhausted the table
+  // (Supabase silently caps each request at 1000 rows by default).
+  while (true) {
+    const { data, error } = await buildQuery(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    const rows = data ?? [];
+    all.push(...rows);
+    if (rows.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+  return all;
+}
+
 export function useExportData() {
   const [isExporting, setIsExporting] = useState(false);
 
   const fetchAllEntries = async (): Promise<FoodEntry[]> => {
-    const { data, error } = await supabase
-      .from('food_entries')
-      .select('*')
-      .order('eaten_date', { ascending: true })
-      .order('created_at', { ascending: true });
-
-    if (error) throw error;
+    const data = await fetchAllPages<any>((from, to) =>
+      supabase
+        .from('food_entries')
+        .select('*')
+        .order('eaten_date', { ascending: true })
+        .order('created_at', { ascending: true })
+        .range(from, to)
+    );
 
     // Parse food_items JSONB (same logic as useFoodEntries)
-    return (data || []).map((entry) => {
+    return data.map((entry) => {
       const rawItems = Array.isArray(entry.food_items)
         ? (entry.food_items as unknown as any[])
         : [];
@@ -46,15 +67,16 @@ export function useExportData() {
   };
 
   const fetchAllWeightSets = async (): Promise<WeightSetExport[]> => {
-    const { data, error } = await supabase
-      .from('weight_sets')
-      .select('logged_date, created_at, description, sets, reps, weight_lbs, raw_input, exercise_metadata, calories_burned_override, calories_burned_estimate, effort, heart_rate, incline_pct, cadence_rpm, speed_mph, duration_minutes, distance_miles, exercise_key, exercise_subtype')
-      .order('logged_date', { ascending: true })
-      .order('created_at', { ascending: true });
+    const data = await fetchAllPages<any>((from, to) =>
+      supabase
+        .from('weight_sets')
+        .select('logged_date, created_at, description, sets, reps, weight_lbs, raw_input, exercise_metadata, calories_burned_override, calories_burned_estimate, effort, heart_rate, incline_pct, cadence_rpm, speed_mph, duration_minutes, distance_miles, exercise_key, exercise_subtype')
+        .order('logged_date', { ascending: true })
+        .order('created_at', { ascending: true })
+        .range(from, to)
+    );
 
-    if (error) throw error;
-
-    return (data || []).map((row) => ({
+    return data.map((row) => ({
       logged_date: row.logged_date,
       created_at: row.created_at,
       description: row.description,
@@ -102,15 +124,16 @@ export function useExportData() {
   };
 
   const fetchAllCustomLogEntries = async (): Promise<CustomLogExportRow[]> => {
-    const { data, error } = await supabase
-      .from('custom_log_entries')
-      .select('logged_date, created_at, dose_time, entry_notes, numeric_value, numeric_value_2, text_value, unit, custom_log_types(name, value_type)')
-      .order('logged_date', { ascending: false })
-      .order('created_at', { ascending: false });
+    const data = await fetchAllPages<any>((from, to) =>
+      supabase
+        .from('custom_log_entries')
+        .select('logged_date, created_at, dose_time, entry_notes, numeric_value, numeric_value_2, text_value, unit, custom_log_types(name, value_type)')
+        .order('logged_date', { ascending: false })
+        .order('created_at', { ascending: false })
+        .range(from, to)
+    );
 
-    if (error) throw error;
-
-    return (data || []).map((row) => ({
+    return data.map((row) => ({
       logged_date: row.logged_date,
       created_at: row.created_at,
       log_type_name: (row.custom_log_types as unknown as { name: string; value_type: string } | null)?.name ?? '',
