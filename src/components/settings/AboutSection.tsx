@@ -16,7 +16,7 @@ export function AboutSection() {
           to="/changelog"
           className="block text-sm text-foreground hover:underline underline-offset-2 transition-colors"
         >
-          Changelog (last updated Apr-13)
+          Changelog (last updated May-09)
         </Link>
       </div>
     </CollapsibleSection>
