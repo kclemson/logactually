@@ -308,6 +308,8 @@ function CustomChartDialogInner({
             isSaving={saveMutation.isPending || updateMutation.isPending}
             initialDsl={initialChart?.chartDsl2 ? (initialChart.chartDsl as ChartDSL) : undefined}
             initialDsl2={initialChart?.chartDsl2 as ChartDSL | undefined}
+            initialTitle={initialChart?.chartSpec.title}
+            initialNote={initialChart?.chartSpec.aiNote}
           />
         ) : singleSubMode === "builder" ? (
           <div className="space-y-2.5">
@@ -328,6 +330,8 @@ function CustomChartDialogInner({
               }}
               isSaving={saveMutation.isPending || updateMutation.isPending}
               initialDsl={initialChart?.chartDsl && !initialChart.chartDsl2 ? (initialChart.chartDsl as ChartDSL) : undefined}
+              initialTitle={initialChart?.chartSpec.title}
+              initialNote={initialChart?.chartSpec.aiNote}
             />
             <button
               onClick={() => setSingleSubMode("ai")}
