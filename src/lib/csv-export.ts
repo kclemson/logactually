@@ -161,6 +161,7 @@ export interface WeightSetExport {
   raw_input: string | null;
   // Promoted metadata columns
   calories_burned_override?: number | null;
+  calories_burned_estimate?: number | null;
   effort?: number | null;
   heart_rate?: number | null;
   incline_pct?: number | null;
