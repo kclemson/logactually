@@ -406,7 +406,10 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
     return savedRoutines.map(r => ({
       id: `routine:${r.id}`,
       label: r.name,
-      searchText: [r.name, r.original_input, ...r.exercise_sets.map(s => s.description)]
+      // Intentionally exclude original_input: incidental words like "for each leg"
+      // produced false matches (e.g. typing "leg" surfacing a kettlebell routine).
+      // Name + structured exercise descriptions carry the real keywords.
+      searchText: [r.name, ...r.exercise_sets.map(s => s.description)]
         .filter(Boolean)
         .join(' '),
       subtitle: formatRoutineSubtitle(r, {
