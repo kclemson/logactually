@@ -81,6 +81,7 @@ export function SingleChartBuilder({ period, onSave, isSaving, initialDsl, initi
 
   const [preview, setPreview] = useState<ChartSpec | null>(null);
   const [currentDsl, setCurrentDsl] = useState<ChartDSL | null>(initialDsl ?? null);
+  const [showDsl, setShowDsl] = useState(false);
   const [customTitle, setCustomTitle] = useState<string | undefined>(initialTitle);
   const [customNote, setCustomNote] = useState<string | undefined>(initialNote);
   const [loading, setLoading] = useState(false);
