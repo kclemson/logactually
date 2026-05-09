@@ -91,6 +91,7 @@ export function CompareChartBuilder({ period, onSave, isSaving, initialDsl, init
   const [preview, setPreview] = useState<ChartSpec | null>(null);
   const [dslA, setDslA] = useState<ChartDSL | null>(initialDsl ?? null);
   const [dslB, setDslB] = useState<ChartDSL | null>(initialDsl2 ?? null);
+  const [showDsl, setShowDsl] = useState(false);
   const [customTitle, setCustomTitle] = useState<string | undefined>(initialTitle);
   const [customNote, setCustomNote] = useState<string | undefined>(initialNote);
   const [loading, setLoading] = useState(false);
@@ -334,12 +335,30 @@ export function CompareChartBuilder({ period, onSave, isSaving, initialDsl, init
               onAiNoteChange={(n) => { setCustomNote(n); setPreview(prev => prev ? { ...prev, aiNote: n } : null); }}
             />
           </div>
-          <div className="flex justify-end">
+          <div className="flex justify-between items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowDsl((v) => !v)}
+              className="text-[10px] text-muted-foreground/70 hover:text-muted-foreground underline-offset-2 hover:underline"
+            >
+              {showDsl ? "Hide DSL" : "Show DSL"}
+            </button>
             <Button size="sm" onClick={handleSave} disabled={isSaving} className="h-8">
               {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
               Save
             </Button>
           </div>
+          {showDsl && (dslA || dslB) && (
+            <div className="flex gap-2">
+              {[dslA, dslB].map((d, i) => d && (
+                <div key={i} className="flex-1 rounded border border-border/40 bg-muted/20 p-1.5 overflow-auto max-h-48">
+                  <pre className="text-[9px] leading-tight text-muted-foreground whitespace-pre-wrap break-all font-mono">
+                    {JSON.stringify(d, null, 2)}
+                  </pre>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
