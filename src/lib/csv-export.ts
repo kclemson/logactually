@@ -230,5 +230,5 @@ export function exportWeightLog(sets: WeightSetExport[]) {
   ].join('\n');
 
   const timestamp = format(new Date(), 'yyyy-MM-dd');
-  downloadCSV(csv, `weight-log-${timestamp}.csv`);
+  downloadCSV(csv, `exercise-log-${timestamp}.csv`);
 }
