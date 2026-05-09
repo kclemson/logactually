@@ -664,16 +664,6 @@ const Trends = () => {
               )}
 
               <div className="grid grid-cols-2 gap-2">
-                {volumeByDay.length > 0 && (
-                  <VolumeChart
-                    title={`Total Volume (${settings.weightUnit})`}
-                    subtitle="Across weight exercises"
-                    chartData={volumeByDay}
-                    color={CHART_COLORS.trainingVolume}
-                    unit={settings.weightUnit}
-                    onNavigate={(date) => navigate(`/weights?date=${date}`)}
-                  />
-                )}
                 {calorieBurnChartData.length > 0 && (() => {
                   const bmr = computeAbsoluteBMR(settings);
                   const sedentaryTDEE = bmr != null ? Math.round(bmr * ACTIVITY_MULTIPLIERS.sedentary) : null;
