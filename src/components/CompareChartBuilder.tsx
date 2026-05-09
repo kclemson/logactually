@@ -61,9 +61,11 @@ interface CompareChartBuilderProps {
   isSaving: boolean;
   initialDsl?: ChartDSL;
   initialDsl2?: ChartDSL;
+  initialTitle?: string;
+  initialNote?: string;
 }
 
-export function CompareChartBuilder({ period, onSave, isSaving, initialDsl, initialDsl2 }: CompareChartBuilderProps) {
+export function CompareChartBuilder({ period, onSave, isSaving, initialDsl, initialDsl2, initialTitle, initialNote }: CompareChartBuilderProps) {
   const [seriesA, setSeriesA] = useState<SeriesConfig>(() => ({
     source: initialDsl?.source ?? "food",
     metric: initialDsl?.metric ?? "calories",
@@ -89,6 +91,8 @@ export function CompareChartBuilder({ period, onSave, isSaving, initialDsl, init
   const [preview, setPreview] = useState<ChartSpec | null>(null);
   const [dslA, setDslA] = useState<ChartDSL | null>(initialDsl ?? null);
   const [dslB, setDslB] = useState<ChartDSL | null>(initialDsl2 ?? null);
+  const [customTitle, setCustomTitle] = useState<string | undefined>(initialTitle);
+  const [customNote, setCustomNote] = useState<string | undefined>(initialNote);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
@@ -126,6 +130,10 @@ export function CompareChartBuilder({ period, onSave, isSaving, initialDsl, init
         colorOverrides: { colorA: seriesA.color, colorB: seriesB.color },
       });
 
+      // Re-apply user metadata so config tweaks don't wipe custom title/note
+      if (customTitle) merged.title = customTitle;
+      if (customNote) merged.aiNote = customNote;
+
       if (!mountedRef.current) return;
       setPreview(merged);
       setDslA(d1);
@@ -146,7 +154,12 @@ export function CompareChartBuilder({ period, onSave, isSaving, initialDsl, init
   const handleSave = () => {
     if (!preview || !dslA || !dslB) return;
     const question = `${seriesLabel(seriesA)} vs ${seriesLabel(seriesB)}`;
-    onSave({ question, chartSpec: preview, chartDsl: dslA, chartDsl2: dslB });
+    const chartSpec = {
+      ...preview,
+      title: customTitle ?? preview.title,
+      aiNote: customNote ?? preview.aiNote,
+    };
+    onSave({ question, chartSpec, chartDsl: dslA, chartDsl2: dslB });
   };
 
   /** Build a human label for a series including any exercise filter */
@@ -317,8 +330,8 @@ export function CompareChartBuilder({ period, onSave, isSaving, initialDsl, init
             <DynamicChart
               spec={preview}
               period={period}
-              onTitleChange={(t) => setPreview(prev => prev ? { ...prev, title: t } : null)}
-              onAiNoteChange={(n) => setPreview(prev => prev ? { ...prev, aiNote: n } : null)}
+              onTitleChange={(t) => { setCustomTitle(t); setPreview(prev => prev ? { ...prev, title: t } : null); }}
+              onAiNoteChange={(n) => { setCustomNote(n); setPreview(prev => prev ? { ...prev, aiNote: n } : null); }}
             />
           </div>
           <div className="flex justify-end">

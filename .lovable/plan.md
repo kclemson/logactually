@@ -1,54 +1,52 @@
 ## Problem
 
-After editing a chart's title and saving, the chart in the Trends grid keeps showing the old title until the page is pulled-to-refresh.
+When a user manually edits a saved custom chart's title or note (via the inline-editable header/footer) and then re-opens the chart in the edit dialog, both fields revert to their auto-generated defaults. The values still exist in the DB (`saved_charts.chart_spec.title` / `saved_charts.chart_spec.aiNote`) — they just aren't threaded into the builder's preview.
 
 ## Root cause
 
-In `src/pages/Trends.tsx`, saved charts are rendered from a derived `liveSpecs` map (line 133) that re-executes the chart DSL against fresh data. The chart's title and `aiNote` are baked *into that map* at fetch time (lines 156–160):
+`CustomChartDialog` opens with one of two builders:
 
-```ts
-results.set(chart.id, {
-  ...freshSpec,
-  title: chart.chart_spec.title,
-  aiNote: chart.chart_spec.aiNote,
-});
-```
+- `SingleChartBuilder` (`src/components/SingleChartBuilder.tsx`)
+- `CompareChartBuilder` (`src/components/CompareChartBuilder.tsx`)
 
-When the user saves a title edit, `useSavedCharts.updateMutation` invalidates both `saved-charts` and `saved-charts-live`. The `saved-charts` cache updates immediately with the new title, but `saved-charts-live` has to re-fetch all chart data (potentially slow) before the new title shows up. Until that refetch completes, the rendered chart reads the stale title from `liveSpecs`.
-
-The pull-to-refresh "fixes" it only because it forces the live refetch to complete and rebuild the map.
+Both receive `initialDsl` (and `initialDsl2`) so form fields restore correctly, but neither receives the saved `chartSpec.title` or `chartSpec.aiNote`. On mount, both run `handleGenerate()`, which builds a fresh `ChartSpec` via `executeDSL` — that produces an auto-built `title` from `buildQuestion()` / `humanizeMetric(metric)`, and no `aiNote` at all. The user's saved metadata is overwritten before the preview renders, and (worse) gets persisted as the auto-generated value if they hit Save without re-typing.
 
 ## Fix
 
-Title and `aiNote` are user-edited metadata, not values derived from chart data. They shouldn't be cached inside the data-fetch query at all. Merge them in at render time from the always-current `savedCharts` source.
+Thread the saved `chartSpec.title` and `chartSpec.aiNote` into each builder and re-apply them after every preview generation. Local `customTitle` / `customNote` state lets subsequent inline edits in the dialog work as today.
 
-### Change 1 — `src/pages/Trends.tsx` line 444
+### Change 1 — `src/components/SingleChartBuilder.tsx`
 
-Replace:
-```tsx
-spec={liveSpecs?.get(chart.id) ?? chart.chart_spec}
-```
+1. Add `initialTitle?: string` and `initialNote?: string` to `SingleChartBuilderProps`.
+2. Add state:
+   - `const [customTitle, setCustomTitle] = useState<string | undefined>(initialTitle);`
+   - `const [customNote, setCustomNote] = useState<string | undefined>(initialNote);`
+3. In `handleGenerate`, after building `spec`:
+   - `if (customTitle) spec.title = customTitle;`
+   - `if (customNote) spec.aiNote = customNote;`
+4. Update the inline-edit handlers (lines 314–315) to also persist to the custom state:
+   - `onTitleChange={(t) => { setCustomTitle(t); setPreview(prev => prev ? { ...prev, title: t } : null); }}`
+   - `onAiNoteChange={(n) => { setCustomNote(n); setPreview(prev => prev ? { ...prev, aiNote: n } : null); }}`
+5. In `handleSave`, defensively merge: `chartSpec: { ...preview, title: customTitle ?? preview.title, aiNote: customNote ?? preview.aiNote }`.
 
-With a small inline merge that overlays the saved title/aiNote on top of the live data spec:
-```tsx
-spec={
-  liveSpecs?.get(chart.id)
-    ? { ...liveSpecs.get(chart.id)!, title: chart.chart_spec.title, aiNote: chart.chart_spec.aiNote }
-    : chart.chart_spec
-}
-```
+### Change 2 — `src/components/CompareChartBuilder.tsx`
 
-(Or pull this into a small `useMemo`/helper for readability.)
+Mirror the exact same pattern at the matching call sites (`mergeChartSpecs(...)` is where the `if (customTitle) merged.title = customTitle; if (customNote) merged.aiNote = customNote;` lines go).
 
-### Change 2 — `src/pages/Trends.tsx` lines 156–160 (cleanup)
+### Change 3 — `src/components/CustomChartDialog.tsx`
 
-The title/aiNote overlay inside the `saved-charts-live` queryFn becomes redundant after Change 1 — remove those two lines so the cached live spec only carries data-derived fields. This avoids future drift where the cached spec disagrees with the saved metadata.
+At the existing builder render sites (around lines 309–310 and 330), pass:
 
-## Result
+- `initialTitle={initialChart?.chartSpec.title}`
+- `initialNote={initialChart?.chartSpec.aiNote}`
 
-Title (and aiNote) edits show up immediately on save, because they read straight from `savedCharts` (which React Query updates synchronously via `updateMutation` invalidation). No refetch of chart data needed for metadata-only edits.
+## Why this approach
+
+- Keeps the DSL as source-of-truth for *data* config, and `chart_spec.{title,aiNote}` as source-of-truth for *display* metadata — same separation already used at the Trends-page render layer.
+- Re-generation triggered by config tweaks naturally preserves user metadata.
+- No schema changes, no `executeDSL` changes.
 
 ## Out of scope
 
-- The `saved-charts-live` invalidation on update is still appropriate for edits that change the DSL (e.g. metric, grouping). Not touching that.
-- No backend / RLS / DSL changes.
+- The "ai" tab (v1 charts without DSL) — `initialChart.chartSpec` is already passed straight through there, so this bug is specific to the v2 builder paths.
+- No backend, RLS, or DSL changes.

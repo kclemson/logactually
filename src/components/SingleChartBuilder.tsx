@@ -64,9 +64,11 @@ interface SingleChartBuilderProps {
   onSave: (params: { question: string; chartSpec: ChartSpec; chartDsl: ChartDSL }) => void;
   isSaving: boolean;
   initialDsl?: ChartDSL;
+  initialTitle?: string;
+  initialNote?: string;
 }
 
-export function SingleChartBuilder({ period, onSave, isSaving, initialDsl }: SingleChartBuilderProps) {
+export function SingleChartBuilder({ period, onSave, isSaving, initialDsl, initialTitle, initialNote }: SingleChartBuilderProps) {
   const [source, setSource] = useState<"food" | "exercise">(initialDsl?.source ?? "food");
   const [metric, setMetric] = useState(initialDsl?.metric ?? "calories");
   const [chartType, setChartType] = useState<"bar" | "line" | "area">(initialDsl?.chartType ?? "bar");
@@ -79,6 +81,8 @@ export function SingleChartBuilder({ period, onSave, isSaving, initialDsl }: Sin
 
   const [preview, setPreview] = useState<ChartSpec | null>(null);
   const [currentDsl, setCurrentDsl] = useState<ChartDSL | null>(initialDsl ?? null);
+  const [customTitle, setCustomTitle] = useState<string | undefined>(initialTitle);
+  const [customNote, setCustomNote] = useState<string | undefined>(initialNote);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
@@ -137,6 +141,10 @@ export function SingleChartBuilder({ period, onSave, isSaving, initialDsl }: Sin
       // Apply color override
       spec.color = color;
 
+      // Re-apply user metadata so config tweaks don't wipe custom title/note
+      if (customTitle) spec.title = customTitle;
+      if (customNote) spec.aiNote = customNote;
+
       if (!mountedRef.current) return;
       setPreview(spec);
       setCurrentDsl(dsl);
@@ -154,7 +162,12 @@ export function SingleChartBuilder({ period, onSave, isSaving, initialDsl }: Sin
 
   const handleSave = () => {
     if (!preview || !currentDsl) return;
-    onSave({ question: buildQuestion(), chartSpec: preview, chartDsl: currentDsl });
+    const chartSpec = {
+      ...preview,
+      title: customTitle ?? preview.title,
+      aiNote: customNote ?? preview.aiNote,
+    };
+    onSave({ question: buildQuestion(), chartSpec, chartDsl: currentDsl });
   };
 
   // Filter groupBy options: "category" only for exercise
@@ -311,8 +324,8 @@ export function SingleChartBuilder({ period, onSave, isSaving, initialDsl }: Sin
             <DynamicChart
               spec={preview}
               period={period}
-              onTitleChange={(t) => setPreview(prev => prev ? { ...prev, title: t } : null)}
-              onAiNoteChange={(n) => setPreview(prev => prev ? { ...prev, aiNote: n } : null)}
+              onTitleChange={(t) => { setCustomTitle(t); setPreview(prev => prev ? { ...prev, title: t } : null); }}
+              onAiNoteChange={(n) => { setCustomNote(n); setPreview(prev => prev ? { ...prev, aiNote: n } : null); }}
             />
           </div>
           <div className="flex justify-end">
