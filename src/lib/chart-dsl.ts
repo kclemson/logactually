@@ -173,9 +173,12 @@ function aggregate(values: number[], method: ChartDSL["aggregation"]): number {
 // ── Post-processing helpers ────────────────────────────────
 
 function applyWindow(dataPoints: Array<Record<string, any>>, window: number, useDecimal = false): void {
+  // Snapshot raw values up-front; otherwise each iteration would read already-averaged
+  // predecessors and produce accidental exponential smoothing instead of a true trailing mean.
+  const raw = dataPoints.map((p) => p.value as number);
   for (let i = 0; i < dataPoints.length; i++) {
     const start = Math.max(0, i - window + 1);
-    const slice = dataPoints.slice(start, i + 1).map((p) => p.value);
+    const slice = raw.slice(start, i + 1);
     const avg = slice.reduce((a: number, b: number) => a + b, 0) / slice.length;
     dataPoints[i].value = useDecimal ? Math.round(avg * 10) / 10 : Math.round(avg);
   }
