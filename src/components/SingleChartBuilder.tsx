@@ -328,12 +328,26 @@ export function SingleChartBuilder({ period, onSave, isSaving, initialDsl, initi
               onAiNoteChange={(n) => { setCustomNote(n); setPreview(prev => prev ? { ...prev, aiNote: n } : null); }}
             />
           </div>
-          <div className="flex justify-end">
+          <div className="flex justify-between items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowDsl((v) => !v)}
+              className="text-[10px] text-muted-foreground/70 hover:text-muted-foreground underline-offset-2 hover:underline"
+            >
+              {showDsl ? "Hide DSL" : "Show DSL"}
+            </button>
             <Button size="sm" onClick={handleSave} disabled={isSaving} className="h-8">
               {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
               Save
             </Button>
           </div>
+          {showDsl && currentDsl && (
+            <div className="rounded border border-border/40 bg-muted/20 p-1.5 overflow-auto max-h-48">
+              <pre className="text-[9px] leading-tight text-muted-foreground whitespace-pre-wrap break-all font-mono">
+                {JSON.stringify(currentDsl, null, 2)}
+              </pre>
+            </div>
+          )}
         </div>
       )}
     </div>
