@@ -683,6 +683,8 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
           onLogSavedRoutine={handleLogSavedRoutine}
           onCreateNewRoutine={() => setCreateRoutineDialogOpen(true)}
           weightUnit={settings.weightUnit}
+          typeaheadCandidates={typeaheadCandidates}
+          onSelectTypeahead={handleSelectTypeahead}
         />
         {analyzeError && (
           <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive mt-3">
