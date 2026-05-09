@@ -1,16 +1,46 @@
-Add a "Show DSL" toggle to the Single and Compare chart builders, mirroring the existing one in the AI tab.
+Fix the rolling-average bug in `src/lib/chart-dsl.ts` `applyWindow` (the function used by every "rolling N-day" chart).
 
-## What
+## The bug
 
-In `SingleChartBuilder.tsx` and `CompareChartBuilder.tsx`, render a small `Show DSL` / `Hide DSL` text button next to the Save button (in the preview footer). When toggled on, render a `<pre>` block below the preview showing `JSON.stringify(currentDsl, null, 2)` — same styling as the existing AI-tab debug block (`text-[9px] leading-tight text-muted-foreground whitespace-pre-wrap font-mono`, bordered muted background, `max-h-48 overflow-auto`).
+```ts
+function applyWindow(dataPoints, window) {
+  for (let i = 0; i < dataPoints.length; i++) {
+    const start = Math.max(0, i - window + 1);
+    const slice = dataPoints.slice(start, i + 1).map((p) => p.value);  // ← reads mutated values
+    const avg = slice.reduce((a, b) => a + b, 0) / slice.length;
+    dataPoints[i].value = ...avg;
+  }
+}
+```
 
-- Single builder: show `currentDsl` (already in state).
-- Compare builder: show both `currentDsl` and `currentDsl2` side-by-side (or stacked) since compare charts have two series.
+It mutates `dataPoints[i].value` in place, then index `i+1` reads `p.value` from those already-mutated entries. Each rolling average is computed from previously-averaged predecessors, not raw values — accidental exponential smoothing.
 
-## Why
+Verified against the user's real data: a true 7-day trailing average on May 9 should be **126** (matches the built-in 7-day chart's avg of 121). The buggy code produces **102**, and once calendar-fill zeros from March missing-log days are folded in it drops further to **~96** — exactly what the chart shows.
 
-You can't currently inspect what the form-built chart actually queries, which makes it hard to debug cases like the rolling 7-day protein average looking wrong. The AI tab already has this affordance; bringing it to the form builders is a small consistency fix.
+## Fix
 
-## Out of scope
+Snapshot raw values once, then write averages out:
 
-Not investigating the protein chart math itself in this change — once the DSL is visible, we can look together and decide if anything's actually off (likely just a smoothing artifact, since today=33 drags the trailing window down).
+```ts
+function applyWindow(dataPoints, window, useDecimal = false) {
+  const raw = dataPoints.map((p) => p.value);
+  for (let i = 0; i < dataPoints.length; i++) {
+    const start = Math.max(0, i - window + 1);
+    const slice = raw.slice(start, i + 1);
+    const avg = slice.reduce((a, b) => a + b, 0) / slice.length;
+    dataPoints[i].value = useDecimal ? Math.round(avg * 10) / 10 : Math.round(avg);
+  }
+}
+```
+
+One-line conceptual change; same signature; no callsite churn.
+
+## Scope of impact
+
+`applyWindow` is called from three places (lines 312, 316, 418): date-grouped rolling, week-grouped rolling, and the catch-all branch. All three benefit from the same fix. Every saved chart with `window > 1` (food and exercise alike) will recompute correctly on next render — no migration needed.
+
+The earlier "zero-fill for unlogged food days" theory turned out to be wrong; that branch is fine and I'm not touching it.
+
+## Verification
+
+After the fix, re-open the Rolling 7-Day Protein Average chart (90-day view). May 9 endpoint should jump from ~96 to ~126, and the line shape over the last week should rise sharply — matching what the built-in protein chart already shows.
