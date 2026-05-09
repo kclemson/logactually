@@ -1,52 +1,47 @@
 ## Problem
 
-When a user manually edits a saved custom chart's title or note (via the inline-editable header/footer) and then re-opens the chart in the edit dialog, both fields revert to their auto-generated defaults. The values still exist in the DB (`saved_charts.chart_spec.title` / `saved_charts.chart_spec.aiNote`) — they just aren't threaded into the builder's preview.
+In `DynamicChart` (`src/components/trends/DynamicChart.tsx`, lines 221–238), the note's `contentEditable` `<p>` renders its placeholder by stuffing `"Add a note..."` into its text content when `spec.aiNote` is empty:
 
-## Root cause
+```tsx
+{spec.aiNote || "Add a note..."}
+```
 
-`CustomChartDialog` opens with one of two builders:
-
-- `SingleChartBuilder` (`src/components/SingleChartBuilder.tsx`)
-- `CompareChartBuilder` (`src/components/CompareChartBuilder.tsx`)
-
-Both receive `initialDsl` (and `initialDsl2`) so form fields restore correctly, but neither receives the saved `chartSpec.title` or `chartSpec.aiNote`. On mount, both run `handleGenerate()`, which builds a fresh `ChartSpec` via `executeDSL` — that produces an auto-built `title` from `buildQuestion()` / `humanizeMetric(metric)`, and no `aiNote` at all. The user's saved metadata is overwritten before the preview renders, and (worse) gets persisted as the auto-generated value if they hit Save without re-typing.
+When the user taps to edit, the placeholder is *real text* inside the field, so it stays put while they type and they end up with `"Add a note...whatever I typed"` (or have to manually clear it first).
 
 ## Fix
 
-Thread the saved `chartSpec.title` and `chartSpec.aiNote` into each builder and re-apply them after every preview generation. Local `customTitle` / `customNote` state lets subsequent inline edits in the dialog work as today.
+Use a CSS-only placeholder via `:empty::before`, which is the standard pattern for contentEditable:
 
-### Change 1 — `src/components/SingleChartBuilder.tsx`
+1. Render the `<p>` with empty content when `spec.aiNote` is falsy (instead of the literal placeholder string).
+2. Add a `data-placeholder="Add a note..."` attribute.
+3. Add a Tailwind arbitrary-variant class so the placeholder text is shown via a pseudo-element only when the element is empty:
+   ```
+   empty:before:content-[attr(data-placeholder)]
+   empty:before:text-foreground/40
+   empty:before:italic
+   ```
+   (Project convention — per memory — for ghost text is `placeholder:text-foreground/50 placeholder:italic`; for contentEditable we mirror that with `text-foreground/50` on the pseudo-element.)
+4. Remove the `if (e.key === "Escape") ... e.currentTarget.textContent = spec.aiNote ?? ""` branch's reliance on the placeholder string — already correct since it sets to `""` when no note.
 
-1. Add `initialTitle?: string` and `initialNote?: string` to `SingleChartBuilderProps`.
-2. Add state:
-   - `const [customTitle, setCustomTitle] = useState<string | undefined>(initialTitle);`
-   - `const [customNote, setCustomNote] = useState<string | undefined>(initialNote);`
-3. In `handleGenerate`, after building `spec`:
-   - `if (customTitle) spec.title = customTitle;`
-   - `if (customNote) spec.aiNote = customNote;`
-4. Update the inline-edit handlers (lines 314–315) to also persist to the custom state:
-   - `onTitleChange={(t) => { setCustomTitle(t); setPreview(prev => prev ? { ...prev, title: t } : null); }}`
-   - `onAiNoteChange={(n) => { setCustomNote(n); setPreview(prev => prev ? { ...prev, aiNote: n } : null); }}`
-5. In `handleSave`, defensively merge: `chartSpec: { ...preview, title: customTitle ?? preview.title, aiNote: customNote ?? preview.aiNote }`.
+The pseudo-element is non-editable, so tapping to type produces a clean, empty caret position with the ghost label visible until the first keystroke.
 
-### Change 2 — `src/components/CompareChartBuilder.tsx`
+### Concrete diff sketch
 
-Mirror the exact same pattern at the matching call sites (`mergeChartSpecs(...)` is where the `if (customTitle) merged.title = customTitle; if (customNote) merged.aiNote = customNote;` lines go).
-
-### Change 3 — `src/components/CustomChartDialog.tsx`
-
-At the existing builder render sites (around lines 309–310 and 330), pass:
-
-- `initialTitle={initialChart?.chartSpec.title}`
-- `initialNote={initialChart?.chartSpec.aiNote}`
-
-## Why this approach
-
-- Keeps the DSL as source-of-truth for *data* config, and `chart_spec.{title,aiNote}` as source-of-truth for *display* metadata — same separation already used at the Trends-page render layer.
-- Re-generation triggered by config tweaks naturally preserves user metadata.
-- No schema changes, no `executeDSL` changes.
+```tsx
+<p
+  contentEditable
+  suppressContentEditableWarning
+  spellCheck={false}
+  data-placeholder="Add a note..."
+  onBlur={...}
+  onKeyDown={...}
+  className="text-[10px] italic text-muted-foreground mt-1 px-0.5 leading-tight outline-none border-b border-dashed border-muted-foreground/30 focus:border-primary cursor-text empty:before:content-[attr(data-placeholder)] empty:before:text-foreground/50 empty:before:italic"
+>
+  {spec.aiNote || ""}
+</p>
+```
 
 ## Out of scope
 
-- The "ai" tab (v1 charts without DSL) — `initialChart.chartSpec` is already passed straight through there, so this bug is specific to the v2 builder paths.
-- No backend, RLS, or DSL changes.
+- Title field — uses a separate input pattern; not affected.
+- Read-only path (the `else` branch when no `onAiNoteChange`) — already correct.

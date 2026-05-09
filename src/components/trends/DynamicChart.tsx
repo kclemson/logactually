@@ -224,6 +224,7 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
         contentEditable
         suppressContentEditableWarning
         spellCheck={false}
+        data-placeholder="Add a note..."
         onBlur={(e) => {
           const newNote = (e.currentTarget.textContent ?? "").trim();
           if (newNote !== (spec.aiNote ?? "")) onAiNoteChange(newNote || undefined as any);
@@ -232,9 +233,9 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
           if (e.key === "Enter") { e.preventDefault(); (e.target as HTMLElement).blur(); }
           if (e.key === "Escape") { e.preventDefault(); e.currentTarget.textContent = spec.aiNote ?? ""; (e.target as HTMLElement).blur(); }
         }}
-        className="text-[10px] italic text-muted-foreground mt-1 px-0.5 leading-tight outline-none border-b border-dashed border-muted-foreground/30 focus:border-primary cursor-text"
+        className="text-[10px] italic text-muted-foreground mt-1 px-0.5 leading-tight outline-none border-b border-dashed border-muted-foreground/30 focus:border-primary cursor-text empty:before:content-[attr(data-placeholder)] empty:before:text-foreground/50 empty:before:italic"
       >
-        {spec.aiNote || "Add a note..."}
+        {spec.aiNote || ""}
       </p>
     ) : (
       <p className="text-[10px] italic text-muted-foreground mt-1 px-0.5 leading-tight">
