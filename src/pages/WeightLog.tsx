@@ -7,6 +7,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { format, isToday, parseISO } from 'date-fns';
 import { useWeightDatesWithData } from '@/hooks/useDatesWithData';
 import { LogInput, LogInputRef } from '@/components/LogInput';
+import type { TypeaheadCandidate } from '@/hooks/useTypeaheadSuggestions';
+import { formatRoutineSubtitle } from '@/lib/routine-subtitle';
+import type { SavedRoutine } from '@/types/weight';
 import { DateNavigation } from '@/components/DateNavigation';
 import { useDateNavigation } from '@/hooks/useDateNavigation';
 import { WeightItemsTable } from '@/components/WeightItemsTable';
@@ -396,6 +399,31 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
     createEntryFromExercises(exercises, null, routineId);
   }, [createEntryFromExercises, isReadOnly]);
 
+  // Typeahead candidates: saved routines only (history is intentionally excluded —
+  // exercise has too much intentional variation per instance to make name-only matching useful).
+  const typeaheadCandidates = useMemo((): TypeaheadCandidate[] | undefined => {
+    if (!savedRoutines?.length) return undefined;
+    return savedRoutines.map(r => ({
+      id: `routine:${r.id}`,
+      label: r.name,
+      searchText: [r.name, r.original_input, ...r.exercise_sets.map(s => s.description)]
+        .filter(Boolean)
+        .join(' '),
+      subtitle: formatRoutineSubtitle(r, {
+        weightUnit: settings.weightUnit,
+        distanceUnit: settings.distanceUnit,
+      }),
+      timestamp: r.last_used_at ?? r.created_at,
+      frequency: Math.max(1, r.use_count ?? 1),
+      payload: r,
+    }));
+  }, [savedRoutines, settings.weightUnit, settings.distanceUnit]);
+
+  const handleSelectTypeahead = useCallback((candidate: TypeaheadCandidate) => {
+    const routine = candidate.payload as SavedRoutine;
+    handleLogSavedRoutine(routine.exercise_sets, routine.id);
+  }, [handleLogSavedRoutine]);
+
   // Auto-save handler for single field updates
   const handleItemUpdate = useCallback((index: number, field: keyof WeightSet, value: string | number) => {
     updateItem(index, field, value);
@@ -655,6 +683,8 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
           onLogSavedRoutine={handleLogSavedRoutine}
           onCreateNewRoutine={() => setCreateRoutineDialogOpen(true)}
           weightUnit={settings.weightUnit}
+          typeaheadCandidates={typeaheadCandidates}
+          onSelectTypeahead={handleSelectTypeahead}
         />
         {analyzeError && (
           <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive mt-3">

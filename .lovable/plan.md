@@ -1,56 +1,91 @@
-Stop treating unlogged food days as zero-protein/zero-calorie days in rolling averages. The rolling window should average only days with actual data over the trailing N-day calendar window.
+# Add Typeahead to Exercise Logging
 
-## The bug
+## Goal
 
-In `src/lib/chart-dsl.ts` around line 292, when `dsl.window > 1`, the engine calendar-fills every gap with `{ value: 0 }` and runs `applyWindow` over the filled array. For exercise that's correct (a rest day is genuinely 0 volume / 0 calories burned). For **food**, an unlogged day means "no data," not "ate nothing" — so zeros drag the rolling average down. Hence the March dip in your chart on days you didn't log.
+Surface inline "previously logged" suggestions in the exercise input — but limited to **saved routines only**, not raw historical exercises. The food typeahead infrastructure is already generic enough to reuse with zero changes; this is purely a wiring task in `WeightLog.tsx`.
 
-## Fix
+## Why saved routines only (and not historical exercises)
 
-Two coordinated changes, both in `src/lib/chart-dsl.ts`:
+You're right that matching against every past run/lift would be a poor experience:
 
-**1. Mark calendar-fill days as null instead of 0** (only for the food branch — leave exercise zero-fill alone):
+- **Food has stable identity**: "Chipotle bowl" today is essentially the same as last week — copying the macros saves typing and is accurate.
+- **Exercise has intentional variation**: every run differs in distance/pace/duration; every lift differs in weight/reps. Suggesting a past instance would either pre-fill stale numbers (wrong) or just match the name (no value over typing).
+- **Saved routines are the user's own curation** — you've already decided "this pattern is worth reusing," and `use_count` / `last_used_at` tells us which ones matter.
 
-```ts
-filled.push({
-  rawDate: ds,
-  label: format(cur, "MMM d"),
-  value: dsl.source === "food" ? null : 0,  // null = "no data"
-  _details: [],
-  _calendarFill: true,
-});
-```
+So the rule: **typeahead = a faster path to your saved routines list**, not a history browser.
 
-**2. Update `applyWindow` to skip nulls in the divisor**:
+## Behavior
 
-```ts
-function applyWindow(dataPoints, window, useDecimal = false) {
-  const raw = dataPoints.map((p) => p.value);
-  for (let i = 0; i < dataPoints.length; i++) {
-    const start = Math.max(0, i - window + 1);
-    const slice = raw.slice(start, i + 1).filter((v) => v !== null && !Number.isNaN(v));
-    if (slice.length === 0) {
-      dataPoints[i].value = null;  // no data at all in window
-      continue;
-    }
-    const avg = slice.reduce((a, b) => a + b, 0) / slice.length;
-    dataPoints[i].value = useDecimal ? Math.round(avg * 10) / 10 : Math.round(avg);
-  }
-}
-```
+- User types in the exercise input. Once 3+ chars match a saved routine name (or its `original_input` / exercise descriptions), the same dropdown that appears in food logging shows up.
+- Selecting a suggestion behaves identically to tapping that routine in `SavedRoutinesPopover`: clears the text, calls `handleLogSavedRoutine(exerciseSets, routineId)`, increments `use_count`, etc.
+- Ranking uses the existing scoring (similarity × recency × frequency). `use_count` → `frequency`, `last_used_at ?? created_at` → `timestamp`. Routines you actually use float to the top.
+- If no routines match, dropdown stays hidden — no fallback to historical exercises.
 
-The existing `dataPoints = filled.filter(p => !p._calendarFill)` line already strips the calendar-fill markers from the rendered output, so days you didn't log still won't show points on the chart — they just no longer poison the average for nearby days.
+## Subtitle: lifting vs cardio paths
 
-## Semantics this matches
+A routine is classified per-routine by inspecting its `exercise_sets`:
 
-This is the same "sum of logged values / count of logged days within the trailing 7 calendar days" that the built-in 7-day protein chart uses. So the rolling average will now agree with the built-in chart at any endpoint, instead of only when you've logged every day.
+- **Cardio** if every set has `duration_minutes` and no meaningful `weight_lbs`.
+- **Lifting** otherwise (mixed routines fall back to lifting since strength is usually the headline).
 
-## Scope
+Then the subtitle picks one of four formats:
 
-- Food rolling charts: March dip flattens out — those days will reflect the average of *what you actually ate* in the surrounding logged days.
-- Exercise rolling charts: unchanged (zeros stay, since a rest day is real data).
-- Intensity metrics (heart_rate, effort): already skip calendar-fill — unchanged.
-- Cumulative transform: unaffected (runs separately).
+| Case | Subtitle |
+|---|---|
+| Lifting, single exercise | `3×8 · 135 lb` (sets×reps · weight, respects `settings.weightUnit`) |
+| Lifting, multi exercise | `4 lifts · 12 sets` (distinct exercises · total set count) |
+| Cardio, single exercise | `30 min · 3.0 mi` (drop the distance half if missing → just `30 min`; respects `settings.distanceUnit`) |
+| Cardio, multi exercise | `2 cardio · 45 min` (count · total duration) |
 
-## Verification
+Weight/distance unit conversion uses the existing helpers in `src/lib/weight-units.ts` so the rendered units match user preference (lb/kg, mi/km).
 
-Reopen the Rolling 7-Day Protein chart, 90-day view. The March dip to ~5 should disappear and the line should sit smoothly in your normal range during that gap. May 9 endpoint should remain ~126 (matching the previous fix).
+## What stays the same (shared architecture)
+
+- `useTypeaheadSuggestions` hook — unchanged. Already generic over `TypeaheadCandidate`.
+- `TypeaheadSuggestions` component — unchanged. Renders label/subtitle/timeAgo regardless of source.
+- `LogInput` props (`typeaheadCandidates`, `onSelectTypeahead`) — already mode-agnostic.
+
+This is exactly the shared-code architecture you wanted: the food log added the infrastructure, and exercise inherits it for free. The only new code is a small subtitle formatter for routines and the wiring in `WeightLog.tsx`.
+
+## Implementation
+
+1. **New helper** `src/lib/routine-subtitle.ts` (small, pure, testable):
+   - `formatRoutineSubtitle(routine: SavedRoutine, opts: { weightUnit, distanceUnit }): string`
+   - Implements the four-case table above.
+   - Unit-tested for each branch (single/multi × lifting/cardio, missing distance, lb↔kg, mi↔km).
+
+2. **Build candidates from `savedRoutines`** in `WeightLog.tsx` (mirrors the saved-meals branch in FoodLog):
+   ```ts
+   const typeaheadCandidates = useMemo((): TypeaheadCandidate[] | undefined => {
+     if (!savedRoutines?.length) return undefined;
+     return savedRoutines.map(r => ({
+       id: `routine:${r.id}`,
+       label: r.name,
+       searchText: [r.name, r.original_input, ...r.exercise_sets.map(s => s.description)]
+         .filter(Boolean).join(' '),
+       subtitle: formatRoutineSubtitle(r, {
+         weightUnit: settings.weightUnit,
+         distanceUnit: settings.distanceUnit,
+       }),
+       timestamp: r.last_used_at ?? r.created_at,
+       frequency: Math.max(1, r.use_count ?? 1),
+       payload: r,
+     }));
+   }, [savedRoutines, settings.weightUnit, settings.distanceUnit]);
+   ```
+
+3. **Selection handler** — unwrap the routine and reuse the existing log path:
+   ```ts
+   const handleSelectTypeahead = useCallback((candidate: TypeaheadCandidate) => {
+     const routine = candidate.payload as SavedRoutine;
+     handleLogSavedRoutine(routine.exercise_sets, routine.id);
+   }, [handleLogSavedRoutine]);
+   ```
+
+4. **Wire into `<LogInput>`** in WeightLog.tsx: pass `typeaheadCandidates` and `onSelectTypeahead`.
+
+## Out of scope (deliberately)
+
+- No matching against `weight_sets` history. If you later want, e.g., "match against the last instance of an exercise to pre-fill its starting weight," that's a different feature with different UX (probably an inline ghost suggestion on the exercise row, not the input dropdown).
+- No changes to the food typeahead.
+- No changes to shared hook/component code.
