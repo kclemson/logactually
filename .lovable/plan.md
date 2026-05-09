@@ -1,48 +1,25 @@
-# Replace `2026-W10` weekly chart labels with a real date
+## Problem
 
-## Goal
+Typing "leg" in the weight log surfaces the "Kettlebell at home" saved routine because its `original_input` ("25lb kettlebell step ups 3 sets of 8 for each **leg**") gets fed into the typeahead's `searchText`. The matcher uses prefix containment, so "leg" → matches "leg" → the routine ranks. Confirmed against the DB.
 
-Stop showing ISO-week strings like `2026-W10` on the X-axis of weekly-grouped charts. Show a real date instead. Keep one code path — no rolling-average special-case, no setting plumbing, no bucket-boundary changes.
+## Fix
 
-## The change
-
-Single line in `src/lib/chart-dsl.ts` (~line 417), inside the `groupBy: "week"` branch:
+In `src/pages/WeightLog.tsx` (around line 409), build the routine's `searchText` from only the structured fields:
 
 ```ts
-// before
-label: weekKey,                           // e.g. "2026-W10"
-
-// after
-label: format(new Date(`${weekDates[weekKey]}T12:00:00`), "MMM d"),  // e.g. "Mar 9"
+searchText: [r.name, ...r.exercise_sets.map(s => s.description)]
+  .filter(Boolean)
+  .join(' '),
 ```
 
-`weekDates[weekKey]` is already computed and tracks the latest logged date in each bucket. `MMM d` matches the format daily charts use (line 285), so weekly charts now visually belong to the same family.
-
-Nothing else moves:
-- ISO-week bucketing (Mon–Sun) is unchanged.
-- `weekKey` stays as the internal bucket key.
-- `rawDate` stays as the latest logged date (chart-merge keys on it — unchanged).
-- No `executeDSL` signature change, no callsite updates, no test updates.
-
-## Known downsides (accepted)
-
-| Downside | Why it's OK |
-|---|---|
-| Bucket boundaries stay ISO regardless of `weekStartDay` | Pre-existing; this change doesn't worsen it |
-| Label position varies with logging density (full week → Sunday; sparse week → last logged day) | Accurate to data; tick interval is index-based not date-based, so axis spacing is unaffected |
-| Current partial-week label shifts day-by-day as new logs land | Accurate, not misleading |
-| Two adjacent buckets can show near-touching dates at the chart's right edge | Resolves once the current week fills out; context makes intent obvious |
-| Compare tooltip may show one series' last-logged date for a shared bucket | Cosmetic; rawDate-keyed merging is unchanged |
-
-## Verification
-
-- Visual: load the rolling 7-day protein chart at 90d range — labels read `Mar 9`, `Mar 16`, etc. instead of `2026-W10`.
-- Single-series weekly chart: full historical weeks land on their last day (typically Sunday for daily-loggers); current partial week lands on today.
-- Compare chart with weekly groupBy: still merges into one chart (rawDate-keyed merging unchanged).
+Remove `r.original_input` from the join. Exercise descriptions already carry the real keywords ("Bench Press", "Romanian Deadlift", etc.), so recall stays high; we just stop matching against incidental words like "for each leg", "today", "felt heavy".
 
 ## Out of scope
 
-- Bucket boundary alignment with `weekStartDay` setting.
-- Daily, weekday-of-week, hour-of-day branches.
-- `chart-label-interval.ts`, `chart-merge.ts`.
-- Saved-chart DSL JSON shape.
+- Saved-meals typeahead in `FoodLog.tsx` — meals' `original_input` is more useful for recall (e.g. "PB&J on sourdough" never made it into a structured description) and hasn't shown a similar false-match. Leave untouched.
+- The similarity scoring itself in `text-similarity.ts` — the matcher is doing what it's told; the input is the issue.
+- Stop-word lists or exercise-specific noise filtering.
+
+## Verification
+
+Manual: type "leg" in the weight log on a routine list that includes "Kettlebell at home"; it should no longer appear. "Leg Press" / "Leg Curl" history-derived candidates (which come from descriptions) should still match.
