@@ -52,7 +52,6 @@ const CHART_COLORS: Record<string, string> = {
   saturated_fat: "#EF4444",
   sodium: "#8B5CF6",
   
-  trainingVolume: "hsl(262 83% 58%)",
   calorieBurn: "#2563EB",
 } as const;
 
