@@ -162,7 +162,12 @@ export function SingleChartBuilder({ period, onSave, isSaving, initialDsl, initi
 
   const handleSave = () => {
     if (!preview || !currentDsl) return;
-    onSave({ question: buildQuestion(), chartSpec: preview, chartDsl: currentDsl });
+    const chartSpec = {
+      ...preview,
+      title: customTitle ?? preview.title,
+      aiNote: customNote ?? preview.aiNote,
+    };
+    onSave({ question: buildQuestion(), chartSpec, chartDsl: currentDsl });
   };
 
   // Filter groupBy options: "category" only for exercise
@@ -319,8 +324,8 @@ export function SingleChartBuilder({ period, onSave, isSaving, initialDsl, initi
             <DynamicChart
               spec={preview}
               period={period}
-              onTitleChange={(t) => setPreview(prev => prev ? { ...prev, title: t } : null)}
-              onAiNoteChange={(n) => setPreview(prev => prev ? { ...prev, aiNote: n } : null)}
+              onTitleChange={(t) => { setCustomTitle(t); setPreview(prev => prev ? { ...prev, title: t } : null); }}
+              onAiNoteChange={(n) => { setCustomNote(n); setPreview(prev => prev ? { ...prev, aiNote: n } : null); }}
             />
           </div>
           <div className="flex justify-end">
