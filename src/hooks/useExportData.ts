@@ -124,15 +124,16 @@ export function useExportData() {
   };
 
   const fetchAllCustomLogEntries = async (): Promise<CustomLogExportRow[]> => {
-    const { data, error } = await supabase
-      .from('custom_log_entries')
-      .select('logged_date, created_at, dose_time, entry_notes, numeric_value, numeric_value_2, text_value, unit, custom_log_types(name, value_type)')
-      .order('logged_date', { ascending: false })
-      .order('created_at', { ascending: false });
+    const data = await fetchAllPages<any>((from, to) =>
+      supabase
+        .from('custom_log_entries')
+        .select('logged_date, created_at, dose_time, entry_notes, numeric_value, numeric_value_2, text_value, unit, custom_log_types(name, value_type)')
+        .order('logged_date', { ascending: false })
+        .order('created_at', { ascending: false })
+        .range(from, to)
+    );
 
-    if (error) throw error;
-
-    return (data || []).map((row) => ({
+    return data.map((row) => ({
       logged_date: row.logged_date,
       created_at: row.created_at,
       log_type_name: (row.custom_log_types as unknown as { name: string; value_type: string } | null)?.name ?? '',
