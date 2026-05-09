@@ -703,12 +703,25 @@ function calculateWeight(
   return Math.max(5, Math.round((baseWeight + progress + variance) / 5) * 5);
 }
 
-function calculateSetsReps(dayIndex: number, totalDays: number): { sets: number; reps: number } {
-  const progress = dayIndex / Math.max(totalDays, 1);
-  return {
-    sets: progress > 0.5 ? 4 : 3,
-    reps: Math.min(12, 8 + Math.floor(progress * 4)),
-  };
+// Pattern library: weighted toward typical strength schemes
+const SETS_REPS_PATTERNS: Array<{ sets: number; reps: number; weight: number }> = [
+  { sets: 3, reps: 8, weight: 4 },
+  { sets: 3, reps: 10, weight: 5 },
+  { sets: 3, reps: 12, weight: 3 },
+  { sets: 4, reps: 8, weight: 2 },
+  { sets: 3, reps: 16, weight: 1 }, // calf raises etc
+  { sets: 5, reps: 5, weight: 1 },
+  { sets: 4, reps: 6, weight: 1 },
+];
+
+function calculateSetsReps(_dayIndex: number, _totalDays: number): { sets: number; reps: number } {
+  const totalWeight = SETS_REPS_PATTERNS.reduce((s, p) => s + p.weight, 0);
+  let r = Math.random() * totalWeight;
+  for (const p of SETS_REPS_PATTERNS) {
+    r -= p.weight;
+    if (r <= 0) return { sets: p.sets, reps: p.reps };
+  }
+  return { sets: 3, reps: 10 };
 }
 
 interface GeneratedExercise {
