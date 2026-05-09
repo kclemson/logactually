@@ -218,6 +218,7 @@ export function exportWeightLog(sets: WeightSetExport[]) {
       incline,
       effortVal,
       calBurned,
+      calBurnedEstimate,
       hr,
       cadence,
       speed ?? '',
