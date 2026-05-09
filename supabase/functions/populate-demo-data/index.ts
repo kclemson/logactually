@@ -386,12 +386,19 @@ const EXERCISES = {
     { key: 'leg_curl', name: 'Leg Curl', startWeight: 35, maxProgress: 25 },
     { key: 'seated_row', name: 'Cable Row', startWeight: 50, maxProgress: 25 },
     { key: 'shoulder_press_machine', name: 'Shoulder Press Machine', startWeight: 30, maxProgress: 25 },
+    { key: 'tricep_extension', name: 'Tricep Extension', startWeight: 65, maxProgress: 30 },
+    { key: 'seated_calf_raise', name: 'Seated Calf Raise', startWeight: 180, maxProgress: 50 },
+    { key: 'hip_abduction', name: 'Hip Abduction', startWeight: 90, maxProgress: 60 },
+    { key: 'diverging_low_row', name: 'Diverging Low Row', startWeight: 65, maxProgress: 35 },
+    { key: 'crunch', name: 'Abdominal Crunch', startWeight: 150, maxProgress: 60 },
   ],
   compound: [
     { key: 'squat', name: 'Squat', startWeight: 65, maxProgress: 50 },
     { key: 'bench_press', name: 'Bench Press', startWeight: 65, maxProgress: 30 },
     { key: 'deadlift', name: 'Deadlift', startWeight: 95, maxProgress: 60 },
     { key: 'romanian_deadlift', name: 'Romanian Deadlift', startWeight: 65, maxProgress: 40 },
+    { key: 'pull_up', name: 'Pull Up', startWeight: 0, maxProgress: 0 },
+    { key: 'dips', name: 'Dips', startWeight: 0, maxProgress: 0 },
   ],
   freeWeight: [
     { key: 'bicep_curl', name: 'Bicep Curl', startWeight: 15, maxProgress: 10 },
@@ -399,6 +406,8 @@ const EXERCISES = {
     { key: 'dumbbell_row', name: 'Dumbbell Row', startWeight: 25, maxProgress: 15 },
     { key: 'lateral_raise', name: 'Lateral Raise', startWeight: 10, maxProgress: 10 },
     { key: 'hammer_curl', name: 'Hammer Curl', startWeight: 15, maxProgress: 10 },
+    { key: 'face_pull', name: 'Face Pull', startWeight: 25, maxProgress: 15 },
+    { key: 'glute_kickback', name: 'Glute Kickback', startWeight: 30, maxProgress: 20 },
   ],
 };
 
@@ -413,15 +422,23 @@ const SAVED_MEAL_TEMPLATES = [
   { name: 'Post-Workout', items: ['protein shake with banana', 'peanut butter toast'] },
 ];
 
-const SAVED_ROUTINE_TEMPLATES = [
+// Mini routine templates: 2-3 themed exercises
+const MINI_ROUTINE_TEMPLATES: Array<{ name: string; exercises: string[] }> = [
+  { name: 'Quick Pull', exercises: ['lat_pulldown', 'seated_row'] },
+  { name: 'Arms Finisher', exercises: ['bicep_curl', 'tricep_extension'] },
+  { name: 'Leg Accessories', exercises: ['leg_extension', 'leg_curl', 'seated_calf_raise'] },
+  { name: 'Shoulder Combo', exercises: ['shoulder_press_machine', 'lateral_raise'] },
+  { name: 'Push Mini', exercises: ['chest_press_machine', 'tricep_extension'] },
+  { name: 'Hip & Glute', exercises: ['hip_abduction', 'glute_kickback'] },
+  { name: 'Core Block', exercises: ['crunch', 'hip_abduction'] },
+];
+
+// Full-day routine templates (kept from original, used sparingly)
+const FULL_DAY_ROUTINE_TEMPLATES: Array<{ name: string; exercises: string[] }> = [
   { name: 'Upper Body Day', exercises: ['bench_press', 'lat_pulldown', 'shoulder_press', 'bicep_curl', 'seated_row'] },
-  { name: 'Leg Day', exercises: ['squat', 'leg_press', 'leg_extension', 'leg_curl'] },
-  { name: 'Full Body Quick', exercises: ['squat', 'bench_press', 'lat_pulldown', 'bicep_curl'] },
-  { name: 'Push Day', exercises: ['bench_press', 'shoulder_press_machine', 'chest_press_machine', 'lateral_raise'] },
-  { name: 'Pull Day', exercises: ['lat_pulldown', 'seated_row', 'bicep_curl', 'hammer_curl', 'dumbbell_row'] },
-  { name: 'Machine Circuit', exercises: ['chest_press_machine', 'lat_pulldown', 'leg_press', 'shoulder_press_machine'] },
-  { name: 'Cardio Day', exercises: ['walk_run', 'elliptical'] },
-  { name: 'Cardio + Strength', exercises: ['walk_run', 'bench_press', 'lat_pulldown', 'bicep_curl'] },
+  { name: 'Leg Day', exercises: ['squat', 'leg_press', 'leg_extension', 'leg_curl', 'seated_calf_raise'] },
+  { name: 'Push Day', exercises: ['bench_press', 'shoulder_press_machine', 'chest_press_machine', 'tricep_extension', 'lateral_raise'] },
+  { name: 'Pull Day', exercises: ['lat_pulldown', 'diverging_low_row', 'bicep_curl', 'hammer_curl', 'face_pull'] },
 ];
 
 // ============================================================================
