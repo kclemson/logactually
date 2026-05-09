@@ -330,8 +330,8 @@ export function CompareChartBuilder({ period, onSave, isSaving, initialDsl, init
             <DynamicChart
               spec={preview}
               period={period}
-              onTitleChange={(t) => setPreview(prev => prev ? { ...prev, title: t } : null)}
-              onAiNoteChange={(n) => setPreview(prev => prev ? { ...prev, aiNote: n } : null)}
+              onTitleChange={(t) => { setCustomTitle(t); setPreview(prev => prev ? { ...prev, title: t } : null); }}
+              onAiNoteChange={(n) => { setCustomNote(n); setPreview(prev => prev ? { ...prev, aiNote: n } : null); }}
             />
           </div>
           <div className="flex justify-end">
