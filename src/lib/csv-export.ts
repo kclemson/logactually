@@ -194,6 +194,7 @@ export function exportWeightLog(sets: WeightSetExport[]) {
     const incline = set.incline_pct ?? set.exercise_metadata?.incline_pct ?? '';
     const effortVal = set.effort ?? set.exercise_metadata?.effort ?? '';
     const calBurned = set.calories_burned_override ?? set.exercise_metadata?.calories_burned ?? '';
+    const calBurnedEstimate = set.calories_burned_estimate ?? '';
     const hr = set.heart_rate ?? set.exercise_metadata?.heart_rate ?? '';
     const cadence = set.cadence_rpm ?? set.exercise_metadata?.cadence_rpm ?? '';
     const speed = set.speed_mph ?? set.exercise_metadata?.speed_mph ?? null;
