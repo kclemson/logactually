@@ -386,12 +386,19 @@ const EXERCISES = {
     { key: 'leg_curl', name: 'Leg Curl', startWeight: 35, maxProgress: 25 },
     { key: 'seated_row', name: 'Cable Row', startWeight: 50, maxProgress: 25 },
     { key: 'shoulder_press_machine', name: 'Shoulder Press Machine', startWeight: 30, maxProgress: 25 },
+    { key: 'tricep_extension', name: 'Tricep Extension', startWeight: 65, maxProgress: 30 },
+    { key: 'seated_calf_raise', name: 'Seated Calf Raise', startWeight: 180, maxProgress: 50 },
+    { key: 'hip_abduction', name: 'Hip Abduction', startWeight: 90, maxProgress: 60 },
+    { key: 'diverging_low_row', name: 'Diverging Low Row', startWeight: 65, maxProgress: 35 },
+    { key: 'crunch', name: 'Abdominal Crunch', startWeight: 150, maxProgress: 60 },
   ],
   compound: [
     { key: 'squat', name: 'Squat', startWeight: 65, maxProgress: 50 },
     { key: 'bench_press', name: 'Bench Press', startWeight: 65, maxProgress: 30 },
     { key: 'deadlift', name: 'Deadlift', startWeight: 95, maxProgress: 60 },
     { key: 'romanian_deadlift', name: 'Romanian Deadlift', startWeight: 65, maxProgress: 40 },
+    { key: 'pull_up', name: 'Pull Up', startWeight: 0, maxProgress: 0 },
+    { key: 'dips', name: 'Dips', startWeight: 0, maxProgress: 0 },
   ],
   freeWeight: [
     { key: 'bicep_curl', name: 'Bicep Curl', startWeight: 15, maxProgress: 10 },
@@ -399,6 +406,8 @@ const EXERCISES = {
     { key: 'dumbbell_row', name: 'Dumbbell Row', startWeight: 25, maxProgress: 15 },
     { key: 'lateral_raise', name: 'Lateral Raise', startWeight: 10, maxProgress: 10 },
     { key: 'hammer_curl', name: 'Hammer Curl', startWeight: 15, maxProgress: 10 },
+    { key: 'face_pull', name: 'Face Pull', startWeight: 25, maxProgress: 15 },
+    { key: 'glute_kickback', name: 'Glute Kickback', startWeight: 30, maxProgress: 20 },
   ],
 };
 
@@ -413,15 +422,23 @@ const SAVED_MEAL_TEMPLATES = [
   { name: 'Post-Workout', items: ['protein shake with banana', 'peanut butter toast'] },
 ];
 
-const SAVED_ROUTINE_TEMPLATES = [
+// Mini routine templates: 2-3 themed exercises
+const MINI_ROUTINE_TEMPLATES: Array<{ name: string; exercises: string[] }> = [
+  { name: 'Quick Pull', exercises: ['lat_pulldown', 'seated_row'] },
+  { name: 'Arms Finisher', exercises: ['bicep_curl', 'tricep_extension'] },
+  { name: 'Leg Accessories', exercises: ['leg_extension', 'leg_curl', 'seated_calf_raise'] },
+  { name: 'Shoulder Combo', exercises: ['shoulder_press_machine', 'lateral_raise'] },
+  { name: 'Push Mini', exercises: ['chest_press_machine', 'tricep_extension'] },
+  { name: 'Hip & Glute', exercises: ['hip_abduction', 'glute_kickback'] },
+  { name: 'Core Block', exercises: ['crunch', 'hip_abduction'] },
+];
+
+// Full-day routine templates (kept from original, used sparingly)
+const FULL_DAY_ROUTINE_TEMPLATES: Array<{ name: string; exercises: string[] }> = [
   { name: 'Upper Body Day', exercises: ['bench_press', 'lat_pulldown', 'shoulder_press', 'bicep_curl', 'seated_row'] },
-  { name: 'Leg Day', exercises: ['squat', 'leg_press', 'leg_extension', 'leg_curl'] },
-  { name: 'Full Body Quick', exercises: ['squat', 'bench_press', 'lat_pulldown', 'bicep_curl'] },
-  { name: 'Push Day', exercises: ['bench_press', 'shoulder_press_machine', 'chest_press_machine', 'lateral_raise'] },
-  { name: 'Pull Day', exercises: ['lat_pulldown', 'seated_row', 'bicep_curl', 'hammer_curl', 'dumbbell_row'] },
-  { name: 'Machine Circuit', exercises: ['chest_press_machine', 'lat_pulldown', 'leg_press', 'shoulder_press_machine'] },
-  { name: 'Cardio Day', exercises: ['walk_run', 'elliptical'] },
-  { name: 'Cardio + Strength', exercises: ['walk_run', 'bench_press', 'lat_pulldown', 'bicep_curl'] },
+  { name: 'Leg Day', exercises: ['squat', 'leg_press', 'leg_extension', 'leg_curl', 'seated_calf_raise'] },
+  { name: 'Push Day', exercises: ['bench_press', 'shoulder_press_machine', 'chest_press_machine', 'tricep_extension', 'lateral_raise'] },
+  { name: 'Pull Day', exercises: ['lat_pulldown', 'diverging_low_row', 'bicep_curl', 'hammer_curl', 'face_pull'] },
 ];
 
 // ============================================================================
@@ -686,12 +703,25 @@ function calculateWeight(
   return Math.max(5, Math.round((baseWeight + progress + variance) / 5) * 5);
 }
 
-function calculateSetsReps(dayIndex: number, totalDays: number): { sets: number; reps: number } {
-  const progress = dayIndex / Math.max(totalDays, 1);
-  return {
-    sets: progress > 0.5 ? 4 : 3,
-    reps: Math.min(12, 8 + Math.floor(progress * 4)),
-  };
+// Pattern library: weighted toward typical strength schemes
+const SETS_REPS_PATTERNS: Array<{ sets: number; reps: number; weight: number }> = [
+  { sets: 3, reps: 8, weight: 4 },
+  { sets: 3, reps: 10, weight: 5 },
+  { sets: 3, reps: 12, weight: 3 },
+  { sets: 4, reps: 8, weight: 2 },
+  { sets: 3, reps: 16, weight: 1 }, // calf raises etc
+  { sets: 5, reps: 5, weight: 1 },
+  { sets: 4, reps: 6, weight: 1 },
+];
+
+function calculateSetsReps(_dayIndex: number, _totalDays: number): { sets: number; reps: number } {
+  const totalWeight = SETS_REPS_PATTERNS.reduce((s, p) => s + p.weight, 0);
+  let r = Math.random() * totalWeight;
+  for (const p of SETS_REPS_PATTERNS) {
+    r -= p.weight;
+    if (r <= 0) return { sets: p.sets, reps: p.reps };
+  }
+  return { sets: 3, reps: 10 };
 }
 
 interface GeneratedExercise {
@@ -798,44 +828,181 @@ function generateSavedMeals(
   });
 }
 
-function generateSavedRoutines(count: number): Array<{ name: string; original_input: string; exercise_sets: unknown[]; use_count: number }> {
-  const templates = shuffleArray(SAVED_ROUTINE_TEMPLATES).slice(0, count);
-  
-  return templates.map(template => {
-    const exerciseSets = template.exercises.map(key => {
-      // Check if it's a cardio exercise
-      const cardioMatch = CARDIO_EXERCISES.find(c => c.key === key);
-      if (cardioMatch) {
-        return {
-          exercise_key: cardioMatch.key,
-          exercise_subtype: cardioMatch.subtype,
-          description: cardioMatch.description,
-          sets: 0,
-          reps: 0,
-          weight_lbs: 0,
-          duration_minutes: randomInt(cardioMatch.durationMin, cardioMatch.durationMax),
-        };
-      }
+interface GeneratedRoutine {
+  name: string;
+  original_input: string;
+  exercise_sets: GeneratedExercise[];
+  use_count: number;
+  is_auto_named: boolean;
+}
 
-      const allExercises = [...EXERCISES.machine, ...EXERCISES.compound, ...EXERCISES.freeWeight];
-      const exercise = allExercises.find(e => e.key === key) || { key, name: key, startWeight: 50 };
-      
-      return {
-        exercise_key: exercise.key,
-        description: exercise.name,
-        sets: randomInt(3, 4),
-        reps: randomInt(8, 12),
-        weight_lbs: exercise.startWeight,
-      };
-    });
-    
+// "Messy human" original_input templates for single-exercise routines
+function messyHumanInput(name: string, weight: number, sets: number, reps: number): string {
+  const abbrev = EXERCISE_ABBREVIATIONS[name];
+  const lower = abbrev ? randomChoice(abbrev) : name.toLowerCase();
+  const formats = [
+    () => `${sets} groups of ${reps} times on ${lower}, weight was ${weight}lbs i think`,
+    () => `${lower} ${sets} sets ${reps} reps at ${weight}, felt good`,
+    () => `did ${sets}x${reps} of ${lower} at ${weight}lb`,
+    () => `${lower} — ${sets} sets of ${reps}, ${weight} lb`,
+    () => `${sets} sets ${lower} ${reps} reps ${weight}`,
+  ];
+  return randomChoice(formats)();
+}
+
+function buildSingleExerciseRoutine(
+  exercise: { key: string; name: string; startWeight: number },
+): GeneratedRoutine {
+  const { sets, reps } = calculateSetsReps(0, 1);
+  const weight = exercise.startWeight === 0
+    ? 0
+    : Math.round((exercise.startWeight + (Math.random() - 0.5) * 10) / 5) * 5;
+
+  const isMessy = Math.random() < 0.25;
+  const original_input = isMessy
+    ? messyHumanInput(exercise.name, weight, sets, reps)
+    : generateCasualExerciseInput(exercise.name, weight, sets, reps);
+
+  return {
+    name: exercise.name,
+    original_input,
+    exercise_sets: [{
+      exercise_key: exercise.key,
+      description: exercise.name,
+      sets,
+      reps,
+      weight_lbs: weight,
+    }],
+    use_count: randomInt(5, 25),
+    is_auto_named: true,
+  };
+}
+
+function buildCardioRoutine(): GeneratedRoutine {
+  const activity = randomChoice(CARDIO_EXERCISES);
+  const dur = randomInt(activity.durationMin, activity.durationMax);
+  const dist = activity.distanceMin && activity.distanceMax
+    ? Math.round((activity.distanceMin + Math.random() * (activity.distanceMax - activity.distanceMin)) * 10) / 10
+    : undefined;
+
+  // Name with parameters baked in (matches user's pattern: "Dog walk (25m, 1mi)")
+  const name = dist
+    ? `${activity.description} (${dur}m, ${dist}mi)`
+    : `${activity.description} (${dur}m)`;
+
+  const tmpl = randomChoice(activity.inputTemplates);
+  const original_input = tmpl(dur, dist);
+
+  return {
+    name,
+    original_input,
+    exercise_sets: [{
+      exercise_key: activity.key,
+      exercise_subtype: activity.subtype,
+      description: activity.description,
+      sets: 0,
+      reps: 0,
+      weight_lbs: 0,
+      duration_minutes: dur,
+      distance_miles: dist ?? null,
+    }],
+    use_count: randomInt(3, 15),
+    is_auto_named: false,
+  };
+}
+
+function buildMiniRoutine(template: { name: string; exercises: string[] }): GeneratedRoutine {
+  const allExercises = [...EXERCISES.machine, ...EXERCISES.compound, ...EXERCISES.freeWeight];
+  const inputParts: string[] = [];
+  const exerciseSets = template.exercises.map(key => {
+    const ex = allExercises.find(e => e.key === key) || { key, name: key, startWeight: 30 };
+    const { sets, reps } = calculateSetsReps(0, 1);
+    const weight = ex.startWeight === 0 ? 0 : Math.round((ex.startWeight + (Math.random() - 0.5) * 10) / 5) * 5;
+    inputParts.push(generateCasualExerciseInput(ex.name, weight, sets, reps));
     return {
-      name: template.name,
-      original_input: template.exercises.join(', '),
-      exercise_sets: exerciseSets,
-      use_count: randomInt(3, 8),
+      exercise_key: ex.key,
+      description: ex.name,
+      sets,
+      reps,
+      weight_lbs: weight,
     };
   });
+  return {
+    name: template.name,
+    original_input: inputParts.join(', '),
+    exercise_sets: exerciseSets,
+    use_count: randomInt(3, 10),
+    is_auto_named: false,
+  };
+}
+
+function buildFullDayRoutine(template: { name: string; exercises: string[] }): GeneratedRoutine {
+  const allExercises = [...EXERCISES.machine, ...EXERCISES.compound, ...EXERCISES.freeWeight];
+  const inputParts: string[] = [];
+  const exerciseSets = template.exercises.map(key => {
+    const ex = allExercises.find(e => e.key === key) || { key, name: key, startWeight: 30 };
+    const { sets, reps } = calculateSetsReps(0, 1);
+    const weight = ex.startWeight === 0 ? 0 : Math.round((ex.startWeight + (Math.random() - 0.5) * 10) / 5) * 5;
+    inputParts.push(generateCasualExerciseInput(ex.name, weight, sets, reps));
+    return {
+      exercise_key: ex.key,
+      description: ex.name,
+      sets,
+      reps,
+      weight_lbs: weight,
+    };
+  });
+  return {
+    name: template.name,
+    original_input: inputParts.join(randomChoice([', ', '\n', ' | '])),
+    exercise_sets: exerciseSets,
+    use_count: randomInt(2, 6),
+    is_auto_named: false,
+  };
+}
+
+/**
+ * Shape-mix generator: ~70% single-exercise, ~20% mini, ~10% full-day.
+ * Cardio sneaks in via single-exercise slot at ~20% rate.
+ */
+function generateSavedRoutines(count: number): GeneratedRoutine[] {
+  const allStrengthExercises = [...EXERCISES.machine, ...EXERCISES.compound, ...EXERCISES.freeWeight];
+  const usedSingleKeys = new Set<string>();
+  const usedMiniNames = new Set<string>();
+  const usedDayNames = new Set<string>();
+  const routines: GeneratedRoutine[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const r = Math.random();
+    if (r < 0.7) {
+      // Single exercise (with 20% chance of cardio variant)
+      if (Math.random() < 0.2) {
+        routines.push(buildCardioRoutine());
+      } else {
+        const available = allStrengthExercises.filter(e => !usedSingleKeys.has(e.key));
+        const pool = available.length > 0 ? available : allStrengthExercises;
+        const ex = randomChoice(pool);
+        usedSingleKeys.add(ex.key);
+        routines.push(buildSingleExerciseRoutine(ex));
+      }
+    } else if (r < 0.9) {
+      // Mini routine
+      const available = MINI_ROUTINE_TEMPLATES.filter(t => !usedMiniNames.has(t.name));
+      const pool = available.length > 0 ? available : MINI_ROUTINE_TEMPLATES;
+      const tmpl = randomChoice(pool);
+      usedMiniNames.add(tmpl.name);
+      routines.push(buildMiniRoutine(tmpl));
+    } else {
+      // Full day
+      const available = FULL_DAY_ROUTINE_TEMPLATES.filter(t => !usedDayNames.has(t.name));
+      const pool = available.length > 0 ? available : FULL_DAY_ROUTINE_TEMPLATES;
+      const tmpl = randomChoice(pool);
+      usedDayNames.add(tmpl.name);
+      routines.push(buildFullDayRoutine(tmpl));
+    }
+  }
+
+  return routines;
 }
 
 // ============================================================================
@@ -959,6 +1126,54 @@ async function doPopulationWork(
     let foodEntriesCreated = 0;
     let weightSetsCreated = 0;
 
+    // ========================================================================
+    // INSERT SAVED ROUTINES UP-FRONT (so daily logs can reference them)
+    // ========================================================================
+    interface RoutinePoolEntry {
+      id: string;
+      name: string;
+      original_input: string;
+      exercise_sets: GeneratedExercise[];
+      is_cardio: boolean;
+    }
+    const routinePool: RoutinePoolEntry[] = [];
+    const routineUsage = new Map<string, number>(); // id -> daily-use count
+    let savedRoutinesCreated = 0;
+
+    if (savedRoutinesCount > 0) {
+      const savedRoutines = generateSavedRoutines(savedRoutinesCount);
+      for (const routine of savedRoutines) {
+        const { data, error: routineError } = await serviceClient
+          .from('saved_routines')
+          .insert({
+            user_id: demoUserId,
+            name: routine.name,
+            original_input: routine.original_input,
+            exercise_sets: routine.exercise_sets,
+            use_count: routine.use_count,
+            is_auto_named: routine.is_auto_named,
+            last_used_at: new Date(Date.now() - randomInt(1, 14) * 24 * 60 * 60 * 1000).toISOString(),
+          })
+          .select('id')
+          .single();
+
+        if (routineError) {
+          console.error('Error inserting saved routine:', routineError);
+        } else if (data?.id) {
+          savedRoutinesCreated++;
+          const isCardio = routine.exercise_sets.every(s => (s.duration_minutes ?? 0) > 0 && (s.sets ?? 0) === 0);
+          routinePool.push({
+            id: data.id,
+            name: routine.name,
+            original_input: routine.original_input,
+            exercise_sets: routine.exercise_sets,
+            is_cardio: isCardio,
+          });
+        }
+      }
+    }
+    const strengthRoutines = routinePool.filter(r => !r.is_cardio);
+
     // Pre-compute calorie index for budget-aware selection
     const calorieIndex = buildCalorieIndex(parsedCache);
 
@@ -1076,14 +1291,35 @@ async function doPopulationWork(
 
       // Generate weight entries (roughly every other day)
       if (generateWeights && Math.random() < 0.5) {
-        const { rawInput, exercises } = generateWeightEntriesForDay(
-          weightConfig,
-          i,
-          selectedDays.length
-        );
-        
+        // 30% of workout days reference a saved routine (if any exist)
+        const useRoutine = strengthRoutines.length > 0 && Math.random() < 0.3;
+        let rawInput: string;
+        let exercises: GeneratedExercise[];
+        let sourceRoutineId: string | null = null;
+
+        if (useRoutine) {
+          const routine = randomChoice(strengthRoutines);
+          sourceRoutineId = routine.id;
+          routineUsage.set(routine.id, (routineUsage.get(routine.id) ?? 0) + 1);
+
+          // Apply the day's progression to each exercise's weight
+          const allEx = [...EXERCISES.machine, ...EXERCISES.compound, ...EXERCISES.freeWeight];
+          exercises = routine.exercise_sets.map(s => {
+            const ref = allEx.find(e => e.key === s.exercise_key);
+            const weight = ref && ref.startWeight > 0
+              ? calculateWeight(ref.startWeight, ref.maxProgress, i, selectedDays.length, weightConfig.progressionMultiplier)
+              : s.weight_lbs;
+            return { ...s, weight_lbs: weight };
+          });
+          rawInput = routine.original_input;
+        } else {
+          const generated = generateWeightEntriesForDay(weightConfig, i, selectedDays.length);
+          rawInput = generated.rawInput;
+          exercises = generated.exercises;
+        }
+
         const entryId = crypto.randomUUID();
-        
+
         for (let j = 0; j < exercises.length; j++) {
           const exercise = exercises[j];
           const { error: weightError } = await serviceClient
@@ -1101,6 +1337,7 @@ async function doPopulationWork(
               duration_minutes: exercise.duration_minutes ?? null,
               distance_miles: exercise.distance_miles ?? null,
               raw_input: j === 0 ? rawInput : null,
+              source_routine_id: sourceRoutineId,
             });
 
           if (weightError) {
@@ -1207,28 +1444,22 @@ async function doPopulationWork(
       }
     }
 
-    // Generate saved routines
-    let savedRoutinesCreated = 0;
-    if (savedRoutinesCount > 0) {
-      const savedRoutines = generateSavedRoutines(savedRoutinesCount);
-      
-      for (const routine of savedRoutines) {
-        const { error: routineError } = await serviceClient
+    // Bump use_count and last_used_at for saved routines that got referenced
+    if (routineUsage.size > 0) {
+      for (const [routineId, addCount] of routineUsage) {
+        const { data: existing } = await serviceClient
           .from('saved_routines')
-          .insert({
-            user_id: demoUserId,
-            name: routine.name,
-            original_input: routine.original_input,
-            exercise_sets: routine.exercise_sets,
-            use_count: routine.use_count,
-            last_used_at: new Date(Date.now() - randomInt(1, 14) * 24 * 60 * 60 * 1000).toISOString(),
-          });
-
-        if (routineError) {
-          console.error('Error inserting saved routine:', routineError);
-        } else {
-          savedRoutinesCreated++;
-        }
+          .select('use_count')
+          .eq('id', routineId)
+          .single();
+        const newCount = (existing?.use_count ?? 0) + addCount;
+        await serviceClient
+          .from('saved_routines')
+          .update({
+            use_count: newCount,
+            last_used_at: new Date().toISOString(),
+          })
+          .eq('id', routineId);
       }
     }
 
