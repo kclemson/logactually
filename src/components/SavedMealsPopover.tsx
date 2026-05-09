@@ -124,7 +124,7 @@ export function SavedMealsPopover({ onSelectMeal, onClose, onCreateNew }: SavedM
                   <Loader2 className="h-3 w-3 animate-spin text-muted-foreground shrink-0" />
                 ) : (
                   <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">
-                    {meal.food_items.length} item{meal.food_items.length !== 1 ? 's' : ''} · {Math.round(totals.calories)} cal
+                    {Math.round(totals.calories)} cal
                   </span>
                 )}
               </button>
