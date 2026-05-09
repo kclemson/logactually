@@ -30,7 +30,7 @@ import { computeAbsoluteBMR } from "@/lib/calorie-burn";
 import { useMergeExercises } from "@/hooks/useMergeExercises";
 import { DuplicateExercisePrompt, type DuplicateGroup } from "@/components/DuplicateExercisePrompt";
 
-import { FoodChart, StackedMacroChart, VolumeChart } from "@/components/trends/FoodChart";
+import { FoodChart, StackedMacroChart } from "@/components/trends/FoodChart";
 import { CalorieBurnChart } from "@/components/trends/CalorieBurnChart";
 import { ExerciseChart } from "@/components/trends/ExerciseChart";
 import { CustomLogTrendChart } from "@/components/trends/CustomLogTrendChart";
@@ -52,7 +52,6 @@ const CHART_COLORS: Record<string, string> = {
   saturated_fat: "#EF4444",
   sodium: "#8B5CF6",
   
-  trainingVolume: "hsl(262 83% 58%)",
   calorieBurn: "#2563EB",
 } as const;
 
@@ -230,44 +229,6 @@ const Trends = () => {
     setDismissedDuplicates(updated);
   };
 
-  // Aggregate total volume by day across all exercises
-  const volumeByDay = useMemo(() => {
-    const byDate: Record<string, number> = {};
-
-    weightExercises.forEach((exercise) => {
-      exercise.weightData.forEach((point) => {
-        if (point.weight === 0) return;
-        byDate[point.date] = (byDate[point.date] || 0) + point.volume;
-      });
-    });
-
-    const data = Object.entries(byDate)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, volumeLbs]) => {
-        const volume = settings.weightUnit === "kg" 
-          ? Math.round(volumeLbs * LBS_TO_KG) 
-          : Math.round(volumeLbs);
-        return {
-          rawDate: date,
-          date: format(new Date(`${date}T12:00:00`), "MMM d"),
-          volume,
-          label: `${Math.round(volume / 1000)}k`,
-        };
-      });
-
-    const dataLength = data.length;
-    const labelInterval = getLabelInterval(dataLength);
-    const labelIntervalFullWidth = getFullWidthLabelInterval(dataLength);
-
-    return data.map((d, index) => {
-      const distanceFromEnd = dataLength - 1 - index;
-      return {
-        ...d,
-        showLabel: distanceFromEnd % labelInterval === 0,
-        showLabelFullWidth: distanceFromEnd % labelIntervalFullWidth === 0,
-      };
-    });
-  }, [weightExercises, settings.weightUnit]);
 
   // Calorie burn chart data (range bars)
   const calorieBurnChartData = useMemo(() => {
@@ -703,16 +664,6 @@ const Trends = () => {
               )}
 
               <div className="grid grid-cols-2 gap-2">
-                {volumeByDay.length > 0 && (
-                  <VolumeChart
-                    title={`Total Volume (${settings.weightUnit})`}
-                    subtitle="Across weight exercises"
-                    chartData={volumeByDay}
-                    color={CHART_COLORS.trainingVolume}
-                    unit={settings.weightUnit}
-                    onNavigate={(date) => navigate(`/weights?date=${date}`)}
-                  />
-                )}
                 {calorieBurnChartData.length > 0 && (() => {
                   const bmr = computeAbsoluteBMR(settings);
                   const sedentaryTDEE = bmr != null ? Math.round(bmr * ACTIVITY_MULTIPLIERS.sedentary) : null;
