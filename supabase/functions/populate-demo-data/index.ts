@@ -1291,14 +1291,35 @@ async function doPopulationWork(
 
       // Generate weight entries (roughly every other day)
       if (generateWeights && Math.random() < 0.5) {
-        const { rawInput, exercises } = generateWeightEntriesForDay(
-          weightConfig,
-          i,
-          selectedDays.length
-        );
-        
+        // 30% of workout days reference a saved routine (if any exist)
+        const useRoutine = strengthRoutines.length > 0 && Math.random() < 0.3;
+        let rawInput: string;
+        let exercises: GeneratedExercise[];
+        let sourceRoutineId: string | null = null;
+
+        if (useRoutine) {
+          const routine = randomChoice(strengthRoutines);
+          sourceRoutineId = routine.id;
+          routineUsage.set(routine.id, (routineUsage.get(routine.id) ?? 0) + 1);
+
+          // Apply the day's progression to each exercise's weight
+          const allEx = [...EXERCISES.machine, ...EXERCISES.compound, ...EXERCISES.freeWeight];
+          exercises = routine.exercise_sets.map(s => {
+            const ref = allEx.find(e => e.key === s.exercise_key);
+            const weight = ref && ref.startWeight > 0
+              ? calculateWeight(ref.startWeight, ref.maxProgress, i, selectedDays.length, weightConfig.progressionMultiplier)
+              : s.weight_lbs;
+            return { ...s, weight_lbs: weight };
+          });
+          rawInput = routine.original_input;
+        } else {
+          const generated = generateWeightEntriesForDay(weightConfig, i, selectedDays.length);
+          rawInput = generated.rawInput;
+          exercises = generated.exercises;
+        }
+
         const entryId = crypto.randomUUID();
-        
+
         for (let j = 0; j < exercises.length; j++) {
           const exercise = exercises[j];
           const { error: weightError } = await serviceClient
@@ -1316,6 +1337,7 @@ async function doPopulationWork(
               duration_minutes: exercise.duration_minutes ?? null,
               distance_miles: exercise.distance_miles ?? null,
               raw_input: j === 0 ? rawInput : null,
+              source_routine_id: sourceRoutineId,
             });
 
           if (weightError) {
