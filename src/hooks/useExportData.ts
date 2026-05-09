@@ -4,6 +4,26 @@ import { logger } from '@/lib/logger';
 import { FoodEntry, FoodItem } from '@/types/food';
 import { exportFoodLog, exportWeightLog as exportWeightLogCSV, exportCustomLog, WeightSetExport, CustomLogExportRow } from '@/lib/csv-export';
 
+const PAGE_SIZE = 1000;
+
+async function fetchAllPages<T>(
+  buildQuery: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+): Promise<T[]> {
+  const all: T[] = [];
+  let from = 0;
+  // Loop until a partial page indicates we've exhausted the table
+  // (Supabase silently caps each request at 1000 rows by default).
+  while (true) {
+    const { data, error } = await buildQuery(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    const rows = data ?? [];
+    all.push(...rows);
+    if (rows.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+  return all;
+}
+
 export function useExportData() {
   const [isExporting, setIsExporting] = useState(false);
 
