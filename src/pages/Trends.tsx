@@ -152,12 +152,9 @@ const Trends = () => {
                 freshSpec = mergeChartSpecs(freshSpec, freshSpec2);
               }
 
-              // Preserve saved visual overrides (title, aiNote) but use fresh data
-              results.set(chart.id, {
-                ...freshSpec,
-                title: chart.chart_spec.title,
-                aiNote: chart.chart_spec.aiNote,
-              });
+              // Title/aiNote are merged in at render time from chart.chart_spec
+              // so user metadata edits show up immediately without waiting for refetch.
+              results.set(chart.id, freshSpec);
             } catch (err) {
               console.warn(`[saved-charts-live] Failed to refresh chart ${chart.id}:`, err);
             }
@@ -441,7 +438,12 @@ const Trends = () => {
                 }`}
               >
               <DynamicChart
-                spec={liveSpecs?.get(chart.id) ?? chart.chart_spec}
+                spec={(() => {
+                  const live = liveSpecs?.get(chart.id);
+                  return live
+                    ? { ...live, title: chart.chart_spec.title, aiNote: chart.chart_spec.aiNote }
+                    : chart.chart_spec;
+                })()}
                 period={selectedPeriod}
                 timeRangeSuffix={chart.chart_dsl ? "· v2" : "· v1"}
                 onNavigate={(date) => {
