@@ -28,16 +28,17 @@ export function useExportData() {
   const [isExporting, setIsExporting] = useState(false);
 
   const fetchAllEntries = async (): Promise<FoodEntry[]> => {
-    const { data, error } = await supabase
-      .from('food_entries')
-      .select('*')
-      .order('eaten_date', { ascending: true })
-      .order('created_at', { ascending: true });
-
-    if (error) throw error;
+    const data = await fetchAllPages<any>((from, to) =>
+      supabase
+        .from('food_entries')
+        .select('*')
+        .order('eaten_date', { ascending: true })
+        .order('created_at', { ascending: true })
+        .range(from, to)
+    );
 
     // Parse food_items JSONB (same logic as useFoodEntries)
-    return (data || []).map((entry) => {
+    return data.map((entry) => {
       const rawItems = Array.isArray(entry.food_items)
         ? (entry.food_items as unknown as any[])
         : [];
