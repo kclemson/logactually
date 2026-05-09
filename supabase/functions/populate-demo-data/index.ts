@@ -1444,28 +1444,22 @@ async function doPopulationWork(
       }
     }
 
-    // Generate saved routines
-    let savedRoutinesCreated = 0;
-    if (savedRoutinesCount > 0) {
-      const savedRoutines = generateSavedRoutines(savedRoutinesCount);
-      
-      for (const routine of savedRoutines) {
-        const { error: routineError } = await serviceClient
+    // Bump use_count and last_used_at for saved routines that got referenced
+    if (routineUsage.size > 0) {
+      for (const [routineId, addCount] of routineUsage) {
+        const { data: existing } = await serviceClient
           .from('saved_routines')
-          .insert({
-            user_id: demoUserId,
-            name: routine.name,
-            original_input: routine.original_input,
-            exercise_sets: routine.exercise_sets,
-            use_count: routine.use_count,
-            last_used_at: new Date(Date.now() - randomInt(1, 14) * 24 * 60 * 60 * 1000).toISOString(),
-          });
-
-        if (routineError) {
-          console.error('Error inserting saved routine:', routineError);
-        } else {
-          savedRoutinesCreated++;
-        }
+          .select('use_count')
+          .eq('id', routineId)
+          .single();
+        const newCount = (existing?.use_count ?? 0) + addCount;
+        await serviceClient
+          .from('saved_routines')
+          .update({
+            use_count: newCount,
+            last_used_at: new Date().toISOString(),
+          })
+          .eq('id', routineId);
       }
     }
 
