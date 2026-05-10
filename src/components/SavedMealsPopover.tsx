@@ -102,7 +102,7 @@ export function SavedMealsPopover({ onSelectMeal, onClose, onCreateNew }: SavedM
         </div>
       )}
       
-      <div className="max-h-64 overflow-y-auto">
+      <div className="max-h-[232px] overflow-y-auto">
         {filteredMeals.length === 0 ? (
           <div className="p-4 text-center text-sm text-muted-foreground">
             No meals match "{search}"
