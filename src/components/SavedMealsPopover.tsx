@@ -139,6 +139,7 @@ export function SavedMealsPopover({ onSelectMeal, onClose, onCreateNew }: SavedM
               </button>
             );
           })
+        )}
       </div>
       {showBottomFade && (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-popover to-transparent" />
