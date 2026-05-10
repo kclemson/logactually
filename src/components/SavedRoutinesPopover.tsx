@@ -102,7 +102,7 @@ export function SavedRoutinesPopover({ onSelectRoutine, onClose, onCreateNew }: 
         </div>
       )}
       
-      <div className="max-h-64 overflow-y-auto">
+      <div className="max-h-[232px] overflow-y-auto">
         {filteredRoutines.length === 0 ? (
           <div className="p-4 text-center text-sm text-muted-foreground">
             No routines match "{search}"

@@ -1,31 +1,29 @@
+## Goal
+
+Make it visually clear that the Saved Meals / Saved Routines dropdown is scrollable when it overflows, by ensuring the last visible row is partially clipped instead of aligning perfectly to the container's bottom edge.
+
+## Problem
+
+Both popovers use `max-h-64` (256px) for the scroll area, and each row is ~28px tall (`px-3 py-1.5` + `text-xs`). 256 / 28 ≈ 9.14, so rows fit nearly flush — there's no half-row peek to signal more content below.
+
 ## Change
 
-In `src/components/SavedMealsPopover.tsx`, drop the `N items` segment from the right-side meta chip so each saved-meal row shows only the calorie count.
+In `src/components/SavedMealsPopover.tsx` and `src/components/SavedRoutinesPopover.tsx`, change the scroll container from:
 
-Before:
 ```
-Strawberries + Chobani pr…   2 items · 190 cal
-```
-
-After:
-```
-Strawberries + Chobani pr…   190 cal
+max-h-64
 ```
 
-## Implementation
+to a height that intentionally lands mid-row, e.g.:
 
-In the row render, replace:
-```tsx
-{meal.food_items.length} item{meal.food_items.length !== 1 ? 's' : ''} · {Math.round(totals.calories)} cal
 ```
-with:
-```tsx
-{Math.round(totals.calories)} cal
+max-h-[232px]
 ```
 
-That frees ~60–70px on each row, which should let most meal names display without truncation at the current `w-72` width. We'll keep the popover width and button order as-is for now and reassess after seeing the result.
+That's ~8.3 rows — 8 full rows visible plus a clear half-row peeking at the bottom, which is the standard scroll affordance pattern.
 
 ## Out of scope
 
-- No change to the saved routines popover (still shows `N exercise(s)`, since routines often share generic names like "Lat Pulldown" and the count is the only differentiator)
-- No popover width or button-order changes
+- No row height, font size, padding, or width changes.
+- No changes to the search bar, "Add New" header, or empty state.
+- No changes to `LogInput.tsx`.
