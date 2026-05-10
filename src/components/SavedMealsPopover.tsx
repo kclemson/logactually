@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Search, Loader2, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,14 @@ export function SavedMealsPopover({ onSelectMeal, onClose, onCreateNew }: SavedM
   const [search, setSearch] = useState('');
   const { data: savedMeals, isLoading } = useSavedMeals();
   const logMeal = useLogSavedMeal();
+  const [showBottomFade, setShowBottomFade] = useState(false);
+
+  const updateFade = useCallback((el: HTMLDivElement | null) => {
+    if (!el) return;
+    setShowBottomFade(el.scrollHeight - el.scrollTop - el.clientHeight > 1);
+  }, []);
+  const scrollRefCb = useCallback((el: HTMLDivElement | null) => updateFade(el), [updateFade]);
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => updateFade(e.currentTarget), [updateFade]);
 
   const filteredMeals = useMemo(() => {
     if (!savedMeals) return [];
@@ -102,7 +110,8 @@ export function SavedMealsPopover({ onSelectMeal, onClose, onCreateNew }: SavedM
         </div>
       )}
       
-      <div className="max-h-[232px] overflow-y-auto">
+      <div className="relative">
+      <div ref={scrollRefCb} onScroll={handleScroll} className="max-h-64 overflow-y-auto">
         {filteredMeals.length === 0 ? (
           <div className="p-4 text-center text-sm text-muted-foreground">
             No meals match "{search}"
@@ -131,6 +140,10 @@ export function SavedMealsPopover({ onSelectMeal, onClose, onCreateNew }: SavedM
             );
           })
         )}
+      </div>
+      {showBottomFade && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-popover to-transparent" />
+      )}
       </div>
     </div>
   );
