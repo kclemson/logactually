@@ -641,9 +641,7 @@ export function FoodItemsTable({
                         className="h-7 w-7 rounded-full border border-input bg-background flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
                         aria-label="Decrease portion"
                       ><Minus className="h-3.5 w-3.5" /></button>
-                      <span className={cn("text-sm font-medium min-w-[3rem] text-center tabular-nums", groupPortionMultiplier !== 1.0 && "text-primary")}>
-                        {groupPortionMultiplier}x
-                      </span>
+                      <MultiplierInput value={groupPortionMultiplier} onChange={setGroupPortionMultiplier} />
                       <button type="button" disabled={groupPortionMultiplier >= 5.0}
                         onClick={() => setGroupPortionMultiplier(stepMultiplier(groupPortionMultiplier, 'up'))}
                         className="h-7 w-7 rounded-full border border-input bg-background flex items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
