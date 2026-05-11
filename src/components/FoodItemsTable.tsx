@@ -30,6 +30,7 @@ import { type EntryBoundary, isFirstInBoundary, isLastInBoundary, isEntryNew, ge
 import { EntryChevron } from '@/components/EntryChevron';
 import { DeleteAllDialog } from '@/components/DeleteAllDialog';
 import { useInlineEdit } from '@/hooks/useInlineEdit';
+import { MultiplierInput } from '@/components/MultiplierInput';
 
 
 interface FoodItemsTableProps {
