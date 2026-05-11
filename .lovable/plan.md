@@ -1,40 +1,41 @@
 ## Goal
 
-Make scroll affordance reliable in the saved meals/routines popover, regardless of exact row height (which evidently lands ~29px so 8 rows fill the 232px container with no peek).
+Let users enter any multiplier (e.g. `0.33`, `0.4`, `1.2`) by tapping the `0.5x` / `1x` label between the − / + buttons. The stepper stays for quick coarse changes; tap-to-type adds precision without new UI affordances.
 
-## Approach: bottom fade mask when overflowing
+This applies to all three places the multiplier stepper is rendered in `src/components/FoodItemsTable.tsx`:
+- Group portion stepper, two-column variant (~L461–488)
+- Group portion stepper, single-column variant (~L639–665)
+- Individual-item portion stepper (~L945–965)
 
-Instead of relying on row-height math, add a CSS mask gradient that fades the bottom ~16px of the scroll area to transparent only when content overflows. This visually clips the last row, signaling "there's more below" — and disappears once the user scrolls to the bottom.
+No backend or data-model changes — the multiplier flows through `scaleGroupPortion` / `scaleItemByMultiplier` exactly as today; only the input UI changes.
 
-### Implementation
+## UX
 
-In both `src/components/SavedMealsPopover.tsx` and `src/components/SavedRoutinesPopover.tsx`:
+- Default state: same `0.5x` text label as today.
+- Tap/click the label → it becomes a small inline `<input>` (~3rem wide, same tabular-nums sizing) pre-filled with the current value, `inputMode="decimal"`, text-selected on focus.
+- Commit on Enter or blur:
+  - Parse as float, clamp to `[0.1, 10]`, round to 2 decimals.
+  - Empty or unparseable → revert to previous value.
+  - Don't snap to the existing `MULTIPLIER_STEPS` sequence — accept any decimal.
+- Escape reverts and exits edit mode.
+- `−` / `+` buttons keep working: when the current value is off-sequence (e.g. 0.33), they step to the next/previous value in `MULTIPLIER_STEPS` using the existing `stepMultiplier` "snap to nearest" branch (already handles this case).
+- Preview line (`(1 portion, 533 cal)`) and Done/Reset behavior unchanged — they already read the multiplier from state.
+- Read-only users: tapping the label still allows local edits; the actual persistence is already gated in the Done handler via `triggerOverlay()`.
 
-1. Revert the scroll container back to `max-h-64` (256px) — restores ~9 visible rows for users with shorter lists.
+## Implementation notes
 
-2. Wrap the scroll container in a relative parent and add a bottom fade overlay:
-   ```tsx
-   <div className="relative">
-     <div ref={scrollRef} onScroll={handleScroll}
-          className="max-h-64 overflow-y-auto">
-       {/* rows */}
-     </div>
-     {showBottomFade && (
-       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6
-                       bg-gradient-to-t from-popover to-transparent" />
-     )}
-   </div>
-   ```
-
-3. Track overflow state with a small `useState` + `onScroll` handler that sets `showBottomFade = scrollHeight - scrollTop - clientHeight > 1`. Initialize on mount via a ref callback measuring `scrollHeight > clientHeight`.
-
-### Why a fade and not just clipping a row
-
-- Works at any row height (rows could change padding/font in the future).
-- Hides itself when the user reaches the bottom — no false signal on short lists.
-- Consistent affordance across both popovers.
+- Add a small local component (or inline state) `MultiplierInput` in `FoodItemsTable.tsx` that swaps between a `<button>` showing `{value}x` and an `<input type="text" inputMode="decimal">` when focused.
+- Keep min `0.1`, max `10` as soft clamps; mirrors the existing 0.25–5.0 stepper bounds but allows the user's 0.33 case while preventing absurd values.
+- Format display: integer when whole (`1x`), else trim trailing zeros (`0.33x`, `1.5x`, not `0.33000x`).
+- Reuse existing styling: `text-sm font-medium tabular-nums`, primary color when ≠ 1.0.
+- No changes to `portion-scaling.ts`, `useGroupPortionScale.ts`, `stepMultiplier`, or `MULTIPLIER_STEPS`. `scalePortion` and `scaleItemByMultiplier` already handle arbitrary decimal multipliers.
 
 ## Out of scope
 
-- No row, button, header, or width changes.
-- No changes to `LogInput.tsx`.
+- No slider, no preset chips, no changes to the step sequence itself.
+- No changes to the saved-meals/routines popovers or any other component.
+- No mobile-specific layout changes — the existing row already fits the input width on the 440px viewport.
+
+## Memory updates
+
+Update `mem://features/portion-scaling-system-v3` to note that the multiplier label is tappable for arbitrary decimal entry, while − / + still walk the `MULTIPLIER_STEPS` sequence.
