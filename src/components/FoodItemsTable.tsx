@@ -947,12 +947,7 @@ export function FoodItemsTable({
                     >
                       <Minus className="h-3.5 w-3.5" />
                     </button>
-                    <span className={cn(
-                      "text-sm font-medium min-w-[3rem] text-center tabular-nums",
-                      portionMultiplier !== 1.0 && "text-primary"
-                    )}>
-                      {portionMultiplier}x
-                    </span>
+                    <MultiplierInput value={portionMultiplier} onChange={setPortionMultiplier} />
                     <button
                       type="button"
                       disabled={portionMultiplier >= 5.0}
