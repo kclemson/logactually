@@ -111,7 +111,7 @@ export function SavedMealsPopover({ onSelectMeal, onClose, onCreateNew }: SavedM
       )}
       
       <div className="relative">
-      <div ref={scrollRefCb} onScroll={handleScroll} className="max-h-64 overflow-y-auto">
+      <div ref={scrollRefCb} onScroll={handleScroll} className="max-h-[14.5rem] overflow-y-auto">
         {filteredMeals.length === 0 ? (
           <div className="p-4 text-center text-sm text-muted-foreground">
             No meals match "{search}"
@@ -126,7 +126,7 @@ export function SavedMealsPopover({ onSelectMeal, onClose, onCreateNew }: SavedM
                 key={meal.id}
                 onClick={() => handleSelectMeal(meal)}
                 disabled={logMeal.isPending}
-                className="w-full text-left px-3 py-1.5 hover:bg-accent transition-colors border-b last:border-b-0 disabled:opacity-50 flex items-center gap-2"
+                className="w-full text-left px-3 py-2.5 hover:bg-accent transition-colors border-b last:border-b-0 disabled:opacity-50 flex items-center gap-2"
               >
                 <span className="font-medium text-xs truncate flex-1 min-w-0">{meal.name}</span>
                 {isLogging ? (

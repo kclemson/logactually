@@ -111,7 +111,7 @@ export function SavedRoutinesPopover({ onSelectRoutine, onClose, onCreateNew }: 
       )}
       
       <div className="relative">
-      <div ref={scrollRefCb} onScroll={handleScroll} className="max-h-64 overflow-y-auto">
+      <div ref={scrollRefCb} onScroll={handleScroll} className="max-h-[14.5rem] overflow-y-auto">
         {filteredRoutines.length === 0 ? (
           <div className="p-4 text-center text-sm text-muted-foreground">
             No routines match "{search}"
@@ -126,7 +126,7 @@ export function SavedRoutinesPopover({ onSelectRoutine, onClose, onCreateNew }: 
                 key={routine.id}
                 onClick={() => handleSelectRoutine(routine)}
                 disabled={logRoutine.isPending}
-                className="w-full text-left px-3 py-1.5 hover:bg-accent transition-colors border-b last:border-b-0 disabled:opacity-50 flex items-center gap-2"
+                className="w-full text-left px-3 py-2.5 hover:bg-accent transition-colors border-b last:border-b-0 disabled:opacity-50 flex items-center gap-2"
               >
                 <span className="font-medium text-xs truncate flex-1 min-w-0">{routine.name}</span>
                 {isLogging ? (
