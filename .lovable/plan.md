@@ -1,27 +1,20 @@
 ## Goal
 
-Add vertical breathing room to each row in the saved meals and saved routines popovers, while keeping a visible half-row peek + fade at the bottom so users see the scroll affordance when the list overflows.
+Make the popover container slightly taller so the peeked row's **text** sits under the bottom fade — eliminating the "two parallel lines" look (row divider + container border) with empty space between them.
 
-## Changes
+## Change
 
-In both `src/components/SavedMealsPopover.tsx` and `src/components/SavedRoutinesPopover.tsx`:
+In both `src/components/SavedMealsPopover.tsx` and `src/components/SavedRoutinesPopover.tsx`, change the scroll container from `max-h-[14.5rem]` (232px) to `max-h-[15.5rem]` (248px).
 
-1. **Row padding**: bump item buttons from `px-3 py-1.5` to `px-3 py-2.5`. The header "Add New …" button stays at `py-2` to remain visually distinct from list rows.
+## Math
 
-2. **Scroll container max-height**: change `max-h-64` (256px) to `max-h-[14.5rem]` (232px) so overflow ends mid-row.
+Row anatomy (37px total): 10px top padding · 16px text · 10px bottom padding · 1px border.
 
-### Math (why 14.5rem)
-
-- New row height: text-xs (~16px line-height) + `py-2.5` (10px × 2) + 1px border ≈ **37px per row**.
-- `max-h-64` (256px) ÷ 37 ≈ 6.9 rows → only ~3px of a 7th row peeks. Too subtle, fade would mask it entirely.
-- `max-h-[14.5rem]` (232px) ÷ 37 ≈ 6.27 rows → **~10px of the 7th row visible** under the existing 24px `from-popover` fade. Clean half-row cutoff with the gradient layered over it.
-
-### Peek/fade behavior
-
-- Existing `showBottomFade` state and `bg-gradient-to-t from-popover to-transparent h-6` overlay are unchanged. They already render only when content actually overflows.
-- With the new mid-row cutoff, the fade sits over a visibly-clipped row instead of a clean row edge — strengthening the "more below" signal.
+- Current `max-h-[14.5rem]` (232px) → 6 rows (222px) + 10px peek. That 10px is exactly the top padding of row 7 — pure whitespace, no text. Result: divider line at 222px, container edge at 232px, with nothing between them.
+- New `max-h-[15.5rem]` (248px) → 6 rows (222px) + 26px peek. Peek now covers row 7's top padding (10px) **and the full text band (16px)**. The 24px `from-popover` fade overlays the bottom 224–248px, fading the text out gracefully instead of clipping empty whitespace.
 
 ## Out of scope
 
-- No changes to fonts, icons, separators, popover width, search input, or empty-state branches.
+- Row padding (`py-2.5`) unchanged.
+- Fade gradient and `showBottomFade` logic unchanged.
 - No other components touched.
