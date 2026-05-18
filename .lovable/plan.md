@@ -1,41 +1,27 @@
 ## Goal
 
-Let users enter any multiplier (e.g. `0.33`, `0.4`, `1.2`) by tapping the `0.5x` / `1x` label between the − / + buttons. The stepper stays for quick coarse changes; tap-to-type adds precision without new UI affordances.
+Add vertical breathing room to each row in the saved meals and saved routines popovers, while keeping a visible half-row peek + fade at the bottom so users see the scroll affordance when the list overflows.
 
-This applies to all three places the multiplier stepper is rendered in `src/components/FoodItemsTable.tsx`:
-- Group portion stepper, two-column variant (~L461–488)
-- Group portion stepper, single-column variant (~L639–665)
-- Individual-item portion stepper (~L945–965)
+## Changes
 
-No backend or data-model changes — the multiplier flows through `scaleGroupPortion` / `scaleItemByMultiplier` exactly as today; only the input UI changes.
+In both `src/components/SavedMealsPopover.tsx` and `src/components/SavedRoutinesPopover.tsx`:
 
-## UX
+1. **Row padding**: bump item buttons from `px-3 py-1.5` to `px-3 py-2.5`. The header "Add New …" button stays at `py-2` to remain visually distinct from list rows.
 
-- Default state: same `0.5x` text label as today.
-- Tap/click the label → it becomes a small inline `<input>` (~3rem wide, same tabular-nums sizing) pre-filled with the current value, `inputMode="decimal"`, text-selected on focus.
-- Commit on Enter or blur:
-  - Parse as float, clamp to `[0.1, 10]`, round to 2 decimals.
-  - Empty or unparseable → revert to previous value.
-  - Don't snap to the existing `MULTIPLIER_STEPS` sequence — accept any decimal.
-- Escape reverts and exits edit mode.
-- `−` / `+` buttons keep working: when the current value is off-sequence (e.g. 0.33), they step to the next/previous value in `MULTIPLIER_STEPS` using the existing `stepMultiplier` "snap to nearest" branch (already handles this case).
-- Preview line (`(1 portion, 533 cal)`) and Done/Reset behavior unchanged — they already read the multiplier from state.
-- Read-only users: tapping the label still allows local edits; the actual persistence is already gated in the Done handler via `triggerOverlay()`.
+2. **Scroll container max-height**: change `max-h-64` (256px) to `max-h-[14.5rem]` (232px) so overflow ends mid-row.
 
-## Implementation notes
+### Math (why 14.5rem)
 
-- Add a small local component (or inline state) `MultiplierInput` in `FoodItemsTable.tsx` that swaps between a `<button>` showing `{value}x` and an `<input type="text" inputMode="decimal">` when focused.
-- Keep min `0.1`, max `10` as soft clamps; mirrors the existing 0.25–5.0 stepper bounds but allows the user's 0.33 case while preventing absurd values.
-- Format display: integer when whole (`1x`), else trim trailing zeros (`0.33x`, `1.5x`, not `0.33000x`).
-- Reuse existing styling: `text-sm font-medium tabular-nums`, primary color when ≠ 1.0.
-- No changes to `portion-scaling.ts`, `useGroupPortionScale.ts`, `stepMultiplier`, or `MULTIPLIER_STEPS`. `scalePortion` and `scaleItemByMultiplier` already handle arbitrary decimal multipliers.
+- New row height: text-xs (~16px line-height) + `py-2.5` (10px × 2) + 1px border ≈ **37px per row**.
+- `max-h-64` (256px) ÷ 37 ≈ 6.9 rows → only ~3px of a 7th row peeks. Too subtle, fade would mask it entirely.
+- `max-h-[14.5rem]` (232px) ÷ 37 ≈ 6.27 rows → **~10px of the 7th row visible** under the existing 24px `from-popover` fade. Clean half-row cutoff with the gradient layered over it.
+
+### Peek/fade behavior
+
+- Existing `showBottomFade` state and `bg-gradient-to-t from-popover to-transparent h-6` overlay are unchanged. They already render only when content actually overflows.
+- With the new mid-row cutoff, the fade sits over a visibly-clipped row instead of a clean row edge — strengthening the "more below" signal.
 
 ## Out of scope
 
-- No slider, no preset chips, no changes to the step sequence itself.
-- No changes to the saved-meals/routines popovers or any other component.
-- No mobile-specific layout changes — the existing row already fits the input width on the 440px viewport.
-
-## Memory updates
-
-Update `mem://features/portion-scaling-system-v3` to note that the multiplier label is tappable for arbitrary decimal entry, while − / + still walk the `MULTIPLIER_STEPS` sequence.
+- No changes to fonts, icons, separators, popover width, search input, or empty-state branches.
+- No other components touched.
