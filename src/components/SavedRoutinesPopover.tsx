@@ -111,7 +111,7 @@ export function SavedRoutinesPopover({ onSelectRoutine, onClose, onCreateNew }: 
       )}
       
       <div className="relative">
-      <div ref={scrollRefCb} onScroll={handleScroll} className="max-h-[14.5rem] overflow-y-auto">
+      <div ref={scrollRefCb} onScroll={handleScroll} className="max-h-[15.5rem] overflow-y-auto">
         {filteredRoutines.length === 0 ? (
           <div className="p-4 text-center text-sm text-muted-foreground">
             No routines match "{search}"
