@@ -106,10 +106,50 @@ export function useCustomLogEntries(dateStr: string) {
         .eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['custom-log-entries', dateStr] });
+      const previous = queryClient.getQueryData<CustomLogEntry[]>(['custom-log-entries', dateStr]);
+      const removed = previous?.find((e) => e.id === id);
+
+      // Optimistically remove from day entries
+      queryClient.setQueryData<CustomLogEntry[]>(['custom-log-entries', dateStr], (old) =>
+        old?.filter((e) => e.id !== id)
+      );
+
+      // Optimistically remove from medications-all cache (if present)
+      const medCaches = queryClient.getQueriesData<CustomLogEntry[]>({ queryKey: ['custom-log-entries-all-meds'] });
+      for (const [key, data] of medCaches) {
+        if (data) queryClient.setQueryData<CustomLogEntry[]>(key, data.filter((e) => e.id !== id));
+      }
+
+      // Optimistically remove matching date point from this log type's trend cache
+      if (removed && user) {
+        const trendKey = ['custom-log-trend-single', removed.log_type_id, user.id];
+        const trend = queryClient.getQueryData<any>(trendKey);
+        if (trend?.series) {
+          queryClient.setQueryData(trendKey, {
+            ...trend,
+            series: trend.series.map((s: any) => ({
+              ...s,
+              data: s.data.filter((d: any) => d.date !== removed.logged_date),
+            })),
+          });
+        }
+      }
+      return { previous, removed };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['custom-log-entries', dateStr], context.previous);
+      }
+    },
+    onSettled: (_data, _err, _id, context) => {
       queryClient.invalidateQueries({ queryKey: ['custom-log-entries', dateStr] });
       queryClient.invalidateQueries({ queryKey: ['custom-log-dates'] });
-      queryClient.invalidateQueries({ queryKey: ['custom-log-trend-single'] });
+      const logTypeId = context?.removed?.log_type_id;
+      if (logTypeId && user) {
+        queryClient.invalidateQueries({ queryKey: ['custom-log-trend-single', logTypeId, user.id] });
+      }
     },
   });
 
