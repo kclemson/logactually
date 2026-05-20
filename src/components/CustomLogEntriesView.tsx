@@ -354,6 +354,10 @@ export function CustomLogEntriesView({
                 />
               ))
             )}
+
+            {logType && (logType.value_type === 'numeric' || logType.value_type === 'dual_numeric') && (
+              <CustomLogGroupTrend logType={logType} />
+            )}
           </div>
         );
       })}
