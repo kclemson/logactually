@@ -9,6 +9,7 @@ import { DescriptionCell } from '@/components/DescriptionCell';
 import { useInlineEdit } from '@/hooks/useInlineEdit';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { cn } from '@/lib/utils';
+import { CustomLogGroupTrend } from '@/components/CustomLogGroupTrend';
 import type { CustomLogType } from '@/hooks/useCustomLogTypes';
 import type { CustomLogEntry } from '@/hooks/useCustomLogEntries';
 
