@@ -1,35 +1,38 @@
-## Goal
+# Speed up custom log delete
 
-Show the all-time trend chart inline within the day's custom log list, beneath each group whose type is chartable (`numeric` or `dual_numeric`) — the same chart that currently appears under the entry dialog. Medication, text, dual-text, and multiline types stay unchanged (they aren't chartable).
+## What's slow
 
-## Where it goes
+Deleting a custom log entry feels laggy for two reasons:
 
-Inside `CustomLogEntriesView`, immediately under each group's entry rows (above the next group's header). One chart per chartable type group, only when the group has at least one rendered entry. No new headers, no toggles — it just appears, matching the dialog treatment.
+1. **No optimistic update.** `deleteEntry` in `useCustomLogEntries.ts` waits for the network round-trip before invalidating queries, then waits again for the refetched entries before the row disappears from the UI. `updateEntry` already does optimistic updates — delete doesn't.
 
-```text
-Weight                     ← existing group header
- 8:14 AM   182 lbs         ← existing entries
- 7:02 AM   181 lbs
-[ trend chart ]            ← NEW — same component as dialog
-─────────────
-Blood Pressure
- …
-```
+2. **Trend invalidation is too broad and now amplified.** `onSuccess` calls `invalidateQueries({ queryKey: ['custom-log-trend-single'] })` with no logTypeId, which refetches **every** inline trend chart currently mounted on the day's log page (we just added one per chartable group). Each of those refetches up to 10,000 rows from `custom_log_entries`. So deleting one Body Weight entry can trigger N large queries in parallel even though only one trend actually changed.
 
-## Implementation
+   Same pattern exists in `useAllMedicationEntries.deleteEntry` (invalidates `['custom-log-entries']` for all dates) and `useCustomLogEntriesForType.deleteEntry`.
 
-1. **New tiny wrapper** `src/components/CustomLogGroupTrend.tsx`
-   - Props: `logType: CustomLogType`
-   - Calls `useCustomLogTrendSingle(logType.id, logType.name, logType.value_type)` (already gates on chartable types — returns `null`/disabled otherwise)
-   - Renders `<CustomLogTrendChart trend={trend} onNavigate={() => {}} />` inside a `mt-2 border-t border-border/50 pt-2` wrapper when `trend` exists, else nothing
-   - Hook is keyed per type, so each group gets its own query (cached, cheap)
+## Fix
 
-2. **`CustomLogEntriesView.tsx`** — render `<CustomLogGroupTrend logType={logType} />` after the entry rows in each non-medication group when `logType?.value_type` is `'numeric'` or `'dual_numeric'`. Skip when `medicationsOnly` mode is on (no chartable types pass that filter anyway).
+In `src/hooks/useCustomLogEntries.ts` `deleteEntry`:
 
-3. No changes to OtherLog, the existing dialog inline trend, hooks, or backend.
+- Accept the full entry (or `{ id, log_type_id }`) instead of just `id`, so we know which trend to touch.
+- Add `onMutate` that:
+  - Cancels in-flight `['custom-log-entries', dateStr]` queries
+  - Optimistically removes the row from the entries cache
+  - Optimistically removes the matching date point from `['custom-log-trend-single', log_type_id, user.id]` (filter by `logged_date`; for `dual_numeric` strip from both series)
+  - Returns rollback snapshots
+- `onError` restores both snapshots.
+- `onSettled` invalidates **scoped** keys: `['custom-log-entries', dateStr]`, `['custom-log-trend-single', log_type_id, user.id]`, and `['custom-log-dates']` (cheap, needed for the calendar dot).
 
-## Notes
+Update the two callers (`CustomLogEntriesView` non-med rows and the medication row in the same view) to pass the entry instead of just id.
 
-- Reuses the existing `useCustomLogTrendSingle` hook and `CustomLogTrendChart` component — no new fetching code or chart logic.
-- Cache key already includes `logTypeId`, so the dialog's chart and the inline chart share data with zero extra requests when both are visible.
-- Read-only / demo users see the chart too (read-only by design — matches dialog behavior).
+For `useAllMedicationEntries.deleteEntry` and `useCustomLogEntriesForType.deleteEntry`: apply the same pattern — accept the entry, optimistic remove, and scope the trend invalidation to the single `log_type_id`.
+
+## Out of scope
+
+- No backend or schema changes.
+- Not touching the trend chart component itself; its cache keys already include `logTypeId` so scoped invalidation lands cleanly.
+- Leaving `OtherLog.tsx`'s `updateMedEntry` invalidation block alone — that's an edit path, not the reported delete path.
+
+## Expected result
+
+Row vanishes instantly on click; only the affected trend chart (if any) refetches in the background, not every chart on the page.

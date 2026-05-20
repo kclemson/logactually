@@ -32,10 +32,34 @@ export function useAllMedicationEntries(medTypeIds: string[], dateStr: string) {
         .eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['custom-log-entries-all-meds'] });
-      queryClient.invalidateQueries({ queryKey: ['custom-log-entries'] });
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['custom-log-entries-all-meds', medTypeIds, dateStr] });
+      const previous = queryClient.getQueryData<CustomLogEntry[]>(['custom-log-entries-all-meds', medTypeIds, dateStr]);
+      const removed = previous?.find((e) => e.id === id);
+      queryClient.setQueryData<CustomLogEntry[]>(
+        ['custom-log-entries-all-meds', medTypeIds, dateStr],
+        (old) => old?.filter((e) => e.id !== id)
+      );
+      // Also optimistically remove from per-day entries cache if present
+      const dayCaches = queryClient.getQueriesData<CustomLogEntry[]>({ queryKey: ['custom-log-entries'] });
+      for (const [key, data] of dayCaches) {
+        if (data) queryClient.setQueryData<CustomLogEntry[]>(key, data.filter((e) => e.id !== id));
+      }
+      return { previous, removed };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['custom-log-entries-all-meds', medTypeIds, dateStr], context.previous);
+      }
+    },
+    onSettled: (_data, _err, _id, context) => {
+      queryClient.invalidateQueries({ queryKey: ['custom-log-entries-all-meds', medTypeIds, dateStr] });
+      queryClient.invalidateQueries({ queryKey: ['custom-log-entries', dateStr] });
       queryClient.invalidateQueries({ queryKey: ['custom-log-dates'] });
+      const logTypeId = context?.removed?.log_type_id;
+      if (logTypeId && user) {
+        queryClient.invalidateQueries({ queryKey: ['custom-log-trend-single', logTypeId, user.id] });
+      }
     },
   });
 

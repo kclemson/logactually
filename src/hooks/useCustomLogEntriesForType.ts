@@ -64,11 +64,46 @@ export function useCustomLogEntriesForType(logTypeId: string | null) {
         .eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['custom-log-entries-for-type', logTypeId] });
+      const previous = queryClient.getQueryData<CustomLogEntry[]>(['custom-log-entries-for-type', logTypeId]);
+      const removed = previous?.find((e) => e.id === id);
+      queryClient.setQueryData<CustomLogEntry[]>(
+        ['custom-log-entries-for-type', logTypeId],
+        (old) => old?.filter((e) => e.id !== id)
+      );
+      // Optimistically remove from per-day entries caches as well
+      const dayCaches = queryClient.getQueriesData<CustomLogEntry[]>({ queryKey: ['custom-log-entries'] });
+      for (const [key, data] of dayCaches) {
+        if (data) queryClient.setQueryData<CustomLogEntry[]>(key, data.filter((e) => e.id !== id));
+      }
+      // Optimistically prune the trend cache for this log type
+      if (removed && user && logTypeId) {
+        const trendKey = ['custom-log-trend-single', logTypeId, user.id];
+        const trend = queryClient.getQueryData<any>(trendKey);
+        if (trend?.series) {
+          queryClient.setQueryData(trendKey, {
+            ...trend,
+            series: trend.series.map((s: any) => ({
+              ...s,
+              data: s.data.filter((d: any) => d.date !== removed.logged_date),
+            })),
+          });
+        }
+      }
+      return { previous };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['custom-log-entries-for-type', logTypeId], context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['custom-log-entries-for-type', logTypeId] });
-      queryClient.invalidateQueries({ queryKey: ['custom-log-entries'] });
       queryClient.invalidateQueries({ queryKey: ['custom-log-dates'] });
-      queryClient.invalidateQueries({ queryKey: ['custom-log-trend-single'] });
+      if (logTypeId && user) {
+        queryClient.invalidateQueries({ queryKey: ['custom-log-trend-single', logTypeId, user.id] });
+      }
     },
   });
 
