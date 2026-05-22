@@ -83,9 +83,6 @@ export function useCustomLogTypes() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['custom-log-types'] });
     },
-    onError: (err: Error) => {
-      toast.error(err.message || 'Failed to create log type');
-    },
   });
 
   const updateType = useMutation({
