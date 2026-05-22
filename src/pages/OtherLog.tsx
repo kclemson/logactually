@@ -222,120 +222,104 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                 </button>
               </div>
             ) : hasLogTypes ? (
-              /* Has log types: stable view-mode select + mode-specific controls */
+              /* Has log types: stable view-mode select + Log New dropdown */
               <>
-                {/* Always-stable view-mode select — never unmounts on mode switch */}
                 <Select value={viewMode} onValueChange={(v) => handleViewModeChange(v as ViewMode)}>
-                  <SelectTrigger className="h-8 text-sm px-2 w-[140px] shrink-0">
+                  <SelectTrigger className="h-8 text-sm px-2 w-[120px] shrink-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="date" className="pl-3 [&>span:first-child]:hidden">Show All</SelectItem>
-                    {showMedView && (
-                      <SelectItem value="medication" className="pl-3 [&>span:first-child]:hidden">Medication Only</SelectItem>
-                    )}
+                    <SelectItem value="date" className="pl-3 [&>span:first-child]:hidden">By Date</SelectItem>
+                    <SelectItem value="by_type" className="pl-3 [&>span:first-child]:hidden">By Type</SelectItem>
                   </SelectContent>
                 </Select>
 
-                {/* Right side: varies by mode */}
-                {effectiveViewMode === 'medication' ? (
-                  /* By Meds: Log New dropdown for medications only */
-                  <Select
-                    value=""
-                    onValueChange={(val) => {
-                      setSelectedMedTypeId(val);
+                <Select
+                  value=""
+                  onValueChange={(val) => {
+                    if (val === '__create_new__') {
+                      setTemplatePickerOpen(true);
+                    } else {
+                      setSelectedTypeId(val);
                       setShowInputDialog(true);
-                    }}
-                  >
-                    <SelectTrigger className="h-8 text-sm font-medium flex items-center gap-1 w-auto bg-teal-500 text-white border-teal-500 hover:bg-teal-600 shrink-0 whitespace-nowrap">
-                      <Plus className="h-3 w-3 shrink-0" />
-                      Log New
-                    </SelectTrigger>
-                    <SelectContent>
-                      {medicationTypes.map((mt) => (
-                        <SelectItem key={mt.id} value={mt.id} className="pl-3 [&>span:first-child]:hidden">
-                          {mt.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  /* By Date: "Log New" dropdown — opens dialog on selection */
-                  <Select
-                    value=""
-                    onValueChange={(val) => {
-                      if (val === '__create_new__') {
-                        setTemplatePickerOpen(true);
-                      } else {
-                        setSelectedTypeId(val);
-                        setShowInputDialog(true);
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="h-8 text-sm font-medium flex items-center gap-1 w-auto bg-teal-500 text-white border-teal-500 hover:bg-teal-600 shrink-0 whitespace-nowrap">
-                      <Plus className="h-3 w-3 shrink-0" />
-                      Log New
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sortedLogTypes.map((lt) => (
-                        <SelectItem key={lt.id} value={lt.id} className="pl-3 [&>span:first-child]:hidden">
-                          Log {lt.name}
-                        </SelectItem>
-                      ))}
-                      {!isReadOnly && (
-                        <SelectItem value="__create_new__" className="pl-3 [&>span:first-child]:hidden text-primary">
-                          <span className="flex items-center gap-1.5">
-                            <Plus className="h-3 w-3" />
-                            New Custom Log Type
-                          </span>
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                )}
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-sm font-medium flex items-center gap-1 w-auto bg-teal-500 text-white border-teal-500 hover:bg-teal-600 shrink-0 whitespace-nowrap">
+                    <Plus className="h-3 w-3 shrink-0" />
+                    Log New
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sortedLogTypes.map((lt) => (
+                      <SelectItem key={lt.id} value={lt.id} className="pl-3 [&>span:first-child]:hidden">
+                        Log {lt.name}
+                      </SelectItem>
+                    ))}
+                    {!isReadOnly && (
+                      <SelectItem value="__create_new__" className="pl-3 [&>span:first-child]:hidden text-primary">
+                        <span className="flex items-center gap-1.5">
+                          <Plus className="h-3 w-3" />
+                          New Custom Log Type
+                        </span>
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
               </>
             ) : null}
           </div>
         )}
       </section>
 
-      {/* Swipe zone: DateNavigation + entries (swipe left = next day, swipe right = prev day) */}
-      <div ref={swipeHandlers.ref} onTouchStart={swipeHandlers.onTouchStart} onTouchEnd={swipeHandlers.onTouchEnd} style={{ touchAction: 'pan-y' }} className="min-h-[calc(100dvh-8rem)] md:min-h-0">
-        {/* Shared date navigation — both modes */}
-        <DateNavigation
-          mountDir={mountDir}
-          selectedDate={selectedDate}
-          isTodaySelected={isTodaySelected}
-          calendarOpen={dateNav.calendarOpen}
-          onCalendarOpenChange={dateNav.setCalendarOpen}
-          calendarMonth={dateNav.calendarMonth}
-          onCalendarMonthChange={dateNav.setCalendarMonth}
-          onPreviousDay={dateNav.goToPreviousDay}
-          onNextDay={dateNav.goToNextDay}
-          onDateSelect={dateNav.handleDateSelect}
-          onGoToToday={dateNav.goToToday}
-          datesWithData={datesWithData}
-          highlightClassName="text-teal-600 dark:text-teal-400 font-semibold"
-          weekStartDay={settings.weekStartDay}
-        />
-
-        {/* Unified entries view — filters to meds-only when in medication mode */}
-        <div className={cn("mt-4", mountDir === 'left' && 'animate-slide-in-from-right', mountDir === 'right' && 'animate-slide-in-from-left')}>
-          <CustomLogEntriesView
-            entries={entries}
-            logTypes={logTypes}
+      {viewMode === 'by_type' ? (
+        /* By Type: no date navigation, list of types with charts/history */
+        <div className="min-h-[calc(100dvh-8rem)] md:min-h-0">
+          <CustomLogByTypeView
+            logTypes={sortedLogTypes}
             isLoading={isLoading}
-            onDelete={(id) => deleteEntry.mutate(id)}
-            onEdit={(entry) => setEditingEntry(entry)}
-            onUpdate={(params) => updateEntry.mutate(params)}
-            onExport={effectiveViewMode === 'medication' ? exportCustomLog : undefined}
             isReadOnly={isReadOnly}
-            medicationsOnly={effectiveViewMode === 'medication'}
-            dateStr={dateStr}
+            onLogNew={(typeId) => {
+              setSelectedTypeId(typeId);
+              setShowInputDialog(true);
+            }}
           />
+          <DuplicateContentDialogHost />
         </div>
-        <DuplicateContentDialogHost />
-      </div>
+      ) : (
+        /* By Date: DateNavigation + day entries (swipe to navigate) */
+        <div ref={swipeHandlers.ref} onTouchStart={swipeHandlers.onTouchStart} onTouchEnd={swipeHandlers.onTouchEnd} style={{ touchAction: 'pan-y' }} className="min-h-[calc(100dvh-8rem)] md:min-h-0">
+          <DateNavigation
+            mountDir={mountDir}
+            selectedDate={selectedDate}
+            isTodaySelected={isTodaySelected}
+            calendarOpen={dateNav.calendarOpen}
+            onCalendarOpenChange={dateNav.setCalendarOpen}
+            calendarMonth={dateNav.calendarMonth}
+            onCalendarMonthChange={dateNav.setCalendarMonth}
+            onPreviousDay={dateNav.goToPreviousDay}
+            onNextDay={dateNav.goToNextDay}
+            onDateSelect={dateNav.handleDateSelect}
+            onGoToToday={dateNav.goToToday}
+            datesWithData={datesWithData}
+            highlightClassName="text-teal-600 dark:text-teal-400 font-semibold"
+            weekStartDay={settings.weekStartDay}
+          />
+
+          <div className={cn("mt-4", mountDir === 'left' && 'animate-slide-in-from-right', mountDir === 'right' && 'animate-slide-in-from-left')}>
+            <CustomLogEntriesView
+              entries={entries}
+              logTypes={logTypes}
+              isLoading={isLoading}
+              onDelete={(id) => deleteEntry.mutate(id)}
+              onEdit={(entry) => setEditingEntry(entry)}
+              onUpdate={(params) => updateEntry.mutate(params)}
+              isReadOnly={isReadOnly}
+              dateStr={dateStr}
+            />
+          </div>
+          <DuplicateContentDialogHost />
+        </div>
+      )}
 
       {/* Entry form as modal dialog — used by By Date, By Type, and By Meds modes */}
       {dialogType && (
