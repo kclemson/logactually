@@ -9,7 +9,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
 };
 
 // Templates shown in the primary list (always visible)
-const PRIMARY_NAMES = ['Body Weight', 'Body Fat %', 'Blood Pressure', 'Medication'];
+const PRIMARY_NAMES = ['Body Weight', 'Body Fat %', 'Blood Pressure', 'Medication', 'Bloodwork'];
 // Templates hidden under "More options"
 const MORE_NAMES = ['Sleep', 'Water Intake', 'Mood', 'Journal'];
 

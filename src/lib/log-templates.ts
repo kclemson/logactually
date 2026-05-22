@@ -22,6 +22,7 @@ export const LOG_TEMPLATES: LogTemplate[] = [
   { name: 'Body Fat %',             valueType: 'numeric',        unitImperial: '%',    unitMetric: '%',    icon: 'Percent' },
   { name: 'Blood Pressure',         valueType: 'dual_numeric',   unitImperial: 'mmHg', unitMetric: 'mmHg', icon: 'HeartPulse' },
   { name: 'Medication',             valueType: 'medication',     unitImperial: null,   unitMetric: null,   icon: 'Pill' },
+  { name: 'Bloodwork',              valueType: 'panel',          unitImperial: null,   unitMetric: null,   icon: 'Droplets' },
   { name: 'Sleep',                  valueType: 'numeric',        unitImperial: 'hrs',  unitMetric: 'hrs',  icon: 'Moon' },
   { name: 'Water Intake',           valueType: 'numeric',        unitImperial: 'oz',   unitMetric: 'ml',   icon: 'Droplets' },
   { name: 'Mood',                   valueType: 'text',           unitImperial: null,   unitMetric: null,   icon: 'Smile' },
