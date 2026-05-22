@@ -4,7 +4,7 @@ import { Plus, ChevronRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { CustomLogGroupTrend } from '@/components/CustomLogGroupTrend';
-import { BloodworkPanelRow } from '@/components/BloodworkPanelGroup';
+import { BloodworkPanelRow, BloodworkPanelToolbar, panelHasMatch } from '@/components/BloodworkPanelGroup';
 import { useBloodworkPanelsForType } from '@/hooks/useBloodworkPanelsForType';
 import { useBloodworkPanelsForDate } from '@/hooks/useBloodworkPanels';
 import { useCustomLogEntriesForType } from '@/hooks/useCustomLogEntriesForType';
