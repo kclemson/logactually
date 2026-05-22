@@ -1,45 +1,46 @@
-# Add edit pencil to every custom log row type
-
-Today only medication rows show a pencil-icon "edit in dialog" affordance. Numeric, dual_numeric, text, text_multiline, and text_numeric rows only support inline cell editing and offer a trash icon. This adds the pencil to those rows too, opening the same dialog that creates entries — pre-filled and in edit mode.
-
-## Scope
-
-In scope:
-- Pencil icon on hover for every non-medication, non-panel row (in both By Date and By Type views, since they share `CustomLogTypeDayRows`).
-- Clicking the pencil opens the existing entry input dialog, pre-filled with the entry's current values, with a "Save" action that updates the entry instead of creating a new one.
-
-Out of scope:
-- Panel (bloodwork) rows — they have their own editing flow.
-- Adding new editable fields (time, notes) for non-med entries. Today those aren't captured at create time, so the edit dialog will mirror what create offers: just the value field(s).
-- Visual redesign of the dialog.
+## Goal
+After a bloodwork file is parsed, show the user a richer success state inside the upload slot — including the date AND the list of panel categories that were extracted (e.g. "CBC With Differential/Platelet · Lipid Panel · Iron and TIBC"), so they can see at a glance what landed.
 
 ## Changes
 
-### `src/components/LogEntryInput.tsx`
-Add optional initial-value props and an edit mode:
-- New props: `initialNumericValue?: number | null`, `initialNumericValue2?: number | null`, `initialTextValue?: string | null`, `mode?: 'create' | 'edit'` (default `'create'`).
-- Seed `useState` from those props.
-- In edit mode: keep the same layout, but label the submit button "Save changes" and do **not** clear the inputs after submit (parent closes the dialog).
+### 1. `supabase/functions/parse-bloodwork/index.ts`
+Include section titles in the success response. After we build `rows`, also build a deduplicated, in-order list of section titles that actually produced ≥1 result, and return it:
 
-### `src/components/CustomLogEntriesView.tsx` (`NonMedEntryRow`)
-- Add an `onEdit?: (entry) => void` prop and thread it down from `CustomLogTypeDayRows`.
-- When `onEdit` is provided and not read-only, render a Pencil button next to the existing Trash button using the exact same styling as the medication row's pencil (`md:opacity-0 md:group-hover:opacity-100`, `h-6 w-6`, etc.).
-- For the `text_multiline` branch, do the same in its 3-column grid.
+```ts
+return new Response(JSON.stringify({
+  ok: true,
+  result_count: rows.length,
+  collected_date: collectedDate,
+  sections: <ordered unique non-null section_titles with at least one result>,
+}), ...);
+```
 
-### `src/pages/OtherLog.tsx`
-- The existing `editingEntry` state already exists and is passed via `onEdit` for medications. Reuse it for non-med rows — the row's pencil already calls `onEdit(entry)`.
-- In the edit dialog block (`{editingEntry && editingLogType && !isReadOnly && ...}`), branch by `editingLogType.value_type`:
-  - `medication` → existing `MedicationEntryInput` (unchanged).
-  - `panel` → render nothing (panel rows don't surface a pencil).
-  - everything else → render `LogEntryInput` in edit mode, pre-filled with `editingEntry.numeric_value / numeric_value_2 / text_value`, wired to `updateEntry.mutate({ id, ...params })` then `setEditingEntry(null)` on success.
-- The dialog wrapper styling (`max-w-sm p-0 ...`) is reused so create and edit look identical.
+Only the success branch needs this. The `duplicate_pending` branch already returns early and doesn't apply.
 
-## Why this design
+### 2. `src/hooks/useBloodworkPanels.ts`
+Extend the `uploadAndParse` return shape to surface the new field:
 
-- Mirrors the medication pattern exactly — same icon, same hover behavior, same dialog shell — so the two row types stop diverging.
-- Uses the existing create component (`LogEntryInput`) instead of building a parallel edit form, so any future field added to create is automatically editable.
-- Uses the existing `updateEntry` mutation that already powers inline editing, so cache invalidation, read-only enforcement, and validation flow through one path.
+```ts
+return {
+  panel,
+  extractedDate: fnData?.collected_date ?? null,
+  sections: (fnData?.sections as string[] | undefined) ?? [],
+};
+```
 
-## Visible behavior after the change
+### 3. `src/components/BloodworkUploadInput.tsx`
+- Replace the single `savedTo` string with a small `saved` state object: `{ date: string | null; sections: string[] } | null` (still using `'__no_date__'` semantics by allowing `date: null`).
+- In `runUpload`, on success capture both `extractedDate` and `sections`.
+- Replace the current dashed upload button with a prominent success card when `saved` is set (matching the previously approved direction):
+  - Left column: green check icon + `Saved to {Mon D, YYYY}` (or "Saved — no date found" fallback) in normal foreground text.
+  - Below that, in muted-foreground text-xs, the section names joined by ` · ` (e.g. `CBC With Differential/Platelet · Lipid Panel · Iron and TIBC`). If `sections` is empty, omit this line.
+  - Right side: a real `View →` button (default variant) that navigates to the extracted date. Hidden if no date.
+  - The cancel `X` continues to dismiss without navigating.
+- The upload button is only rendered while `saved` is null.
 
-For Weight, Measurement, Blood Pressure, and every other custom log type, hovering a row shows a pencil + trash. The pencil opens the same compact dialog used to log a new entry, pre-filled with the current values, with a "Save changes" button. This works identically in By Date and By Type views.
+No backfill of existing panels is needed — this only affects the post-upload toast state, not stored data.
+
+## Out of scope
+- Showing per-section result counts (e.g. "Lipid Panel (6)") — keep it to category names only for now.
+- Restyling the in-progress / error / duplicate states.
+- Changing how categories render in `BloodworkPanelGroup` itself.

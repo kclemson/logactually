@@ -172,7 +172,7 @@ export function useBloodworkPanelsForDate(dateStr: string) {
         body: { panel_id: panel.id },
       });
       if (fnErr) throw fnErr;
-      return { panel: panel as BloodworkPanel, extractedDate: (fnData?.collected_date as string | null) ?? null };
+      return { panel: panel as BloodworkPanel, extractedDate: (fnData?.collected_date as string | null) ?? null, sections: (fnData?.sections as string[] | undefined) ?? [] };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bloodwork-panels'] });
