@@ -21,6 +21,8 @@ export interface BloodworkResult {
   flag: string | null;
 }
 
+export type BloodworkParseStatus = 'pending' | 'success' | 'failed' | 'duplicate_pending';
+
 export interface BloodworkPanel {
   id: string;
   user_id: string;
@@ -30,14 +32,42 @@ export interface BloodworkPanel {
   storage_path: string;
   source_mime_type: string | null;
   source_filename: string | null;
-  parse_status: 'pending' | 'success' | 'failed';
+  file_sha256: string | null;
+  content_signature: string | null;
+  parse_status: BloodworkParseStatus;
   parse_error: string | null;
+  raw_extraction: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }
 
 export interface BloodworkPanelWithResults extends BloodworkPanel {
   results: BloodworkResult[];
+}
+
+export class DuplicateFileError extends Error {
+  constructor(public existingPanel: BloodworkPanel) {
+    super('Duplicate file');
+    this.name = 'DuplicateFileError';
+  }
+}
+
+async function sha256Hex(file: File): Promise<string> {
+  const buf = await file.arrayBuffer();
+  const digest = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function loadPanelsAndResults(panelsRaw: BloodworkPanel[], resultsRaw: BloodworkResult[]): BloodworkPanelWithResults[] {
+  const byPanel = new Map<string, BloodworkResult[]>();
+  for (const r of resultsRaw) {
+    const arr = byPanel.get(r.panel_id) ?? [];
+    arr.push(r);
+    byPanel.set(r.panel_id, arr);
+  }
+  return panelsRaw.map((p) => ({ ...p, results: byPanel.get(p.id) ?? [] }));
 }
 
 export function useBloodworkPanelsForDate(dateStr: string) {
@@ -48,34 +78,54 @@ export function useBloodworkPanelsForDate(dateStr: string) {
     queryKey: ['bloodwork-panels', dateStr, user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data: panelsRaw, error: pErr } = await supabase
+      // Show panels collected on this date PLUS in-flight panels on this date (pending/duplicate_pending/failed/missing-date)
+      // so the user sees their upload progress even before extraction resolves a date.
+      const { data: byDate } = await supabase
         .from('bloodwork_panels')
         .select('*')
-        .eq('collected_date', dateStr)
-        .order('created_at', { ascending: true });
-      if (pErr) throw pErr;
-      const panelIds = (panelsRaw ?? []).map(p => p.id);
+        .eq('collected_date', dateStr);
+
+      const { data: inFlight } = await supabase
+        .from('bloodwork_panels')
+        .select('*')
+        .in('parse_status', ['pending', 'failed'])
+        .is('collected_date', null);
+
+      const merged = new Map<string, BloodworkPanel>();
+      for (const p of (byDate ?? []) as BloodworkPanel[]) merged.set(p.id, p);
+      for (const p of (inFlight ?? []) as BloodworkPanel[]) merged.set(p.id, p);
+      const panelsRaw = Array.from(merged.values()).sort((a, b) => a.created_at.localeCompare(b.created_at));
+
+      const panelIds = panelsRaw.map((p) => p.id);
       if (panelIds.length === 0) return [] as BloodworkPanelWithResults[];
-      const { data: resultsRaw, error: rErr } = await supabase
+      const { data: resultsRaw } = await supabase
         .from('bloodwork_results')
         .select('*')
         .in('panel_id', panelIds)
         .order('section_order', { ascending: true })
         .order('result_order', { ascending: true });
-      if (rErr) throw rErr;
-      const byPanel = new Map<string, BloodworkResult[]>();
-      for (const r of resultsRaw ?? []) {
-        const arr = byPanel.get(r.panel_id) ?? [];
-        arr.push(r as BloodworkResult);
-        byPanel.set(r.panel_id, arr);
-      }
-      return (panelsRaw as BloodworkPanel[]).map(p => ({ ...p, results: byPanel.get(p.id) ?? [] }));
+      return loadPanelsAndResults(panelsRaw, (resultsRaw ?? []) as BloodworkResult[]);
     },
   });
 
   const uploadAndParse = useMutation({
     mutationFn: async ({ file, logTypeId }: { file: File; logTypeId: string }) => {
       if (!user) throw new Error('No user');
+
+      // Layer 1: hash the file and check globally for an existing panel.
+      const hash = await sha256Hex(file);
+      const { data: existing } = await supabase
+        .from('bloodwork_panels')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('file_sha256', hash)
+        .neq('parse_status', 'failed')
+        .limit(1)
+        .maybeSingle();
+      if (existing) {
+        throw new DuplicateFileError(existing as BloodworkPanel);
+      }
+
       const ext = file.name.split('.').pop() || 'bin';
       const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
       const { error: upErr } = await supabase.storage
@@ -83,6 +133,7 @@ export function useBloodworkPanelsForDate(dateStr: string) {
         .upload(path, file, { contentType: file.type, upsert: false });
       if (upErr) throw upErr;
 
+      // Insert panel WITHOUT collected_date — edge function sets it from extraction.
       const { data: panel, error: insErr } = await supabase
         .from('bloodwork_panels')
         .insert({
@@ -91,18 +142,18 @@ export function useBloodworkPanelsForDate(dateStr: string) {
           storage_path: path,
           source_mime_type: file.type,
           source_filename: file.name,
+          file_sha256: hash,
           parse_status: 'pending',
-          collected_date: dateStr,
         })
         .select()
         .single();
       if (insErr) throw insErr;
 
-      const { error: fnErr } = await supabase.functions.invoke('parse-bloodwork', {
+      const { data: fnData, error: fnErr } = await supabase.functions.invoke('parse-bloodwork', {
         body: { panel_id: panel.id },
       });
       if (fnErr) throw fnErr;
-      return panel as BloodworkPanel;
+      return { panel: panel as BloodworkPanel, extractedDate: (fnData?.collected_date as string | null) ?? null };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bloodwork-panels'] });
@@ -123,10 +174,11 @@ export function useBloodworkPanelsForDate(dateStr: string) {
 
   const deletePanel = useMutation({
     mutationFn: async (panelId: string) => {
-      const panel = panels.find(p => p.id === panelId);
+      const panel = panels.find((p) => p.id === panelId);
       if (panel?.storage_path) {
         await supabase.storage.from('bloodwork-files').remove([panel.storage_path]);
       }
+      await supabase.from('bloodwork_results').delete().eq('panel_id', panelId);
       const { error } = await supabase.from('bloodwork_panels').delete().eq('id', panelId);
       if (error) throw error;
     },
@@ -135,7 +187,7 @@ export function useBloodworkPanelsForDate(dateStr: string) {
       const previous = queryClient.getQueryData<BloodworkPanelWithResults[]>(['bloodwork-panels', dateStr, user?.id]);
       queryClient.setQueryData<BloodworkPanelWithResults[]>(
         ['bloodwork-panels', dateStr, user?.id],
-        (old) => old?.filter(p => p.id !== panelId) ?? [],
+        (old) => old?.filter((p) => p.id !== panelId) ?? [],
       );
       return { previous };
     },
@@ -155,4 +207,122 @@ export function useBloodworkPanelsForDate(dateStr: string) {
   }
 
   return { panels, isLoading, uploadAndParse, retryParse, deletePanel, getSignedUrl };
+}
+
+/**
+ * Watches all of the user's `duplicate_pending` panels — so the Layer 2 dialog
+ * can surface regardless of which day the panel landed on after parsing.
+ */
+export function useDuplicatePendingPanels() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const { data: panels = [] } = useQuery({
+    queryKey: ['bloodwork-duplicate-pending', user?.id],
+    enabled: !!user,
+    refetchInterval: 4000, // poll while a parse may still resolve
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('bloodwork_panels')
+        .select('*')
+        .eq('parse_status', 'duplicate_pending')
+        .order('created_at', { ascending: true });
+      return (data ?? []) as BloodworkPanel[];
+    },
+  });
+
+  const resolveDuplicate = useMutation({
+    mutationFn: async ({
+      panelId,
+      action,
+      existingPanelId,
+    }: {
+      panelId: string;
+      action: 'replace' | 'keep' | 'discard';
+      existingPanelId: string;
+    }) => {
+      if (!user) throw new Error('No user');
+      const { data: panel, error: pErr } = await supabase
+        .from('bloodwork_panels')
+        .select('*')
+        .eq('id', panelId)
+        .maybeSingle();
+      if (pErr || !panel) throw pErr ?? new Error('Panel missing');
+
+      if (action === 'discard') {
+        if (panel.storage_path) {
+          await supabase.storage.from('bloodwork-files').remove([panel.storage_path]);
+        }
+        await supabase.from('bloodwork_results').delete().eq('panel_id', panelId);
+        await supabase.from('bloodwork_panels').delete().eq('id', panelId);
+        return;
+      }
+
+      if (action === 'replace') {
+        // Fetch old panel's storage path, then delete it (cascades nothing — results have no FK; explicit delete).
+        const { data: oldPanel } = await supabase
+          .from('bloodwork_panels')
+          .select('storage_path')
+          .eq('id', existingPanelId)
+          .maybeSingle();
+        if (oldPanel?.storage_path) {
+          await supabase.storage.from('bloodwork-files').remove([oldPanel.storage_path]);
+        }
+        await supabase.from('bloodwork_results').delete().eq('panel_id', existingPanelId);
+        await supabase.from('bloodwork_panels').delete().eq('id', existingPanelId);
+      }
+
+      // For both 'keep' and 'replace': commit the pending panel by inserting its results
+      // from raw_extraction and flipping status to success.
+      const raw = panel.raw_extraction as
+        | { sections?: Array<{ section_title?: string | null; results?: Array<Record<string, unknown>> }> }
+        | null;
+      const rows: Record<string, unknown>[] = [];
+      const { canonicalize } = await import('@/lib/bloodwork-canonical');
+      raw?.sections?.forEach((section, sIdx) => {
+        (section.results ?? []).forEach((r, rIdx) => {
+          const analyte = (r.analyte_name as string) ?? '';
+          if (!analyte) return;
+          const { canonical_key, display_name } = canonicalize(analyte);
+          const toNum = (v: unknown): number | null => {
+            if (v === null || v === undefined || v === '') return null;
+            const n = Number(v);
+            return Number.isFinite(n) ? n : null;
+          };
+          rows.push({
+            user_id: user.id,
+            panel_id: panelId,
+            collected_date: panel.collected_date,
+            panel_section: section.section_title ?? null,
+            section_order: sIdx,
+            result_order: rIdx,
+            analyte_name: analyte,
+            canonical_key,
+            display_name,
+            numeric_value: toNum(r.numeric_value),
+            unit: (r.unit as string) ?? null,
+            reference_low: toNum(r.reference_low),
+            reference_high: toNum(r.reference_high),
+            reference_raw: (r.reference_raw as string) ?? null,
+            flag: (r.flag as string) ?? null,
+          });
+        });
+      });
+
+      if (rows.length > 0) {
+        await supabase.from('bloodwork_results').insert(rows);
+      }
+      await supabase
+        .from('bloodwork_panels')
+        .update({ parse_status: 'success', parse_error: null })
+        .eq('id', panelId);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['bloodwork-panels'] });
+      queryClient.invalidateQueries({ queryKey: ['bloodwork-duplicate-pending'] });
+      queryClient.invalidateQueries({ queryKey: ['custom-log-dates'] });
+    },
+  });
+
+  return { panels, resolveDuplicate };
 }

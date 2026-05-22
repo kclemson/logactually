@@ -126,6 +126,11 @@ function toNum(v: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+function isValidDate(s: string | null | undefined): s is string {
+  if (!s || typeof s !== 'string') return false;
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(new Date(s).getTime());
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -141,7 +146,6 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
-    // Verify JWT by calling auth with the user's token.
     const userClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authHeader } } });
     const { data: userData, error: userErr } = await userClient.auth.getUser();
     if (userErr || !userData.user) {
@@ -160,7 +164,6 @@ Deno.serve(async (req) => {
 
     const admin = createClient(supabaseUrl, serviceKey);
 
-    // Fetch the panel; verify ownership.
     const { data: panel, error: panelErr } = await admin
       .from('bloodwork_panels')
       .select('*')
@@ -173,7 +176,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Download file from storage.
     const { data: fileBlob, error: dlErr } = await admin.storage
       .from('bloodwork-files')
       .download(panel.storage_path);
@@ -192,7 +194,6 @@ Deno.serve(async (req) => {
     const base64 = btoa(binary);
     const mimeType = panel.source_mime_type || fileBlob.type || 'application/pdf';
 
-    // Try Gemini, then OpenAI fallback.
     let extracted: ExtractedPanel | null = null;
     try {
       extracted = await callGateway('google/gemini-2.5-pro', base64, mimeType);
@@ -218,16 +219,21 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Resolve collected_date from extraction (source of truth).
+    const collectedDate = isValidDate(extracted.collected_date) ? extracted.collected_date : null;
+
     // Build result rows.
     const rows: Record<string, unknown>[] = [];
+    const canonicalKeys: string[] = [];
     extracted.sections.forEach((section, sIdx) => {
       (section.results ?? []).forEach((r, rIdx) => {
         if (!r.analyte_name) return;
         const { canonical_key, display_name } = canonicalize(r.analyte_name);
+        canonicalKeys.push(canonical_key);
         rows.push({
           user_id: userId,
           panel_id,
-          collected_date: extracted!.collected_date ?? panel.collected_date ?? null,
+          collected_date: collectedDate,
           panel_section: section.section_title ?? null,
           section_order: sIdx,
           result_order: rIdx,
@@ -253,6 +259,43 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Compute content_signature for Layer 2 duplicate detection.
+    const sortedKeys = [...canonicalKeys].sort();
+    const contentSignature = `${collectedDate ?? 'nodate'}:${sortedKeys.join(',')}`;
+
+    // Layer 2: check for existing success panel with same (user, collected_date, signature).
+    let duplicateOf: string | null = null;
+    if (collectedDate) {
+      const { data: dupes } = await admin
+        .from('bloodwork_panels')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('collected_date', collectedDate)
+        .eq('content_signature', contentSignature)
+        .eq('parse_status', 'success')
+        .neq('id', panel_id)
+        .limit(1);
+      if (dupes && dupes.length > 0) {
+        duplicateOf = dupes[0].id;
+      }
+    }
+
+    if (duplicateOf) {
+      // Hold as duplicate_pending — do not insert results yet; client will resolve.
+      await admin.from('bloodwork_panels').update({
+        parse_status: 'duplicate_pending',
+        parse_error: null,
+        collected_date: collectedDate,
+        panel_title: extracted.panel_title ?? panel.panel_title ?? null,
+        content_signature: contentSignature,
+        raw_extraction: { ...extracted, duplicate_of: duplicateOf },
+      }).eq('id', panel_id);
+
+      return new Response(JSON.stringify({ ok: true, duplicate_of: duplicateOf }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Replace any prior results for this panel (in case of retry), then insert fresh.
     await admin.from('bloodwork_results').delete().eq('panel_id', panel_id);
     const { error: insertErr } = await admin.from('bloodwork_results').insert(rows);
@@ -268,13 +311,14 @@ Deno.serve(async (req) => {
 
     await admin.from('bloodwork_panels').update({
       parse_status: 'success',
-      parse_error: null,
-      collected_date: extracted.collected_date ?? panel.collected_date ?? null,
+      parse_error: collectedDate ? null : 'Could not find a collection date in the document — please set one manually.',
+      collected_date: collectedDate,
       panel_title: extracted.panel_title ?? panel.panel_title ?? null,
+      content_signature: contentSignature,
       raw_extraction: extracted,
     }).eq('id', panel_id);
 
-    return new Response(JSON.stringify({ ok: true, result_count: rows.length }), {
+    return new Response(JSON.stringify({ ok: true, result_count: rows.length, collected_date: collectedDate }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (e) {
