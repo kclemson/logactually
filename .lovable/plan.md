@@ -1,32 +1,27 @@
-### Normalize Bloodwork Flag Display + Re-Color Out-of-Range
+### Extend Bloodwork Filter to Match Sections and Flags
 
-**Goal:** Make bloodwork flag labels consistent and use a single amber color for any out-of-range result.
+**Goal:** Let users filter bloodwork results by panel section name (e.g. "Lipid") and by out-of-range status (e.g. "High", "Low").
 
-**Current state:**
-- Flags render verbatim from the database: `H`, `High`, `L`, `Low`, `Alert`
-- High flags are colored orange; low flags are colored blue
+**Change in `src/components/BloodworkPanelGroup.tsx` → `resultMatchesQuery`:**
 
-**Changes in `src/components/BloodworkPanelGroup.tsx`:**
+Extend the match to additionally check:
+1. **`r.panel_section`** — substring match (so "lipid" matches all results under the "Lipid Panel" section).
+2. **Normalized flag** — run `normalizeFlag(r.flag)` and substring-match against `"high"` / `"low"`. So typing `high` shows only flagged-high results, `low` shows only flagged-low. Partial typing like `hi` will also match `"High"` (acceptable — same substring semantics as the rest).
 
-1. **Add `normalizeFlag` helper** (module-level):
-   ```ts
-   function normalizeFlag(flag: string | null): 'High' | 'Low' | null {
-     if (!flag) return null;
-     const upper = flag.trim().toUpperCase();
-     if (upper.startsWith('H')) return 'High';
-     if (upper.startsWith('L')) return 'Low';
-     return null;
-   }
-   ```
-   This maps `H`, `High`, `HH` → `"High"` and `L`, `Low`, `LL` → `"Low"`. Anything else (including `Alert`) returns `null` and renders no flag label.
+```ts
+export function resultMatchesQuery(r, q) {
+  if (!q) return true;
+  const needle = q.toLowerCase();
+  const nf = normalizeFlag(r.flag);
+  return (
+    (r.display_name?.toLowerCase().includes(needle) ?? false) ||
+    (r.analyte_name?.toLowerCase().includes(needle) ?? false) ||
+    (r.panel_section?.toLowerCase().includes(needle) ?? false) ||
+    (nf?.toLowerCase().includes(needle) ?? false)
+  );
+}
+```
 
-2. **Update 4 flag rendering sites** (identical logic appears twice in the filtering/rows-only view and twice in the expanded panel view):
-   - Replace conditional orange/blue classes with a single amber class for any non-null normalized flag.
-   - Render the normalized string (`"High"` / `"Low"`) instead of the raw `r.flag` value.
-   - Keep `font-medium` on the numeric value when out of range.
+**No other changes.** The existing rows-only filtered view already collapses section chrome, so section-name matches surface as a flat list of that section's results under the date label — which is the desired compact behavior.
 
-**Visual result:**
-- All out-of-range values (high or low) show in `amber-600` / `amber-400` with a `"High"` or `"Low"` label.
-- In-range values remain unchanged (no flag, default text color).
-
-**No database or API changes.**
+**No DB or API changes.**
