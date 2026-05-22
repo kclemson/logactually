@@ -8,17 +8,32 @@ import { BloodworkPanelRow } from '@/components/BloodworkPanelGroup';
 import { useBloodworkPanelsForType } from '@/hooks/useBloodworkPanelsForType';
 import { useBloodworkPanelsForDate } from '@/hooks/useBloodworkPanels';
 import { useCustomLogEntriesForType } from '@/hooks/useCustomLogEntriesForType';
+import { CustomLogTypeDayRows } from '@/components/CustomLogEntriesView';
 import { getMedicationMeta } from '@/lib/medication-meta';
 import type { CustomLogType } from '@/hooks/useCustomLogTypes';
+import type { CustomLogEntry } from '@/hooks/useCustomLogEntries';
+
+const MAX_DATES = 30;
 
 interface CustomLogByTypeViewProps {
   logTypes: CustomLogType[];
   isLoading: boolean;
   isReadOnly: boolean;
   onLogNew: (typeId: string) => void;
+  onEditEntry?: (entry: CustomLogEntry) => void;
+  onDeleteEntry?: (id: string) => void;
+  onUpdateEntry?: (params: { id: string; numeric_value?: number | null; numeric_value_2?: number | null; text_value?: string | null }) => void;
 }
 
-export function CustomLogByTypeView({ logTypes, isLoading, isReadOnly, onLogNew }: CustomLogByTypeViewProps) {
+export function CustomLogByTypeView({
+  logTypes,
+  isLoading,
+  isReadOnly,
+  onLogNew,
+  onEditEntry,
+  onDeleteEntry,
+  onUpdateEntry,
+}: CustomLogByTypeViewProps) {
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -38,13 +53,35 @@ export function CustomLogByTypeView({ logTypes, isLoading, isReadOnly, onLogNew 
   return (
     <div className="space-y-4">
       {logTypes.map((lt) => (
-        <TypeCard key={lt.id} logType={lt} isReadOnly={isReadOnly} onLogNew={onLogNew} />
+        <TypeCard
+          key={lt.id}
+          logType={lt}
+          isReadOnly={isReadOnly}
+          onLogNew={onLogNew}
+          onEditEntry={onEditEntry}
+          onDeleteEntry={onDeleteEntry}
+          onUpdateEntry={onUpdateEntry}
+        />
       ))}
     </div>
   );
 }
 
-function TypeCard({ logType, isReadOnly, onLogNew }: { logType: CustomLogType; isReadOnly: boolean; onLogNew: (id: string) => void }) {
+function TypeCard({
+  logType,
+  isReadOnly,
+  onLogNew,
+  onEditEntry,
+  onDeleteEntry,
+  onUpdateEntry,
+}: {
+  logType: CustomLogType;
+  isReadOnly: boolean;
+  onLogNew: (id: string) => void;
+  onEditEntry?: (entry: CustomLogEntry) => void;
+  onDeleteEntry?: (id: string) => void;
+  onUpdateEntry?: (params: { id: string; numeric_value?: number | null; numeric_value_2?: number | null; text_value?: string | null }) => void;
+}) {
   const [expanded, setExpanded] = useState(false);
   const meta = logType.value_type === 'medication' ? getMedicationMeta(logType) : null;
 
@@ -76,36 +113,128 @@ function TypeCard({ logType, isReadOnly, onLogNew }: { logType: CustomLogType; i
       </button>
       {expanded && (
         <div className="p-3">
-          <TypeBody logType={logType} isReadOnly={isReadOnly} />
+          <TypeBody
+            logType={logType}
+            isReadOnly={isReadOnly}
+            onEditEntry={onEditEntry}
+            onDeleteEntry={onDeleteEntry}
+            onUpdateEntry={onUpdateEntry}
+          />
         </div>
       )}
     </div>
   );
 }
 
-function TypeBody({ logType, isReadOnly }: { logType: CustomLogType; isReadOnly: boolean }) {
+function TypeBody({
+  logType,
+  isReadOnly,
+  onEditEntry,
+  onDeleteEntry,
+  onUpdateEntry,
+}: {
+  logType: CustomLogType;
+  isReadOnly: boolean;
+  onEditEntry?: (entry: CustomLogEntry) => void;
+  onDeleteEntry?: (id: string) => void;
+  onUpdateEntry?: (params: { id: string; numeric_value?: number | null; numeric_value_2?: number | null; text_value?: string | null }) => void;
+}) {
+  // Panels live in a separate table; keep their own history view.
   if (logType.value_type === 'panel') {
     return <PanelHistory logTypeId={logType.id} isReadOnly={isReadOnly} />;
   }
-  if (logType.value_type === 'text' || logType.value_type === 'text_multiline') {
-    return <TextHistory logTypeId={logType.id} />;
+  return (
+    <EntryHistory
+      logType={logType}
+      isReadOnly={isReadOnly}
+      onEditEntry={onEditEntry}
+      onDeleteEntry={onDeleteEntry}
+      onUpdateEntry={onUpdateEntry}
+    />
+  );
+}
+
+function EntryHistory({
+  logType,
+  isReadOnly,
+  onEditEntry,
+  onDeleteEntry,
+  onUpdateEntry,
+}: {
+  logType: CustomLogType;
+  isReadOnly: boolean;
+  onEditEntry?: (entry: CustomLogEntry) => void;
+  onDeleteEntry?: (id: string) => void;
+  onUpdateEntry?: (params: { id: string; numeric_value?: number | null; numeric_value_2?: number | null; text_value?: string | null }) => void;
+}) {
+  const { entries, isLoading, deleteEntry } = useCustomLogEntriesForType(logType.id);
+  const showTrend = logType.value_type === 'numeric' || logType.value_type === 'dual_numeric';
+
+  if (isLoading) return <Skeleton className="h-8 w-full" />;
+  if (entries.length === 0) {
+    return <p className="text-xs text-muted-foreground italic">No entries yet.</p>;
   }
-  // numeric, dual_numeric, medication — show all-time chart (medication still useful as count)
-  if (logType.value_type === 'numeric' || logType.value_type === 'dual_numeric') {
-    return (
-      <div className="-mt-1">
-        <CustomLogGroupTrend logType={logType} />
+
+  // Group by logged_date, preserving the hook's desc order.
+  const byDate: { date: string; items: CustomLogEntry[] }[] = [];
+  const seen = new Map<string, number>();
+  for (const entry of entries) {
+    const idx = seen.get(entry.logged_date);
+    if (idx !== undefined) {
+      byDate[idx].items.push(entry);
+    } else {
+      seen.set(entry.logged_date, byDate.length);
+      byDate.push({ date: entry.logged_date, items: [entry] });
+    }
+  }
+
+  const visibleDates = byDate.slice(0, MAX_DATES);
+  const hiddenCount = byDate.length - visibleDates.length;
+
+  const handleDelete = (id: string) => {
+    if (onDeleteEntry) onDeleteEntry(id);
+    else deleteEntry.mutate(id);
+  };
+
+  return (
+    <div className="space-y-3">
+      {showTrend && (
+        <div className="-mt-1">
+          <CustomLogGroupTrend logType={logType} />
+        </div>
+      )}
+      <div className="space-y-2">
+        {visibleDates.map(({ date, items }) => (
+          <div key={date} className="space-y-0">
+            <div className="text-[11px] uppercase tracking-wide text-muted-foreground pt-1 pb-0.5">
+              {format(parseISO(date), 'MMM d, yyyy')}
+            </div>
+            <CustomLogTypeDayRows
+              logType={logType}
+              entries={items}
+              dateStr={date}
+              isReadOnly={isReadOnly}
+              onDelete={handleDelete}
+              onEdit={onEditEntry}
+              onUpdate={onUpdateEntry}
+              showTypeHeader={false}
+              showTrend={false}
+            />
+          </div>
+        ))}
+        {hiddenCount > 0 && (
+          <p className="text-[11px] text-muted-foreground italic pt-1">
+            + {hiddenCount} more date{hiddenCount === 1 ? '' : 's'}
+          </p>
+        )}
       </div>
-    );
-  }
-  // medication: small "last logged" line
-  return <MedicationSummary logTypeId={logType.id} unit={logType.unit} />;
+    </div>
+  );
 }
 
 function PanelHistory({ logTypeId, isReadOnly }: { logTypeId: string; isReadOnly: boolean }) {
   const { data: panels = [], isLoading } = useBloodworkPanelsForType(logTypeId);
   // Reuse the date-scoped hook's mutations via a tiny passthrough so delete/retry work the same.
-  // We pass today's dateStr just to satisfy the hook contract; mutations are global and invalidate all panel caches.
   const today = format(new Date(), 'yyyy-MM-dd');
   const { deletePanel, retryParse, getSignedUrl } = useBloodworkPanelsForDate(today);
 
@@ -134,44 +263,6 @@ function PanelHistory({ logTypeId, isReadOnly }: { logTypeId: string; isReadOnly
           />
         </div>
       ))}
-    </div>
-  );
-}
-
-function TextHistory({ logTypeId }: { logTypeId: string }) {
-  const { entries, isLoading } = useCustomLogEntriesForType(logTypeId);
-  if (isLoading) return <Skeleton className="h-8 w-full" />;
-  const recent = entries.slice(0, 5);
-  if (recent.length === 0) return <p className="text-xs text-muted-foreground italic">No entries yet.</p>;
-  return (
-    <ul className="space-y-1">
-      {recent.map((e) => (
-        <li key={e.id} className="text-xs flex items-start gap-2 border-b border-border/40 pb-1 last:border-0">
-          <span className="text-muted-foreground tabular-nums shrink-0 w-16">
-            {format(parseISO(e.logged_date), 'MMM d')}
-          </span>
-          <span className="text-foreground/90 break-words min-w-0 flex-1">{e.text_value || '—'}</span>
-        </li>
-      ))}
-      {entries.length > recent.length && (
-        <li className="text-[11px] text-muted-foreground italic pt-1">
-          + {entries.length - recent.length} more
-        </li>
-      )}
-    </ul>
-  );
-}
-
-function MedicationSummary({ logTypeId, unit }: { logTypeId: string; unit: string | null }) {
-  const { entries, isLoading } = useCustomLogEntriesForType(logTypeId);
-  if (isLoading) return <Skeleton className="h-8 w-full" />;
-  if (entries.length === 0) return <p className="text-xs text-muted-foreground italic">No doses logged yet.</p>;
-  const last = entries[0];
-  return (
-    <div className="text-xs text-muted-foreground">
-      Last dose: <span className="text-foreground">{last.numeric_value ?? '—'}{unit ? ` ${unit}` : ''}</span>
-      <span className="text-muted-foreground/70"> · {format(parseISO(last.logged_date), 'MMM d, yyyy')}</span>
-      <span className="text-muted-foreground/70"> · {entries.length} total</span>
     </div>
   );
 }
