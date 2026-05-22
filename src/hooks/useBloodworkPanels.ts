@@ -296,23 +296,22 @@ export function useDuplicatePendingPanels() {
       const raw = panel.raw_extraction as
         | { sections?: Array<{ section_title?: string | null; results?: Array<Record<string, unknown>> }> }
         | null;
-      const rows: Record<string, unknown>[] = [];
-      const { canonicalize } = await import('@/lib/bloodwork-canonical');
+      const rows: BloodworkResultInsert[] = [];
+      const toNum = (v: unknown): number | null => {
+        if (v === null || v === undefined || v === '') return null;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : null;
+      };
       raw?.sections?.forEach((section, sIdx) => {
         (section.results ?? []).forEach((r, rIdx) => {
           const analyte = (r.analyte_name as string) ?? '';
           if (!analyte) return;
           const { canonical_key, display_name } = canonicalize(analyte);
-          const toNum = (v: unknown): number | null => {
-            if (v === null || v === undefined || v === '') return null;
-            const n = Number(v);
-            return Number.isFinite(n) ? n : null;
-          };
           rows.push({
             user_id: user.id,
             panel_id: panelId,
             collected_date: panel.collected_date,
-            panel_section: section.section_title ?? null,
+            panel_section: (section.section_title as string) ?? null,
             section_order: sIdx,
             result_order: rIdx,
             analyte_name: analyte,
