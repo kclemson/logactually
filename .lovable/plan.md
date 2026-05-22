@@ -1,48 +1,35 @@
-# Custom Log top section: minimal recenter
-
 ## Goal
 
-Make the top of the Custom Log page feel intentional next to Food/Exercise by (1) swapping the view-mode dropdown for a pill toggle and (2) centering both controls in the reserved top-section space, stacked.
+Fix the stale By-Type view after creating a medication entry, and prevent the recurring class of bug where a new mutation forgets to invalidate one of the parallel custom-log caches.
 
-## Layout
+## Approach
 
-```text
-        [ By Date | By Type ]      ← pill toggle, centered
-
-           [ + Log New ▾ ]         ← existing button, centered
-
-   ──────── Today, May 22 ‹ › ────────
-```
-
-Both controls sit inside the existing `min-h-[148px]` top section, centered horizontally and vertically as a stacked pair. Date nav below is untouched, so it stays anchored in the same vertical position as Food/Exercise.
+Add a single helper that invalidates every custom-log-related query key, and call it from every mutation's `onSuccess`.
 
 ## Changes
 
-### 1. Pill toggle replaces the view-mode Select
+1. **New file: `src/hooks/invalidateCustomLogCaches.ts`**
+   - Export `invalidateCustomLogCaches(queryClient, { logTypeId?, loggedDate? })`.
+   - Invalidates: `custom-log-entries`, `custom-log-entries-for-type`, `custom-log-entries-all-meds`, `custom-log-dates`, `custom-log-trend-single`.
+   - When `logTypeId` / `loggedDate` are provided, scope those keys; otherwise invalidate the key broadly.
 
-Two-segment pill: `[ By Date | By Type ]`
-- Rounded-full container with muted background; active segment gets a solid surface + stronger text weight.
-- Compact height (~`h-8`), same `handleViewModeChange` wiring.
-- Inline Tailwind, no new dependency.
+2. **`src/hooks/useCustomLogEntries.ts`**
+   - Replace the per-mutation invalidation blocks in `createEntry`, `updateEntry`, and `deleteEntry` `onSuccess` with calls to the helper.
 
-### 2. Center the stacked pair
+3. **`src/hooks/useCustomLogEntriesForType.ts`** (and `useAllMedicationEntries` if it has its own mutations)
+   - Same swap — route any local mutation invalidations through the helper.
 
-Update the top section wrapper:
-- `flex flex-col items-center justify-center gap-3` (replacing `justify-start` row + `gap-2`).
-- Pill toggle on row 1, existing `+ Log New ▾` Select on row 2.
-
-### 3. Leave everything else alone
-
-- `+ Log New` dropdown keeps its current behavior, including the "New Custom Log Type" submenu item.
-- Onboarding empty-state branch (template grid + "Create your own") unchanged.
-- Read-only behavior unchanged.
-
-## Files
-
-- `src/pages/OtherLog.tsx` — in the `hasLogTypes` branch (lines ~224–268), swap the view-mode `Select` for the pill toggle and adjust the outer flex container to center both rows. No other files touched.
+4. **`src/pages/OtherLog.tsx`**
+   - Replace the hand-wired dual-key invalidation in `updateMedEntry` with the helper. Remove the now-redundant lines.
 
 ## Out of scope
 
-- Chip rail / promoting type creation out of the dropdown.
-- Modal positioning for the input form.
-- Any By-Type or By-Date internals.
+- Optimistic updates across caches.
+- Collapsing the parallel queries into a single source of truth (Option C).
+- Any UI changes.
+
+## Verification
+
+- Log a new medication entry from the By-Type view → card list updates immediately.
+- Edit and delete a medication entry → both By-Date and By-Type views stay in sync.
+- Same checks for a non-medication custom log type.

@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { format } from 'date-fns';
 import type { CustomLogEntry } from './useCustomLogEntries';
+import { invalidateCustomLogCaches } from './invalidateCustomLogCaches';
 
 export function useCustomLogEntriesForType(logTypeId: string | null) {
   const { user } = useAuth();
@@ -49,10 +50,11 @@ export function useCustomLogEntriesForType(logTypeId: string | null) {
       return data as CustomLogEntry;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['custom-log-entries-for-type', data.log_type_id] });
-      queryClient.invalidateQueries({ queryKey: ['custom-log-entries', data.logged_date] });
-      queryClient.invalidateQueries({ queryKey: ['custom-log-dates'] });
-      queryClient.invalidateQueries({ queryKey: ['custom-log-trend-single'] });
+      invalidateCustomLogCaches(queryClient, {
+        logTypeId: data.log_type_id,
+        loggedDate: data.logged_date,
+        userId: user?.id,
+      });
     },
   });
 
@@ -99,11 +101,7 @@ export function useCustomLogEntriesForType(logTypeId: string | null) {
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['custom-log-entries-for-type', logTypeId] });
-      queryClient.invalidateQueries({ queryKey: ['custom-log-dates'] });
-      if (logTypeId && user) {
-        queryClient.invalidateQueries({ queryKey: ['custom-log-trend-single', logTypeId, user.id] });
-      }
+      invalidateCustomLogCaches(queryClient, { logTypeId, userId: user?.id });
     },
   });
 

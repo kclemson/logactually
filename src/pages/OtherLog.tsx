@@ -14,6 +14,7 @@ import { useCustomLogTypes } from '@/hooks/useCustomLogTypes';
 import { useExportData } from '@/hooks/useExportData';
 import { useCustomLogEntries } from '@/hooks/useCustomLogEntries';
 import { useCustomLogEntriesForType } from '@/hooks/useCustomLogEntriesForType';
+import { invalidateCustomLogCaches } from '@/hooks/invalidateCustomLogCaches';
 import { CreateLogTypeDialog } from '@/components/CreateLogTypeDialog';
 import { CreateMedicationDialog } from '@/components/CreateMedicationDialog';
 import { LogTemplatePickerDialog } from '@/components/LogTemplatePickerDialog';
@@ -137,10 +138,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['custom-log-entries-all-meds'] });
-      queryClient.invalidateQueries({ queryKey: ['custom-log-entries-for-type'] });
-      queryClient.invalidateQueries({ queryKey: ['custom-log-entries', dateStr] });
-      queryClient.invalidateQueries({ queryKey: ['custom-log-trend-single'] });
+      invalidateCustomLogCaches(queryClient, { loggedDate: dateStr });
       setEditingEntry(null);
     },
   });
