@@ -14,6 +14,122 @@ export type Database = {
   }
   public: {
     Tables: {
+      bloodwork_panels: {
+        Row: {
+          collected_date: string | null
+          created_at: string
+          id: string
+          log_type_id: string
+          panel_title: string | null
+          parse_error: string | null
+          parse_status: string
+          raw_extraction: Json | null
+          source_filename: string | null
+          source_mime_type: string | null
+          storage_path: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          collected_date?: string | null
+          created_at?: string
+          id?: string
+          log_type_id: string
+          panel_title?: string | null
+          parse_error?: string | null
+          parse_status?: string
+          raw_extraction?: Json | null
+          source_filename?: string | null
+          source_mime_type?: string | null
+          storage_path: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          collected_date?: string | null
+          created_at?: string
+          id?: string
+          log_type_id?: string
+          panel_title?: string | null
+          parse_error?: string | null
+          parse_status?: string
+          raw_extraction?: Json | null
+          source_filename?: string | null
+          source_mime_type?: string | null
+          storage_path?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      bloodwork_results: {
+        Row: {
+          analyte_name: string
+          canonical_key: string
+          collected_date: string | null
+          created_at: string
+          display_name: string
+          flag: string | null
+          id: string
+          numeric_value: number | null
+          panel_id: string
+          panel_section: string | null
+          reference_high: number | null
+          reference_low: number | null
+          reference_raw: string | null
+          result_order: number
+          section_order: number
+          unit: string | null
+          user_id: string
+        }
+        Insert: {
+          analyte_name: string
+          canonical_key: string
+          collected_date?: string | null
+          created_at?: string
+          display_name: string
+          flag?: string | null
+          id?: string
+          numeric_value?: number | null
+          panel_id: string
+          panel_section?: string | null
+          reference_high?: number | null
+          reference_low?: number | null
+          reference_raw?: string | null
+          result_order?: number
+          section_order?: number
+          unit?: string | null
+          user_id: string
+        }
+        Update: {
+          analyte_name?: string
+          canonical_key?: string
+          collected_date?: string | null
+          created_at?: string
+          display_name?: string
+          flag?: string | null
+          id?: string
+          numeric_value?: number | null
+          panel_id?: string
+          panel_section?: string | null
+          reference_high?: number | null
+          reference_low?: number | null
+          reference_raw?: string | null
+          result_order?: number
+          section_order?: number
+          unit?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bloodwork_results_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "bloodwork_panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       custom_log_entries: {
         Row: {
           created_at: string
