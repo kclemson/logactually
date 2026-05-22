@@ -20,16 +20,19 @@ function normalizeFlag(flag: string | null | undefined): 'High' | 'Low' | null {
   return null;
 }
 
-// Substring match against display_name + analyte_name only (not numeric values).
+// Substring match against display_name, analyte_name, panel_section, and normalized flag.
 export function resultMatchesQuery(
   r: BloodworkPanelWithResults['results'][number],
   q: string,
 ): boolean {
   if (!q) return true;
   const needle = q.toLowerCase();
+  const nf = normalizeFlag(r.flag);
   return (
     (r.display_name?.toLowerCase().includes(needle) ?? false) ||
-    (r.analyte_name?.toLowerCase().includes(needle) ?? false)
+    (r.analyte_name?.toLowerCase().includes(needle) ?? false) ||
+    (r.panel_section?.toLowerCase().includes(needle) ?? false) ||
+    (nf?.toLowerCase().includes(needle) ?? false)
   );
 }
 
