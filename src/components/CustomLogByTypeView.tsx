@@ -238,6 +238,10 @@ function PanelHistory({ logTypeId, isReadOnly }: { logTypeId: string; isReadOnly
   const today = format(new Date(), 'yyyy-MM-dd');
   const { deletePanel, retryParse, getSignedUrl } = useBloodworkPanelsForDate(today);
 
+  const [query, setQuery] = useState('');
+  const [collapsedMap, setCollapsedMap] = useState<Record<string, boolean>>({});
+  const [allCollapsed, setAllCollapsed] = useState(false);
+
   const visible = panels.filter((p) => p.parse_status !== 'duplicate_pending');
 
   if (isLoading) return <Skeleton className="h-8 w-full" />;
@@ -245,24 +249,50 @@ function PanelHistory({ logTypeId, isReadOnly }: { logTypeId: string; isReadOnly
     return <p className="text-xs text-muted-foreground italic">No panels uploaded yet. Tap "+ Log" to upload one.</p>;
   }
 
+  const filtered = query ? visible.filter((p) => panelHasMatch(p, query)) : visible;
+
+  const toggleAll = () => {
+    const next = !allCollapsed ? true : false;
+    setAllCollapsed(next);
+    const m: Record<string, boolean> = {};
+    for (const p of visible) m[p.id] = !next;
+    setCollapsedMap(m);
+  };
+
   return (
     <div className="space-y-0">
-      {visible.map((panel) => (
-        <div key={panel.id} className="space-y-0">
-          {panel.collected_date && (
-            <div className="text-[11px] uppercase tracking-wide text-muted-foreground pt-1 pb-0.5">
-              {format(parseISO(panel.collected_date), 'MMM d, yyyy')}
-            </div>
-          )}
-          <BloodworkPanelRow
-            panel={panel}
-            isReadOnly={isReadOnly}
-            onDelete={() => deletePanel.mutate(panel.id)}
-            onRetry={() => retryParse.mutate(panel.id)}
-            getSignedUrl={getSignedUrl}
-          />
-        </div>
-      ))}
+      {visible.length >= 2 && (
+        <BloodworkPanelToolbar
+          query={query}
+          onQueryChange={setQuery}
+          allExpanded={!allCollapsed}
+          onToggleAll={toggleAll}
+          showToggle
+        />
+      )}
+      {filtered.map((panel) => {
+        const forcedExpanded = query ? true : collapsedMap[panel.id];
+        return (
+          <div key={panel.id} className="space-y-0">
+            {panel.collected_date && (
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground pt-1 pb-0.5">
+                {format(parseISO(panel.collected_date), 'MMM d, yyyy')}
+              </div>
+            )}
+            <BloodworkPanelRow
+              panel={panel}
+              isReadOnly={isReadOnly}
+              onDelete={() => deletePanel.mutate(panel.id)}
+              onRetry={() => retryParse.mutate(panel.id)}
+              getSignedUrl={getSignedUrl}
+              expanded={forcedExpanded}
+              onToggle={() => setCollapsedMap((m) => ({ ...m, [panel.id]: !(m[panel.id] ?? true) }))}
+              filterQuery={query}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }
+
