@@ -160,39 +160,56 @@ function PanelHeaderControls({
   allCollapsed: boolean;
   onToggleAll: () => void;
 }) {
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const showInput = isSearchOpen || !!query;
+
   return (
     <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-      <div className="relative">
-        <Search className="absolute left-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => onQueryChange(e.target.value)}
-          placeholder="Filter…"
-          autoComplete="off"
-          className="w-28 h-7 pl-6 pr-6 text-xs rounded border border-border bg-background placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring"
-        />
-        {query && (
-          <button
-            type="button"
-            onClick={() => onQueryChange('')}
-            className="absolute right-1 top-1/2 -translate-y-1/2 h-5 w-5 inline-flex items-center justify-center text-muted-foreground hover:text-foreground"
-            aria-label="Clear filter"
+      {showInput ? (
+        <div className="relative">
+          <Search className="absolute left-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => onQueryChange(e.target.value)}
+            onBlur={() => { if (!query) setIsSearchOpen(false); }}
+            placeholder="Filter…"
+            autoComplete="off"
+            autoFocus
+            className="w-28 h-7 pl-6 pr-6 text-xs rounded border border-border bg-background placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => { onQueryChange(''); setIsSearchOpen(false); }}
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-5 w-5 inline-flex items-center justify-center text-muted-foreground hover:text-foreground"
+              aria-label="Clear filter"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+      ) : (
+        <>
+          <Button
+            variant="ghost" size="icon"
+            className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
+            onClick={() => setIsSearchOpen(true)}
+            aria-label="Filter results"
+            title="Filter results"
           >
-            <X className="h-3 w-3" />
-          </button>
-        )}
-      </div>
-      {!query && (
-        <Button
-          variant="ghost" size="icon"
-          className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
-          onClick={onToggleAll}
-          aria-label={allCollapsed ? 'Expand all' : 'Collapse all'}
-          title={allCollapsed ? 'Expand all' : 'Collapse all'}
-        >
-          {allCollapsed ? <ChevronsUpDown className="h-3.5 w-3.5" /> : <ChevronsDownUp className="h-3.5 w-3.5" />}
-        </Button>
+            <Search className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="ghost" size="icon"
+            className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
+            onClick={onToggleAll}
+            aria-label={allCollapsed ? 'Expand all' : 'Collapse all'}
+            title={allCollapsed ? 'Expand all' : 'Collapse all'}
+          >
+            {allCollapsed ? <ChevronsUpDown className="h-3.5 w-3.5" /> : <ChevronsDownUp className="h-3.5 w-3.5" />}
+          </Button>
+        </>
       )}
     </div>
   );
