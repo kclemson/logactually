@@ -343,6 +343,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
             dateStr={dateStr}
           />
         </div>
+        <DuplicateContentDialogHost />
       </div>
 
       {/* Entry form as modal dialog — used by By Date, By Type, and By Meds modes */}
