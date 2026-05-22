@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { invalidateCustomLogCaches } from './invalidateCustomLogCaches';
 
 export interface CustomLogEntry {
   id: string;
@@ -58,9 +59,11 @@ export function useCustomLogEntries(dateStr: string) {
       return data as CustomLogEntry;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['custom-log-entries', data.logged_date] });
-      queryClient.invalidateQueries({ queryKey: ['custom-log-dates'] });
-      queryClient.invalidateQueries({ queryKey: ['custom-log-trend-single'] });
+      invalidateCustomLogCaches(queryClient, {
+        logTypeId: data.log_type_id,
+        loggedDate: data.logged_date,
+        userId: user?.id,
+      });
     },
   });
 
@@ -93,8 +96,7 @@ export function useCustomLogEntries(dateStr: string) {
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['custom-log-entries', dateStr] });
-      queryClient.invalidateQueries({ queryKey: ['custom-log-trend-single'] });
+      invalidateCustomLogCaches(queryClient, { loggedDate: dateStr, userId: user?.id });
     },
   });
 
@@ -144,12 +146,11 @@ export function useCustomLogEntries(dateStr: string) {
       }
     },
     onSettled: (_data, _err, _id, context) => {
-      queryClient.invalidateQueries({ queryKey: ['custom-log-entries', dateStr] });
-      queryClient.invalidateQueries({ queryKey: ['custom-log-dates'] });
-      const logTypeId = context?.removed?.log_type_id;
-      if (logTypeId && user) {
-        queryClient.invalidateQueries({ queryKey: ['custom-log-trend-single', logTypeId, user.id] });
-      }
+      invalidateCustomLogCaches(queryClient, {
+        logTypeId: context?.removed?.log_type_id,
+        loggedDate: dateStr,
+        userId: user?.id,
+      });
     },
   });
 
