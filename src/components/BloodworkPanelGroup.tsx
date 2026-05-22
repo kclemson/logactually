@@ -167,6 +167,57 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
     sections[idx.get(key)!].results.push(r);
   }
 
+  const isFiltering = !!filterQuery;
+
+  // Rows-only mode: when filtering, drop the panel chrome (header + section titles + indent)
+  // and just render matching rows under the parent's date label.
+  if (isFiltering) {
+    if (isPending || isFailed) return null;
+    const flatResults = sections.flatMap((s) => s.results);
+    if (flatResults.length === 0) return null;
+    return (
+      <div className="pb-1">
+        <div className="grid grid-cols-[minmax(0,1fr)_6rem_5rem] items-baseline gap-x-3 text-xs">
+          {flatResults.map((r) => {
+            const refRange =
+              r.reference_low != null && r.reference_high != null
+                ? `${r.reference_low}–${r.reference_high}`
+                : r.reference_raw ?? '';
+            const valueStr =
+              r.numeric_value != null
+                ? `${r.numeric_value}`
+                : r.reference_raw && r.numeric_value == null
+                  ? r.reference_raw
+                  : '—';
+            return (
+              <div key={r.id} className="contents">
+                <span className="truncate py-0.5">{r.display_name}</span>
+                <span className="tabular-nums whitespace-nowrap py-0.5">
+                  <span className={cn(
+                    r.flag === 'H' || r.flag === 'High' ? 'text-orange-600 dark:text-orange-400 font-medium' :
+                    r.flag === 'L' || r.flag === 'Low' ? 'text-blue-600 dark:text-blue-400 font-medium' :
+                    ''
+                  )}>{valueStr}</span>
+                  {r.flag && (
+                    <span className={cn(
+                      'ml-1 text-[10px]',
+                      r.flag === 'H' || r.flag === 'High' ? 'text-orange-600 dark:text-orange-400' :
+                      r.flag === 'L' || r.flag === 'Low' ? 'text-blue-600 dark:text-blue-400' :
+                      'text-muted-foreground'
+                    )}>{r.flag}</span>
+                  )}
+                </span>
+                <span className="text-muted-foreground tabular-nums whitespace-nowrap text-[10px] text-right truncate py-0.5">
+                  {refRange}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="border-b border-border/50 last:border-0 group">
       <div className="grid grid-cols-[auto_1fr_auto] items-center gap-x-2 py-1 pl-1">
@@ -299,3 +350,4 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
     </div>
   );
 }
+
