@@ -1,9 +1,26 @@
-The values are still rendering right-aligned because the value cell is a `<span>` (inline) and the inner content is also a span — `text-left` isn't taking effect reliably in the grid cell.
+Plan:
 
-Fix in `src/components/BloodworkPanelGroup.tsx` (around lines 165–185):
-1. Change the value cell from `<span>` to `<div>` so it's a block-level grid item.
-2. Add `justify-self-start` to that cell so it explicitly hugs the left edge of its 3.5rem track instead of stretching.
-3. Keep `tabular-nums whitespace-nowrap` for alignment, drop redundant `text-left`.
-4. Leave name and reference-range cells unchanged.
+1. Replace the current bloodwork result-row grid with a simpler, explicit three-column structure:
 
-This guarantees every numeric value starts flush at the same left edge of the value column, with the H/L flag sitting to the right of the number when present.
+```text
+[test name]        [value flag]      [reference range]
+```
+
+2. Treat `value + H/L flag` as one cell:
+- value is left-aligned at the start of the value column
+- flag sits immediately to the right of the value only when abnormal
+- no unit is rendered or used in layout
+
+3. Remove the fragile narrow `3.5rem` value track and use a stable value column wide enough for normal lab values plus an optional flag, so the reference range column does not influence value alignment.
+
+4. Keep the markup intentionally boring:
+- one row container
+- one name cell
+- one value cell
+- one reference cell
+- small helper logic only for `valueStr`, `refRange`, and normalized flag color
+
+Technical notes:
+- The `unit` field still exists in the database type, but this component is not rendering it. I’ll keep it completely out of the row math.
+- The likely layout issue is the combination of CSS Grid tracks (`1fr 3.5rem auto`) plus a too-narrow value column, not hidden unit text.
+- I’ll make the value column explicit and left-anchored so all values start from the same x-position regardless of digit count or reference range length.
