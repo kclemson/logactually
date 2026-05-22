@@ -321,7 +321,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
         </div>
       )}
 
-      {/* Entry form as modal dialog — used by By Date, By Type, and By Meds modes */}
+      {/* Entry form as modal dialog — used by both view modes. In by_type mode entries land on today. */}
       {dialogType && (
         <Dialog open={showInputDialog} onOpenChange={(open) => { if (!open) setShowInputDialog(false); }}>
           <DialogContent className="max-w-sm p-0 gap-0 border-0 bg-transparent shadow-none [&>button]:hidden">
@@ -335,36 +335,19 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                 doseTimes={dialogType.dose_times}
                 todayEntryCount={todayMedEntries.length}
                 todayLoggedTimes={todayMedEntries.map(e => e.dose_time).filter(Boolean) as string[]}
-                loggedDate={dateStr}
+                loggedDate={logTargetDate}
                 onSubmit={(params) => {
-                  if (effectiveViewMode === 'date') {
-                    createEntry.mutate({
-                      log_type_id: dialogType.id,
-                      logged_date: dateStr,
-                      unit: dialogType.unit || null,
-                      ...params,
-                    }, {
-                      onSuccess: () => setShowInputDialog(false),
-                    });
-                  } else {
-                    createTypeEntry.mutate({
-                      log_type_id: dialogType.id,
-                      logged_date: dateStr,
-                      unit: dialogType.unit || null,
-                      ...params,
-                    }, {
-                      onSuccess: () => {
-                        setShowInputDialog(false);
-                        if (viewMode === 'medication') setSelectedMedTypeId(null);
-                      },
-                    });
-                  }
+                  createEntry.mutate({
+                    log_type_id: dialogType.id,
+                    logged_date: logTargetDate,
+                    unit: dialogType.unit || null,
+                    ...params,
+                  }, {
+                    onSuccess: () => setShowInputDialog(false),
+                  });
                 }}
-                onCancel={() => {
-                  setShowInputDialog(false);
-                  if (viewMode === 'medication') setSelectedMedTypeId(null);
-                }}
-                isLoading={effectiveViewMode === 'date' ? createEntry.isPending : createTypeEntry.isPending}
+                onCancel={() => setShowInputDialog(false)}
+                isLoading={createEntry.isPending}
                 disabled={isReadOnly}
               />
             ) : dialogType.value_type === 'panel' ? (
@@ -372,7 +355,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                 <BloodworkUploadInput
                   label={dialogType.name}
                   logTypeId={dialogType.id}
-                  loggedDate={dateStr}
+                  loggedDate={logTargetDate}
                   onSuccess={() => setShowInputDialog(false)}
                   onCancel={() => setShowInputDialog(false)}
                   disabled={isReadOnly}
@@ -385,30 +368,20 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                   label={dialogType.name}
                   unit={dialogType.unit}
                   onSubmit={(params) => {
-                    if (effectiveViewMode === 'date') {
-                      createEntry.mutate({
-                        log_type_id: dialogType.id,
-                        logged_date: dateStr,
-                        unit: dialogType.unit || null,
-                        ...params,
-                      }, {
-                        onSuccess: () => setShowInputDialog(false),
-                      });
-                    } else {
-                      createTypeEntry.mutate({
-                        log_type_id: dialogType.id,
-                        unit: dialogType.unit || null,
-                        ...params,
-                      }, {
-                        onSuccess: () => setShowInputDialog(false),
-                      });
-                    }
+                    createEntry.mutate({
+                      log_type_id: dialogType.id,
+                      logged_date: logTargetDate,
+                      unit: dialogType.unit || null,
+                      ...params,
+                    }, {
+                      onSuccess: () => setShowInputDialog(false),
+                    });
                   }}
                   onCancel={() => setShowInputDialog(false)}
-                  isLoading={effectiveViewMode === 'date' ? createEntry.isPending : createTypeEntry.isPending}
+                  isLoading={createEntry.isPending}
                   disabled={isReadOnly}
                 />
-                {inlineTrend && (
+                {inlineTrend && viewMode === 'date' && (
                   <div className="mt-3 border-t border-border pt-3">
                     <CustomLogTrendChart trend={inlineTrend} onNavigate={() => {}} />
                   </div>
