@@ -205,6 +205,16 @@ function NonMedEntryRow({ entry, valueType, typeUnit, onDelete, onEdit, onUpdate
 
       {/* Col 4: actions */}
       <div className="flex items-center gap-0.5 shrink-0">
+        {!isReadOnly && onEdit && (
+          <Button
+            variant="ghost" size="icon"
+            className="h-6 w-6 p-0 text-foreground hover:text-foreground hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+            onClick={() => onEdit(entry)}
+            aria-label="Edit entry"
+          >
+            <Pencil className="h-3 w-3" />
+          </Button>
+        )}
         {!isReadOnly && (
           <Button
             variant="ghost" size="icon"
