@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, ExternalLink, Trash2, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
+import { ChevronDown, ChevronRight, ExternalLink, Trash2, AlertCircle, Loader2, RefreshCw, ChevronsDownUp, ChevronsUpDown, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useBloodworkPanelsForDate, type BloodworkPanelWithResults } from '@/hooks/useBloodworkPanels';
 import { cn } from '@/lib/utils';
@@ -10,24 +10,123 @@ interface BloodworkPanelGroupProps {
   isReadOnly: boolean;
 }
 
+// Substring match against display_name + analyte_name only (not numeric values).
+export function resultMatchesQuery(
+  r: BloodworkPanelWithResults['results'][number],
+  q: string,
+): boolean {
+  if (!q) return true;
+  const needle = q.toLowerCase();
+  return (
+    (r.display_name?.toLowerCase().includes(needle) ?? false) ||
+    (r.analyte_name?.toLowerCase().includes(needle) ?? false)
+  );
+}
+
+export function panelHasMatch(panel: BloodworkPanelWithResults, q: string): boolean {
+  if (!q) return true;
+  return panel.results.some((r) => resultMatchesQuery(r, q));
+}
+
+export function BloodworkPanelToolbar({
+  query,
+  onQueryChange,
+  allExpanded,
+  onToggleAll,
+  showToggle,
+}: {
+  query: string;
+  onQueryChange: (q: string) => void;
+  allExpanded: boolean;
+  onToggleAll: () => void;
+  showToggle: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-1 mb-2">
+      <div className="relative flex-1">
+        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => onQueryChange(e.target.value)}
+          placeholder="Filter results…"
+          autoComplete="off"
+          className="w-full h-7 pl-7 pr-7 text-xs rounded border border-border bg-background placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring"
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={() => onQueryChange('')}
+            className="absolute right-1 top-1/2 -translate-y-1/2 h-5 w-5 inline-flex items-center justify-center text-muted-foreground hover:text-foreground"
+            aria-label="Clear filter"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        )}
+      </div>
+      {showToggle && (
+        <Button
+          variant="ghost" size="icon"
+          className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
+          onClick={onToggleAll}
+          aria-label={allExpanded ? 'Collapse all' : 'Expand all'}
+          title={allExpanded ? 'Collapse all' : 'Expand all'}
+        >
+          {allExpanded ? <ChevronsDownUp className="h-3.5 w-3.5" /> : <ChevronsUpDown className="h-3.5 w-3.5" />}
+        </Button>
+      )}
+    </div>
+  );
+}
+
 export function BloodworkPanelGroup({ dateStr, logTypeId, isReadOnly }: BloodworkPanelGroupProps) {
   const { panels, deletePanel, retryParse, getSignedUrl } = useBloodworkPanelsForDate(dateStr);
   // duplicate_pending panels are resolved via the global DuplicateContentDialogHost.
   const myPanels = panels.filter((p) => p.log_type_id === logTypeId && p.parse_status !== 'duplicate_pending');
+
+  const [query, setQuery] = useState('');
+  const [collapsedMap, setCollapsedMap] = useState<Record<string, boolean>>({});
+  const [allCollapsed, setAllCollapsed] = useState(false);
+
   if (myPanels.length === 0) return null;
+
+  const visiblePanels = query ? myPanels.filter((p) => panelHasMatch(p, query)) : myPanels;
+
+  const toggleAll = () => {
+    const next = !allCollapsed ? true : false;
+    setAllCollapsed(next);
+    const m: Record<string, boolean> = {};
+    for (const p of myPanels) m[p.id] = !next;
+    setCollapsedMap(m);
+  };
 
   return (
     <div className="space-y-0">
-      {myPanels.map((panel) => (
-        <BloodworkPanelRow
-          key={panel.id}
-          panel={panel}
-          isReadOnly={isReadOnly}
-          onDelete={() => deletePanel.mutate(panel.id)}
-          onRetry={() => retryParse.mutate(panel.id)}
-          getSignedUrl={getSignedUrl}
+      {myPanels.length >= 2 && (
+        <BloodworkPanelToolbar
+          query={query}
+          onQueryChange={setQuery}
+          allExpanded={!allCollapsed}
+          onToggleAll={toggleAll}
+          showToggle
         />
-      ))}
+      )}
+      {visiblePanels.map((panel) => {
+        const forcedExpanded = query ? true : collapsedMap[panel.id];
+        return (
+          <BloodworkPanelRow
+            key={panel.id}
+            panel={panel}
+            isReadOnly={isReadOnly}
+            onDelete={() => deletePanel.mutate(panel.id)}
+            onRetry={() => retryParse.mutate(panel.id)}
+            getSignedUrl={getSignedUrl}
+            expanded={forcedExpanded}
+            onToggle={() => setCollapsedMap((m) => ({ ...m, [panel.id]: !(m[panel.id] ?? true) }))}
+            filterQuery={query}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -38,10 +137,14 @@ interface BloodworkPanelRowProps {
   onDelete: () => void;
   onRetry: () => void;
   getSignedUrl: (path: string) => Promise<string | null>;
+  expanded?: boolean;
+  onToggle?: () => void;
+  filterQuery?: string;
 }
 
-export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSignedUrl }: BloodworkPanelRowProps) {
-  const [expanded, setExpanded] = useState(true);
+export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSignedUrl, expanded: controlledExpanded, onToggle, filterQuery = '' }: BloodworkPanelRowProps) {
+  const [internalExpanded, setInternalExpanded] = useState(true);
+  const expanded = controlledExpanded ?? internalExpanded;
   const isPending = panel.parse_status === 'pending';
   const isFailed = panel.parse_status === 'failed';
 
@@ -51,9 +154,11 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
   };
 
   // Group results by panel_section, preserving section_order/result_order from query.
+  // When a filter is active, drop results that don't match and skip sections that become empty.
   const sections: { title: string | null; results: typeof panel.results }[] = [];
   const idx = new Map<string, number>();
   for (const r of panel.results) {
+    if (filterQuery && !resultMatchesQuery(r, filterQuery)) continue;
     const key = r.panel_section ?? '';
     if (!idx.has(key)) {
       idx.set(key, sections.length);
@@ -66,7 +171,7 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
     <div className="border-b border-border/50 last:border-0 group">
       <div className="grid grid-cols-[auto_1fr_auto] items-center gap-x-2 py-1 pl-1">
         <button
-          onClick={() => setExpanded((v) => !v)}
+          onClick={() => (onToggle ? onToggle() : setInternalExpanded((v) => !v))}
           className="h-6 w-6 inline-flex items-center justify-center text-muted-foreground hover:text-foreground"
           aria-label={expanded ? 'Collapse' : 'Expand'}
           disabled={isPending}
