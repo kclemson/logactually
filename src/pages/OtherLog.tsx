@@ -183,9 +183,9 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   return (
     <div className="space-y-4">
       {/* Top section: matches LogInput height on Food/Exercise pages */}
-      <section className="min-h-[148px] flex flex-col justify-center space-y-3">
+      <section className="min-h-[148px] flex flex-col items-center justify-center gap-3">
         {(
-          <div className="flex items-center justify-start gap-2">
+          <div className="flex flex-col items-center gap-3 w-full">
             {!isReadOnly && !isLoading && sortedLogTypes.length === 0 ? (
               /* Onboarding: no log types yet — hidden in read-only */
               <div className="flex flex-col items-center gap-3 w-full max-w-sm mx-auto">
@@ -222,17 +222,36 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                 </button>
               </div>
             ) : hasLogTypes ? (
-              /* Has log types: stable view-mode select + Log New dropdown */
+              /* Has log types: pill toggle + Log New dropdown, centered & stacked */
               <>
-                <Select value={viewMode} onValueChange={(v) => handleViewModeChange(v as ViewMode)}>
-                  <SelectTrigger className="h-8 text-sm px-2 w-[120px] shrink-0">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="date" className="pl-3 [&>span:first-child]:hidden">By Date</SelectItem>
-                    <SelectItem value="by_type" className="pl-3 [&>span:first-child]:hidden">By Type</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div
+                  role="tablist"
+                  aria-label="View mode"
+                  className="inline-flex items-center rounded-full bg-muted p-0.5"
+                >
+                  {([
+                    { value: 'date', label: 'By Date' },
+                    { value: 'by_type', label: 'By Type' },
+                  ] as const).map((opt) => {
+                    const active = viewMode === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        role="tab"
+                        aria-selected={active}
+                        onClick={() => handleViewModeChange(opt.value)}
+                        className={cn(
+                          'h-7 px-4 rounded-full text-sm transition-colors',
+                          active
+                            ? 'bg-background text-foreground font-medium shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground'
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
 
                 <Select
                   value=""
