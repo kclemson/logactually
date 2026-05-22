@@ -88,7 +88,7 @@ export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, 
 
   const handleViewSaved = () => {
     if (savedTo && savedTo !== '__no_date__') {
-      navigate(`/other?date=${savedTo}`);
+      navigate(`/custom?date=${savedTo}`);
     }
     setSavedTo(null);
     onSuccess?.();
