@@ -18,6 +18,7 @@ import { CreateLogTypeDialog } from '@/components/CreateLogTypeDialog';
 import { CreateMedicationDialog } from '@/components/CreateMedicationDialog';
 import { LogTemplatePickerDialog } from '@/components/LogTemplatePickerDialog';
 import { LogEntryInput } from '@/components/LogEntryInput';
+import { BloodworkUploadInput } from '@/components/BloodworkUploadInput';
 import { MedicationEntryInput } from '@/components/MedicationEntryInput';
 import { CustomLogEntriesView } from '@/components/CustomLogEntriesView';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
