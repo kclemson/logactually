@@ -80,7 +80,7 @@ function MultilineTextArea({ value, isReadOnly, onSave }: { value: string; isRea
   );
 }
 
-function NonMedEntryRow({ entry, valueType, typeUnit, onDelete, onUpdate, isReadOnly }: NonMedEntryRowProps) {
+function NonMedEntryRow({ entry, valueType, typeUnit, onDelete, onEdit, onUpdate, isReadOnly }: NonMedEntryRowProps) {
   const unitLabel = entry.unit || typeUnit;
   const { triggerOverlay } = useReadOnlyContext();
 
