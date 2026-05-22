@@ -164,19 +164,26 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
                 return (
                   <div key={r.id} className="grid grid-cols-[1fr_3.5rem_auto] items-baseline gap-x-3 py-0.5 text-xs">
                     <span className="truncate">{r.display_name}</span>
-                    <span className={cn(
-                      'tabular-nums whitespace-nowrap text-right',
-                      r.flag === 'H' || r.flag === 'High' ? 'text-orange-600 dark:text-orange-400 font-medium' :
-                      r.flag === 'L' || r.flag === 'Low' ? 'text-blue-600 dark:text-blue-400 font-medium' :
-                      ''
-                    )}>
-                      {valueStr}
-                      {r.flag && <span className="ml-1 text-[10px]">{r.flag}</span>}
+                    <span className="tabular-nums whitespace-nowrap text-left">
+                      <span className={cn(
+                        r.flag === 'H' || r.flag === 'High' ? 'text-orange-600 dark:text-orange-400 font-medium' :
+                        r.flag === 'L' || r.flag === 'Low' ? 'text-blue-600 dark:text-blue-400 font-medium' :
+                        ''
+                      )}>{valueStr}</span>
+                      {r.flag && (
+                        <span className={cn(
+                          'ml-1 text-[10px]',
+                          r.flag === 'H' || r.flag === 'High' ? 'text-orange-600 dark:text-orange-400' :
+                          r.flag === 'L' || r.flag === 'Low' ? 'text-blue-600 dark:text-blue-400' :
+                          'text-muted-foreground'
+                        )}>{r.flag}</span>
+                      )}
                     </span>
                     <span className="text-muted-foreground tabular-nums whitespace-nowrap text-[10px]">
                       {refRange}
                     </span>
                   </div>
+
                 );
               })}
             </div>
