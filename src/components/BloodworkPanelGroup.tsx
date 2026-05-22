@@ -81,12 +81,13 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
         </button>
         <div className="min-w-0 flex items-center gap-2">
           {!isPending && !isFailed ? (() => {
-            const count = panel.results.length;
-            const sectionNames = sections.map((s) => s.title).filter(Boolean) as string[];
-            const countLabel = `${count} result${count === 1 ? '' : 's'}`;
-            const summary = sectionNames.length
-              ? `${countLabel}: ${sectionNames.join(' · ')}`
-              : (panel.panel_title || panel.source_filename || countLabel);
+            const sectionParts = sections.map((s) => {
+              const title = s.title || 'Other';
+              return `${title} (${s.results.length})`;
+            });
+            const summary = sectionParts.length
+              ? sectionParts.join(' · ')
+              : (panel.panel_title || panel.source_filename || 'Bloodwork');
             return (
               <span className="text-xs text-muted-foreground truncate min-w-0" title={summary}>
                 {summary}
