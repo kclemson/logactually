@@ -338,6 +338,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
             onExport={effectiveViewMode === 'medication' ? exportCustomLog : undefined}
             isReadOnly={isReadOnly}
             medicationsOnly={effectiveViewMode === 'medication'}
+            dateStr={dateStr}
           />
         </div>
       </div>
