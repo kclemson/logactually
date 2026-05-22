@@ -83,7 +83,7 @@ export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, 
   const handleViewExisting = (panel: BloodworkPanel) => {
     setDuplicate(null);
     setPendingFile(null);
-    if (panel.collected_date) navigate(`/other?date=${panel.collected_date}`);
+    if (panel.collected_date) navigate(`/custom?date=${panel.collected_date}`);
   };
 
   const handleViewSaved = () => {
