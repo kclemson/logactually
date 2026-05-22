@@ -12,7 +12,8 @@ interface BloodworkPanelGroupProps {
 
 export function BloodworkPanelGroup({ dateStr, logTypeId, isReadOnly }: BloodworkPanelGroupProps) {
   const { panels, deletePanel, retryParse, getSignedUrl } = useBloodworkPanelsForDate(dateStr);
-  const myPanels = panels.filter(p => p.log_type_id === logTypeId);
+  // duplicate_pending panels are resolved via the global DuplicateContentDialogHost.
+  const myPanels = panels.filter((p) => p.log_type_id === logTypeId && p.parse_status !== 'duplicate_pending');
   if (myPanels.length === 0) return null;
 
   return (
