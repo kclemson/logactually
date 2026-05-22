@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
-import { Upload, X, Loader2, CheckCircle2 } from 'lucide-react';
+import { Upload, X, Loader2, CheckCircle2, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useBloodworkPanelsForDate, DuplicateFileError, type BloodworkPanel } from '@/hooks/useBloodworkPanels';
 import { DuplicateBlockedDialog } from '@/components/DuplicateBlockedDialog';
@@ -15,13 +15,15 @@ interface BloodworkUploadInputProps {
   disabled?: boolean;
 }
 
+type SavedState = { date: string | null; sections: string[] };
+
 export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, onCancel, disabled }: BloodworkUploadInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [duplicate, setDuplicate] = useState<BloodworkPanel | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [savedTo, setSavedTo] = useState<string | null>(null);
+  const [saved, setSaved] = useState<SavedState | null>(null);
   const { uploadAndParse } = useBloodworkPanelsForDate(loggedDate);
   const navigate = useNavigate();
 
@@ -30,17 +32,15 @@ export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, 
   const runUpload = async (file: File, opts?: { skipDupCheck?: boolean }) => {
     setBusy(true);
     setError(null);
-    setSavedTo(null);
+    setSaved(null);
     try {
-      // If skipping dup check (user chose "Upload anyway"), we patch the hash check
-      // by temporarily setting a unique marker — simplest path is to just retry and
-      // accept that uniqueness index will reject; instead we set a sentinel hash.
       const result = await uploadAndParse.mutateAsync({ file, logTypeId });
       const extracted = result.extractedDate;
+      const sections = result.sections ?? [];
       if (extracted && extracted !== loggedDate) {
-        setSavedTo(extracted);
+        setSaved({ date: extracted, sections });
       } else if (!extracted) {
-        setSavedTo('__no_date__');
+        setSaved({ date: null, sections });
       } else {
         onSuccess?.();
       }
@@ -69,9 +69,6 @@ export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, 
     const file = pendingFile;
     setDuplicate(null);
     setPendingFile(null);
-    // Re-tag the file with a sentinel byte to force a unique hash. We append a single
-    // random byte so the upload bypasses the bytes-hash check without altering the
-    // visible document. (Same labs → Layer 2 will still catch as content duplicate.)
     const tagged = new File(
       [file, new Uint8Array([Math.floor(Math.random() * 256)])],
       file.name,
@@ -87,10 +84,8 @@ export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, 
   };
 
   const handleViewSaved = () => {
-    if (savedTo && savedTo !== '__no_date__') {
-      navigate(`/custom?date=${savedTo}`);
-    }
-    setSavedTo(null);
+    if (saved?.date) navigate(`/custom?date=${saved.date}`);
+    setSaved(null);
     onSuccess?.();
   };
 
@@ -99,13 +94,41 @@ export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, 
       <div className="flex items-center gap-2">
         <span className="text-xs font-medium text-muted-foreground shrink-0">{label}</span>
         <input ref={fileInputRef} type="file" accept=".pdf,image/*" className="hidden" onChange={handleFile} />
-        <Button
-          type="button" variant="ghost" size="sm"
-          className="h-8 text-sm flex-1 justify-start gap-2 border border-dashed border-border"
-          onClick={handlePick} disabled={disabled || busy}
-        >
-          {busy ? (<><Loader2 className="h-4 w-4 animate-spin" />Reading your document…</>) : (<><Upload className="h-4 w-4" />Choose a PDF or image</>)}
-        </Button>
+        {!saved && (
+          <Button
+            type="button" variant="ghost" size="sm"
+            className="h-8 text-sm flex-1 justify-start gap-2 border border-dashed border-border"
+            onClick={handlePick} disabled={disabled || busy}
+          >
+            {busy ? (<><Loader2 className="h-4 w-4 animate-spin" />Reading your document…</>) : (<><Upload className="h-4 w-4" />Choose a PDF or image</>)}
+          </Button>
+        )}
+        {saved && (
+          <div className="flex-1 flex items-start gap-2 rounded-md border border-border bg-muted/40 px-2.5 py-1.5">
+            <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <div className="text-sm text-foreground">
+                {saved.date
+                  ? `Saved to ${format(new Date(saved.date), 'MMM d, yyyy')}`
+                  : 'Saved — no collection date found in the document'}
+              </div>
+              {saved.sections.length > 0 && (
+                <div className="text-xs text-muted-foreground truncate" title={saved.sections.join(' · ')}>
+                  {saved.sections.join(' · ')}
+                </div>
+              )}
+            </div>
+            {saved.date && (
+              <Button
+                type="button" size="sm" variant="default"
+                className="h-7 px-2.5 gap-1 shrink-0"
+                onClick={handleViewSaved}
+              >
+                View <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
+        )}
         {onCancel && (
           <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={onCancel} disabled={busy}>
             <X className="h-4 w-4" />
@@ -113,20 +136,6 @@ export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, 
         )}
       </div>
       {error && <p className="text-xs text-destructive pl-1">{error}</p>}
-      {savedTo && savedTo !== '__no_date__' && (
-        <button
-          onClick={handleViewSaved}
-          className="text-xs text-muted-foreground pl-1 inline-flex items-center gap-1 hover:text-foreground"
-        >
-          <CheckCircle2 className="h-3 w-3 text-green-600" />
-          Saved to {format(new Date(savedTo), 'MMM d, yyyy')} · view
-        </button>
-      )}
-      {savedTo === '__no_date__' && (
-        <p className="text-xs text-muted-foreground pl-1">
-          Saved, but no collection date was found in the document.
-        </p>
-      )}
       <DuplicateBlockedDialog
         open={!!duplicate}
         existing={duplicate}
