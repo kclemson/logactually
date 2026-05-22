@@ -80,12 +80,21 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
           )}
         </button>
         <div className="min-w-0 flex items-center gap-2">
-          <span className="text-sm truncate">
-            {panel.panel_title || panel.source_filename || 'Bloodwork'}
-          </span>
-          {!isPending && !isFailed && (
-            <span className="text-xs text-muted-foreground shrink-0">
-              · {panel.results.length} result{panel.results.length === 1 ? '' : 's'}
+          {!isPending && !isFailed ? (() => {
+            const count = panel.results.length;
+            const sectionNames = sections.map((s) => s.title).filter(Boolean) as string[];
+            const countLabel = `${count} result${count === 1 ? '' : 's'}`;
+            const summary = sectionNames.length
+              ? `${countLabel}: ${sectionNames.join(' · ')}`
+              : (panel.panel_title || panel.source_filename || countLabel);
+            return (
+              <span className="text-sm truncate min-w-0" title={summary}>
+                {summary}
+              </span>
+            );
+          })() : (
+            <span className="text-sm truncate min-w-0">
+              {panel.panel_title || panel.source_filename || 'Bloodwork'}
             </span>
           )}
           {isPending && <span className="text-xs text-muted-foreground italic shrink-0">parsing…</span>}
