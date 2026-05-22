@@ -434,6 +434,7 @@ export function CustomLogTypeDayRows({
             valueType={logType.value_type}
             typeUnit={logType.unit}
             onDelete={onDelete}
+            onEdit={onEdit}
             onUpdate={onUpdate ?? (() => {})}
             isReadOnly={isReadOnly}
           />
