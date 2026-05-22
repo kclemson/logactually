@@ -1,6 +1,25 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { canonicalize } from '@/lib/bloodwork-canonical';
 import { useAuth } from './useAuth';
+
+type BloodworkResultInsert = {
+  user_id: string;
+  panel_id: string;
+  collected_date: string | null;
+  panel_section: string | null;
+  section_order: number;
+  result_order: number;
+  analyte_name: string;
+  canonical_key: string;
+  display_name: string;
+  numeric_value: number | null;
+  unit: string | null;
+  reference_low: number | null;
+  reference_high: number | null;
+  reference_raw: string | null;
+  flag: string | null;
+};
 
 export interface BloodworkResult {
   id: string;
