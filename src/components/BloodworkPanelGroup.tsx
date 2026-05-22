@@ -88,7 +88,7 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
               ? `${countLabel}: ${sectionNames.join(' · ')}`
               : (panel.panel_title || panel.source_filename || countLabel);
             return (
-              <span className="text-sm truncate min-w-0" title={summary}>
+              <span className="text-xs text-muted-foreground truncate min-w-0" title={summary}>
                 {summary}
               </span>
             );
