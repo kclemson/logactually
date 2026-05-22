@@ -208,11 +208,16 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
                 <span className="tabular-nums whitespace-nowrap py-0.5">
                   {(() => {
                     const nf = normalizeFlag(r.flag);
+                    const flagColor = nf === 'High'
+                      ? 'text-amber-600 dark:text-amber-400'
+                      : nf === 'Low'
+                        ? 'text-blue-600 dark:text-blue-400'
+                        : '';
                     return (
                       <>
-                        <span className={cn(nf ? 'text-amber-600 dark:text-amber-400 font-medium' : '')}>{valueStr}</span>
+                        <span className={cn(flagColor, nf ? 'font-medium' : '')}>{valueStr}</span>
                         {nf && (
-                          <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">{nf}</span>
+                          <span className={cn('ml-1 text-[10px]', flagColor)}>{nf}</span>
                         )}
                       </>
                     );
