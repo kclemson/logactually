@@ -15,7 +15,13 @@ interface BloodworkUploadInputProps {
   disabled?: boolean;
 }
 
-type SavedState = { date: string | null; sections: string[] };
+type SectionSummary = { title: string; count: number };
+type SavedState = {
+  date: string | null;
+  sections: SectionSummary[];
+  resultCount: number;
+  filename: string;
+};
 
 export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, onCancel, disabled }: BloodworkUploadInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -36,11 +42,16 @@ export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, 
     try {
       const result = await uploadAndParse.mutateAsync({ file, logTypeId });
       const extracted = result.extractedDate;
-      const sections = result.sections ?? [];
+      const summary: SavedState = {
+        date: extracted ?? null,
+        sections: result.sections,
+        resultCount: result.resultCount,
+        filename: result.filename,
+      };
       if (extracted && extracted !== loggedDate) {
-        setSaved({ date: extracted, sections });
+        setSaved(summary);
       } else if (!extracted) {
-        setSaved({ date: null, sections });
+        setSaved(summary);
       } else {
         onSuccess?.();
       }
@@ -90,52 +101,91 @@ export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, 
   };
 
   return (
-    <div className="space-y-1">
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-medium text-muted-foreground shrink-0">{label}</span>
-        <input ref={fileInputRef} type="file" accept=".pdf,image/*" className="hidden" onChange={handleFile} />
-        {!saved && (
-          <Button
-            type="button" variant="ghost" size="sm"
-            className="h-8 text-sm flex-1 justify-start gap-2 border border-dashed border-border"
-            onClick={handlePick} disabled={disabled || busy}
-          >
-            {busy ? (<><Loader2 className="h-4 w-4 animate-spin" />Reading your document…</>) : (<><Upload className="h-4 w-4" />Choose a PDF or image</>)}
-          </Button>
-        )}
-        {saved && (
-          <div className="flex-1 flex items-start gap-2 rounded-md border border-border bg-muted/40 px-2.5 py-1.5">
-            <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <div className="text-sm text-foreground">
-                {saved.date
-                  ? `Saved to ${format(new Date(saved.date), 'MMM d, yyyy')}`
-                  : 'Saved — no collection date found in the document'}
-              </div>
-              {saved.sections.length > 0 && (
-                <div className="text-xs text-muted-foreground truncate" title={saved.sections.join(' · ')}>
-                  {saved.sections.join(' · ')}
-                </div>
-              )}
-            </div>
-            {saved.date && (
-              <Button
-                type="button" size="sm" variant="default"
-                className="h-7 px-2.5 gap-1 shrink-0"
-                onClick={handleViewSaved}
-              >
-                View <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
-            )}
-          </div>
-        )}
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-muted-foreground">{label}</span>
         {onCancel && (
-          <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={onCancel} disabled={busy}>
+          <Button type="button" size="icon" variant="ghost" className="h-7 w-7 -mr-1.5" onClick={onCancel} disabled={busy}>
             <X className="h-4 w-4" />
           </Button>
         )}
       </div>
-      {error && <p className="text-xs text-destructive pl-1">{error}</p>}
+
+      <input ref={fileInputRef} type="file" accept=".pdf,image/*" className="hidden" onChange={handleFile} />
+
+      {!saved && (
+        <button
+          type="button"
+          onClick={handlePick}
+          disabled={disabled || busy}
+          className="w-full rounded-lg border-2 border-dashed border-border hover:border-foreground/30 hover:bg-muted/30 transition-colors py-8 px-4 flex flex-col items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {busy ? (
+            <>
+              <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
+              <span className="text-sm text-foreground font-medium">Reading your document…</span>
+              <span className="text-xs text-muted-foreground">This usually takes a few seconds</span>
+            </>
+          ) : (
+            <>
+              <Upload className="h-6 w-6 text-muted-foreground" />
+              <span className="text-sm text-foreground font-medium">Choose a PDF or image</span>
+              <span className="text-xs text-muted-foreground">PDF or image, up to 20MB</span>
+            </>
+          )}
+        </button>
+      )}
+
+      {saved && (
+        <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+              <span className="text-sm font-medium text-foreground">
+                {saved.date ? format(new Date(saved.date), 'MMM d, yyyy') : 'No collection date found in document'}
+              </span>
+            </div>
+            <div className="text-xs text-muted-foreground pl-6 truncate" title={saved.filename}>
+              {saved.filename}
+            </div>
+            {saved.resultCount > 0 && (
+              <div className="text-xs text-muted-foreground pl-6">
+                {saved.resultCount} result{saved.resultCount === 1 ? '' : 's'}
+                {saved.sections.length > 0 && (
+                  <> across {saved.sections.length} panel{saved.sections.length === 1 ? '' : 's'}</>
+                )}
+              </div>
+            )}
+          </div>
+
+          {saved.sections.length > 0 && (
+            <ul className="space-y-1 pl-6">
+              {saved.sections.map((s) => (
+                <li key={s.title} className="text-xs flex items-baseline gap-2">
+                  <span className="text-muted-foreground">·</span>
+                  <span className="text-foreground/80 flex-1">{s.title}</span>
+                  <span className="text-muted-foreground tabular-nums">{s.count}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {saved.date && (
+            <div className="flex justify-end pt-1">
+              <Button
+                type="button" size="sm" variant="default"
+                className="h-9 gap-1.5"
+                onClick={handleViewSaved}
+              >
+                View <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {error && <p className="text-xs text-destructive mt-1">{error}</p>}
+
       <DuplicateBlockedDialog
         open={!!duplicate}
         existing={duplicate}
