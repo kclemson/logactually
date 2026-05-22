@@ -38,40 +38,24 @@ export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, 
   };
 
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs font-medium text-muted-foreground shrink-0">{label}</span>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".pdf,image/*"
-        className="hidden"
-        onChange={handleFile}
-      />
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className="h-8 text-sm flex-1 justify-start gap-2 border border-dashed border-border"
-        onClick={handlePick}
-        disabled={disabled || busy}
-      >
-        {busy ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Reading your document…
-          </>
-        ) : (
-          <>
-            <Upload className="h-4 w-4" />
-            Choose a PDF or image
-          </>
-        )}
-      </Button>
-      {onCancel && (
-        <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={onCancel} disabled={busy}>
-          <X className="h-4 w-4" />
+    <div className="space-y-1">
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-medium text-muted-foreground shrink-0">{label}</span>
+        <input ref={fileInputRef} type="file" accept=".pdf,image/*" className="hidden" onChange={handleFile} />
+        <Button
+          type="button" variant="ghost" size="sm"
+          className="h-8 text-sm flex-1 justify-start gap-2 border border-dashed border-border"
+          onClick={handlePick} disabled={disabled || busy}
+        >
+          {busy ? (<><Loader2 className="h-4 w-4 animate-spin" />Reading your document…</>) : (<><Upload className="h-4 w-4" />Choose a PDF or image</>)}
         </Button>
-      )}
+        {onCancel && (
+          <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={onCancel} disabled={busy}>
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+      {error && <p className="text-xs text-destructive pl-1">{error}</p>}
     </div>
   );
 }
