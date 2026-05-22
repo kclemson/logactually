@@ -10,6 +10,8 @@ import { useInlineEdit } from '@/hooks/useInlineEdit';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { cn } from '@/lib/utils';
 import { CustomLogGroupTrend } from '@/components/CustomLogGroupTrend';
+import { BloodworkPanelGroup } from '@/components/BloodworkPanelGroup';
+import { useBloodworkPanelsForDate } from '@/hooks/useBloodworkPanels';
 import type { CustomLogType } from '@/hooks/useCustomLogTypes';
 import type { CustomLogEntry } from '@/hooks/useCustomLogEntries';
 
@@ -23,6 +25,7 @@ interface CustomLogEntriesViewProps {
   onExport?: () => void;
   isReadOnly: boolean;
   medicationsOnly?: boolean;
+  dateStr: string;
 }
 
 function formatTime(timestamp: string | null): string {
@@ -217,7 +220,10 @@ export function CustomLogEntriesView({
   onExport,
   isReadOnly,
   medicationsOnly = false,
+  dateStr,
 }: CustomLogEntriesViewProps) {
+  const { panels: bloodworkPanels } = useBloodworkPanelsForDate(dateStr);
+
   if (isLoading) {
     return (
       <div className="space-y-2">
