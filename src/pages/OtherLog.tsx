@@ -299,7 +299,11 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
               setSelectedTypeId(typeId);
               setShowInputDialog(true);
             }}
+            onEditEntry={(entry) => setEditingEntry(entry)}
+            onDeleteEntry={(id) => deleteEntry.mutate(id)}
+            onUpdateEntry={(params) => updateEntry.mutate(params)}
           />
+
           <DuplicateContentDialogHost />
         </div>
       ) : (

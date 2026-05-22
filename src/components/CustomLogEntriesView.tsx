@@ -283,71 +283,18 @@ export function CustomLogEntriesView({
     <div className="space-y-1.5">
       {visibleGroups.map((group) => {
         const logType = logTypes.find((t) => t.id === group.typeId);
-        const isMedication = logType?.value_type === 'medication';
-        const isPanel = logType?.value_type === 'panel';
-
+        if (!logType) return null;
         return (
-          <div key={group.typeId} className="space-y-0">
-            <div className="py-0.5 flex items-baseline gap-1.5">
-              <span className="text-xs font-medium text-muted-foreground">{logType?.name ?? 'Unknown'}</span>
-              {isMedication && logType && (() => {
-                const meta = getMedicationMeta(logType);
-                return meta ? (<span className="text-xs text-muted-foreground/60">· {meta}</span>) : null;
-              })()}
-            </div>
-
-            {isMedication ? (
-              group.items.map((entry) => {
-                const dose =
-                  entry.numeric_value != null
-                    ? entry.unit ? `${entry.numeric_value} ${entry.unit}`
-                      : logType?.unit ? `${entry.numeric_value} ${logType.unit}`
-                      : String(entry.numeric_value)
-                    : '—';
-                return (
-                  <div key={entry.id} className="border-b border-border/50 last:border-0 group">
-                    <div className="grid grid-cols-[4rem_auto_1fr_auto] items-center gap-x-2 py-1 pl-3">
-                      <span className="text-xs text-muted-foreground tabular-nums">{formatTime(entry.dose_time)}</span>
-                      <span className="text-xs tabular-nums text-muted-foreground whitespace-nowrap">{dose}</span>
-                      <span className="text-xs text-muted-foreground italic truncate min-w-0">{entry.entry_notes ?? ''}</span>
-                      <div className="flex items-center gap-0.5 shrink-0">
-                        {!isReadOnly && onEdit && (
-                          <Button variant="ghost" size="icon" className="h-6 w-6 p-0 text-foreground hover:text-foreground hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity" onClick={() => onEdit(entry)} aria-label="Edit entry">
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                        )}
-                        {!isReadOnly && (
-                          <Button variant="ghost" size="icon" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity" onClick={() => onDelete(entry.id)} aria-label="Delete entry">
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            ) : isPanel ? null : (
-              group.items.map((entry) => (
-                <NonMedEntryRow
-                  key={entry.id}
-                  entry={entry}
-                  valueType={logType?.value_type ?? 'text'}
-                  typeUnit={logType?.unit}
-                  onDelete={onDelete}
-                  onUpdate={onUpdate ?? (() => {})}
-                  isReadOnly={isReadOnly}
-                />
-              ))
-            )}
-
-            {isPanel && logType && (
-              <BloodworkPanelGroup dateStr={dateStr} logTypeId={logType.id} isReadOnly={isReadOnly} />
-            )}
-
-            {logType && (logType.value_type === 'numeric' || logType.value_type === 'dual_numeric') && (
-              <CustomLogGroupTrend logType={logType} />
-            )}
-          </div>
+          <CustomLogTypeDayRows
+            key={group.typeId}
+            logType={logType}
+            entries={group.items}
+            dateStr={dateStr}
+            isReadOnly={isReadOnly}
+            onDelete={onDelete}
+            onEdit={onEdit}
+            onUpdate={onUpdate}
+          />
         );
       })}
 
@@ -355,12 +302,16 @@ export function CustomLogEntriesView({
         const logType = logTypes.find((t) => t.id === group.typeId);
         if (!logType) return null;
         return (
-          <div key={group.typeId} className="space-y-0">
-            <div className="py-0.5 flex items-baseline gap-1.5">
-              <span className="text-xs font-medium text-muted-foreground">{logType.name}</span>
-            </div>
-            <BloodworkPanelGroup dateStr={dateStr} logTypeId={logType.id} isReadOnly={isReadOnly} />
-          </div>
+          <CustomLogTypeDayRows
+            key={group.typeId}
+            logType={logType}
+            entries={[]}
+            dateStr={dateStr}
+            isReadOnly={isReadOnly}
+            onDelete={onDelete}
+            onEdit={onEdit}
+            onUpdate={onUpdate}
+          />
         );
       })}
 
@@ -378,3 +329,102 @@ export function CustomLogEntriesView({
     </div>
   );
 }
+
+// ──────────────────────────────────────────────
+// CustomLogTypeDayRows — per-(type, day) block.
+// Used by By-Date (once per type that has entries today) and By-Type
+// (once per date that has entries for that type).
+// ──────────────────────────────────────────────
+interface CustomLogTypeDayRowsProps {
+  logType: CustomLogType;
+  entries: CustomLogEntry[];
+  dateStr: string;
+  isReadOnly: boolean;
+  onDelete: (id: string) => void;
+  onEdit?: (entry: CustomLogEntry) => void;
+  onUpdate?: (params: { id: string; numeric_value?: number | null; numeric_value_2?: number | null; text_value?: string | null }) => void;
+  showTypeHeader?: boolean;
+  showTrend?: boolean;
+}
+
+export function CustomLogTypeDayRows({
+  logType,
+  entries,
+  dateStr,
+  isReadOnly,
+  onDelete,
+  onEdit,
+  onUpdate,
+  showTypeHeader = true,
+  showTrend = true,
+}: CustomLogTypeDayRowsProps) {
+  const isMedication = logType.value_type === 'medication';
+  const isPanel = logType.value_type === 'panel';
+
+  return (
+    <div className="space-y-0">
+      {showTypeHeader && (
+        <div className="py-0.5 flex items-baseline gap-1.5">
+          <span className="text-xs font-medium text-muted-foreground">{logType.name}</span>
+          {isMedication && (() => {
+            const meta = getMedicationMeta(logType);
+            return meta ? (<span className="text-xs text-muted-foreground/60">· {meta}</span>) : null;
+          })()}
+        </div>
+      )}
+
+      {isMedication ? (
+        entries.map((entry) => {
+          const dose =
+            entry.numeric_value != null
+              ? entry.unit ? `${entry.numeric_value} ${entry.unit}`
+                : logType.unit ? `${entry.numeric_value} ${logType.unit}`
+                : String(entry.numeric_value)
+              : '—';
+          return (
+            <div key={entry.id} className="border-b border-border/50 last:border-0 group">
+              <div className="grid grid-cols-[4rem_auto_1fr_auto] items-center gap-x-2 py-1 pl-3">
+                <span className="text-xs text-muted-foreground tabular-nums">{formatTime(entry.dose_time)}</span>
+                <span className="text-xs tabular-nums text-muted-foreground whitespace-nowrap">{dose}</span>
+                <span className="text-xs text-muted-foreground italic truncate min-w-0">{entry.entry_notes ?? ''}</span>
+                <div className="flex items-center gap-0.5 shrink-0">
+                  {!isReadOnly && onEdit && (
+                    <Button variant="ghost" size="icon" className="h-6 w-6 p-0 text-foreground hover:text-foreground hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity" onClick={() => onEdit(entry)} aria-label="Edit entry">
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                  )}
+                  {!isReadOnly && (
+                    <Button variant="ghost" size="icon" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity" onClick={() => onDelete(entry.id)} aria-label="Delete entry">
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })
+      ) : isPanel ? null : (
+        entries.map((entry) => (
+          <NonMedEntryRow
+            key={entry.id}
+            entry={entry}
+            valueType={logType.value_type}
+            typeUnit={logType.unit}
+            onDelete={onDelete}
+            onUpdate={onUpdate ?? (() => {})}
+            isReadOnly={isReadOnly}
+          />
+        ))
+      )}
+
+      {isPanel && (
+        <BloodworkPanelGroup dateStr={dateStr} logTypeId={logType.id} isReadOnly={isReadOnly} />
+      )}
+
+      {showTrend && (logType.value_type === 'numeric' || logType.value_type === 'dual_numeric') && (
+        <CustomLogGroupTrend logType={logType} />
+      )}
+    </div>
+  );
+}
+
