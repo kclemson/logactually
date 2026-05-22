@@ -21,6 +21,7 @@ import { LogEntryInput } from '@/components/LogEntryInput';
 import { BloodworkUploadInput } from '@/components/BloodworkUploadInput';
 import { MedicationEntryInput } from '@/components/MedicationEntryInput';
 import { CustomLogEntriesView } from '@/components/CustomLogEntriesView';
+import { DuplicateContentDialogHost } from '@/components/DuplicateContentDialogHost';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { getStoredDate, getSwipeDirection, setSwipeDirection } from '@/lib/selected-date';
 import { LOG_TEMPLATES, getTemplateUnit } from '@/lib/log-templates';
