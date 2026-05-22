@@ -389,6 +389,17 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                 isLoading={effectiveViewMode === 'date' ? createEntry.isPending : createTypeEntry.isPending}
                 disabled={isReadOnly}
               />
+            ) : dialogType.value_type === 'panel' ? (
+              <div className="rounded-lg border border-border bg-card p-3">
+                <BloodworkUploadInput
+                  label={dialogType.name}
+                  logTypeId={dialogType.id}
+                  loggedDate={dateStr}
+                  onSuccess={() => setShowInputDialog(false)}
+                  onCancel={() => setShowInputDialog(false)}
+                  disabled={isReadOnly}
+                />
+              </div>
             ) : (
               <div className="rounded-lg border border-border bg-card p-3">
                 <LogEntryInput
