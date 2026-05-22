@@ -2,7 +2,6 @@ import { useRef, useState } from 'react';
 import { Upload, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useBloodworkPanelsForDate } from '@/hooks/useBloodworkPanels';
-import { toast } from 'sonner';
 
 interface BloodworkUploadInputProps {
   label: string;
@@ -16,6 +15,7 @@ interface BloodworkUploadInputProps {
 export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, onCancel, disabled }: BloodworkUploadInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { uploadAndParse } = useBloodworkPanelsForDate(loggedDate);
 
   const handlePick = () => fileInputRef.current?.click();
@@ -24,15 +24,13 @@ export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, 
     const file = e.target.files?.[0];
     if (!file) return;
     setBusy(true);
+    setError(null);
     try {
       await uploadAndParse.mutateAsync({ file, logTypeId });
-      toast.success('Bloodwork uploaded and extracted');
       onSuccess?.();
-    } catch (err: any) {
-      const msg = err?.message ?? 'Upload failed';
-      if (msg.includes('Rate limit')) toast.error('Rate limit hit, try again in a moment.');
-      else if (msg.includes('credits')) toast.error('AI credits exhausted.');
-      else toast.error(msg);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Upload failed';
+      setError(msg);
     } finally {
       setBusy(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
