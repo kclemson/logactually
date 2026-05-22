@@ -10,6 +10,16 @@ interface BloodworkPanelGroupProps {
   isReadOnly: boolean;
 }
 
+// Normalize raw flag strings (H, High, HH, L, Low, LL, etc.) to canonical labels.
+// Unrecognized flags (e.g. "Alert") return null and render no flag label.
+function normalizeFlag(flag: string | null | undefined): 'High' | 'Low' | null {
+  if (!flag) return null;
+  const upper = flag.trim().toUpperCase();
+  if (upper.startsWith('H')) return 'High';
+  if (upper.startsWith('L')) return 'Low';
+  return null;
+}
+
 // Substring match against display_name + analyte_name only (not numeric values).
 export function resultMatchesQuery(
   r: BloodworkPanelWithResults['results'][number],
@@ -193,19 +203,17 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
               <div key={r.id} className="contents">
                 <span className="truncate py-0.5">{r.display_name}</span>
                 <span className="tabular-nums whitespace-nowrap py-0.5">
-                  <span className={cn(
-                    r.flag === 'H' || r.flag === 'High' ? 'text-orange-600 dark:text-orange-400 font-medium' :
-                    r.flag === 'L' || r.flag === 'Low' ? 'text-blue-600 dark:text-blue-400 font-medium' :
-                    ''
-                  )}>{valueStr}</span>
-                  {r.flag && (
-                    <span className={cn(
-                      'ml-1 text-[10px]',
-                      r.flag === 'H' || r.flag === 'High' ? 'text-orange-600 dark:text-orange-400' :
-                      r.flag === 'L' || r.flag === 'Low' ? 'text-blue-600 dark:text-blue-400' :
-                      'text-muted-foreground'
-                    )}>{r.flag}</span>
-                  )}
+                  {(() => {
+                    const nf = normalizeFlag(r.flag);
+                    return (
+                      <>
+                        <span className={cn(nf ? 'text-amber-600 dark:text-amber-400 font-medium' : '')}>{valueStr}</span>
+                        {nf && (
+                          <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">{nf}</span>
+                        )}
+                      </>
+                    );
+                  })()}
                 </span>
                 <span className="text-muted-foreground tabular-nums whitespace-nowrap text-[10px] text-right truncate py-0.5">
                   {refRange}
@@ -322,19 +330,17 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
                     <div key={r.id} className="contents">
                       <span className="truncate py-0.5">{r.display_name}</span>
                       <span className="tabular-nums whitespace-nowrap py-0.5">
-                        <span className={cn(
-                          r.flag === 'H' || r.flag === 'High' ? 'text-orange-600 dark:text-orange-400 font-medium' :
-                          r.flag === 'L' || r.flag === 'Low' ? 'text-blue-600 dark:text-blue-400 font-medium' :
-                          ''
-                        )}>{valueStr}</span>
-                        {r.flag && (
-                          <span className={cn(
-                            'ml-1 text-[10px]',
-                            r.flag === 'H' || r.flag === 'High' ? 'text-orange-600 dark:text-orange-400' :
-                            r.flag === 'L' || r.flag === 'Low' ? 'text-blue-600 dark:text-blue-400' :
-                            'text-muted-foreground'
-                          )}>{r.flag}</span>
-                        )}
+                        {(() => {
+                          const nf = normalizeFlag(r.flag);
+                          return (
+                            <>
+                              <span className={cn(nf ? 'text-amber-600 dark:text-amber-400 font-medium' : '')}>{valueStr}</span>
+                              {nf && (
+                                <span className="ml-1 text-[10px] text-amber-600 dark:text-amber-400">{nf}</span>
+                              )}
+                            </>
+                          );
+                        })()}
                       </span>
                       <span className="text-muted-foreground tabular-nums whitespace-nowrap text-[10px] text-right truncate py-0.5">
                         {refRange}
