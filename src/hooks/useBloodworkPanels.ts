@@ -183,7 +183,9 @@ export function useBloodworkPanelsForDate(dateStr: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bloodwork-panels'] });
       queryClient.invalidateQueries({ queryKey: ['custom-log-dates'] });
+      queryClient.invalidateQueries({ queryKey: ['custom-log-type-recency'] });
     },
+
   });
 
   const retryParse = useMutation({
@@ -222,6 +224,8 @@ export function useBloodworkPanelsForDate(dateStr: string) {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['bloodwork-panels'] });
       queryClient.invalidateQueries({ queryKey: ['custom-log-dates'] });
+      queryClient.invalidateQueries({ queryKey: ['custom-log-type-recency'] });
+
     },
   });
 
@@ -345,7 +349,9 @@ export function useDuplicatePendingPanels() {
       queryClient.invalidateQueries({ queryKey: ['bloodwork-panels'] });
       queryClient.invalidateQueries({ queryKey: ['bloodwork-duplicate-pending'] });
       queryClient.invalidateQueries({ queryKey: ['custom-log-dates'] });
+      queryClient.invalidateQueries({ queryKey: ['custom-log-type-recency'] });
     },
+
   });
 
   return { panels, resolveDuplicate };

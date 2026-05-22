@@ -38,20 +38,27 @@ export function useCustomLogTypes() {
     enabled: !!user,
   });
 
-  // Fetch most recent entry per log type for recency sorting
+  // Fetch most recent activity per log type (entries + bloodwork panels) for recency sorting
   const { data: recentUsage = {} } = useQuery({
     queryKey: ['custom-log-type-recency', user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('custom_log_entries')
-        .select('log_type_id, created_at')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      const [entriesRes, panelsRes] = await Promise.all([
+        supabase
+          .from('custom_log_entries')
+          .select('log_type_id, created_at')
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('bloodwork_panels')
+          .select('log_type_id, created_at')
+          .order('created_at', { ascending: false }),
+      ]);
+      if (entriesRes.error) throw entriesRes.error;
+      if (panelsRes.error) throw panelsRes.error;
 
       const usage: Record<string, string> = {};
-      for (const row of data || []) {
-        if (!usage[row.log_type_id]) {
+      for (const row of [...(entriesRes.data || []), ...(panelsRes.data || [])]) {
+        const existing = usage[row.log_type_id];
+        if (!existing || row.created_at > existing) {
           usage[row.log_type_id] = row.created_at;
         }
       }
@@ -59,6 +66,7 @@ export function useCustomLogTypes() {
     },
     enabled: !!user,
   });
+
 
   const createType = useMutation({
     mutationFn: async (params: { name: string; value_type: ValueType; unit?: string | null; description?: string | null; default_dose?: number | null; doses_per_day?: number; dose_times?: string[] | null }) => {
