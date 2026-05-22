@@ -1,10 +1,9 @@
 import { useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
-import { Upload, X, Loader2, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Upload, X, Loader2, CheckCircle2, ArrowRight, AlertCircle, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useBloodworkPanelsForDate, DuplicateFileError, type BloodworkPanel } from '@/hooks/useBloodworkPanels';
-import { DuplicateBlockedDialog } from '@/components/DuplicateBlockedDialog';
 
 interface BloodworkUploadInputProps {
   label: string;
@@ -16,87 +15,107 @@ interface BloodworkUploadInputProps {
 }
 
 type SectionSummary = { title: string; count: number };
-type SavedState = {
+type JobResult = {
   date: string | null;
   sections: SectionSummary[];
   resultCount: number;
-  filename: string;
 };
+type FileJob = {
+  id: string;
+  file: File;
+  status: 'queued' | 'uploading' | 'done' | 'error' | 'duplicate';
+  result?: JobResult;
+  error?: string;
+  duplicate?: BloodworkPanel;
+};
+
+const CONCURRENCY = 3;
 
 export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, onCancel, disabled }: BloodworkUploadInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [duplicate, setDuplicate] = useState<BloodworkPanel | null>(null);
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [saved, setSaved] = useState<SavedState | null>(null);
+  const [jobs, setJobs] = useState<FileJob[]>([]);
   const { uploadAndParse } = useBloodworkPanelsForDate(loggedDate);
   const navigate = useNavigate();
 
-  const handlePick = () => fileInputRef.current?.click();
+  const inFlight = jobs.some((j) => j.status === 'queued' || j.status === 'uploading');
+  const hasJobs = jobs.length > 0;
 
-  const runUpload = async (file: File, opts?: { skipDupCheck?: boolean }) => {
-    setBusy(true);
-    setError(null);
-    setSaved(null);
+  const updateJob = (id: string, patch: Partial<FileJob>) => {
+    setJobs((prev) => prev.map((j) => (j.id === id ? { ...j, ...patch } : j)));
+  };
+
+  const runJob = async (job: FileJob, fileOverride?: File, skipDupCheck = false) => {
+    updateJob(job.id, { status: 'uploading', error: undefined, duplicate: undefined });
     try {
+      const file = fileOverride ?? job.file;
       const result = await uploadAndParse.mutateAsync({ file, logTypeId });
-      const extracted = result.extractedDate;
-      const summary: SavedState = {
-        date: extracted ?? null,
-        sections: result.sections,
-        resultCount: result.resultCount,
-        filename: result.filename,
-      };
-      if (extracted && extracted !== loggedDate) {
-        setSaved(summary);
-      } else if (!extracted) {
-        setSaved(summary);
-      } else {
-        onSuccess?.();
-      }
+      updateJob(job.id, {
+        status: 'done',
+        result: {
+          date: result.extractedDate ?? null,
+          sections: result.sections,
+          resultCount: result.resultCount,
+        },
+      });
     } catch (err: unknown) {
-      if (err instanceof DuplicateFileError && !opts?.skipDupCheck) {
-        setDuplicate(err.existingPanel);
-        setPendingFile(file);
+      if (err instanceof DuplicateFileError && !skipDupCheck) {
+        updateJob(job.id, { status: 'duplicate', duplicate: err.existingPanel });
         return;
       }
       const msg = err instanceof Error ? err.message : 'Upload failed';
-      setError(msg);
-    } finally {
-      setBusy(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      updateJob(job.id, { status: 'error', error: msg });
     }
   };
 
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    await runUpload(file);
+  const runBatch = async (newJobs: FileJob[]) => {
+    let cursor = 0;
+    const workers = Array.from({ length: Math.min(CONCURRENCY, newJobs.length) }, async () => {
+      while (cursor < newJobs.length) {
+        const idx = cursor++;
+        await runJob(newJobs[idx]);
+      }
+    });
+    await Promise.all(workers);
   };
 
-  const handleUploadAnyway = async () => {
-    if (!pendingFile) return;
-    const file = pendingFile;
-    setDuplicate(null);
-    setPendingFile(null);
+  const handlePick = () => fileInputRef.current?.click();
+
+  const handleFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(e.target.files ?? []);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (picked.length === 0) return;
+    const newJobs: FileJob[] = picked.map((file) => ({
+      id: crypto.randomUUID(),
+      file,
+      status: 'queued',
+    }));
+    setJobs((prev) => [...prev, ...newJobs]);
+    await runBatch(newJobs);
+  };
+
+  const handleUploadAnyway = async (job: FileJob) => {
     const tagged = new File(
-      [file, new Uint8Array([Math.floor(Math.random() * 256)])],
-      file.name,
-      { type: file.type },
+      [job.file, new Uint8Array([Math.floor(Math.random() * 256)])],
+      job.file.name,
+      { type: job.file.type },
     );
-    await runUpload(tagged, { skipDupCheck: true });
+    await runJob(job, tagged, true);
+  };
+
+  const handleRetry = async (job: FileJob) => {
+    await runJob(job);
   };
 
   const handleViewExisting = (panel: BloodworkPanel) => {
-    setDuplicate(null);
-    setPendingFile(null);
     if (panel.collected_date) navigate(`/custom?date=${panel.collected_date}`);
   };
 
-  const handleViewSaved = () => {
-    if (saved?.date) navigate(`/custom?date=${saved.date}`);
-    setSaved(null);
+  const handleViewDate = (date: string) => {
+    navigate(`/custom?date=${date}`);
+  };
+
+  const handleDone = () => {
+    setJobs([]);
     onSuccess?.();
   };
 
@@ -105,94 +124,181 @@ export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, 
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-muted-foreground">{label}</span>
         {onCancel && (
-          <Button type="button" size="icon" variant="ghost" className="h-7 w-7 -mr-1.5" onClick={onCancel} disabled={busy}>
+          <Button type="button" size="icon" variant="ghost" className="h-7 w-7 -mr-1.5" onClick={onCancel} disabled={inFlight}>
             <X className="h-4 w-4" />
           </Button>
         )}
       </div>
 
-      <input ref={fileInputRef} type="file" accept=".pdf,image/*" className="hidden" onChange={handleFile} />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,image/*"
+        multiple
+        className="hidden"
+        onChange={handleFiles}
+      />
 
-      {!saved && (
-        <button
-          type="button"
-          onClick={handlePick}
-          disabled={disabled || busy}
-          className="w-full rounded-lg border-2 border-dashed border-border hover:border-foreground/30 hover:bg-muted/30 transition-colors py-8 px-4 flex flex-col items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {busy ? (
-            <>
-              <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
-              <span className="text-sm text-foreground font-medium">Reading your document…</span>
-              <span className="text-xs text-muted-foreground">This usually takes a few seconds</span>
-            </>
-          ) : (
-            <>
-              <Upload className="h-6 w-6 text-muted-foreground" />
-              <span className="text-sm text-foreground font-medium">Choose a PDF or image</span>
-              <span className="text-xs text-muted-foreground">PDF or image, up to 20MB</span>
-            </>
-          )}
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={handlePick}
+        disabled={disabled || inFlight}
+        className="w-full rounded-lg border-2 border-dashed border-border hover:border-foreground/30 hover:bg-muted/30 transition-colors py-6 px-4 flex flex-col items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {inFlight ? (
+          <>
+            <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
+            <span className="text-sm text-foreground font-medium">Reading your documents…</span>
+            <span className="text-xs text-muted-foreground">Up to {CONCURRENCY} at a time</span>
+          </>
+        ) : (
+          <>
+            <Upload className="h-6 w-6 text-muted-foreground" />
+            <span className="text-sm text-foreground font-medium">
+              {hasJobs ? 'Add more PDFs or images' : 'Choose PDFs or images'}
+            </span>
+            <span className="text-xs text-muted-foreground">PDF or image, up to 20MB each</span>
+          </>
+        )}
+      </button>
 
-      {saved && (
-        <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
-              <span className="text-sm font-medium text-foreground">
-                {saved.date ? format(new Date(saved.date), 'MMM d, yyyy') : 'No collection date found in document'}
-              </span>
-            </div>
-            <div className="text-xs text-muted-foreground pl-6 truncate" title={saved.filename}>
-              {saved.filename}
-            </div>
-            {saved.resultCount > 0 && (
-              <div className="text-xs text-muted-foreground pl-6">
-                {saved.resultCount} result{saved.resultCount === 1 ? '' : 's'}
-                {saved.sections.length > 0 && (
-                  <> across {saved.sections.length} panel{saved.sections.length === 1 ? '' : 's'}</>
-                )}
-              </div>
-            )}
-          </div>
-
-          {saved.sections.length > 0 && (
-            <ul className="space-y-1 pl-6">
-              {saved.sections.map((s) => (
-                <li key={s.title} className="text-xs flex items-baseline gap-2">
-                  <span className="text-muted-foreground">·</span>
-                  <span className="text-foreground/80 flex-1">{s.title}</span>
-                  <span className="text-muted-foreground tabular-nums">{s.count}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {saved.date && (
-            <div className="flex justify-end pt-1">
-              <Button
-                type="button" size="sm" variant="default"
-                className="h-9 gap-1.5"
-                onClick={handleViewSaved}
-              >
-                View <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          )}
+      {hasJobs && (
+        <div className="rounded-lg border border-border bg-muted/30 divide-y divide-border/60">
+          {jobs.map((job) => (
+            <JobRow
+              key={job.id}
+              job={job}
+              loggedDate={loggedDate}
+              onUploadAnyway={() => handleUploadAnyway(job)}
+              onRetry={() => handleRetry(job)}
+              onViewExisting={handleViewExisting}
+              onViewDate={handleViewDate}
+            />
+          ))}
         </div>
       )}
 
-      {error && <p className="text-xs text-destructive mt-1">{error}</p>}
+      {hasJobs && (
+        <div className="flex justify-end">
+          <Button type="button" size="sm" onClick={handleDone} disabled={inFlight}>
+            Done
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
 
-      <DuplicateBlockedDialog
-        open={!!duplicate}
-        existing={duplicate}
-        onCancel={() => { setDuplicate(null); setPendingFile(null); }}
-        onUploadAnyway={handleUploadAnyway}
-        onViewExisting={handleViewExisting}
-      />
+interface JobRowProps {
+  job: FileJob;
+  loggedDate: string;
+  onUploadAnyway: () => void;
+  onRetry: () => void;
+  onViewExisting: (panel: BloodworkPanel) => void;
+  onViewDate: (date: string) => void;
+}
+
+function JobRow({ job, loggedDate, onUploadAnyway, onRetry, onViewExisting, onViewDate }: JobRowProps) {
+  const icon = (() => {
+    switch (job.status) {
+      case 'queued':
+      case 'uploading':
+        return <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />;
+      case 'done':
+        return <CheckCircle2 className="h-4 w-4 text-green-600" />;
+      case 'duplicate':
+        return <AlertCircle className="h-4 w-4 text-amber-600" />;
+      case 'error':
+        return <AlertCircle className="h-4 w-4 text-destructive" />;
+    }
+  })();
+
+  const dateMismatch =
+    job.status === 'done' && job.result?.date && job.result.date !== loggedDate;
+
+  return (
+    <div className="px-3 py-2 flex items-start gap-2 text-xs">
+      <div className="mt-0.5 shrink-0">{icon}</div>
+      <div className="min-w-0 flex-1 space-y-0.5">
+        <div className="flex items-baseline gap-2">
+          <span className="text-foreground font-medium truncate" title={job.file.name}>
+            {job.file.name}
+          </span>
+          {job.status === 'done' && job.result?.date && (
+            <span className="text-muted-foreground tabular-nums shrink-0">
+              {format(new Date(job.result.date), 'MMM d, yyyy')}
+            </span>
+          )}
+        </div>
+
+        {job.status === 'uploading' && (
+          <div className="text-muted-foreground">Reading & parsing…</div>
+        )}
+        {job.status === 'queued' && (
+          <div className="text-muted-foreground">Queued</div>
+        )}
+
+        {job.status === 'done' && job.result && (
+          <div className="text-muted-foreground">
+            {job.result.resultCount > 0 ? (
+              <>
+                {job.result.resultCount} result{job.result.resultCount === 1 ? '' : 's'}
+                {job.result.sections.length > 0 && (
+                  <> · {job.result.sections.length} panel{job.result.sections.length === 1 ? '' : 's'}</>
+                )}
+              </>
+            ) : (
+              <>No results found</>
+            )}
+            {!job.result.date && <> · no collection date</>}
+          </div>
+        )}
+
+        {job.status === 'duplicate' && (
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="text-amber-700 dark:text-amber-500">Already uploaded</span>
+            {job.duplicate && (
+              <button
+                type="button"
+                onClick={() => onViewExisting(job.duplicate!)}
+                className="text-foreground/80 hover:text-foreground underline-offset-2 hover:underline inline-flex items-center gap-0.5"
+              >
+                View existing <ExternalLink className="h-3 w-3" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onUploadAnyway}
+              className="text-foreground/80 hover:text-foreground underline-offset-2 hover:underline"
+            >
+              Upload anyway
+            </button>
+          </div>
+        )}
+
+        {job.status === 'error' && (
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="text-destructive">{job.error ?? 'Upload failed'}</span>
+            <button
+              type="button"
+              onClick={onRetry}
+              className="text-foreground/80 hover:text-foreground underline-offset-2 hover:underline"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {dateMismatch && job.result?.date && (
+          <button
+            type="button"
+            onClick={() => onViewDate(job.result!.date!)}
+            className="text-foreground/80 hover:text-foreground underline-offset-2 hover:underline inline-flex items-center gap-0.5"
+          >
+            View <ArrowRight className="h-3 w-3" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
