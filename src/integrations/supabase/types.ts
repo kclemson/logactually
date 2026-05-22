@@ -17,7 +17,9 @@ export type Database = {
       bloodwork_panels: {
         Row: {
           collected_date: string | null
+          content_signature: string | null
           created_at: string
+          file_sha256: string | null
           id: string
           log_type_id: string
           panel_title: string | null
@@ -32,7 +34,9 @@ export type Database = {
         }
         Insert: {
           collected_date?: string | null
+          content_signature?: string | null
           created_at?: string
+          file_sha256?: string | null
           id?: string
           log_type_id: string
           panel_title?: string | null
@@ -47,7 +51,9 @@ export type Database = {
         }
         Update: {
           collected_date?: string | null
+          content_signature?: string | null
           created_at?: string
+          file_sha256?: string | null
           id?: string
           log_type_id?: string
           panel_title?: string | null
