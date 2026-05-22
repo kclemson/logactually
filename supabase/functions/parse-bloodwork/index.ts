@@ -225,7 +225,10 @@ Deno.serve(async (req) => {
     // Build result rows.
     const rows: Record<string, unknown>[] = [];
     const canonicalKeys: string[] = [];
+    const sectionTitles: string[] = [];
+    const seenSections = new Set<string>();
     extracted.sections.forEach((section, sIdx) => {
+      let sectionHadRow = false;
       (section.results ?? []).forEach((r, rIdx) => {
         if (!r.analyte_name) return;
         const { canonical_key, display_name } = canonicalize(r.analyte_name);
@@ -247,7 +250,13 @@ Deno.serve(async (req) => {
           reference_raw: r.reference_raw ?? null,
           flag: r.flag ?? null,
         });
+        sectionHadRow = true;
       });
+      const title = section.section_title?.trim();
+      if (sectionHadRow && title && !seenSections.has(title)) {
+        seenSections.add(title);
+        sectionTitles.push(title);
+      }
     });
 
     if (rows.length === 0) {
