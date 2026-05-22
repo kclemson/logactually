@@ -51,6 +51,7 @@ interface NonMedEntryRowProps {
   valueType: string;
   typeUnit?: string | null;
   onDelete: (id: string) => void;
+  onEdit?: (entry: CustomLogEntry) => void;
   onUpdate: (params: { id: string; numeric_value?: number | null; numeric_value_2?: number | null; text_value?: string | null }) => void;
   isReadOnly: boolean;
 }
