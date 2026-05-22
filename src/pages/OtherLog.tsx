@@ -413,30 +413,52 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
         </Dialog>
       )}
 
-      {/* Edit dialog — reuses MedicationEntryInput pre-filled with existing entry data */}
-      {editingEntry && editingLogType && !isReadOnly && (
+      {/* Edit dialog — reuses the same input component used to create the entry, pre-filled. */}
+      {editingEntry && editingLogType && !isReadOnly && editingLogType.value_type !== 'panel' && (
         <Dialog open={!!editingEntry} onOpenChange={(open) => { if (!open) setEditingEntry(null); }}>
           <DialogContent className="max-w-sm p-0 gap-0 border-0 bg-transparent shadow-none [&>button]:hidden">
-            <MedicationEntryInput
-              label={editingLogType.name}
-              unit={editingLogType.unit}
-              description={editingLogType.description}
-              defaultDose={editingLogType.default_dose}
-              dosesPerDay={editingLogType.doses_per_day}
-              doseTimes={editingLogType.dose_times}
-              initialDose={editingEntry.numeric_value}
-              initialTime={editingEntry.dose_time}
-              initialNotes={editingEntry.entry_notes}
-              todayEntryCount={editingTodayEntries.length}
-              todayLoggedTimes={editingTodayEntries.map(e => e.dose_time).filter(Boolean) as string[]}
-              initialTimeInList={editingEntry.dose_time}
-              loggedDate={dateStr}
-              onSubmit={(params) => {
-                updateMedEntry.mutate({ id: editingEntry.id, numeric_value: params.numeric_value, dose_time: params.dose_time, entry_notes: params.entry_notes });
-              }}
-              onCancel={() => setEditingEntry(null)}
-              isLoading={updateMedEntry.isPending}
-            />
+            {editingLogType.value_type === 'medication' ? (
+              <MedicationEntryInput
+                label={editingLogType.name}
+                unit={editingLogType.unit}
+                description={editingLogType.description}
+                defaultDose={editingLogType.default_dose}
+                dosesPerDay={editingLogType.doses_per_day}
+                doseTimes={editingLogType.dose_times}
+                initialDose={editingEntry.numeric_value}
+                initialTime={editingEntry.dose_time}
+                initialNotes={editingEntry.entry_notes}
+                todayEntryCount={editingTodayEntries.length}
+                todayLoggedTimes={editingTodayEntries.map(e => e.dose_time).filter(Boolean) as string[]}
+                initialTimeInList={editingEntry.dose_time}
+                loggedDate={dateStr}
+                onSubmit={(params) => {
+                  updateMedEntry.mutate({ id: editingEntry.id, numeric_value: params.numeric_value, dose_time: params.dose_time, entry_notes: params.entry_notes });
+                }}
+                onCancel={() => setEditingEntry(null)}
+                isLoading={updateMedEntry.isPending}
+              />
+            ) : (
+              <div className="rounded-lg border border-border bg-card p-3">
+                <LogEntryInput
+                  valueType={editingLogType.value_type}
+                  label={editingLogType.name}
+                  unit={editingLogType.unit}
+                  mode="edit"
+                  initialNumericValue={editingEntry.numeric_value}
+                  initialNumericValue2={editingEntry.numeric_value_2}
+                  initialTextValue={editingEntry.text_value}
+                  onSubmit={(params) => {
+                    updateEntry.mutate(
+                      { id: editingEntry.id, ...params },
+                      { onSuccess: () => setEditingEntry(null) }
+                    );
+                  }}
+                  onCancel={() => setEditingEntry(null)}
+                  isLoading={updateEntry.isPending}
+                />
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       )}
