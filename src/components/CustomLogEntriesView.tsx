@@ -254,21 +254,23 @@ export function CustomLogEntriesView({
       })
     : groups;
 
-  if (visibleGroups.length === 0) {
+  // Bloodwork panel-type log types that have panels for this day (only when not medications-only)
+  const panelGroups = medicationsOnly
+    ? []
+    : Array.from(new Set(bloodworkPanels.map(p => p.log_type_id)))
+        .filter(id => !visibleGroups.some(g => g.typeId === id))
+        .map(id => ({ typeId: id }));
+
+  if (visibleGroups.length === 0 && panelGroups.length === 0) {
     return (
       <div className="space-y-4">
         <div className="text-center text-muted-foreground py-8">
-          {medicationsOnly
-            ? 'No medications logged for this day.'
-            : 'No custom log items for this day'}
+          {medicationsOnly ? 'No medications logged for this day.' : 'No custom log items for this day'}
         </div>
         {onExport && (
           <p className="text-xs text-muted-foreground text-center">
             For full history across all dates,{' '}
-            <button
-              onClick={onExport}
-              className="underline underline-offset-2 hover:text-foreground transition-colors"
-            >
+            <button onClick={onExport} className="underline underline-offset-2 hover:text-foreground transition-colors">
               export your data to CSV
             </button>
           </p>
