@@ -1,6 +1,6 @@
 import { format, parseISO } from 'date-fns';
 import { useState } from 'react';
-import { Plus, ChevronRight } from 'lucide-react';
+import { Plus, ChevronRight, Search, X, ChevronsUpDown, ChevronsDownUp } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { CustomLogGroupTrend } from '@/components/CustomLogGroupTrend';
