@@ -113,14 +113,26 @@ function NonMedEntryRow({ entry, valueType, typeUnit, onDelete, onEdit, onUpdate
           onSave={(val) => onUpdate({ id: entry.id, text_value: val })}
         />
         {!isReadOnly ? (
-          <Button
-            variant="ghost" size="icon"
-            className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity mt-1"
-            onClick={() => onDelete(entry.id)}
-            aria-label="Delete entry"
-          >
-            <Trash2 className="h-3 w-3" />
-          </Button>
+          <div className="flex items-center gap-0.5 shrink-0 mt-1">
+            {onEdit && (
+              <Button
+                variant="ghost" size="icon"
+                className="h-6 w-6 p-0 text-foreground hover:text-foreground hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                onClick={() => onEdit(entry)}
+                aria-label="Edit entry"
+              >
+                <Pencil className="h-3 w-3" />
+              </Button>
+            )}
+            <Button
+              variant="ghost" size="icon"
+              className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+              onClick={() => onDelete(entry.id)}
+              aria-label="Delete entry"
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
         ) : <span />}
       </div>
     );
