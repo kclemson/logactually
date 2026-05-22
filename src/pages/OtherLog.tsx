@@ -265,20 +265,14 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                 ) : (
                   /* By Date: "Log New" dropdown — opens dialog on selection */
                   <Select
-                    value={effectiveTypeId || ''}
+                    value=""
                     onValueChange={(val) => {
                       if (val === '__create_new__') {
-                        createNewClickedRef.current = true;
                         setTemplatePickerOpen(true);
                       } else {
                         setSelectedTypeId(val);
-                      }
-                    }}
-                    onOpenChange={(open) => {
-                      if (!open && effectiveTypeId && !createNewClickedRef.current) {
                         setShowInputDialog(true);
                       }
-                      createNewClickedRef.current = false;
                     }}
                   >
                     <SelectTrigger className="h-8 text-sm font-medium flex items-center gap-1 w-auto bg-teal-500 text-white border-teal-500 hover:bg-teal-600 shrink-0 whitespace-nowrap">
