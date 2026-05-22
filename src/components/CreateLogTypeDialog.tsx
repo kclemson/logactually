@@ -35,10 +35,9 @@ export function CreateLogTypeDialog({ open, onOpenChange, onSubmit, isLoading, e
       valueType === 'panel' ? 'panel' :
       valueType;
     onSubmit(name.trim(), finalType, showUnit && unit.trim() ? unit.trim() : undefined);
-    setName('');
-    setValueType('numeric');
-    setUnit('');
-    setTextMultiline(false);
+    // Do NOT reset state here — parent closes the dialog on success (which
+    // unmounts and resets it). On failure the form stays populated so the
+    // user can retry without re-typing.
   };
 
   return (
