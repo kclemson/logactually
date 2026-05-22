@@ -21,6 +21,7 @@ import { LogEntryInput } from '@/components/LogEntryInput';
 import { BloodworkUploadInput } from '@/components/BloodworkUploadInput';
 import { MedicationEntryInput } from '@/components/MedicationEntryInput';
 import { CustomLogEntriesView } from '@/components/CustomLogEntriesView';
+import { CustomLogByTypeView } from '@/components/CustomLogByTypeView';
 import { DuplicateContentDialogHost } from '@/components/DuplicateContentDialogHost';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { getStoredDate, getSwipeDirection, setSwipeDirection } from '@/lib/selected-date';
@@ -42,12 +43,17 @@ const OtherLog = () => {
 
 export default OtherLog;
 
-type ViewMode = 'date' | 'medication';
+type ViewMode = 'date' | 'by_type';
 
 function getStoredViewMode(): ViewMode {
   try {
     const stored = localStorage.getItem('custom-log-view-mode');
-    if (stored === 'date' || stored === 'medication') return stored;
+    if (stored === 'date' || stored === 'by_type') return stored;
+    // Migrate legacy 'medication' value to 'by_type'
+    if (stored === 'medication') {
+      try { localStorage.setItem('custom-log-view-mode', 'by_type'); } catch {}
+      return 'by_type';
+    }
   } catch {}
   return 'date';
 }
