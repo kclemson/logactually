@@ -1,26 +1,28 @@
-Plan:
+## Problem
 
-1. Replace the current bloodwork result-row grid with a simpler, explicit three-column structure:
+Each lab result row in `BloodworkPanelGroup` is its own CSS Grid. The reference-range column uses `auto`, so it sizes to that row's content. Rows with wider ranges (e.g. `11.1–15.9`) push the value column over, producing the misalignment you're seeing. Units are not the cause — the per-row `auto` track is.
 
-```text
-[test name]        [value flag]      [reference range]
-```
+## Fix
 
-2. Treat `value + H/L flag` as one cell:
-- value is left-aligned at the start of the value column
-- flag sits immediately to the right of the value only when abnormal
-- no unit is rendered or used in layout
+Stop letting each row compute its own columns. Define one column template once on the rows container and have every row inherit it, so all values and ranges align on shared vertical edges.
 
-3. Remove the fragile narrow `3.5rem` value track and use a stable value column wide enough for normal lab values plus an optional flag, so the reference range column does not influence value alignment.
+1. **Single shared grid template**
+   - On the rows wrapper (parent of all result rows), apply `grid grid-cols-[minmax(0,1fr)_6rem_5rem] gap-x-3`.
+   - Each row becomes `display: contents` (or just three direct children of the wrapper), so its three cells participate in the parent grid instead of creating their own.
 
-4. Keep the markup intentionally boring:
-- one row container
-- one name cell
-- one value cell
-- one reference cell
-- small helper logic only for `valueStr`, `refRange`, and normalized flag color
+2. **Three simple cells per row**
+   - Cell 1 (test name): left-aligned, truncates as needed.
+   - Cell 2 (value + flag): fixed `6rem` track, left-aligned, `tabular-nums whitespace-nowrap`. Flag (H/L) rendered inline next to the value, only when present. No units rendered.
+   - Cell 3 (reference range): fixed `5rem` track, right-aligned, muted, `tabular-nums whitespace-nowrap`. Long ranges truncate inside their fixed track instead of resizing the column.
 
-Technical notes:
-- The `unit` field still exists in the database type, but this component is not rendering it. I’ll keep it completely out of the row math.
-- The likely layout issue is the combination of CSS Grid tracks (`1fr 3.5rem auto`) plus a too-narrow value column, not hidden unit text.
-- I’ll make the value column explicit and left-anchored so all values start from the same x-position regardless of digit count or reference range length.
+3. **Remove per-row grid leftovers**
+   - Delete the row-level `grid grid-cols-[...]` class currently on each result row.
+   - Keep existing colors, abnormal H/L styling, hover/click behavior, and spacing tokens unchanged.
+
+4. **Verify**
+   - Reload the panel, confirm all values share one vertical edge and all reference ranges share another, regardless of range width.
+
+## Scope
+
+- Only `src/components/BloodworkPanelGroup.tsx` row/list markup and classes.
+- No data, no business logic, no unit handling changes.
