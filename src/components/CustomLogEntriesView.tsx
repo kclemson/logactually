@@ -51,6 +51,7 @@ interface NonMedEntryRowProps {
   valueType: string;
   typeUnit?: string | null;
   onDelete: (id: string) => void;
+  onEdit?: (entry: CustomLogEntry) => void;
   onUpdate: (params: { id: string; numeric_value?: number | null; numeric_value_2?: number | null; text_value?: string | null }) => void;
   isReadOnly: boolean;
 }
@@ -79,7 +80,7 @@ function MultilineTextArea({ value, isReadOnly, onSave }: { value: string; isRea
   );
 }
 
-function NonMedEntryRow({ entry, valueType, typeUnit, onDelete, onUpdate, isReadOnly }: NonMedEntryRowProps) {
+function NonMedEntryRow({ entry, valueType, typeUnit, onDelete, onEdit, onUpdate, isReadOnly }: NonMedEntryRowProps) {
   const unitLabel = entry.unit || typeUnit;
   const { triggerOverlay } = useReadOnlyContext();
 
@@ -112,14 +113,26 @@ function NonMedEntryRow({ entry, valueType, typeUnit, onDelete, onUpdate, isRead
           onSave={(val) => onUpdate({ id: entry.id, text_value: val })}
         />
         {!isReadOnly ? (
-          <Button
-            variant="ghost" size="icon"
-            className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity mt-1"
-            onClick={() => onDelete(entry.id)}
-            aria-label="Delete entry"
-          >
-            <Trash2 className="h-3 w-3" />
-          </Button>
+          <div className="flex items-center gap-0.5 shrink-0 mt-1">
+            {onEdit && (
+              <Button
+                variant="ghost" size="icon"
+                className="h-6 w-6 p-0 text-foreground hover:text-foreground hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                onClick={() => onEdit(entry)}
+                aria-label="Edit entry"
+              >
+                <Pencil className="h-3 w-3" />
+              </Button>
+            )}
+            <Button
+              variant="ghost" size="icon"
+              className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+              onClick={() => onDelete(entry.id)}
+              aria-label="Delete entry"
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
         ) : <span />}
       </div>
     );
@@ -192,6 +205,16 @@ function NonMedEntryRow({ entry, valueType, typeUnit, onDelete, onUpdate, isRead
 
       {/* Col 4: actions */}
       <div className="flex items-center gap-0.5 shrink-0">
+        {!isReadOnly && onEdit && (
+          <Button
+            variant="ghost" size="icon"
+            className="h-6 w-6 p-0 text-foreground hover:text-foreground hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+            onClick={() => onEdit(entry)}
+            aria-label="Edit entry"
+          >
+            <Pencil className="h-3 w-3" />
+          </Button>
+        )}
         {!isReadOnly && (
           <Button
             variant="ghost" size="icon"
@@ -411,6 +434,7 @@ export function CustomLogTypeDayRows({
             valueType={logType.value_type}
             typeUnit={logType.unit}
             onDelete={onDelete}
+            onEdit={onEdit}
             onUpdate={onUpdate ?? (() => {})}
             isReadOnly={isReadOnly}
           />

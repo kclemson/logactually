@@ -13,12 +13,28 @@ interface LogEntryInputProps {
   disabled?: boolean;
   label?: string;
   unit?: string | null;
+  initialNumericValue?: number | null;
+  initialNumericValue2?: number | null;
+  initialTextValue?: string | null;
+  mode?: 'create' | 'edit';
 }
 
-export function LogEntryInput({ valueType, onSubmit, onCancel, isLoading, disabled, label, unit }: LogEntryInputProps) {
-  const [numericValue, setNumericValue] = useState('');
-  const [numericValue2, setNumericValue2] = useState('');
-  const [textValue, setTextValue] = useState('');
+export function LogEntryInput({
+  valueType,
+  onSubmit,
+  onCancel,
+  isLoading,
+  disabled,
+  label,
+  unit,
+  initialNumericValue,
+  initialNumericValue2,
+  initialTextValue,
+  mode = 'create',
+}: LogEntryInputProps) {
+  const [numericValue, setNumericValue] = useState(initialNumericValue != null ? String(initialNumericValue) : '');
+  const [numericValue2, setNumericValue2] = useState(initialNumericValue2 != null ? String(initialNumericValue2) : '');
+  const [textValue, setTextValue] = useState(initialTextValue ?? '');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,9 +53,11 @@ export function LogEntryInput({ valueType, onSubmit, onCancel, isLoading, disabl
       onSubmit({ text_value: textValue });
     }
 
-    setNumericValue('');
-    setNumericValue2('');
-    setTextValue('');
+    if (mode === 'create') {
+      setNumericValue('');
+      setNumericValue2('');
+      setTextValue('');
+    }
   };
 
   return (
@@ -112,7 +130,7 @@ export function LogEntryInput({ valueType, onSubmit, onCancel, isLoading, disabl
         </div>
       )}
       <Button type="submit" variant="ghost" size="sm" className="h-8 shrink-0 text-sm" disabled={isLoading || disabled}>
-        Save
+        {mode === 'edit' ? 'Save changes' : 'Save'}
       </Button>
       {onCancel && (
         <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={onCancel}>
