@@ -10,6 +10,16 @@ interface BloodworkPanelGroupProps {
   isReadOnly: boolean;
 }
 
+// Normalize raw flag strings (H, High, HH, L, Low, LL, etc.) to canonical labels.
+// Unrecognized flags (e.g. "Alert") return null and render no flag label.
+function normalizeFlag(flag: string | null | undefined): 'High' | 'Low' | null {
+  if (!flag) return null;
+  const upper = flag.trim().toUpperCase();
+  if (upper.startsWith('H')) return 'High';
+  if (upper.startsWith('L')) return 'Low';
+  return null;
+}
+
 // Substring match against display_name + analyte_name only (not numeric values).
 export function resultMatchesQuery(
   r: BloodworkPanelWithResults['results'][number],

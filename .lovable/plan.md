@@ -1,20 +1,32 @@
-In the bloodwork TypeCard header, replace the permanently-visible search input with a tap-to-expand pattern: a search icon button is shown by default; tapping it reveals the narrow filter input. The collapse/expand-all toggle remains always visible.
+### Normalize Bloodwork Flag Display + Re-Color Out-of-Range
 
-**1. PanelHeaderControls refactor (CustomLogByTypeView.tsx)**
+**Goal:** Make bloodwork flag labels consistent and use a single amber color for any out-of-range result.
 
-- Add local `isSearchOpen` boolean state.
-- Default: render only a small `Search` icon button + the collapse/expand-all toggle.
-- Tap search icon → `isSearchOpen = true`, input appears (same `w-28` narrow style) with auto-focus.
-- The input still has the inline `×` clear button. When query is cleared AND the input loses focus, collapse back to the icon button.
-- Keep `onClick` stop-propagation so tapping doesn't collapse the TypeCard.
-- When `query` is non-empty, the input stays rendered regardless of focus so the user can still see what they're filtering by.
+**Current state:**
+- Flags render verbatim from the database: `H`, `High`, `L`, `Low`, `Alert`
+- High flags are colored orange; low flags are colored blue
 
-**Visual flow:**
-```
-Default:       [🔍] [⇅]
-Tapped:        [🔍 Filter… ×]
-With query:    [🔍 Filter… ×]
-Cleared+blur:  [🔍] [⇅]
-```
+**Changes in `src/components/BloodworkPanelGroup.tsx`:**
 
-**File:** `src/components/CustomLogByTypeView.tsx` (PanelHeaderControls component only)
+1. **Add `normalizeFlag` helper** (module-level):
+   ```ts
+   function normalizeFlag(flag: string | null): 'High' | 'Low' | null {
+     if (!flag) return null;
+     const upper = flag.trim().toUpperCase();
+     if (upper.startsWith('H')) return 'High';
+     if (upper.startsWith('L')) return 'Low';
+     return null;
+   }
+   ```
+   This maps `H`, `High`, `HH` → `"High"` and `L`, `Low`, `LL` → `"Low"`. Anything else (including `Alert`) returns `null` and renders no flag label.
+
+2. **Update 4 flag rendering sites** (identical logic appears twice in the filtering/rows-only view and twice in the expanded panel view):
+   - Replace conditional orange/blue classes with a single amber class for any non-null normalized flag.
+   - Render the normalized string (`"High"` / `"Low"`) instead of the raw `r.flag` value.
+   - Keep `font-medium` on the numeric value when out of range.
+
+**Visual result:**
+- All out-of-range values (high or low) show in `amber-600` / `amber-400` with a `"High"` or `"Low"` label.
+- In-range values remain unchanged (no flag, default text color).
+
+**No database or API changes.**
