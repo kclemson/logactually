@@ -327,7 +327,7 @@ Deno.serve(async (req) => {
       raw_extraction: extracted,
     }).eq('id', panel_id);
 
-    return new Response(JSON.stringify({ ok: true, result_count: rows.length, collected_date: collectedDate }), {
+    return new Response(JSON.stringify({ ok: true, result_count: rows.length, collected_date: collectedDate, sections: sectionTitles }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (e) {
