@@ -164,7 +164,7 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
                 return (
                   <div key={r.id} className="grid grid-cols-[1fr_3.5rem_auto] items-baseline gap-x-3 py-0.5 text-xs">
                     <span className="truncate">{r.display_name}</span>
-                    <span className="tabular-nums whitespace-nowrap text-left">
+                    <div className="tabular-nums whitespace-nowrap justify-self-start">
                       <span className={cn(
                         r.flag === 'H' || r.flag === 'High' ? 'text-orange-600 dark:text-orange-400 font-medium' :
                         r.flag === 'L' || r.flag === 'Low' ? 'text-blue-600 dark:text-blue-400 font-medium' :
@@ -178,7 +178,8 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
                           'text-muted-foreground'
                         )}>{r.flag}</span>
                       )}
-                    </span>
+                    </div>
+
                     <span className="text-muted-foreground tabular-nums whitespace-nowrap text-[10px]">
                       {refRange}
                     </span>

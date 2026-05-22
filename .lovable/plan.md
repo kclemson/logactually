@@ -1,11 +1,9 @@
-Fix bloodwork result row alignment so all numeric values share the same left edge in their own column. No units shown.
+The values are still rendering right-aligned because the value cell is a `<span>` (inline) and the inner content is also a span — `text-left` isn't taking effect reliably in the grid cell.
 
-Row layout (3 columns):
-```text
-test name | value [flag] | reference range
-```
+Fix in `src/components/BloodworkPanelGroup.tsx` (around lines 165–185):
+1. Change the value cell from `<span>` to `<div>` so it's a block-level grid item.
+2. Add `justify-self-start` to that cell so it explicitly hugs the left edge of its 3.5rem track instead of stretching.
+3. Keep `tabular-nums whitespace-nowrap` for alignment, drop redundant `text-left`.
+4. Leave name and reference-range cells unchanged.
 
-Changes in `src/components/BloodworkPanelGroup.tsx` (around lines 165–179):
-1. Keep grid as 3 columns but make the value column left-aligned with a fixed width: `grid-cols-[1fr_3.5rem_auto]`.
-2. Value cell: render `valueStr` left-aligned with `tabular-nums text-left`, with the H/L flag inline to its right (small, colored). Flag only appears when abnormal, so it sits to the right of the number without disturbing the shared left edge of values across all rows.
-3. Reference range cell unchanged (muted).
+This guarantees every numeric value starts flush at the same left edge of the value column, with the H/L flag sitting to the right of the number when present.
