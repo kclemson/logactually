@@ -40,7 +40,7 @@ interface BloodworkPanelRowProps {
   getSignedUrl: (path: string) => Promise<string | null>;
 }
 
-function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSignedUrl }: BloodworkPanelRowProps) {
+export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSignedUrl }: BloodworkPanelRowProps) {
   const [expanded, setExpanded] = useState(true);
   const isPending = panel.parse_status === 'pending';
   const isFailed = panel.parse_status === 'failed';
