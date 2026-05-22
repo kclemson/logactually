@@ -1,22 +1,48 @@
+# Custom Log top section: minimal recenter
+
 ## Goal
 
-In the "By Type" view on `/custom`, render each log type as a collapsed section by default. The user clicks a header to expand and see its body (chart, panel history, text history, or medication summary). Mirrors the "details" expansion pattern used on grouped food/exercise rows.
+Make the top of the Custom Log page feel intentional next to Food/Exercise by (1) swapping the view-mode dropdown for a pill toggle and (2) centering both controls in the reserved top-section space, stacked.
+
+## Layout
+
+```text
+        [ By Date | By Type ]      ← pill toggle, centered
+
+           [ + Log New ▾ ]         ← existing button, centered
+
+   ──────── Today, May 22 ‹ › ────────
+```
+
+Both controls sit inside the existing `min-h-[148px]` top section, centered horizontally and vertically as a stacked pair. Date nav below is untouched, so it stays anchored in the same vertical position as Food/Exercise.
 
 ## Changes
 
-**`src/components/CustomLogByTypeView.tsx`** (only file edited)
+### 1. Pill toggle replaces the view-mode Select
 
-- `TypeCard` gains local `const [expanded, setExpanded] = useState(false)`.
-- Header row becomes the click target (whole row toggles expanded state).
-  - Add a chevron on the left (`ChevronRight` rotated 90° when expanded, matching existing food/exercise group disclosure styling).
-  - Keep the "+ Log" button on the right; stop its click from toggling (`e.stopPropagation()`).
-- Body (`<TypeBody />`) only renders when `expanded === true`, so the heavy hooks (`useBloodworkPanelsForType`, `useCustomLogEntriesForType`, `CustomLogGroupTrend`'s query) don't fire until the user opens that card. This also keeps the initial view fast even with many types.
-- Border-bottom on the header is removed when collapsed (no visible body to separate); restored when expanded.
+Two-segment pill: `[ By Date | By Type ]`
+- Rounded-full container with muted background; active segment gets a solid surface + stronger text weight.
+- Compact height (~`h-8`), same `handleViewModeChange` wiring.
+- Inline Tailwind, no new dependency.
 
-No other files change. No state persistence — collapsed is always the default on mount, consistent with how food/exercise group "details" behave.
+### 2. Center the stacked pair
+
+Update the top section wrapper:
+- `flex flex-col items-center justify-center gap-3` (replacing `justify-start` row + `gap-2`).
+- Pill toggle on row 1, existing `+ Log New ▾` Select on row 2.
+
+### 3. Leave everything else alone
+
+- `+ Log New` dropdown keeps its current behavior, including the "New Custom Log Type" submenu item.
+- Onboarding empty-state branch (template grid + "Create your own") unchanged.
+- Read-only behavior unchanged.
+
+## Files
+
+- `src/pages/OtherLog.tsx` — in the `hasLogTypes` branch (lines ~224–268), swap the view-mode `Select` for the pill toggle and adjust the outer flex container to center both rows. No other files touched.
 
 ## Out of scope
 
-- Persisting expanded state across navigation.
-- "Expand all" affordance.
-- Changes to the By Date view or template picker.
+- Chip rail / promoting type creation out of the dropdown.
+- Modal positioning for the input form.
+- Any By-Type or By-Date internals.
