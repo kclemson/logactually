@@ -157,7 +157,7 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
                     : r.reference_raw ?? '';
                 const valueStr =
                   r.numeric_value != null
-                    ? `${r.numeric_value}${r.unit ? ` ${r.unit}` : ''}`
+                    ? `${r.numeric_value}`
                     : r.reference_raw && r.numeric_value == null
                       ? r.reference_raw
                       : '—';
