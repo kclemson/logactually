@@ -225,10 +225,10 @@ Deno.serve(async (req) => {
     // Build result rows.
     const rows: Record<string, unknown>[] = [];
     const canonicalKeys: string[] = [];
-    const sectionTitles: string[] = [];
-    const seenSections = new Set<string>();
+    const sectionOrder: string[] = [];
+    const sectionCounts = new Map<string, number>();
     extracted.sections.forEach((section, sIdx) => {
-      let sectionHadRow = false;
+      const title = section.section_title?.trim() || '';
       (section.results ?? []).forEach((r, rIdx) => {
         if (!r.analyte_name) return;
         const { canonical_key, display_name } = canonicalize(r.analyte_name);
@@ -250,14 +250,13 @@ Deno.serve(async (req) => {
           reference_raw: r.reference_raw ?? null,
           flag: r.flag ?? null,
         });
-        sectionHadRow = true;
+        if (title) {
+          if (!sectionCounts.has(title)) sectionOrder.push(title);
+          sectionCounts.set(title, (sectionCounts.get(title) ?? 0) + 1);
+        }
       });
-      const title = section.section_title?.trim();
-      if (sectionHadRow && title && !seenSections.has(title)) {
-        seenSections.add(title);
-        sectionTitles.push(title);
-      }
     });
+    const sections = sectionOrder.map((title) => ({ title, count: sectionCounts.get(title) ?? 0 }));
 
     if (rows.length === 0) {
       await admin.from('bloodwork_panels').update({
@@ -327,7 +326,7 @@ Deno.serve(async (req) => {
       raw_extraction: extracted,
     }).eq('id', panel_id);
 
-    return new Response(JSON.stringify({ ok: true, result_count: rows.length, collected_date: collectedDate, sections: sectionTitles }), {
+    return new Response(JSON.stringify({ ok: true, result_count: rows.length, collected_date: collectedDate, sections }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (e) {
