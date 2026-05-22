@@ -14,6 +14,7 @@ import { useCustomLogTypes } from '@/hooks/useCustomLogTypes';
 import { useExportData } from '@/hooks/useExportData';
 import { useCustomLogEntries } from '@/hooks/useCustomLogEntries';
 import { useCustomLogEntriesForType } from '@/hooks/useCustomLogEntriesForType';
+import { invalidateCustomLogCaches } from '@/hooks/invalidateCustomLogCaches';
 import { CreateLogTypeDialog } from '@/components/CreateLogTypeDialog';
 import { CreateMedicationDialog } from '@/components/CreateMedicationDialog';
 import { LogTemplatePickerDialog } from '@/components/LogTemplatePickerDialog';
