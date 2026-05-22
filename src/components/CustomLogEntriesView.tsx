@@ -284,19 +284,15 @@ export function CustomLogEntriesView({
       {visibleGroups.map((group) => {
         const logType = logTypes.find((t) => t.id === group.typeId);
         const isMedication = logType?.value_type === 'medication';
+        const isPanel = logType?.value_type === 'panel';
 
         return (
           <div key={group.typeId} className="space-y-0">
-            {/* Section header */}
             <div className="py-0.5 flex items-baseline gap-1.5">
-              <span className="text-xs font-medium text-muted-foreground">
-                {logType?.name ?? 'Unknown'}
-              </span>
+              <span className="text-xs font-medium text-muted-foreground">{logType?.name ?? 'Unknown'}</span>
               {isMedication && logType && (() => {
                 const meta = getMedicationMeta(logType);
-                return meta ? (
-                  <span className="text-xs text-muted-foreground/60">· {meta}</span>
-                ) : null;
+                return meta ? (<span className="text-xs text-muted-foreground/60">· {meta}</span>) : null;
               })()}
             </div>
 
@@ -304,43 +300,24 @@ export function CustomLogEntriesView({
               group.items.map((entry) => {
                 const dose =
                   entry.numeric_value != null
-                    ? entry.unit
-                      ? `${entry.numeric_value} ${entry.unit}`
-                      : logType?.unit
-                      ? `${entry.numeric_value} ${logType.unit}`
+                    ? entry.unit ? `${entry.numeric_value} ${entry.unit}`
+                      : logType?.unit ? `${entry.numeric_value} ${logType.unit}`
                       : String(entry.numeric_value)
                     : '—';
-
                 return (
                   <div key={entry.id} className="border-b border-border/50 last:border-0 group">
                     <div className="grid grid-cols-[4rem_auto_1fr_auto] items-center gap-x-2 py-1 pl-3">
-                      <span className="text-xs text-muted-foreground tabular-nums">
-                        {formatTime(entry.dose_time)}
-                      </span>
-                      <span className="text-xs tabular-nums text-muted-foreground whitespace-nowrap">
-                        {dose}
-                      </span>
-                      <span className="text-xs text-muted-foreground italic truncate min-w-0">
-                        {entry.entry_notes ?? ''}
-                      </span>
+                      <span className="text-xs text-muted-foreground tabular-nums">{formatTime(entry.dose_time)}</span>
+                      <span className="text-xs tabular-nums text-muted-foreground whitespace-nowrap">{dose}</span>
+                      <span className="text-xs text-muted-foreground italic truncate min-w-0">{entry.entry_notes ?? ''}</span>
                       <div className="flex items-center gap-0.5 shrink-0">
                         {!isReadOnly && onEdit && (
-                          <Button
-                            variant="ghost" size="icon"
-                            className="h-6 w-6 p-0 text-foreground hover:text-foreground hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
-                            onClick={() => onEdit(entry)}
-                            aria-label="Edit entry"
-                          >
+                          <Button variant="ghost" size="icon" className="h-6 w-6 p-0 text-foreground hover:text-foreground hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity" onClick={() => onEdit(entry)} aria-label="Edit entry">
                             <Pencil className="h-3 w-3" />
                           </Button>
                         )}
                         {!isReadOnly && (
-                          <Button
-                            variant="ghost" size="icon"
-                            className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity"
-                            onClick={() => onDelete(entry.id)}
-                            aria-label="Delete entry"
-                          >
+                          <Button variant="ghost" size="icon" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity" onClick={() => onDelete(entry.id)} aria-label="Delete entry">
                             <Trash2 className="h-3 w-3" />
                           </Button>
                         )}
@@ -349,7 +326,7 @@ export function CustomLogEntriesView({
                   </div>
                 );
               })
-            ) : (
+            ) : isPanel ? null : (
               group.items.map((entry) => (
                 <NonMedEntryRow
                   key={entry.id}
@@ -363,9 +340,26 @@ export function CustomLogEntriesView({
               ))
             )}
 
+            {isPanel && logType && (
+              <BloodworkPanelGroup dateStr={dateStr} logTypeId={logType.id} isReadOnly={isReadOnly} />
+            )}
+
             {logType && (logType.value_type === 'numeric' || logType.value_type === 'dual_numeric') && (
               <CustomLogGroupTrend logType={logType} />
             )}
+          </div>
+        );
+      })}
+
+      {panelGroups.map((group) => {
+        const logType = logTypes.find((t) => t.id === group.typeId);
+        if (!logType) return null;
+        return (
+          <div key={group.typeId} className="space-y-0">
+            <div className="py-0.5 flex items-baseline gap-1.5">
+              <span className="text-xs font-medium text-muted-foreground">{logType.name}</span>
+            </div>
+            <BloodworkPanelGroup dateStr={dateStr} logTypeId={logType.id} isReadOnly={isReadOnly} />
           </div>
         );
       })}
