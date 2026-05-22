@@ -149,7 +149,7 @@ export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, 
           <>
             <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
             <span className="text-sm text-foreground font-medium">Reading your documents…</span>
-            <span className="text-xs text-muted-foreground">Up to {CONCURRENCY} at a time</span>
+            
           </>
         ) : (
           <>
