@@ -1,81 +1,117 @@
 ## Goal
 
-Let the user upload a bloodwork document (PDF or image, any visual layout), parse it into a dated panel with grouped analyte/value/unit rows, persist the original file, and chart per-analyte trends through the existing custom-log infrastructure.
+Two changes bundled together:
 
-## Custom log type model
+1. **Extracted date is source of truth.** The `collected_date` on a bloodwork panel comes from the document itself (set by the parser), not from whatever day the user was viewing when they uploaded. Panels appear in the day-view of their real collection date.
+2. **Two-layer duplicate detection** to prevent accidentally re-uploading the same labs.
 
-Add a new `value_type = 'panel'` to `custom_log_types`. Surface it in the existing dropdown in `CreateLogTypeDialog` as **"Document upload"** — same entrypoint as any other custom log, no special UI path. The user can name it whatever they want ("Bloodwork", "Lab Results"); the type just declares "entries are uploaded documents that get parsed into named numeric values".
+## Duplicate detection
 
-## Schema
+**Layer 1 — File-bytes hash (pre-parse, global per user).**
+SHA-256 the file in the browser before upload. Query existing panels by `(user_id, file_sha256)` — no date filter, because we don't know the collection date yet, and identical bytes = identical labs regardless. If a match exists (and isn't `parse_status='failed'`), block upload immediately, no storage write, no AI call.
 
-**`bloodwork_panels`** (one row per uploaded document):
-- `id`, `user_id`, `log_type_id`
-- `collected_date` (the date the labs were drawn — drives all trends)
-- `panel_title` (full document title for display, e.g. "CBC With Differential/Platelet; Iron and TIBC; Ferritin")
-- `storage_path`, `source_mime_type`, `source_filename`
-- `raw_extraction` jsonb (full unmodified AI output, kept for debugging + future verify UI)
-- `parse_status` text ('pending' | 'success' | 'failed'), `parse_error` text nullable
-- `created_at`, `updated_at`
+**Layer 2 — Content signature (post-parse, scoped to extracted date).**
+After parse succeeds in the edge function, compute `content_signature = collected_date + ":" + sorted(canonical_keys).join(",")`. Look for an existing `parse_status='success'` panel with the same `(user_id, collected_date, content_signature)`. If found, set the new panel to `parse_status='duplicate_pending'` and stash the matched panel id in `raw_extraction.duplicate_of`. No results inserted yet.
 
-**`bloodwork_results`** (one row per analyte value):
-- `id`, `user_id`, `panel_id` (cascade delete with panel), `collected_date` (denormalized for fast trend queries)
-- `panel_section` text — the heading the value appeared under in the document ("Lipid Panel", "Iron and TIBC", "CBC With Differential/Platelet"). Drives UI grouping.
-- `section_order` int, `result_order` int — preserve printed order within section
-- `analyte_name` text (raw, as printed: "Iron Bind.Cap.(TIBC)")
-- `canonical_key` text (`tibc`, `ldl_cholesterol`, `ferritin`) — the trend identity
-- `display_name` text ("TIBC", "LDL Cholesterol", "Ferritin")
-- `numeric_value` numeric, `unit` text
-- `reference_low` numeric, `reference_high` numeric, `reference_raw` text (for non-numeric refs like "Not Estab.")
-- `flag` text nullable (H/L/Abnormal if the lab marked it)
+Both layers block at save and ask the user what to do — never auto-discard, never silently keep both.
 
-Index: `bloodwork_results(user_id, canonical_key, collected_date)` — primary trend query path.
+## Flow
 
-RLS on both tables: `auth.uid() = user_id` for SELECT; INSERT/UPDATE/DELETE additionally `NOT is_read_only_user(auth.uid())`, matching existing custom-log tables.
+```text
+client picks file
+  │
+  ▼
+hash file (SubtleCrypto)
+query bloodwork_panels for (user, file_sha256, status ≠ failed)
+  │
+  ├─ match → DuplicateBlockedDialog:
+  │      "You already uploaded this file. It was logged for [extracted_date of match]."
+  │      [View existing] [Upload anyway] [Cancel]
+  │
+  └─ no match → upload bytes to storage
+                insert panel: collected_date=NULL, file_sha256=hash, parse_status='pending'
+                invoke parse-bloodwork
+                  │
+                  ▼
+            edge function:
+              parse with AI → get collected_date + sections
+              set collected_date on panel from extraction
+              compute content_signature
+              check for existing (user, collected_date, signature) with status='success'
+                  │
+                  ├─ match → parse_status='duplicate_pending', raw_extraction.duplicate_of=existing_id
+                  │            client sees duplicate_pending → DuplicateContentDialog:
+                  │              "These look like the same labs as [existing panel], collected [date]."
+                  │              [Replace existing] [Keep both] [Discard this one]
+                  │
+                  └─ no match → insert results, parse_status='success'
+                                inline confirmation to user: "Saved to [Mar 14, 2025] — view"
+```
 
-## File storage
+## Date-from-extraction changes
 
-New private bucket `bloodwork-files`. Storage RLS: read/write only inside `${auth.uid()}/`. Client uploads directly; DB stores `storage_path`. View opens a signed URL in a new tab.
+- `bloodwork_panels.collected_date` stays nullable, set by edge function from AI extraction (not by client at insert time).
+- Client insert no longer passes `collected_date`. The "upload row" is just the entrypoint — the day being viewed doesn't determine where the panel lands.
+- If extraction can't find a collection date, edge function leaves it null and sets `parse_status='success'` anyway with a `parse_error` note like "Couldn't find collection date — tap to set manually." Panel surfaces in a small "needs a date" bucket on today's view until the user assigns one. (Manual date-fix UI is out of scope for this round; just surfacing the unassigned state is enough.)
+- After successful parse, `useBloodworkPanelsForDate` queries the panel's actual extracted date, so the new panel "jumps" from the upload day to its real date. UX: while parsing, show a small inline "Reading your labs…" row on today's view; on success, replace it with a brief toast/inline confirmation `Saved to Mar 14, 2025 [view]` that links to that date.
+- `bloodwork_results.collected_date` is also set by edge function from the extracted date (already denormalized for fast trend queries).
 
-## Parsing pipeline
+## Schema changes
 
-New edge function `parse-bloodwork`:
+`bloodwork_panels`:
+- `file_sha256 text` — set by client on insert.
+- `content_signature text` — set by edge function after parse.
+- New allowed `parse_status` value: `duplicate_pending`.
+- Partial unique index for Layer 1: `unique (user_id, file_sha256) where parse_status <> 'failed' and file_sha256 is not null`.
+- **No unique index for Layer 2** — enforced purely by edge function, so the "Keep both" choice works.
 
-1. Client uploads file to bucket → gets `storage_path`.
-2. Client inserts a `bloodwork_panels` row with `parse_status='pending'` and the storage path, then calls the function with the panel id.
-3. Function downloads the file with the service role, base64-encodes, sends to `google/gemini-2.5-pro` via the AI gateway with a structured **tool call** (not "return JSON"). Tool name `extract_bloodwork`, parameters:
-   ```
-   { collected_date: string (YYYY-MM-DD),
-     panel_title: string,
-     sections: [{
-       section_title: string,
-       results: [{ analyte_name, numeric_value, unit,
-                   reference_low?, reference_high?, reference_raw?, flag? }]
-     }] }
-   ```
-   System prompt stays general (per project's semantic-prompting rule): extract every visible result, preserve units and section headings as printed, leave fields blank rather than guess. No enumerated analyte list, no per-lab heuristics.
-4. **Canonicalization pass** in the same function: a small lookup table in `supabase/functions/_shared/bloodwork-canonical.ts` mapping synonyms to a canonical key + display name (~80 common analytes — LDL/HDL/total cholesterol/triglycerides, ferritin/iron/TIBC/UIBC/iron saturation, full CBC, A1C, TSH/free T4/free T3, AST/ALT, glucose, etc.). Unknown analytes get a slug of the raw name (`iron_bind_cap_tibc`) plus the raw display — they still chart immediately, just won't merge with other labs' wording until a synonym is added.
-5. Bulk-insert `bloodwork_results`, flip the panel to `parse_status='success'` with `raw_extraction` saved. On failure: retry once with `openai/gpt-5` (matches existing AI fallback pattern), and if that also fails, set `parse_status='failed'` with the error message so the user sees it in the UI.
-6. Standard 402/429 surfacing to client.
+## Client actions on Layer 2 prompt
+
+- **Replace existing**: delete the old panel (cascades results + storage file via existing `deletePanel`), then flip new panel to `success` and bulk-insert results from `raw_extraction`.
+- **Keep both**: flip new panel to `success` and insert results. Allowed because no unique index blocks it.
+- **Discard this one**: delete the new panel + its storage file.
 
 ## UI
 
-- **Per-type input row**: when `value_type === 'panel'`, the input renders a file picker (accept `.pdf,image/*`) + spinner state ("Reading your labs…"). Same row layout as numeric/medication rows.
-- **Per-day log row** (collapsed): `[date] · {type name} · N results · 📎 view`. Trash icon for delete (cascades to results + storage object).
-- **Per-day log row** (expanded): results listed grouped by `panel_section` in printed order, each row showing `display_name · value unit · ref range · flag`. Section headings act as visual dividers.
-- **View original**: "view" link opens a fresh signed URL in a new tab.
-- **Failed parse state**: collapsed row shows "⚠ Couldn't parse — tap to retry"; tapping re-invokes the function against the same `storage_path`.
-- **Trends**: a thin adapter exposes each `canonical_key` in `bloodwork_results` as a chartable series for the existing custom-log trend builder. "Ferritin over time" works out of the box once two panels exist.
+- **`DuplicateBlockedDialog`** (Layer 1) — modal, three actions. Shows existing panel's filename, original upload time, and its extracted collection date.
+- **`DuplicateContentDialog`** (Layer 2) — modal, three actions. Side-by-side: existing panel title + result count + collection date vs new panel's same fields.
+- **`BloodworkUploadInput`**: adds the pre-upload SHA-256 hash step and Layer 1 dialog trigger. Stops passing `loggedDate` as the source-of-truth date; passes it only as a "view context" for the post-parse toast.
+- **Post-parse confirmation**: small non-blocking inline message on the upload row: `Saved to [Mar 14, 2025] · view`. If the extracted date == the day being viewed, the panel just appears in place and no jump message is needed.
+- **Unassigned-date state**: panels with `collected_date=null` and `parse_status='success'` show on today's view with a "no date found" label, deferred for manual fix later.
 
-## Out of scope for step 1
-- Inline verify-against-original UI (data captured in `raw_extraction` so we can build it later without re-parsing).
-- AI-driven canonicalization (lookup map only).
-- Out-of-range alerting beyond storing `flag`.
-- Demo data for the new type.
+## Hooks
 
-## Technical notes
-- New edge function: `supabase/functions/parse-bloodwork/index.ts` + shared canonical map in `supabase/functions/_shared/bloodwork-canonical.ts`.
-- New hooks: `useBloodworkPanels` (per-day + per-type, optimistic delete mirroring `useCustomLogEntriesForType`).
-- New components: `BloodworkUploadRow`, `BloodworkPanelEntry` (the per-day expanded grouped view).
-- `CreateLogTypeDialog`: add a third radio option "Document upload" → `value_type='panel'`.
-- Number coercion (`Number(v)`) on every numeric field at ingest.
-- Memory entry after build: `mem://features/bloodwork-panel-system` documenting the panel/results split, section grouping, canonical-key trend strategy, and the synonym-map vs exercise-catalog distinction.
+`useBloodworkPanels.ts`:
+- `uploadAndParse` mutation:
+  - Hash file → `findByHash(hash)` (global per user, no date filter).
+  - If hit → throw a typed `DuplicateFileError` carrying the matched panel; component opens Layer 1 dialog.
+  - Else upload, insert panel with `collected_date=null` and `file_sha256`, invoke function, return the panel id and (after the function resolves) the extracted `collected_date`.
+- `resolveDuplicate(panelId, action, existingPanelId?)` mutation for the Layer 2 dialog.
+- `useDuplicatePendingPanels()` — small global query so the Layer 2 dialog can open on whatever day the panel actually landed on.
+- Invalidate `bloodwork-panels` for both the old viewing date and the newly extracted date after success.
+
+## Edge function changes
+
+`parse-bloodwork`:
+- After parse: set `collected_date` on the panel from extraction.
+- Compute `content_signature`.
+- Check for `(user_id, collected_date, content_signature, parse_status='success')` match → if found, set `parse_status='duplicate_pending'`, write `raw_extraction.duplicate_of`, return early without inserting results.
+- Else: insert `bloodwork_results` (with their own `collected_date` from extraction) and set `parse_status='success'`.
+- If extraction returns no date: leave `collected_date` null, write a short note to `parse_error`, still `parse_status='success'`.
+
+## Out of scope
+
+- Cross-date duplicate detection beyond bytes-hash (covered by Layer 1).
+- Fuzzy matching on value drift (e.g. AI parsed slightly different numbers).
+- Manual date-fix UI for unassigned panels (just surface them; fix later).
+- Bulk dedup sweep of historical panels.
+
+## Files touched
+
+- New migration: add `file_sha256`, `content_signature` columns; Layer 1 partial unique index; allow `duplicate_pending` status.
+- `supabase/functions/parse-bloodwork/index.ts`: set `collected_date` from extraction, signature computation, duplicate branch.
+- `src/hooks/useBloodworkPanels.ts`: pre-upload hash check + `DuplicateFileError`, drop client-side `collected_date`, `resolveDuplicate` mutation, `useDuplicatePendingPanels`, dual-date cache invalidation.
+- `src/components/BloodworkUploadInput.tsx`: SHA-256 hash, Layer 1 dialog wiring, post-parse confirmation showing extracted date.
+- New: `src/components/DuplicateBlockedDialog.tsx`, `src/components/DuplicateContentDialog.tsx`.
+- `src/components/CustomLogEntriesView.tsx` (or `BloodworkPanelGroup.tsx`): surface `duplicate_pending` panels, open Layer 2 dialog; surface unassigned-date panels.
+- Update `mem://features/bloodwork-panel-system` to document: extracted-date as source of truth, two-layer dedup contract, and the upload-day vs collection-day UX.
