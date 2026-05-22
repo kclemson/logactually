@@ -66,7 +66,6 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   const [createTypeOpen, setCreateTypeOpen] = useState(false);
   const [createMedicationOpen, setCreateMedicationOpen] = useState(false);
   const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
-  const [selectedMedTypeId, setSelectedMedTypeId] = useState<string | null>(null);
   const [showInputDialog, setShowInputDialog] = useState(false);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>(getStoredViewMode);
@@ -77,6 +76,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   const dateStr = initialDate;
   const selectedDate = parseISO(initialDate);
   const isTodaySelected = isToday(selectedDate);
+  const today = format(new Date(), 'yyyy-MM-dd');
 
   const { logTypes, isLoading, createType, recentUsage } = useCustomLogTypes();
   const { exportCustomLog } = useExportData();
@@ -105,22 +105,14 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
     selectedType?.value_type,
   );
 
-  // Medication types and By Meds eligibility
-  const medicationTypes = useMemo(
-    () => logTypes.filter((t) => t.value_type === 'medication'),
-    [logTypes]
+  // In by_type mode, new entries land on today's date (no date navigator).
+  const logTargetDate = viewMode === 'by_type' ? today : dateStr;
+
+  // Entries for the dialog type (used by MedicationEntryInput to show today's logged times).
+  // In date mode we reuse `entries` (already scoped to dateStr); in by_type we fetch by type and filter.
+  const { entries: dialogTypeEntries } = useCustomLogEntriesForType(
+    viewMode === 'by_type' ? effectiveTypeId : null
   );
-  const showMedView = medicationTypes.length >= 2;
-
-  // Guard: if med view no longer qualifies, fall back to 'date'
-  const effectiveViewMode = viewMode === 'medication' && !showMedView ? 'date' : viewMode;
-  const activeTypeId = viewMode === 'medication' ? selectedMedTypeId : null;
-
-  // Used for medication entry dialog (today's entry count / logged times)
-  const {
-    entries: typeEntries,
-    createEntry: createTypeEntry,
-  } = useCustomLogEntriesForType(activeTypeId);
 
   // Used for the edit dialog — scoped to the type being edited, regardless of view mode
   const { entries: editingTypeEntries } = useCustomLogEntriesForType(
@@ -155,11 +147,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
 
   const editingLogType = editingEntry ? logTypes.find(t => t.id === editingEntry.log_type_id) : null;
 
-  // Dialog type: derived from active view mode
-  const dialogType =
-    effectiveViewMode === 'medication'
-      ? logTypes.find((t) => t.id === selectedMedTypeId)
-      : selectedType;
+  const dialogType = selectedType;
 
   function handleViewModeChange(mode: ViewMode) {
     setViewMode(mode);
@@ -178,9 +166,12 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
 
   const hasLogTypes = !isLoading && sortedLogTypes.length > 0;
 
-  // Today's entries for the selected medication (used in dialog)
+  // Today's entries for the selected medication (used in dialog).
+  // In date mode `entries` is already today's (if dateStr=today); in by_type we filter dialogTypeEntries to today.
   const todayMedEntries = dialogType
-    ? entries.filter((e) => e.log_type_id === dialogType.id)
+    ? viewMode === 'by_type'
+      ? dialogTypeEntries.filter((e) => e.log_type_id === dialogType.id && e.logged_date === today)
+      : entries.filter((e) => e.log_type_id === dialogType.id)
     : [];
 
   const swipeHandlers = useSwipeNavigation(
