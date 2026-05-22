@@ -1,5 +1,6 @@
 import { format, parseISO } from 'date-fns';
-import { Plus } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, ChevronRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { CustomLogGroupTrend } from '@/components/CustomLogGroupTrend';
@@ -44,12 +45,20 @@ export function CustomLogByTypeView({ logTypes, isLoading, isReadOnly, onLogNew 
 }
 
 function TypeCard({ logType, isReadOnly, onLogNew }: { logType: CustomLogType; isReadOnly: boolean; onLogNew: (id: string) => void }) {
+  const [expanded, setExpanded] = useState(false);
   const meta = logType.value_type === 'medication' ? getMedicationMeta(logType) : null;
 
   return (
     <div className="rounded-lg border border-border/60">
-      <div className="flex items-baseline justify-between gap-2 px-3 py-2 border-b border-border/50">
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className={`w-full flex items-baseline justify-between gap-2 px-3 py-2 text-left hover:bg-muted/40 transition-colors ${expanded ? 'border-b border-border/50' : ''}`}
+      >
         <div className="flex items-baseline gap-2 min-w-0">
+          <ChevronRight
+            className={`h-3.5 w-3.5 shrink-0 self-center text-muted-foreground transition-transform ${expanded ? 'rotate-90' : ''}`}
+          />
           <span className="text-sm font-medium truncate">{logType.name}</span>
           {logType.unit && <span className="text-xs text-muted-foreground">{logType.unit}</span>}
           {meta && <span className="text-xs text-muted-foreground/70">· {meta}</span>}
@@ -58,16 +67,18 @@ function TypeCard({ logType, isReadOnly, onLogNew }: { logType: CustomLogType; i
           <Button
             variant="ghost" size="sm"
             className="h-7 px-2 text-xs text-teal-600 dark:text-teal-400 hover:text-teal-700 hover:bg-teal-500/10"
-            onClick={() => onLogNew(logType.id)}
+            onClick={(e) => { e.stopPropagation(); onLogNew(logType.id); }}
           >
             <Plus className="h-3 w-3 mr-1" />
             Log
           </Button>
         )}
-      </div>
-      <div className="p-3">
-        <TypeBody logType={logType} isReadOnly={isReadOnly} />
-      </div>
+      </button>
+      {expanded && (
+        <div className="p-3">
+          <TypeBody logType={logType} isReadOnly={isReadOnly} />
+        </div>
+      )}
     </div>
   );
 }
