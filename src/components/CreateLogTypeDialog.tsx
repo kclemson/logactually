@@ -12,14 +12,15 @@ interface CreateLogTypeDialogProps {
   existingNames?: string[];
 }
 
-const VALUE_TYPE_OPTIONS: { value: 'numeric' | 'text'; label: string; description: string }[] = [
+const VALUE_TYPE_OPTIONS: { value: 'numeric' | 'text' | 'panel'; label: string; description: string }[] = [
   { value: 'numeric', label: 'Numeric', description: 'A single number (e.g. body weight)' },
   { value: 'text', label: 'Text only', description: 'Free-form text' },
+  { value: 'panel', label: 'Document upload', description: 'Upload a PDF or image (e.g. bloodwork) and have its values extracted automatically' },
 ];
 
 export function CreateLogTypeDialog({ open, onOpenChange, onSubmit, isLoading, existingNames = [] }: CreateLogTypeDialogProps) {
   const [name, setName] = useState('');
-  const [valueType, setValueType] = useState<'numeric' | 'text'>('numeric');
+  const [valueType, setValueType] = useState<'numeric' | 'text' | 'panel'>('numeric');
   const [unit, setUnit] = useState('');
   const [textMultiline, setTextMultiline] = useState(false);
 
@@ -29,7 +30,10 @@ export function CreateLogTypeDialog({ open, onOpenChange, onSubmit, isLoading, e
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || isDuplicate) return;
-    const finalType: ValueType = valueType === 'text' && textMultiline ? 'text_multiline' : valueType;
+    const finalType: ValueType =
+      valueType === 'text' && textMultiline ? 'text_multiline' :
+      valueType === 'panel' ? 'panel' :
+      valueType;
     onSubmit(name.trim(), finalType, showUnit && unit.trim() ? unit.trim() : undefined);
     setName('');
     setValueType('numeric');

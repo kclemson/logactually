@@ -18,6 +18,7 @@ import { CreateLogTypeDialog } from '@/components/CreateLogTypeDialog';
 import { CreateMedicationDialog } from '@/components/CreateMedicationDialog';
 import { LogTemplatePickerDialog } from '@/components/LogTemplatePickerDialog';
 import { LogEntryInput } from '@/components/LogEntryInput';
+import { BloodworkUploadInput } from '@/components/BloodworkUploadInput';
 import { MedicationEntryInput } from '@/components/MedicationEntryInput';
 import { CustomLogEntriesView } from '@/components/CustomLogEntriesView';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
@@ -338,6 +339,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
             onExport={effectiveViewMode === 'medication' ? exportCustomLog : undefined}
             isReadOnly={isReadOnly}
             medicationsOnly={effectiveViewMode === 'medication'}
+            dateStr={dateStr}
           />
         </div>
       </div>
@@ -388,6 +390,17 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                 isLoading={effectiveViewMode === 'date' ? createEntry.isPending : createTypeEntry.isPending}
                 disabled={isReadOnly}
               />
+            ) : dialogType.value_type === 'panel' ? (
+              <div className="rounded-lg border border-border bg-card p-3">
+                <BloodworkUploadInput
+                  label={dialogType.name}
+                  logTypeId={dialogType.id}
+                  loggedDate={dateStr}
+                  onSuccess={() => setShowInputDialog(false)}
+                  onCancel={() => setShowInputDialog(false)}
+                  disabled={isReadOnly}
+                />
+              </div>
             ) : (
               <div className="rounded-lg border border-border bg-card p-3">
                 <LogEntryInput
