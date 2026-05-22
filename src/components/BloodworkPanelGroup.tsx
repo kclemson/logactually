@@ -162,9 +162,9 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
                       ? r.reference_raw
                       : '—';
                 return (
-                  <div key={r.id} className="grid grid-cols-[1fr_3.5rem_auto] items-baseline gap-x-3 py-0.5 text-xs">
+                  <div key={r.id} className="grid grid-cols-[minmax(0,1fr)_6rem_auto] items-baseline gap-x-3 py-0.5 text-xs">
                     <span className="truncate">{r.display_name}</span>
-                    <div className="tabular-nums whitespace-nowrap justify-self-start">
+                    <span className="tabular-nums whitespace-nowrap">
                       <span className={cn(
                         r.flag === 'H' || r.flag === 'High' ? 'text-orange-600 dark:text-orange-400 font-medium' :
                         r.flag === 'L' || r.flag === 'Low' ? 'text-blue-600 dark:text-blue-400 font-medium' :
@@ -178,14 +178,13 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
                           'text-muted-foreground'
                         )}>{r.flag}</span>
                       )}
-                    </div>
-
+                    </span>
                     <span className="text-muted-foreground tabular-nums whitespace-nowrap text-[10px]">
                       {refRange}
                     </span>
                   </div>
-
                 );
+
               })}
             </div>
           ))}
