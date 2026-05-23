@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, ExternalLink, Trash2, AlertCircle, Loader2, RefreshCw, ChevronsDownUp, ChevronsUpDown, Search, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, ExternalLink, Trash2, AlertCircle, Loader2, RefreshCw, ChevronsDownUp, ChevronsUpDown, Search, X, Pin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useBloodworkPanelsForDate, type BloodworkPanelWithResults } from '@/hooks/useBloodworkPanels';
+import { usePinnedBloodworkCharts } from '@/hooks/usePinnedBloodworkCharts';
 import { cn } from '@/lib/utils';
 
 interface BloodworkPanelGroupProps {
