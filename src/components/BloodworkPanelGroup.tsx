@@ -232,7 +232,7 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
     if (flatResults.length === 0) return null;
     return (
       <div className="pb-1">
-        <div className="grid grid-cols-[minmax(0,1fr)_5rem_4rem] items-baseline gap-x-3 text-xs">
+        <div className="grid grid-cols-[minmax(0,1fr)_3.5rem_3.5rem] items-baseline gap-x-3 text-xs">
           {flatResults.map((r) => {
             const refRange =
               r.reference_low != null && r.reference_high != null
