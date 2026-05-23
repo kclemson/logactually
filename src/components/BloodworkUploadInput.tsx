@@ -124,8 +124,8 @@ export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, 
   };
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-3 min-h-0 max-h-[85vh] max-h-[85dvh]">
+      <div className="shrink-0 flex items-center justify-between">
         <span className="text-xs font-medium text-muted-foreground">{label}</span>
         {onCancel && (
           <Button type="button" size="icon" variant="ghost" className="h-7 w-7 -mr-1.5" onClick={onCancel} disabled={inFlight}>
