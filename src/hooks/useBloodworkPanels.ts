@@ -97,17 +97,20 @@ export function useBloodworkPanelsForDate(dateStr: string) {
     queryKey: ['bloodwork-panels', dateStr, user?.id],
     enabled: !!user,
     queryFn: async () => {
-      // Show panels collected on this date PLUS in-flight panels on this date (pending/duplicate_pending/failed/missing-date)
-      // so the user sees their upload progress even before extraction resolves a date.
+      // Show panels collected on this date PLUS in-flight (pending) panels with no
+      // collected_date yet, so the user sees their upload progress before extraction
+      // resolves a date. Failed panels are intentionally excluded — they're surfaced
+      // under the Bloodwork log type in Settings instead.
       const { data: byDate } = await supabase
         .from('bloodwork_panels')
         .select('*')
-        .eq('collected_date', dateStr);
+        .eq('collected_date', dateStr)
+        .neq('parse_status', 'failed');
 
       const { data: inFlight } = await supabase
         .from('bloodwork_panels')
         .select('*')
-        .in('parse_status', ['pending', 'failed'])
+        .eq('parse_status', 'pending')
         .is('collected_date', null);
 
       const merged = new Map<string, BloodworkPanel>();
