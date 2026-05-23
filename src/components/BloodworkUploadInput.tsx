@@ -167,7 +167,7 @@ export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, 
       </button>
 
       {hasJobs && (
-        <div className="rounded-lg border border-border bg-muted/30 divide-y divide-border/60">
+        <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-border bg-muted/30 divide-y divide-border/60">
           {jobs.map((job) => (
             <JobRow
               key={job.id}
