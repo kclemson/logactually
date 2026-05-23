@@ -89,15 +89,35 @@ function TypeCard({
   onDeleteEntry?: (id: string) => void;
   onUpdateEntry?: (params: { id: string; numeric_value?: number | null; numeric_value_2?: number | null; text_value?: string | null }) => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
-  const meta = logType.value_type === 'medication' ? getMedicationMeta(logType) : null;
   const isPanel = logType.value_type === 'panel';
+  const scope = logType.id;
+  const [expanded, setExpanded] = useState(() => readTypeExpanded(logType.id));
+  const meta = logType.value_type === 'medication' ? getMedicationMeta(logType) : null;
 
   // Panel-only header state (filter query + collapse-all toggle), lifted up so it can sit in the header.
-  const [panelQuery, setPanelQuery] = useState('');
-  const [panelAllCollapsed, setPanelAllCollapsed] = useState(false);
-  // Bump to broadcast collapse-all toggles down to PanelHistory.
-  const [panelCollapseTick, setPanelCollapseTick] = useState(0);
+  const [panelQuery, setPanelQuery] = useState(() => (isPanel ? readPanelQuery(scope) : ''));
+  const [panelAllCollapsed, setPanelAllCollapsed] = useState(() => (isPanel ? readPanelAllCollapsed(scope) : false));
+
+  const handleToggleExpanded = () => {
+    setExpanded((v) => {
+      const next = !v;
+      writeTypeExpanded(logType.id, next);
+      return next;
+    });
+  };
+
+  const handleQueryChange = (q: string) => {
+    setPanelQuery(q);
+    writePanelQuery(scope, q);
+  };
+
+  const handleToggleAll = () => {
+    setPanelAllCollapsed((v) => {
+      const next = !v;
+      writePanelAllCollapsed(scope, next);
+      return next;
+    });
+  };
 
   return (
     <div className="rounded-lg border border-border/60">
@@ -106,7 +126,7 @@ function TypeCard({
       >
         <button
           type="button"
-          onClick={() => setExpanded((v) => !v)}
+          onClick={handleToggleExpanded}
           className="flex items-baseline gap-2 min-w-0 flex-1 text-left hover:opacity-80 transition-opacity"
         >
           <ChevronRight
@@ -119,12 +139,9 @@ function TypeCard({
         {expanded && isPanel && (
           <PanelHeaderControls
             query={panelQuery}
-            onQueryChange={setPanelQuery}
+            onQueryChange={handleQueryChange}
             allCollapsed={panelAllCollapsed}
-            onToggleAll={() => {
-              setPanelAllCollapsed((v) => !v);
-              setPanelCollapseTick((t) => t + 1);
-            }}
+            onToggleAll={handleToggleAll}
           />
         )}
         {!isReadOnly && (
@@ -139,7 +156,8 @@ function TypeCard({
         )}
       </div>
       {expanded && (
-        <div className="p-3">
+        <div className="p-3 space-y-3">
+          {isPanel && <PinnedBloodworkChartsSection query={panelQuery} />}
           <TypeBody
             logType={logType}
             isReadOnly={isReadOnly}
@@ -148,7 +166,6 @@ function TypeCard({
             onUpdateEntry={onUpdateEntry}
             panelQuery={panelQuery}
             panelAllCollapsed={panelAllCollapsed}
-            panelCollapseTick={panelCollapseTick}
           />
         </div>
       )}
