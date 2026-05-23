@@ -1,15 +1,22 @@
 import { format, parseISO } from 'date-fns';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Plus, ChevronRight, Search, X, ChevronsUpDown, ChevronsDownUp } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { CustomLogGroupTrend } from '@/components/CustomLogGroupTrend';
 import { BloodworkPanelRow, panelHasMatch } from '@/components/BloodworkPanelGroup';
+import { PinnedBloodworkChartsSection } from '@/components/PinnedBloodworkChartsSection';
 import { useBloodworkPanelsForType } from '@/hooks/useBloodworkPanelsForType';
 import { useBloodworkPanelsForDate } from '@/hooks/useBloodworkPanels';
 import { useCustomLogEntriesForType } from '@/hooks/useCustomLogEntriesForType';
 import { CustomLogTypeDayRows } from '@/components/CustomLogEntriesView';
 import { getMedicationMeta } from '@/lib/medication-meta';
+import {
+  readTypeExpanded, writeTypeExpanded,
+  readPanelQuery, writePanelQuery,
+  readPanelAllCollapsed, writePanelAllCollapsed,
+  readPanelOverrides, writePanelOverrides,
+} from '@/lib/bloodwork-ui-state';
 import type { CustomLogType } from '@/hooks/useCustomLogTypes';
 import type { CustomLogEntry } from '@/hooks/useCustomLogEntries';
 
