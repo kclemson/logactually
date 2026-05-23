@@ -79,7 +79,7 @@ export function CustomLogTypeRow({
                 <button
                   type="button"
                   aria-label="Retry parse"
-                  className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-50"
+                  className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-50"
                   disabled={retrying}
                   onClick={() => retryParse.mutate(p.id)}
                 >
