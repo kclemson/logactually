@@ -65,6 +65,9 @@ export function BloodworkPanelToolbar({
           onChange={(e) => onQueryChange(e.target.value)}
           placeholder="Filter results…"
           autoComplete="off"
+          spellCheck={false}
+          autoCorrect="off"
+          autoCapitalize="off"
           className="w-full h-7 pl-7 pr-7 text-xs rounded border border-border bg-background placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring"
         />
         {query && (
