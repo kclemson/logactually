@@ -124,8 +124,8 @@ export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, 
   };
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-3 min-h-0 max-h-[85vh] max-h-[85dvh]">
+      <div className="shrink-0 flex items-center justify-between">
         <span className="text-xs font-medium text-muted-foreground">{label}</span>
         {onCancel && (
           <Button type="button" size="icon" variant="ghost" className="h-7 w-7 -mr-1.5" onClick={onCancel} disabled={inFlight}>
@@ -147,7 +147,7 @@ export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, 
         type="button"
         onClick={handlePick}
         disabled={disabled || inFlight}
-        className="w-full rounded-lg border-2 border-dashed border-border hover:border-foreground/30 hover:bg-muted/30 transition-colors py-6 px-4 flex flex-col items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="shrink-0 w-full rounded-lg border-2 border-dashed border-border hover:border-foreground/30 hover:bg-muted/30 transition-colors py-6 px-4 flex flex-col items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {inFlight ? (
           <>
@@ -167,7 +167,7 @@ export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, 
       </button>
 
       {hasJobs && (
-        <div className="rounded-lg border border-border bg-muted/30 divide-y divide-border/60">
+        <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-border bg-muted/30 divide-y divide-border/60">
           {jobs.map((job) => (
             <JobRow
               key={job.id}
@@ -183,7 +183,7 @@ export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, 
       )}
 
       {hasJobs && (
-        <div className="flex justify-end">
+        <div className="shrink-0 flex justify-end">
           <Button type="button" size="sm" onClick={handleDone} disabled={inFlight}>
             Done
           </Button>
