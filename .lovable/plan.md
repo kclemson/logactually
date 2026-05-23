@@ -1,31 +1,23 @@
-# Move failed bloodwork out of the daily log view
+# Fix retry UX in Settings failed-bloodwork list
 
 ## Problem
+Clicking the retry icon on a failed bloodwork upload in Settings makes the row disappear immediately, even while the parse is still running. If the parse fails again, the row only reappears after the refetch settles — and to the user it looks like the retry did nothing / lost their file.
 
-A failed bloodwork upload currently appears as a row in the custom-log day view for whatever day it was uploaded (because `collected_date` is `null` after a failed parse, and `useBloodworkPanelsForDate` deliberately surfaces null-date failed panels as "in-flight"). That's misleading — a failed parse isn't really an entry on that day, and the retry/delete affordance belongs with the Bloodwork log type itself in Settings.
+Root cause: `useFailedBloodworkPanels.retryParse` has an `onMutate` that optimistically filters the panel out of the failed list. Since the list is "failed only", removing it on mutate hides it for the entire duration of the parse.
 
-## Changes
+## Change
+`src/hooks/useBloodworkPanels.ts`, `useFailedBloodworkPanels.retryParse`:
+- Remove `onMutate` and `onError` (no more optimistic removal).
+- Keep `onSettled` invalidation so the list refreshes once the edge function returns.
+- The retry button in `CustomLogTypeRow` already shows a `Loader2` spinner while `retryParse.isPending && variables === p.id`, so the user gets immediate feedback that the retry is in flight, and the row stays visible until the real status is known.
 
-### 1. Stop surfacing failed panels in the daily view
-`src/hooks/useBloodworkPanels.ts`, `useBloodworkPanelsForDate`:
-- Change the `inFlight` query from `.in('parse_status', ['pending', 'failed'])` to just `.eq('parse_status', 'pending')`.
-- Update the comment on the merge block accordingly.
-- Result: failed panels with no `collected_date` no longer appear in any day view. Failed panels that DO have a `collected_date` (rare — parse populated date then failed downstream) also drop out, since we'll want a single canonical place to manage failed uploads.
+Result:
+- Click retry → spinner appears on that row's retry icon, row stays put.
+- Parse succeeds → row disappears (no longer failed).
+- Parse fails again → row stays with updated `parse_error`.
 
-### 2. Surface failed panels under the Bloodwork log type in Settings
-- New hook `useFailedBloodworkPanels(logTypeId)` in `src/hooks/useBloodworkPanels.ts`: selects all `bloodwork_panels` for the current user where `log_type_id = logTypeId` and `parse_status = 'failed'`, ordered by `created_at desc`.
-- In `src/components/CustomLogTypeRow.tsx`, when `type.value_type === 'panel'`:
-  - Call the hook.
-  - If there are failed panels, render a small inline list directly beneath the row (indented, muted styling consistent with existing settings rows). Each entry shows: filename (or "Untitled upload"), upload date, the `parse_error` message, plus a retry icon and a delete icon.
-  - Retry calls the existing `retryParse` mutation; delete calls the existing `deletePanel` mutation. Both already exist in `useBloodworkPanels.ts`.
-  - If there are no failed panels, render nothing extra — no empty state.
-
-### Technical notes
-- No DB or RLS changes.
-- No edge function changes.
-- The optimistic-update behavior added to `retryParse` last turn still works here — clicking retry from Settings will flip the row to "parsing…" immediately, then either disappear (on success, since it's no longer failed) or stay with an updated error message.
-- Keep wiring contained to `CustomLogTypeRow` so other log-type rows are unaffected.
+`deletePanel` keeps its optimistic removal (delete is user-initiated and final, so instant removal is the correct UX there).
 
 ## Out of scope
-- Why parses are failing in the first place (separate investigation).
-- Any change to how successful bloodwork panels render in the day view.
+- Daily-view behavior (already correct).
+- Why parses fail.
