@@ -7,11 +7,13 @@ interface ImportExportSectionProps {
   showWeights: boolean;
   showCustomLogs: boolean;
   hasCustomLogTypes: boolean;
+  hasBloodworkLogType: boolean;
   isReadOnly: boolean;
 }
 
-export function ImportExportSection({ showWeights, showCustomLogs, hasCustomLogTypes, isReadOnly }: ImportExportSectionProps) {
+export function ImportExportSection({ showWeights, showCustomLogs, hasCustomLogTypes, hasBloodworkLogType, isReadOnly }: ImportExportSectionProps) {
   const { isExporting, exportFoodLog, exportWeightLog, exportCustomLog, exportBloodwork, exportBloodworkFiles } = useExportData();
+
 
   return (
     <CollapsibleSection title="Import and Export" icon={ArrowDownUp} storageKey="settings-export" iconClassName="text-zinc-500 dark:text-zinc-400">
@@ -50,7 +52,7 @@ export function ImportExportSection({ showWeights, showCustomLogs, hasCustomLogT
             </button>
           </div>
         )}
-        {!isReadOnly && (
+        {hasBloodworkLogType && !isReadOnly && (
           <>
             <div className="flex items-center justify-between">
               <p className="text-xs text-muted-foreground">Export bloodwork results to CSV</p>
