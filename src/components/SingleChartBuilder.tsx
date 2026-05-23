@@ -69,13 +69,14 @@ interface SingleChartBuilderProps {
 }
 
 export function SingleChartBuilder({ period, onSave, isSaving, initialDsl, initialTitle, initialNote }: SingleChartBuilderProps) {
-  const [source, setSource] = useState<"food" | "exercise">(initialDsl?.source ?? "food");
+  const [source, setSource] = useState<"food" | "exercise">((initialDsl?.source as "food" | "exercise") ?? "food");
   const [metric, setMetric] = useState(initialDsl?.metric ?? "calories");
   const [chartType, setChartType] = useState<"bar" | "line" | "area">(initialDsl?.chartType ?? "bar");
   const [groupBy, setGroupBy] = useState<ChartDSL["groupBy"]>(initialDsl?.groupBy ?? "date");
   const [aggregation, setAggregation] = useState<ChartDSL["aggregation"]>(initialDsl?.aggregation ?? "sum");
   const [window, setWindow] = useState(initialDsl?.window ?? 0);
-  const [color, setColor] = useState(SOURCE_DEFAULT_COLORS[initialDsl?.source ?? "food"]);
+  const [color, setColor] = useState(SOURCE_DEFAULT_COLORS[(initialDsl?.source as "food" | "exercise") ?? "food"]);
+
   const [exerciseKey, setExerciseKey] = useState<string | undefined>(initialDsl?.filter?.exerciseKey);
   const [exerciseSubtype, setExerciseSubtype] = useState<string | undefined>(initialDsl?.filter?.exerciseSubtype);
 

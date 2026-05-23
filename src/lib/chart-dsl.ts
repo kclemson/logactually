@@ -209,9 +209,16 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
     dsl = { ...dsl, compare: { ...dsl.compare, metric: METRIC_COMPAT[dsl.compare.metric] } };
   }
 
+  // ── Bloodwork branch ────────────────────────────────────
+  // Sparse, raw point series — one point per panel. No aggregation, no calendar fill.
+  if (dsl.source === "bloodwork") {
+    return executeBloodworkDSL(dsl, dailyTotals);
+  }
+
   // Collect all dates from the relevant source
   const sourceMap = dsl.source === "food" ? dailyTotals.food : dailyTotals.exercise;
   let dates = Object.keys(sourceMap).sort();
+
 
   // Apply filters
   if (dsl.filter?.dayOfWeek) {
@@ -222,7 +229,7 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
   // Extract values per date
   const dateValues: Array<{ date: string; value: number }> = [];
   for (const d of dates) {
-    const v = extractValue(dsl.source, dsl.metric, dsl.derivedMetric, dailyTotals, d);
+    const v = extractValue(dsl.source as "food" | "exercise", dsl.metric, dsl.derivedMetric, dailyTotals, d);
     if (v !== null) {
       dateValues.push({ date: d, value: v });
     }
@@ -241,7 +248,8 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
         let cmpVal: number | null = null;
         let cmpMetric: string | undefined;
         if (dsl.compare) {
-          const cmpSource = dsl.compare.source ?? dsl.source;
+          const cmpSource = (dsl.compare.source ?? dsl.source) as "food" | "exercise";
+
           cmpMetric = METRIC_COMPAT[dsl.compare.metric] ?? dsl.compare.metric;
           cmpVal = extractValue(cmpSource, cmpMetric, undefined, dailyTotals, date);
           if (cmpVal !== null) finalValue -= cmpVal;
@@ -382,7 +390,7 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
         let finalValue = value;
         let cmpVal: number | null = null;
         if (dsl.compare) {
-          const cmpSource = dsl.compare.source ?? dsl.source;
+          const cmpSource = (dsl.compare.source ?? dsl.source) as "food" | "exercise";
           weekCmpMetric = METRIC_COMPAT[dsl.compare.metric] ?? dsl.compare.metric;
           cmpVal = extractValue(cmpSource, weekCmpMetric, undefined, dailyTotals, date);
           if (cmpVal !== null) finalValue -= cmpVal;
@@ -739,3 +747,50 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
 
   return chartSpec;
 }
+
+// ── Bloodwork executor ─────────────────────────────────────
+// Sparse raw-point series: one point per panel, X-axis = collected_date.
+// Carries reference range (from most recent point) + per-point flag for renderer.
+function executeBloodworkDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
+  const points = (dailyTotals.bloodwork ?? [])
+    .slice()
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  const dataPoints = points.map((p) => ({
+    rawDate: p.date,
+    label: format(new Date(`${p.date}T12:00:00`), "MMM yyyy"),
+    value: p.value,
+    _flag: p.flag,
+    _details: [
+      ...(p.refLow != null && p.refHigh != null
+        ? [{ label: "ref", value: `${p.refLow}–${p.refHigh}${p.unit ? ` ${p.unit}` : ""}` }]
+        : []),
+      ...(p.flag ? [{ label: "", value: p.flag }] : []),
+    ],
+  }));
+
+  // Pull reference range from the most recent point (last in sorted order) that has one.
+  let referenceRange: { low: number | null; high: number | null; unit?: string | null } | undefined;
+  for (let i = points.length - 1; i >= 0; i--) {
+    const p = points[i];
+    if (p.refLow != null && p.refHigh != null) {
+      referenceRange = { low: p.refLow, high: p.refHigh, unit: p.unit };
+      break;
+    }
+  }
+
+  return {
+    chartType: "line",
+    title: dsl.title,
+    aiNote: dsl.aiNote ?? undefined,
+    xAxis: { field: "label", label: "Date" },
+    yAxis: { label: points[0]?.unit ?? "value" },
+    color: "hsl(0 65% 50%)",
+    data: dataPoints,
+    dataKey: "value",
+    dataSource: "bloodwork",
+    groupBy: "date",
+    referenceRange,
+  };
+}
+

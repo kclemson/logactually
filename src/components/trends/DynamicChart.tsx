@@ -1,7 +1,8 @@
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  LabelList, ReferenceLine, ComposedChart, Legend,
+  LabelList, ReferenceLine, ReferenceArea, ComposedChart, Legend,
 } from "recharts";
+
 import { ChartCard } from "./ChartCard";
 import { CompactChartTooltip } from "./CompactChartTooltip";
 import { useChartInteraction } from "@/hooks/useChartInteraction";
@@ -45,8 +46,11 @@ export interface ChartSpec {
   dataKey: string;
   valueFormat?: "integer" | "decimal1" | "duration_mmss" | "none";
   referenceLine?: { value: number; label?: string };
-  dataSource?: "food" | "exercise" | "custom" | "mixed";
+  dataSource?: "food" | "exercise" | "custom" | "mixed" | "bloodwork";
   groupBy?: "date" | "dayOfWeek" | "hourOfDay" | "weekdayVsWeekend" | "week" | "item" | "category" | "dayClassification";
+  /** Optional shaded reference band (e.g. bloodwork normal range) drawn under the series. */
+  referenceRange?: { low: number | null; high: number | null; unit?: string | null };
+
   verification?: {
     type: "daily" | "aggregate";
     source: "food" | "exercise";
@@ -281,6 +285,21 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
     />
   ) : null;
 
+  const isBloodwork = spec.dataSource === "bloodwork";
+  const referenceAreaEl = spec.referenceRange && spec.referenceRange.low != null && spec.referenceRange.high != null ? (
+    <ReferenceArea
+      y1={spec.referenceRange.low}
+      y2={spec.referenceRange.high}
+      fill="hsl(142 71% 45%)"
+      fillOpacity={0.12}
+      stroke="hsl(142 71% 45%)"
+      strokeOpacity={0.25}
+      strokeDasharray="2 3"
+      ifOverflow="extendDomain"
+    />
+  ) : null;
+
+
   // Render Series A element
   const renderSeriesA = () => {
     const yAxisId = isDualSeries ? "left" : undefined;
@@ -310,9 +329,15 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
             strokeWidth={1.5}
             dot={isDualSeries ? false : (props: any) => {
               const val = props.payload?.[dataKey];
-              if (val == null || val === 0) return <g key={props.key} />;
-              return <circle key={props.key} cx={props.cx} cy={props.cy} r={2} fill={color} />;
+              if (val == null) return <g key={props.key} />;
+              if (!isBloodwork && val === 0) return <g key={props.key} />;
+              const flag = props.payload?._flag;
+              const fill = flag === "High" ? "hsl(38 92% 50%)"
+                : flag === "Low" ? "hsl(217 91% 60%)"
+                : color;
+              return <circle key={props.key} cx={props.cx} cy={props.cy} r={isBloodwork ? 3 : 2} fill={fill} stroke={isBloodwork ? "hsl(var(--card))" : undefined} strokeWidth={isBloodwork ? 1 : 0} />;
             }}
+
             activeDot={{ r: 3 }}
             connectNulls
             className="cursor-pointer"
@@ -422,12 +447,15 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
               {chartType === "line" ? renderSeriesA() : renderSeriesB()}
             </ComposedChart>
           ) : chartType === "line" ? (
-            <LineChart data={chartData} margin={{ top: 16, right: 4, left: 0, bottom: 0 }} onClick={handleChartClick}>
+            <LineChart data={chartData} margin={{ top: 16, right: 4, left: isBloodwork ? 4 : 0, bottom: 0 }} onClick={handleChartClick}>
               <XAxis {...sharedXAxisProps} />
+              {isBloodwork && <YAxis tick={{ fontSize: 7 }} width={24} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} domain={["dataMin", "dataMax"]} />}
+              {referenceAreaEl}
               {referenceLineEl}
               <Tooltip {...sharedTooltipProps} />
               {renderSeriesA()}
             </LineChart>
+
           ) : (
             <BarChart data={chartData} margin={{ top: 16, right: 0, left: 0, bottom: 0 }}>
               <XAxis {...sharedXAxisProps} />
