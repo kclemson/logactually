@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, ExternalLink, Trash2, AlertCircle, Loader2, RefreshCw, ChevronsDownUp, ChevronsUpDown, Search, X, Pin } from 'lucide-react';
+import { ChevronDown, ChevronRight, ExternalLink, Trash2, AlertCircle, Loader2, RefreshCw, ChevronsDownUp, ChevronsUpDown, Search, X, Pin, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useBloodworkPanelsForDate, type BloodworkPanelWithResults } from '@/hooks/useBloodworkPanels';
 import { usePinnedBloodworkCharts } from '@/hooks/usePinnedBloodworkCharts';
@@ -182,6 +182,22 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
       </button>
     );
   };
+  const renderLookup = (displayName: string) => {
+    const url = `https://www.google.com/search?q=${encodeURIComponent(`${displayName} blood test`)}`;
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        aria-label={`Look up ${displayName}`}
+        title={`Look up "${displayName} blood test"`}
+        className="inline-flex h-4 w-4 shrink-0 items-center justify-center text-muted-foreground/40 hover:text-foreground transition-opacity md:opacity-0 md:group-hover/row:opacity-100"
+      >
+        <HelpCircle className="h-3 w-3" />
+      </a>
+    );
+  };
   const [internalExpanded, setInternalExpanded] = useState(true);
   const expanded = controlledExpanded ?? internalExpanded;
   const isPending = panel.parse_status === 'pending';
@@ -230,9 +246,10 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
                   : '—';
             return (
               <div key={r.id} className="contents">
-                <span className="flex items-center gap-1 min-w-0 py-0.5">
+                <span className="flex items-center gap-1 min-w-0 py-0.5 group/row">
                   {renderPin(r.canonical_key, r.display_name)}
                   <span className="truncate">{r.display_name}</span>
+                  {renderLookup(r.display_name)}
                 </span>
                 <span className="tabular-nums whitespace-nowrap py-0.5">
                   {(() => {
@@ -365,9 +382,10 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
                         : '—';
                   return (
                     <div key={r.id} className="contents">
-                      <span className="flex items-center gap-1 min-w-0 py-0.5">
+                      <span className="flex items-center gap-1 min-w-0 py-0.5 group/row">
                         {renderPin(r.canonical_key, r.display_name)}
                         <span className="truncate">{r.display_name}</span>
+                        {renderLookup(r.display_name)}
                       </span>
                       <span className="tabular-nums whitespace-nowrap py-0.5">
                         {(() => {
