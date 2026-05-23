@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 import { FoodEntry, FoodItem } from '@/types/food';
-import { exportFoodLog, exportWeightLog as exportWeightLogCSV, exportCustomLog, WeightSetExport, CustomLogExportRow } from '@/lib/csv-export';
+import { exportFoodLog, exportWeightLog as exportWeightLogCSV, exportCustomLog, exportBloodworkLog, WeightSetExport, CustomLogExportRow, BloodworkExportRow } from '@/lib/csv-export';
+import JSZip from 'jszip';
+import { format } from 'date-fns';
 
 const PAGE_SIZE = 1000;
 
