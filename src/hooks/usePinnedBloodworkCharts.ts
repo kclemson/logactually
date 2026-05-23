@@ -23,7 +23,7 @@ export function usePinnedBloodworkCharts() {
         .eq("user_id", user!.id);
       if (error) throw error;
       const keys = new Set<string>();
-      for (const row of (data ?? []) as Array<{ chart_dsl: any }>) {
+      for (const row of ((data ?? []) as unknown) as Array<{ chart_dsl: any }>) {
         const dsl = row.chart_dsl as ChartDSL | null;
         if (dsl?.source === "bloodwork" && dsl.filter?.canonicalKey) {
           keys.add(dsl.filter.canonicalKey);
@@ -75,7 +75,7 @@ export function usePinnedBloodworkCharts() {
         .select("id, chart_dsl")
         .eq("user_id", user.id);
       if (error) throw error;
-      const ids = ((data ?? []) as Array<{ id: string; chart_dsl: any }>)
+      const ids = (((data ?? []) as unknown) as Array<{ id: string; chart_dsl: any }>)
         .filter((r) => {
           const dsl = r.chart_dsl as ChartDSL | null;
           return dsl?.source === "bloodwork" && dsl.filter?.canonicalKey === canonicalKey;
