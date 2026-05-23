@@ -79,7 +79,7 @@ export function CustomLogTypeRow({
                 <button
                   type="button"
                   aria-label="Retry parse"
-                  className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-50"
+                  className="p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-50"
                   disabled={retrying}
                   onClick={() => retryParse.mutate(p.id)}
                 >
@@ -88,7 +88,7 @@ export function CustomLogTypeRow({
                 <button
                   type="button"
                   aria-label="Delete failed upload"
-                  className="p-1 text-muted-foreground hover:text-destructive"
+                  className="p-0.5 text-muted-foreground hover:text-destructive"
                   onClick={() => deletePanel.mutate(p.id)}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
