@@ -62,7 +62,10 @@ export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, 
         updateJob(job.id, { status: 'duplicate', duplicate: err.existingPanel });
         return;
       }
-      const msg = err instanceof Error ? err.message : 'Upload failed';
+      const raw = err instanceof Error ? err.message : '';
+      const msg = /non-2xx|Edge Function/i.test(raw)
+        ? 'Unable to read this file'
+        : raw || 'Unable to read this file';
       updateJob(job.id, { status: 'error', error: msg });
     }
   };
