@@ -329,9 +329,15 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
             strokeWidth={1.5}
             dot={isDualSeries ? false : (props: any) => {
               const val = props.payload?.[dataKey];
-              if (val == null || val === 0) return <g key={props.key} />;
-              return <circle key={props.key} cx={props.cx} cy={props.cy} r={2} fill={color} />;
+              if (val == null) return <g key={props.key} />;
+              if (!isBloodwork && val === 0) return <g key={props.key} />;
+              const flag = props.payload?._flag;
+              const fill = flag === "High" ? "hsl(38 92% 50%)"
+                : flag === "Low" ? "hsl(217 91% 60%)"
+                : color;
+              return <circle key={props.key} cx={props.cx} cy={props.cy} r={isBloodwork ? 3 : 2} fill={fill} stroke={isBloodwork ? "hsl(var(--card))" : undefined} strokeWidth={isBloodwork ? 1 : 0} />;
             }}
+
             activeDot={{ r: 3 }}
             connectNulls
             className="cursor-pointer"
