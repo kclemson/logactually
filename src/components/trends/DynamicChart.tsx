@@ -1,7 +1,8 @@
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  LabelList, ReferenceLine, ComposedChart, Legend,
+  LabelList, ReferenceLine, ReferenceArea, ComposedChart, Legend,
 } from "recharts";
+
 import { ChartCard } from "./ChartCard";
 import { CompactChartTooltip } from "./CompactChartTooltip";
 import { useChartInteraction } from "@/hooks/useChartInteraction";
