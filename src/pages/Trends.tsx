@@ -710,10 +710,24 @@ const Trends = () => {
       )}
 
       {/* Other Trends Section */}
-      {showCustomLogs && customLogTrends.length > 0 && (
+      {((showCustomLogs && customLogTrends.length > 0) || bloodworkCharts.length > 0) && (
         <CollapsibleSection title="Custom Trends" icon={ClipboardList} iconClassName="text-teal-500 dark:text-teal-400" defaultOpen={true} storageKey="trends-other">
           <div className="grid grid-cols-2 gap-2">
-            {customLogTrends.map((trend) => (
+            {bloodworkCharts.map((chart) => {
+              const live = liveSpecs?.get(chart.id);
+              const spec = live
+                ? { ...live, title: chart.chart_spec.title, aiNote: chart.chart_spec.aiNote }
+                : chart.chart_spec;
+              return (
+                <DynamicChart
+                  key={chart.id}
+                  spec={spec}
+                  period={selectedPeriod}
+                  timeRangeSuffix={chart.chart_dsl ? "· v2" : "· v1"}
+                />
+              );
+            })}
+            {showCustomLogs && customLogTrends.map((trend) => (
               <CustomLogTrendChart key={trend.logTypeId} trend={trend} days={selectedPeriod} onNavigate={(date) => navigate(`/custom?date=${date}`)} />
             ))}
           </div>
