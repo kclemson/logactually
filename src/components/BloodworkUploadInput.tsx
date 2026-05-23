@@ -124,7 +124,7 @@ export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, 
   };
 
   return (
-    <div className="flex flex-col gap-3 min-h-0 max-h-[85vh] max-h-[85dvh]">
+    <div className="flex flex-col gap-3 min-h-0 min-w-0 w-full max-h-[85vh] max-h-[85dvh]">
       <div className="shrink-0 flex items-center justify-between">
         <span className="text-xs font-medium text-muted-foreground">{label}</span>
         {onCancel && (
