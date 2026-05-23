@@ -182,6 +182,22 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
       </button>
     );
   };
+  const renderLookup = (displayName: string) => {
+    const url = `https://www.google.com/search?q=${encodeURIComponent(`${displayName} blood test`)}`;
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        aria-label={`Look up ${displayName}`}
+        title={`Look up "${displayName} blood test"`}
+        className="inline-flex h-4 w-4 shrink-0 items-center justify-center text-muted-foreground/40 hover:text-foreground transition-opacity md:opacity-0 md:group-hover/row:opacity-100"
+      >
+        <HelpCircle className="h-3 w-3" />
+      </a>
+    );
+  };
   const [internalExpanded, setInternalExpanded] = useState(true);
   const expanded = controlledExpanded ?? internalExpanded;
   const isPending = panel.parse_status === 'pending';
