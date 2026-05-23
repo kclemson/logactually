@@ -45,8 +45,11 @@ export interface ChartSpec {
   dataKey: string;
   valueFormat?: "integer" | "decimal1" | "duration_mmss" | "none";
   referenceLine?: { value: number; label?: string };
-  dataSource?: "food" | "exercise" | "custom" | "mixed";
+  dataSource?: "food" | "exercise" | "custom" | "mixed" | "bloodwork";
   groupBy?: "date" | "dayOfWeek" | "hourOfDay" | "weekdayVsWeekend" | "week" | "item" | "category" | "dayClassification";
+  /** Optional shaded reference band (e.g. bloodwork normal range) drawn under the series. */
+  referenceRange?: { low: number | null; high: number | null; unit?: string | null };
+
   verification?: {
     type: "daily" | "aggregate";
     source: "food" | "exercise";
