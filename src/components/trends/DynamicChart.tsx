@@ -285,6 +285,21 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
     />
   ) : null;
 
+  const isBloodwork = spec.dataSource === "bloodwork";
+  const referenceAreaEl = spec.referenceRange && spec.referenceRange.low != null && spec.referenceRange.high != null ? (
+    <ReferenceArea
+      y1={spec.referenceRange.low}
+      y2={spec.referenceRange.high}
+      fill="hsl(142 71% 45%)"
+      fillOpacity={0.12}
+      stroke="hsl(142 71% 45%)"
+      strokeOpacity={0.25}
+      strokeDasharray="2 3"
+      ifOverflow="extendDomain"
+    />
+  ) : null;
+
+
   // Render Series A element
   const renderSeriesA = () => {
     const yAxisId = isDualSeries ? "left" : undefined;
