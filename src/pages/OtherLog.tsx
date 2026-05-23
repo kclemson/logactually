@@ -345,7 +345,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
       {/* Entry form as modal dialog — used by both view modes. In by_type mode entries land on today. */}
       {dialogType && (
         <Dialog open={showInputDialog} onOpenChange={(open) => { if (!open) setShowInputDialog(false); }}>
-          <DialogContent className="max-w-sm p-0 gap-0 border-0 bg-transparent shadow-none [&>button]:hidden">
+          <DialogContent className="w-[calc(100vw-1rem)] max-w-sm top-[5%] translate-y-0 p-0 gap-0 border-0 bg-transparent shadow-none [&>button]:hidden">
             {dialogType.value_type === 'medication' ? (
               <MedicationEntryInput
                 label={dialogType.name}
@@ -372,7 +372,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                 disabled={isReadOnly}
               />
             ) : dialogType.value_type === 'panel' ? (
-              <div className="rounded-lg border border-border bg-card p-5 flex flex-col min-h-0 max-h-[90vh] max-h-[90dvh]">
+              <div className="rounded-lg border border-border bg-card p-3 sm:p-5 flex flex-col min-h-0 min-w-0 overflow-hidden max-h-[90vh] max-h-[90dvh]">
                 <BloodworkUploadInput
                   label={dialogType.name}
                   logTypeId={dialogType.id}

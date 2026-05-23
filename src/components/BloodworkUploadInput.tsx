@@ -124,7 +124,7 @@ export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, 
   };
 
   return (
-    <div className="flex flex-col gap-3 min-h-0 max-h-[85vh] max-h-[85dvh]">
+    <div className="flex flex-col gap-3 min-h-0 min-w-0 w-full max-h-[85vh] max-h-[85dvh]">
       <div className="shrink-0 flex items-center justify-between">
         <span className="text-xs font-medium text-muted-foreground">{label}</span>
         {onCancel && (
@@ -147,7 +147,7 @@ export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, 
         type="button"
         onClick={handlePick}
         disabled={disabled || inFlight}
-        className="shrink-0 w-full rounded-lg border-2 border-dashed border-border hover:border-foreground/30 hover:bg-muted/30 transition-colors py-6 px-4 flex flex-col items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="shrink-0 w-full rounded-lg border-2 border-dashed border-border hover:border-foreground/30 hover:bg-muted/30 transition-colors py-4 sm:py-6 px-3 sm:px-4 flex flex-col items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {inFlight ? (
           <>
@@ -221,11 +221,11 @@ function JobRow({ job, loggedDate, onUploadAnyway, onRetry, onViewExisting, onVi
     job.status === 'done' && job.result?.date && job.result.date !== loggedDate;
 
   return (
-    <div className="px-3 py-2 flex items-start gap-2 text-xs">
+    <div className="px-3 py-2 flex items-start gap-2 text-xs min-w-0">
       <div className="mt-0.5 shrink-0">{icon}</div>
       <div className="min-w-0 flex-1 space-y-0.5">
-        <div className="flex items-baseline gap-2">
-          <span className="text-foreground font-medium truncate" title={job.file.name}>
+        <div className="flex items-baseline gap-2 min-w-0">
+          <span className="text-foreground font-medium truncate min-w-0 flex-1" title={job.file.name}>
             {job.file.name}
           </span>
           {job.status === 'done' && job.result?.date && (
