@@ -147,7 +147,7 @@ export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, 
         type="button"
         onClick={handlePick}
         disabled={disabled || inFlight}
-        className="shrink-0 w-full rounded-lg border-2 border-dashed border-border hover:border-foreground/30 hover:bg-muted/30 transition-colors py-6 px-4 flex flex-col items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="shrink-0 w-full rounded-lg border-2 border-dashed border-border hover:border-foreground/30 hover:bg-muted/30 transition-colors py-4 sm:py-6 px-3 sm:px-4 flex flex-col items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {inFlight ? (
           <>
