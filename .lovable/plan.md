@@ -1,15 +1,11 @@
-## Boost shaded reference range visibility in dark theme
+## Left-align panel-row chevron with section headers
 
-The bloodwork "normal range" shaded band uses fixed opacities (`0.12` fill, `0.25` stroke) that read fine on a light background but nearly disappear on the dark `--card` background.
+In the bloodwork expanded view, the per-report chevron sits visually indented because it's centered in a 24px-wide button (`h-6 w-6 justify-center`), so the icon falls ~5px to the right of the button's left edge. The section headers below use only `pl-1` (4px) and read flush-left.
 
 ### Change
 
-In `src/components/trends/DynamicChart.tsx` (line ~289-300), bump opacities so the band is visible in dark mode without overwhelming light mode. Use Tailwind's `dark:` variant via inline computation since this is a Recharts SVG element (no className passthrough), so instead detect theme via `document.documentElement.classList.contains('dark')` at render time, or simpler — just raise the base values to a level that works in both modes.
+In `src/components/BloodworkPanelGroup.tsx` line 271, change the toggle button's icon alignment from centered to left-aligned:
 
-Proposed values:
-- `fillOpacity`: `0.12` → `0.22`
-- `strokeOpacity`: `0.25` → `0.5`
+- `justify-center` → `justify-start`
 
-These are still subtle on light backgrounds but become clearly visible on dark. Color (`hsl(142 71% 45%)`) and dashed stroke are unchanged.
-
-No other files touched.
+That puts the chevron's left edge flush with the same `pl-1` baseline used by the section header below it. No other layout/spacing changes.
