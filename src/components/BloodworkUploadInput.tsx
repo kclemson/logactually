@@ -221,11 +221,11 @@ function JobRow({ job, loggedDate, onUploadAnyway, onRetry, onViewExisting, onVi
     job.status === 'done' && job.result?.date && job.result.date !== loggedDate;
 
   return (
-    <div className="px-3 py-2 flex items-start gap-2 text-xs">
+    <div className="px-3 py-2 flex items-start gap-2 text-xs min-w-0">
       <div className="mt-0.5 shrink-0">{icon}</div>
       <div className="min-w-0 flex-1 space-y-0.5">
-        <div className="flex items-baseline gap-2">
-          <span className="text-foreground font-medium truncate" title={job.file.name}>
+        <div className="flex items-baseline gap-2 min-w-0">
+          <span className="text-foreground font-medium truncate min-w-0 flex-1" title={job.file.name}>
             {job.file.name}
           </span>
           {job.status === 'done' && job.result?.date && (
