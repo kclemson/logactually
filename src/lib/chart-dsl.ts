@@ -390,7 +390,7 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
         let finalValue = value;
         let cmpVal: number | null = null;
         if (dsl.compare) {
-          const cmpSource = dsl.compare.source ?? dsl.source;
+          const cmpSource = (dsl.compare.source ?? dsl.source) as "food" | "exercise";
           weekCmpMetric = METRIC_COMPAT[dsl.compare.metric] ?? dsl.compare.metric;
           cmpVal = extractValue(cmpSource, weekCmpMetric, undefined, dailyTotals, date);
           if (cmpVal !== null) finalValue -= cmpVal;
