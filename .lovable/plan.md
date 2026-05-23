@@ -1,17 +1,15 @@
-## Hide time-range subheader on bloodwork charts
+## Boost shaded reference range visibility in dark theme
 
-Bloodwork charts always show all-time data and ignore the Trends page period selector, so the "Last 90 days · v2" subheader is misleading.
+The bloodwork "normal range" shaded band uses fixed opacities (`0.12` fill, `0.25` stroke) that read fine on a light background but nearly disappear on the dark `--card` background.
 
 ### Change
 
-In `src/pages/Trends.tsx` (line ~726-731), when rendering `DynamicChart` for bloodwork charts, omit both `period` and `timeRangeSuffix` props. With both undefined, `DynamicChart` already renders `timeRange=""` (the `.filter(Boolean).join(" ")` collapses to empty), so the subtitle row disappears.
+In `src/components/trends/DynamicChart.tsx` (line ~289-300), bump opacities so the band is visible in dark mode without overwhelming light mode. Use Tailwind's `dark:` variant via inline computation since this is a Recharts SVG element (no className passthrough), so instead detect theme via `document.documentElement.classList.contains('dark')` at render time, or simpler — just raise the base values to a level that works in both modes.
 
-```tsx
-<DynamicChart
-  key={chart.id}
-  spec={spec}
-  // no period, no timeRangeSuffix → no subheader
-/>
-```
+Proposed values:
+- `fillOpacity`: `0.12` → `0.22`
+- `strokeOpacity`: `0.25` → `0.5`
 
-No changes to `DynamicChart`, the `ChartCard` subtitle logic, or custom-log trends.
+These are still subtle on light backgrounds but become clearly visible on dark. Color (`hsl(142 71% 45%)`) and dashed stroke are unchanged.
+
+No other files touched.
