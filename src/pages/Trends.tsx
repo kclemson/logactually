@@ -726,9 +726,8 @@ const Trends = () => {
                 <DynamicChart
                   key={chart.id}
                   spec={spec}
-                  period={selectedPeriod}
-                  timeRangeSuffix={chart.chart_dsl ? "· v2" : "· v1"}
                 />
+
               );
             })}
             {showCustomLogs && customLogTrends.map((trend) => (
