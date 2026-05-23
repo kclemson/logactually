@@ -447,12 +447,15 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
               {chartType === "line" ? renderSeriesA() : renderSeriesB()}
             </ComposedChart>
           ) : chartType === "line" ? (
-            <LineChart data={chartData} margin={{ top: 16, right: 4, left: 0, bottom: 0 }} onClick={handleChartClick}>
+            <LineChart data={chartData} margin={{ top: 16, right: 4, left: isBloodwork ? 4 : 0, bottom: 0 }} onClick={handleChartClick}>
               <XAxis {...sharedXAxisProps} />
+              {isBloodwork && <YAxis tick={{ fontSize: 7 }} width={24} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} domain={["dataMin", "dataMax"]} />}
+              {referenceAreaEl}
               {referenceLineEl}
               <Tooltip {...sharedTooltipProps} />
               {renderSeriesA()}
             </LineChart>
+
           ) : (
             <BarChart data={chartData} margin={{ top: 16, right: 0, left: 0, bottom: 0 }}>
               <XAxis {...sharedXAxisProps} />
