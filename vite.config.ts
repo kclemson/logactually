@@ -44,6 +44,8 @@ export default defineConfig(({ mode }) => ({
         navigateFallbackDenylist: [/^\/~oauth\//],
         clientsClaim: true,
         skipWaiting: true,
+        // Main JS bundle exceeds the 2 MiB default; bump to 5 MiB so it's precached.
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
       },
     }),
   ],
