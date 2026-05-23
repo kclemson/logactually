@@ -268,7 +268,7 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
       <div className="grid grid-cols-[auto_1fr_auto] items-center gap-x-2 py-1 pl-1">
         <button
           onClick={() => (onToggle ? onToggle() : setInternalExpanded((v) => !v))}
-          className="h-6 w-6 inline-flex items-center justify-center text-muted-foreground hover:text-foreground"
+          className="h-6 w-6 inline-flex items-center justify-start text-muted-foreground hover:text-foreground"
           aria-label={expanded ? 'Collapse' : 'Expand'}
           disabled={isPending}
         >
