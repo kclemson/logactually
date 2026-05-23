@@ -372,7 +372,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                 disabled={isReadOnly}
               />
             ) : dialogType.value_type === 'panel' ? (
-              <div className="rounded-lg border border-border bg-card p-5 flex flex-col min-h-0 max-h-[90vh] max-h-[90dvh]">
+              <div className="rounded-lg border border-border bg-card p-3 sm:p-5 flex flex-col min-h-0 min-w-0 overflow-hidden max-h-[90vh] max-h-[90dvh]">
                 <BloodworkUploadInput
                   label={dialogType.name}
                   logTypeId={dialogType.id}
