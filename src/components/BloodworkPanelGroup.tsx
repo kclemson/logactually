@@ -230,7 +230,10 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
                   : '—';
             return (
               <div key={r.id} className="contents">
-                <span className="truncate py-0.5">{r.display_name}</span>
+                <span className="flex items-center gap-1 min-w-0 py-0.5">
+                  {renderPin(r.canonical_key, r.display_name)}
+                  <span className="truncate">{r.display_name}</span>
+                </span>
                 <span className="tabular-nums whitespace-nowrap py-0.5">
                   {(() => {
                     const nf = normalizeFlag(r.flag);
@@ -362,7 +365,10 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
                         : '—';
                   return (
                     <div key={r.id} className="contents">
-                      <span className="truncate py-0.5">{r.display_name}</span>
+                      <span className="flex items-center gap-1 min-w-0 py-0.5">
+                        {renderPin(r.canonical_key, r.display_name)}
+                        <span className="truncate">{r.display_name}</span>
+                      </span>
                       <span className="tabular-nums whitespace-nowrap py-0.5">
                         {(() => {
                           const nf = normalizeFlag(r.flag);
