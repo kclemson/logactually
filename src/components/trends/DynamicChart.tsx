@@ -291,9 +291,9 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
       y1={spec.referenceRange.low}
       y2={spec.referenceRange.high}
       fill="hsl(142 71% 45%)"
-      fillOpacity={0.12}
+      fillOpacity={0.22}
       stroke="hsl(142 71% 45%)"
-      strokeOpacity={0.25}
+      strokeOpacity={0.5}
       strokeDasharray="2 3"
       ifOverflow="extendDomain"
     />
