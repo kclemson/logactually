@@ -406,15 +406,9 @@ export function useFailedBloodworkPanels(logTypeId: string | undefined) {
       const { error } = await supabase.functions.invoke('parse-bloodwork', { body: { panel_id: panelId } });
       if (error) throw error;
     },
-    onMutate: async (panelId) => {
-      await queryClient.cancelQueries({ queryKey });
-      const previous = queryClient.getQueryData<BloodworkPanel[]>(queryKey);
-      queryClient.setQueryData<BloodworkPanel[]>(queryKey, (old) => old?.filter((p) => p.id !== panelId) ?? []);
-      return { previous };
-    },
-    onError: (_e, _id, ctx) => {
-      if (ctx?.previous) queryClient.setQueryData(queryKey, ctx.previous);
-    },
+    // No optimistic removal — keep the row visible (with a spinner on the retry
+    // button) until the parse settles. If it succeeds the refetch drops it; if
+    // it fails again the row stays with the updated parse_error.
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['bloodwork-panels'] });
     },
