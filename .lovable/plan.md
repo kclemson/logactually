@@ -1,3 +1,1 @@
-When the user taps "View" (or "View existing") on a bloodwork upload row, `BloodworkUploadInput` calls `navigate(...)` but never closes the parent upload dialog. On mobile the dialog stays mounted on top of the destination route, so the link appears to do nothing.
-
-Fix in `src/components/BloodworkUploadInput.tsx`: after navigating in `handleViewExisting` and `handleViewDate`, also call `onSuccess?.()` so the parent dialog (`OtherLog.tsx`) closes and the navigated date view is visible.
+In `src/components/BloodworkUploadInput.tsx` `runJob` catch block, replace raw edge-function error messages with the generic string "Unable to read this file". Preserve the existing `DuplicateFileError` branch. The regex detects messages containing "non-2xx" or "Edge Function" and swaps them for the friendly fallback.
