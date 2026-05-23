@@ -194,6 +194,21 @@ export function useBloodworkPanelsForDate(dateStr: string) {
       const { error } = await supabase.functions.invoke('parse-bloodwork', { body: { panel_id: panelId } });
       if (error) throw error;
     },
+    onMutate: async (panelId) => {
+      await queryClient.cancelQueries({ queryKey: ['bloodwork-panels', dateStr, user?.id] });
+      const previous = queryClient.getQueryData<BloodworkPanelWithResults[]>(['bloodwork-panels', dateStr, user?.id]);
+      queryClient.setQueryData<BloodworkPanelWithResults[]>(
+        ['bloodwork-panels', dateStr, user?.id],
+        (old) => old?.map((p) => p.id === panelId
+          ? { ...p, parse_status: 'pending', parse_error: null }
+          : p,
+        ) ?? [],
+      );
+      return { previous };
+    },
+    onError: (_e, _id, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(['bloodwork-panels', dateStr, user?.id], ctx.previous);
+    },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['bloodwork-panels'] });
     },

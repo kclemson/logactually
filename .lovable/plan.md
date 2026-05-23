@@ -1,12 +1,25 @@
-Give analyte names more horizontal space by tightening the value and reference columns.
+Make the bloodwork "Retry" action visibly do something.
 
-Both bloodwork result grids currently use `grid-cols-[minmax(0,1fr)_5rem_4rem]`. The 5rem value column and 4rem reference column reserve more width than typical numeric content needs, so names like "Alkaline Phosphatase", "% Immature Granulocytes", and "Absolute Lymphocytes" get truncated even though there's empty space to the right of each value.
+## Problem
 
-Change in `src/components/BloodworkPanelGroup.tsx` at the two grid sites (lines 235 and 370):
+Clicking the retry icon on a failed bloodwork panel looks like a no-op. The mutation does fire (it flips `parse_status` to `pending` server-side and invokes the edge function), but the UI never reflects the in-progress state — the row stays on "failed" for the entire 10–30s parse, then either flips silently to success or stays on "failed" with the same error.
 
-- Update grid template to `grid-cols-[minmax(0,1fr)_3.5rem_3.5rem]`, freeing ~2rem for the name column.
-- Value column stays left-aligned (the value sits flush at the start of its column, right next to the name), preserving `tabular-nums whitespace-nowrap`. The optional `High`/`Low` flag continues to render inline after the number.
-- Reference column keeps its existing `text-right` alignment.
-- Apply the same template to both the flat filtering view and the expanded section view so they stay consistent.
+The `BloodworkPanelRow` already renders a `Loader2` spinner and a "parsing…" label when `parse_status === 'pending'` — the cache just never gets that value until the request settles.
 
-No logic changes.
+## Fix
+
+In `src/hooks/useBloodworkPanels.ts`, update the `retryParse` mutation (lines 191–200):
+
+- Add an `onMutate(panelId)` that optimistically rewrites the cached panel in `['bloodwork-panels', dateStr, user?.id]` to `parse_status: 'pending'`, `parse_error: null`. Save the previous cache snapshot in the context.
+- Add an `onError(_e, _id, ctx)` that restores the previous snapshot if the mutation throws.
+- Keep the existing `onSettled` invalidate so the real DB state takes over once parsing finishes.
+
+Same pattern already used by `deletePanel` in the same file.
+
+Result: clicking retry instantly shows the spinner + "parsing…" label. Eventually the row flips to either success (results expand) or back to failed (with whatever new `parse_error` came back). No more silent no-op.
+
+## Why it failed in the first place — separate investigation
+
+Defer until UI fix lands. The original parse_error is `"AI could not extract any results."` from `parse-bloodwork/index.ts` line 215, meaning Gemini returned a response but with zero `sections`. This is usually a content issue (e.g. the PDF is a portal landing page, photo of a screen, or a multi-page document where the lab page is buried). We'll dig in once the retry UX is fixed.
+
+No DB schema changes.
