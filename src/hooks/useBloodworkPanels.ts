@@ -97,17 +97,20 @@ export function useBloodworkPanelsForDate(dateStr: string) {
     queryKey: ['bloodwork-panels', dateStr, user?.id],
     enabled: !!user,
     queryFn: async () => {
-      // Show panels collected on this date PLUS in-flight panels on this date (pending/duplicate_pending/failed/missing-date)
-      // so the user sees their upload progress even before extraction resolves a date.
+      // Show panels collected on this date PLUS in-flight (pending) panels with no
+      // collected_date yet, so the user sees their upload progress before extraction
+      // resolves a date. Failed panels are intentionally excluded — they're surfaced
+      // under the Bloodwork log type in Settings instead.
       const { data: byDate } = await supabase
         .from('bloodwork_panels')
         .select('*')
-        .eq('collected_date', dateStr);
+        .eq('collected_date', dateStr)
+        .neq('parse_status', 'failed');
 
       const { data: inFlight } = await supabase
         .from('bloodwork_panels')
         .select('*')
-        .in('parse_status', ['pending', 'failed'])
+        .eq('parse_status', 'pending')
         .is('collected_date', null);
 
       const merged = new Map<string, BloodworkPanel>();
@@ -371,3 +374,76 @@ export function useDuplicatePendingPanels() {
 
   return { panels, resolveDuplicate };
 }
+
+/**
+ * Failed bloodwork panels for a given log type, surfaced in Settings so the user
+ * can retry or delete them outside the daily log view.
+ */
+export function useFailedBloodworkPanels(logTypeId: string | undefined) {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const queryKey = ['bloodwork-panels', 'failed', logTypeId, user?.id];
+
+  const { data: panels = [] } = useQuery({
+    queryKey,
+    enabled: !!user && !!logTypeId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('bloodwork_panels')
+        .select('*')
+        .eq('user_id', user!.id)
+        .eq('log_type_id', logTypeId!)
+        .eq('parse_status', 'failed')
+        .order('created_at', { ascending: false });
+      return (data ?? []) as BloodworkPanel[];
+    },
+  });
+
+  const retryParse = useMutation({
+    mutationFn: async (panelId: string) => {
+      await supabase.from('bloodwork_panels').update({ parse_status: 'pending', parse_error: null }).eq('id', panelId);
+      const { error } = await supabase.functions.invoke('parse-bloodwork', { body: { panel_id: panelId } });
+      if (error) throw error;
+    },
+    onMutate: async (panelId) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<BloodworkPanel[]>(queryKey);
+      queryClient.setQueryData<BloodworkPanel[]>(queryKey, (old) => old?.filter((p) => p.id !== panelId) ?? []);
+      return { previous };
+    },
+    onError: (_e, _id, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(queryKey, ctx.previous);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['bloodwork-panels'] });
+    },
+  });
+
+  const deletePanel = useMutation({
+    mutationFn: async (panelId: string) => {
+      const panel = panels.find((p) => p.id === panelId);
+      if (panel?.storage_path) {
+        await supabase.storage.from('bloodwork-files').remove([panel.storage_path]);
+      }
+      await supabase.from('bloodwork_results').delete().eq('panel_id', panelId);
+      const { error } = await supabase.from('bloodwork_panels').delete().eq('id', panelId);
+      if (error) throw error;
+    },
+    onMutate: async (panelId) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<BloodworkPanel[]>(queryKey);
+      queryClient.setQueryData<BloodworkPanel[]>(queryKey, (old) => old?.filter((p) => p.id !== panelId) ?? []);
+      return { previous };
+    },
+    onError: (_e, _id, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(queryKey, ctx.previous);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['bloodwork-panels'] });
+    },
+  });
+
+  return { failedPanels: panels, retryParse, deletePanel };
+}
+
