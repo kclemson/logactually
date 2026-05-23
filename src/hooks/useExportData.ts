@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 import { FoodEntry, FoodItem } from '@/types/food';
-import { exportFoodLog, exportWeightLog as exportWeightLogCSV, exportCustomLog, WeightSetExport, CustomLogExportRow } from '@/lib/csv-export';
+import { exportFoodLog, exportWeightLog as exportWeightLogCSV, exportCustomLog, exportBloodworkLog, WeightSetExport, CustomLogExportRow, BloodworkExportRow } from '@/lib/csv-export';
+import JSZip from 'jszip';
+import { format } from 'date-fns';
 
 const PAGE_SIZE = 1000;
 
@@ -159,10 +161,125 @@ export function useExportData() {
     }
   };
 
+  const fetchAllBloodworkResults = async (): Promise<BloodworkExportRow[]> => {
+    const data = await fetchAllPages<any>((from, to) =>
+      supabase
+        .from('bloodwork_results')
+        .select('collected_date, panel_section, display_name, canonical_key, numeric_value, unit, reference_low, reference_high, reference_raw, flag, section_order, result_order, bloodwork_panels(panel_title, source_filename)')
+        .order('collected_date', { ascending: false })
+        .order('section_order', { ascending: true })
+        .order('result_order', { ascending: true })
+        .range(from, to)
+    );
+
+    return data.map((row) => {
+      const panel = row.bloodwork_panels as { panel_title: string | null; source_filename: string | null } | null;
+      return {
+        collected_date: row.collected_date,
+        panel_title: panel?.panel_title ?? null,
+        source_filename: panel?.source_filename ?? null,
+        panel_section: row.panel_section,
+        display_name: row.display_name,
+        canonical_key: row.canonical_key,
+        numeric_value: row.numeric_value != null ? Number(row.numeric_value) : null,
+        unit: row.unit,
+        reference_low: row.reference_low != null ? Number(row.reference_low) : null,
+        reference_high: row.reference_high != null ? Number(row.reference_high) : null,
+        reference_raw: row.reference_raw,
+        flag: row.flag,
+        section_order: row.section_order ?? 0,
+        result_order: row.result_order ?? 0,
+      };
+    });
+  };
+
+  const handleExportBloodwork = async () => {
+    setIsExporting(true);
+    try {
+      const rows = await fetchAllBloodworkResults();
+      exportBloodworkLog(rows);
+    } catch (error) {
+      logger.error('Export failed:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportBloodworkFiles = async () => {
+    setIsExporting(true);
+    try {
+      const panels = await fetchAllPages<any>((from, to) =>
+        supabase
+          .from('bloodwork_panels')
+          .select('storage_path, source_filename, collected_date, parse_status')
+          .neq('parse_status', 'duplicate_pending')
+          .order('collected_date', { ascending: false })
+          .range(from, to)
+      );
+      if (panels.length === 0) return;
+
+      const zip = new JSZip();
+      const usedNames = new Set<string>();
+
+      const addPanel = async (panel: any) => {
+        if (!panel.storage_path) return;
+        const { data: signed, error } = await supabase.storage
+          .from('bloodwork-files')
+          .createSignedUrl(panel.storage_path, 300);
+        if (error || !signed?.signedUrl) {
+          logger.error('Signed URL failed:', error);
+          return;
+        }
+        const res = await fetch(signed.signedUrl);
+        if (!res.ok) return;
+        const blob = await res.blob();
+        const dir = panel.collected_date ?? 'undated';
+        const baseName = panel.source_filename || panel.storage_path.split('/').pop() || 'file';
+        let name = `${dir}/${baseName}`;
+        if (usedNames.has(name)) {
+          const dot = baseName.lastIndexOf('.');
+          const stem = dot > 0 ? baseName.slice(0, dot) : baseName;
+          const ext = dot > 0 ? baseName.slice(dot) : '';
+          let i = 2;
+          while (usedNames.has(`${dir}/${stem} (${i})${ext}`)) i++;
+          name = `${dir}/${stem} (${i})${ext}`;
+        }
+        usedNames.add(name);
+        zip.file(name, blob);
+      };
+
+      // Concurrency = 3
+      const queue = [...panels];
+      const workers = Array.from({ length: 3 }, async () => {
+        while (queue.length) {
+          const next = queue.shift();
+          if (next) await addPanel(next);
+        }
+      });
+      await Promise.all(workers);
+
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `bloodwork-files-${format(new Date(), 'yyyy-MM-dd')}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      logger.error('Export failed:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return {
     isExporting,
     exportFoodLog: handleExportFoodLog,
     exportWeightLog: handleExportWeightLog,
     exportCustomLog: handleExportCustomLog,
+    exportBloodwork: handleExportBloodwork,
+    exportBloodworkFiles: handleExportBloodworkFiles,
   };
 }

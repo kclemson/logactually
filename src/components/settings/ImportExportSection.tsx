@@ -11,7 +11,7 @@ interface ImportExportSectionProps {
 }
 
 export function ImportExportSection({ showWeights, showCustomLogs, hasCustomLogTypes, isReadOnly }: ImportExportSectionProps) {
-  const { isExporting, exportFoodLog, exportWeightLog, exportCustomLog } = useExportData();
+  const { isExporting, exportFoodLog, exportWeightLog, exportCustomLog, exportBloodwork, exportBloodworkFiles } = useExportData();
 
   return (
     <CollapsibleSection title="Import and Export" icon={ArrowDownUp} storageKey="settings-export" iconClassName="text-zinc-500 dark:text-zinc-400">
@@ -49,6 +49,30 @@ export function ImportExportSection({ showWeights, showCustomLogs, hasCustomLogT
               Custom Logs
             </button>
           </div>
+        )}
+        {!isReadOnly && (
+          <>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">Export bloodwork results to CSV</p>
+              <button
+                onClick={exportBloodwork}
+                disabled={isExporting}
+                className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors disabled:opacity-50"
+              >
+                Bloodwork
+              </button>
+            </div>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">Download original bloodwork files</p>
+              <button
+                onClick={exportBloodworkFiles}
+                disabled={isExporting}
+                className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors disabled:opacity-50"
+              >
+                Bloodwork Files (zip)
+              </button>
+            </div>
+          </>
         )}
         {showWeights && !isReadOnly && <AppleHealthImport />}
         {isReadOnly && (

@@ -235,3 +235,64 @@ export function exportWeightLog(sets: WeightSetExport[]) {
   const timestamp = format(new Date(), 'yyyy-MM-dd');
   downloadCSV(csv, `exercise-log-${timestamp}.csv`);
 }
+
+/**
+ * Bloodwork result row for CSV export
+ */
+export interface BloodworkExportRow {
+  collected_date: string | null;
+  panel_title: string | null;
+  source_filename: string | null;
+  panel_section: string | null;
+  display_name: string;
+  canonical_key: string;
+  numeric_value: number | null;
+  unit: string | null;
+  reference_low: number | null;
+  reference_high: number | null;
+  reference_raw: string | null;
+  flag: string | null;
+  section_order: number;
+  result_order: number;
+}
+
+export function exportBloodworkLog(rows: BloodworkExportRow[]) {
+  const headers = [
+    'Collected Date', 'Panel', 'Source File', 'Section',
+    'Analyte', 'Analyte Key', 'Value', 'Unit',
+    'Reference Low', 'Reference High', 'Reference Range', 'Flag',
+  ];
+
+  const sorted = [...rows].sort((a, b) => {
+    const ad = a.collected_date ?? '';
+    const bd = b.collected_date ?? '';
+    if (ad !== bd) return bd.localeCompare(ad);
+    const ap = a.panel_title ?? '';
+    const bp = b.panel_title ?? '';
+    if (ap !== bp) return ap.localeCompare(bp);
+    if (a.section_order !== b.section_order) return a.section_order - b.section_order;
+    return a.result_order - b.result_order;
+  });
+
+  const dataRows = sorted.map((r) => [
+    r.collected_date ?? '',
+    r.panel_title ?? '',
+    r.source_filename ?? '',
+    r.panel_section ?? '',
+    r.display_name,
+    r.canonical_key,
+    r.numeric_value ?? '',
+    r.unit ?? '',
+    r.reference_low ?? '',
+    r.reference_high ?? '',
+    r.reference_raw ?? '',
+    r.flag ?? '',
+  ]);
+
+  const csv = [
+    headers.join(','),
+    ...dataRows.map((row) => row.map(escapeCSV).join(',')),
+  ].join('\n');
+
+  downloadCSV(csv, `bloodwork-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+}
