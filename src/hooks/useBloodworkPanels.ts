@@ -374,3 +374,76 @@ export function useDuplicatePendingPanels() {
 
   return { panels, resolveDuplicate };
 }
+
+/**
+ * Failed bloodwork panels for a given log type, surfaced in Settings so the user
+ * can retry or delete them outside the daily log view.
+ */
+export function useFailedBloodworkPanels(logTypeId: string | undefined) {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const queryKey = ['bloodwork-panels', 'failed', logTypeId, user?.id];
+
+  const { data: panels = [] } = useQuery({
+    queryKey,
+    enabled: !!user && !!logTypeId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('bloodwork_panels')
+        .select('*')
+        .eq('user_id', user!.id)
+        .eq('log_type_id', logTypeId!)
+        .eq('parse_status', 'failed')
+        .order('created_at', { ascending: false });
+      return (data ?? []) as BloodworkPanel[];
+    },
+  });
+
+  const retryParse = useMutation({
+    mutationFn: async (panelId: string) => {
+      await supabase.from('bloodwork_panels').update({ parse_status: 'pending', parse_error: null }).eq('id', panelId);
+      const { error } = await supabase.functions.invoke('parse-bloodwork', { body: { panel_id: panelId } });
+      if (error) throw error;
+    },
+    onMutate: async (panelId) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<BloodworkPanel[]>(queryKey);
+      queryClient.setQueryData<BloodworkPanel[]>(queryKey, (old) => old?.filter((p) => p.id !== panelId) ?? []);
+      return { previous };
+    },
+    onError: (_e, _id, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(queryKey, ctx.previous);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['bloodwork-panels'] });
+    },
+  });
+
+  const deletePanel = useMutation({
+    mutationFn: async (panelId: string) => {
+      const panel = panels.find((p) => p.id === panelId);
+      if (panel?.storage_path) {
+        await supabase.storage.from('bloodwork-files').remove([panel.storage_path]);
+      }
+      await supabase.from('bloodwork_results').delete().eq('panel_id', panelId);
+      const { error } = await supabase.from('bloodwork_panels').delete().eq('id', panelId);
+      if (error) throw error;
+    },
+    onMutate: async (panelId) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<BloodworkPanel[]>(queryKey);
+      queryClient.setQueryData<BloodworkPanel[]>(queryKey, (old) => old?.filter((p) => p.id !== panelId) ?? []);
+      return { previous };
+    },
+    onError: (_e, _id, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(queryKey, ctx.previous);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['bloodwork-panels'] });
+    },
+  });
+
+  return { failedPanels: panels, retryParse, deletePanel };
+}
+
