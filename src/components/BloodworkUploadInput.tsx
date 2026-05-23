@@ -110,12 +110,14 @@ export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, 
     if (panel.collected_date) {
       try { localStorage.setItem('custom-log-view-mode', 'date'); } catch {}
       navigate(`/custom?date=${panel.collected_date}`);
+      onSuccess?.();
     }
   };
 
   const handleViewDate = (date: string) => {
     try { localStorage.setItem('custom-log-view-mode', 'date'); } catch {}
     navigate(`/custom?date=${date}`);
+    onSuccess?.();
   };
 
   const handleDone = () => {

@@ -1,1 +1,3 @@
-Add `spellCheck={false}` to the bloodwork filter `<input>` in `BloodworkPanelGroup.tsx` to prevent the browser from underlining analyte names and medical terms.
+When the user taps "View" (or "View existing") on a bloodwork upload row, `BloodworkUploadInput` calls `navigate(...)` but never closes the parent upload dialog. On mobile the dialog stays mounted on top of the destination route, so the link appears to do nothing.
+
+Fix in `src/components/BloodworkUploadInput.tsx`: after navigating in `handleViewExisting` and `handleViewDate`, also call `onSuccess?.()` so the parent dialog (`OtherLog.tsx`) closes and the navigated date view is visible.
