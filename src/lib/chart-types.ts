@@ -35,6 +35,16 @@ export type HourlyTotals<T> = Record<number, T[]>;
 
 // ── Composite data container ───────────────────────────────
 
+export interface BloodworkPoint {
+  date: string;             // YYYY-MM-DD collected_date
+  value: number;
+  flag: "High" | "Low" | null;
+  refLow: number | null;
+  refHigh: number | null;
+  unit: string | null;
+  displayName: string;
+}
+
 export interface DailyTotals {
   food: Record<string, FoodDayTotals>;
   exercise: Record<string, ExerciseDayTotals>;
@@ -77,7 +87,10 @@ export interface DailyTotals {
   exerciseByCategory?: Record<string, ExerciseDayTotals>;
   /** Per-date totals from only rows where the charted metric was non-zero (unfiltered date charts only) */
   exerciseMetricContributors?: Record<string, ExerciseDayTotals & { contributorCount: number }>;
+  /** Populated when source === "bloodwork" */
+  bloodwork?: BloodworkPoint[];
 }
+
 
 // ── DSL schema ─────────────────────────────────────────────
 
