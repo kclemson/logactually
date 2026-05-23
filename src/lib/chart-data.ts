@@ -34,6 +34,11 @@ export async function fetchChartData(
   dsl: ChartDSL,
   period: number,
 ): Promise<DailyTotals> {
+  // Bloodwork: sparse-point fetch, no date window (always all-time).
+  if (dsl.source === "bloodwork") {
+    return fetchBloodworkData(supabase, dsl.filter?.canonicalKey);
+  }
+
   const startDate = period === 0 ? "2000-01-01" : format(subDays(new Date(), period), "yyyy-MM-dd");
   const needsHourly = dsl.groupBy === "hourOfDay";
   const needsItem = dsl.groupBy === "item";
@@ -63,6 +68,49 @@ export async function fetchChartData(
   }
   return exerciseData;
 }
+
+// ── Bloodwork fetcher ───────────────────────────────────────
+
+function normalizeBloodworkFlag(flag: string | null | undefined): "High" | "Low" | null {
+  if (!flag) return null;
+  const upper = flag.trim().toUpperCase();
+  if (upper.startsWith("H")) return "High";
+  if (upper.startsWith("L")) return "Low";
+  return null;
+}
+
+async function fetchBloodworkData(
+  supabase: TypedClient,
+  canonicalKey: string | undefined,
+): Promise<DailyTotals> {
+  if (!canonicalKey) {
+    return { food: {}, exercise: {}, bloodwork: [] };
+  }
+  const { data, error } = await supabase
+    .from("bloodwork_results")
+    .select("collected_date, numeric_value, unit, reference_low, reference_high, flag, display_name")
+    .eq("canonical_key", canonicalKey)
+    .not("collected_date", "is", null)
+    .not("numeric_value", "is", null)
+    .order("collected_date", { ascending: true })
+    .limit(2000);
+  if (error) throw error;
+
+  const bloodwork = (data ?? [])
+    .filter((r) => r.collected_date && r.numeric_value != null)
+    .map((r) => ({
+      date: r.collected_date as string,
+      value: Number(r.numeric_value),
+      flag: normalizeBloodworkFlag(r.flag),
+      refLow: r.reference_low != null ? Number(r.reference_low) : null,
+      refHigh: r.reference_high != null ? Number(r.reference_high) : null,
+      unit: r.unit ?? null,
+      displayName: r.display_name,
+    }));
+
+  return { food: {}, exercise: {}, bloodwork };
+}
+
 
 // ── Food fetcher ────────────────────────────────────────────
 
