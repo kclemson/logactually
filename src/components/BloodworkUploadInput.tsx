@@ -183,7 +183,7 @@ export function BloodworkUploadInput({ label, logTypeId, loggedDate, onSuccess, 
       )}
 
       {hasJobs && (
-        <div className="flex justify-end">
+        <div className="shrink-0 flex justify-end">
           <Button type="button" size="sm" onClick={handleDone} disabled={inFlight}>
             Done
           </Button>
