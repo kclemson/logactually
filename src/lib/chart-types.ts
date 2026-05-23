@@ -99,7 +99,7 @@ export interface ChartDSL {
   title: string;
   aiNote?: string;
 
-  source: "food" | "exercise";
+  source: "food" | "exercise" | "bloodwork";
   metric: string;
   derivedMetric?: string;
 
@@ -137,6 +137,8 @@ export interface ChartDSL {
     exerciseSubtype?: string;
     dayOfWeek?: number[]; // 0=Sun … 6=Sat
     category?: "Cardio" | "Strength";
+    /** Required when source === "bloodwork": the canonical_key of the analyte to plot. */
+    canonicalKey?: string;
   };
 
   compare?: {
@@ -154,3 +156,4 @@ export interface ChartDSL {
   /** Prefix-sum cumulative transform. Only valid when groupBy is "date" or "week". Applied after window (if any). */
   transform?: "cumulative";
 }
+
