@@ -174,7 +174,7 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
         title={pinned ? 'Pinned to Trends' : 'Pin to Trends'}
         className={cn(
           'inline-flex h-4 w-4 shrink-0 items-center justify-center transition-colors',
-          pinned ? 'text-[hsl(0_65%_50%)]' : 'text-muted-foreground/40 hover:text-foreground',
+          pinned ? 'text-teal-500 dark:text-teal-400' : 'text-muted-foreground/40 hover:text-foreground',
           isReadOnly && 'opacity-30 cursor-not-allowed',
         )}
       >
