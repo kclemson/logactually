@@ -50,6 +50,30 @@ export function ImportExportSection({ showWeights, showCustomLogs, hasCustomLogT
             </button>
           </div>
         )}
+        {!isReadOnly && (
+          <>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">Export bloodwork results to CSV</p>
+              <button
+                onClick={exportBloodwork}
+                disabled={isExporting}
+                className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors disabled:opacity-50"
+              >
+                Bloodwork
+              </button>
+            </div>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">Download original bloodwork files</p>
+              <button
+                onClick={exportBloodworkFiles}
+                disabled={isExporting}
+                className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors disabled:opacity-50"
+              >
+                Bloodwork Files (zip)
+              </button>
+            </div>
+          </>
+        )}
         {showWeights && !isReadOnly && <AppleHealthImport />}
         {isReadOnly && (
           <p className="text-xs text-muted-foreground mt-2">
