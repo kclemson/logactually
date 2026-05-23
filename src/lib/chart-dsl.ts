@@ -209,9 +209,16 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
     dsl = { ...dsl, compare: { ...dsl.compare, metric: METRIC_COMPAT[dsl.compare.metric] } };
   }
 
+  // ── Bloodwork branch ────────────────────────────────────
+  // Sparse, raw point series — one point per panel. No aggregation, no calendar fill.
+  if (dsl.source === "bloodwork") {
+    return executeBloodworkDSL(dsl, dailyTotals);
+  }
+
   // Collect all dates from the relevant source
   const sourceMap = dsl.source === "food" ? dailyTotals.food : dailyTotals.exercise;
   let dates = Object.keys(sourceMap).sort();
+
 
   // Apply filters
   if (dsl.filter?.dayOfWeek) {
