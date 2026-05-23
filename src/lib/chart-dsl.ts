@@ -785,7 +785,7 @@ function executeBloodworkDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec
     aiNote: dsl.aiNote ?? undefined,
     xAxis: { field: "label", label: "Date" },
     yAxis: { label: points[0]?.unit ?? "value" },
-    color: "hsl(0 65% 50%)",
+    color: "hsl(173 80% 40%)",
     data: dataPoints,
     dataKey: "value",
     dataSource: "bloodwork",
