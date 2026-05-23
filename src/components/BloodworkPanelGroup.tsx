@@ -382,9 +382,10 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
                         : '—';
                   return (
                     <div key={r.id} className="contents">
-                      <span className="flex items-center gap-1 min-w-0 py-0.5">
+                      <span className="flex items-center gap-1 min-w-0 py-0.5 group/row">
                         {renderPin(r.canonical_key, r.display_name)}
                         <span className="truncate">{r.display_name}</span>
+                        {renderLookup(r.display_name)}
                       </span>
                       <span className="tabular-nums whitespace-nowrap py-0.5">
                         {(() => {
