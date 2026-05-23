@@ -67,22 +67,23 @@ interface CompareChartBuilderProps {
 
 export function CompareChartBuilder({ period, onSave, isSaving, initialDsl, initialDsl2, initialTitle, initialNote }: CompareChartBuilderProps) {
   const [seriesA, setSeriesA] = useState<SeriesConfig>(() => ({
-    source: initialDsl?.source ?? "food",
+    source: (initialDsl?.source as "food" | "exercise") ?? "food",
     metric: initialDsl?.metric ?? "calories",
     chartType: (initialDsl?.chartType as "bar" | "line") ?? "bar",
-    color: SOURCE_DEFAULT_COLORS[initialDsl?.source ?? "food"],
+    color: SOURCE_DEFAULT_COLORS[(initialDsl?.source as "food" | "exercise") ?? "food"],
     exerciseKey: initialDsl?.filter?.exerciseKey,
     exerciseSubtype: initialDsl?.filter?.exerciseSubtype,
   }));
 
   const [seriesB, setSeriesB] = useState<SeriesConfig>(() => ({
-    source: initialDsl2?.source ?? "exercise",
+    source: (initialDsl2?.source as "food" | "exercise") ?? "exercise",
     metric: initialDsl2?.metric ?? "duration_minutes",
     chartType: (initialDsl2?.chartType as "bar" | "line") ?? "line",
-    color: SOURCE_DEFAULT_COLORS[initialDsl2?.source ?? "exercise"],
+    color: SOURCE_DEFAULT_COLORS[(initialDsl2?.source as "food" | "exercise") ?? "exercise"],
     exerciseKey: initialDsl2?.filter?.exerciseKey,
     exerciseSubtype: initialDsl2?.filter?.exerciseSubtype,
   }));
+
 
   const [groupBy, setGroupBy] = useState<"date" | "week">(
     (initialDsl?.groupBy as "date" | "week") ?? "date",
