@@ -1,8 +1,13 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight, ExternalLink, Trash2, AlertCircle, Loader2, RefreshCw, ChevronsDownUp, ChevronsUpDown, Search, X, Pin, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useBloodworkPanelsForDate, type BloodworkPanelWithResults } from '@/hooks/useBloodworkPanels';
 import { usePinnedBloodworkCharts } from '@/hooks/usePinnedBloodworkCharts';
+import {
+  readPanelQuery, writePanelQuery,
+  readPanelAllCollapsed, writePanelAllCollapsed,
+  readPanelOverrides, writePanelOverrides,
+} from '@/lib/bloodwork-ui-state';
 import { cn } from '@/lib/utils';
 
 interface BloodworkPanelGroupProps {
