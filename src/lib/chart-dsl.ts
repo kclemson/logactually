@@ -229,7 +229,7 @@ export function executeDSL(dsl: ChartDSL, dailyTotals: DailyTotals): ChartSpec {
   // Extract values per date
   const dateValues: Array<{ date: string; value: number }> = [];
   for (const d of dates) {
-    const v = extractValue(dsl.source, dsl.metric, dsl.derivedMetric, dailyTotals, d);
+    const v = extractValue(dsl.source as "food" | "exercise", dsl.metric, dsl.derivedMetric, dailyTotals, d);
     if (v !== null) {
       dateValues.push({ date: d, value: v });
     }
