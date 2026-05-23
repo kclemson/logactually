@@ -157,6 +157,31 @@ interface BloodworkPanelRowProps {
 }
 
 export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSignedUrl, expanded: controlledExpanded, onToggle, filterQuery = '' }: BloodworkPanelRowProps) {
+  const { pinnedKeys, pin, unpin } = usePinnedBloodworkCharts();
+  const togglePin = (canonicalKey: string, displayName: string) => {
+    if (isReadOnly) return;
+    if (pinnedKeys.has(canonicalKey)) unpin.mutate(canonicalKey);
+    else pin.mutate({ canonicalKey, displayName });
+  };
+  const renderPin = (canonicalKey: string, displayName: string) => {
+    const pinned = pinnedKeys.has(canonicalKey);
+    return (
+      <button
+        type="button"
+        onClick={() => togglePin(canonicalKey, displayName)}
+        disabled={isReadOnly}
+        aria-label={pinned ? 'Unpin from Trends' : 'Pin to Trends'}
+        title={pinned ? 'Pinned to Trends' : 'Pin to Trends'}
+        className={cn(
+          'inline-flex h-4 w-4 shrink-0 items-center justify-center transition-colors',
+          pinned ? 'text-[hsl(0_65%_50%)]' : 'text-muted-foreground/40 hover:text-foreground',
+          isReadOnly && 'opacity-30 cursor-not-allowed',
+        )}
+      >
+        <Pin className={cn('h-3 w-3', pinned && 'fill-current')} />
+      </button>
+    );
+  };
   const [internalExpanded, setInternalExpanded] = useState(true);
   const expanded = controlledExpanded ?? internalExpanded;
   const isPending = panel.parse_status === 'pending';
