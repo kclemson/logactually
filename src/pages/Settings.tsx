@@ -17,6 +17,7 @@ export default function Settings() {
   const { settings, updateSettings, isLoading } = useUserSettings();
   const { isReadOnly } = useReadOnlyContext();
   const { logTypes } = useCustomLogTypes();
+  const hasBloodworkLogType = logTypes.some((t) => t.value_type === 'panel');
 
   return (
     <div className="space-y-4">
@@ -30,8 +31,10 @@ export default function Settings() {
         showWeights={settings.showWeights}
         showCustomLogs={settings.showCustomLogs ?? false}
         hasCustomLogTypes={logTypes.length > 0}
+        hasBloodworkLogType={hasBloodworkLogType}
         isReadOnly={isReadOnly}
       />
+
       <AccountSection user={user} signOut={signOut} isReadOnly={isReadOnly} queryClient={queryClient} />
       <AboutSection />
     </div>
