@@ -104,22 +104,46 @@ export function BloodworkPanelToolbar({
 export function BloodworkPanelGroup({ dateStr, logTypeId, isReadOnly }: BloodworkPanelGroupProps) {
   const { panels, deletePanel, retryParse, getSignedUrl } = useBloodworkPanelsForDate(dateStr);
   // duplicate_pending panels are resolved via the global DuplicateContentDialogHost.
-  const myPanels = panels.filter((p) => p.log_type_id === logTypeId && p.parse_status !== 'duplicate_pending');
+  const myPanels = useMemo(
+    () => panels.filter((p) => p.log_type_id === logTypeId && p.parse_status !== 'duplicate_pending'),
+    [panels, logTypeId]
+  );
 
-  const [query, setQuery] = useState('');
-  const [collapsedMap, setCollapsedMap] = useState<Record<string, boolean>>({});
-  const [allCollapsed, setAllCollapsed] = useState(false);
+  // Shared scope across all dates for this log type — panel ids are globally
+  // unique, and the overrides map prunes stale ids on read.
+  const scope = `dated:${logTypeId}`;
+  const [query, setQuery] = useState(() => readPanelQuery(scope));
+  const [collapsedMap, setCollapsedMap] = useState<Record<string, boolean>>(() => {
+    const ids = new Set(myPanels.map((p) => p.id));
+    return readPanelOverrides(scope, ids.size > 0 ? ids : undefined);
+  });
+  const [allCollapsed, setAllCollapsed] = useState(() => readPanelAllCollapsed(scope));
 
   if (myPanels.length === 0) return null;
 
   const visiblePanels = query ? myPanels.filter((p) => panelHasMatch(p, query)) : myPanels;
 
+  const handleQueryChange = (q: string) => {
+    setQuery(q);
+    writePanelQuery(scope, q);
+  };
+
   const toggleAll = () => {
     const next = !allCollapsed ? true : false;
     setAllCollapsed(next);
-    const m: Record<string, boolean> = {};
+    writePanelAllCollapsed(scope, next);
+    const m: Record<string, boolean> = { ...collapsedMap };
     for (const p of myPanels) m[p.id] = !next;
     setCollapsedMap(m);
+    writePanelOverrides(scope, m);
+  };
+
+  const handleToggleRow = (panelId: string) => {
+    setCollapsedMap((m) => {
+      const next = { ...m, [panelId]: !(m[panelId] ?? true) };
+      writePanelOverrides(scope, next);
+      return next;
+    });
   };
 
   return (
@@ -127,7 +151,7 @@ export function BloodworkPanelGroup({ dateStr, logTypeId, isReadOnly }: Bloodwor
       {myPanels.length >= 2 && (
         <BloodworkPanelToolbar
           query={query}
-          onQueryChange={setQuery}
+          onQueryChange={handleQueryChange}
           allExpanded={!allCollapsed}
           onToggleAll={toggleAll}
           showToggle
@@ -144,7 +168,7 @@ export function BloodworkPanelGroup({ dateStr, logTypeId, isReadOnly }: Bloodwor
             onRetry={() => retryParse.mutate(panel.id)}
             getSignedUrl={getSignedUrl}
             expanded={forcedExpanded}
-            onToggle={() => setCollapsedMap((m) => ({ ...m, [panel.id]: !(m[panel.id] ?? true) }))}
+            onToggle={() => handleToggleRow(panel.id)}
             filterQuery={query}
           />
         );
