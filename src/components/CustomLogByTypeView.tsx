@@ -362,25 +362,28 @@ function PanelHistory({
   isReadOnly,
   query,
   allCollapsed,
-  collapseTick,
 }: {
   logTypeId: string;
   isReadOnly: boolean;
   query: string;
   allCollapsed: boolean;
-  collapseTick: number;
 }) {
   const { data: panels = [], isLoading } = useBloodworkPanelsForType(logTypeId);
   // Reuse the date-scoped hook's mutations via a tiny passthrough so delete/retry work the same.
   const today = format(new Date(), 'yyyy-MM-dd');
   const { deletePanel, retryParse, getSignedUrl } = useBloodworkPanelsForDate(today);
 
-  // Per-panel overrides keyed by `${collapseTick}:${panelId}` so that bumping the tick
-  // (from parent's collapse/expand-all toggle) effectively resets every override without
-  // needing a sync effect.
-  const [overrides, setOverrides] = useState<Record<string, boolean>>({});
+  const visible = useMemo(
+    () => panels.filter((p) => p.parse_status !== 'duplicate_pending'),
+    [panels]
+  );
 
-  const visible = panels.filter((p) => p.parse_status !== 'duplicate_pending');
+  // Per-panel expand overrides persist across navigation. Prune entries
+  // for panel ids that no longer exist on read.
+  const [overrides, setOverrides] = useState<Record<string, boolean>>(() => {
+    const ids = new Set(visible.map((p) => p.id));
+    return readPanelOverrides(logTypeId, ids.size > 0 ? ids : undefined);
+  });
 
   if (isLoading) return <Skeleton className="h-8 w-full" />;
   if (visible.length === 0) {
@@ -389,11 +392,19 @@ function PanelHistory({
 
   const filtered = query ? visible.filter((p) => panelHasMatch(p, query)) : visible;
 
+  const handleToggle = (panelId: string) => {
+    setOverrides((m) => {
+      const current = m[panelId] ?? !allCollapsed;
+      const next = { ...m, [panelId]: !current };
+      writePanelOverrides(logTypeId, next);
+      return next;
+    });
+  };
+
   return (
     <div className="space-y-0">
       {filtered.map((panel) => {
-        const key = `${collapseTick}:${panel.id}`;
-        const forcedExpanded = query ? true : (overrides[key] ?? !allCollapsed);
+        const forcedExpanded = query ? true : (overrides[panel.id] ?? !allCollapsed);
         return (
           <div key={panel.id} className="space-y-0">
             {panel.collected_date && (
@@ -408,7 +419,7 @@ function PanelHistory({
               onRetry={() => retryParse.mutate(panel.id)}
               getSignedUrl={getSignedUrl}
               expanded={forcedExpanded}
-              onToggle={() => setOverrides((m) => ({ ...m, [key]: !(m[key] ?? !allCollapsed) }))}
+              onToggle={() => handleToggle(panel.id)}
               filterQuery={query}
             />
           </div>
