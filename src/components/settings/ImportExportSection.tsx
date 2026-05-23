@@ -11,7 +11,7 @@ interface ImportExportSectionProps {
 }
 
 export function ImportExportSection({ showWeights, showCustomLogs, hasCustomLogTypes, isReadOnly }: ImportExportSectionProps) {
-  const { isExporting, exportFoodLog, exportWeightLog, exportCustomLog } = useExportData();
+  const { isExporting, exportFoodLog, exportWeightLog, exportCustomLog, exportBloodwork, exportBloodworkFiles } = useExportData();
 
   return (
     <CollapsibleSection title="Import and Export" icon={ArrowDownUp} storageKey="settings-export" iconClassName="text-zinc-500 dark:text-zinc-400">
