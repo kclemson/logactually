@@ -1,23 +1,11 @@
-# Fix retry UX in Settings failed-bloodwork list
+# Align failed-bloodwork row icons with parent row icons
 
 ## Problem
-Clicking the retry icon on a failed bloodwork upload in Settings makes the row disappear immediately, even while the parse is still running. If the parse fails again, the row only reappears after the refetch settles — and to the user it looks like the retry did nothing / lost their file.
-
-Root cause: `useFailedBloodworkPanels.retryParse` has an `onMutate` that optimistically filters the panel out of the failed list. Since the list is "failed only", removing it on mutate hides it for the entire duration of the parse.
+The retry/delete icons on the failed-upload row sit slightly off from the edit/delete icons on the parent log-type rows above. Cause: my row uses `p-1` button padding while `SavedItemRow` uses `p-0.5`, so the icons end up at a different horizontal position (and slightly larger hit boxes).
 
 ## Change
-`src/hooks/useBloodworkPanels.ts`, `useFailedBloodworkPanels.retryParse`:
-- Remove `onMutate` and `onError` (no more optimistic removal).
-- Keep `onSettled` invalidation so the list refreshes once the edge function returns.
-- The retry button in `CustomLogTypeRow` already shows a `Loader2` spinner while `retryParse.isPending && variables === p.id`, so the user gets immediate feedback that the retry is in flight, and the row stays visible until the real status is known.
+`src/components/CustomLogTypeRow.tsx`, in the failed-panels list:
+- Change the retry and delete button padding from `p-1` to `p-0.5` to match `SavedItemRow`'s icon buttons exactly.
+- Keep the same icon sizes (`h-3.5 w-3.5`) and the same gap.
 
-Result:
-- Click retry → spinner appears on that row's retry icon, row stays put.
-- Parse succeeds → row disappears (no longer failed).
-- Parse fails again → row stays with updated `parse_error`.
-
-`deletePanel` keeps its optimistic removal (delete is user-initiated and final, so instant removal is the correct UX there).
-
-## Out of scope
-- Daily-view behavior (already correct).
-- Why parses fail.
+That's it — the right edge already aligns because the indented `<ul>` shares the parent row's right edge; only the button padding was throwing things off.
