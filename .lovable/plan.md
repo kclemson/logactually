@@ -1,11 +1,19 @@
-# Align failed-bloodwork row icons with parent row icons
+# Constrain bloodwork upload dialog on mobile
 
 ## Problem
-The retry/delete icons on the failed-upload row sit slightly off from the edit/delete icons on the parent log-type rows above. Cause: my row uses `p-1` button padding while `SavedItemRow` uses `p-0.5`, so the icons end up at a different horizontal position (and slightly larger hit boxes).
+When the user picks many files at once, the job list inside the bloodwork upload dialog grows unbounded. The wrapping `DialogContent` has no max-height and the inner `<div className="rounded-lg border border-border bg-card p-5">` lets the list push the dialog past the viewport, so on mobile the top and bottom (dropzone + Done button) get clipped.
 
 ## Change
-`src/components/CustomLogTypeRow.tsx`, in the failed-panels list:
-- Change the retry and delete button padding from `p-1` to `p-0.5` to match `SavedItemRow`'s icon buttons exactly.
-- Keep the same icon sizes (`h-3.5 w-3.5`) and the same gap.
+`src/components/BloodworkUploadInput.tsx`:
+- Wrap the outer container as a vertical flex column with `max-h-[85dvh]` (with `max-h-[85vh]` fallback in the class list) and `min-h-0`.
+- Make the dropzone button and the bottom Done button non-shrinking (`shrink-0`) so they stay visible.
+- Add `max-h` + `overflow-y-auto` + `min-h-0` to the jobs list container so only the list scrolls when there are many files. Keep the existing divide-y styling.
 
-That's it — the right edge already aligns because the indented `<ul>` shares the parent row's right edge; only the button padding was throwing things off.
+`src/pages/OtherLog.tsx` (panel branch around line 374):
+- Change the inner panel wrapper from `p-5` to also `flex flex-col min-h-0` so the height constraint inside BloodworkUploadInput propagates correctly.
+
+No DialogContent positioning change is needed beyond this — the list will scroll inside the dialog instead of pushing the dialog off-screen. Works the same on desktop (the constraint only activates when the list overflows).
+
+## Out of scope
+- Behavior of any other custom-log entry dialog (only the panel/bloodwork one has this issue).
+- Visual styling of the rows themselves.
