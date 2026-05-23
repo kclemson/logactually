@@ -343,7 +343,7 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
       )}
 
       {expanded && !isPending && !isFailed && (
-        <div className="pl-8 pr-2 pb-2 space-y-2">
+        <div className="pl-1 pr-2 pb-2 space-y-2">
           {sections.map((section, i) => (
             <div key={i} className="space-y-0">
               {section.title && (
