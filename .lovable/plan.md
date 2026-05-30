@@ -1,51 +1,34 @@
-# Persist bloodwork view state + pinned charts in /custom
+## Goal
 
-Two related changes scoped to the bloodwork (panel-type) custom log experience.
+Make all 5 unitless items in your (user #1) saved meals editable again by giving each a sensible `portion` string. This is a surgical data-only fix — no code changes, and historical logs are left untouched.
 
-## 1. Persist bloodwork view state across navigation
+## Scope confirmed
 
-All persisted to `localStorage` (device-local, matches existing patterns like `trends-period`, `custom-log-view-mode`, `trends-cardio-mode-*`).
+- **Saved meals (fix):** 5 items across 5 meals.
+- **Historical logs (skip):** 198 items — intentionally left alone.
 
-Persisted keys:
-- `bloodwork-panel-expanded:<panelId>` — per-panel expand/collapse
-- `bloodwork-panel-all-collapsed` — header "collapse all" toggle
-- `bloodwork-panel-query` — header filter query
-- `bloodwork-type-expanded` — whether the panel-type row itself is expanded on /custom
+## The fix
 
-State flow follows the project's useEffect guideline: read once via lazy `useState` initializer, write in event handlers (no `useEffect` sync).
+Update the `food_items` JSONB on these 5 saved-meal rows, setting `portion` on the one offending item in each. Values use my suggestions (whole single-serving units):
 
-Touchpoints:
-- `src/components/CustomLogByTypeView.tsx` — lift `expanded`, `panelQuery`, `panelAllCollapsed` to lazy initializers from localStorage; persist on each setter callback. `panelCollapseTick` stays in-memory (broadcast signal, not user-visible).
-- `src/components/BloodworkPanelGroup.tsx` (used in the dated view) — same treatment so behavior is consistent if the user visits both views.
-- New helper `src/lib/bloodwork-ui-state.ts` with typed `read*`/`write*` functions so both call sites share serialization (especially the `Record<string, boolean>` collapsed map).
+| Saved meal (id) | Item index | Item | Portion to set |
+|---|---|---|---|
+| `05592e96…` Barebell bar – Cookies & Caramel | 0 | Barebell protein bar | `1 bar` |
+| `c35bf65f…` Edamame (bag) | 0 | Salted Edamame In Pod | `1 bag` |
+| `a6b0d660…` Egg & Cheese Pita Snack Sandwich | 0 | Egg & Cheese Pita Snack Sandwich | `1 sandwich` |
+| `29a4a78b…` Red Baron french bread pizza | 0 | French bread five cheese & garlic | `1 piece` |
+| `18a528eb…` strawberries + cottage cheese | 0 | Cottage Cheese | `0.458 cup` |
 
-Edge cases:
-- Wrap all storage access in `try/catch` (matches existing patterns).
-- Prune the collapsed map opportunistically: when reading, drop keys whose `panelId` isn't in the current panel list, then write back.
-- Active `query` continues to force rows expanded; per-panel state takes over once the query clears.
+## How it will be applied
 
-## 2. Pinned analyte charts section on the panel-type log
+A single targeted data update (via the database insert/update tool) that uses `jsonb_set` to write `portion` into the exact item index of each of the 5 rows — matched by `id` to avoid touching any other meal. Macros/calories are unchanged; only the missing portion label is added, which re-enables the existing amount/scaling stepper.
 
-When the user expands a panel-type custom log on /custom, show a "Pinned" section above the panel history listing the saved bloodwork charts. Reuses the rendering already used in Trends so visuals stay in sync.
+## Verification
 
-Touchpoints:
-- New `src/components/PinnedBloodworkChartsSection.tsx`:
-  - Uses `useSavedCharts()` to get saved charts + live specs (same hook Trends uses).
-  - Filters to `chart_dsl.source === "bloodwork"`.
-  - Receives the panel header's `query` as a prop. When `query` is non-empty, further filter the pinned charts so only charts whose analyte matches the query are shown — match against the chart title, the DSL's `filter.canonicalKey`, and (where available) the analyte's display name / aliases via `src/lib/bloodwork-canonical.ts`. This way, searching for an analyte surfaces both its panel rows and its pinned chart together.
-  - Renders inside a `CollapsibleSection` titled "Pinned" with `storageKey="custom-pinned-bloodwork"` (open/closed persists for free).
-  - Layout: same `grid grid-cols-2 gap-2` of `<DynamicChart spec={live ?? chart.chart_spec} />` blocks used in Trends.
-  - Empty state: render nothing — including when a search query filters all pinned charts out — so we never show an empty "Pinned" header.
-- `src/components/CustomLogByTypeView.tsx` — when `logType.value_type === 'panel'`, render `<PinnedBloodworkChartsSection query={panelQuery} />` at the top of the expanded body, above `<PanelHistory />`.
-- No backend changes. Pinning/unpinning continues to flow through `usePinnedBloodworkCharts` from `BloodworkPanelRow`; React Query invalidation makes the new section update live.
+After the update, re-query these 5 rows to confirm each target item now has a non-empty `portion`, and confirm the global count of unitless items on your account in saved meals is `0`.
 
 ## Out of scope
 
-- Hover-card / popover variant of the chart (we chose the dedicated section).
-- Syncing state across devices (explicitly device-local).
-- Changes to Trends rendering of pinned bloodwork charts.
-- Persisting other unrelated ephemeral UI (food-log expansions, etc.).
-
-## Memory update
-
-After implementation, add a memory entry `Bloodwork UI Persistence` — keys list + lazy-init + event-handler write pattern, plus the rule that pinned charts honor the header search query.
+- Historical `food_entries` (198 items) — not modified.
+- Any code change to `FoodItemsTable.tsx` rendering logic.
+- Other users' data.
