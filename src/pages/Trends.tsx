@@ -367,6 +367,22 @@ const Trends = () => {
     })),
   ];
 
+  // Per-section visibility: in normal mode, hide a section entirely when all of
+  // its charts are hidden. In customize mode, always show so charts can return.
+  const foodChartIds = [
+    CHART_IDS.foodCalories,
+    CHART_IDS.foodMacroSplit,
+    CHART_IDS.foodCombined,
+    ...charts.slice(1).map((c) => foodMacroChartId(c.key)),
+  ];
+  const foodSectionVisible = customizeMode || foodChartIds.some((id) => !hiddenSet.has(id));
+  const exerciseSectionVisible = customizeMode
+    || !hiddenSet.has(CHART_IDS.exerciseCalorieBurn)
+    || weightExercises.some((ex) => !hiddenSet.has(exerciseChartId(ex.exercise_key, ex.exercise_subtype)));
+  const customSectionVisible = customizeMode
+    || bloodworkCharts.some((c) => !hiddenSet.has(bloodworkChartId(c.id)))
+    || customLogTrends.some((t) => !hiddenSet.has(customLogChartId(t.logTypeId)));
+
   return (
     <div className="space-y-6 -mx-2">
       <div className="flex items-center justify-center gap-2">
