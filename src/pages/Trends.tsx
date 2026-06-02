@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, ChartTitle, ChartSubtitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
-import { UtensilsCrossed, Dumbbell, ClipboardList, Pin, Plus, BarChart3, Pencil, GripVertical } from "lucide-react";
+import { UtensilsCrossed, Dumbbell, ClipboardList, Pin, Plus, BarChart3, Pencil, GripVertical, SlidersHorizontal } from "lucide-react";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { useWeightTrends, ExerciseTrend } from "@/hooks/useWeightTrends";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
