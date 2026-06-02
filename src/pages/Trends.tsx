@@ -663,8 +663,8 @@ const Trends = () => {
             {/* Row 2: Protein + Carbs + Fat */}
             <div className="grid grid-cols-3 gap-1">
               {charts.slice(1).map(({ key, label, color }) => (
+                <ChartVisibilityWrapper key={key} chartId={foodMacroChartId(key)} isHidden={hiddenSet.has(foodMacroChartId(key))} customizeMode={customizeMode} onToggle={toggleChart}>
                 <FoodChart
-                  key={key}
                   title={label}
                   subtitle={`avg: ${averages[key as keyof typeof averages]}, today: ${todayValues[key as keyof typeof todayValues]}`}
                   chartData={chartData}
@@ -679,6 +679,7 @@ const Trends = () => {
                       : `${name}: ${Math.round(value)}g`;
                   }}
                 />
+                </ChartVisibilityWrapper>
               ))}
             </div>
           </div>
