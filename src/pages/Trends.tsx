@@ -689,7 +689,7 @@ const Trends = () => {
       )}
 
       {/* Weight Trends Section */}
-      {showWeights && (
+      {showWeights && exerciseSectionVisible && (
         <CollapsibleSection title="Exercise Trends" icon={Dumbbell} iconClassName="text-[hsl(262_83%_58%)]" defaultOpen={true} storageKey="trends-weights" headerAction={
           <span className="flex items-center gap-1.5 text-xs">
             <button onClick={() => { setExerciseInitialView("ask"); setExerciseAIOpen(true); }} className="text-primary hover:underline">Ask AI</button>
