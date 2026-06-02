@@ -28,6 +28,15 @@ interface CustomLogTrendChartProps {
 
 
 export const CustomLogTrendChart = ({ trend, onNavigate, days }: CustomLogTrendChartProps) => {
+  // Single numeric series that reads as a "level" metric renders as a fitted line.
+  const useLine = useMemo(
+    () =>
+      trend.valueType === 'numeric' &&
+      trend.series.length === 1 &&
+      isLevelSeries(trend.series[0].data),
+    [trend],
+  );
+
   const chartData = useMemo(() => {
     const isTextType = trend.valueType === 'text' || trend.valueType === 'text_multiline';
 
