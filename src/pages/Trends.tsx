@@ -567,6 +567,7 @@ const Trends = () => {
           <div className="space-y-3">
             {/* Row 1: Calories + Macros Breakdown */}
             <div className="grid grid-cols-2 gap-2">
+              <ChartVisibilityWrapper chartId={CHART_IDS.foodCalories} isHidden={hiddenSet.has(CHART_IDS.foodCalories)} customizeMode={customizeMode} onToggle={toggleChart}>
               <FoodChart
                 title="Calories"
                 subtitle={`avg: ${averages.calories}, today: ${todayValues.calories}`}
@@ -579,7 +580,9 @@ const Trends = () => {
                   return t ? { value: t, color: "hsl(var(--muted-foreground))" } : undefined;
                 })()}
               />
+              </ChartVisibilityWrapper>
 
+              <ChartVisibilityWrapper chartId={CHART_IDS.foodMacroSplit} isHidden={hiddenSet.has(CHART_IDS.foodMacroSplit)} customizeMode={customizeMode} onToggle={toggleChart}>
               <StackedMacroChart
                 title="Macro Split (%)"
                 subtitle={`avg: ${averages.protein}/${averages.carbs}/${averages.fat}, today: ${todayValues.protein}/${todayValues.carbs}/${todayValues.fat}`}
@@ -610,6 +613,7 @@ const Trends = () => {
                 );
               }}
               />
+              </ChartVisibilityWrapper>
             </div>
 
             {/* Combined Calories + Macros Chart */}
