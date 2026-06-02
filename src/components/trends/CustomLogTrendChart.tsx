@@ -66,7 +66,8 @@ export const CustomLogTrendChart = ({ trend, onNavigate, days }: CustomLogTrendC
       };
       trend.series.forEach(s => {
         const match = s.data.find(d => d.date === date);
-        point[s.label] = match ? match.value : 0;
+        // Line mode: missing days are gaps (null), not zeros that would spike to the floor.
+        point[s.label] = match ? match.value : (useLine ? null : 0);
         if (match?.textLabel) point.textPreview = match.textLabel;
       });
       // For dual_numeric (BP), add a "120/80" label on visible label points
@@ -77,7 +78,7 @@ export const CustomLogTrendChart = ({ trend, onNavigate, days }: CustomLogTrendC
       }
       return point;
     });
-  }, [trend, days]);
+  }, [trend, days, useLine]);
 
   const labelFormatter = useMemo(() => {
     if (trend.series.length !== 1) return undefined;
