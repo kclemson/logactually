@@ -58,6 +58,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   defaultIntensity: null,
   weekStartDay: 0,
   displayMacros: DEFAULT_DISPLAY_MACROS,
+  hiddenCharts: [],
 };
 
 export function useUserSettings() {
