@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, ChartTitle, ChartSubtitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
-import { UtensilsCrossed, Dumbbell, ClipboardList, Pin, Plus, BarChart3, Pencil, GripVertical } from "lucide-react";
+import { UtensilsCrossed, Dumbbell, ClipboardList, Pin, Plus, BarChart3, Pencil, GripVertical, SlidersHorizontal } from "lucide-react";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { useWeightTrends, ExerciseTrend } from "@/hooks/useWeightTrends";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
@@ -37,6 +37,8 @@ import { CustomLogTrendChart } from "@/components/trends/CustomLogTrendChart";
 import { useDailyCalorieBurn } from "@/hooks/useDailyCalorieBurn";
 import { useCustomLogTrends } from "@/hooks/useCustomLogTrends";
 import { getLabelInterval, getFullWidthLabelInterval } from "@/lib/chart-label-interval";
+import { ChartVisibilityWrapper } from "@/components/trends/ChartVisibilityWrapper";
+import { CHART_IDS, foodMacroChartId, exerciseChartId, customLogChartId, bloodworkChartId, toggleChartId } from "@/lib/chart-visibility";
 
 import { MACRO_META } from '@/lib/macro-display';
 
@@ -82,8 +84,14 @@ const Trends = () => {
       return [];
     }
   });
-  const { settings } = useUserSettings();
+  const { settings, updateSettings } = useUserSettings();
   const showWeights = settings.showWeights;
+  const hiddenCharts = settings.hiddenCharts ?? [];
+  const hiddenSet = useMemo(() => new Set(hiddenCharts), [hiddenCharts]);
+  const [customizeMode, setCustomizeMode] = useState(false);
+  const toggleChart = useCallback((id: string) => {
+    updateSettings({ hiddenCharts: toggleChartId(id, settings.hiddenCharts ?? []) });
+  }, [updateSettings, settings.hiddenCharts]);
   const mergeMutation = useMergeExercises();
   const [foodAIOpen, setFoodAIOpen] = useState(false);
   const [exerciseAIOpen, setExerciseAIOpen] = useState(false);
@@ -264,9 +272,17 @@ const Trends = () => {
     });
   }, [dailyCalorieBurn, selectedPeriod]);
 
-  // Visible exercises (load more pattern)
-  const visibleExercises = weightExercises.slice(0, visibleExerciseCount);
-  const hasMoreExercises = weightExercises.length > visibleExerciseCount;
+  // Visible exercises (load more pattern). In normal mode hidden exercises are
+  // filtered out so they don't consume the visible slice; in customize mode they
+  // stay (dimmed) so they can be brought back.
+  const exercisePool = useMemo(
+    () => customizeMode
+      ? weightExercises
+      : weightExercises.filter((ex) => !hiddenSet.has(exerciseChartId(ex.exercise_key, ex.exercise_subtype))),
+    [weightExercises, customizeMode, hiddenSet]
+  );
+  const visibleExercises = exercisePool.slice(0, visibleExerciseCount);
+  const hasMoreExercises = exercisePool.length > visibleExerciseCount;
 
   // Aggregate by date from fetchChartData pipeline
   const chartData = useMemo(() => {
@@ -351,6 +367,22 @@ const Trends = () => {
     })),
   ];
 
+  // Per-section visibility: in normal mode, hide a section entirely when all of
+  // its charts are hidden. In customize mode, always show so charts can return.
+  const foodChartIds = [
+    CHART_IDS.foodCalories,
+    CHART_IDS.foodMacroSplit,
+    CHART_IDS.foodCombined,
+    ...charts.slice(1).map((c) => foodMacroChartId(c.key)),
+  ];
+  const foodSectionVisible = customizeMode || foodChartIds.some((id) => !hiddenSet.has(id));
+  const exerciseSectionVisible = customizeMode
+    || !hiddenSet.has(CHART_IDS.exerciseCalorieBurn)
+    || weightExercises.some((ex) => !hiddenSet.has(exerciseChartId(ex.exercise_key, ex.exercise_subtype)));
+  const customSectionVisible = customizeMode
+    || bloodworkCharts.some((c) => !hiddenSet.has(bloodworkChartId(c.id)))
+    || customLogTrends.some((t) => !hiddenSet.has(customLogChartId(t.logTypeId)));
+
   return (
     <div className="space-y-6 -mx-2">
       <div className="flex items-center justify-center gap-2">
@@ -377,7 +409,17 @@ const Trends = () => {
             Chart
           </Button>
         )}
+        <Button
+          size="sm"
+          variant={customizeMode ? "default" : "outline"}
+          onClick={() => setCustomizeMode((v) => !v)}
+          className="gap-1"
+        >
+          <SlidersHorizontal className="h-3.5 w-3.5" />
+          {customizeMode ? "Done" : "Customize"}
+        </Button>
       </div>
+
 
       {/* My Charts Section — admin only */}
       {canUseCharts && savedCharts.length > 0 && (
@@ -502,6 +544,7 @@ const Trends = () => {
       )}
 
       {/* Food Trends Section */}
+      {foodSectionVisible && (
       <CollapsibleSection title="Food Trends" icon={UtensilsCrossed} defaultOpen={true} storageKey="trends-food" iconClassName="text-blue-500 dark:text-blue-400" headerAction={
         <span className="flex items-center gap-1.5 text-xs">
           <button onClick={() => { setFoodInitialView("ask"); setFoodAIOpen(true); }} className="text-primary hover:underline">Ask AI</button>
@@ -525,6 +568,7 @@ const Trends = () => {
           <div className="space-y-3">
             {/* Row 1: Calories + Macros Breakdown */}
             <div className="grid grid-cols-2 gap-2">
+              <ChartVisibilityWrapper chartId={CHART_IDS.foodCalories} isHidden={hiddenSet.has(CHART_IDS.foodCalories)} customizeMode={customizeMode} onToggle={toggleChart}>
               <FoodChart
                 title="Calories"
                 subtitle={`avg: ${averages.calories}, today: ${todayValues.calories}`}
@@ -537,7 +581,9 @@ const Trends = () => {
                   return t ? { value: t, color: "hsl(var(--muted-foreground))" } : undefined;
                 })()}
               />
+              </ChartVisibilityWrapper>
 
+              <ChartVisibilityWrapper chartId={CHART_IDS.foodMacroSplit} isHidden={hiddenSet.has(CHART_IDS.foodMacroSplit)} customizeMode={customizeMode} onToggle={toggleChart}>
               <StackedMacroChart
                 title="Macro Split (%)"
                 subtitle={`avg: ${averages.protein}/${averages.carbs}/${averages.fat}, today: ${todayValues.protein}/${todayValues.carbs}/${todayValues.fat}`}
@@ -568,9 +614,11 @@ const Trends = () => {
                 );
               }}
               />
+              </ChartVisibilityWrapper>
             </div>
 
             {/* Combined Calories + Macros Chart */}
+            <ChartVisibilityWrapper chartId={CHART_IDS.foodCombined} isHidden={hiddenSet.has(CHART_IDS.foodCombined)} customizeMode={customizeMode} onToggle={toggleChart}>
             <StackedMacroChart
               title="Combined Calories + Macros"
               chartData={chartData}
@@ -611,12 +659,13 @@ const Trends = () => {
                 return t ? { value: t, color: "hsl(var(--muted-foreground))" } : undefined;
               })()}
             />
+            </ChartVisibilityWrapper>
 
             {/* Row 2: Protein + Carbs + Fat */}
             <div className="grid grid-cols-3 gap-1">
               {charts.slice(1).map(({ key, label, color }) => (
+                <ChartVisibilityWrapper key={key} chartId={foodMacroChartId(key)} isHidden={hiddenSet.has(foodMacroChartId(key))} customizeMode={customizeMode} onToggle={toggleChart}>
                 <FoodChart
-                  key={key}
                   title={label}
                   subtitle={`avg: ${averages[key as keyof typeof averages]}, today: ${todayValues[key as keyof typeof todayValues]}`}
                   chartData={chartData}
@@ -631,14 +680,16 @@ const Trends = () => {
                       : `${name}: ${Math.round(value)}g`;
                   }}
                 />
+                </ChartVisibilityWrapper>
               ))}
             </div>
           </div>
         )}
       </CollapsibleSection>
+      )}
 
       {/* Weight Trends Section */}
-      {showWeights && (
+      {showWeights && exerciseSectionVisible && (
         <CollapsibleSection title="Exercise Trends" icon={Dumbbell} iconClassName="text-[hsl(262_83%_58%)]" defaultOpen={true} storageKey="trends-weights" headerAction={
           <span className="flex items-center gap-1.5 text-xs">
             <button onClick={() => { setExerciseInitialView("ask"); setExerciseAIOpen(true); }} className="text-primary hover:underline">Ask AI</button>
@@ -677,6 +728,7 @@ const Trends = () => {
                       ? `TDEE (excluding exercise): ~${sedentaryTDEE.toLocaleString()}`
                       : "Set bio in Settings for precision";
                   return (
+                    <ChartVisibilityWrapper chartId={CHART_IDS.exerciseCalorieBurn} isHidden={hiddenSet.has(CHART_IDS.exerciseCalorieBurn)} customizeMode={customizeMode} onToggle={toggleChart}>
                     <CalorieBurnChart
                       title="Estimated Exercise Calorie Burn"
                       subtitle={subtitle}
@@ -685,17 +737,22 @@ const Trends = () => {
                       onNavigate={(date) => navigate(`/weights?date=${date}`)}
                       sedentaryTDEE={sedentaryTDEE}
                     />
+                    </ChartVisibilityWrapper>
                   );
                 })()}
-                {visibleExercises.map((exercise, index) => (
+                {visibleExercises.map((exercise, index) => {
+                  const id = exerciseChartId(exercise.exercise_key, exercise.exercise_subtype);
+                  return (
+                  <ChartVisibilityWrapper key={`${exercise.exercise_key}-${exercise.exercise_subtype ?? index}`} chartId={id} isHidden={hiddenSet.has(id)} customizeMode={customizeMode} onToggle={toggleChart}>
                   <ExerciseChart 
-                    key={`${exercise.exercise_key}-${exercise.exercise_subtype ?? index}`} 
                     exercise={exercise} 
                     unit={settings.weightUnit}
                     onBarClick={handleExerciseBarClick}
                     distanceUnit={settings.distanceUnit}
                   />
-                ))}
+                  </ChartVisibilityWrapper>
+                  );
+                })}
               </div>
 
               {hasMoreExercises && (
@@ -714,7 +771,7 @@ const Trends = () => {
       )}
 
       {/* Other Trends Section */}
-      {((showCustomLogs && customLogTrends.length > 0) || bloodworkCharts.length > 0) && (
+      {((showCustomLogs && customLogTrends.length > 0) || bloodworkCharts.length > 0) && customSectionVisible && (
         <CollapsibleSection title="Custom Trends" icon={ClipboardList} iconClassName="text-teal-500 dark:text-teal-400" defaultOpen={true} storageKey="trends-other">
           <div className="grid grid-cols-2 gap-2">
             {bloodworkCharts.map((chart) => {
@@ -722,19 +779,31 @@ const Trends = () => {
               const spec = live
                 ? { ...live, title: chart.chart_spec.title, aiNote: chart.chart_spec.aiNote }
                 : chart.chart_spec;
+              const id = bloodworkChartId(chart.id);
               return (
+                <ChartVisibilityWrapper key={chart.id} chartId={id} isHidden={hiddenSet.has(id)} customizeMode={customizeMode} onToggle={toggleChart}>
                 <DynamicChart
-                  key={chart.id}
                   spec={spec}
                 />
-
+                </ChartVisibilityWrapper>
               );
             })}
-            {showCustomLogs && customLogTrends.map((trend) => (
-              <CustomLogTrendChart key={trend.logTypeId} trend={trend} days={selectedPeriod} onNavigate={(date) => navigate(`/custom?date=${date}`)} />
-            ))}
+            {showCustomLogs && customLogTrends.map((trend) => {
+              const id = customLogChartId(trend.logTypeId);
+              return (
+                <ChartVisibilityWrapper key={trend.logTypeId} chartId={id} isHidden={hiddenSet.has(id)} customizeMode={customizeMode} onToggle={toggleChart}>
+                <CustomLogTrendChart trend={trend} days={selectedPeriod} onNavigate={(date) => navigate(`/custom?date=${date}`)} />
+                </ChartVisibilityWrapper>
+              );
+            })}
           </div>
         </CollapsibleSection>
+      )}
+
+      {!customizeMode && hiddenCharts.length > 0 && !foodSectionVisible && !(showWeights && exerciseSectionVisible) && !customSectionVisible && (
+        <div className="py-12 text-center text-sm text-muted-foreground">
+          All charts are hidden. Tap <span className="font-medium text-foreground">Customize</span> to bring them back.
+        </div>
       )}
       <AskTrendsAIDialog mode="food" open={foodAIOpen} onOpenChange={setFoodAIOpen} initialView={foodInitialView} />
       <AskTrendsAIDialog mode="exercise" open={exerciseAIOpen} onOpenChange={setExerciseAIOpen} initialView={exerciseInitialView} />

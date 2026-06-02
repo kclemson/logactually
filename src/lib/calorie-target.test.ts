@@ -112,6 +112,7 @@ const baseSettings: UserSettings = {
   defaultIntensity: null,
   weekStartDay: 0,
   displayMacros: ['protein', 'carbs', 'fat'],
+  hiddenCharts: [],
 };
 
 describe('getEffectiveDailyTarget', () => {

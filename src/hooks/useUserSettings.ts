@@ -32,6 +32,7 @@ export interface UserSettings {
   defaultIntensity: number | null;
   weekStartDay: 0 | 1 | 2 | 3 | 4 | 5 | 6;
   displayMacros: DisplayMacros;
+  hiddenCharts: string[];
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
@@ -57,6 +58,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   defaultIntensity: null,
   weekStartDay: 0,
   displayMacros: DEFAULT_DISPLAY_MACROS,
+  hiddenCharts: [],
 };
 
 export function useUserSettings() {
