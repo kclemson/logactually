@@ -62,6 +62,7 @@ export function useCustomLogTrends(days: number) {
             logTypeId: type.id,
             logTypeName: type.name,
             valueType: type.value_type,
+            unit: type.unit,
             series: [{
               label: type.name,
               data: Array.from(byDate.entries()).map(([date, info]) => ({
@@ -82,6 +83,7 @@ export function useCustomLogTrends(days: number) {
             logTypeId: type.id,
             logTypeName: type.name,
             valueType: type.value_type,
+            unit: type.unit,
             series: [{
               label: type.name,
               data: typeEntries.map((e: any) => ({
@@ -95,6 +97,7 @@ export function useCustomLogTrends(days: number) {
             logTypeId: type.id,
             logTypeName: type.name,
             valueType: type.value_type,
+            unit: type.unit,
             series: [
               {
                 label: 'Diastolic',
@@ -126,6 +129,7 @@ export function useCustomLogTrends(days: number) {
             logTypeId: type.id,
             logTypeName: type.name,
             valueType: type.value_type,
+            unit: type.unit,
             series: Array.from(byLabel.entries()).map(([label, data]) => ({ label, data })),
           });
         }
