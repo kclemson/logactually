@@ -544,6 +544,7 @@ const Trends = () => {
       )}
 
       {/* Food Trends Section */}
+      {foodSectionVisible && (
       <CollapsibleSection title="Food Trends" icon={UtensilsCrossed} defaultOpen={true} storageKey="trends-food" iconClassName="text-blue-500 dark:text-blue-400" headerAction={
         <span className="flex items-center gap-1.5 text-xs">
           <button onClick={() => { setFoodInitialView("ask"); setFoodAIOpen(true); }} className="text-primary hover:underline">Ask AI</button>
