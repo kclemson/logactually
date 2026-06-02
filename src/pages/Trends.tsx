@@ -409,7 +409,17 @@ const Trends = () => {
             Chart
           </Button>
         )}
+        <Button
+          size="sm"
+          variant={customizeMode ? "default" : "outline"}
+          onClick={() => setCustomizeMode((v) => !v)}
+          className="gap-1"
+        >
+          <SlidersHorizontal className="h-3.5 w-3.5" />
+          {customizeMode ? "Done" : "Customize"}
+        </Button>
       </div>
+
 
       {/* My Charts Section — admin only */}
       {canUseCharts && savedCharts.length > 0 && (
