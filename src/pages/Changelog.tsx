@@ -22,6 +22,7 @@ type ChangelogEntry = {
 
 // prettier-ignore
 const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+{ date: "Jun-02", text: "Tweaked trends charts for certain custom logs like body weight or body fat %, they now show as line charts zoomed in to your range instead of columns starting at zero, to make gradual changes easier to spot." },
 { date: "May-09", text: "Easily re-log a saved routine by typing a few characters, and any matches will show up in a dropdown.", image: "exercise-typeahead.png" },
 { date: "Apr-13", text: "Added configurable display macros — choose which 3 macros (protein, carbs, fat, fiber, sugar, net carbs, saturated fat, sodium) appear in your food tables and charts. Set your preference in Settings under Display Macros.", image: "display-macros.png" },
 { date: "Feb-27", text: "Easily re-log some food that you've logged before, just start typing and it'll show a dropdown with matching items or saved meals.", image: "typeahead-saved-meals.png" },
@@ -56,7 +57,7 @@ const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   { date: "Jan-23", text: "It's alive! v1 of app published with support for food logging & AI integration, editing logged items (and editing calories auto-scales protein/carbs/fat), charts for trends over time, mobile & desktop layouts, PWA support for pinning to home screen." },
 ];
 
-export const LAST_UPDATED = "May-09-26";
+export const LAST_UPDATED = "Jun-02-26";
 // ============================================
 
 export default function Changelog() {
