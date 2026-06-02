@@ -272,9 +272,17 @@ const Trends = () => {
     });
   }, [dailyCalorieBurn, selectedPeriod]);
 
-  // Visible exercises (load more pattern)
-  const visibleExercises = weightExercises.slice(0, visibleExerciseCount);
-  const hasMoreExercises = weightExercises.length > visibleExerciseCount;
+  // Visible exercises (load more pattern). In normal mode hidden exercises are
+  // filtered out so they don't consume the visible slice; in customize mode they
+  // stay (dimmed) so they can be brought back.
+  const exercisePool = useMemo(
+    () => customizeMode
+      ? weightExercises
+      : weightExercises.filter((ex, i) => !hiddenSet.has(exerciseChartId(ex.exercise_key, ex.exercise_subtype ?? String(i)))),
+    [weightExercises, customizeMode, hiddenSet]
+  );
+  const visibleExercises = exercisePool.slice(0, visibleExerciseCount);
+  const hasMoreExercises = exercisePool.length > visibleExerciseCount;
 
   // Aggregate by date from fetchChartData pipeline
   const chartData = useMemo(() => {
