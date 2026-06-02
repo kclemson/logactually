@@ -1,16 +1,31 @@
 import { useMemo } from "react";
 import { format, subDays, startOfDay } from "date-fns";
 import { FoodChart, StackedMacroChart } from "@/components/trends/FoodChart";
+import { CustomLogLineChart } from "@/components/trends/CustomLogLineChart";
 import { type CustomLogTrendSeries } from "@/hooks/useCustomLogTrends";
 import { getLabelInterval } from "@/lib/chart-label-interval";
 
 const TEAL_PALETTE = ['#14b8a6', '#0d9488', '#2dd4bf', '#0f766e', '#5eead4'];
+
+// Decide whether a single numeric series reads as a "level" metric (body weight,
+// measurements, resting HR, glucose…) that should use a fitted line instead of a
+// zero-baseline bar. Data-driven, no hardcoded metric names: a narrow band of
+// strictly-positive values means a zero baseline would crush the visible signal.
+const isLevelSeries = (points: { value: number }[]): boolean => {
+  const values = points.map(p => p.value).filter(v => typeof v === 'number' && !Number.isNaN(v));
+  if (values.length < 3) return false;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  if (min <= 0 || max <= 0) return false;
+  return (max - min) / max < 0.4;
+};
 
 interface CustomLogTrendChartProps {
   trend: CustomLogTrendSeries;
   onNavigate: (date: string) => void;
   days?: number;
 }
+
 
 export const CustomLogTrendChart = ({ trend, onNavigate, days }: CustomLogTrendChartProps) => {
   const chartData = useMemo(() => {
