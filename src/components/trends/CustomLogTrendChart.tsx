@@ -124,6 +124,19 @@ export const CustomLogTrendChart = ({ trend, onNavigate, days }: CustomLogTrendC
   }
 
   if (trend.series.length === 1) {
+    if (useLine) {
+      return (
+        <CustomLogLineChart
+          title={trend.logTypeName}
+          subtitle={lineSubtitle}
+          chartData={chartData}
+          dataKey={trend.series[0].label}
+          color={TEAL_PALETTE[0]}
+          onNavigate={onNavigate}
+          labelFormatter={labelFormatter}
+        />
+      );
+    }
     return (
       <FoodChart
         title={trend.logTypeName}
