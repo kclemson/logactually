@@ -771,7 +771,7 @@ const Trends = () => {
       )}
 
       {/* Other Trends Section */}
-      {((showCustomLogs && customLogTrends.length > 0) || bloodworkCharts.length > 0) && (
+      {((showCustomLogs && customLogTrends.length > 0) || bloodworkCharts.length > 0) && customSectionVisible && (
         <CollapsibleSection title="Custom Trends" icon={ClipboardList} iconClassName="text-teal-500 dark:text-teal-400" defaultOpen={true} storageKey="trends-other">
           <div className="grid grid-cols-2 gap-2">
             {bloodworkCharts.map((chart) => {
@@ -779,17 +779,23 @@ const Trends = () => {
               const spec = live
                 ? { ...live, title: chart.chart_spec.title, aiNote: chart.chart_spec.aiNote }
                 : chart.chart_spec;
+              const id = bloodworkChartId(chart.id);
               return (
+                <ChartVisibilityWrapper key={chart.id} chartId={id} isHidden={hiddenSet.has(id)} customizeMode={customizeMode} onToggle={toggleChart}>
                 <DynamicChart
-                  key={chart.id}
                   spec={spec}
                 />
-
+                </ChartVisibilityWrapper>
               );
             })}
-            {showCustomLogs && customLogTrends.map((trend) => (
-              <CustomLogTrendChart key={trend.logTypeId} trend={trend} days={selectedPeriod} onNavigate={(date) => navigate(`/custom?date=${date}`)} />
-            ))}
+            {showCustomLogs && customLogTrends.map((trend) => {
+              const id = customLogChartId(trend.logTypeId);
+              return (
+                <ChartVisibilityWrapper key={trend.logTypeId} chartId={id} isHidden={hiddenSet.has(id)} customizeMode={customizeMode} onToggle={toggleChart}>
+                <CustomLogTrendChart trend={trend} days={selectedPeriod} onNavigate={(date) => navigate(`/custom?date=${date}`)} />
+                </ChartVisibilityWrapper>
+              );
+            })}
           </div>
         </CollapsibleSection>
       )}
