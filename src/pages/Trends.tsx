@@ -617,6 +617,7 @@ const Trends = () => {
             </div>
 
             {/* Combined Calories + Macros Chart */}
+            <ChartVisibilityWrapper chartId={CHART_IDS.foodCombined} isHidden={hiddenSet.has(CHART_IDS.foodCombined)} customizeMode={customizeMode} onToggle={toggleChart}>
             <StackedMacroChart
               title="Combined Calories + Macros"
               chartData={chartData}
@@ -657,6 +658,7 @@ const Trends = () => {
                 return t ? { value: t, color: "hsl(var(--muted-foreground))" } : undefined;
               })()}
             />
+            </ChartVisibilityWrapper>
 
             {/* Row 2: Protein + Carbs + Fat */}
             <div className="grid grid-cols-3 gap-1">
