@@ -84,8 +84,14 @@ const Trends = () => {
       return [];
     }
   });
-  const { settings } = useUserSettings();
+  const { settings, updateSettings } = useUserSettings();
   const showWeights = settings.showWeights;
+  const hiddenCharts = settings.hiddenCharts ?? [];
+  const hiddenSet = useMemo(() => new Set(hiddenCharts), [hiddenCharts]);
+  const [customizeMode, setCustomizeMode] = useState(false);
+  const toggleChart = useCallback((id: string) => {
+    updateSettings({ hiddenCharts: toggleChartId(id, settings.hiddenCharts ?? []) });
+  }, [updateSettings, settings.hiddenCharts]);
   const mergeMutation = useMergeExercises();
   const [foodAIOpen, setFoodAIOpen] = useState(false);
   const [exerciseAIOpen, setExerciseAIOpen] = useState(false);
