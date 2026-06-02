@@ -37,6 +37,8 @@ import { CustomLogTrendChart } from "@/components/trends/CustomLogTrendChart";
 import { useDailyCalorieBurn } from "@/hooks/useDailyCalorieBurn";
 import { useCustomLogTrends } from "@/hooks/useCustomLogTrends";
 import { getLabelInterval, getFullWidthLabelInterval } from "@/lib/chart-label-interval";
+import { ChartVisibilityWrapper } from "@/components/trends/ChartVisibilityWrapper";
+import { CHART_IDS, foodMacroChartId, exerciseChartId, customLogChartId, bloodworkChartId, toggleChartId } from "@/lib/chart-visibility";
 
 import { MACRO_META } from '@/lib/macro-display';
 
