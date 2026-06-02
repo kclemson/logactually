@@ -799,6 +799,12 @@ const Trends = () => {
           </div>
         </CollapsibleSection>
       )}
+
+      {!customizeMode && hiddenCharts.length > 0 && !foodSectionVisible && !(showWeights && exerciseSectionVisible) && !customSectionVisible && (
+        <div className="py-12 text-center text-sm text-muted-foreground">
+          All charts are hidden. Tap <span className="font-medium text-foreground">Customize</span> to bring them back.
+        </div>
+      )}
       <AskTrendsAIDialog mode="food" open={foodAIOpen} onOpenChange={setFoodAIOpen} initialView={foodInitialView} />
       <AskTrendsAIDialog mode="exercise" open={exerciseAIOpen} onOpenChange={setExerciseAIOpen} initialView={exerciseInitialView} />
       <CustomChartDialog open={createChartOpen} onOpenChange={setCreateChartOpen} period={selectedPeriod} />
