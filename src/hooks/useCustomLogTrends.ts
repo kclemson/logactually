@@ -13,6 +13,7 @@ export interface CustomLogTrendSeries {
   logTypeId: string;
   logTypeName: string;
   valueType: string;
+  unit?: string | null;
   // For numeric: single series; for text_numeric: one series per unique text_value
   series: { label: string; data: CustomLogTrendPoint[] }[];
 }
