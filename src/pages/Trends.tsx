@@ -278,7 +278,7 @@ const Trends = () => {
   const exercisePool = useMemo(
     () => customizeMode
       ? weightExercises
-      : weightExercises.filter((ex, i) => !hiddenSet.has(exerciseChartId(ex.exercise_key, ex.exercise_subtype ?? String(i)))),
+      : weightExercises.filter((ex) => !hiddenSet.has(exerciseChartId(ex.exercise_key, ex.exercise_subtype))),
     [weightExercises, customizeMode, hiddenSet]
   );
   const visibleExercises = exercisePool.slice(0, visibleExerciseCount);
