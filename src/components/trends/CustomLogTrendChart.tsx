@@ -1,10 +1,24 @@
 import { useMemo } from "react";
 import { format, subDays, startOfDay } from "date-fns";
 import { FoodChart, StackedMacroChart } from "@/components/trends/FoodChart";
+import { CustomLogLineChart } from "@/components/trends/CustomLogLineChart";
 import { type CustomLogTrendSeries } from "@/hooks/useCustomLogTrends";
 import { getLabelInterval } from "@/lib/chart-label-interval";
 
 const TEAL_PALETTE = ['#14b8a6', '#0d9488', '#2dd4bf', '#0f766e', '#5eead4'];
+
+// Decide whether a single numeric series reads as a "level" metric (body weight,
+// measurements, resting HR, glucose…) that should use a fitted line instead of a
+// zero-baseline bar. Data-driven, no hardcoded metric names: a narrow band of
+// strictly-positive values means a zero baseline would crush the visible signal.
+const isLevelSeries = (points: { value: number }[]): boolean => {
+  const values = points.map(p => p.value).filter(v => typeof v === 'number' && !Number.isNaN(v));
+  if (values.length < 3) return false;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  if (min <= 0 || max <= 0) return false;
+  return (max - min) / max < 0.4;
+};
 
 interface CustomLogTrendChartProps {
   trend: CustomLogTrendSeries;
@@ -12,7 +26,17 @@ interface CustomLogTrendChartProps {
   days?: number;
 }
 
+
 export const CustomLogTrendChart = ({ trend, onNavigate, days }: CustomLogTrendChartProps) => {
+  // Single numeric series that reads as a "level" metric renders as a fitted line.
+  const useLine = useMemo(
+    () =>
+      trend.valueType === 'numeric' &&
+      trend.series.length === 1 &&
+      isLevelSeries(trend.series[0].data),
+    [trend],
+  );
+
   const chartData = useMemo(() => {
     const isTextType = trend.valueType === 'text' || trend.valueType === 'text_multiline';
 
@@ -42,7 +66,8 @@ export const CustomLogTrendChart = ({ trend, onNavigate, days }: CustomLogTrendC
       };
       trend.series.forEach(s => {
         const match = s.data.find(d => d.date === date);
-        point[s.label] = match ? match.value : 0;
+        // Line mode: missing days are gaps (null), not zeros that would spike to the floor.
+        point[s.label] = match ? match.value : (useLine ? null : 0);
         if (match?.textLabel) point.textPreview = match.textLabel;
       });
       // For dual_numeric (BP), add a "120/80" label on visible label points
@@ -53,13 +78,26 @@ export const CustomLogTrendChart = ({ trend, onNavigate, days }: CustomLogTrendC
       }
       return point;
     });
-  }, [trend, days]);
+  }, [trend, days, useLine]);
 
   const labelFormatter = useMemo(() => {
     if (trend.series.length !== 1) return undefined;
     const hasDecimals = trend.series[0].data.some(d => d.value % 1 !== 0);
     return hasDecimals ? (v: number) => v.toFixed(1) : undefined;
   }, [trend]);
+
+  // Delta vs the first recorded point — the real payoff for level metrics.
+  const lineSubtitle = useMemo(() => {
+    if (!useLine) return undefined;
+    const pts = trend.series[0].data;
+    if (pts.length < 2) return undefined;
+    const delta = pts[pts.length - 1].value - pts[0].value;
+    if (delta === 0) return 'no change';
+    const fmt = labelFormatter ?? ((v: number) => `${Math.round(v)}`);
+    const unit = trend.unit ? ` ${trend.unit}` : '';
+    return `${delta > 0 ? '+' : '−'}${fmt(Math.abs(delta))}${unit}`;
+  }, [useLine, trend, labelFormatter]);
+
 
   if (trend.valueType === 'text' || trend.valueType === 'text_multiline') {
     return (
@@ -86,6 +124,19 @@ export const CustomLogTrendChart = ({ trend, onNavigate, days }: CustomLogTrendC
   }
 
   if (trend.series.length === 1) {
+    if (useLine) {
+      return (
+        <CustomLogLineChart
+          title={trend.logTypeName}
+          subtitle={lineSubtitle}
+          chartData={chartData}
+          dataKey={trend.series[0].label}
+          color={TEAL_PALETTE[0]}
+          onNavigate={onNavigate}
+          labelFormatter={labelFormatter}
+        />
+      );
+    }
     return (
       <FoodChart
         title={trend.logTypeName}
