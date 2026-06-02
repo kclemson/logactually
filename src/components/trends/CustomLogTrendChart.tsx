@@ -86,6 +86,19 @@ export const CustomLogTrendChart = ({ trend, onNavigate, days }: CustomLogTrendC
     return hasDecimals ? (v: number) => v.toFixed(1) : undefined;
   }, [trend]);
 
+  // Delta vs the first recorded point — the real payoff for level metrics.
+  const lineSubtitle = useMemo(() => {
+    if (!useLine) return undefined;
+    const pts = trend.series[0].data;
+    if (pts.length < 2) return undefined;
+    const delta = pts[pts.length - 1].value - pts[0].value;
+    if (delta === 0) return 'no change';
+    const fmt = labelFormatter ?? ((v: number) => `${Math.round(v)}`);
+    const unit = trend.unit ? ` ${trend.unit}` : '';
+    return `${delta > 0 ? '+' : '−'}${fmt(Math.abs(delta))}${unit}`;
+  }, [useLine, trend, labelFormatter]);
+
+
   if (trend.valueType === 'text' || trend.valueType === 'text_multiline') {
     return (
       <StackedMacroChart
