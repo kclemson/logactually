@@ -728,6 +728,7 @@ const Trends = () => {
                       ? `TDEE (excluding exercise): ~${sedentaryTDEE.toLocaleString()}`
                       : "Set bio in Settings for precision";
                   return (
+                    <ChartVisibilityWrapper chartId={CHART_IDS.exerciseCalorieBurn} isHidden={hiddenSet.has(CHART_IDS.exerciseCalorieBurn)} customizeMode={customizeMode} onToggle={toggleChart}>
                     <CalorieBurnChart
                       title="Estimated Exercise Calorie Burn"
                       subtitle={subtitle}
@@ -736,17 +737,22 @@ const Trends = () => {
                       onNavigate={(date) => navigate(`/weights?date=${date}`)}
                       sedentaryTDEE={sedentaryTDEE}
                     />
+                    </ChartVisibilityWrapper>
                   );
                 })()}
-                {visibleExercises.map((exercise, index) => (
+                {visibleExercises.map((exercise, index) => {
+                  const id = exerciseChartId(exercise.exercise_key, exercise.exercise_subtype);
+                  return (
+                  <ChartVisibilityWrapper key={`${exercise.exercise_key}-${exercise.exercise_subtype ?? index}`} chartId={id} isHidden={hiddenSet.has(id)} customizeMode={customizeMode} onToggle={toggleChart}>
                   <ExerciseChart 
-                    key={`${exercise.exercise_key}-${exercise.exercise_subtype ?? index}`} 
                     exercise={exercise} 
                     unit={settings.weightUnit}
                     onBarClick={handleExerciseBarClick}
                     distanceUnit={settings.distanceUnit}
                   />
-                ))}
+                  </ChartVisibilityWrapper>
+                  );
+                })}
               </div>
 
               {hasMoreExercises && (
