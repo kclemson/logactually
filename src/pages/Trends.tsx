@@ -686,6 +686,7 @@ const Trends = () => {
           </div>
         )}
       </CollapsibleSection>
+      )}
 
       {/* Weight Trends Section */}
       {showWeights && (
