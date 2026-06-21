@@ -34,6 +34,14 @@ const App = () => (
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/changelog" element={<Changelog />} />
                 <Route
+                  path="/custom/memories"
+                  element={
+                    <ProtectedRoute>
+                      <MemoryViewer />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   element={
                     <ProtectedRoute>
                       <Layout />
