@@ -332,17 +332,15 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
         )}
       </section>
 
-      {viewMode === 'by_type' ? (
-        /* By Type: no date navigation, list of types with charts/history */
+      {effectiveViewMode !== 'date' ? (
+        /* By Type / Focused: no date navigation, list of types with charts/history */
         <div className="min-h-[calc(100dvh-8rem)] md:min-h-0">
           <CustomLogByTypeView
             logTypes={sortedLogTypes}
             isLoading={isLoading}
             isReadOnly={isReadOnly}
-            onLogNew={(typeId) => {
-              setSelectedTypeId(typeId);
-              setShowInputDialog(true);
-            }}
+            filterTypeId={effectiveViewMode === 'focused' ? featuredTypeId : null}
+            onLogNew={handleLogNew}
             onEditEntry={(entry) => setEditingEntry(entry)}
             onDeleteEntry={(id) => deleteEntry.mutate(id)}
             onUpdateEntry={(params) => updateEntry.mutate(params)}
