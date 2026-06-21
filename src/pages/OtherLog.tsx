@@ -110,13 +110,20 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
     selectedType?.value_type,
   );
 
-  // In by_type mode, new entries land on today's date (no date navigator).
-  const logTargetDate = viewMode === 'by_type' ? today : dateStr;
+  // Featured ("focused") type for the third toggle segment. Derived generically:
+  // most-recently-created type when unset, 'none' = opted out, else the chosen id.
+  const featuredTypeId = resolveFocusedTypeId(settings.defaultFocusedTypeId, logTypes);
+  const featuredType = logTypes.find((t) => t.id === featuredTypeId) ?? null;
+  // Guard the stored view mode: if 'focused' but no featured type exists, fall back to date.
+  const effectiveViewMode: ViewMode = viewMode === 'focused' && !featuredType ? 'date' : viewMode;
+
+  // In by_type/focused mode there is no date navigator, so new entries land on today.
+  const logTargetDate = effectiveViewMode === 'date' ? dateStr : today;
 
   // Entries for the dialog type (used by MedicationEntryInput to show today's logged times).
-  // In date mode we reuse `entries` (already scoped to dateStr); in by_type we fetch by type and filter.
+  // In date mode we reuse `entries` (already scoped to dateStr); otherwise we fetch by type and filter.
   const { entries: dialogTypeEntries } = useCustomLogEntriesForType(
-    viewMode === 'by_type' ? effectiveTypeId : null
+    effectiveViewMode !== 'date' ? effectiveTypeId : null
   );
 
   // Used for the edit dialog — scoped to the type being edited, regardless of view mode
