@@ -18,7 +18,7 @@ export interface MemoryDay {
 
 /**
  * Fetch all memory entries for a memory-type log, grouped by day (newest day
- * first). Within a day, entries are ordered oldest-first and each entry's media
+ * first). Within a day, entries are ordered newest-first and each entry's media
  * is ordered by sort_order.
  */
 export function useMemoryDays(logTypeId: string | null) {
@@ -34,7 +34,7 @@ export function useMemoryDays(logTypeId: string | null) {
         .select('*')
         .eq('log_type_id', logTypeId)
         .order('logged_date', { ascending: false })
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
         .limit(2000);
       if (error) throw error;
 
