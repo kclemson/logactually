@@ -204,3 +204,15 @@ export function formatDuration(seconds: number | null | undefined): string {
   const s = total % 60;
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
+
+/**
+ * Display a category as a hashtag. Leaves an existing leading `#` untouched
+ * (and tolerates surrounding whitespace) so users who type `#Foo` don't get
+ * `##Foo`. The stored value is never modified — this is display-only.
+ */
+export function formatTag(category: string | null | undefined): string {
+  const trimmed = (category ?? '').trim();
+  if (!trimmed) return '';
+  return trimmed.startsWith('#') ? trimmed : `#${trimmed}`;
+}
+
