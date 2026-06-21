@@ -30,18 +30,34 @@ interface MemoryComposerProps {
   logTypeId: string;
   loggedDate: string;
   existingCategories?: string[];
+  /** When provided, the composer edits this memory instead of creating one. */
+  editEntry?: MemoryEntry;
   onSuccess?: () => void;
   onCancel?: () => void;
   disabled?: boolean;
 }
 
-interface PendingFile {
-  id: string;
-  file: File;
-  kind: MediaKind;
-  previewUrl: string;
-  status: FileUploadStatus;
-}
+/**
+ * A slide in the composer: either a newly-picked local file (object URL preview)
+ * or an existing media row being edited (signed URL preview, resolved on mount).
+ */
+type PendingFile =
+  | {
+      id: string;
+      source: 'new';
+      file: File;
+      kind: MediaKind;
+      previewUrl: string;
+      status: FileUploadStatus;
+    }
+  | {
+      id: string;
+      source: 'existing';
+      media: MemoryMedia;
+      kind: MediaKind;
+      previewUrl: string; // '' until the signed URL resolves
+      status: FileUploadStatus;
+    };
 
 /**
  * Tracks how much of the layout viewport the on-screen keyboard is covering, so
