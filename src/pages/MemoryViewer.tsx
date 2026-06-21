@@ -159,7 +159,173 @@ const MemoryViewer = () => {
 
   const itemKey = `${dayIndex}:${clampedItemIndex}`;
 
+  const handleDelete = () => {
+    if (!currentItem) return;
+    if (!confirm('Delete this memory and all its photos/videos?')) return;
+    const entry = currentItem.entry;
+    const wasLastInDay = items.length <= 1;
+    deleteMemory.mutate(entry, {
+      onSuccess: () => {
+        if (wasLastInDay) {
+          setDayIndex((d) => Math.max(0, Math.min(d, days.length - 2)));
+          setItemIndex(0);
+        } else {
+          setItemIndex((i) => Math.max(0, i - 1));
+        }
+      },
+    });
+  };
+
+  // Stage: loading / empty / the current slide.
+  const stage = isLoading ? (
+    <div className="flex h-full items-center justify-center text-sm text-white/60">Loading…</div>
+  ) : days.length === 0 ? (
+    <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-white/70">
+      <p className="text-sm">No memories yet.</p>
+      <Button variant="secondary" size="sm" onClick={close}>
+        Back
+      </Button>
+    </div>
+  ) : (
+    <MemoryStage
+      itemKey={itemKey}
+      direction={direction}
+      hasPrev={hasPrev}
+      hasNext={hasNext}
+      onPrev={goPrevItem}
+      onNext={goNextItem}
+    >
+      {currentItem && <SlideContent item={currentItem} />}
+    </MemoryStage>
+  );
+
+  const dots =
+    currentItem && items.length > 1 ? (
+      <div className="mb-3 flex justify-center gap-1.5">
+        {items.map((_, i) => (
+          <span
+            key={i}
+            className={cn(
+              'h-1.5 rounded-full transition-all',
+              i === clampedItemIndex ? 'w-4 bg-white' : 'w-1.5 bg-white/40',
+            )}
+          />
+        ))}
+      </div>
+    ) : undefined;
+
+  const dateRow = currentItem ? (
+    <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+      {currentDay && (
+        <span className="text-xs font-medium text-white/80">
+          {format(parseISO(currentDay.date), 'EEE, MMM d, yyyy')}
+        </span>
+      )}
+      {currentItem.entry.category && (
+        <span className="inline-block rounded-full bg-teal-500/80 px-2 py-0.5 text-[11px] font-medium text-white">
+          {formatTag(currentItem.entry.category)}
+        </span>
+      )}
+    </div>
+  ) : undefined;
+
+  const caption =
+    currentItem && currentItem.entry.text_value ? (
+      <p className="max-h-[22vh] overflow-y-auto whitespace-pre-wrap text-sm leading-snug text-white/90">
+        {currentItem.entry.text_value}
+      </p>
+    ) : undefined;
+
+  const viewerActions: MemoryAction[] = currentItem
+    ? [
+        {
+          key: 'calendar',
+          icon: CalendarIcon,
+          label: 'Pick a day',
+          onClick: () => setCalendarOpen((v) => !v),
+        },
+        ...(!isReadOnly
+          ? ([
+              {
+                key: 'edit',
+                icon: Pencil,
+                label: 'Edit memory',
+                onClick: () => setEditing(true),
+              },
+              {
+                key: 'delete',
+                icon: Trash2,
+                label: 'Delete memory',
+                tone: 'danger',
+                onClick: handleDelete,
+              },
+            ] as MemoryAction[])
+          : []),
+        { key: 'close', icon: X, label: 'Close', align: 'end', onClick: close },
+      ]
+    : [];
+
+  const overlay = (
+    <>
+      {/* Calendar overlay */}
+      {calendarOpen && (
+        <div
+          className="absolute inset-0 z-30 flex items-center justify-center bg-black/70 px-4"
+          onClick={() => setCalendarOpen(false)}
+        >
+          <div
+            className="rounded-lg bg-card p-2 text-foreground shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Calendar
+              mode="single"
+              selected={currentDay ? parseISO(currentDay.date) : undefined}
+              onSelect={(date) => {
+                if (!date) return;
+                const key = format(date, 'yyyy-MM-dd');
+                const idx = days.findIndex((d) => d.date === key);
+                if (idx >= 0) {
+                  setDirection(idx > dayIndex ? 1 : -1);
+                  setDayIndex(idx);
+                  setItemIndex(0);
+                }
+                setCalendarOpen(false);
+              }}
+              modifiers={{ hasData: datesWithData }}
+              modifiersClassNames={{ hasData: 'font-semibold text-teal-600 dark:text-teal-400' }}
+              disabled={(date) => !days.some((d) => d.date === format(date, 'yyyy-MM-dd'))}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Edit composer */}
+      {editing && currentItem && (
+        <MemoryComposer
+          label={logType?.name ?? 'Scrapbook'}
+          logTypeId={typeId}
+          loggedDate={currentItem.entry.logged_date}
+          existingCategories={memoryCategories}
+          editEntry={currentItem.entry}
+          disabled={isReadOnly}
+          onSuccess={() => setEditing(false)}
+          onCancel={() => setEditing(false)}
+        />
+      )}
+    </>
+  );
+
   return (
+    <MemoryScaffold
+      stage={stage}
+      dots={dots}
+      dateRow={dateRow}
+      caption={caption}
+      actions={currentItem ? <MemoryActionBar actions={viewerActions} /> : undefined}
+      overlay={overlay}
+    />
+  );
+};
     <div className="fixed inset-0 z-50 bg-black text-white flex flex-col select-none">
       {/* Content */}
       <div className="relative flex-1 min-h-0 overflow-hidden">
