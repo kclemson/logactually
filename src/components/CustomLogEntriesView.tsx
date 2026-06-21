@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getMedicationMeta } from '@/lib/medication-meta';
 import { format } from 'date-fns';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Images } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
