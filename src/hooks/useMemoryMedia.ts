@@ -411,19 +411,27 @@ export function useUpdateMemory() {
           if (delErr) throw delErr;
         }
 
-        return { entryId, logTypeId, loggedDate };
+        return { entryId, logTypeId, loggedDate, originalDate };
       } catch (err) {
         await cleanupNew();
         throw err;
       }
     },
-    onSuccess: ({ logTypeId, loggedDate }) => {
+    onSuccess: ({ logTypeId, loggedDate, originalDate }) => {
       queryClient.invalidateQueries({ queryKey: ['memory-days', logTypeId] });
       invalidateCustomLogCaches(queryClient, {
         logTypeId,
         loggedDate,
         userId: user?.id,
       });
+      // If the date changed, the original day's caches need refreshing too.
+      if (originalDate && originalDate !== loggedDate) {
+        invalidateCustomLogCaches(queryClient, {
+          logTypeId,
+          loggedDate: originalDate,
+          userId: user?.id,
+        });
+      }
     },
   });
 
