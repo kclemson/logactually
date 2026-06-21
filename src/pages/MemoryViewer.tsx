@@ -128,12 +128,12 @@ const MemoryViewer = () => {
                 {format(parseISO(currentDay.date), 'EEEE, MMM d, yyyy')}
               </div>
               <div className="text-[11px] text-white/60 truncate">
-                {logType?.name ?? 'Memories'}
+                {logType?.name ?? 'Photo Scrapbook'}
                 {days.length > 0 && <> · {dayIndex + 1} / {days.length} days</>}
               </div>
             </>
           ) : (
-            <div className="text-sm font-medium">{logType?.name ?? 'Memories'}</div>
+            <div className="text-sm font-medium">{logType?.name ?? 'Photo Scrapbook'}</div>
           )}
         </div>
         <div className="flex items-center gap-1 py-2">
