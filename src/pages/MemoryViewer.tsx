@@ -349,7 +349,29 @@ function SlideContent({ item }: { item: ViewItem }) {
   return <MediaSlide media={media} />;
 }
 
+/**
+ * Ken Burns presets — a slow zoom paired with a gentle drift and a matching
+ * transform-origin. One is chosen deterministically per media id so each photo
+ * in a memory drifts differently, but the same photo always animates the same
+ * way across visits.
+ */
+const KEN_BURNS_PRESETS = [
+  { origin: 'center', fromX: '0%', fromY: '0%', toX: '0%', toY: '0%' }, // push-in
+  { origin: 'top left', fromX: '0%', fromY: '0%', toX: '-2%', toY: '-1.5%' }, // drift up-left
+  { origin: 'bottom right', fromX: '0%', fromY: '0%', toX: '2%', toY: '1.5%' }, // drift down-right
+  { origin: 'center left', fromX: '0%', fromY: '0%', toX: '-2%', toY: '0%' }, // drift left
+  { origin: 'top center', fromX: '0%', fromY: '0%', toX: '0%', toY: '-2%' }, // drift up
+  { origin: 'bottom left', fromX: '0%', fromY: '0%', toX: '-1.5%', toY: '1.5%' }, // drift down-left
+] as const;
+
+function kenBurnsVariant(id: string) {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  return KEN_BURNS_PRESETS[hash % KEN_BURNS_PRESETS.length];
+}
+
 function MediaSlide({ media }: { media: MemoryMedia }) {
+  const reduce = useReducedMotion();
   const [url, setUrl] = useState<string | null>(null);
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
