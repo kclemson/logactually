@@ -1,43 +1,40 @@
-# Fix first-slide transition glitch in the scrapbook viewer
+# Ken Burns auto-motion for scrapbook photos (v2 "Cinematic")
 
-## Problem
+Give photos in the immersive viewer a slow, looping zoom-and-pan so each memory feels alive on its own — using the **v2** feel: scale ~100% → 112%, ~25s loop, ease-in-out, seamless mirror reverse, with a gentle drift that varies per photo.
 
-When opening a scrapbook entry with multiple media, the **first** transition (media 1 → media 2) looks like a crossfade/jumble instead of a clean horizontal slide. Every later transition (2 → 3, etc.) slides correctly.
+## Scope
 
-## Root cause
+- **Viewer only** (`src/pages/MemoryViewer.tsx`, the `MediaSlide` component).
+- **All photos, regardless of aspect ratio.** Both full-bleed (`cover`) and letterboxed (`contain`) photos animate. Scaling a `contain` photo crops inward into the photo (the `overflow-hidden` frame clips it) and shrinks the letterbox bars — no blank edges are ever revealed, and any remaining gap shows the existing blurred backdrop. This keeps a mixed-aspect-ratio memory visually consistent.
+- **Videos unchanged** for now (muted-autoplay pass comes later).
+- Respect **reduced-motion**: no animation when the OS setting is on.
 
-In `src/components/custom/MemoryStage.tsx`, the slide's `initial`, `animate`, and `exit` are written as **inline object literals** that read the `direction` prop at render time:
+## Behavior
 
-```text
-exit={slide ? { x: direction > 0 ? '-100%' : '100%', opacity: 0.4 } : { opacity: 0 }}
-```
+- The photo continuously scales between **1.0 and ~1.12** over **~25s**, `ease: 'easeInOut'`, `repeat: Infinity`, `repeatType: 'mirror'` so the loop reverses smoothly and never snaps.
+- Alongside the zoom, a small **pan of ~1.5–2%** and a chosen **transform-origin**, both **varied per photo** so a multi-photo memory doesn't repeat. The variant is picked deterministically from the media id (a tiny hash → one of ~6 presets: push-in centered, drift up-left, drift down-right, drift left, drift up, drift down-left). Deterministic so the same photo always animates the same way across visits.
+- Motion lives on the **image layer**; the outer slide transition, gradient scrim, caption, pills, and action bar are untouched and stay static/legible. The blurred backdrop stays still (it's blurred and largely covered, so its stillness isn't noticeable).
 
-Framer-motion captures the exiting element's `exit` values from that element's **last render**, not from the current navigation. The very first slide was last rendered while `direction === 0`. So when navigating 1 → 2, slide 1 evaluates its exit with the stale `direction = 0` and leaves toward `+100%` (the right) — the same edge slide 2 enters from. The two overlapping on the right edge produce the crossfade-looking motion.
+## Technical details (`src/pages/MemoryViewer.tsx`)
 
-On 2 → 3, slide 2 was last rendered with `direction = 1`, so its exit correctly resolves leftward and the slide is clean.
-
-## Fix
-
-Convert the inline literals into framer-motion **variants** and pass `custom={direction}` to both `AnimatePresence` and the `motion.div`. Variant *functions* are re-resolved using `AnimatePresence`'s `custom` value at the moment of exit, so the exiting slide always uses the current navigation direction — eliminating the stale-direction glitch. This is framer-motion's standard slider pattern.
-
-### Changes in `src/components/custom/MemoryStage.tsx`
-
-- Define a variants object that supports both animation modes (`slide` and `fade`), e.g.:
-
-```text
-enter:  (dir) => slide ? { x: dir === 0 ? 0 : dir > 0 ? '100%' : '-100%', opacity: 0.4 } : { opacity: 0 }
-center: { x: 0, opacity: 1 }
-exit:   (dir) => slide ? { x: dir > 0 ? '-100%' : '100%', opacity: 0.4 } : { opacity: 0 }
-```
-
-- On the `motion.div`, replace the inline `initial`/`animate`/`exit` objects with `variants={...}` plus `initial="enter"`, `animate="center"`, `exit="exit"`, and keep `custom={direction}`.
-- Keep `AnimatePresence` with `initial={false}`, `mode="popLayout"`, and `custom={direction}` (already present).
-- Leave the `transition` logic, drag/swipe handlers, and chevrons unchanged.
-
-No other files change. This is a presentation-only fix.
+- Add a small module-level helper: `kenBurnsVariant(id: string)` → returns `{ origin, fromX, fromY, toX, toY }` from a deterministic hash of the id, selecting from a fixed preset array.
+- In `MediaSlide`:
+  - Import `useReducedMotion` from `framer-motion` (already a dependency); compute `const reduce = useReducedMotion()`.
+  - Compute `const animatePhoto = !reduce && media.kind === 'image'` (independent of `fit`).
+  - When `animatePhoto` is true, render the image as `motion.img` with:
+    - `style={{ transformOrigin: variant.origin }}`
+    - `animate={{ scale: [1, 1.12], x: [variant.fromX, variant.toX], y: [variant.fromY, variant.toY] }}`
+    - `transition={{ duration: 25, ease: 'easeInOut', repeat: Infinity, repeatType: 'mirror' }}`
+    - keep existing `onLoad` (fit detection), `onError`, `className={mediaFit}`, `draggable={false}`.
+  - When `animatePhoto` is false (reduced motion), render the plain `<img>` exactly as today.
+  - Fit detection (`contain` ↔ `cover`) is unchanged; the `mediaFit` class still applies, and the Ken Burns transform layers on top of whichever fit resolves.
+- The image already sits inside an `overflow-hidden` container, so the zoom is clipped cleanly with no layout shift.
+- No changes to `MemoryStage`, the composer, hooks, data, or styling tokens.
 
 ## Verification
 
-- Open a multi-media entry and step 1 → 2: it should push horizontally with no crossfade.
-- Confirm 2 → 3, back-navigation (2 → 1), and swipe gestures still slide correctly in the right direction.
-- Confirm the editor's `fade` animation path (if used) still cross-fades.
+- Open a memory with a **mix** of portrait and landscape photos: confirm every photo animates with a slow, smooth zoom/pan that loops and reverses without snapping, and the feel is consistent across aspect ratios.
+- Confirm no blank edges appear on letterboxed photos during the zoom.
+- Step across photos: confirm directions differ between photos and are stable on revisit; chrome stays fixed and readable.
+- Confirm videos behave as before.
+- Toggle OS "reduce motion" and confirm the animation is disabled.

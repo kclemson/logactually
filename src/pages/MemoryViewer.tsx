@@ -348,6 +348,28 @@ function SlideContent({ item }: { item: ViewItem }) {
   return <MediaSlide media={media} />;
 }
 
+/**
+ * Ken Burns presets — a slow zoom paired with a gentle drift and a matching
+ * transform-origin (zoom focal point). One is chosen deterministically per media
+ * id so each photo in a memory drifts differently, but the same photo always
+ * animates the same way across visits. Driven by the `.kenburns` CSS animation
+ * (index.css), which reads `--kb-tx` / `--kb-ty` as the end-of-zoom drift.
+ */
+const KEN_BURNS_PRESETS = [
+  { origin: 'center', tx: '0%', ty: '0%' }, // push-in
+  { origin: 'top left', tx: '-2%', ty: '-1.5%' }, // drift up-left
+  { origin: 'bottom right', tx: '2%', ty: '1.5%' }, // drift down-right
+  { origin: 'center left', tx: '-2%', ty: '0%' }, // drift left
+  { origin: 'top center', tx: '0%', ty: '-2%' }, // drift up
+  { origin: 'bottom left', tx: '-1.5%', ty: '1.5%' }, // drift down-left
+] as const;
+
+function kenBurnsVariant(id: string) {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  return KEN_BURNS_PRESETS[hash % KEN_BURNS_PRESETS.length];
+}
+
 function MediaSlide({ media }: { media: MemoryMedia }) {
   const [url, setUrl] = useState<string | null>(null);
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
@@ -391,6 +413,20 @@ function MediaSlide({ media }: { media: MemoryMedia }) {
   const mediaFit =
     fit === 'cover' ? 'h-full w-full object-cover' : 'max-h-full max-w-full object-contain';
 
+  // Ken Burns: slow zoom + gentle per-photo drift that loops and mirrors so it
+  // never snaps. Applied to all photos (the overflow-hidden frame crops inward,
+  // so letterboxed photos reveal no blank edges). The `.kenburns` CSS animation
+  // disables itself under prefers-reduced-motion.
+  const kb = kenBurnsVariant(media.id);
+  const kenBurnsStyle =
+    media.kind === 'image'
+      ? ({
+          transformOrigin: kb.origin,
+          '--kb-tx': kb.tx,
+          '--kb-ty': kb.ty,
+        } as React.CSSProperties)
+      : undefined;
+
   return (
     <div className="relative h-full w-full overflow-hidden">
       {/* Blurred backdrop (only visible when the media is letterboxed) */}
@@ -412,7 +448,8 @@ function MediaSlide({ media }: { media: MemoryMedia }) {
                 applyFit(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)
               }
               onError={handleError}
-              className={mediaFit}
+              className={cn(mediaFit, 'kenburns')}
+              style={kenBurnsStyle}
               draggable={false}
             />
           ) : (

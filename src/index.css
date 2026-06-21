@@ -164,3 +164,27 @@ All colors MUST be HSL.
     
   }
 }
+
+/* Ken Burns: slow, looping zoom + per-photo drift for the memory viewer.
+   The drift end-point is supplied per element via --kb-tx / --kb-ty; the zoom
+   focal point via transform-origin. `alternate` mirrors the loop so it never
+   snaps. Disabled under reduced-motion. */
+@keyframes kenburns {
+  from {
+    transform: scale(1) translate(0, 0);
+  }
+  to {
+    transform: scale(1.12) translate(var(--kb-tx, 0%), var(--kb-ty, 0%));
+  }
+}
+
+.kenburns {
+  animation: kenburns 25s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kenburns {
+    animation: none;
+  }
+}
