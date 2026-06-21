@@ -179,6 +179,17 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
     try { localStorage.setItem('custom-log-view-mode', mode); } catch {}
   }
 
+  // Opening the log dialog for a type. In the focused view, logging a type other
+  // than the featured one would be hidden, so transiently drop to the Daily view
+  // (in-memory only — storage stays 'focused', so the next visit returns here).
+  function handleLogNew(typeId: string) {
+    if (effectiveViewMode === 'focused' && typeId !== featuredTypeId) {
+      setViewMode('date');
+    }
+    setSelectedTypeId(typeId);
+    setShowInputDialog(true);
+  }
+
   const handleCreateType = (name: string, valueType: 'numeric' | 'text' | 'dual_numeric', unit?: string) => {
     createType.mutate({ name, value_type: valueType, unit: unit || null }, {
       onSuccess: (newType) => {
