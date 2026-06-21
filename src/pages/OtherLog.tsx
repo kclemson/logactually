@@ -21,6 +21,8 @@ import { LogTemplatePickerDialog } from '@/components/LogTemplatePickerDialog';
 import { LogEntryInput } from '@/components/LogEntryInput';
 import { BloodworkUploadInput } from '@/components/BloodworkUploadInput';
 import { MedicationEntryInput } from '@/components/MedicationEntryInput';
+import { MemoryEntryInput } from '@/components/custom/MemoryEntryInput';
+import { useMemoryDays } from '@/hooks/useMemoryDays';
 import { CustomLogEntriesView } from '@/components/CustomLogEntriesView';
 import { CustomLogByTypeView } from '@/components/CustomLogByTypeView';
 import { DuplicateContentDialogHost } from '@/components/DuplicateContentDialogHost';
@@ -146,6 +148,21 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   const editingLogType = editingEntry ? logTypes.find(t => t.id === editingEntry.log_type_id) : null;
 
   const dialogType = selectedType;
+
+  // Category autocomplete source for the memory composer (only fetched for memory types).
+  const memoryCategoryTypeId = dialogType?.value_type === 'memory' ? dialogType.id : null;
+  const { days: memoryDays } = useMemoryDays(memoryCategoryTypeId);
+  const memoryCategories = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          memoryDays
+            .flatMap((d) => d.entries.map((e) => e.category))
+            .filter((c): c is string => !!c),
+        ),
+      ),
+    [memoryDays],
+  );
 
   function handleViewModeChange(mode: ViewMode) {
     setViewMode(mode);
@@ -382,6 +399,16 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                   disabled={isReadOnly}
                 />
               </div>
+            ) : dialogType.value_type === 'memory' ? (
+              <MemoryEntryInput
+                label={dialogType.name}
+                logTypeId={dialogType.id}
+                loggedDate={logTargetDate}
+                existingCategories={memoryCategories}
+                onSuccess={() => setShowInputDialog(false)}
+                onCancel={() => setShowInputDialog(false)}
+                disabled={isReadOnly}
+              />
             ) : (
               <div className="rounded-lg border border-border bg-card p-3">
                 <LogEntryInput
@@ -414,7 +441,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
       )}
 
       {/* Edit dialog — reuses the same input component used to create the entry, pre-filled. */}
-      {editingEntry && editingLogType && !isReadOnly && editingLogType.value_type !== 'panel' && (
+      {editingEntry && editingLogType && !isReadOnly && editingLogType.value_type !== 'panel' && editingLogType.value_type !== 'memory' && (
         <Dialog open={!!editingEntry} onOpenChange={(open) => { if (!open) setEditingEntry(null); }}>
           <DialogContent className="max-w-sm p-0 gap-0 border-0 bg-transparent shadow-none [&>button]:hidden">
             {editingLogType.value_type === 'medication' ? (

@@ -138,7 +138,9 @@ export type Database = {
       }
       custom_log_entries: {
         Row: {
+          category: string | null
           created_at: string
+          created_by: string | null
           dose_time: string | null
           entry_notes: string | null
           id: string
@@ -152,7 +154,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          category?: string | null
           created_at?: string
+          created_by?: string | null
           dose_time?: string | null
           entry_notes?: string | null
           id?: string
@@ -166,7 +170,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          category?: string | null
           created_at?: string
+          created_by?: string | null
           dose_time?: string | null
           entry_notes?: string | null
           id?: string
@@ -352,6 +358,62 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      memory_media: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          duration_secs: number | null
+          entry_id: string
+          height: number | null
+          id: string
+          kind: string
+          mime_type: string | null
+          poster_path: string | null
+          sort_order: number
+          storage_path: string
+          user_id: string
+          width: number | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          duration_secs?: number | null
+          entry_id: string
+          height?: number | null
+          id?: string
+          kind: string
+          mime_type?: string | null
+          poster_path?: string | null
+          sort_order?: number
+          storage_path: string
+          user_id: string
+          width?: number | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          duration_secs?: number | null
+          entry_id?: string
+          height?: number | null
+          id?: string
+          kind?: string
+          mime_type?: string | null
+          poster_path?: string | null
+          sort_order?: number
+          storage_path?: string
+          user_id?: string
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "memory_media_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "custom_log_entries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pinned_chats: {
         Row: {

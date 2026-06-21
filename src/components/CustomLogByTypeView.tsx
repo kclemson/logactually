@@ -1,6 +1,7 @@
 import { format, parseISO } from 'date-fns';
 import { useMemo, useState } from 'react';
-import { Plus, ChevronRight, Search, X, ChevronsUpDown, ChevronsDownUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, ChevronRight, Search, X, ChevronsUpDown, ChevronsDownUp, Images } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { CustomLogGroupTrend } from '@/components/CustomLogGroupTrend';
@@ -9,6 +10,8 @@ import { PinnedBloodworkChartsSection } from '@/components/PinnedBloodworkCharts
 import { useBloodworkPanelsForType } from '@/hooks/useBloodworkPanelsForType';
 import { useBloodworkPanelsForDate } from '@/hooks/useBloodworkPanels';
 import { useCustomLogEntriesForType } from '@/hooks/useCustomLogEntriesForType';
+import { useMemoryDays } from '@/hooks/useMemoryDays';
+import { MemoryThumb } from '@/components/custom/MemoryThumb';
 import { CustomLogTypeDayRows } from '@/components/CustomLogEntriesView';
 import { getMedicationMeta } from '@/lib/medication-meta';
 import {
@@ -267,6 +270,9 @@ function TypeBody({
       />
     );
   }
+  if (logType.value_type === 'memory') {
+    return <MemoryTypeBody logType={logType} />;
+  }
   return (
     <EntryHistory
       logType={logType}
@@ -425,6 +431,80 @@ function PanelHistory({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function MemoryTypeBody({ logType }: { logType: CustomLogType }) {
+  const navigate = useNavigate();
+  const { days, isLoading } = useMemoryDays(logType.id);
+
+  const openViewer = (date?: string) =>
+    navigate(`/custom/memories?type=${logType.id}${date ? `&date=${date}` : ''}`);
+
+  if (isLoading) return <Skeleton className="h-8 w-full" />;
+  if (days.length === 0) {
+    return <p className="text-xs text-muted-foreground italic">No memories yet. Tap "+ Log" to add one.</p>;
+  }
+
+  const recent = days.slice(0, MAX_DATES);
+  const hiddenCount = days.length - recent.length;
+
+  return (
+    <div className="space-y-3">
+      <Button
+        onClick={() => openViewer()}
+        className="w-full bg-teal-500 text-white hover:bg-teal-600"
+        size="sm"
+      >
+        <Images className="h-4 w-4 mr-1.5" />
+        View Memories
+      </Button>
+
+      <div className="space-y-1.5">
+        {recent.map((day) => {
+          const media = day.entries.flatMap((e) => e.media);
+          const note = day.entries.map((e) => e.text_value).find(Boolean);
+          const category = day.entries.map((e) => e.category).find(Boolean);
+          return (
+            <button
+              key={day.date}
+              type="button"
+              onClick={() => openViewer(day.date)}
+              className="w-full text-left rounded-md p-2 hover:bg-accent transition-colors"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  {format(parseISO(day.date), 'MMM d, yyyy')}
+                </span>
+                {category && (
+                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-teal-500/15 text-teal-600 dark:text-teal-400">
+                    {category}
+                  </span>
+                )}
+              </div>
+              {media.length > 0 && (
+                <div className="flex items-center gap-1.5">
+                  {media.slice(0, 5).map((m) => (
+                    <MemoryThumb key={m.id} media={m} className="h-12 w-12" />
+                  ))}
+                  {media.length > 5 && (
+                    <span className="text-xs text-muted-foreground">+{media.length - 5}</span>
+                  )}
+                </div>
+              )}
+              {note && (
+                <p className="text-xs text-muted-foreground truncate mt-1">{note}</p>
+              )}
+            </button>
+          );
+        })}
+        {hiddenCount > 0 && (
+          <p className="text-[11px] text-muted-foreground italic pt-1">
+            + {hiddenCount} more date{hiddenCount === 1 ? '' : 's'}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
