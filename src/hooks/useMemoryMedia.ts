@@ -234,6 +234,7 @@ export function useUpdateMemory() {
         entryId,
         logTypeId,
         loggedDate,
+        originalDate,
         note,
         category,
         originalMedia,
