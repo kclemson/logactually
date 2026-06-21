@@ -83,13 +83,13 @@ export function ImportExportSection({ showWeights, showCustomLogs, hasCustomLogT
         )}
         {canImportMemories && (
           <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">Import memories from files</p>
+            <p className="text-xs text-muted-foreground">Import to photo scrapbook</p>
             <button
               onClick={() => setMemoryImportOpen(true)}
               className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors disabled:opacity-50"
             >
               <Upload className="h-4 w-4" />
-              Import Memories
+              Import to Scrapbook
             </button>
           </div>
         )}
