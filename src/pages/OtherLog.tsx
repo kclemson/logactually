@@ -257,35 +257,43 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                 </button>
               </div>
             ) : hasLogTypes ? (
-              /* Has log types: pill toggle + Log New dropdown, centered & stacked */
+              /* Has log types: View toggle + Log New dropdown, centered & stacked */
               <>
-                <div
-                  role="tablist"
-                  aria-label="View mode"
-                  className="inline-flex items-center rounded-full bg-muted p-0.5"
-                >
-                  {([
-                    { value: 'date', label: 'By Date' },
-                    { value: 'by_type', label: 'By Type' },
-                  ] as const).map((opt) => {
-                    const active = viewMode === opt.value;
-                    return (
-                      <button
-                        key={opt.value}
-                        role="tab"
-                        aria-selected={active}
-                        onClick={() => handleViewModeChange(opt.value)}
-                        className={cn(
-                          'h-7 px-4 rounded-full text-sm transition-colors',
-                          active
-                            ? 'bg-background text-foreground font-medium shadow-sm'
-                            : 'text-muted-foreground hover:text-foreground'
-                        )}
-                      >
-                        {opt.label}
-                      </button>
-                    );
-                  })}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground shrink-0">View:</span>
+                  <div
+                    role="tablist"
+                    aria-label="View mode"
+                    className="inline-flex items-center rounded-full bg-muted p-0.5"
+                  >
+                    {([
+                      { value: 'date', label: 'Daily', aria: 'Daily — entries by day' },
+                      { value: 'by_type', label: 'All', aria: 'All custom logs' },
+                      ...(featuredType
+                        ? [{ value: 'focused' as const, label: getToggleLabel(featuredType.name), aria: featuredType.name }]
+                        : []),
+                    ] as const).map((opt) => {
+                      const active = effectiveViewMode === opt.value;
+                      return (
+                        <button
+                          key={opt.value}
+                          role="tab"
+                          aria-selected={active}
+                          aria-label={opt.aria}
+                          title={opt.aria}
+                          onClick={() => handleViewModeChange(opt.value)}
+                          className={cn(
+                            'h-7 px-3.5 rounded-full text-sm transition-colors max-w-[7rem] truncate',
+                            active
+                              ? 'bg-background text-foreground font-medium shadow-sm'
+                              : 'text-muted-foreground hover:text-foreground'
+                          )}
+                        >
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <Select
@@ -294,8 +302,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                     if (val === '__create_new__') {
                       setTemplatePickerOpen(true);
                     } else {
-                      setSelectedTypeId(val);
-                      setShowInputDialog(true);
+                      handleLogNew(val);
                     }
                   }}
                 >
