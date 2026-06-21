@@ -521,7 +521,7 @@ export function CustomLogTypeDayRows({
             entry={entry}
             media={memoryCovers.get(entry.id) ?? []}
             density={density}
-            onOpen={() => navigate(`/custom/memories?type=${logType.id}&date=${dateStr}`)}
+            onOpen={() => navigate(`/custom/memories?type=${logType.id}&date=${dateStr}&entry=${entry.id}`)}
           />
         ))
       ) : (
