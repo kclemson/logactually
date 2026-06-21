@@ -120,14 +120,14 @@ export function LogTemplatePickerDialog({
           <button
             disabled={isLoading || newlySelected.length === 0}
             onClick={handleAddSelected}
-            className="w-full py-2 rounded-md bg-teal-500 text-white text-sm font-medium hover:bg-teal-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="mt-1 w-full py-2 rounded-md bg-teal-500 text-white text-sm font-medium hover:bg-teal-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {newlySelected.length > 0 ? `Add ${newlySelected.length} selected` : 'Add selected'}
           </button>
 
           <button
             onClick={onCreateCustom}
-            className="flex items-center justify-center gap-2 w-full py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center justify-center gap-2 w-full py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <Wrench className="h-4 w-4" />
             <span className="font-medium">Create your own</span>
