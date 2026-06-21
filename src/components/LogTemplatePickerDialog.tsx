@@ -2,16 +2,16 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { LOG_TEMPLATES, MEASUREMENT_TEMPLATES, getTemplateUnit } from '@/lib/log-templates';
 import { useUserSettings } from '@/hooks/useUserSettings';
-import { Scale, Ruler, Percent, HeartPulse, Moon, Smile, BookOpen, Droplets, Wrench, ChevronDown, ChevronRight, Pill, type LucideIcon } from 'lucide-react';
+import { Scale, Ruler, Percent, HeartPulse, Moon, Smile, BookOpen, Droplets, Wrench, ChevronDown, ChevronRight, Pill, Images, type LucideIcon } from 'lucide-react';
 
 const ICON_MAP: Record<string, LucideIcon> = {
-  Scale, Ruler, Percent, HeartPulse, Moon, Smile, BookOpen, Droplets, Pill,
+  Scale, Ruler, Percent, HeartPulse, Moon, Smile, BookOpen, Droplets, Pill, Images,
 };
 
 // Templates shown in the primary list (always visible)
 const PRIMARY_NAMES = ['Body Weight', 'Body Fat %', 'Blood Pressure', 'Medication', 'Bloodwork'];
 // Templates hidden under "More options"
-const MORE_NAMES = ['Sleep', 'Water Intake', 'Mood', 'Journal'];
+const MORE_NAMES = ['Sleep', 'Water Intake', 'Mood', 'Journal', 'Memories'];
 
 interface LogTemplatePickerDialogProps {
   open: boolean;
