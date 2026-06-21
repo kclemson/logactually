@@ -412,16 +412,6 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                   disabled={isReadOnly}
                 />
               </div>
-            ) : dialogType.value_type === 'memory' ? (
-              <MemoryEntryInput
-                label={dialogType.name}
-                logTypeId={dialogType.id}
-                loggedDate={logTargetDate}
-                existingCategories={memoryCategories}
-                onSuccess={() => setShowInputDialog(false)}
-                onCancel={() => setShowInputDialog(false)}
-                disabled={isReadOnly}
-              />
             ) : (
               <div className="rounded-lg border border-border bg-card p-3">
                 <LogEntryInput
