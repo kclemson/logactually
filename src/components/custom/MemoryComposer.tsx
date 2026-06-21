@@ -487,7 +487,7 @@ export function MemoryComposer({
     },
   ];
 
-  return (
+  return createPortal(
     <MemoryScaffold
       stage={stage}
       dots={dots}
@@ -496,7 +496,8 @@ export function MemoryComposer({
       actions={<MemoryActionBar actions={actions} />}
       error={error ? <p className="mt-2 text-xs text-red-300">{error}</p> : undefined}
       liftWithKeyboard
-    />
+    />,
+    document.body,
   );
 }
 
