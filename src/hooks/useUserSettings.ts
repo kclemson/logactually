@@ -65,6 +65,30 @@ const DEFAULT_SETTINGS: UserSettings = {
   defaultFocusedTypeId: null,
 };
 
+// Persist the resolved settings per user so the first paint after a (re)load
+// reflects the user's real preferences instead of flashing DEFAULT_SETTINGS
+// (which would, e.g., briefly hide the Custom tab in the bottom nav).
+const settingsCacheKey = (userId: string) => `user-settings:${userId}`;
+
+function readPersistedSettings(userId: string | undefined): UserSettings | undefined {
+  if (!userId) return undefined;
+  try {
+    const raw = localStorage.getItem(settingsCacheKey(userId));
+    if (!raw) return undefined;
+    return { ...DEFAULT_SETTINGS, ...(JSON.parse(raw) as Partial<UserSettings>) };
+  } catch {
+    return undefined;
+  }
+}
+
+function writePersistedSettings(userId: string, settings: UserSettings) {
+  try {
+    localStorage.setItem(settingsCacheKey(userId), JSON.stringify(settings));
+  } catch {
+    // Ignore storage errors (private mode, quota, etc.)
+  }
+}
+
 export function useUserSettings() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -101,10 +125,14 @@ export function useUserSettings() {
           dm[i] = fallback as any;
         }
       }
+      writePersistedSettings(user.id, merged);
       return merged;
     },
     enabled: !!user,
     staleTime: Infinity,
+    // Seed from last-known persisted settings so the nav (and other
+    // settings-driven UI) doesn't flash defaults while the fetch runs.
+    placeholderData: () => readPersistedSettings(user?.id),
   });
 
   const { mutate: updateSettings } = useMutation({
