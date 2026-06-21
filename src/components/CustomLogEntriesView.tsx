@@ -2,7 +2,9 @@ import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getMedicationMeta } from '@/lib/medication-meta';
 import { format } from 'date-fns';
-import { Pencil, Trash2, Images } from 'lucide-react';
+import { Pencil, Trash2, Images, AlignLeft } from 'lucide-react';
+import { MemoryThumb } from '@/components/custom/MemoryThumb';
+import { useMemoryCovers } from '@/hooks/useMemoryCovers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -386,6 +388,7 @@ export function CustomLogTypeDayRows({
   const isMedication = logType.value_type === 'medication';
   const isPanel = logType.value_type === 'panel';
   const isMemory = logType.value_type === 'memory';
+  const memoryCovers = useMemoryCovers(isMemory ? entries.map((e) => e.id) : []);
 
   return (
     <div className="space-y-0">
@@ -432,17 +435,30 @@ export function CustomLogTypeDayRows({
       ) : isPanel ? null : isMemory ? (
         entries.map((entry) => {
           const category = (entry as CustomLogEntry & { category?: string | null }).category;
+          const cover = memoryCovers.get(entry.id);
           return (
             <button
               key={entry.id}
               type="button"
               onClick={() => navigate(`/custom/memories?type=${logType.id}&date=${dateStr}`)}
-              className="w-full text-left grid grid-cols-[4rem_1fr_auto] items-center gap-x-2 py-1 pl-3 border-b border-border/50 last:border-0 hover:bg-accent transition-colors"
+              className="w-full text-left grid grid-cols-[2.5rem_1fr_auto] items-center gap-x-2.5 py-1.5 pl-3 border-b border-border/50 last:border-0 hover:bg-accent transition-colors"
             >
-              <span className="text-xs text-muted-foreground tabular-nums">{formatTime(entry.created_at)}</span>
-              <span className="text-sm truncate min-w-0">
-                {entry.text_value || 'Memory'}
-                {category ? <span className="text-muted-foreground"> · {category}</span> : null}
+              {cover ? (
+                <MemoryThumb media={cover} className="h-10 w-10" />
+              ) : (
+                <span
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md"
+                  style={{ backgroundImage: 'linear-gradient(150deg, hsl(174 64% 24%), hsl(199 70% 18%), hsl(222 47% 16%))' }}
+                >
+                  <AlignLeft className="h-4 w-4 text-white/80" />
+                </span>
+              )}
+              <span className="min-w-0">
+                <span className="block text-sm truncate">
+                  {entry.text_value || 'Memory'}
+                  {category ? <span className="text-muted-foreground"> · {category}</span> : null}
+                </span>
+                <span className="block text-[11px] text-muted-foreground tabular-nums">{formatTime(entry.created_at)}</span>
               </span>
               <Images className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
             </button>
