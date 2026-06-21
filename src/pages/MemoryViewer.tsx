@@ -323,6 +323,7 @@ const MemoryViewer = () => {
       caption={caption}
       actions={currentItem ? <MemoryActionBar actions={viewerActions} /> : undefined}
       overlay={overlay}
+      bottomPlacement="overlay"
     />
   );
 };
