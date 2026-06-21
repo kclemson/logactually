@@ -41,6 +41,20 @@ export function MemoryStage({
 }: MemoryStageProps) {
   const slide = animation === 'slide';
 
+  // Variants (functions of `direction`) instead of inline literals, so the
+  // exiting slide resolves its exit using AnimatePresence's *current* custom
+  // value at exit time — not the stale `direction` from its last render. This
+  // fixes the first 1→2 transition looking like a crossfade.
+  const variants = {
+    enter: (dir: number) =>
+      slide
+        ? { x: dir === 0 ? 0 : dir > 0 ? '100%' : '-100%', opacity: 0.4 }
+        : { opacity: 0 },
+    center: slide ? { x: 0, opacity: 1 } : { opacity: 1 },
+    exit: (dir: number) =>
+      slide ? { x: dir > 0 ? '-100%' : '100%', opacity: 0.4 } : { opacity: 0 },
+  };
+
   return (
     <div className="relative h-full w-full overflow-hidden">
       <AnimatePresence initial={false} custom={direction} mode="popLayout">
@@ -54,13 +68,10 @@ export function MemoryStage({
             if (info.offset.x < -80 && hasNext) onNext();
             else if (info.offset.x > 80 && hasPrev) onPrev();
           }}
-          initial={
-            slide
-              ? { x: direction === 0 ? 0 : direction > 0 ? '100%' : '-100%', opacity: 0.4 }
-              : { opacity: 0 }
-          }
-          animate={slide ? { x: 0, opacity: 1 } : { opacity: 1 }}
-          exit={slide ? { x: direction > 0 ? '-100%' : '100%', opacity: 0.4 } : { opacity: 0 }}
+          variants={variants}
+          initial="enter"
+          animate="center"
+          exit="exit"
           transition={slide ? { type: 'spring', stiffness: 320, damping: 34 } : { duration: 0.25 }}
           className="absolute inset-0"
         >

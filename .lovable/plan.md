@@ -1,24 +1,43 @@
-# Fix Custom tab flicker in bottom nav
+# Fix first-slide transition glitch in the scrapbook viewer
 
-## What's happening
+## Problem
 
-The bottom nav shows the **Custom** tab only when `settings.showCustomLogs` is true. While the `user-settings` query is (re)loading, the hook falls back to `DEFAULT_SETTINGS`, where `showCustomLogs` is `false`. For a brief moment the nav renders the default (no Custom tab), then re-renders with the real settings once they resolve — so the tab disappears and reappears.
+When opening a scrapbook entry with multiple media, the **first** transition (media 1 → media 2) looks like a crossfade/jumble instead of a clean horizontal slide. Every later transition (2 → 3, etc.) slides correctly.
 
-Confirmed by reproduction: on a cold render the nav first paints `Food · Exercise · Calendar · Trends · Settings` (no Custom, no Admin), then a beat later becomes `Food · Exercise · Custom · Calendar · Trends · Settings · Admin`. The **Admin** tab flashes for the same reason (its `isAdmin` query defaults to `false` while loading). On navigation, anything that makes these queries briefly fall back to defaults (e.g. the preview re-syncing) produces the same flash.
+## Root cause
 
-## The fix
+In `src/components/custom/MemoryStage.tsx`, the slide's `initial`, `animate`, and `exit` are written as **inline object literals** that read the `direction` prop at render time:
 
-Seed both queries with the user's **last-known value from localStorage** so the very first paint already reflects the real state — no flash to defaults. The network fetch still runs and overwrites with fresh data.
+```text
+exit={slide ? { x: direction > 0 ? '-100%' : '100%', opacity: 0.4 } : { opacity: 0 }}
+```
 
-### `src/hooks/useUserSettings.ts`
-- Add a tiny localStorage helper that reads/writes the resolved settings under a per-user key (e.g. `user-settings:<user.id>`).
-- In the `useQuery`, add `placeholderData` that returns the persisted settings for the current user when present (kept distinct from `DEFAULT_SETTINGS`). `placeholderData` shows immediately while still fetching, so `staleTime: Infinity` and refetch behavior are unchanged.
-- At the end of `queryFn`, after computing `merged`, write it to localStorage so the next load has an accurate seed. (Side-effect lives inside the fetch function, not a `useEffect`, per project conventions.)
+Framer-motion captures the exiting element's `exit` values from that element's **last render**, not from the current navigation. The very first slide was last rendered while `direction === 0`. So when navigating 1 → 2, slide 1 evaluates its exit with the stale `direction = 0` and leaves toward `+100%` (the right) — the same edge slide 2 enters from. The two overlapping on the right edge produce the crossfade-looking motion.
 
-### `src/hooks/useIsAdmin.ts`
-- Same pattern: persist the boolean result under a per-user key (e.g. `is-admin:<user.id>`) and use `placeholderData` to seed it, so the Admin tab doesn't flash either.
+On 2 → 3, slide 2 was last rendered with `direction = 1`, so its exit correctly resolves leftward and the slide is clean.
 
-## Notes
-- Keys are namespaced by `user.id` so values never leak between accounts; a different/absent user simply gets no placeholder and falls back to current behavior.
-- Frontend-only change. No backend, schema, or data changes.
-- Verify by repeating the cold-load reproduction: the nav should paint with Custom (and Admin) present on the first frame, with no disappear/reappear.
+## Fix
+
+Convert the inline literals into framer-motion **variants** and pass `custom={direction}` to both `AnimatePresence` and the `motion.div`. Variant *functions* are re-resolved using `AnimatePresence`'s `custom` value at the moment of exit, so the exiting slide always uses the current navigation direction — eliminating the stale-direction glitch. This is framer-motion's standard slider pattern.
+
+### Changes in `src/components/custom/MemoryStage.tsx`
+
+- Define a variants object that supports both animation modes (`slide` and `fade`), e.g.:
+
+```text
+enter:  (dir) => slide ? { x: dir === 0 ? 0 : dir > 0 ? '100%' : '-100%', opacity: 0.4 } : { opacity: 0 }
+center: { x: 0, opacity: 1 }
+exit:   (dir) => slide ? { x: dir > 0 ? '-100%' : '100%', opacity: 0.4 } : { opacity: 0 }
+```
+
+- On the `motion.div`, replace the inline `initial`/`animate`/`exit` objects with `variants={...}` plus `initial="enter"`, `animate="center"`, `exit="exit"`, and keep `custom={direction}`.
+- Keep `AnimatePresence` with `initial={false}`, `mode="popLayout"`, and `custom={direction}` (already present).
+- Leave the `transition` logic, drag/swipe handlers, and chevrons unchanged.
+
+No other files change. This is a presentation-only fix.
+
+## Verification
+
+- Open a multi-media entry and step 1 → 2: it should push horizontally with no crossfade.
+- Confirm 2 → 3, back-navigation (2 → 1), and swipe gestures still slide correctly in the right direction.
+- Confirm the editor's `fade` animation path (if used) still cross-fades.
