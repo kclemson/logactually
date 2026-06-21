@@ -187,7 +187,7 @@ export function MemoryComposer({
   const removeCurrent = () => {
     setFiles((prev) => {
       const target = prev[index];
-      if (target) URL.revokeObjectURL(target.previewUrl);
+      if (target && target.source === 'new') URL.revokeObjectURL(target.previewUrl);
       const next = prev.filter((_, i) => i !== index);
       setIndex((i) => Math.max(0, Math.min(i, next.length - 1)));
       return next;
