@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useState } from 'react';
+import { cn } from '@/lib/utils';
 
 /**
  * Tracks how much of the layout viewport the on-screen keyboard is covering, so
