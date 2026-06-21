@@ -1,11 +1,13 @@
 import { useState, useMemo, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
-import { X, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Play, Trash2, Pencil } from 'lucide-react';
+import { X, Calendar as CalendarIcon, Play, Trash2, Pencil } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { MemoryComposer } from '@/components/custom/MemoryComposer';
+import { MemoryScaffold } from '@/components/custom/MemoryScaffold';
+import { MemoryStage } from '@/components/custom/MemoryStage';
+import { MemoryActionBar, type MemoryAction } from '@/components/custom/MemoryActionBar';
 import { useCustomLogTypes } from '@/hooks/useCustomLogTypes';
 import { useMemoryDays, type MemoryDay, type MemoryEntry } from '@/hooks/useMemoryDays';
 import type { MemoryMedia } from '@/hooks/useMemoryMedia';
