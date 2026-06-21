@@ -1,6 +1,7 @@
 import { format, parseISO } from 'date-fns';
 import { useMemo, useState } from 'react';
-import { Plus, ChevronRight, Search, X, ChevronsUpDown, ChevronsDownUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, ChevronRight, Search, X, ChevronsUpDown, ChevronsDownUp, Images } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { CustomLogGroupTrend } from '@/components/CustomLogGroupTrend';
@@ -9,6 +10,8 @@ import { PinnedBloodworkChartsSection } from '@/components/PinnedBloodworkCharts
 import { useBloodworkPanelsForType } from '@/hooks/useBloodworkPanelsForType';
 import { useBloodworkPanelsForDate } from '@/hooks/useBloodworkPanels';
 import { useCustomLogEntriesForType } from '@/hooks/useCustomLogEntriesForType';
+import { useMemoryDays } from '@/hooks/useMemoryDays';
+import { MemoryThumb } from '@/components/custom/MemoryThumb';
 import { CustomLogTypeDayRows } from '@/components/CustomLogEntriesView';
 import { getMedicationMeta } from '@/lib/medication-meta';
 import {
