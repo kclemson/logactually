@@ -34,7 +34,7 @@ export function useMemoryDays(logTypeId: string | null) {
         .select('*')
         .eq('log_type_id', logTypeId)
         .order('logged_date', { ascending: false })
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
         .limit(2000);
       if (error) throw error;
 
