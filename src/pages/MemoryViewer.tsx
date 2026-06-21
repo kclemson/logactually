@@ -351,17 +351,18 @@ function SlideContent({ item }: { item: ViewItem }) {
 
 /**
  * Ken Burns presets — a slow zoom paired with a gentle drift and a matching
- * transform-origin. One is chosen deterministically per media id so each photo
- * in a memory drifts differently, but the same photo always animates the same
- * way across visits.
+ * transform-origin (zoom focal point). One is chosen deterministically per media
+ * id so each photo in a memory drifts differently, but the same photo always
+ * animates the same way across visits. Driven by the `.kenburns` CSS animation
+ * (index.css), which reads `--kb-tx` / `--kb-ty` as the end-of-zoom drift.
  */
 const KEN_BURNS_PRESETS = [
-  { origin: 'center', fromX: '0%', fromY: '0%', toX: '0%', toY: '0%' }, // push-in
-  { origin: 'top left', fromX: '0%', fromY: '0%', toX: '-2%', toY: '-1.5%' }, // drift up-left
-  { origin: 'bottom right', fromX: '0%', fromY: '0%', toX: '2%', toY: '1.5%' }, // drift down-right
-  { origin: 'center left', fromX: '0%', fromY: '0%', toX: '-2%', toY: '0%' }, // drift left
-  { origin: 'top center', fromX: '0%', fromY: '0%', toX: '0%', toY: '-2%' }, // drift up
-  { origin: 'bottom left', fromX: '0%', fromY: '0%', toX: '-1.5%', toY: '1.5%' }, // drift down-left
+  { origin: 'center', tx: '0%', ty: '0%' }, // push-in
+  { origin: 'top left', tx: '-2%', ty: '-1.5%' }, // drift up-left
+  { origin: 'bottom right', tx: '2%', ty: '1.5%' }, // drift down-right
+  { origin: 'center left', tx: '-2%', ty: '0%' }, // drift left
+  { origin: 'top center', tx: '0%', ty: '-2%' }, // drift up
+  { origin: 'bottom left', tx: '-1.5%', ty: '1.5%' }, // drift down-left
 ] as const;
 
 function kenBurnsVariant(id: string) {
@@ -371,7 +372,6 @@ function kenBurnsVariant(id: string) {
 }
 
 function MediaSlide({ media }: { media: MemoryMedia }) {
-  const reduce = useReducedMotion();
   const [url, setUrl] = useState<string | null>(null);
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
