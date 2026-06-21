@@ -486,7 +486,11 @@ export function MemoryComposer({
                           i === index ? 'ring-teal-400' : 'ring-transparent opacity-65 hover:opacity-100',
                         )}
                       >
-                        {f.kind === 'image' ? (
+                        {!f.previewUrl ? (
+                          <span className="flex h-full w-full items-center justify-center bg-white/10">
+                            <Loader2 className="h-4 w-4 animate-spin text-white/70" />
+                          </span>
+                        ) : f.kind === 'image' ? (
                           <img src={f.previewUrl} alt="" className="h-full w-full object-cover" />
                         ) : (
                           <>
