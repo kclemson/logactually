@@ -14,8 +14,15 @@ import {
   Plus,
 } from 'lucide-react';
 import { format, isToday, parseISO } from 'date-fns';
-import { useCreateMemory, type FileUploadStatus } from '@/hooks/useMemoryMedia';
-import { mediaKindFromMime, type MediaKind } from '@/lib/memory-media';
+import {
+  useCreateMemory,
+  useUpdateMemory,
+  type FileUploadStatus,
+  type EditMediaItem,
+  type MemoryMedia,
+} from '@/hooks/useMemoryMedia';
+import type { MemoryEntry } from '@/hooks/useMemoryDays';
+import { mediaKindFromMime, getSignedMemoryUrl, type MediaKind } from '@/lib/memory-media';
 import { cn } from '@/lib/utils';
 
 interface MemoryComposerProps {
