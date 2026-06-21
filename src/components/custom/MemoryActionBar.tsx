@@ -57,6 +57,24 @@ export function MemoryActionBar({ actions }: { actions: MemoryAction[] }) {
           );
         }
 
+        if (a.glass) {
+          return (
+            <button
+              key={a.key}
+              type="button"
+              onClick={a.onClick}
+              disabled={a.disabled}
+              aria-label={a.label}
+              className={cn(
+                'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/10 text-white backdrop-blur-md transition-colors hover:bg-white/20 disabled:opacity-40',
+                pushRight && 'ml-auto',
+              )}
+            >
+              {a.busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Icon className="h-5 w-5" />}
+            </button>
+          );
+        }
+
         return (
           <button
             key={a.key}
