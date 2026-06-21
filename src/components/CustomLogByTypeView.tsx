@@ -105,7 +105,9 @@ function TypeCard({
   forceExpanded?: boolean;
   density?: 'compact' | 'rich';
 }) {
+  const navigate = useNavigate();
   const isPanel = logType.value_type === 'panel';
+  const isMemory = logType.value_type === 'memory';
   const scope = logType.id;
   // In the focused view the single card is always open; otherwise honour stored state.
   const [expanded, setExpanded] = useState(() => forceExpanded || readTypeExpanded(logType.id));
@@ -160,6 +162,16 @@ function TypeCard({
             allCollapsed={panelAllCollapsed}
             onToggleAll={handleToggleAll}
           />
+        )}
+        {isMemory && (
+          <Button
+            variant="ghost" size="sm"
+            className="h-7 px-2 text-xs text-teal-600 dark:text-teal-400 hover:text-teal-700 hover:bg-teal-500/10 shrink-0"
+            onClick={(e) => { e.stopPropagation(); navigate(`/custom/memories?type=${logType.id}`); }}
+          >
+            <Images className="h-3.5 w-3.5 mr-1" />
+            Scrapbook
+          </Button>
         )}
         {!isReadOnly && (
           <Button
@@ -469,14 +481,7 @@ function MemoryTypeBody({ logType, density }: { logType: CustomLogType; density:
 
   return (
     <div className="space-y-3">
-      <Button
-        onClick={() => openViewer()}
-        className="w-full bg-teal-500 text-white hover:bg-teal-600"
-        size="sm"
-      >
-        <Images className="h-4 w-4 mr-1.5" />
-        View Scrapbook
-      </Button>
+
 
       <div className="space-y-2">
         {recent.map((day) => (
