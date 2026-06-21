@@ -441,7 +441,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
       )}
 
       {/* Edit dialog — reuses the same input component used to create the entry, pre-filled. */}
-      {editingEntry && editingLogType && !isReadOnly && editingLogType.value_type !== 'panel' && (
+      {editingEntry && editingLogType && !isReadOnly && editingLogType.value_type !== 'panel' && editingLogType.value_type !== 'memory' && (
         <Dialog open={!!editingEntry} onOpenChange={(open) => { if (!open) setEditingEntry(null); }}>
           <DialogContent className="max-w-sm p-0 gap-0 border-0 bg-transparent shadow-none [&>button]:hidden">
             {editingLogType.value_type === 'medication' ? (
