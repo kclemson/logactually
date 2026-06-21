@@ -261,7 +261,7 @@ const MemoryViewer = () => {
               },
             ] as MemoryAction[])
           : []),
-        { key: 'close', icon: X, label: 'Close', align: 'end', onClick: close },
+        { key: 'close', icon: X, label: 'Close', align: 'end', glass: true, onClick: close },
       ]
     : [];
 
