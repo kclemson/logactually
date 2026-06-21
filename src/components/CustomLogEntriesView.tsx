@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { Pencil, Trash2, Images, AlignLeft } from 'lucide-react';
 import { MemoryThumb } from '@/components/custom/MemoryThumb';
 import { useMemoryCovers } from '@/hooks/useMemoryCovers';
+import type { MemoryMedia } from '@/hooks/useMemoryMedia';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
