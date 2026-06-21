@@ -49,8 +49,8 @@ interface ReviewRow {
 }
 
 function previewText(note: string, sourceName: string): string {
-  const firstLine = note.split('\n').map((l) => l.trim()).find(Boolean);
-  return firstLine || sourceName;
+  const text = note.split('\n').map((l) => l.trim()).filter(Boolean).join(' ');
+  return text || sourceName;
 }
 
 export function MemoryImportDialog({ open, onOpenChange, memoryLogTypes }: MemoryImportDialogProps) {
