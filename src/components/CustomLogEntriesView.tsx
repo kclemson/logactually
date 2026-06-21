@@ -363,7 +363,7 @@ export function CustomLogEntriesView({
 //   compact: leading thumbnail strip, used inline in Daily/All views.
 //   rich:    larger thumbnails, used in the focused Scrapbook view.
 // ──────────────────────────────────────────────
-function MemoryEntryRow({
+export function MemoryEntryRow({
   entry,
   media,
   density,
@@ -377,9 +377,24 @@ function MemoryEntryRow({
   const category = (entry as CustomLogEntry & { category?: string | null }).category;
   const isRich = density === 'rich';
   const thumbSize = isRich ? 'h-20 w-20' : 'h-12 w-12';
-  const maxThumbs = isRich ? 4 : 4;
-  const shown = media.slice(0, maxThumbs);
+  const shown = media.slice(0, 4);
   const extra = media.length - shown.length;
+  const hasMedia = shown.length > 0;
+  const caption = entry.text_value?.trim() || '';
+  const time = formatTime(entry.created_at);
+
+  const thumbnails = (
+    <div className="flex items-center gap-1.5">
+      {shown.map((m) => (
+        <MemoryThumb key={m.id} media={m} className={thumbSize} />
+      ))}
+      {extra > 0 && (
+        <span className={cn('flex shrink-0 items-center justify-center rounded-md bg-muted text-xs text-muted-foreground', thumbSize)}>
+          +{extra}
+        </span>
+      )}
+    </div>
+  );
 
   return (
     <button
@@ -387,26 +402,34 @@ function MemoryEntryRow({
       onClick={onOpen}
       className="w-full text-left flex flex-col gap-1.5 py-2 pl-3 pr-2 border-b border-border/50 last:border-0 hover:bg-accent transition-colors"
     >
-      {shown.length > 0 ? (
-        <div className="flex items-center gap-1.5">
-          {shown.map((m) => (
-            <MemoryThumb key={m.id} media={m} className={thumbSize} />
-          ))}
-          {extra > 0 && (
-            <span className={cn('flex shrink-0 items-center justify-center rounded-md bg-muted text-xs text-muted-foreground', thumbSize)}>
-              +{extra}
-            </span>
+      {isRich ? (
+        <>
+          <div className="flex items-start gap-2">
+            {hasMedia ? thumbnails : <AlignLeft className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />}
+            <span className="ml-auto shrink-0 text-[11px] text-muted-foreground tabular-nums">{time}</span>
+          </div>
+          {caption && (
+            <p className="text-sm whitespace-pre-wrap line-clamp-4">{caption}</p>
           )}
-        </div>
-      ) : null}
-      <div className="flex items-baseline justify-between gap-2 min-w-0">
-        <span className="min-w-0 truncate text-sm flex items-center gap-1">
-          {shown.length === 0 && <AlignLeft className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
-          <span className="truncate">{entry.text_value || 'Memory'}</span>
-          {category ? <span className="text-muted-foreground shrink-0"> · {category}</span> : null}
-        </span>
-        <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">{formatTime(entry.created_at)}</span>
-      </div>
+          {category && (
+            <p className="text-xs text-muted-foreground">{category}</p>
+          )}
+        </>
+      ) : (
+        <>
+          {hasMedia && thumbnails}
+          <div className="flex items-baseline justify-between gap-2 min-w-0">
+            <span className="min-w-0 truncate text-sm flex items-center gap-1">
+              {!hasMedia && <AlignLeft className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+              {caption && <span className="truncate">{caption}</span>}
+              {category && (
+                <span className="text-muted-foreground shrink-0">{caption ? ' · ' : ''}{category}</span>
+              )}
+            </span>
+            <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">{time}</span>
+          </div>
+        </>
+      )}
     </button>
   );
 }
