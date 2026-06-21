@@ -429,7 +429,26 @@ export function CustomLogTypeDayRows({
             </div>
           );
         })
-      ) : isPanel ? null : (
+      ) : isPanel ? null : isMemory ? (
+        entries.map((entry) => {
+          const category = (entry as CustomLogEntry & { category?: string | null }).category;
+          return (
+            <button
+              key={entry.id}
+              type="button"
+              onClick={() => navigate(`/custom/memories?type=${logType.id}&date=${dateStr}`)}
+              className="w-full text-left grid grid-cols-[4rem_1fr_auto] items-center gap-x-2 py-1 pl-3 border-b border-border/50 last:border-0 hover:bg-accent transition-colors"
+            >
+              <span className="text-xs text-muted-foreground tabular-nums">{formatTime(entry.created_at)}</span>
+              <span className="text-sm truncate min-w-0">
+                {entry.text_value || 'Memory'}
+                {category ? <span className="text-muted-foreground"> · {category}</span> : null}
+              </span>
+              <Images className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            </button>
+          );
+        })
+      ) : (
         entries.map((entry) => (
           <NonMedEntryRow
             key={entry.id}
