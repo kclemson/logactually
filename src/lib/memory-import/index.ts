@@ -43,8 +43,10 @@ const PREFERRED_MAX_WIDTH = 1456;
 function pickImageUrl(img: HTMLImageElement): string | null {
   const srcset = img.getAttribute('srcset');
   if (srcset) {
+    // Candidates are separated by a comma followed by whitespace. We can't split
+    // on bare commas because image URLs themselves may contain commas.
     const candidates = srcset
-      .split(',')
+      .split(/,\s+/)
       .map((part) => part.trim())
       .map((part) => {
         const [url, descriptor] = part.split(/\s+/);
