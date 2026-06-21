@@ -203,20 +203,23 @@ export function MemoryComposer({
           onOpenAutoFocus={(e) => e.preventDefault()}
           asChild
         >
-          <motion.div
-            initial={{ opacity: 0, y: 28, scale: 0.985 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ type: 'spring', damping: 32, stiffness: 320 }}
-            className={cn(
-              'fixed z-50 flex flex-col overflow-hidden bg-black text-white',
-              'inset-0', // mobile: full-screen takeover
-              // desktop: centered cinematic card
-              'sm:inset-auto sm:left-1/2 sm:top-1/2 sm:h-[88vh] sm:max-h-[920px] sm:w-[min(600px,92vw)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl sm:shadow-2xl sm:ring-1 sm:ring-white/10',
-            )}
-          >
-            <DialogPrimitive.Title className="sr-only">
-              Add memory to {label}
-            </DialogPrimitive.Title>
+          {/* Outer element handles positioning so framer's inline transform
+              (used for the entrance animation) never fights the centering. */}
+          <div className="pointer-events-none fixed inset-0 z-50 flex sm:items-center sm:justify-center">
+            <motion.div
+              initial={{ opacity: 0, y: 28, scale: 0.985 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ type: 'spring', damping: 32, stiffness: 320 }}
+              className={cn(
+                'pointer-events-auto relative flex h-full w-full flex-col overflow-hidden bg-black text-white',
+                // desktop: centered cinematic card
+                'sm:h-[88vh] sm:max-h-[920px] sm:w-[min(600px,92vw)] sm:rounded-3xl sm:shadow-2xl sm:ring-1 sm:ring-white/10',
+              )}
+            >
+              <DialogPrimitive.Title className="sr-only">
+                Add memory to {label}
+              </DialogPrimitive.Title>
+
 
             {/* ───────────── Stage ───────────── */}
             <div className="relative min-h-0 flex-1 overflow-hidden">
