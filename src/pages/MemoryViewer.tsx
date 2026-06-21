@@ -411,7 +411,6 @@ function MediaSlide({
   useEffect(() => {
     let active = true;
     retriedRef.current = false;
-    setPlaying(false);
     setUrl(null);
     setPosterUrl(null);
     setFit('contain');
@@ -423,6 +422,17 @@ function MediaSlide({
       active = false;
     };
   }, [media.storage_path, media.poster_path]);
+
+  // Apply the session sound preference to the autoplaying (initially muted)
+  // video. Starting muted guarantees autoplay; unmuting works because `soundOn`
+  // only flips from a user tap, so the page already has activation.
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    el.muted = !soundOn;
+    void el.play().catch(() => {});
+  }, [soundOn, url]);
+
 
   const handleError = useCallback(async () => {
     // Signed URL may have expired — re-mint once and retry.
