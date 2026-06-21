@@ -230,7 +230,7 @@ const MemoryViewer = () => {
   ) : undefined;
 
   const caption =
-    currentItem && currentItem.entry.text_value ? (
+    currentItem && currentItem.media && currentItem.entry.text_value ? (
       <p className="max-h-[22vh] overflow-y-auto whitespace-pre-wrap text-sm leading-snug text-white/90">
         {currentItem.entry.text_value}
       </p>
