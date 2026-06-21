@@ -205,6 +205,8 @@ export interface UpdateMemoryParams {
   entryId: string;
   logTypeId: string;
   loggedDate: string;
+  /** The entry's date before this edit, so we can refresh both days if it moved. */
+  originalDate: string;
   note: string | null;
   category: string | null;
   /** The full original media set for this entry (to diff against). */
@@ -232,6 +234,7 @@ export function useUpdateMemory() {
         entryId,
         logTypeId,
         loggedDate,
+        originalDate,
         note,
         category,
         originalMedia,
@@ -340,12 +343,13 @@ export function useUpdateMemory() {
           onItemProgress?.(i, 'done');
         }
 
-        // 2. Update the entry's caption + category.
+        // 2. Update the entry's caption, category + date.
         const { error: entryErr } = await supabase
           .from('custom_log_entries')
           .update({
             text_value: note?.trim() || null,
             category: category?.trim() || null,
+            logged_date: loggedDate,
           })
           .eq('id', entryId);
         if (entryErr) throw entryErr;
@@ -407,19 +411,27 @@ export function useUpdateMemory() {
           if (delErr) throw delErr;
         }
 
-        return { entryId, logTypeId, loggedDate };
+        return { entryId, logTypeId, loggedDate, originalDate };
       } catch (err) {
         await cleanupNew();
         throw err;
       }
     },
-    onSuccess: ({ logTypeId, loggedDate }) => {
+    onSuccess: ({ logTypeId, loggedDate, originalDate }) => {
       queryClient.invalidateQueries({ queryKey: ['memory-days', logTypeId] });
       invalidateCustomLogCaches(queryClient, {
         logTypeId,
         loggedDate,
         userId: user?.id,
       });
+      // If the date changed, the original day's caches need refreshing too.
+      if (originalDate && originalDate !== loggedDate) {
+        invalidateCustomLogCaches(queryClient, {
+          logTypeId,
+          loggedDate: originalDate,
+          userId: user?.id,
+        });
+      }
     },
   });
 

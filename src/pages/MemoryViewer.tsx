@@ -1,11 +1,13 @@
 import { useState, useMemo, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
-import { X, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Play, Trash2, Pencil } from 'lucide-react';
+import { X, Calendar as CalendarIcon, Play, Trash2, Pencil } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { MemoryComposer } from '@/components/custom/MemoryComposer';
+import { MemoryScaffold } from '@/components/custom/MemoryScaffold';
+import { MemoryStage } from '@/components/custom/MemoryStage';
+import { MemoryActionBar, type MemoryAction } from '@/components/custom/MemoryActionBar';
 import { useCustomLogTypes } from '@/hooks/useCustomLogTypes';
 import { useMemoryDays, type MemoryDay, type MemoryEntry } from '@/hooks/useMemoryDays';
 import type { MemoryMedia } from '@/hooks/useMemoryMedia';
@@ -157,171 +159,122 @@ const MemoryViewer = () => {
 
   const itemKey = `${dayIndex}:${clampedItemIndex}`;
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black text-white flex flex-col select-none">
-      {/* Content */}
-      <div className="relative flex-1 min-h-0 overflow-hidden">
-        {isLoading ? (
-          <div className="h-full flex items-center justify-center text-white/60 text-sm">Loading…</div>
-        ) : days.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center gap-3 text-white/70 px-6 text-center">
-            <p className="text-sm">No memories yet.</p>
-            <Button variant="secondary" size="sm" onClick={close}>Back</Button>
-          </div>
-        ) : (
-          <AnimatePresence initial={false} custom={direction} mode="popLayout">
-            <motion.div
-              key={itemKey}
-              custom={direction}
-              drag="x"
-              dragConstraints={{ left: 0, right: 0 }}
-              dragElastic={0.2}
-              onDragEnd={(_e, info) => {
-                if (info.offset.x < -80 && hasNext) goNextItem();
-                else if (info.offset.x > 80 && hasPrev) goPrevItem();
-              }}
-              initial={{ x: direction === 0 ? 0 : direction > 0 ? '100%' : '-100%', opacity: 0.4 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: direction > 0 ? '-100%' : '100%', opacity: 0.4 }}
-              transition={{ type: 'spring', stiffness: 320, damping: 34 }}
-              className="absolute inset-0"
-            >
-              {currentItem && <SlideContent item={currentItem} />}
-            </motion.div>
-          </AnimatePresence>
-        )}
+  const handleDelete = () => {
+    if (!currentItem) return;
+    if (!confirm('Delete this memory and all its photos/videos?')) return;
+    const entry = currentItem.entry;
+    const wasLastInDay = items.length <= 1;
+    deleteMemory.mutate(entry, {
+      onSuccess: () => {
+        if (wasLastInDay) {
+          setDayIndex((d) => Math.max(0, Math.min(d, days.length - 2)));
+          setItemIndex(0);
+        } else {
+          setItemIndex((i) => Math.max(0, i - 1));
+        }
+      },
+    });
+  };
 
-        {/* Item navigation chevrons (desktop / large tap targets) */}
-        {days.length > 0 && hasPrev && (
-          <button
-            type="button"
-            onClick={goPrevItem}
-            className="absolute left-1 top-1/2 -translate-y-1/2 z-20 h-11 w-11 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center"
-            aria-label="Previous"
-          >
-            <ChevronLeft className="h-6 w-6" />
-          </button>
-        )}
-        {days.length > 0 && hasNext && (
-          <button
-            type="button"
-            onClick={goNextItem}
-            className="absolute right-1 top-1/2 -translate-y-1/2 z-20 h-11 w-11 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center"
-            aria-label="Next"
-          >
-            <ChevronRight className="h-6 w-6" />
-          </button>
-        )}
+  // Stage: loading / empty / the current slide.
+  const stage = isLoading ? (
+    <div className="flex h-full items-center justify-center text-sm text-white/60">Loading…</div>
+  ) : days.length === 0 ? (
+    <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-white/70">
+      <p className="text-sm">No memories yet.</p>
+      <Button variant="secondary" size="sm" onClick={close}>
+        Back
+      </Button>
+    </div>
+  ) : (
+    <MemoryStage
+      itemKey={itemKey}
+      direction={direction}
+      hasPrev={hasPrev}
+      hasNext={hasNext}
+      onPrev={goPrevItem}
+      onNext={goNextItem}
+    >
+      {currentItem && <SlideContent item={currentItem} />}
+    </MemoryStage>
+  );
+
+  const dots =
+    currentItem && items.length > 1 ? (
+      <div className="mb-3 flex justify-center gap-1.5">
+        {items.map((_, i) => (
+          <span
+            key={i}
+            className={cn(
+              'h-1.5 rounded-full transition-all',
+              i === clampedItemIndex ? 'w-4 bg-white' : 'w-1.5 bg-white/40',
+            )}
+          />
+        ))}
       </div>
+    ) : undefined;
 
-      {/* Bottom: dots, date + tag, caption, action bar */}
-      {currentItem && (
-        <div className="relative z-20 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-6 bg-gradient-to-t from-black via-black/85 to-transparent">
-          {items.length > 1 && (
-            <div className="flex justify-center gap-1.5 mb-3">
-              {items.map((_, i) => (
-                <span
-                  key={i}
-                  className={cn(
-                    'h-1.5 rounded-full transition-all',
-                    i === clampedItemIndex ? 'w-4 bg-white' : 'w-1.5 bg-white/40',
-                  )}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Date + tag travel with the content */}
-          <div className="flex items-center flex-wrap gap-x-2 gap-y-1 mb-1">
-            {currentDay && (
-              <span className="text-xs font-medium text-white/80">
-                {format(parseISO(currentDay.date), 'EEE, MMM d, yyyy')}
-              </span>
-            )}
-            {currentItem.entry.category && (
-              <span className="inline-block text-[11px] font-medium px-2 py-0.5 rounded-full bg-teal-500/80 text-white">
-                {formatTag(currentItem.entry.category)}
-              </span>
-            )}
-          </div>
-
-          {currentItem.entry.text_value && (
-            <p className="text-sm text-white/90 whitespace-pre-wrap leading-snug max-h-[22vh] overflow-y-auto">
-              {currentItem.entry.text_value}
-            </p>
-          )}
-
-          {/* Thumb-zone action bar */}
-          <div className="mt-3 flex items-center gap-1">
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-10 w-10 text-white hover:bg-white/15"
-              onClick={() => setCalendarOpen((v) => !v)}
-              aria-label="Pick a day"
-            >
-              <CalendarIcon className="h-5 w-5" />
-            </Button>
-
-            {!isReadOnly && (
-              <>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-10 w-10 text-white hover:bg-white/15"
-                  onClick={() => setEditing(true)}
-                  aria-label="Edit memory"
-                >
-                  <Pencil className="h-5 w-5" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-10 w-10 text-white/80 hover:text-white hover:bg-white/15"
-                  onClick={() => {
-                    if (confirm('Delete this memory and all its photos/videos?')) {
-                      const entry = currentItem.entry;
-                      const wasLastInDay = items.length <= 1;
-                      deleteMemory.mutate(entry, {
-                        onSuccess: () => {
-                          if (wasLastInDay) {
-                            setDayIndex((d) => Math.max(0, Math.min(d, days.length - 2)));
-                            setItemIndex(0);
-                          } else {
-                            setItemIndex((i) => Math.max(0, i - 1));
-                          }
-                        },
-                      });
-                    }
-                  }}
-                  aria-label="Delete memory"
-                >
-                  <Trash2 className="h-5 w-5" />
-                </Button>
-              </>
-            )}
-
-            <Button
-              size="icon"
-              variant="ghost"
-              className="ml-auto h-10 w-10 text-white hover:bg-white/15"
-              onClick={close}
-              aria-label="Close"
-            >
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
+  const dateRow = currentItem ? (
+    <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+      {currentDay && (
+        <span className="text-xs font-medium text-white/80">
+          {format(parseISO(currentDay.date), 'EEE, MMM d, yyyy')}
+        </span>
       )}
+      {currentItem.entry.category && (
+        <span className="inline-block rounded-full bg-teal-500/80 px-2 py-0.5 text-[11px] font-medium text-white">
+          {formatTag(currentItem.entry.category)}
+        </span>
+      )}
+    </div>
+  ) : undefined;
 
+  const caption =
+    currentItem && currentItem.entry.text_value ? (
+      <p className="max-h-[22vh] overflow-y-auto whitespace-pre-wrap text-sm leading-snug text-white/90">
+        {currentItem.entry.text_value}
+      </p>
+    ) : undefined;
+
+  const viewerActions: MemoryAction[] = currentItem
+    ? [
+        {
+          key: 'calendar',
+          icon: CalendarIcon,
+          label: 'Pick a day',
+          onClick: () => setCalendarOpen((v) => !v),
+        },
+        ...(!isReadOnly
+          ? ([
+              {
+                key: 'edit',
+                icon: Pencil,
+                label: 'Edit memory',
+                onClick: () => setEditing(true),
+              },
+              {
+                key: 'delete',
+                icon: Trash2,
+                label: 'Delete memory',
+                tone: 'danger',
+                onClick: handleDelete,
+              },
+            ] as MemoryAction[])
+          : []),
+        { key: 'close', icon: X, label: 'Close', align: 'end', onClick: close },
+      ]
+    : [];
+
+  const overlay = (
+    <>
       {/* Calendar overlay */}
       {calendarOpen && (
         <div
-          className="absolute inset-0 z-30 bg-black/70 flex items-center justify-center px-4"
+          className="absolute inset-0 z-30 flex items-center justify-center bg-black/70 px-4"
           onClick={() => setCalendarOpen(false)}
         >
           <div
-            className="rounded-lg bg-card text-foreground p-2 shadow-xl"
+            className="rounded-lg bg-card p-2 text-foreground shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <Calendar
@@ -359,7 +312,18 @@ const MemoryViewer = () => {
           onCancel={() => setEditing(false)}
         />
       )}
-    </div>
+    </>
+  );
+
+  return (
+    <MemoryScaffold
+      stage={stage}
+      dots={dots}
+      dateRow={dateRow}
+      caption={caption}
+      actions={currentItem ? <MemoryActionBar actions={viewerActions} /> : undefined}
+      overlay={overlay}
+    />
   );
 };
 
