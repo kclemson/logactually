@@ -11,8 +11,7 @@ import { useBloodworkPanelsForType } from '@/hooks/useBloodworkPanelsForType';
 import { useBloodworkPanelsForDate } from '@/hooks/useBloodworkPanels';
 import { useCustomLogEntriesForType } from '@/hooks/useCustomLogEntriesForType';
 import { useMemoryDays } from '@/hooks/useMemoryDays';
-import { MemoryThumb } from '@/components/custom/MemoryThumb';
-import { CustomLogTypeDayRows } from '@/components/CustomLogEntriesView';
+import { CustomLogTypeDayRows, MemoryEntryRow } from '@/components/CustomLogEntriesView';
 import { getMedicationMeta } from '@/lib/medication-meta';
 import {
   readTypeExpanded, writeTypeExpanded,
