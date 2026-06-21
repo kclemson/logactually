@@ -497,7 +497,7 @@ function MemoryTypeBody({ logType, density }: { logType: CustomLogType; density:
                 entry={entry}
                 media={entry.media}
                 density={density}
-                onOpen={() => openViewer(day.date)}
+                onOpen={() => openViewer(day.date, entry.id)}
               />
             ))}
           </div>
