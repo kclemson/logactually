@@ -149,6 +149,21 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
 
   const dialogType = selectedType;
 
+  // Category autocomplete source for the memory composer (only fetched for memory types).
+  const memoryCategoryTypeId = dialogType?.value_type === 'memory' ? dialogType.id : null;
+  const { days: memoryDays } = useMemoryDays(memoryCategoryTypeId);
+  const memoryCategories = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          memoryDays
+            .flatMap((d) => d.entries.map((e) => e.category))
+            .filter((c): c is string => !!c),
+        ),
+      ),
+    [memoryDays],
+  );
+
   function handleViewModeChange(mode: ViewMode) {
     setViewMode(mode);
     setShowInputDialog(false);
