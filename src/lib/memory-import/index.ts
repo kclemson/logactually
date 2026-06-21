@@ -142,9 +142,9 @@ export function parseMemoryFile(html: string, fileName: string): ParsedPost {
   }
   const note = bodyLines.join('\n\n').trim();
 
-  // Category = first hashtag found anywhere in the document text.
-  const fullText = doc.body?.textContent ?? '';
-  const hashtags = extractHashtags(fullText);
+  // Category = first hashtag found in the content. Extract per paragraph so
+  // adjacent block text isn't concatenated onto the tag (e.g. "#Tag" + "Thanks").
+  const hashtags = paragraphs.flatMap((line) => extractHashtags(line));
   const category = hashtags.length > 0 ? hashtags[0] : null;
 
   // Images in document order, de-duplicated by URL.
