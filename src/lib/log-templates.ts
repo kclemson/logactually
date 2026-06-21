@@ -27,6 +27,7 @@ export const LOG_TEMPLATES: LogTemplate[] = [
   { name: 'Water Intake',           valueType: 'numeric',        unitImperial: 'oz',   unitMetric: 'ml',   icon: 'Droplets' },
   { name: 'Mood',                   valueType: 'text',           unitImperial: null,   unitMetric: null,   icon: 'Smile' },
   { name: 'Journal',                valueType: 'text_multiline', unitImperial: null,   unitMetric: null,   icon: 'BookOpen' },
+  { name: 'Memories',               valueType: 'memory',         unitImperial: null,   unitMetric: null,   icon: 'Images' },
 ];
 
 export const MEASUREMENT_TEMPLATES = LOG_TEMPLATES.filter(t => t.group === 'measurement');
