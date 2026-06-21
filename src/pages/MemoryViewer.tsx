@@ -389,15 +389,24 @@ function kenBurnsVariant(id: string) {
   return KEN_BURNS_PRESETS[hash % KEN_BURNS_PRESETS.length];
 }
 
-function MediaSlide({ media }: { media: MemoryMedia }) {
+function MediaSlide({
+  media,
+  soundOn,
+  onToggleSound,
+}: {
+  media: MemoryMedia;
+  soundOn: boolean;
+  onToggleSound: () => void;
+}) {
   const [url, setUrl] = useState<string | null>(null);
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
-  const [playing, setPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
   // Smart per-orientation fill: portrait media fills the frame (cover) for a
   // true full-bleed feel; landscape/square stays letterboxed (contain) so
   // nothing is cropped. We default to contain until dimensions are known.
   const [fit, setFit] = useState<'contain' | 'cover'>('contain');
   const retriedRef = useRef(false);
+
 
   useEffect(() => {
     let active = true;
