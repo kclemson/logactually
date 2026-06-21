@@ -18,6 +18,9 @@ export default function Settings() {
   const { isReadOnly } = useReadOnlyContext();
   const { logTypes } = useCustomLogTypes();
   const hasBloodworkLogType = logTypes.some((t) => t.value_type === 'panel');
+  const memoryLogTypes = logTypes
+    .filter((t) => t.value_type === 'memory')
+    .map((t) => ({ id: t.id, name: t.name }));
 
   return (
     <div className="space-y-4">
@@ -32,6 +35,7 @@ export default function Settings() {
         showCustomLogs={settings.showCustomLogs ?? false}
         hasCustomLogTypes={logTypes.length > 0}
         hasBloodworkLogType={hasBloodworkLogType}
+        memoryLogTypes={memoryLogTypes}
         isReadOnly={isReadOnly}
       />
 
