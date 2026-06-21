@@ -30,6 +30,31 @@ function buildDayItems(day: MemoryDay): ViewItem[] {
   return items;
 }
 
+/**
+ * Resolve the starting day/item index from the requested date/entry. Returns
+ * null when the data isn't ready yet (so we can defer to a layout effect).
+ * Prefers the explicit entry, then the date, then the first day.
+ */
+function computeStart(
+  days: MemoryDay[],
+  initialDate: string | null,
+  initialEntry: string | null,
+): { dayIndex: number; itemIndex: number } | null {
+  if (days.length === 0) return null;
+  if (initialEntry) {
+    const byEntry = days.findIndex((d) => d.entries.some((e) => e.id === initialEntry));
+    if (byEntry >= 0) {
+      const iIdx = buildDayItems(days[byEntry]).findIndex((it) => it.entry.id === initialEntry);
+      return { dayIndex: byEntry, itemIndex: iIdx >= 0 ? iIdx : 0 };
+    }
+  }
+  if (initialDate) {
+    const dIdx = days.findIndex((d) => d.date === initialDate);
+    if (dIdx >= 0) return { dayIndex: dIdx, itemIndex: 0 };
+  }
+  return { dayIndex: 0, itemIndex: 0 };
+}
+
 const MemoryViewer = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
