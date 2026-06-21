@@ -6,6 +6,7 @@ import { Pencil, Trash2, AlignLeft } from 'lucide-react';
 import { MemoryThumb } from '@/components/custom/MemoryThumb';
 import { useMemoryCovers } from '@/hooks/useMemoryCovers';
 import type { MemoryMedia } from '@/hooks/useMemoryMedia';
+import { formatTag } from '@/lib/memory-media';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
