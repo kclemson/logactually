@@ -470,7 +470,7 @@ function MemoryTypeBody({ logType }: { logType: CustomLogType }) {
         size="sm"
       >
         <Images className="h-4 w-4 mr-1.5" />
-        View Memories
+        View Scrapbook
       </Button>
 
       <div className="space-y-1.5">
