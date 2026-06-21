@@ -183,6 +183,7 @@ function TypeCard({
             onUpdateEntry={onUpdateEntry}
             panelQuery={panelQuery}
             panelAllCollapsed={panelAllCollapsed}
+            density={density}
           />
         </div>
       )}
@@ -264,6 +265,7 @@ function TypeBody({
   onUpdateEntry,
   panelQuery,
   panelAllCollapsed,
+  density,
 }: {
   logType: CustomLogType;
   isReadOnly: boolean;
@@ -272,6 +274,7 @@ function TypeBody({
   onUpdateEntry?: (params: { id: string; numeric_value?: number | null; numeric_value_2?: number | null; text_value?: string | null }) => void;
   panelQuery: string;
   panelAllCollapsed: boolean;
+  density: 'compact' | 'rich';
 }) {
   // Panels live in a separate table; keep their own history view.
   if (logType.value_type === 'panel') {
@@ -285,7 +288,7 @@ function TypeBody({
     );
   }
   if (logType.value_type === 'memory') {
-    return <MemoryTypeBody logType={logType} />;
+    return <MemoryTypeBody logType={logType} density={density} />;
   }
   return (
     <EntryHistory
