@@ -29,6 +29,8 @@ import { DuplicateContentDialogHost } from '@/components/DuplicateContentDialogH
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { getStoredDate, getSwipeDirection, setSwipeDirection } from '@/lib/selected-date';
 import { LOG_TEMPLATES, getTemplateUnit } from '@/lib/log-templates';
+import { getToggleLabel } from '@/lib/toggle-label';
+import { resolveFocusedTypeId } from '@/lib/focused-type';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { Button } from '@/components/ui/button';
 import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
@@ -46,12 +48,12 @@ const OtherLog = () => {
 
 export default OtherLog;
 
-type ViewMode = 'date' | 'by_type';
+type ViewMode = 'date' | 'by_type' | 'focused';
 
 function getStoredViewMode(): ViewMode {
   try {
     const stored = localStorage.getItem('custom-log-view-mode');
-    if (stored === 'date' || stored === 'by_type') return stored;
+    if (stored === 'date' || stored === 'by_type' || stored === 'focused') return stored;
     // Migrate legacy 'medication' value to 'by_type'
     if (stored === 'medication') {
       try { localStorage.setItem('custom-log-view-mode', 'by_type'); } catch {}
