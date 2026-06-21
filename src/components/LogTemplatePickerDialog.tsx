@@ -79,7 +79,7 @@ export function LogTemplatePickerDialog({
                         key={t.name}
                         disabled={isLoading || added}
                         onClick={() => onSelectMedication()}
-                        className={`flex items-center gap-3 w-full px-2 py-2 rounded-lg text-sm transition-colors ${added ? 'opacity-40 cursor-not-allowed' : 'hover:bg-accent'} disabled:opacity-40`}
+                        className={`flex items-center gap-3 w-full px-2 py-1.5 rounded-lg text-sm transition-colors ${added ? 'opacity-40 cursor-not-allowed' : 'hover:bg-accent'} disabled:opacity-40`}
                       >
                         {Icon && <Icon className="h-4 w-4 text-teal-500" />}
                         <span className="font-medium">{t.name}</span>
