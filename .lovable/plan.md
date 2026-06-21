@@ -1,115 +1,72 @@
-# Visual Memory Diary
+# Reorganize the "Add Log Type" picker
 
-A custom-log type for logging photos/videos and/or a text note per day, organized by optional category, browsable in a dedicated immersive full-screen viewer. Built to extend the app's "log anything" vision without disturbing Food/Exercise/Custom code, and with a data + security model designed for future sharing and multi-author contributions.
+Turn the template picker into a single grouped checklist where the user ticks which built-in log types to enable, confirms once to create them all, and only takes a separate path for fully custom types. Memories becomes a first-class, always-visible option.
 
-## Core model decisions
+## What changes for the user
 
-- **One memory log type** (`value_type = 'memory'`). Not multiple types.
-- **Category is an optional property** of each memory (freeform text, autocomplete from the user's existing categories, e.g. "Garden", "Vacation 2026"). Can be left blank.
-- **Media is optional.** A memory can be text-only, media-only, or both. Save requires *something*: a note OR at least one media item.
-- **An entry = one author's submission**: `text_value` (optional note) + `logged_date` + optional `category`, with its ordered `memory_media` rows. This is the text↔media link.
-- **A "memory" in the viewer = all entries sharing a `logged_date`** (today all authored by the owner; later possibly multiple authors).
-- **No caps**: unlimited media per entry and per day, no length/size/count limits.
-- **"public" = Postgres schema name only.** `public.memory_media` lives in the default app schema like every other table; it has no bearing on visibility. Access is governed by RLS + a private storage bucket. Default is strictly private to the owner.
+- Opening **Add Log Type** shows every built-in type at once, organized under three labeled groups — no more "More options" expander to hunt through.
+- Each built-in type is a **checkbox**. Tick any number across groups, then press **Add selected** to create them in one step.
+- Types you already have are shown checked and disabled with an "Added" label.
+- **Memories** is visible by default in its own group.
+- **Mood** and **Journal** are removed (verified unused — no one has them).
+- A **Create your own** link at the bottom remains the path for anything not in the list.
 
-## Data model
-
-Add to `custom_log_entries` (additive, nullable — memory-only, harmless to other log types):
-- `category text` — optional category for memory entries.
-- `created_by uuid` — the author of the row. Today equals `user_id`; reserved so future invited contributors are distinguishable from the diary owner. Backfill existing/other rows to `user_id`.
-
-New table `public.memory_media` (one row per file):
+## Groups
 
 ```text
-id            uuid pk
-user_id       uuid  -> auth.users   (diary OWNER; RLS scope)
-created_by    uuid  -> auth.users   (uploader/author; = user_id today)
-entry_id      uuid  -> custom_log_entries(id) on delete cascade
-storage_path  text   (memory-media/{user_id}/{entry_id}/{file})
-kind          text   ('image' | 'video')
-mime_type     text
-width         int
-height        int
-duration_secs numeric  (videos only)
-poster_path   text     (video first-frame thumbnail)
-sort_order    int
-created_at    timestamptz
+Body
+  ☐ Body Weight            (lbs/kg)
+  ☐ Body Fat %             (%)
+  ☐ Waist                  (in/cm)
+  ☐ Hips                   (in/cm)
+  ☐ Chest                  (in/cm)
+  ☐ Bicep                  (in/cm)
+  ☐ Thigh                  (in/cm)
+  ☐ Neck                   (in/cm)
+
+Health
+  ☐ Blood Pressure         (mmHg)
+  ☐ Sleep                  (hrs)
+  ☐ Water Intake           (oz/ml)
+  ☐ Bloodwork
+  →  Medication            (opens setup — see below)
+
+Memories
+  ☐ Memories
+
+[ Add N selected ]
+Create your own →
 ```
 
-- Full GRANT block + RLS scoped to `auth.uid() = user_id`. Read-only/demo users blocked via existing `is_read_only_user(uuid)` pattern on write policies.
-- Day in `logged_date`; entry order within a day by `created_at`; media order by `sort_order`.
+The previous nested "Body Measurement" sub-expander goes away; the individual measurements become normal checkboxes in the Body group, which is simpler and consistent with the new model.
 
-## Storage
+## The one special case: Medication
 
-- New **private** bucket `memory-media`, RLS on `storage.objects`: a user accesses only files under their own `{user_id}/...` prefix. Owner-prefixed paths are stable so a future share-aware policy can grant contributor access without moving files.
-- Store only the path in the DB (never base64), per project convention.
-- **Signed URLs designed so nothing ages out mid-session:** long TTL (12-24h), minted when the viewer opens (not at app load), and silent re-mint + retry if any media fails to load.
-
-## Capture flow — media-first atomic create
-
-`MemoryEntryInput.tsx`:
-1. Generate the entry UUID client-side up front.
-2. User optionally adds a note, optionally picks a category (autocomplete), optionally selects/captures any number of media (`accept=image/*,video/*`, `capture` supported); thumbnails with remove/reorder. Save enabled once a note OR ≥1 media exists.
-3. On save: upload **all** media (+ video poster frames) to `memory-media/{user_id}/{entryId}/...` first, with per-file progress.
-4. Only after every upload succeeds: insert the `custom_log_entries` row + all `memory_media` rows.
-5. Any upload fails → abort, nothing persisted. Final DB insert fails → best-effort cleanup of just-uploaded files. No "ghost" memories.
-
-## Immersive viewer
-
-Dedicated route `/custom/memories`:
-- Full-bleed media over a blurred backdrop; clean text-only and single-media states.
-- **Gesture map (explicit, no collisions):** horizontal swipe = change day; vertical swipe / tap zones = move between entries+media within the day; videos tap-to-play (no scrub in v1).
-- Day header shows date, note, category; in-viewer calendar picker to jump to a day; optional category filter.
-- `framer-motion` transitions; lazy signed-URL fetch with prefetch of adjacent days.
-
-## Information architecture
-
-- Lives under the **Custom** tab (like medication/bloodwork). No new top-level nav.
-- Custom page memory card: **"View Memories"** (launches viewer) + **"Log"** (opens composer).
-- "Log New" dropdown gains a `memory` branch → composer (mirrors `panel`→bloodwork, `medication`→med input).
-- "By Date" view: compact rows (note + category + thumbnail strip, or note-only) tapping into the viewer at that day.
-- Gated behind `showCustomLogs`. Demo users can interact but not save.
-
-## Future-sharing & multi-author readiness (design only — no sharing UI now)
-
-- **Owner vs author split** (`user_id` = owner, `created_by` = author) on entries and media.
-- **Contributions are new entries, not edits.** When UserA later invites UserB/UserC to a day: UserB's photos and UserC's video+text each become their own entry (`user_id = UserA`, `created_by = contributor`) grouped under the same `logged_date`. Text is always attributed via the entry's `created_by`; media always hangs off an entry. Viewer can show per-author attribution.
-- **Owner-prefixed storage paths** let a future share-aware storage policy grant contributor writes into the owner's prefix without moving files.
-- A future `memory_shares` table (`owner_id`, date range or entry set, `grantee`/`share_token`, `permission` view|contribute, `expires_at`) layers in additively. Today's RLS (`user_id = auth.uid()`) is written so a share lookup can be OR-ed in (read for view; insert-where-`created_by = auth.uid()` for contribute) without rewriting policies or data.
-
-## Build order
-
-1. Backend: alter `custom_log_entries` (+`category`,`created_by`); create `memory_media` table; create `memory-media` private bucket + storage RLS.
-2. Helpers + composer (capture, compression, poster, atomic upload) + minimal "By Date" display.
-3. Immersive viewer.
-4. Polish: in-viewer calendar + category filter, prefetch, refinements.
-
-## Files
-
-**New**
-- `src/components/custom/MemoryEntryInput.tsx`
-- `src/pages/MemoryViewer.tsx` (+ small subcomponents)
-- `src/hooks/useMemoryMedia.ts` (upload/insert/cache via React Query)
-- `src/hooks/useMemoryDays.ts` (day-grouped fetch)
-- `src/lib/memory-media.ts` (+ `.test.ts`) — compression, poster extraction, aspect/duration helpers, path builders, signed-URL cache
-
-**Edited (minimal, additive)**
-- `src/hooks/useCustomLogTypes.ts` — add `'memory'` to `ValueType`
-- `src/lib/log-templates.ts` — add "Memories" template
-- `src/pages/OtherLog.tsx` — memory dialog branch + viewer entry
-- `src/components/CustomLogByTypeView.tsx` — memory card/row variant
-- App router — register `/custom/memories`
+Medication needs its dose/schedule setup (`CreateMedicationDialog`), so it can't be silently batch-created from a checkbox. It stays a distinct **row with a chevron** inside the Health group that closes the picker and opens the medication setup step (existing `onSelectMedication` behavior). Everything else is a plain checkbox handled by the batch create.
 
 ## Technical details
 
-- Client-generated `entryId` (`crypto.randomUUID`) used as the storage sub-path so uploads precede the DB row.
-- React Query caches invalidated after successful atomic create; no optimistic UI (only persisted memories appear).
-- Signed URLs cached in-memory with TTL; re-mint on load error while viewer open.
-- No `useEffect` for state sync (project guideline): composer resets via conditional mount/unmount; persistence in event handlers.
-- Custom = teal theming; existing mobile dialog standards.
+**`src/lib/log-templates.ts`**
+- Remove the `Mood` and `Journal` entries from `LOG_TEMPLATES`.
+- Set a `group` value on every template so the dialog can render sections: `'body'` (Body Weight, Body Fat %, and the six measurements), `'health'` (Blood Pressure, Sleep, Water Intake, Bloodwork, Medication), `'memory'` (Memories). The old `'measurement'` group tag on the six measurement rows is replaced by `'body'`.
+- Delete the now-unused `MEASUREMENT_TEMPLATES` export (confirmed: only the picker dialog imports it).
 
-## Out of scope (deferred)
+**`src/components/LogTemplatePickerDialog.tsx`** (main rewrite)
+- Replace the Body-Weight-row + measurement-expander + primary-rows + "More options" structure with a flat render that maps over the group order (`body`, `health`, `memory`), printing a small section header per group and a checkbox row per template.
+- A single `selected: Set<string>` of template names drives the footer **Add N selected** button (disabled when nothing new is selected). Already-added templates render checked + disabled. Per the project's useEffect guidance, this state resets via conditional unmount of the dialog (not effect syncing).
+- Medication renders as a chevron row (not a checkbox) that calls `onSelectMedication`.
+- Confirm calls `onSelectTemplates` with all ticked items (keeping the existing fallback that loops `onSelectTemplate` when `onSelectTemplates` is absent).
+- Keep the **Create your own** button (`onCreateCustom`) at the bottom; reuse each template's existing lucide icon.
 
-- Pinned one-tap "Log New <foo>" buttons.
-- Any sharing UI / contributor invites (schema is ready; UI is not built).
-- Video scrubbing/trimming and server-side transcoding.
+**`src/components/settings/CustomLogTypesSection.tsx`**
+- Add an `onSelectTemplates` handler (batch create, mirroring the one already in `OtherLog.tsx`) so multi-select works here too.
+- Replace the narrow `value_type` cast with `as ValueType` (verified: `ValueType` already covers `numeric | text_numeric | text | text_multiline | dual_numeric | medication | panel | memory`, and `createType` accepts it — no other plumbing needed).
+
+**`src/pages/OtherLog.tsx`**
+- Wrap `<LogTemplatePickerDialog />` in `{templatePickerOpen && ( … )}` so it unmounts on close and selection state resets cleanly (matching `CustomLogTypesSection`). Existing `onSelectTemplates`/`onSelectMedication`/`onCreateCustom` wiring is reused as-is.
+
+## Out of scope
+
+- No database/schema changes (Mood/Journal removal is template-list only; they were never created as types).
+- No changes to how Memories, Medication, or Bloodwork entries are composed or viewed.
+- No new icons or font/design-system changes.
