@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import FoodLog from "./pages/FoodLog";
 import WeightLog from "./pages/WeightLog";
 import OtherLog from "./pages/OtherLog";
+import MemoryViewer from "./pages/MemoryViewer";
 import Trends from "./pages/Trends";
 import History from "./pages/History";
 import Admin from "./pages/Admin";
