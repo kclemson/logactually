@@ -15,14 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { parseMemoryFile, type ParsedPost } from '@/lib/memory-import';
 import { useMemoryDays } from '@/hooks/useMemoryDays';
 import { useImportMemories, type ImportItem } from '@/hooks/useImportMemories';
