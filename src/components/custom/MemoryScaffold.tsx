@@ -1,30 +1,6 @@
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
-
-/**
- * Tracks how much of the layout viewport the on-screen keyboard is covering, so
- * the bottom block can lift above it on mobile. Subscribes to the visualViewport
- * API (an external browser system), which is the appropriate use of an effect.
- */
-function useKeyboardInset(): number {
-  const [inset, setInset] = useState(0);
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const update = () => {
-      const overlap = window.innerHeight - vv.height - vv.offsetTop;
-      setInset(overlap > 60 ? overlap : 0);
-    };
-    vv.addEventListener('resize', update);
-    vv.addEventListener('scroll', update);
-    update();
-    return () => {
-      vv.removeEventListener('resize', update);
-      vv.removeEventListener('scroll', update);
-    };
-  }, []);
-  return inset;
-}
+import { useKeyboardInset } from '@/hooks/useKeyboardInset';
 
 /**
  * The shared full-screen shell for immersive memory surfaces. The stage fills the

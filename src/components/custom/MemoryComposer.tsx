@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useLayoutEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
   X,
@@ -25,8 +25,7 @@ import { mediaKindFromMime, getSignedMemoryUrl, type MediaKind } from '@/lib/mem
 import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { MemoryScaffold } from './MemoryScaffold';
-import { MemoryStage } from './MemoryStage';
+import { useKeyboardInset } from '@/hooks/useKeyboardInset';
 import { MemoryActionBar, type MemoryAction } from './MemoryActionBar';
 
 interface MemoryComposerProps {
@@ -63,8 +62,9 @@ type PendingFile =
       status: FileUploadStatus;
     };
 
-// Fixed, tasteful backdrop for text-only memories (and the empty canvas).
-const TEXT_GRADIENT =
+// One continuous teal-to-navy canvas. Flows edge-to-edge — writing and media
+// are equal peers on the same surface (no stage / black-block split).
+const CANVAS_GRADIENT =
   'linear-gradient(150deg, hsl(174 64% 18%) 0%, hsl(199 70% 14%) 45%, hsl(222 47% 11%) 100%)';
 
 export function MemoryComposer({
@@ -79,9 +79,10 @@ export function MemoryComposer({
 }: MemoryComposerProps) {
   const isEditing = !!editEntry;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const noteRef = useRef<HTMLTextAreaElement>(null);
   const [note, setNote] = useState(() => editEntry?.text_value ?? '');
   const [category, setCategory] = useState(() => editEntry?.category ?? '');
-  // The entry's date is editable (tap the date row); seeded from the entry/prop.
+  // The entry's date is editable (tap the date pill); seeded from the entry/prop.
   const [loggedDate, setLoggedDate] = useState(() => editEntry?.logged_date ?? loggedDateProp);
   const [files, setFiles] = useState<PendingFile[]>(() =>
     (editEntry?.media ?? []).map((m) => ({
@@ -98,6 +99,7 @@ export function MemoryComposer({
   const { createMemory } = useCreateMemory();
   const { updateMemory } = useUpdateMemory();
   const saving = createMemory.isPending || updateMemory.isPending;
+  const keyboardInset = useKeyboardInset();
 
   // Resolve signed preview URLs for any existing media (external storage), once.
   useEffect(() => {
@@ -126,6 +128,17 @@ export function MemoryComposer({
       });
     };
   }, []);
+
+  // Grow the writing area to fit its content (DOM measurement, not state sync).
+  const autoGrow = useCallback(() => {
+    const el = noteRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, []);
+  useLayoutEffect(() => {
+    autoGrow();
+  }, [autoGrow]);
 
   const hasMedia = files.length > 0;
   const current = files[Math.min(index, files.length - 1)];
@@ -182,14 +195,6 @@ export function MemoryComposer({
     });
     setIndex((i) => Math.max(0, Math.min(i + dir, files.length - 1)));
   };
-
-  const goTo = useCallback((dir: -1 | 1) => {
-    setIndex((i) => {
-      const n = i + dir;
-      if (n < 0 || n >= filesRef.current.length) return i;
-      return n;
-    });
-  }, []);
 
   // Escape closes the editor (mirrors the viewer's keyboard handling).
   useEffect(() => {
@@ -258,184 +263,6 @@ export function MemoryComposer({
 
   const uniqueCategories = Array.from(new Set(existingCategories.filter(Boolean)));
 
-  // ───────────── Stage content ─────────────
-  const stageContent =
-    hasMedia && current ? (
-      <MediaPreview file={current} />
-    ) : (
-      <div
-        className="flex h-full w-full items-center justify-center"
-        style={{ backgroundImage: TEXT_GRADIENT }}
-      >
-        {note.trim().length > 0 ? (
-          <p className="max-h-[60%] overflow-y-auto whitespace-pre-wrap px-10 text-center text-xl font-medium leading-relaxed text-white/90">
-            {note}
-          </p>
-        ) : (
-          <button
-            type="button"
-            onClick={handlePick}
-            disabled={disabled || saving}
-            className="flex flex-col items-center gap-3 rounded-3xl border border-white/15 bg-white/5 px-10 py-9 backdrop-blur-sm transition-colors hover:bg-white/10 disabled:opacity-50"
-          >
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-teal-500/20 ring-1 ring-teal-400/40">
-              <ImagePlus className="h-7 w-7 text-teal-300" />
-            </span>
-            <span className="text-base font-medium">Add photos or video</span>
-            <span className="text-xs text-white/55">or just write a note below</span>
-          </button>
-        )}
-      </div>
-    );
-
-  const stage = (
-    <MemoryStage
-      itemKey={current?.id ?? 'empty'}
-      hasPrev={index > 0}
-      hasNext={index < files.length - 1}
-      onPrev={() => goTo(-1)}
-      onNext={() => goTo(1)}
-      swipeable={files.length > 1}
-      animation="fade"
-      chevronsOnMobile={false}
-    >
-      {stageContent}
-    </MemoryStage>
-  );
-
-  // ───────────── Bottom block ─────────────
-  const dots =
-    files.length > 1 ? (
-      <div className="mb-3 flex justify-center gap-1.5">
-        {files.map((f, i) => (
-          <span
-            key={f.id}
-            className={cn(
-              'h-1.5 rounded-full transition-all',
-              i === index ? 'w-4 bg-white' : 'w-1.5 bg-white/40',
-            )}
-          />
-        ))}
-      </div>
-    ) : null;
-
-  const dateRow = (
-    <div className="mb-1 flex items-center">
-      <Popover>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            disabled={saving}
-            className="inline-flex items-center gap-1 rounded-md text-xs font-medium text-white/80 transition-colors hover:text-white disabled:opacity-50"
-            aria-label="Change date"
-          >
-            <CalendarIcon className="h-3.5 w-3.5" />
-            {dateLabel}
-          </button>
-        </PopoverTrigger>
-        <PopoverContent align="start" className="w-auto p-0">
-          <Calendar
-            mode="single"
-            selected={dateObj}
-            onSelect={(d) => d && setLoggedDate(format(d, 'yyyy-MM-dd'))}
-            initialFocus
-            className={cn('p-3 pointer-events-auto')}
-          />
-        </PopoverContent>
-      </Popover>
-    </div>
-  );
-
-  const caption = (
-    <>
-      {/* Filmstrip */}
-      {hasMedia && (
-        <div className="mb-3 flex items-center gap-2 overflow-x-auto pb-1">
-          {files.map((f, i) => (
-            <button
-              key={f.id}
-              type="button"
-              onClick={() => setIndex(i)}
-              className={cn(
-                'relative h-12 w-12 shrink-0 overflow-hidden rounded-lg ring-2 transition-all',
-                i === index ? 'ring-teal-400' : 'ring-transparent opacity-65 hover:opacity-100',
-              )}
-            >
-              {!f.previewUrl ? (
-                <span className="flex h-full w-full items-center justify-center bg-white/10">
-                  <Loader2 className="h-4 w-4 animate-spin text-white/70" />
-                </span>
-              ) : f.kind === 'image' ? (
-                <img src={f.previewUrl} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <>
-                  <video src={f.previewUrl} muted playsInline className="h-full w-full object-cover" />
-                  <span className="absolute inset-0 flex items-center justify-center">
-                    <Play className="h-4 w-4 text-white drop-shadow" />
-                  </span>
-                </>
-              )}
-              {f.status === 'uploading' && (
-                <span className="absolute inset-0 flex items-center justify-center bg-black/50">
-                  <Loader2 className="h-4 w-4 animate-spin text-white" />
-                </span>
-              )}
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={handlePick}
-            disabled={disabled || saving}
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-dashed border-white/30 text-white/70 transition-colors hover:border-white/60 hover:text-white disabled:opacity-40"
-            aria-label="Add more"
-          >
-            <Plus className="h-5 w-5" />
-          </button>
-        </div>
-      )}
-
-      {/* Caption */}
-      <textarea
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        placeholder="Write a caption…"
-        autoComplete="off"
-        rows={2}
-        disabled={saving}
-        className="w-full resize-none border-0 bg-transparent text-lg leading-snug text-white placeholder:italic placeholder:text-white/45 focus:outline-none"
-      />
-
-      {/* Category */}
-      <div className="mt-1 flex items-center gap-1 rounded-full bg-white/10 px-3 py-1.5">
-        <span className="text-sm text-teal-300">#</span>
-        <input
-          type="text"
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          placeholder="category"
-          autoComplete="off"
-          list="memory-composer-categories"
-          disabled={saving}
-          className="min-w-0 flex-1 border-0 bg-transparent text-sm text-white placeholder:italic placeholder:text-white/45 focus:outline-none"
-        />
-        <datalist id="memory-composer-categories">
-          {uniqueCategories.map((c) => (
-            <option key={c} value={c} />
-          ))}
-        </datalist>
-      </div>
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*,video/*"
-        multiple
-        className="hidden"
-        onChange={handleFiles}
-      />
-    </>
-  );
-
   const actions: MemoryAction[] = [
     {
       key: 'add',
@@ -467,14 +294,6 @@ export function MemoryComposer({
       disabled: !hasMedia || index === files.length - 1 || saving,
     },
     {
-      key: 'cancel',
-      icon: X,
-      label: 'Cancel',
-      align: 'end',
-      onClick: () => !saving && onCancel?.(),
-      disabled: saving,
-    },
-    {
       key: 'save',
       icon: Check,
       label: 'Save',
@@ -487,16 +306,173 @@ export function MemoryComposer({
     },
   ];
 
+  const lift = keyboardInset ? { transform: `translateY(-${keyboardInset}px)` } : undefined;
+
   return createPortal(
-    <MemoryScaffold
-      stage={stage}
-      dots={dots}
-      dateRow={dateRow}
-      caption={caption}
-      actions={<MemoryActionBar actions={actions} />}
-      error={error ? <p className="mt-2 text-xs text-red-300">{error}</p> : undefined}
-      liftWithKeyboard
-    />,
+    <div
+      className="fixed inset-0 z-50 flex select-none flex-col text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.35)]"
+      style={{ backgroundImage: CANVAS_GRADIENT }}
+    >
+      {/* Header */}
+      <div className="flex shrink-0 items-center justify-between px-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              disabled={saving}
+              className="inline-flex items-center gap-1.5 rounded-full bg-white/5 px-3 py-1.5 text-xs font-medium text-white/85 ring-1 ring-white/10 backdrop-blur-sm transition-colors hover:bg-white/10 disabled:opacity-50"
+              aria-label="Change date"
+            >
+              <CalendarIcon className="h-3.5 w-3.5 text-teal-300" />
+              {dateLabel}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-auto p-0">
+            <Calendar
+              mode="single"
+              selected={dateObj}
+              onSelect={(d) => d && setLoggedDate(format(d, 'yyyy-MM-dd'))}
+              initialFocus
+              className={cn('p-3 pointer-events-auto')}
+            />
+          </PopoverContent>
+        </Popover>
+
+        <button
+          type="button"
+          onClick={() => !saving && onCancel?.()}
+          disabled={saving}
+          aria-label="Cancel"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+
+      {/* Canvas: writing + media as equal peers */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-4 pb-44">
+        <textarea
+          ref={noteRef}
+          value={note}
+          onChange={(e) => {
+            setNote(e.target.value);
+            autoGrow();
+          }}
+          placeholder="Start writing your memory…"
+          autoComplete="off"
+          rows={1}
+          disabled={saving}
+          className="w-full resize-none border-0 bg-transparent text-xl leading-relaxed text-white placeholder:italic placeholder:text-white/45 focus:outline-none"
+        />
+
+        <div className="mt-6">
+          {!hasMedia ? (
+            <button
+              type="button"
+              onClick={handlePick}
+              disabled={disabled || saving}
+              className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-white/20 bg-white/[0.03] transition-colors hover:border-white/35 hover:bg-white/[0.06] disabled:opacity-50"
+            >
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-teal-500/20 ring-1 ring-teal-400/40">
+                <ImagePlus className="h-7 w-7 text-teal-300" />
+              </span>
+              <span className="text-base font-medium">Add photos or video</span>
+              <span className="text-xs text-white/50">optional — a note on its own is plenty</span>
+            </button>
+          ) : (
+            <>
+              {current && (
+                <div className="h-[42vh] w-full overflow-hidden rounded-2xl bg-black/30 ring-1 ring-white/10">
+                  <MediaPreview file={current} />
+                </div>
+              )}
+
+              {/* Filmstrip */}
+              <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1">
+                {files.map((f, i) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setIndex(i)}
+                    className={cn(
+                      'relative h-14 w-14 shrink-0 overflow-hidden rounded-lg ring-2 transition-all',
+                      i === index ? 'ring-teal-400' : 'ring-transparent opacity-65 hover:opacity-100',
+                    )}
+                  >
+                    {!f.previewUrl ? (
+                      <span className="flex h-full w-full items-center justify-center bg-white/10">
+                        <Loader2 className="h-4 w-4 animate-spin text-white/70" />
+                      </span>
+                    ) : f.kind === 'image' ? (
+                      <img src={f.previewUrl} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <>
+                        <video src={f.previewUrl} muted playsInline className="h-full w-full object-cover" />
+                        <span className="absolute inset-0 flex items-center justify-center">
+                          <Play className="h-4 w-4 text-white drop-shadow" />
+                        </span>
+                      </>
+                    )}
+                    {f.status === 'uploading' && (
+                      <span className="absolute inset-0 flex items-center justify-center bg-black/50">
+                        <Loader2 className="h-4 w-4 animate-spin text-white" />
+                      </span>
+                    )}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={handlePick}
+                  disabled={disabled || saving}
+                  className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-dashed border-white/30 text-white/70 transition-colors hover:border-white/60 hover:text-white disabled:opacity-40"
+                  aria-label="Add more"
+                >
+                  <Plus className="h-5 w-5" />
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Floating bottom bar */}
+      <div
+        className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/55 via-black/25 to-transparent px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-10"
+        style={lift}
+      >
+        {error && <p className="mb-2 text-xs text-red-300">{error}</p>}
+
+        <div className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5">
+          <span className="text-sm text-teal-300">#</span>
+          <input
+            type="text"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            placeholder="category"
+            autoComplete="off"
+            list="memory-composer-categories"
+            disabled={saving}
+            className="min-w-0 flex-1 border-0 bg-transparent text-sm text-white placeholder:italic placeholder:text-white/45 focus:outline-none"
+          />
+          <datalist id="memory-composer-categories">
+            {uniqueCategories.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
+        </div>
+
+        <MemoryActionBar actions={actions} />
+      </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,video/*"
+        multiple
+        className="hidden"
+        onChange={handleFiles}
+      />
+    </div>,
     document.body,
   );
 }
