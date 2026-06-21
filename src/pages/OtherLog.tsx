@@ -21,7 +21,7 @@ import { LogTemplatePickerDialog } from '@/components/LogTemplatePickerDialog';
 import { LogEntryInput } from '@/components/LogEntryInput';
 import { BloodworkUploadInput } from '@/components/BloodworkUploadInput';
 import { MedicationEntryInput } from '@/components/MedicationEntryInput';
-import { MemoryEntryInput } from '@/components/custom/MemoryEntryInput';
+import { MemoryComposer } from '@/components/custom/MemoryComposer';
 import { useMemoryDays } from '@/hooks/useMemoryDays';
 import { CustomLogEntriesView } from '@/components/CustomLogEntriesView';
 import { CustomLogByTypeView } from '@/components/CustomLogByTypeView';
