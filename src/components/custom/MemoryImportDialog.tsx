@@ -99,7 +99,7 @@ export function MemoryImportDialog({ open, onOpenChange, memoryLogTypes }: Memor
       parsed.sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
       setRows(classifyRows(parsed));
     } catch {
-      setParseError('Could not read one or more files. Make sure they are exported .html files.');
+      setParseError("Could not read one or more files. Make sure they're the files you exported from the other platform.");
     }
   };
 
@@ -160,9 +160,11 @@ export function MemoryImportDialog({ open, onOpenChange, memoryLogTypes }: Memor
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl w-[calc(100vw-2rem)] top-[5%] translate-y-0 max-h-[85vh] max-h-[85dvh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Import memories</DialogTitle>
+          <DialogTitle>Import to photo scrapbook</DialogTitle>
           <DialogDescription>
-            Add exported <code>.html</code> files. Review the list, then import them all at once.
+            Have content exported from another platform (like a blog or newsletter)? Upload the
+            exported files here and we'll pull in the posts and photos. Review the list, then import
+            them all at once.
           </DialogDescription>
         </DialogHeader>
 
@@ -260,7 +262,7 @@ export function MemoryImportDialog({ open, onOpenChange, memoryLogTypes }: Memor
 
           {summary && (
             <p className="text-sm">
-              Imported {summary.imported} {summary.imported === 1 ? 'memory' : 'memories'}
+              Imported {summary.imported} {summary.imported === 1 ? 'post' : 'posts'}
               {summary.failed > 0 && `, ${summary.failed} failed`}.
             </p>
           )}
