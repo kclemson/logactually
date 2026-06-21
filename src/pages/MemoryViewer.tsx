@@ -493,46 +493,36 @@ function MediaSlide({
           ) : (
             <div className="text-white/50 text-sm">Loading…</div>
           )
-        ) : playing && url ? (
-          <video
-            src={url}
-            controls
-            autoPlay
-            playsInline
-            onLoadedMetadata={(e) =>
-              applyFit(e.currentTarget.videoWidth, e.currentTarget.videoHeight)
-            }
-            onError={handleError}
-            className={mediaFit}
-          />
+        ) : url ? (
+          <>
+            <video
+              ref={videoRef}
+              src={url}
+              poster={posterUrl ?? undefined}
+              controls
+              autoPlay
+              loop
+              muted
+              playsInline
+              onLoadedMetadata={(e) =>
+                applyFit(e.currentTarget.videoWidth, e.currentTarget.videoHeight)
+              }
+              onError={handleError}
+              className={mediaFit}
+            />
+            <button
+              type="button"
+              onClick={onToggleSound}
+              aria-label={soundOn ? 'Mute' : 'Unmute'}
+              className="absolute right-3 top-3 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-black/45 text-white backdrop-blur-md transition-colors hover:bg-black/65"
+            >
+              {soundOn ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+            </button>
+          </>
         ) : (
-          <button
-            type="button"
-            onClick={() => setPlaying(true)}
-            className="relative h-full w-full flex items-center justify-center"
-            aria-label="Play video"
-          >
-            {posterUrl && (
-              <img
-                src={posterUrl}
-                alt=""
-                onLoad={(e) =>
-                  applyFit(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)
-                }
-                className={mediaFit}
-                draggable={false}
-              />
-            )}
-            <span className="absolute h-16 w-16 rounded-full bg-black/50 flex items-center justify-center">
-              <Play className="h-8 w-8 text-white ml-1" />
-            </span>
-            {media.duration_secs ? (
-              <span className="absolute bottom-3 right-3 text-xs bg-black/60 px-1.5 py-0.5 rounded">
-                {formatDuration(media.duration_secs)}
-              </span>
-            ) : null}
-          </button>
+          <div className="text-white/50 text-sm">Loading…</div>
         )}
+
       </div>
     </div>
 
