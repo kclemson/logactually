@@ -59,13 +59,13 @@ export function LogTemplatePickerDialog({
           <DialogTitle>Add a Log Type</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
           {TEMPLATE_GROUPS.map(group => {
             const templates = LOG_TEMPLATES.filter(t => t.group === group.key);
             if (templates.length === 0) return null;
             return (
               <div key={group.key} className="flex flex-col">
-                <p className="px-1 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="px-1 pb-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   {group.label}
                 </p>
                 {templates.map(t => {
