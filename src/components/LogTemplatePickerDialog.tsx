@@ -97,7 +97,7 @@ export function LogTemplatePickerDialog({
                   return (
                     <label
                       key={t.name}
-                      className={`flex items-center gap-3 w-full px-2 py-2 rounded-lg text-sm transition-colors ${added ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-accent'}`}
+                      className={`flex items-center gap-3 w-full px-2 py-1.5 rounded-lg text-sm transition-colors ${added ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-accent'}`}
                     >
                       <input
                         type="checkbox"
