@@ -94,26 +94,57 @@ export function MemoryComposer({
   logTypeId,
   loggedDate,
   existingCategories = [],
+  editEntry,
   onSuccess,
   onCancel,
   disabled,
 }: MemoryComposerProps) {
+  const isEditing = !!editEntry;
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [note, setNote] = useState('');
-  const [category, setCategory] = useState('');
-  const [files, setFiles] = useState<PendingFile[]>([]);
+  const [note, setNote] = useState(() => editEntry?.text_value ?? '');
+  const [category, setCategory] = useState(() => editEntry?.category ?? '');
+  const [files, setFiles] = useState<PendingFile[]>(() =>
+    (editEntry?.media ?? []).map((m) => ({
+      id: m.id,
+      source: 'existing' as const,
+      media: m,
+      kind: m.kind,
+      previewUrl: '',
+      status: 'done' as FileUploadStatus,
+    })),
+  );
   const [index, setIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const { createMemory } = useCreateMemory();
-  const saving = createMemory.isPending;
+  const { updateMemory } = useUpdateMemory();
+  const saving = createMemory.isPending || updateMemory.isPending;
   const keyboardInset = useKeyboardInset();
 
-  // Revoke all object URLs when the composer unmounts.
+  // Resolve signed preview URLs for any existing media (external storage), once.
+  useEffect(() => {
+    let active = true;
+    for (const m of editEntry?.media ?? []) {
+      getSignedMemoryUrl(m.poster_path || m.storage_path).then((url) => {
+        if (active && url) {
+          setFiles((prev) =>
+            prev.map((f) => (f.id === m.id ? { ...f, previewUrl: url } : f)),
+          );
+        }
+      });
+    }
+    return () => {
+      active = false;
+    };
+  }, [editEntry]);
+
+  // Revoke object URLs for newly-picked files when the composer unmounts.
   const filesRef = useRef<PendingFile[]>([]);
   filesRef.current = files;
   useEffect(() => {
     return () => {
-      filesRef.current.forEach((f) => URL.revokeObjectURL(f.previewUrl));
+      filesRef.current.forEach((f) => {
+        if (f.source === 'new') URL.revokeObjectURL(f.previewUrl);
+      });
     };
   }, []);
 
@@ -123,6 +154,7 @@ export function MemoryComposer({
 
   const dateObj = parseISO(loggedDate);
   const dateLabel = isToday(dateObj) ? 'Today' : format(dateObj, 'EEE, MMM d');
+
 
   const handlePick = () => fileInputRef.current?.click();
 
