@@ -456,7 +456,7 @@ function MemoryTypeBody({ logType }: { logType: CustomLogType }) {
 
   if (isLoading) return <Skeleton className="h-8 w-full" />;
   if (days.length === 0) {
-    return <p className="text-xs text-muted-foreground italic">No memories yet. Tap "+ Log" to add one.</p>;
+    return <p className="text-xs text-muted-foreground italic">No entries yet. Tap "+ Log" to add one.</p>;
   }
 
   const recent = days.slice(0, MAX_DATES);
