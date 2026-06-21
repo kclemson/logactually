@@ -305,7 +305,7 @@ export function MemoryComposer({
               )}
             >
               <DialogPrimitive.Title className="sr-only">
-                Add memory to {label}
+                {isEditing ? `Edit memory in ${label}` : `Add memory to ${label}`}
               </DialogPrimitive.Title>
 
 
