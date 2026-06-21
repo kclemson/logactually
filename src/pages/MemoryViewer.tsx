@@ -261,7 +261,7 @@ const MemoryViewer = () => {
               },
             ] as MemoryAction[])
           : []),
-        { key: 'close', icon: X, label: 'Close', align: 'end', onClick: close },
+        { key: 'close', icon: X, label: 'Close', align: 'end', glass: true, onClick: close },
       ]
     : [];
 
@@ -323,6 +323,7 @@ const MemoryViewer = () => {
       caption={caption}
       actions={currentItem ? <MemoryActionBar actions={viewerActions} /> : undefined}
       overlay={overlay}
+      bottomPlacement="overlay"
     />
   );
 };
@@ -351,6 +352,10 @@ function MediaSlide({ media }: { media: MemoryMedia }) {
   const [url, setUrl] = useState<string | null>(null);
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
+  // Smart per-orientation fill: portrait media fills the frame (cover) for a
+  // true full-bleed feel; landscape/square stays letterboxed (contain) so
+  // nothing is cropped. We default to contain until dimensions are known.
+  const [fit, setFit] = useState<'contain' | 'cover'>('contain');
   const retriedRef = useRef(false);
 
   useEffect(() => {
@@ -359,6 +364,7 @@ function MediaSlide({ media }: { media: MemoryMedia }) {
     setPlaying(false);
     setUrl(null);
     setPosterUrl(null);
+    setFit('contain');
     getSignedMemoryUrl(media.storage_path).then((u) => active && setUrl(u));
     if (media.poster_path) {
       getSignedMemoryUrl(media.poster_path).then((u) => active && setPosterUrl(u));
@@ -377,12 +383,18 @@ function MediaSlide({ media }: { media: MemoryMedia }) {
     setUrl(fresh);
   }, [media.storage_path]);
 
+  const applyFit = useCallback((w: number, h: number) => {
+    if (w > 0 && h > 0) setFit(h > w ? 'cover' : 'contain');
+  }, []);
+
   const backdrop = media.kind === 'image' ? url : posterUrl;
+  const mediaFit =
+    fit === 'cover' ? 'h-full w-full object-cover' : 'max-h-full max-w-full object-contain';
 
   return (
     <div className="relative h-full w-full overflow-hidden">
-      {/* Blurred backdrop */}
-      {backdrop && (
+      {/* Blurred backdrop (only visible when the media is letterboxed) */}
+      {backdrop && fit === 'contain' && (
         <div
           aria-hidden
           className="absolute inset-0 bg-center bg-cover scale-110 blur-2xl opacity-40"
@@ -396,8 +408,11 @@ function MediaSlide({ media }: { media: MemoryMedia }) {
             <img
               src={url}
               alt=""
+              onLoad={(e) =>
+                applyFit(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)
+              }
               onError={handleError}
-              className="max-h-full max-w-full object-contain"
+              className={mediaFit}
               draggable={false}
             />
           ) : (
@@ -409,8 +424,11 @@ function MediaSlide({ media }: { media: MemoryMedia }) {
             controls
             autoPlay
             playsInline
+            onLoadedMetadata={(e) =>
+              applyFit(e.currentTarget.videoWidth, e.currentTarget.videoHeight)
+            }
             onError={handleError}
-            className="max-h-full max-w-full object-contain"
+            className={mediaFit}
           />
         ) : (
           <button
@@ -423,7 +441,10 @@ function MediaSlide({ media }: { media: MemoryMedia }) {
               <img
                 src={posterUrl}
                 alt=""
-                className="max-h-full max-w-full object-contain"
+                onLoad={(e) =>
+                  applyFit(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)
+                }
+                className={mediaFit}
                 draggable={false}
               />
             )}
@@ -439,5 +460,6 @@ function MediaSlide({ media }: { media: MemoryMedia }) {
         )}
       </div>
     </div>
+
   );
 }

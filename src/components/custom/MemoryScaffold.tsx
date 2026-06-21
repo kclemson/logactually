@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useState } from 'react';
+import { cn } from '@/lib/utils';
 
 /**
  * Tracks how much of the layout viewport the on-screen keyboard is covering, so
@@ -42,6 +43,13 @@ interface MemoryScaffoldProps {
   overlay?: ReactNode;
   /** Lift the bottom block above the on-screen keyboard (editor). */
   liftWithKeyboard?: boolean;
+  /**
+   * 'stacked' (default): the stage and the bottom block sit in a flex column —
+   * the media is letterboxed above its own controls (used by the editor).
+   * 'overlay': the stage fills the whole surface and the bottom block floats
+   * over the bottom of the media with a legibility scrim (used by the viewer).
+   */
+  bottomPlacement?: 'stacked' | 'overlay';
 }
 
 export function MemoryScaffold({
@@ -53,28 +61,38 @@ export function MemoryScaffold({
   error,
   overlay,
   liftWithKeyboard,
+  bottomPlacement = 'stacked',
 }: MemoryScaffoldProps) {
   const keyboardInset = useKeyboardInset();
   const lift =
     liftWithKeyboard && keyboardInset ? { transform: `translateY(-${keyboardInset}px)` } : undefined;
   const hasBottom = dots || dateRow || caption || actions || error;
+  const isOverlay = bottomPlacement === 'overlay';
+
+  const bottomBlock = hasBottom ? (
+    <div
+      className={cn(
+        'z-20 bg-gradient-to-t from-black/90 via-black/30 to-transparent px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] [text-shadow:0_1px_3px_rgba(0,0,0,0.6)]',
+        isOverlay ? 'absolute inset-x-0 bottom-0 pt-16' : 'relative pt-6',
+      )}
+      style={lift}
+    >
+      {dots}
+      {dateRow}
+      {caption}
+      {actions}
+      {error}
+    </div>
+  ) : null;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col select-none bg-black text-white">
-      <div className="relative min-h-0 flex-1 overflow-hidden">{stage}</div>
+      <div className={cn('relative min-h-0 flex-1 overflow-hidden', isOverlay && 'min-h-full')}>
+        {stage}
+        {isOverlay && bottomBlock}
+      </div>
 
-      {hasBottom && (
-        <div
-          className="relative z-20 bg-gradient-to-t from-black via-black/85 to-transparent px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-6"
-          style={lift}
-        >
-          {dots}
-          {dateRow}
-          {caption}
-          {actions}
-          {error}
-        </div>
-      )}
+      {!isOverlay && bottomBlock}
 
       {overlay}
     </div>

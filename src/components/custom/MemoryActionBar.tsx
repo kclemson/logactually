@@ -20,6 +20,8 @@ export interface MemoryAction {
   tone?: 'default' | 'danger';
   /** Renders a filled teal pill (e.g. Save) instead of a ghost icon button. */
   prominent?: boolean;
+  /** Renders a rounded glass (backdrop-blur) icon button, e.g. the viewer close. */
+  glass?: boolean;
   /** Shows a spinner in place of the icon (e.g. while saving). */
   busy?: boolean;
 }
@@ -51,6 +53,24 @@ export function MemoryActionBar({ actions }: { actions: MemoryAction[] }) {
             >
               {a.busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}
               {a.text ?? a.label}
+            </button>
+          );
+        }
+
+        if (a.glass) {
+          return (
+            <button
+              key={a.key}
+              type="button"
+              onClick={a.onClick}
+              disabled={a.disabled}
+              aria-label={a.label}
+              className={cn(
+                'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/10 text-white backdrop-blur-md transition-colors hover:bg-white/20 disabled:opacity-40',
+                pushRight && 'ml-auto',
+              )}
+            >
+              {a.busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Icon className="h-5 w-5" />}
             </button>
           );
         }

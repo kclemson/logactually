@@ -119,10 +119,13 @@ export function PullToRefresh({ onRefresh, children }: PullToRefreshProps) {
         </div>
       </div>
 
-      {/* Content with pull offset */}
+      {/* Content with pull offset. At rest we must NOT apply a transform: any
+          non-`none` transform turns this div into the containing block for
+          `position: fixed` descendants (e.g. the immersive memory composer),
+          which would clip them to this element instead of the viewport. */}
       <div
         style={{
-          transform: `translateY(${pullDistance}px)`,
+          transform: pullDistance ? `translateY(${pullDistance}px)` : undefined,
           transition: isPullingRef.current ? 'none' : 'transform 0.2s ease-out',
         }}
       >
