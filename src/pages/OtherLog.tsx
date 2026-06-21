@@ -457,7 +457,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                   isLoading={createEntry.isPending}
                   disabled={isReadOnly}
                 />
-                {inlineTrend && viewMode === 'date' && (
+                {inlineTrend && effectiveViewMode === 'date' && (
                   <div className="mt-3 border-t border-border pt-3">
                     <CustomLogTrendChart trend={inlineTrend} onNavigate={() => {}} />
                   </div>
