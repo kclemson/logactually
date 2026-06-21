@@ -1,6 +1,8 @@
-import { ArrowDownUp } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowDownUp, Upload } from 'lucide-react';
 import { CollapsibleSection } from '@/components/CollapsibleSection';
 import { AppleHealthImport } from '@/components/AppleHealthImport';
+import { MemoryImportDialog } from '@/components/custom/MemoryImportDialog';
 import { useExportData } from '@/hooks/useExportData';
 
 interface ImportExportSectionProps {
@@ -8,12 +10,15 @@ interface ImportExportSectionProps {
   showCustomLogs: boolean;
   hasCustomLogTypes: boolean;
   hasBloodworkLogType: boolean;
+  memoryLogTypes: { id: string; name: string }[];
   isReadOnly: boolean;
 }
 
-export function ImportExportSection({ showWeights, showCustomLogs, hasCustomLogTypes, hasBloodworkLogType, isReadOnly }: ImportExportSectionProps) {
+export function ImportExportSection({ showWeights, showCustomLogs, hasCustomLogTypes, hasBloodworkLogType, memoryLogTypes, isReadOnly }: ImportExportSectionProps) {
   const { isExporting, exportFoodLog, exportWeightLog, exportCustomLog, exportBloodwork, exportBloodworkFiles } = useExportData();
+  const [memoryImportOpen, setMemoryImportOpen] = useState(false);
 
+  const canImportMemories = showCustomLogs && memoryLogTypes.length > 0 && !isReadOnly;
 
   return (
     <CollapsibleSection title="Import and Export" icon={ArrowDownUp} storageKey="settings-export" iconClassName="text-zinc-500 dark:text-zinc-400">
@@ -76,6 +81,18 @@ export function ImportExportSection({ showWeights, showCustomLogs, hasCustomLogT
             </div>
           </>
         )}
+        {canImportMemories && (
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">Import memories from files</p>
+            <button
+              onClick={() => setMemoryImportOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors disabled:opacity-50"
+            >
+              <Upload className="h-4 w-4" />
+              Import Memories
+            </button>
+          </div>
+        )}
         {showWeights && !isReadOnly && <AppleHealthImport />}
         {isReadOnly && (
           <p className="text-xs text-muted-foreground mt-2">
@@ -83,6 +100,13 @@ export function ImportExportSection({ showWeights, showCustomLogs, hasCustomLogT
           </p>
         )}
       </div>
+      {memoryImportOpen && (
+        <MemoryImportDialog
+          open
+          onOpenChange={setMemoryImportOpen}
+          memoryLogTypes={memoryLogTypes}
+        />
+      )}
     </CollapsibleSection>
   );
 }
