@@ -5,7 +5,7 @@ import { CustomLogTypeRow } from '@/components/CustomLogTypeRow';
 import { LogTemplatePickerDialog } from '@/components/LogTemplatePickerDialog';
 import { CreateLogTypeDialog } from '@/components/CreateLogTypeDialog';
 import { CreateMedicationDialog } from '@/components/CreateMedicationDialog';
-import { useCustomLogTypes } from '@/hooks/useCustomLogTypes';
+import { useCustomLogTypes, type ValueType } from '@/hooks/useCustomLogTypes';
 
 interface CustomLogTypesSectionProps {
   isReadOnly: boolean;
@@ -59,9 +59,22 @@ export function CustomLogTypesSection({ isReadOnly }: CustomLogTypesSectionProps
           open={templatePickerOpen}
           onOpenChange={setTemplatePickerOpen}
           onSelectTemplate={(template) => {
-            createType.mutate({ name: template.name, value_type: template.value_type as "numeric" | "text" | "text_numeric" | "text_multiline", unit: template.unit ?? undefined }, {
+            createType.mutate({ name: template.name, value_type: template.value_type as ValueType, unit: template.unit ?? undefined }, {
               onSuccess: () => setTemplatePickerOpen(false),
             });
+          }}
+          onSelectTemplates={(items) => {
+            const createNext = (index: number) => {
+              if (index >= items.length) {
+                setTemplatePickerOpen(false);
+                return;
+              }
+              const p = items[index];
+              createType.mutate({ name: p.name, value_type: p.value_type as ValueType, unit: p.unit ?? undefined }, {
+                onSuccess: () => createNext(index + 1),
+              });
+            };
+            createNext(0);
           }}
           onCreateCustom={() => {
             setTemplatePickerOpen(false);
