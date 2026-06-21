@@ -519,46 +519,48 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
         isLoading={createType.isPending}
         existingNames={logTypes.map(t => t.name)}
       />
-      <LogTemplatePickerDialog
-        open={templatePickerOpen}
-        onOpenChange={setTemplatePickerOpen}
-        onSelectTemplate={(params) => {
-          createType.mutate({ name: params.name, value_type: params.value_type as any, unit: params.unit }, {
-            onSuccess: (newType) => {
-              setTemplatePickerOpen(false);
-              setSelectedTypeId(newType.id);
-            },
-          });
-        }}
-        onSelectTemplates={(items) => {
-          let lastId: string | null = null;
-          const createNext = (index: number) => {
-            if (index >= items.length) {
-              setTemplatePickerOpen(false);
-              if (lastId) setSelectedTypeId(lastId);
-              return;
-            }
-            const p = items[index];
-            createType.mutate({ name: p.name, value_type: p.value_type as any, unit: p.unit }, {
+      {templatePickerOpen && (
+        <LogTemplatePickerDialog
+          open={templatePickerOpen}
+          onOpenChange={setTemplatePickerOpen}
+          onSelectTemplate={(params) => {
+            createType.mutate({ name: params.name, value_type: params.value_type as any, unit: params.unit }, {
               onSuccess: (newType) => {
-                lastId = newType.id;
-                createNext(index + 1);
+                setTemplatePickerOpen(false);
+                setSelectedTypeId(newType.id);
               },
             });
-          };
-          createNext(0);
-        }}
-        onCreateCustom={() => {
-          setTemplatePickerOpen(false);
-          setCreateTypeOpen(true);
-        }}
-        onSelectMedication={() => {
-          setTemplatePickerOpen(false);
-          setCreateMedicationOpen(true);
-        }}
-        isLoading={createType.isPending}
-        existingNames={logTypes.map(t => t.name)}
-      />
+          }}
+          onSelectTemplates={(items) => {
+            let lastId: string | null = null;
+            const createNext = (index: number) => {
+              if (index >= items.length) {
+                setTemplatePickerOpen(false);
+                if (lastId) setSelectedTypeId(lastId);
+                return;
+              }
+              const p = items[index];
+              createType.mutate({ name: p.name, value_type: p.value_type as any, unit: p.unit }, {
+                onSuccess: (newType) => {
+                  lastId = newType.id;
+                  createNext(index + 1);
+                },
+              });
+            };
+            createNext(0);
+          }}
+          onCreateCustom={() => {
+            setTemplatePickerOpen(false);
+            setCreateTypeOpen(true);
+          }}
+          onSelectMedication={() => {
+            setTemplatePickerOpen(false);
+            setCreateMedicationOpen(true);
+          }}
+          isLoading={createType.isPending}
+          existingNames={logTypes.map(t => t.name)}
+        />
+      )}
     </div>
   );
 };

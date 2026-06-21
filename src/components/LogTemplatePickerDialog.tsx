@@ -1,17 +1,12 @@
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { LOG_TEMPLATES, MEASUREMENT_TEMPLATES, getTemplateUnit } from '@/lib/log-templates';
+import { LOG_TEMPLATES, TEMPLATE_GROUPS, getTemplateUnit } from '@/lib/log-templates';
 import { useUserSettings } from '@/hooks/useUserSettings';
-import { Scale, Ruler, Percent, HeartPulse, Moon, Smile, BookOpen, Droplets, Wrench, ChevronDown, ChevronRight, Pill, Images, type LucideIcon } from 'lucide-react';
+import { Scale, Ruler, Percent, HeartPulse, Moon, Droplets, Wrench, ChevronRight, Pill, Images, type LucideIcon } from 'lucide-react';
 
 const ICON_MAP: Record<string, LucideIcon> = {
-  Scale, Ruler, Percent, HeartPulse, Moon, Smile, BookOpen, Droplets, Pill, Images,
+  Scale, Ruler, Percent, HeartPulse, Moon, Droplets, Pill, Images,
 };
-
-// Templates shown in the primary list (always visible)
-const PRIMARY_NAMES = ['Body Weight', 'Body Fat %', 'Blood Pressure', 'Medication', 'Bloodwork'];
-// Templates hidden under "More options"
-const MORE_NAMES = ['Sleep', 'Water Intake', 'Mood', 'Journal', 'Memories'];
 
 interface LogTemplatePickerDialogProps {
   open: boolean;
@@ -29,24 +24,25 @@ export function LogTemplatePickerDialog({
 }: LogTemplatePickerDialogProps) {
   const { settings } = useUserSettings();
   const lowerExisting = existingNames.map(n => n.toLowerCase());
-  const [measurementExpanded, setMeasurementExpanded] = useState(false);
-  const [selectedMeasurements, setSelectedMeasurements] = useState<Set<string>>(new Set());
-  const [moreExpanded, setMoreExpanded] = useState(false);
+  // No effect-based reset: the dialog is mounted conditionally by parents, so
+  // this state resets naturally on close.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const allMeasurementsAdded = MEASUREMENT_TEMPLATES.every(t => lowerExisting.includes(t.name.toLowerCase()));
-  const newlySelected = [...selectedMeasurements].filter(name => !lowerExisting.includes(name.toLowerCase()));
+  const isAdded = (name: string) => lowerExisting.includes(name.toLowerCase());
 
-  const handleToggleMeasurement = (name: string) => {
-    setSelectedMeasurements(prev => {
+  const toggle = (name: string) => {
+    setSelected(prev => {
       const next = new Set(prev);
       if (next.has(name)) next.delete(name); else next.add(name);
       return next;
     });
   };
 
+  const newlySelected = [...selected].filter(name => !isAdded(name));
+
   const handleAddSelected = () => {
-    const items = MEASUREMENT_TEMPLATES
-      .filter(t => selectedMeasurements.has(t.name) && !lowerExisting.includes(t.name.toLowerCase()))
+    const items = LOG_TEMPLATES
+      .filter(t => selected.has(t.name) && !isAdded(t.name))
       .map(t => ({ name: t.name, value_type: t.valueType, unit: getTemplateUnit(t, settings.weightUnit) }));
     if (items.length === 0) return;
     if (onSelectTemplates) {
@@ -54,186 +50,90 @@ export function LogTemplatePickerDialog({
     } else {
       for (const item of items) onSelectTemplate(item);
     }
-    setSelectedMeasurements(new Set());
-    setMeasurementExpanded(false);
   };
-
-  const handleOpenChange = (val: boolean) => {
-    if (!val) {
-      setMeasurementExpanded(false);
-      setSelectedMeasurements(new Set());
-      setMoreExpanded(false);
-    }
-    onOpenChange(val);
-  };
-
-  const bodyWeightTemplate = LOG_TEMPLATES.find(t => t.name === 'Body Weight');
-  const primaryTemplates = LOG_TEMPLATES.filter(t => PRIMARY_NAMES.includes(t.name));
-  const moreTemplates = LOG_TEMPLATES.filter(t => MORE_NAMES.includes(t.name));
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>Add a Log Type</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col">
-          {/* Body Weight */}
-          {bodyWeightTemplate && (
-            <TemplateRow
-              template={bodyWeightTemplate}
-              unit={getTemplateUnit(bodyWeightTemplate, settings.weightUnit)}
-              alreadyAdded={lowerExisting.includes(bodyWeightTemplate.name.toLowerCase())}
-              isLoading={isLoading}
-              onSelect={onSelectTemplate}
-            />
-          )}
-
-          {/* Body Measurement group */}
-          <button
-            disabled={isLoading || allMeasurementsAdded}
-            onClick={() => setMeasurementExpanded(prev => !prev)}
-            className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-colors ${allMeasurementsAdded ? 'opacity-40 cursor-not-allowed' : 'hover:bg-accent'} disabled:opacity-40`}
-          >
-            <Ruler className="h-4 w-4 text-teal-500" />
-            <span className="font-medium">Body Measurement</span>
-            {allMeasurementsAdded ? (
-              <span className="text-xs text-muted-foreground ml-1">Already added</span>
-            ) : (
-              measurementExpanded
-                ? <ChevronDown className="h-3 w-3 ml-auto text-muted-foreground" />
-                : <ChevronRight className="h-3 w-3 ml-auto text-muted-foreground" />
-            )}
-          </button>
-
-          {measurementExpanded && !allMeasurementsAdded && (
-            <div className="pl-10 pr-3 pb-2 space-y-1">
-              {MEASUREMENT_TEMPLATES.map(t => {
-                const alreadyAdded = lowerExisting.includes(t.name.toLowerCase());
-                const checked = alreadyAdded || selectedMeasurements.has(t.name);
-                const unit = getTemplateUnit(t, settings.weightUnit);
-                return (
-                  <label
-                    key={t.name}
-                    className={`flex items-center gap-2 py-1 text-sm ${alreadyAdded ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      disabled={alreadyAdded}
-                      onChange={() => handleToggleMeasurement(t.name)}
-                      className="accent-teal-500 h-3.5 w-3.5"
-                    />
-                    <span>{t.displayName || t.name}</span>
-                    {unit && <span className="text-xs text-muted-foreground">({unit})</span>}
-                    {alreadyAdded && <span className="text-xs text-muted-foreground ml-auto">Added</span>}
-                  </label>
-                );
-              })}
-              {newlySelected.length > 0 && (
-                <button
-                  disabled={isLoading}
-                  onClick={handleAddSelected}
-                  className="mt-2 w-full py-1.5 rounded-md bg-teal-500 text-white text-sm font-medium hover:bg-teal-600 transition-colors disabled:opacity-50"
-                >
-                  Add {newlySelected.length} selected
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Primary templates: Body Fat %, Blood Pressure, Medication */}
-          {primaryTemplates.map((t) => {
-            const unit = getTemplateUnit(t, settings.weightUnit);
-            const alreadyAdded = lowerExisting.includes(t.name.toLowerCase());
+        <div className="flex flex-col gap-4">
+          {TEMPLATE_GROUPS.map(group => {
+            const templates = LOG_TEMPLATES.filter(t => t.group === group.key);
+            if (templates.length === 0) return null;
             return (
-              <TemplateRow
-                key={t.name}
-                template={t}
-                unit={unit}
-                alreadyAdded={alreadyAdded}
-                isLoading={isLoading}
-                onSelect={t.name === 'Medication' && onSelectMedication
-                  ? () => onSelectMedication()
-                  : onSelectTemplate}
-              />
+              <div key={group.key} className="flex flex-col">
+                <p className="px-1 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {group.label}
+                </p>
+                {templates.map(t => {
+                  // Medication needs a dedicated setup step, so it is a
+                  // chevron row rather than a batch-create checkbox.
+                  if (t.valueType === 'medication' && onSelectMedication) {
+                    const added = isAdded(t.name);
+                    const Icon = ICON_MAP[t.icon];
+                    return (
+                      <button
+                        key={t.name}
+                        disabled={isLoading || added}
+                        onClick={() => onSelectMedication()}
+                        className={`flex items-center gap-3 w-full px-2 py-2 rounded-lg text-sm transition-colors ${added ? 'opacity-40 cursor-not-allowed' : 'hover:bg-accent'} disabled:opacity-40`}
+                      >
+                        {Icon && <Icon className="h-4 w-4 text-teal-500" />}
+                        <span className="font-medium">{t.name}</span>
+                        {added
+                          ? <span className="text-xs text-muted-foreground ml-auto">Added</span>
+                          : <ChevronRight className="h-3.5 w-3.5 ml-auto text-muted-foreground" />}
+                      </button>
+                    );
+                  }
+
+                  const added = isAdded(t.name);
+                  const checked = added || selected.has(t.name);
+                  const unit = getTemplateUnit(t, settings.weightUnit);
+                  const Icon = ICON_MAP[t.icon];
+                  return (
+                    <label
+                      key={t.name}
+                      className={`flex items-center gap-3 w-full px-2 py-2 rounded-lg text-sm transition-colors ${added ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-accent'}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={added || isLoading}
+                        onChange={() => toggle(t.name)}
+                        className="accent-teal-500 h-4 w-4"
+                      />
+                      {Icon && <Icon className="h-4 w-4 text-teal-500" />}
+                      <span className="font-medium">{t.displayName || t.name}</span>
+                      {unit && <span className="text-xs text-muted-foreground">({unit})</span>}
+                      {added && <span className="text-xs text-muted-foreground ml-auto">Added</span>}
+                    </label>
+                  );
+                })}
+              </div>
             );
           })}
 
-          {/* More options expando */}
           <button
-            onClick={() => setMoreExpanded(prev => !prev)}
-            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm hover:bg-accent transition-colors text-muted-foreground"
+            disabled={isLoading || newlySelected.length === 0}
+            onClick={handleAddSelected}
+            className="w-full py-2 rounded-md bg-teal-500 text-white text-sm font-medium hover:bg-teal-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            <Wrench className="h-4 w-4 text-teal-500" />
-            <span className="font-medium text-foreground">More options</span>
-            {moreExpanded
-              ? <ChevronDown className="h-3 w-3 ml-auto" />
-              : <ChevronRight className="h-3 w-3 ml-auto" />}
+            {newlySelected.length > 0 ? `Add ${newlySelected.length} selected` : 'Add selected'}
           </button>
 
-          {moreExpanded && (
-            <>
-              {moreTemplates.map((t) => {
-                const unit = getTemplateUnit(t, settings.weightUnit);
-                const alreadyAdded = lowerExisting.includes(t.name.toLowerCase());
-                return (
-                  <TemplateRow
-                    key={t.name}
-                    template={t}
-                    unit={unit}
-                    alreadyAdded={alreadyAdded}
-                    isLoading={isLoading}
-                    onSelect={onSelectTemplate}
-                  />
-                );
-              })}
-
-              <button
-                onClick={onCreateCustom}
-                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm hover:bg-accent transition-colors"
-              >
-                <Wrench className="h-4 w-4 text-teal-500" />
-                <span className="font-medium">Create your own</span>
-              </button>
-            </>
-          )}
+          <button
+            onClick={onCreateCustom}
+            className="flex items-center justify-center gap-2 w-full py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Wrench className="h-4 w-4" />
+            <span className="font-medium">Create your own</span>
+          </button>
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function TemplateRow({ template, unit, alreadyAdded, isLoading, onSelect }: {
-  template: typeof LOG_TEMPLATES[number];
-  unit: string | null;
-  alreadyAdded: boolean;
-  isLoading: boolean;
-  onSelect: ((params: { name: string; value_type: string; unit: string | null }) => void) | (() => void);
-}) {
-  const Icon = ICON_MAP[template.icon];
-  return (
-    <button
-      disabled={isLoading || alreadyAdded}
-      onClick={() => {
-        if (onSelect.length === 0) {
-          (onSelect as () => void)();
-        } else {
-          (onSelect as (params: { name: string; value_type: string; unit: string | null }) => void)(
-            { name: template.name, value_type: template.valueType, unit }
-          );
-        }
-      }}
-      className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-colors ${alreadyAdded ? 'opacity-40 cursor-not-allowed' : 'hover:bg-accent'} disabled:opacity-40`}
-    >
-      {Icon && <Icon className="h-4 w-4 text-teal-500" />}
-      <span className="font-medium">{template.name}</span>
-      {alreadyAdded ? (
-        <span className="text-xs text-muted-foreground ml-1">Already added</span>
-      ) : unit ? (
-        <span className="text-xs text-muted-foreground ml-1">{unit}</span>
-      ) : null}
-    </button>
   );
 }
