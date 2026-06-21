@@ -33,6 +33,8 @@ interface CustomLogByTypeViewProps {
   onEditEntry?: (entry: CustomLogEntry) => void;
   onDeleteEntry?: (id: string) => void;
   onUpdateEntry?: (params: { id: string; numeric_value?: number | null; numeric_value_2?: number | null; text_value?: string | null }) => void;
+  /** When set, render only this type, expanded (the "focused" featured view). */
+  filterTypeId?: string | null;
 }
 
 export function CustomLogByTypeView({
@@ -43,7 +45,13 @@ export function CustomLogByTypeView({
   onEditEntry,
   onDeleteEntry,
   onUpdateEntry,
+  filterTypeId,
 }: CustomLogByTypeViewProps) {
+  const focused = !!filterTypeId;
+  const visibleTypes = filterTypeId
+    ? logTypes.filter((lt) => lt.id === filterTypeId)
+    : logTypes;
+
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -52,7 +60,7 @@ export function CustomLogByTypeView({
     );
   }
 
-  if (logTypes.length === 0) {
+  if (visibleTypes.length === 0) {
     return (
       <div className="text-center text-muted-foreground py-8">
         No custom log types yet
@@ -62,7 +70,7 @@ export function CustomLogByTypeView({
 
   return (
     <div className="space-y-4">
-      {logTypes.map((lt) => (
+      {visibleTypes.map((lt) => (
         <TypeCard
           key={lt.id}
           logType={lt}
@@ -71,6 +79,7 @@ export function CustomLogByTypeView({
           onEditEntry={onEditEntry}
           onDeleteEntry={onDeleteEntry}
           onUpdateEntry={onUpdateEntry}
+          forceExpanded={focused}
         />
       ))}
     </div>
