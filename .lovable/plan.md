@@ -1,40 +1,23 @@
-# Ken Burns auto-motion for scrapbook photos (v2 "Cinematic")
+# Make scrapbook entries sort newest-first within each day
 
-Give photos in the immersive viewer a slow, looping zoom-and-pan so each memory feels alive on its own — using the **v2** feel: scale ~100% → 112%, ~25s loop, ease-in-out, seamless mirror reverse, with a gentle drift that varies per photo.
+## Problem
 
-## Scope
+In the `/custom` list, scrapbook (memory) entries under a date header appear **oldest-first**, the opposite of every other log type, which lists entries **newest-first** within a day. This breaks the user's expectation of descending-timestamp order.
 
-- **Viewer only** (`src/pages/MemoryViewer.tsx`, the `MediaSlide` component).
-- **All photos, regardless of aspect ratio.** Both full-bleed (`cover`) and letterboxed (`contain`) photos animate. Scaling a `contain` photo crops inward into the photo (the `overflow-hidden` frame clips it) and shrinks the letterbox bars — no blank edges are ever revealed, and any remaining gap shows the existing blurred backdrop. This keeps a mixed-aspect-ratio memory visually consistent.
-- **Videos unchanged** for now (muted-autoplay pass comes later).
-- Respect **reduced-motion**: no animation when the OS setting is on.
+## Root cause
 
-## Behavior
+`src/hooks/useMemoryDays.ts` orders entries by `logged_date` descending (correct — newest day first) but `created_at` **ascending** (oldest entry first within a day). The equivalent hook for all other types, `useCustomLogEntriesForType.ts`, orders `created_at` **descending**.
 
-- The photo continuously scales between **1.0 and ~1.12** over **~25s**, `ease: 'easeInOut'`, `repeat: Infinity`, `repeatType: 'mirror'` so the loop reverses smoothly and never snaps.
-- Alongside the zoom, a small **pan of ~1.5–2%** and a chosen **transform-origin**, both **varied per photo** so a multi-photo memory doesn't repeat. The variant is picked deterministically from the media id (a tiny hash → one of ~6 presets: push-in centered, drift up-left, drift down-right, drift left, drift up, drift down-left). Deterministic so the same photo always animates the same way across visits.
-- Motion lives on the **image layer**; the outer slide transition, gradient scrim, caption, pills, and action bar are untouched and stay static/legible. The blurred backdrop stays still (it's blurred and largely covered, so its stillness isn't noticeable).
+## Fix
 
-## Technical details (`src/pages/MemoryViewer.tsx`)
+In `src/hooks/useMemoryDays.ts`:
 
-- Add a small module-level helper: `kenBurnsVariant(id: string)` → returns `{ origin, fromX, fromY, toX, toY }` from a deterministic hash of the id, selecting from a fixed preset array.
-- In `MediaSlide`:
-  - Import `useReducedMotion` from `framer-motion` (already a dependency); compute `const reduce = useReducedMotion()`.
-  - Compute `const animatePhoto = !reduce && media.kind === 'image'` (independent of `fit`).
-  - When `animatePhoto` is true, render the image as `motion.img` with:
-    - `style={{ transformOrigin: variant.origin }}`
-    - `animate={{ scale: [1, 1.12], x: [variant.fromX, variant.toX], y: [variant.fromY, variant.toY] }}`
-    - `transition={{ duration: 25, ease: 'easeInOut', repeat: Infinity, repeatType: 'mirror' }}`
-    - keep existing `onLoad` (fit detection), `onError`, `className={mediaFit}`, `draggable={false}`.
-  - When `animatePhoto` is false (reduced motion), render the plain `<img>` exactly as today.
-  - Fit detection (`contain` ↔ `cover`) is unchanged; the `mediaFit` class still applies, and the Ken Burns transform layers on top of whichever fit resolves.
-- The image already sits inside an `overflow-hidden` container, so the zoom is clipped cleanly with no layout shift.
-- No changes to `MemoryStage`, the composer, hooks, data, or styling tokens.
+- Change the secondary sort from `.order('created_at', { ascending: true })` to `.order('created_at', { ascending: false })` so within-day entries are newest-first, matching the rest of the app.
+- Update the hook's doc comment, which currently says entries are "ordered oldest-first," to say newest-first.
+
+This also makes the immersive viewer (which builds its slide list from the same `days` data) step through a day's entries newest-first, keeping the list and viewer consistent. Media *within* a single entry is still ordered by the user's chosen `sort_order` and is unaffected. Day grouping (newest day first) is unchanged.
 
 ## Verification
 
-- Open a memory with a **mix** of portrait and landscape photos: confirm every photo animates with a slow, smooth zoom/pan that loops and reverses without snapping, and the feel is consistent across aspect ratios.
-- Confirm no blank edges appear on letterboxed photos during the zoom.
-- Step across photos: confirm directions differ between photos and are stable on revisit; chrome stays fixed and readable.
-- Confirm videos behave as before.
-- Toggle OS "reduce motion" and confirm the animation is disabled.
+- Open `/custom`, expand a scrapbook type with a day that has multiple entries: confirm the most recently added entry appears at the top of that date.
+- Open the viewer on that day and confirm swiping moves newest → oldest, consistent with the list.
