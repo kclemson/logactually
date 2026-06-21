@@ -486,8 +486,10 @@ export function MemoryComposer({
               className="hidden"
               onChange={handleFiles}
             />
-          </motion.div>
+            </motion.div>
+          </div>
         </DialogPrimitive.Content>
+
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
   );
