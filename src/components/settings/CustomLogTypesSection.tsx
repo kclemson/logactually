@@ -60,7 +60,33 @@ export function CustomLogTypesSection({ isReadOnly }: CustomLogTypesSectionProps
             ))}
           </ul>
         )}
+
+        {!isReadOnly && logTypes.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-border/60">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm text-foreground">Focused view</p>
+                <p className="text-xs text-muted-foreground">Featured as the third tab on the custom log page.</p>
+              </div>
+              <Select
+                value={focusedSelectValue}
+                onValueChange={(v) => updateSettings({ defaultFocusedTypeId: v === FOCUSED_NONE ? FOCUSED_NONE : v })}
+              >
+                <SelectTrigger className="h-8 w-36 shrink-0 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={FOCUSED_NONE}>None</SelectItem>
+                  {logTypes.map((lt) => (
+                    <SelectItem key={lt.id} value={lt.id}>{lt.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
       </CollapsibleSection>
+
 
       {templatePickerOpen && (
         <LogTemplatePickerDialog
