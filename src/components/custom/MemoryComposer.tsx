@@ -377,7 +377,7 @@ export function MemoryComposer({
                 <ImagePlus className="h-7 w-7 text-teal-300" />
               </span>
               <span className="text-base font-medium">Add photos or video</span>
-              <span className="text-xs text-white/50">optional — a note on its own is plenty</span>
+
             </button>
           ) : (
             <>
