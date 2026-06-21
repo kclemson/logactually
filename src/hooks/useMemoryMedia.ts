@@ -205,6 +205,8 @@ export interface UpdateMemoryParams {
   entryId: string;
   logTypeId: string;
   loggedDate: string;
+  /** The entry's date before this edit, so we can refresh both days if it moved. */
+  originalDate: string;
   note: string | null;
   category: string | null;
   /** The full original media set for this entry (to diff against). */
