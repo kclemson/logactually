@@ -11,8 +11,7 @@ import { useBloodworkPanelsForType } from '@/hooks/useBloodworkPanelsForType';
 import { useBloodworkPanelsForDate } from '@/hooks/useBloodworkPanels';
 import { useCustomLogEntriesForType } from '@/hooks/useCustomLogEntriesForType';
 import { useMemoryDays } from '@/hooks/useMemoryDays';
-import { MemoryThumb } from '@/components/custom/MemoryThumb';
-import { CustomLogTypeDayRows } from '@/components/CustomLogEntriesView';
+import { CustomLogTypeDayRows, MemoryEntryRow } from '@/components/CustomLogEntriesView';
 import { getMedicationMeta } from '@/lib/medication-meta';
 import {
   readTypeExpanded, writeTypeExpanded,
@@ -80,6 +79,7 @@ export function CustomLogByTypeView({
           onDeleteEntry={onDeleteEntry}
           onUpdateEntry={onUpdateEntry}
           forceExpanded={focused}
+          density={focused ? 'rich' : 'compact'}
         />
       ))}
     </div>
@@ -94,6 +94,7 @@ function TypeCard({
   onDeleteEntry,
   onUpdateEntry,
   forceExpanded = false,
+  density = 'compact',
 }: {
   logType: CustomLogType;
   isReadOnly: boolean;
@@ -102,6 +103,7 @@ function TypeCard({
   onDeleteEntry?: (id: string) => void;
   onUpdateEntry?: (params: { id: string; numeric_value?: number | null; numeric_value_2?: number | null; text_value?: string | null }) => void;
   forceExpanded?: boolean;
+  density?: 'compact' | 'rich';
 }) {
   const isPanel = logType.value_type === 'panel';
   const scope = logType.id;
@@ -181,6 +183,7 @@ function TypeCard({
             onUpdateEntry={onUpdateEntry}
             panelQuery={panelQuery}
             panelAllCollapsed={panelAllCollapsed}
+            density={density}
           />
         </div>
       )}
@@ -262,6 +265,7 @@ function TypeBody({
   onUpdateEntry,
   panelQuery,
   panelAllCollapsed,
+  density,
 }: {
   logType: CustomLogType;
   isReadOnly: boolean;
@@ -270,6 +274,7 @@ function TypeBody({
   onUpdateEntry?: (params: { id: string; numeric_value?: number | null; numeric_value_2?: number | null; text_value?: string | null }) => void;
   panelQuery: string;
   panelAllCollapsed: boolean;
+  density: 'compact' | 'rich';
 }) {
   // Panels live in a separate table; keep their own history view.
   if (logType.value_type === 'panel') {
@@ -283,7 +288,7 @@ function TypeBody({
     );
   }
   if (logType.value_type === 'memory') {
-    return <MemoryTypeBody logType={logType} />;
+    return <MemoryTypeBody logType={logType} density={density} />;
   }
   return (
     <EntryHistory
@@ -447,7 +452,7 @@ function PanelHistory({
   );
 }
 
-function MemoryTypeBody({ logType }: { logType: CustomLogType }) {
+function MemoryTypeBody({ logType, density }: { logType: CustomLogType; density: 'compact' | 'rich' }) {
   const navigate = useNavigate();
   const { days, isLoading } = useMemoryDays(logType.id);
 
@@ -473,44 +478,23 @@ function MemoryTypeBody({ logType }: { logType: CustomLogType }) {
         View Scrapbook
       </Button>
 
-      <div className="space-y-1.5">
-        {recent.map((day) => {
-          const media = day.entries.flatMap((e) => e.media);
-          const note = day.entries.map((e) => e.text_value).find(Boolean);
-          const category = day.entries.map((e) => e.category).find(Boolean);
-          return (
-            <button
-              key={day.date}
-              type="button"
-              onClick={() => openViewer(day.date)}
-              className="w-full text-left rounded-md p-2 hover:bg-accent transition-colors"
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  {format(parseISO(day.date), 'MMM d, yyyy')}
-                </span>
-                {category && (
-                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-teal-500/15 text-teal-600 dark:text-teal-400">
-                    {category}
-                  </span>
-                )}
-              </div>
-              {media.length > 0 && (
-                <div className="flex items-center gap-1.5">
-                  {media.slice(0, 5).map((m) => (
-                    <MemoryThumb key={m.id} media={m} className="h-12 w-12" />
-                  ))}
-                  {media.length > 5 && (
-                    <span className="text-xs text-muted-foreground">+{media.length - 5}</span>
-                  )}
-                </div>
-              )}
-              {note && (
-                <p className="text-xs text-muted-foreground truncate mt-1">{note}</p>
-              )}
-            </button>
-          );
-        })}
+      <div className="space-y-2">
+        {recent.map((day) => (
+          <div key={day.date} className="space-y-0">
+            <div className="text-[11px] uppercase tracking-wide text-muted-foreground pt-1 pb-0.5">
+              {format(parseISO(day.date), 'MMM d, yyyy')}
+            </div>
+            {day.entries.map((entry) => (
+              <MemoryEntryRow
+                key={entry.id}
+                entry={entry}
+                media={entry.media}
+                density={density}
+                onOpen={() => openViewer(day.date)}
+              />
+            ))}
+          </div>
+        ))}
         {hiddenCount > 0 && (
           <p className="text-[11px] text-muted-foreground italic pt-1">
             + {hiddenCount} more date{hiddenCount === 1 ? '' : 's'}
