@@ -481,14 +481,7 @@ function MemoryTypeBody({ logType, density }: { logType: CustomLogType; density:
 
   return (
     <div className="space-y-3">
-      <Button
-        onClick={() => openViewer()}
-        className="w-full bg-teal-500 text-white hover:bg-teal-600"
-        size="sm"
-      >
-        <Images className="h-4 w-4 mr-1.5" />
-        View Scrapbook
-      </Button>
+
 
       <div className="space-y-2">
         {recent.map((day) => (
