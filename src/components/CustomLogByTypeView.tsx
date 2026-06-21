@@ -79,6 +79,7 @@ export function CustomLogByTypeView({
           onDeleteEntry={onDeleteEntry}
           onUpdateEntry={onUpdateEntry}
           forceExpanded={focused}
+          density={focused ? 'rich' : 'compact'}
         />
       ))}
     </div>
@@ -93,6 +94,7 @@ function TypeCard({
   onDeleteEntry,
   onUpdateEntry,
   forceExpanded = false,
+  density = 'compact',
 }: {
   logType: CustomLogType;
   isReadOnly: boolean;
@@ -101,6 +103,7 @@ function TypeCard({
   onDeleteEntry?: (id: string) => void;
   onUpdateEntry?: (params: { id: string; numeric_value?: number | null; numeric_value_2?: number | null; text_value?: string | null }) => void;
   forceExpanded?: boolean;
+  density?: 'compact' | 'rich';
 }) {
   const isPanel = logType.value_type === 'panel';
   const scope = logType.id;
