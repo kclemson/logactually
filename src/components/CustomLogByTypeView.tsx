@@ -452,7 +452,7 @@ function PanelHistory({
   );
 }
 
-function MemoryTypeBody({ logType }: { logType: CustomLogType }) {
+function MemoryTypeBody({ logType, density }: { logType: CustomLogType; density: 'compact' | 'rich' }) {
   const navigate = useNavigate();
   const { days, isLoading } = useMemoryDays(logType.id);
 
@@ -478,44 +478,23 @@ function MemoryTypeBody({ logType }: { logType: CustomLogType }) {
         View Scrapbook
       </Button>
 
-      <div className="space-y-1.5">
-        {recent.map((day) => {
-          const media = day.entries.flatMap((e) => e.media);
-          const note = day.entries.map((e) => e.text_value).find(Boolean);
-          const category = day.entries.map((e) => e.category).find(Boolean);
-          return (
-            <button
-              key={day.date}
-              type="button"
-              onClick={() => openViewer(day.date)}
-              className="w-full text-left rounded-md p-2 hover:bg-accent transition-colors"
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  {format(parseISO(day.date), 'MMM d, yyyy')}
-                </span>
-                {category && (
-                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-teal-500/15 text-teal-600 dark:text-teal-400">
-                    {category}
-                  </span>
-                )}
-              </div>
-              {media.length > 0 && (
-                <div className="flex items-center gap-1.5">
-                  {media.slice(0, 5).map((m) => (
-                    <MemoryThumb key={m.id} media={m} className="h-12 w-12" />
-                  ))}
-                  {media.length > 5 && (
-                    <span className="text-xs text-muted-foreground">+{media.length - 5}</span>
-                  )}
-                </div>
-              )}
-              {note && (
-                <p className="text-xs text-muted-foreground truncate mt-1">{note}</p>
-              )}
-            </button>
-          );
-        })}
+      <div className="space-y-2">
+        {recent.map((day) => (
+          <div key={day.date} className="space-y-0">
+            <div className="text-[11px] uppercase tracking-wide text-muted-foreground pt-1 pb-0.5">
+              {format(parseISO(day.date), 'MMM d, yyyy')}
+            </div>
+            {day.entries.map((entry) => (
+              <MemoryEntryRow
+                key={entry.id}
+                entry={entry}
+                media={entry.media}
+                density={density}
+                onOpen={() => openViewer(day.date)}
+              />
+            ))}
+          </div>
+        ))}
         {hiddenCount > 0 && (
           <p className="text-[11px] text-muted-foreground italic pt-1">
             + {hiddenCount} more date{hiddenCount === 1 ? '' : 's'}
