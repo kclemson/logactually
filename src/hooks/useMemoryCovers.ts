@@ -4,19 +4,19 @@ import { useAuth } from './useAuth';
 import type { MemoryMedia } from './useMemoryMedia';
 
 /**
- * Fetches the first (cover) media item for each of the given memory entry ids,
- * so list rows can show a leading thumbnail. Returns a map of entryId -> media.
- * Entries with no media (text-only) are simply absent from the map.
+ * Fetches the first N media items (ordered by sort_order) for each of the given
+ * memory entry ids, so list rows can show a leading thumbnail strip. Returns a
+ * map of entryId -> media[]. Entries with no media (text-only) are absent.
  */
-export function useMemoryCovers(entryIds: string[]) {
+export function useMemoryCovers(entryIds: string[], limit = 4) {
   const { user } = useAuth();
   const sorted = [...entryIds].sort();
   const key = sorted.join(',');
 
-  const { data: covers = new Map<string, MemoryMedia>() } = useQuery({
-    queryKey: ['memory-covers', key],
-    queryFn: async (): Promise<Map<string, MemoryMedia>> => {
-      const map = new Map<string, MemoryMedia>();
+  const { data: covers = new Map<string, MemoryMedia[]>() } = useQuery({
+    queryKey: ['memory-covers', key, limit],
+    queryFn: async (): Promise<Map<string, MemoryMedia[]>> => {
+      const map = new Map<string, MemoryMedia[]>();
       if (sorted.length === 0) return map;
       const { data, error } = await supabase
         .from('memory_media')
@@ -25,8 +25,12 @@ export function useMemoryCovers(entryIds: string[]) {
         .order('sort_order', { ascending: true });
       if (error) throw error;
       for (const m of data ?? []) {
-        // First row per entry wins (already ordered by sort_order asc).
-        if (!map.has(m.entry_id)) map.set(m.entry_id, m as MemoryMedia);
+        const existing = map.get(m.entry_id);
+        if (existing) {
+          if (existing.length < limit) existing.push(m as MemoryMedia);
+        } else {
+          map.set(m.entry_id, [m as MemoryMedia]);
+        }
       }
       return map;
     },

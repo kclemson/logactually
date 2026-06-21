@@ -5,7 +5,10 @@ import { CustomLogTypeRow } from '@/components/CustomLogTypeRow';
 import { LogTemplatePickerDialog } from '@/components/LogTemplatePickerDialog';
 import { CreateLogTypeDialog } from '@/components/CreateLogTypeDialog';
 import { CreateMedicationDialog } from '@/components/CreateMedicationDialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCustomLogTypes, type ValueType } from '@/hooks/useCustomLogTypes';
+import { useUserSettings } from '@/hooks/useUserSettings';
+import { resolveFocusedTypeId, FOCUSED_NONE } from '@/lib/focused-type';
 
 interface CustomLogTypesSectionProps {
   isReadOnly: boolean;
@@ -13,10 +16,15 @@ interface CustomLogTypesSectionProps {
 
 export function CustomLogTypesSection({ isReadOnly }: CustomLogTypesSectionProps) {
   const { logTypes, isLoading: logTypesLoading, createType, updateType, deleteType } = useCustomLogTypes();
+  const { settings, updateSettings } = useUserSettings();
   const [openLogTypePopoverId, setOpenLogTypePopoverId] = useState<string | null>(null);
   const [createLogTypeDialogOpen, setCreateLogTypeDialogOpen] = useState(false);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
   const [createMedicationOpen, setCreateMedicationOpen] = useState(false);
+
+  // The select reflects the effective featured type (derived when unset) so the
+  // user always sees what's currently featured; 'none' means explicitly off.
+  const focusedSelectValue = resolveFocusedTypeId(settings.defaultFocusedTypeId, logTypes) ?? FOCUSED_NONE;
 
   return (
     <>
@@ -52,7 +60,33 @@ export function CustomLogTypesSection({ isReadOnly }: CustomLogTypesSectionProps
             ))}
           </ul>
         )}
+
+        {!isReadOnly && logTypes.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-border/60">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm text-foreground">Focused view</p>
+                <p className="text-xs text-muted-foreground">Featured as the third tab on the custom log page.</p>
+              </div>
+              <Select
+                value={focusedSelectValue}
+                onValueChange={(v) => updateSettings({ defaultFocusedTypeId: v === FOCUSED_NONE ? FOCUSED_NONE : v })}
+              >
+                <SelectTrigger className="h-8 w-36 shrink-0 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={FOCUSED_NONE}>None</SelectItem>
+                  {logTypes.map((lt) => (
+                    <SelectItem key={lt.id} value={lt.id}>{lt.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
       </CollapsibleSection>
+
 
       {templatePickerOpen && (
         <LogTemplatePickerDialog

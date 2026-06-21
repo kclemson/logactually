@@ -27,14 +27,14 @@ export const LOG_TEMPLATES: LogTemplate[] = [
   { name: 'Water Intake',           valueType: 'numeric',        unitImperial: 'oz',   unitMetric: 'ml',   icon: 'Droplets',   group: 'health' },
   { name: 'Bloodwork',              valueType: 'panel',          unitImperial: null,   unitMetric: null,   icon: 'Droplets',   group: 'health' },
   { name: 'Medication',             valueType: 'medication',     unitImperial: null,   unitMetric: null,   icon: 'Pill',       group: 'health' },
-  // Memories
-  { name: 'Memories',               valueType: 'memory',         unitImperial: null,   unitMetric: null,   icon: 'Images',     group: 'memory' },
+  // Photo Scrapbook
+  { name: 'Photo Scrapbook',        valueType: 'memory',         unitImperial: null,   unitMetric: null,   icon: 'Images',     group: 'memory' },
 ];
 
 export const TEMPLATE_GROUPS: { key: LogTemplate['group']; label: string }[] = [
   { key: 'body', label: 'Body' },
   { key: 'health', label: 'Health' },
-  { key: 'memory', label: 'Memories' },
+  { key: 'memory', label: 'Photo Scrapbook' },
 ];
 
 export function getTemplateUnit(template: LogTemplate, weightUnit: WeightUnit): string | null {

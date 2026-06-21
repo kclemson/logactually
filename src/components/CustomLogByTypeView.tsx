@@ -33,6 +33,8 @@ interface CustomLogByTypeViewProps {
   onEditEntry?: (entry: CustomLogEntry) => void;
   onDeleteEntry?: (id: string) => void;
   onUpdateEntry?: (params: { id: string; numeric_value?: number | null; numeric_value_2?: number | null; text_value?: string | null }) => void;
+  /** When set, render only this type, expanded (the "focused" featured view). */
+  filterTypeId?: string | null;
 }
 
 export function CustomLogByTypeView({
@@ -43,7 +45,13 @@ export function CustomLogByTypeView({
   onEditEntry,
   onDeleteEntry,
   onUpdateEntry,
+  filterTypeId,
 }: CustomLogByTypeViewProps) {
+  const focused = !!filterTypeId;
+  const visibleTypes = filterTypeId
+    ? logTypes.filter((lt) => lt.id === filterTypeId)
+    : logTypes;
+
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -52,7 +60,7 @@ export function CustomLogByTypeView({
     );
   }
 
-  if (logTypes.length === 0) {
+  if (visibleTypes.length === 0) {
     return (
       <div className="text-center text-muted-foreground py-8">
         No custom log types yet
@@ -62,7 +70,7 @@ export function CustomLogByTypeView({
 
   return (
     <div className="space-y-4">
-      {logTypes.map((lt) => (
+      {visibleTypes.map((lt) => (
         <TypeCard
           key={lt.id}
           logType={lt}
@@ -71,6 +79,7 @@ export function CustomLogByTypeView({
           onEditEntry={onEditEntry}
           onDeleteEntry={onDeleteEntry}
           onUpdateEntry={onUpdateEntry}
+          forceExpanded={focused}
         />
       ))}
     </div>
@@ -84,6 +93,7 @@ function TypeCard({
   onEditEntry,
   onDeleteEntry,
   onUpdateEntry,
+  forceExpanded = false,
 }: {
   logType: CustomLogType;
   isReadOnly: boolean;
@@ -91,10 +101,12 @@ function TypeCard({
   onEditEntry?: (entry: CustomLogEntry) => void;
   onDeleteEntry?: (id: string) => void;
   onUpdateEntry?: (params: { id: string; numeric_value?: number | null; numeric_value_2?: number | null; text_value?: string | null }) => void;
+  forceExpanded?: boolean;
 }) {
   const isPanel = logType.value_type === 'panel';
   const scope = logType.id;
-  const [expanded, setExpanded] = useState(() => readTypeExpanded(logType.id));
+  // In the focused view the single card is always open; otherwise honour stored state.
+  const [expanded, setExpanded] = useState(() => forceExpanded || readTypeExpanded(logType.id));
   const meta = logType.value_type === 'medication' ? getMedicationMeta(logType) : null;
 
   // Panel-only header state (filter query + collapse-all toggle), lifted up so it can sit in the header.
@@ -444,7 +456,7 @@ function MemoryTypeBody({ logType }: { logType: CustomLogType }) {
 
   if (isLoading) return <Skeleton className="h-8 w-full" />;
   if (days.length === 0) {
-    return <p className="text-xs text-muted-foreground italic">No memories yet. Tap "+ Log" to add one.</p>;
+    return <p className="text-xs text-muted-foreground italic">No entries yet. Tap "+ Log" to add one.</p>;
   }
 
   const recent = days.slice(0, MAX_DATES);
@@ -458,7 +470,7 @@ function MemoryTypeBody({ logType }: { logType: CustomLogType }) {
         size="sm"
       >
         <Images className="h-4 w-4 mr-1.5" />
-        View Memories
+        View Scrapbook
       </Button>
 
       <div className="space-y-1.5">

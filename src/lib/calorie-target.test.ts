@@ -113,6 +113,7 @@ const baseSettings: UserSettings = {
   weekStartDay: 0,
   displayMacros: ['protein', 'carbs', 'fat'],
   hiddenCharts: [],
+  defaultFocusedTypeId: null,
 };
 
 describe('getEffectiveDailyTarget', () => {

@@ -2,9 +2,10 @@ import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getMedicationMeta } from '@/lib/medication-meta';
 import { format } from 'date-fns';
-import { Pencil, Trash2, Images, AlignLeft } from 'lucide-react';
+import { Pencil, Trash2, AlignLeft } from 'lucide-react';
 import { MemoryThumb } from '@/components/custom/MemoryThumb';
 import { useMemoryCovers } from '@/hooks/useMemoryCovers';
+import type { MemoryMedia } from '@/hooks/useMemoryMedia';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -357,6 +358,60 @@ export function CustomLogEntriesView({
 }
 
 // ──────────────────────────────────────────────
+// MemoryEntryRow — media-rich row for scrapbook (memory) entries.
+// Same list control everywhere; `density` controls how immersive it reads.
+//   compact: leading thumbnail strip, used inline in Daily/All views.
+//   rich:    larger thumbnails, used in the focused Scrapbook view.
+// ──────────────────────────────────────────────
+function MemoryEntryRow({
+  entry,
+  media,
+  density,
+  onOpen,
+}: {
+  entry: CustomLogEntry;
+  media: MemoryMedia[];
+  density: 'compact' | 'rich';
+  onOpen: () => void;
+}) {
+  const category = (entry as CustomLogEntry & { category?: string | null }).category;
+  const isRich = density === 'rich';
+  const thumbSize = isRich ? 'h-20 w-20' : 'h-12 w-12';
+  const maxThumbs = isRich ? 4 : 4;
+  const shown = media.slice(0, maxThumbs);
+  const extra = media.length - shown.length;
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="w-full text-left flex flex-col gap-1.5 py-2 pl-3 pr-2 border-b border-border/50 last:border-0 hover:bg-accent transition-colors"
+    >
+      {shown.length > 0 ? (
+        <div className="flex items-center gap-1.5">
+          {shown.map((m) => (
+            <MemoryThumb key={m.id} media={m} className={thumbSize} />
+          ))}
+          {extra > 0 && (
+            <span className={cn('flex shrink-0 items-center justify-center rounded-md bg-muted text-xs text-muted-foreground', thumbSize)}>
+              +{extra}
+            </span>
+          )}
+        </div>
+      ) : null}
+      <div className="flex items-baseline justify-between gap-2 min-w-0">
+        <span className="min-w-0 truncate text-sm flex items-center gap-1">
+          {shown.length === 0 && <AlignLeft className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+          <span className="truncate">{entry.text_value || 'Memory'}</span>
+          {category ? <span className="text-muted-foreground shrink-0"> · {category}</span> : null}
+        </span>
+        <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">{formatTime(entry.created_at)}</span>
+      </div>
+    </button>
+  );
+}
+
+// ──────────────────────────────────────────────
 // CustomLogTypeDayRows — per-(type, day) block.
 // Used by By-Date (once per type that has entries today) and By-Type
 // (once per date that has entries for that type).
@@ -371,6 +426,8 @@ interface CustomLogTypeDayRowsProps {
   onUpdate?: (params: { id: string; numeric_value?: number | null; numeric_value_2?: number | null; text_value?: string | null }) => void;
   showTypeHeader?: boolean;
   showTrend?: boolean;
+  /** Visual density for memory (scrapbook) rows. Defaults to 'compact'. */
+  density?: 'compact' | 'rich';
 }
 
 export function CustomLogTypeDayRows({
@@ -383,6 +440,7 @@ export function CustomLogTypeDayRows({
   onUpdate,
   showTypeHeader = true,
   showTrend = true,
+  density = 'compact',
 }: CustomLogTypeDayRowsProps) {
   const navigate = useNavigate();
   const isMedication = logType.value_type === 'medication';
@@ -433,37 +491,15 @@ export function CustomLogTypeDayRows({
           );
         })
       ) : isPanel ? null : isMemory ? (
-        entries.map((entry) => {
-          const category = (entry as CustomLogEntry & { category?: string | null }).category;
-          const cover = memoryCovers.get(entry.id);
-          return (
-            <button
-              key={entry.id}
-              type="button"
-              onClick={() => navigate(`/custom/memories?type=${logType.id}&date=${dateStr}`)}
-              className="w-full text-left grid grid-cols-[2.5rem_1fr_auto] items-center gap-x-2.5 py-1.5 pl-3 border-b border-border/50 last:border-0 hover:bg-accent transition-colors"
-            >
-              {cover ? (
-                <MemoryThumb media={cover} className="h-10 w-10" />
-              ) : (
-                <span
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md"
-                  style={{ backgroundImage: 'linear-gradient(150deg, hsl(174 64% 24%), hsl(199 70% 18%), hsl(222 47% 16%))' }}
-                >
-                  <AlignLeft className="h-4 w-4 text-white/80" />
-                </span>
-              )}
-              <span className="min-w-0">
-                <span className="block text-sm truncate">
-                  {entry.text_value || 'Memory'}
-                  {category ? <span className="text-muted-foreground"> · {category}</span> : null}
-                </span>
-                <span className="block text-[11px] text-muted-foreground tabular-nums">{formatTime(entry.created_at)}</span>
-              </span>
-              <Images className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            </button>
-          );
-        })
+        entries.map((entry) => (
+          <MemoryEntryRow
+            key={entry.id}
+            entry={entry}
+            media={memoryCovers.get(entry.id) ?? []}
+            density={density}
+            onOpen={() => navigate(`/custom/memories?type=${logType.id}&date=${dateStr}`)}
+          />
+        ))
       ) : (
         entries.map((entry) => (
           <NonMedEntryRow

@@ -29,6 +29,8 @@ import { DuplicateContentDialogHost } from '@/components/DuplicateContentDialogH
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { getStoredDate, getSwipeDirection, setSwipeDirection } from '@/lib/selected-date';
 import { LOG_TEMPLATES, getTemplateUnit } from '@/lib/log-templates';
+import { getToggleLabel } from '@/lib/toggle-label';
+import { resolveFocusedTypeId } from '@/lib/focused-type';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { Button } from '@/components/ui/button';
 import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
@@ -46,12 +48,12 @@ const OtherLog = () => {
 
 export default OtherLog;
 
-type ViewMode = 'date' | 'by_type';
+type ViewMode = 'date' | 'by_type' | 'focused';
 
 function getStoredViewMode(): ViewMode {
   try {
     const stored = localStorage.getItem('custom-log-view-mode');
-    if (stored === 'date' || stored === 'by_type') return stored;
+    if (stored === 'date' || stored === 'by_type' || stored === 'focused') return stored;
     // Migrate legacy 'medication' value to 'by_type'
     if (stored === 'medication') {
       try { localStorage.setItem('custom-log-view-mode', 'by_type'); } catch {}
@@ -108,13 +110,20 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
     selectedType?.value_type,
   );
 
-  // In by_type mode, new entries land on today's date (no date navigator).
-  const logTargetDate = viewMode === 'by_type' ? today : dateStr;
+  // Featured ("focused") type for the third toggle segment. Derived generically:
+  // most-recently-created type when unset, 'none' = opted out, else the chosen id.
+  const featuredTypeId = resolveFocusedTypeId(settings.defaultFocusedTypeId, logTypes);
+  const featuredType = logTypes.find((t) => t.id === featuredTypeId) ?? null;
+  // Guard the stored view mode: if 'focused' but no featured type exists, fall back to date.
+  const effectiveViewMode: ViewMode = viewMode === 'focused' && !featuredType ? 'date' : viewMode;
+
+  // In by_type/focused mode there is no date navigator, so new entries land on today.
+  const logTargetDate = effectiveViewMode === 'date' ? dateStr : today;
 
   // Entries for the dialog type (used by MedicationEntryInput to show today's logged times).
-  // In date mode we reuse `entries` (already scoped to dateStr); in by_type we fetch by type and filter.
+  // In date mode we reuse `entries` (already scoped to dateStr); otherwise we fetch by type and filter.
   const { entries: dialogTypeEntries } = useCustomLogEntriesForType(
-    viewMode === 'by_type' ? effectiveTypeId : null
+    effectiveViewMode !== 'date' ? effectiveTypeId : null
   );
 
   // Used for the edit dialog — scoped to the type being edited, regardless of view mode
@@ -170,6 +179,17 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
     try { localStorage.setItem('custom-log-view-mode', mode); } catch {}
   }
 
+  // Opening the log dialog for a type. In the focused view, logging a type other
+  // than the featured one would be hidden, so transiently drop to the Daily view
+  // (in-memory only — storage stays 'focused', so the next visit returns here).
+  function handleLogNew(typeId: string) {
+    if (effectiveViewMode === 'focused' && typeId !== featuredTypeId) {
+      setViewMode('date');
+    }
+    setSelectedTypeId(typeId);
+    setShowInputDialog(true);
+  }
+
   const handleCreateType = (name: string, valueType: 'numeric' | 'text' | 'dual_numeric', unit?: string) => {
     createType.mutate({ name, value_type: valueType, unit: unit || null }, {
       onSuccess: (newType) => {
@@ -182,9 +202,9 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   const hasLogTypes = !isLoading && sortedLogTypes.length > 0;
 
   // Today's entries for the selected medication (used in dialog).
-  // In date mode `entries` is already today's (if dateStr=today); in by_type we filter dialogTypeEntries to today.
+  // In date mode `entries` is already today's (if dateStr=today); otherwise we filter dialogTypeEntries to today.
   const todayMedEntries = dialogType
-    ? viewMode === 'by_type'
+    ? effectiveViewMode !== 'date'
       ? dialogTypeEntries.filter((e) => e.log_type_id === dialogType.id && e.logged_date === today)
       : entries.filter((e) => e.log_type_id === dialogType.id)
     : [];
@@ -237,35 +257,43 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                 </button>
               </div>
             ) : hasLogTypes ? (
-              /* Has log types: pill toggle + Log New dropdown, centered & stacked */
+              /* Has log types: View toggle + Log New dropdown, centered & stacked */
               <>
-                <div
-                  role="tablist"
-                  aria-label="View mode"
-                  className="inline-flex items-center rounded-full bg-muted p-0.5"
-                >
-                  {([
-                    { value: 'date', label: 'By Date' },
-                    { value: 'by_type', label: 'By Type' },
-                  ] as const).map((opt) => {
-                    const active = viewMode === opt.value;
-                    return (
-                      <button
-                        key={opt.value}
-                        role="tab"
-                        aria-selected={active}
-                        onClick={() => handleViewModeChange(opt.value)}
-                        className={cn(
-                          'h-7 px-4 rounded-full text-sm transition-colors',
-                          active
-                            ? 'bg-background text-foreground font-medium shadow-sm'
-                            : 'text-muted-foreground hover:text-foreground'
-                        )}
-                      >
-                        {opt.label}
-                      </button>
-                    );
-                  })}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground shrink-0">View:</span>
+                  <div
+                    role="tablist"
+                    aria-label="View mode"
+                    className="inline-flex items-center rounded-full bg-muted p-0.5"
+                  >
+                    {([
+                      { value: 'date', label: 'Daily', aria: 'Daily — entries by day' },
+                      { value: 'by_type', label: 'All', aria: 'All custom logs' },
+                      ...(featuredType
+                        ? [{ value: 'focused' as const, label: getToggleLabel(featuredType.name), aria: featuredType.name }]
+                        : []),
+                    ] as const).map((opt) => {
+                      const active = effectiveViewMode === opt.value;
+                      return (
+                        <button
+                          key={opt.value}
+                          role="tab"
+                          aria-selected={active}
+                          aria-label={opt.aria}
+                          title={opt.aria}
+                          onClick={() => handleViewModeChange(opt.value)}
+                          className={cn(
+                            'h-7 px-3.5 rounded-full text-sm transition-colors max-w-[7rem] truncate',
+                            active
+                              ? 'bg-background text-foreground font-medium shadow-sm'
+                              : 'text-muted-foreground hover:text-foreground'
+                          )}
+                        >
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <Select
@@ -274,8 +302,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                     if (val === '__create_new__') {
                       setTemplatePickerOpen(true);
                     } else {
-                      setSelectedTypeId(val);
-                      setShowInputDialog(true);
+                      handleLogNew(val);
                     }
                   }}
                 >
@@ -305,17 +332,15 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
         )}
       </section>
 
-      {viewMode === 'by_type' ? (
-        /* By Type: no date navigation, list of types with charts/history */
+      {effectiveViewMode !== 'date' ? (
+        /* By Type / Focused: no date navigation, list of types with charts/history */
         <div className="min-h-[calc(100dvh-8rem)] md:min-h-0">
           <CustomLogByTypeView
             logTypes={sortedLogTypes}
             isLoading={isLoading}
             isReadOnly={isReadOnly}
-            onLogNew={(typeId) => {
-              setSelectedTypeId(typeId);
-              setShowInputDialog(true);
-            }}
+            filterTypeId={effectiveViewMode === 'focused' ? featuredTypeId : null}
+            onLogNew={handleLogNew}
             onEditEntry={(entry) => setEditingEntry(entry)}
             onDeleteEntry={(id) => deleteEntry.mutate(id)}
             onUpdateEntry={(params) => updateEntry.mutate(params)}
@@ -432,7 +457,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                   isLoading={createEntry.isPending}
                   disabled={isReadOnly}
                 />
-                {inlineTrend && viewMode === 'date' && (
+                {inlineTrend && effectiveViewMode === 'date' && (
                   <div className="mt-3 border-t border-border pt-3">
                     <CustomLogTrendChart trend={inlineTrend} onNavigate={() => {}} />
                   </div>

@@ -33,6 +33,9 @@ export interface UserSettings {
   weekStartDay: 0 | 1 | 2 | 3 | 4 | 5 | 6;
   displayMacros: DisplayMacros;
   hiddenCharts: string[];
+  // Featured custom log type for the /custom view toggle.
+  // null = unset (derive most-recently-created); 'none' = explicit opt-out; otherwise a type id.
+  defaultFocusedTypeId: string | null;
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
@@ -59,6 +62,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   weekStartDay: 0,
   displayMacros: DEFAULT_DISPLAY_MACROS,
   hiddenCharts: [],
+  defaultFocusedTypeId: null,
 };
 
 export function useUserSettings() {
