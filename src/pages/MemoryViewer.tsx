@@ -414,6 +414,12 @@ function MediaSlide({ media }: { media: MemoryMedia }) {
   const mediaFit =
     fit === 'cover' ? 'h-full w-full object-cover' : 'max-h-full max-w-full object-contain';
 
+  // Ken Burns: slow zoom + gentle per-photo drift that loops and mirrors so it
+  // never snaps. Applied to all photos (the overflow-hidden frame crops inward,
+  // so letterboxed photos reveal no blank edges). Disabled for reduced-motion.
+  const animatePhoto = !reduce && media.kind === 'image';
+  const kb = kenBurnsVariant(media.id);
+
   return (
     <div className="relative h-full w-full overflow-hidden">
       {/* Blurred backdrop (only visible when the media is letterboxed) */}
@@ -428,16 +434,37 @@ function MediaSlide({ media }: { media: MemoryMedia }) {
       <div className="relative h-full w-full flex items-center justify-center">
         {media.kind === 'image' ? (
           url ? (
-            <img
-              src={url}
-              alt=""
-              onLoad={(e) =>
-                applyFit(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)
-              }
-              onError={handleError}
-              className={mediaFit}
-              draggable={false}
-            />
+            animatePhoto ? (
+              <motion.img
+                src={url}
+                alt=""
+                onLoad={(e) =>
+                  applyFit(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)
+                }
+                onError={handleError}
+                className={mediaFit}
+                draggable={false}
+                style={{ transformOrigin: kb.origin }}
+                animate={{ scale: [1, 1.12], x: [kb.fromX, kb.toX], y: [kb.fromY, kb.toY] }}
+                transition={{
+                  duration: 25,
+                  ease: 'easeInOut',
+                  repeat: Infinity,
+                  repeatType: 'mirror',
+                }}
+              />
+            ) : (
+              <img
+                src={url}
+                alt=""
+                onLoad={(e) =>
+                  applyFit(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)
+                }
+                onError={handleError}
+                className={mediaFit}
+                draggable={false}
+              />
+            )
           ) : (
             <div className="text-white/50 text-sm">Loading…</div>
           )
