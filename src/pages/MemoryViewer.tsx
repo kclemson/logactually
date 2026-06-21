@@ -76,7 +76,11 @@ const MemoryViewer = () => {
   const [direction, setDirection] = useState(0);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [editing, setEditing] = useState(false);
+  // Sound preference persists across slides for this viewing session. Videos
+  // always start muted (so autoplay is allowed) and unmute once this is on.
+  const [soundOn, setSoundOn] = useState(false);
   const startedRef = useRef(initialStart.current !== null);
+
 
   // Cold-load fallback: when the viewer mounts before data has arrived, apply the
   // start position once, before paint. The viewer shows "Loading…" until then, so
