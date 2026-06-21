@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
-import { X, Calendar as CalendarIcon, Play, Trash2, Pencil } from 'lucide-react';
+import { X, Calendar as CalendarIcon, Trash2, Pencil, Volume2, VolumeX } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { MemoryComposer } from '@/components/custom/MemoryComposer';
@@ -11,7 +11,7 @@ import { MemoryActionBar, type MemoryAction } from '@/components/custom/MemoryAc
 import { useCustomLogTypes } from '@/hooks/useCustomLogTypes';
 import { useMemoryDays, type MemoryDay, type MemoryEntry } from '@/hooks/useMemoryDays';
 import type { MemoryMedia } from '@/hooks/useMemoryMedia';
-import { getSignedMemoryUrl, invalidateSignedUrl, formatDuration, formatTag } from '@/lib/memory-media';
+import { getSignedMemoryUrl, invalidateSignedUrl, formatTag } from '@/lib/memory-media';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { cn } from '@/lib/utils';
 
@@ -76,7 +76,11 @@ const MemoryViewer = () => {
   const [direction, setDirection] = useState(0);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [editing, setEditing] = useState(false);
+  // Sound preference persists across slides for this viewing session. Videos
+  // always start muted (so autoplay is allowed) and unmute once this is on.
+  const [soundOn, setSoundOn] = useState(false);
   const startedRef = useRef(initialStart.current !== null);
+
 
   // Cold-load fallback: when the viewer mounts before data has arrived, apply the
   // start position once, before paint. The viewer shows "Loading…" until then, so
@@ -195,7 +199,13 @@ const MemoryViewer = () => {
       onPrev={goPrevItem}
       onNext={goNextItem}
     >
-      {currentItem && <SlideContent item={currentItem} />}
+      {currentItem && (
+        <SlideContent
+          item={currentItem}
+          soundOn={soundOn}
+          onToggleSound={() => setSoundOn((v) => !v)}
+        />
+      )}
     </MemoryStage>
   );
 
@@ -331,7 +341,15 @@ const MemoryViewer = () => {
 export default MemoryViewer;
 
 /** Resolves a signed URL for the item's media and renders it full-bleed. */
-function SlideContent({ item }: { item: ViewItem }) {
+function SlideContent({
+  item,
+  soundOn,
+  onToggleSound,
+}: {
+  item: ViewItem;
+  soundOn: boolean;
+  onToggleSound: () => void;
+}) {
   const media = item.media;
 
   if (!media) {
@@ -345,8 +363,9 @@ function SlideContent({ item }: { item: ViewItem }) {
     );
   }
 
-  return <MediaSlide media={media} />;
+  return <MediaSlide media={media} soundOn={soundOn} onToggleSound={onToggleSound} />;
 }
+
 
 /**
  * Ken Burns presets — a slow zoom paired with a gentle drift and a matching
@@ -370,20 +389,28 @@ function kenBurnsVariant(id: string) {
   return KEN_BURNS_PRESETS[hash % KEN_BURNS_PRESETS.length];
 }
 
-function MediaSlide({ media }: { media: MemoryMedia }) {
+function MediaSlide({
+  media,
+  soundOn,
+  onToggleSound,
+}: {
+  media: MemoryMedia;
+  soundOn: boolean;
+  onToggleSound: () => void;
+}) {
   const [url, setUrl] = useState<string | null>(null);
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
-  const [playing, setPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
   // Smart per-orientation fill: portrait media fills the frame (cover) for a
   // true full-bleed feel; landscape/square stays letterboxed (contain) so
   // nothing is cropped. We default to contain until dimensions are known.
   const [fit, setFit] = useState<'contain' | 'cover'>('contain');
   const retriedRef = useRef(false);
 
+
   useEffect(() => {
     let active = true;
     retriedRef.current = false;
-    setPlaying(false);
     setUrl(null);
     setPosterUrl(null);
     setFit('contain');
@@ -395,6 +422,17 @@ function MediaSlide({ media }: { media: MemoryMedia }) {
       active = false;
     };
   }, [media.storage_path, media.poster_path]);
+
+  // Apply the session sound preference to the autoplaying (initially muted)
+  // video. Starting muted guarantees autoplay; unmuting works because `soundOn`
+  // only flips from a user tap, so the page already has activation.
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    el.muted = !soundOn;
+    void el.play().catch(() => {});
+  }, [soundOn, url]);
+
 
   const handleError = useCallback(async () => {
     // Signed URL may have expired — re-mint once and retry.
@@ -455,46 +493,36 @@ function MediaSlide({ media }: { media: MemoryMedia }) {
           ) : (
             <div className="text-white/50 text-sm">Loading…</div>
           )
-        ) : playing && url ? (
-          <video
-            src={url}
-            controls
-            autoPlay
-            playsInline
-            onLoadedMetadata={(e) =>
-              applyFit(e.currentTarget.videoWidth, e.currentTarget.videoHeight)
-            }
-            onError={handleError}
-            className={mediaFit}
-          />
+        ) : url ? (
+          <>
+            <video
+              ref={videoRef}
+              src={url}
+              poster={posterUrl ?? undefined}
+              controls
+              autoPlay
+              loop
+              muted
+              playsInline
+              onLoadedMetadata={(e) =>
+                applyFit(e.currentTarget.videoWidth, e.currentTarget.videoHeight)
+              }
+              onError={handleError}
+              className={mediaFit}
+            />
+            <button
+              type="button"
+              onClick={onToggleSound}
+              aria-label={soundOn ? 'Mute' : 'Unmute'}
+              className="absolute right-3 top-3 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-black/45 text-white backdrop-blur-md transition-colors hover:bg-black/65"
+            >
+              {soundOn ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+            </button>
+          </>
         ) : (
-          <button
-            type="button"
-            onClick={() => setPlaying(true)}
-            className="relative h-full w-full flex items-center justify-center"
-            aria-label="Play video"
-          >
-            {posterUrl && (
-              <img
-                src={posterUrl}
-                alt=""
-                onLoad={(e) =>
-                  applyFit(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)
-                }
-                className={mediaFit}
-                draggable={false}
-              />
-            )}
-            <span className="absolute h-16 w-16 rounded-full bg-black/50 flex items-center justify-center">
-              <Play className="h-8 w-8 text-white ml-1" />
-            </span>
-            {media.duration_secs ? (
-              <span className="absolute bottom-3 right-3 text-xs bg-black/60 px-1.5 py-0.5 rounded">
-                {formatDuration(media.duration_secs)}
-              </span>
-            ) : null}
-          </button>
+          <div className="text-white/50 text-sm">Loading…</div>
         )}
+
       </div>
     </div>
 
