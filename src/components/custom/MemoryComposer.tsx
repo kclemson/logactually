@@ -219,26 +219,58 @@ export function MemoryComposer({
   const handleSave = () => {
     if (!canSave) return;
     setError(null);
+    const onSettledError = (err: unknown) => {
+      setError(err instanceof Error ? err.message : 'Could not save memory');
+      setFiles((prev) =>
+        prev.map((f) => (f.source === 'new' ? { ...f, status: 'queued' } : f)),
+      );
+    };
+
+    if (isEditing && editEntry) {
+      const items: EditMediaItem[] = files.map((f) =>
+        f.source === 'existing'
+          ? { type: 'existing', media: f.media }
+          : { type: 'new', file: f.file },
+      );
+      updateMemory.mutate(
+        {
+          entryId: editEntry.id,
+          logTypeId,
+          loggedDate,
+          note,
+          category,
+          originalMedia: editEntry.media,
+          items,
+          onItemProgress: (i, status) => {
+            setFiles((prev) => prev.map((f, fi) => (fi === i ? { ...f, status } : f)));
+          },
+        },
+        {
+          onSuccess: () => onSuccess?.(),
+          onError: onSettledError,
+        },
+      );
+      return;
+    }
+
     createMemory.mutate(
       {
         logTypeId,
         loggedDate,
         note,
         category,
-        files: files.map((f) => f.file),
+        files: files.flatMap((f) => (f.source === 'new' ? [f.file] : [])),
         onFileProgress: (i, status) => {
           setFiles((prev) => prev.map((f, fi) => (fi === i ? { ...f, status } : f)));
         },
       },
       {
         onSuccess: () => onSuccess?.(),
-        onError: (err) => {
-          setError(err instanceof Error ? err.message : 'Could not save memory');
-          setFiles((prev) => prev.map((f) => ({ ...f, status: 'queued' })));
-        },
+        onError: onSettledError,
       },
     );
   };
+
 
   const uniqueCategories = Array.from(new Set(existingCategories.filter(Boolean)));
 
