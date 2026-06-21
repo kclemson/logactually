@@ -5,7 +5,10 @@ import { CustomLogTypeRow } from '@/components/CustomLogTypeRow';
 import { LogTemplatePickerDialog } from '@/components/LogTemplatePickerDialog';
 import { CreateLogTypeDialog } from '@/components/CreateLogTypeDialog';
 import { CreateMedicationDialog } from '@/components/CreateMedicationDialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCustomLogTypes, type ValueType } from '@/hooks/useCustomLogTypes';
+import { useUserSettings } from '@/hooks/useUserSettings';
+import { resolveFocusedTypeId, FOCUSED_NONE } from '@/lib/focused-type';
 
 interface CustomLogTypesSectionProps {
   isReadOnly: boolean;
@@ -13,10 +16,15 @@ interface CustomLogTypesSectionProps {
 
 export function CustomLogTypesSection({ isReadOnly }: CustomLogTypesSectionProps) {
   const { logTypes, isLoading: logTypesLoading, createType, updateType, deleteType } = useCustomLogTypes();
+  const { settings, updateSettings } = useUserSettings();
   const [openLogTypePopoverId, setOpenLogTypePopoverId] = useState<string | null>(null);
   const [createLogTypeDialogOpen, setCreateLogTypeDialogOpen] = useState(false);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
   const [createMedicationOpen, setCreateMedicationOpen] = useState(false);
+
+  // The select reflects the effective featured type (derived when unset) so the
+  // user always sees what's currently featured; 'none' means explicitly off.
+  const focusedSelectValue = resolveFocusedTypeId(settings.defaultFocusedTypeId, logTypes) ?? FOCUSED_NONE;
 
   return (
     <>
