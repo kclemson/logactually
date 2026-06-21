@@ -169,6 +169,7 @@ export function MemoryComposer({
       if (!kind) continue;
       added.push({
         id: crypto.randomUUID(),
+        source: 'new',
         file,
         kind,
         previewUrl: URL.createObjectURL(file),
