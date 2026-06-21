@@ -1,0 +1,1 @@
+DELETE FROM public.custom_log_entries WHERE id = 'c5642a06-ad91-442c-bb1d-0ff95c844ba1';
