@@ -341,7 +341,15 @@ const MemoryViewer = () => {
 export default MemoryViewer;
 
 /** Resolves a signed URL for the item's media and renders it full-bleed. */
-function SlideContent({ item }: { item: ViewItem }) {
+function SlideContent({
+  item,
+  soundOn,
+  onToggleSound,
+}: {
+  item: ViewItem;
+  soundOn: boolean;
+  onToggleSound: () => void;
+}) {
   const media = item.media;
 
   if (!media) {
@@ -355,8 +363,9 @@ function SlideContent({ item }: { item: ViewItem }) {
     );
   }
 
-  return <MediaSlide media={media} />;
+  return <MediaSlide media={media} soundOn={soundOn} onToggleSound={onToggleSound} />;
 }
+
 
 /**
  * Ken Burns presets — a slow zoom paired with a gentle drift and a matching
