@@ -359,8 +359,21 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
         </div>
       )}
 
-      {/* Entry form as modal dialog — used by both view modes. In by_type mode entries land on today. */}
-      {dialogType && (
+      {/* Memory: bespoke immersive composer, fully separate from the utilitarian dialog. */}
+      {dialogType && dialogType.value_type === 'memory' && showInputDialog && (
+        <MemoryComposer
+          label={dialogType.name}
+          logTypeId={dialogType.id}
+          loggedDate={logTargetDate}
+          existingCategories={memoryCategories}
+          onSuccess={() => setShowInputDialog(false)}
+          onCancel={() => setShowInputDialog(false)}
+          disabled={isReadOnly}
+        />
+      )}
+
+      {/* Entry form as modal dialog — used by both view modes for utilitarian log types. In by_type mode entries land on today. */}
+      {dialogType && dialogType.value_type !== 'memory' && (
         <Dialog open={showInputDialog} onOpenChange={(open) => { if (!open) setShowInputDialog(false); }}>
           <DialogContent className="w-[calc(100vw-1rem)] max-w-sm top-[5%] translate-y-0 p-0 gap-0 border-0 bg-transparent shadow-none [&>button]:hidden">
             {dialogType.value_type === 'medication' ? (
