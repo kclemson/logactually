@@ -413,7 +413,7 @@ export function MemoryEntryRow({
             <p className="text-sm whitespace-pre-wrap line-clamp-4">{caption}</p>
           )}
           {category && (
-            <p className="text-xs text-muted-foreground">{category}</p>
+            <p className="text-xs text-muted-foreground">{formatTag(category)}</p>
           )}
         </>
       ) : (
