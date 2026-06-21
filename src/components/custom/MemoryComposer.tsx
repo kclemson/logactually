@@ -124,7 +124,7 @@ export function MemoryComposer({
   useEffect(() => {
     let active = true;
     for (const m of editEntry?.media ?? []) {
-      getSignedMemoryUrl(m.poster_path || m.storage_path).then((url) => {
+      getSignedMemoryUrl(m.storage_path).then((url) => {
         if (active && url) {
           setFiles((prev) =>
             prev.map((f) => (f.id === m.id ? { ...f, previewUrl: url } : f)),
