@@ -343,12 +343,13 @@ export function useUpdateMemory() {
           onItemProgress?.(i, 'done');
         }
 
-        // 2. Update the entry's caption + category.
+        // 2. Update the entry's caption, category + date.
         const { error: entryErr } = await supabase
           .from('custom_log_entries')
           .update({
             text_value: note?.trim() || null,
             category: category?.trim() || null,
+            logged_date: loggedDate,
           })
           .eq('id', entryId);
         if (entryErr) throw entryErr;
