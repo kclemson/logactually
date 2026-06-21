@@ -468,8 +468,10 @@ function MemoryTypeBody({ logType, density }: { logType: CustomLogType; density:
   const navigate = useNavigate();
   const { days, isLoading } = useMemoryDays(logType.id);
 
-  const openViewer = (date?: string) =>
-    navigate(`/custom/memories?type=${logType.id}${date ? `&date=${date}` : ''}`);
+  const openViewer = (date?: string, entryId?: string) =>
+    navigate(
+      `/custom/memories?type=${logType.id}${date ? `&date=${date}` : ''}${entryId ? `&entry=${entryId}` : ''}`,
+    );
 
   if (isLoading) return <Skeleton className="h-8 w-full" />;
   if (days.length === 0) {
@@ -495,7 +497,7 @@ function MemoryTypeBody({ logType, density }: { logType: CustomLogType; density:
                 entry={entry}
                 media={entry.media}
                 density={density}
-                onOpen={() => openViewer(day.date)}
+                onOpen={() => openViewer(day.date, entry.id)}
               />
             ))}
           </div>

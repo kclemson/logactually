@@ -14,8 +14,15 @@ import {
   Plus,
 } from 'lucide-react';
 import { format, isToday, parseISO } from 'date-fns';
-import { useCreateMemory, type FileUploadStatus } from '@/hooks/useMemoryMedia';
-import { mediaKindFromMime, type MediaKind } from '@/lib/memory-media';
+import {
+  useCreateMemory,
+  useUpdateMemory,
+  type FileUploadStatus,
+  type EditMediaItem,
+  type MemoryMedia,
+} from '@/hooks/useMemoryMedia';
+import type { MemoryEntry } from '@/hooks/useMemoryDays';
+import { mediaKindFromMime, getSignedMemoryUrl, type MediaKind } from '@/lib/memory-media';
 import { cn } from '@/lib/utils';
 
 interface MemoryComposerProps {
@@ -23,18 +30,34 @@ interface MemoryComposerProps {
   logTypeId: string;
   loggedDate: string;
   existingCategories?: string[];
+  /** When provided, the composer edits this memory instead of creating one. */
+  editEntry?: MemoryEntry;
   onSuccess?: () => void;
   onCancel?: () => void;
   disabled?: boolean;
 }
 
-interface PendingFile {
-  id: string;
-  file: File;
-  kind: MediaKind;
-  previewUrl: string;
-  status: FileUploadStatus;
-}
+/**
+ * A slide in the composer: either a newly-picked local file (object URL preview)
+ * or an existing media row being edited (signed URL preview, resolved on mount).
+ */
+type PendingFile =
+  | {
+      id: string;
+      source: 'new';
+      file: File;
+      kind: MediaKind;
+      previewUrl: string;
+      status: FileUploadStatus;
+    }
+  | {
+      id: string;
+      source: 'existing';
+      media: MemoryMedia;
+      kind: MediaKind;
+      previewUrl: string; // '' until the signed URL resolves
+      status: FileUploadStatus;
+    };
 
 /**
  * Tracks how much of the layout viewport the on-screen keyboard is covering, so
@@ -71,26 +94,57 @@ export function MemoryComposer({
   logTypeId,
   loggedDate,
   existingCategories = [],
+  editEntry,
   onSuccess,
   onCancel,
   disabled,
 }: MemoryComposerProps) {
+  const isEditing = !!editEntry;
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [note, setNote] = useState('');
-  const [category, setCategory] = useState('');
-  const [files, setFiles] = useState<PendingFile[]>([]);
+  const [note, setNote] = useState(() => editEntry?.text_value ?? '');
+  const [category, setCategory] = useState(() => editEntry?.category ?? '');
+  const [files, setFiles] = useState<PendingFile[]>(() =>
+    (editEntry?.media ?? []).map((m) => ({
+      id: m.id,
+      source: 'existing' as const,
+      media: m,
+      kind: m.kind,
+      previewUrl: '',
+      status: 'done' as FileUploadStatus,
+    })),
+  );
   const [index, setIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const { createMemory } = useCreateMemory();
-  const saving = createMemory.isPending;
+  const { updateMemory } = useUpdateMemory();
+  const saving = createMemory.isPending || updateMemory.isPending;
   const keyboardInset = useKeyboardInset();
 
-  // Revoke all object URLs when the composer unmounts.
+  // Resolve signed preview URLs for any existing media (external storage), once.
+  useEffect(() => {
+    let active = true;
+    for (const m of editEntry?.media ?? []) {
+      getSignedMemoryUrl(m.storage_path).then((url) => {
+        if (active && url) {
+          setFiles((prev) =>
+            prev.map((f) => (f.id === m.id ? { ...f, previewUrl: url } : f)),
+          );
+        }
+      });
+    }
+    return () => {
+      active = false;
+    };
+  }, [editEntry]);
+
+  // Revoke object URLs for newly-picked files when the composer unmounts.
   const filesRef = useRef<PendingFile[]>([]);
   filesRef.current = files;
   useEffect(() => {
     return () => {
-      filesRef.current.forEach((f) => URL.revokeObjectURL(f.previewUrl));
+      filesRef.current.forEach((f) => {
+        if (f.source === 'new') URL.revokeObjectURL(f.previewUrl);
+      });
     };
   }, []);
 
@@ -100,6 +154,7 @@ export function MemoryComposer({
 
   const dateObj = parseISO(loggedDate);
   const dateLabel = isToday(dateObj) ? 'Today' : format(dateObj, 'EEE, MMM d');
+
 
   const handlePick = () => fileInputRef.current?.click();
 
@@ -114,6 +169,7 @@ export function MemoryComposer({
       if (!kind) continue;
       added.push({
         id: crypto.randomUUID(),
+        source: 'new',
         file,
         kind,
         previewUrl: URL.createObjectURL(file),
@@ -131,7 +187,7 @@ export function MemoryComposer({
   const removeCurrent = () => {
     setFiles((prev) => {
       const target = prev[index];
-      if (target) URL.revokeObjectURL(target.previewUrl);
+      if (target && target.source === 'new') URL.revokeObjectURL(target.previewUrl);
       const next = prev.filter((_, i) => i !== index);
       setIndex((i) => Math.max(0, Math.min(i, next.length - 1)));
       return next;
@@ -163,26 +219,58 @@ export function MemoryComposer({
   const handleSave = () => {
     if (!canSave) return;
     setError(null);
+    const onSettledError = (err: unknown) => {
+      setError(err instanceof Error ? err.message : 'Could not save memory');
+      setFiles((prev) =>
+        prev.map((f) => (f.source === 'new' ? { ...f, status: 'queued' } : f)),
+      );
+    };
+
+    if (isEditing && editEntry) {
+      const items: EditMediaItem[] = files.map((f) =>
+        f.source === 'existing'
+          ? { type: 'existing', media: f.media }
+          : { type: 'new', file: f.file },
+      );
+      updateMemory.mutate(
+        {
+          entryId: editEntry.id,
+          logTypeId,
+          loggedDate,
+          note,
+          category,
+          originalMedia: editEntry.media,
+          items,
+          onItemProgress: (i, status) => {
+            setFiles((prev) => prev.map((f, fi) => (fi === i ? { ...f, status } : f)));
+          },
+        },
+        {
+          onSuccess: () => onSuccess?.(),
+          onError: onSettledError,
+        },
+      );
+      return;
+    }
+
     createMemory.mutate(
       {
         logTypeId,
         loggedDate,
         note,
         category,
-        files: files.map((f) => f.file),
+        files: files.flatMap((f) => (f.source === 'new' ? [f.file] : [])),
         onFileProgress: (i, status) => {
           setFiles((prev) => prev.map((f, fi) => (fi === i ? { ...f, status } : f)));
         },
       },
       {
         onSuccess: () => onSuccess?.(),
-        onError: (err) => {
-          setError(err instanceof Error ? err.message : 'Could not save memory');
-          setFiles((prev) => prev.map((f) => ({ ...f, status: 'queued' })));
-        },
+        onError: onSettledError,
       },
     );
   };
+
 
   const uniqueCategories = Array.from(new Set(existingCategories.filter(Boolean)));
 
@@ -217,7 +305,7 @@ export function MemoryComposer({
               )}
             >
               <DialogPrimitive.Title className="sr-only">
-                Add memory to {label}
+                {isEditing ? `Edit memory in ${label}` : `Add memory to ${label}`}
               </DialogPrimitive.Title>
 
 
@@ -240,7 +328,9 @@ export function MemoryComposer({
                     transition={{ duration: 0.25 }}
                     className="absolute inset-0 flex items-center justify-center bg-black"
                   >
-                    {current.kind === 'image' ? (
+                    {!current.previewUrl ? (
+                      <Loader2 className="h-6 w-6 animate-spin text-white/60" />
+                    ) : current.kind === 'image' ? (
                       <img
                         src={current.previewUrl}
                         alt=""
@@ -396,7 +486,11 @@ export function MemoryComposer({
                           i === index ? 'ring-teal-400' : 'ring-transparent opacity-65 hover:opacity-100',
                         )}
                       >
-                        {f.kind === 'image' ? (
+                        {!f.previewUrl ? (
+                          <span className="flex h-full w-full items-center justify-center bg-white/10">
+                            <Loader2 className="h-4 w-4 animate-spin text-white/70" />
+                          </span>
+                        ) : f.kind === 'image' ? (
                           <img src={f.previewUrl} alt="" className="h-full w-full object-cover" />
                         ) : (
                           <>

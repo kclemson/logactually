@@ -6,6 +6,7 @@ import { Pencil, Trash2, AlignLeft } from 'lucide-react';
 import { MemoryThumb } from '@/components/custom/MemoryThumb';
 import { useMemoryCovers } from '@/hooks/useMemoryCovers';
 import type { MemoryMedia } from '@/hooks/useMemoryMedia';
+import { formatTag } from '@/lib/memory-media';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -412,7 +413,7 @@ export function MemoryEntryRow({
             <p className="text-sm whitespace-pre-wrap line-clamp-4">{caption}</p>
           )}
           {category && (
-            <p className="text-xs text-muted-foreground">{category}</p>
+            <p className="text-xs text-muted-foreground">{formatTag(category)}</p>
           )}
         </>
       ) : (
@@ -423,7 +424,7 @@ export function MemoryEntryRow({
               {!hasMedia && <AlignLeft className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
               {caption && <span className="truncate">{caption}</span>}
               {category && (
-                <span className="text-muted-foreground shrink-0">{caption ? ' · ' : ''}{category}</span>
+                <span className="text-muted-foreground shrink-0">{caption ? ' · ' : ''}{formatTag(category)}</span>
               )}
             </span>
             <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">{time}</span>
@@ -520,7 +521,7 @@ export function CustomLogTypeDayRows({
             entry={entry}
             media={memoryCovers.get(entry.id) ?? []}
             density={density}
-            onOpen={() => navigate(`/custom/memories?type=${logType.id}&date=${dateStr}`)}
+            onOpen={() => navigate(`/custom/memories?type=${logType.id}&date=${dateStr}&entry=${entry.id}`)}
           />
         ))
       ) : (
