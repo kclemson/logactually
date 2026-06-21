@@ -1,66 +1,115 @@
-# Customizable Trends: hide/show charts
+# Visual Memory Diary
 
-## Goal
-Let users tailor the Trends page by hiding charts they don't care about and bringing them back later. Visibility is per-chart, controlled via an edit mode with eye icons, and synced to the user's account so it follows them across devices.
+A custom-log type for logging photos/videos and/or a text note per day, organized by optional category, browsable in a dedicated immersive full-screen viewer. Built to extend the app's "log anything" vision without disturbing Food/Exercise/Custom code, and with a data + security model designed for future sharing and multi-author contributions.
 
-## How it works (UX)
-- A **"Customize"** toggle (pencil icon) sits next to the period selector at the top of Trends.
-- Turning it on enters **customize mode** across the built-in sections (Food, Exercise, Custom):
-  - Every chart shows a small **eye / eye-off** button in its corner.
-  - Hidden charts stay visible but **dimmed** with an eye-off icon, so they can be turned back on.
-  - Tapping the icon toggles that chart and saves immediately.
-- Turning customize mode off returns to the normal view, where **hidden charts simply don't render**.
-- A section with no visible charts is hidden entirely in normal view (its header disappears), but reappears in customize mode so nothing is permanently lost.
-- If the user has hidden everything, a gentle hint points them to the Customize button.
+## Core model decisions
 
-The existing **My Charts** section already has its own edit mode (create / edit / delete / reorder), so it stays as-is — this feature targets the auto-generated built-in charts.
-
-## Which charts become toggleable
-Every built-in chart across the three sections, each with a stable ID:
-
-```text
-Food
-  food:calories            Calories
-  food:macroSplit          Macro Split (%)
-  food:combined            Combined Calories + Macros
-  food:macro:<key>         each displayed macro (protein, carbs, fat, ...)
-Exercise
-  exercise:calorieBurn     Estimated Exercise Calorie Burn
-  exercise:<key>:<subtype> each per-exercise chart
-Custom
-  customlog:<logTypeId>    each custom-log trend
-  bloodwork:<chartId>      each bloodwork chart
-```
-
-Fixed charts use constant IDs; data-driven charts (exercises, custom logs, bloodwork) derive a stable ID from their existing keys.
+- **One memory log type** (`value_type = 'memory'`). Not multiple types.
+- **Category is an optional property** of each memory (freeform text, autocomplete from the user's existing categories, e.g. "Garden", "Vacation 2026"). Can be left blank.
+- **Media is optional.** A memory can be text-only, media-only, or both. Save requires *something*: a note OR at least one media item.
+- **An entry = one author's submission**: `text_value` (optional note) + `logged_date` + optional `category`, with its ordered `memory_media` rows. This is the text↔media link.
+- **A "memory" in the viewer = all entries sharing a `logged_date`** (today all authored by the owner; later possibly multiple authors).
+- **No caps**: unlimited media per entry and per day, no length/size/count limits.
+- **"public" = Postgres schema name only.** `public.memory_media` lives in the default app schema like every other table; it has no bearing on visibility. Access is governed by RLS + a private storage bucket. Default is strictly private to the owner.
 
 ## Data model
-Add a single field to user settings (stored in the existing `profiles.settings` JSON, same mechanism as `displayMacros`):
 
-- `hiddenCharts: string[]` — list of chart IDs the user has hidden. Default `[]` (everything visible).
+Add to `custom_log_entries` (additive, nullable — memory-only, harmless to other log types):
+- `category text` — optional category for memory entries.
+- `created_by uuid` — the author of the row. Today equals `user_id`; reserved so future invited contributors are distinguishable from the diary owner. Backfill existing/other rows to `user_id`.
 
-A chart is visible when its ID is **not** in `hiddenCharts`. New charts (new exercises, new log types) are visible by default, which is the desired behavior.
+New table `public.memory_media` (one row per file):
 
-## Implementation
+```text
+id            uuid pk
+user_id       uuid  -> auth.users   (diary OWNER; RLS scope)
+created_by    uuid  -> auth.users   (uploader/author; = user_id today)
+entry_id      uuid  -> custom_log_entries(id) on delete cascade
+storage_path  text   (memory-media/{user_id}/{entry_id}/{file})
+kind          text   ('image' | 'video')
+mime_type     text
+width         int
+height        int
+duration_secs numeric  (videos only)
+poster_path   text     (video first-frame thumbnail)
+sort_order    int
+created_at    timestamptz
+```
 
-1. **`src/hooks/useUserSettings.ts`** — add `hiddenCharts: string[]` to the `UserSettings` interface and `DEFAULT_SETTINGS` (`[]`). No migration needed; the existing merge handles missing keys.
+- Full GRANT block + RLS scoped to `auth.uid() = user_id`. Read-only/demo users blocked via existing `is_read_only_user(uuid)` pattern on write policies.
+- Day in `logged_date`; entry order within a day by `created_at`; media order by `sort_order`.
 
-2. **New helper `src/lib/chart-visibility.ts`** — small pure utilities: chart-ID builders for each chart type, an `isChartHidden(id, hidden)` check, and a `toggleChartId(id, hidden)` that returns the next array. Keeps `Trends.tsx` clean and unit-testable.
+## Storage
 
-3. **New wrapper `src/components/trends/ChartVisibilityWrapper.tsx`** — wraps any chart in a `relative` container and, in customize mode, overlays a corner eye/eye-off button and applies dimming when hidden. Outside customize mode it renders `null` for hidden charts and the chart untouched otherwise. Using a wrapper avoids editing every individual chart component.
+- New **private** bucket `memory-media`, RLS on `storage.objects`: a user accesses only files under their own `{user_id}/...` prefix. Owner-prefixed paths are stable so a future share-aware policy can grant contributor access without moving files.
+- Store only the path in the DB (never base64), per project convention.
+- **Signed URLs designed so nothing ages out mid-session:** long TTL (12-24h), minted when the viewer opens (not at app load), and silent re-mint + retry if any media fails to load.
 
-4. **`src/pages/Trends.tsx`** —
-   - Add a `customizeMode` state and a pencil toggle button in the top bar (next to the period `Select`).
-   - Read `settings.hiddenCharts`; create a `toggleChart(id)` that calls `updateSettings`.
-   - Wrap each built-in chart (Food, Exercise, Custom sections) in `ChartVisibilityWrapper`, passing its stable ID, the hidden state, customize mode, and the toggle.
-   - Compute per-section "has any visible chart" so sections with everything hidden are omitted in normal view but shown in customize mode.
-   - Add the all-hidden hint.
+## Capture flow — media-first atomic create
 
-5. **`src/lib/chart-visibility.test.ts`** — cover ID building, hidden check, and toggle add/remove.
+`MemoryEntryInput.tsx`:
+1. Generate the entry UUID client-side up front.
+2. User optionally adds a note, optionally picks a category (autocomplete), optionally selects/captures any number of media (`accept=image/*,video/*`, `capture` supported); thumbnails with remove/reorder. Save enabled once a note OR ≥1 media exists.
+3. On save: upload **all** media (+ video poster frames) to `memory-media/{user_id}/{entryId}/...` first, with per-file progress.
+4. Only after every upload succeeds: insert the `custom_log_entries` row + all `memory_media` rows.
+5. Any upload fails → abort, nothing persisted. Final DB insert fails → best-effort cleanup of just-uploaded files. No "ghost" memories.
+
+## Immersive viewer
+
+Dedicated route `/custom/memories`:
+- Full-bleed media over a blurred backdrop; clean text-only and single-media states.
+- **Gesture map (explicit, no collisions):** horizontal swipe = change day; vertical swipe / tap zones = move between entries+media within the day; videos tap-to-play (no scrub in v1).
+- Day header shows date, note, category; in-viewer calendar picker to jump to a day; optional category filter.
+- `framer-motion` transitions; lazy signed-URL fetch with prefetch of adjacent days.
+
+## Information architecture
+
+- Lives under the **Custom** tab (like medication/bloodwork). No new top-level nav.
+- Custom page memory card: **"View Memories"** (launches viewer) + **"Log"** (opens composer).
+- "Log New" dropdown gains a `memory` branch → composer (mirrors `panel`→bloodwork, `medication`→med input).
+- "By Date" view: compact rows (note + category + thumbnail strip, or note-only) tapping into the viewer at that day.
+- Gated behind `showCustomLogs`. Demo users can interact but not save.
+
+## Future-sharing & multi-author readiness (design only — no sharing UI now)
+
+- **Owner vs author split** (`user_id` = owner, `created_by` = author) on entries and media.
+- **Contributions are new entries, not edits.** When UserA later invites UserB/UserC to a day: UserB's photos and UserC's video+text each become their own entry (`user_id = UserA`, `created_by = contributor`) grouped under the same `logged_date`. Text is always attributed via the entry's `created_by`; media always hangs off an entry. Viewer can show per-author attribution.
+- **Owner-prefixed storage paths** let a future share-aware storage policy grant contributor writes into the owner's prefix without moving files.
+- A future `memory_shares` table (`owner_id`, date range or entry set, `grantee`/`share_token`, `permission` view|contribute, `expires_at`) layers in additively. Today's RLS (`user_id = auth.uid()`) is written so a share lookup can be OR-ed in (read for view; insert-where-`created_by = auth.uid()` for contribute) without rewriting policies or data.
+
+## Build order
+
+1. Backend: alter `custom_log_entries` (+`category`,`created_by`); create `memory_media` table; create `memory-media` private bucket + storage RLS.
+2. Helpers + composer (capture, compression, poster, atomic upload) + minimal "By Date" display.
+3. Immersive viewer.
+4. Polish: in-viewer calendar + category filter, prefetch, refinements.
+
+## Files
+
+**New**
+- `src/components/custom/MemoryEntryInput.tsx`
+- `src/pages/MemoryViewer.tsx` (+ small subcomponents)
+- `src/hooks/useMemoryMedia.ts` (upload/insert/cache via React Query)
+- `src/hooks/useMemoryDays.ts` (day-grouped fetch)
+- `src/lib/memory-media.ts` (+ `.test.ts`) — compression, poster extraction, aspect/duration helpers, path builders, signed-URL cache
+
+**Edited (minimal, additive)**
+- `src/hooks/useCustomLogTypes.ts` — add `'memory'` to `ValueType`
+- `src/lib/log-templates.ts` — add "Memories" template
+- `src/pages/OtherLog.tsx` — memory dialog branch + viewer entry
+- `src/components/CustomLogByTypeView.tsx` — memory card/row variant
+- App router — register `/custom/memories`
 
 ## Technical details
-- Persistence reuses `updateSettings` (optimistic update already built in), so toggles feel instant and sync to the account.
-- The eye button uses `Eye` / `EyeOff` from lucide-react and the blue interactive color per the design system.
-- Per-exercise charts keep their existing "Show more" pagination; visibility filtering applies to whichever are rendered. (Hidden exercises are filtered from the visible slice so paging still surfaces fresh ones.)
-- Read-only/demo users: toggling is a harmless personal preference and writes only to their own settings row, so it stays enabled.
-- No database or schema changes — `hiddenCharts` lives in the existing settings JSON.
+
+- Client-generated `entryId` (`crypto.randomUUID`) used as the storage sub-path so uploads precede the DB row.
+- React Query caches invalidated after successful atomic create; no optimistic UI (only persisted memories appear).
+- Signed URLs cached in-memory with TTL; re-mint on load error while viewer open.
+- No `useEffect` for state sync (project guideline): composer resets via conditional mount/unmount; persistence in event handlers.
+- Custom = teal theming; existing mobile dialog standards.
+
+## Out of scope (deferred)
+
+- Pinned one-tap "Log New <foo>" buttons.
+- Any sharing UI / contributor invites (schema is ready; UI is not built).
+- Video scrubbing/trimming and server-side transcoding.
