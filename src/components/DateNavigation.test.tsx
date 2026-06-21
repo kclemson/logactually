@@ -50,7 +50,7 @@ describe('DateNavigation', () => {
     expect(screen.getByText(/Mon, Jan 6/)).toBeInTheDocument();
   });
 
-  it('disables next-day button when on today', () => {
+  it('keeps next-day button enabled on today (no future-date block)', () => {
     render(
       <DateNavigation
         {...baseProps}
@@ -59,7 +59,7 @@ describe('DateNavigation', () => {
       />
     );
     const nextButton = screen.getByLabelText('Next day');
-    expect(nextButton).toBeDisabled();
+    expect(nextButton).toBeEnabled();
   });
 
   it('shows "Go to today" link only when not on today', () => {
