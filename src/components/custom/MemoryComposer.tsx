@@ -328,7 +328,9 @@ export function MemoryComposer({
                     transition={{ duration: 0.25 }}
                     className="absolute inset-0 flex items-center justify-center bg-black"
                   >
-                    {current.kind === 'image' ? (
+                    {!current.previewUrl ? (
+                      <Loader2 className="h-6 w-6 animate-spin text-white/60" />
+                    ) : current.kind === 'image' ? (
                       <img
                         src={current.previewUrl}
                         alt=""
