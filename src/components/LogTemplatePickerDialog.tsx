@@ -59,13 +59,13 @@ export function LogTemplatePickerDialog({
           <DialogTitle>Add a Log Type</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
           {TEMPLATE_GROUPS.map(group => {
             const templates = LOG_TEMPLATES.filter(t => t.group === group.key);
             if (templates.length === 0) return null;
             return (
               <div key={group.key} className="flex flex-col">
-                <p className="px-1 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="px-1 pb-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   {group.label}
                 </p>
                 {templates.map(t => {
@@ -79,7 +79,7 @@ export function LogTemplatePickerDialog({
                         key={t.name}
                         disabled={isLoading || added}
                         onClick={() => onSelectMedication()}
-                        className={`flex items-center gap-3 w-full px-2 py-2 rounded-lg text-sm transition-colors ${added ? 'opacity-40 cursor-not-allowed' : 'hover:bg-accent'} disabled:opacity-40`}
+                        className={`flex items-center gap-3 w-full px-2 py-1.5 rounded-lg text-sm transition-colors ${added ? 'opacity-40 cursor-not-allowed' : 'hover:bg-accent'} disabled:opacity-40`}
                       >
                         {Icon && <Icon className="h-4 w-4 text-teal-500" />}
                         <span className="font-medium">{t.name}</span>
@@ -97,7 +97,7 @@ export function LogTemplatePickerDialog({
                   return (
                     <label
                       key={t.name}
-                      className={`flex items-center gap-3 w-full px-2 py-2 rounded-lg text-sm transition-colors ${added ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-accent'}`}
+                      className={`flex items-center gap-3 w-full px-2 py-1.5 rounded-lg text-sm transition-colors ${added ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-accent'}`}
                     >
                       <input
                         type="checkbox"
@@ -120,14 +120,14 @@ export function LogTemplatePickerDialog({
           <button
             disabled={isLoading || newlySelected.length === 0}
             onClick={handleAddSelected}
-            className="w-full py-2 rounded-md bg-teal-500 text-white text-sm font-medium hover:bg-teal-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="mt-1 w-full py-2 rounded-md bg-teal-500 text-white text-sm font-medium hover:bg-teal-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {newlySelected.length > 0 ? `Add ${newlySelected.length} selected` : 'Add selected'}
           </button>
 
           <button
             onClick={onCreateCustom}
-            className="flex items-center justify-center gap-2 w-full py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center justify-center gap-2 w-full py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <Wrench className="h-4 w-4" />
             <span className="font-medium">Create your own</span>

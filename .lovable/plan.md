@@ -1,72 +1,20 @@
-# Reorganize the "Add Log Type" picker
+# Tighten row spacing in the "Add a Log Type" picker
 
-Turn the template picker into a single grouped checklist where the user ticks which built-in log types to enable, confirms once to create them all, and only takes a separate path for fully custom types. Memories becomes a first-class, always-visible option.
+The picker rows currently have more vertical space than needed for mobile tap targets. Reduce it for a denser list while keeping comfortable, accessible hit areas.
 
-## What changes for the user
+## Context: is the spacing needed?
 
-- Opening **Add Log Type** shows every built-in type at once, organized under three labeled groups — no more "More options" expander to hunt through.
-- Each built-in type is a **checkbox**. Tick any number across groups, then press **Add selected** to create them in one step.
-- Types you already have are shown checked and disabled with an "Added" label.
-- **Memories** is visible by default in its own group.
-- **Mood** and **Journal** are removed (verified unused — no one has them).
-- A **Create your own** link at the bottom remains the path for anything not in the list.
+No. The recommended minimum touch target is ~44px (Apple) / 48px (Material), but each row is fully tappable (the `<label>`/`<button>` spans the full width). The current look comes from two sources stacked together:
+- Each row uses `py-2` (8px top + 8px bottom).
+- Every group is separated by `gap-4` (16px) **and** the group header adds its own bottom padding.
 
-## Groups
+That combination is what makes it feel airy. We can tighten without dropping below a usable target.
 
-```text
-Body
-  ☐ Body Weight            (lbs/kg)
-  ☐ Body Fat %             (%)
-  ☐ Waist                  (in/cm)
-  ☐ Hips                   (in/cm)
-  ☐ Chest                  (in/cm)
-  ☐ Bicep                  (in/cm)
-  ☐ Thigh                  (in/cm)
-  ☐ Neck                   (in/cm)
+## Changes (all in `src/components/LogTemplatePickerDialog.tsx`)
 
-Health
-  ☐ Blood Pressure         (mmHg)
-  ☐ Sleep                  (hrs)
-  ☐ Water Intake           (oz/ml)
-  ☐ Bloodwork
-  →  Medication            (opens setup — see below)
+- **Row padding:** change each row's `py-2` to `py-1.5` (≈6px), giving ~32-34px rows. Keep `gap-3` between checkbox/icon/label so they stay easy to read and tap. The full-row tap area keeps it usable on mobile.
+- **Group spacing:** reduce the outer container from `gap-4` to `gap-2` so sections sit closer together.
+- **Group header:** keep the uppercase label but tighten its bottom padding (`pb-1` → `pb-0.5`) and add a small `mt` only where needed so headers don't crowd the previous group.
+- **Footer buttons:** slightly reduce the gap above "Add selected" / "Create your own" so the bottom of the dialog matches the tighter rhythm (e.g. trim the container `gap` and the "Create your own" vertical padding).
 
-Memories
-  ☐ Memories
-
-[ Add N selected ]
-Create your own →
-```
-
-The previous nested "Body Measurement" sub-expander goes away; the individual measurements become normal checkboxes in the Body group, which is simpler and consistent with the new model.
-
-## The one special case: Medication
-
-Medication needs its dose/schedule setup (`CreateMedicationDialog`), so it can't be silently batch-created from a checkbox. It stays a distinct **row with a chevron** inside the Health group that closes the picker and opens the medication setup step (existing `onSelectMedication` behavior). Everything else is a plain checkbox handled by the batch create.
-
-## Technical details
-
-**`src/lib/log-templates.ts`**
-- Remove the `Mood` and `Journal` entries from `LOG_TEMPLATES`.
-- Set a `group` value on every template so the dialog can render sections: `'body'` (Body Weight, Body Fat %, and the six measurements), `'health'` (Blood Pressure, Sleep, Water Intake, Bloodwork, Medication), `'memory'` (Memories). The old `'measurement'` group tag on the six measurement rows is replaced by `'body'`.
-- Delete the now-unused `MEASUREMENT_TEMPLATES` export (confirmed: only the picker dialog imports it).
-
-**`src/components/LogTemplatePickerDialog.tsx`** (main rewrite)
-- Replace the Body-Weight-row + measurement-expander + primary-rows + "More options" structure with a flat render that maps over the group order (`body`, `health`, `memory`), printing a small section header per group and a checkbox row per template.
-- A single `selected: Set<string>` of template names drives the footer **Add N selected** button (disabled when nothing new is selected). Already-added templates render checked + disabled. Per the project's useEffect guidance, this state resets via conditional unmount of the dialog (not effect syncing).
-- Medication renders as a chevron row (not a checkbox) that calls `onSelectMedication`.
-- Confirm calls `onSelectTemplates` with all ticked items (keeping the existing fallback that loops `onSelectTemplate` when `onSelectTemplates` is absent).
-- Keep the **Create your own** button (`onCreateCustom`) at the bottom; reuse each template's existing lucide icon.
-
-**`src/components/settings/CustomLogTypesSection.tsx`**
-- Add an `onSelectTemplates` handler (batch create, mirroring the one already in `OtherLog.tsx`) so multi-select works here too.
-- Replace the narrow `value_type` cast with `as ValueType` (verified: `ValueType` already covers `numeric | text_numeric | text | text_multiline | dual_numeric | medication | panel | memory`, and `createType` accepts it — no other plumbing needed).
-
-**`src/pages/OtherLog.tsx`**
-- Wrap `<LogTemplatePickerDialog />` in `{templatePickerOpen && ( … )}` so it unmounts on close and selection state resets cleanly (matching `CustomLogTypesSection`). Existing `onSelectTemplates`/`onSelectMedication`/`onCreateCustom` wiring is reused as-is.
-
-## Out of scope
-
-- No database/schema changes (Mood/Journal removal is template-list only; they were never created as types).
-- No changes to how Memories, Medication, or Bloodwork entries are composed or viewed.
-- No new icons or font/design-system changes.
+No logic, behavior, or wording changes — purely spacing/density. After the change I'll verify on the 390px mobile viewport via a screenshot to confirm rows still look tappable and the whole list fits more compactly.
