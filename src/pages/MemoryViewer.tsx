@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useState, useMemo, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
@@ -30,6 +30,31 @@ function buildDayItems(day: MemoryDay): ViewItem[] {
   return items;
 }
 
+/**
+ * Resolve the starting day/item index from the requested date/entry. Returns
+ * null when the data isn't ready yet (so we can defer to a layout effect).
+ * Prefers the explicit entry, then the date, then the first day.
+ */
+function computeStart(
+  days: MemoryDay[],
+  initialDate: string | null,
+  initialEntry: string | null,
+): { dayIndex: number; itemIndex: number } | null {
+  if (days.length === 0) return null;
+  if (initialEntry) {
+    const byEntry = days.findIndex((d) => d.entries.some((e) => e.id === initialEntry));
+    if (byEntry >= 0) {
+      const iIdx = buildDayItems(days[byEntry]).findIndex((it) => it.entry.id === initialEntry);
+      return { dayIndex: byEntry, itemIndex: iIdx >= 0 ? iIdx : 0 };
+    }
+  }
+  if (initialDate) {
+    const dIdx = days.findIndex((d) => d.date === initialDate);
+    if (dIdx >= 0) return { dayIndex: dIdx, itemIndex: 0 };
+  }
+  return { dayIndex: 0, itemIndex: 0 };
+}
+
 const MemoryViewer = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -41,32 +66,28 @@ const MemoryViewer = () => {
   const { days, isLoading, deleteMemory } = useMemoryDays(typeId);
   const { isReadOnly } = useReadOnlyContext();
 
-  const [dayIndex, setDayIndex] = useState(0);
-  const [itemIndex, setItemIndex] = useState(0);
+  // Resolve the starting position synchronously when data is already cached, so
+  // the requested memory is shown from the first painted frame (no stale flash).
+  const initialStart = useRef(computeStart(days, initialDate, initialEntry));
+  const [dayIndex, setDayIndex] = useState(initialStart.current?.dayIndex ?? 0);
+  const [itemIndex, setItemIndex] = useState(initialStart.current?.itemIndex ?? 0);
   const [direction, setDirection] = useState(0);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [editing, setEditing] = useState(false);
-  const startedRef = useRef(false);
+  const startedRef = useRef(initialStart.current !== null);
 
-  // Jump to the requested date/entry once, when data first arrives.
-  useEffect(() => {
-    if (startedRef.current || days.length === 0) return;
+  // Cold-load fallback: when the viewer mounts before data has arrived, apply the
+  // start position once, before paint. The viewer shows "Loading…" until then, so
+  // no stale entry is ever visible.
+  useLayoutEffect(() => {
+    if (startedRef.current) return;
+    const start = computeStart(days, initialDate, initialEntry);
+    if (!start) return;
     startedRef.current = true;
-    if (!initialDate && !initialEntry) return;
-    const dIdx = initialDate ? days.findIndex((d) => d.date === initialDate) : -1;
-    const targetDay = dIdx >= 0 ? dIdx : 0;
-    if (initialEntry) {
-      // Prefer the explicit entry: find its day and the first item that belongs to it.
-      const byEntry = days.findIndex((d) => d.entries.some((e) => e.id === initialEntry));
-      if (byEntry >= 0) {
-        setDayIndex(byEntry);
-        const iIdx = buildDayItems(days[byEntry]).findIndex((it) => it.entry.id === initialEntry);
-        if (iIdx >= 0) setItemIndex(iIdx);
-        return;
-      }
-    }
-    if (dIdx >= 0) setDayIndex(targetDay);
+    setDayIndex(start.dayIndex);
+    setItemIndex(start.itemIndex);
   }, [days, initialDate, initialEntry]);
+
 
   const close = useCallback(() => {
     navigate('/custom');
