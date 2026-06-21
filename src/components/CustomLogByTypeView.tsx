@@ -93,6 +93,7 @@ function TypeCard({
   onEditEntry,
   onDeleteEntry,
   onUpdateEntry,
+  forceExpanded = false,
 }: {
   logType: CustomLogType;
   isReadOnly: boolean;
@@ -100,10 +101,12 @@ function TypeCard({
   onEditEntry?: (entry: CustomLogEntry) => void;
   onDeleteEntry?: (id: string) => void;
   onUpdateEntry?: (params: { id: string; numeric_value?: number | null; numeric_value_2?: number | null; text_value?: string | null }) => void;
+  forceExpanded?: boolean;
 }) {
   const isPanel = logType.value_type === 'panel';
   const scope = logType.id;
-  const [expanded, setExpanded] = useState(() => readTypeExpanded(logType.id));
+  // In the focused view the single card is always open; otherwise honour stored state.
+  const [expanded, setExpanded] = useState(() => forceExpanded || readTypeExpanded(logType.id));
   const meta = logType.value_type === 'medication' ? getMedicationMeta(logType) : null;
 
   // Panel-only header state (filter query + collapse-all toggle), lifted up so it can sit in the header.
