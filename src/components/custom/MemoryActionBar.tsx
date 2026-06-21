@@ -20,6 +20,8 @@ export interface MemoryAction {
   tone?: 'default' | 'danger';
   /** Renders a filled teal pill (e.g. Save) instead of a ghost icon button. */
   prominent?: boolean;
+  /** Renders a rounded glass (backdrop-blur) icon button, e.g. the viewer close. */
+  glass?: boolean;
   /** Shows a spinner in place of the icon (e.g. while saving). */
   busy?: boolean;
 }
