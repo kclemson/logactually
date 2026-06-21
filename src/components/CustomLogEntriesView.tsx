@@ -424,7 +424,7 @@ export function MemoryEntryRow({
               {!hasMedia && <AlignLeft className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
               {caption && <span className="truncate">{caption}</span>}
               {category && (
-                <span className="text-muted-foreground shrink-0">{caption ? ' · ' : ''}{category}</span>
+                <span className="text-muted-foreground shrink-0">{caption ? ' · ' : ''}{formatTag(category)}</span>
               )}
             </span>
             <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">{time}</span>
