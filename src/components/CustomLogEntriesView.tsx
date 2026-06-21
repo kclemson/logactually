@@ -388,6 +388,7 @@ export function CustomLogTypeDayRows({
   const isMedication = logType.value_type === 'medication';
   const isPanel = logType.value_type === 'panel';
   const isMemory = logType.value_type === 'memory';
+  const memoryCovers = useMemoryCovers(isMemory ? entries.map((e) => e.id) : []);
 
   return (
     <div className="space-y-0">
