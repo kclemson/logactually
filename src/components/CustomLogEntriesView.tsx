@@ -382,8 +382,10 @@ export function CustomLogTypeDayRows({
   showTypeHeader = true,
   showTrend = true,
 }: CustomLogTypeDayRowsProps) {
+  const navigate = useNavigate();
   const isMedication = logType.value_type === 'medication';
   const isPanel = logType.value_type === 'panel';
+  const isMemory = logType.value_type === 'memory';
 
   return (
     <div className="space-y-0">
