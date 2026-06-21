@@ -270,6 +270,9 @@ function TypeBody({
       />
     );
   }
+  if (logType.value_type === 'memory') {
+    return <MemoryTypeBody logType={logType} />;
+  }
   return (
     <EntryHistory
       logType={logType}
