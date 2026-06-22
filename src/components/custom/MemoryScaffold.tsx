@@ -62,15 +62,17 @@ export function MemoryScaffold({
   ) : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col select-none bg-black text-white">
-      <div className={cn('relative min-h-0 flex-1 overflow-hidden', isOverlay && 'min-h-full')}>
-        {stage}
-        {isOverlay && bottomBlock}
+    <div className="fixed inset-0 z-50 md:bg-black/80 md:p-6 lg:p-10">
+      <div className="relative flex h-full w-full flex-col select-none overflow-hidden bg-black text-white md:rounded-2xl md:shadow-2xl">
+        <div className={cn('relative min-h-0 flex-1 overflow-hidden', isOverlay && 'min-h-full')}>
+          {stage}
+          {isOverlay && bottomBlock}
+        </div>
+
+        {!isOverlay && bottomBlock}
+
+        {overlay}
       </div>
-
-      {!isOverlay && bottomBlock}
-
-      {overlay}
     </div>
   );
 }

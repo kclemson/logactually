@@ -1,25 +1,22 @@
-# Make the Ken Burns effect more pronounced
+Make the desktop memory viewer inset from viewport edges instead of full-bleed.
 
-The effect feels subtle because the zoom is small (`scale(1.25)`) and stretched across a slow 18s loop, so motion-per-second is tiny. I'll increase the zoom magnitude, widen the per-photo drift, and modestly shorten the loop so movement is clearly perceptible — without becoming jarring or revealing blank edges.
+## Problem
+`MemoryScaffold` currently renders the memory viewer with `fixed inset-0 z-50 bg-black`, covering the entire desktop viewport. The user finds this too large and wants it inset with visible surrounding space.
 
 ## Changes
 
-### `src/index.css`
-- Increase the keyframe end zoom from `scale(1.25)` to `scale(1.45)` (more visible push-in; the extra scale also keeps drift edges covered).
-- Shorten the loop from `18s` to `14s` so the same travel happens faster and reads as motion.
-- Keep `ease-in-out infinite alternate` (smooth, never snaps) and keep the reduced-motion disable intact.
+### `src/components/custom/MemoryScaffold.tsx`
+- Wrap the fixed root in a desktop-only inset container: on viewports >= `md` ( Tailwind `md:` breakpoint), apply outer padding and rounded corners so the viewer floats like a lightbox.
+- Add `md:p-6 lg:p-10` padding on the outer wrapper to create the inset.
+- Change the inner surface from `fixed inset-0` to `fixed inset-0 md:inset-6 lg:inset-10` on the black background layer, or alternatively keep `fixed inset-0` on the backdrop and constrain the content surface with max dimensions. **Chosen approach:** Add a `md:rounded-xl` border radius to the inner black surface and inset it with `md:inset-4 lg:inset-8` (exact values TBD in implementation) so edges of the viewport remain visible behind a translucent or solid app background.
+- Keep mobile unchanged: mobile remains full-bleed `inset-0` with safe-area handling.
+- Ensure `z-50` and overlay children (calendar, composer) remain correctly positioned relative to the inset frame.
 
-### `src/pages/MemoryViewer.tsx`
-- Widen the `KEN_BURNS_PRESETS` drift amounts so panning is more apparent while staying within the larger zoom margin (no blank edges):
-  - up-left / down-right: `~7%` / `~5.5%`
-  - left: `~8%`
-  - up: `~7%`
-  - down-left: `~5.5%`
-  - keep one pure push-in (center, `0%`) for variety.
-
-## Why these values
-At `scale(1.45)` the image is 45% larger than the frame, leaving ample margin so drifts up to ~8% never expose edges. Dropping to 14s raises the visible speed by ~30%. Together the zoom + pan become clearly noticeable while still feeling like a slow, cinematic Ken Burns drift rather than a fast animation.
+### Visual result
+- Desktop: dark background of the app peeks through around all four edges; the memory viewer is a rounded rectangle centered on screen.
+- Mobile: unchanged full-bleed experience.
 
 ## Verification
-- Open a memory in the viewer and confirm photos now visibly zoom and pan, with different photos drifting in different directions, and no blank/letterbox edges appearing mid-animation.
-- Confirm `prefers-reduced-motion` still fully disables the animation.
+- Open the memory viewer on desktop preview and confirm visible inset margins and rounded corners.
+- Confirm mobile preview still shows full-bleed with no rounded corners.
+- Confirm navigation, overlays, and keyboard interactions still work within the inset frame.
