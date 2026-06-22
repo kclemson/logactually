@@ -139,6 +139,7 @@ export function useCreateMemory() {
               width: meta.width || null,
               height: meta.height || null,
               duration: meta.duration || null,
+              originalName: file.name,
             });
           }
           onFileProgress?.(i, 'done');
