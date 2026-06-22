@@ -494,6 +494,56 @@ export function MemoryComposer({
         <MemoryActionBar actions={actions} />
       </div>
 
+      {/* Centered status overlay: an unmissable saving state, and a clear
+          failure card so a failed save can't be mistaken for success. */}
+      {(saving || error) && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 px-6 backdrop-blur-sm">
+          {saving ? (
+            <div className="flex w-full max-w-xs flex-col items-center gap-5 rounded-3xl bg-white/[0.07] px-8 py-9 text-center ring-1 ring-white/10">
+              <RadialProgress value={overallProgress} size={84} stroke={6} showPercent />
+              <div className="space-y-1">
+                <p className="text-base font-semibold">Saving your memory…</p>
+                <p className="text-sm text-white/70">
+                  {totalUploads > 0
+                    ? `Uploading ${Math.min(doneUploads + 1, totalUploads)} of ${totalUploads}…`
+                    : 'Almost there…'}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex w-full max-w-xs flex-col items-center gap-4 rounded-3xl bg-white/[0.07] px-8 py-9 text-center ring-1 ring-white/10">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/20 ring-1 ring-red-400/40">
+                <X className="h-6 w-6 text-red-300" />
+              </span>
+              <div className="space-y-1">
+                <p className="text-base font-semibold">Couldn’t save</p>
+                <p className="text-sm text-white/70">{error}</p>
+              </div>
+              <div className="flex w-full gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setError(null)}
+                  className="flex-1 rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white/85 transition-colors hover:bg-white/15"
+                >
+                  Dismiss
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError(null);
+                    handleSave();
+                  }}
+                  className="flex-1 rounded-full bg-teal-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-400"
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+
       <input
         ref={fileInputRef}
         type="file"
