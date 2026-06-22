@@ -82,6 +82,19 @@ export function ImportExportSection({ showWeights, showCustomLogs, hasCustomLogT
             </div>
           </>
         )}
+        {hasScrapbooks && !isReadOnly && (
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">Export photos, videos &amp; notes (zip)</p>
+            <button
+              onClick={exportScrapbook}
+              disabled={isExporting}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors disabled:opacity-50"
+            >
+              <Download className="h-4 w-4" />
+              Export Scrapbook
+            </button>
+          </div>
+        )}
         {canImportMemories && (
           <div className="flex items-center justify-between">
             <p className="text-xs text-muted-foreground">Import to photo scrapbook</p>
