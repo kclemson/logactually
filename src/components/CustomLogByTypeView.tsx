@@ -468,6 +468,15 @@ function MemoryTypeBody({ logType, density }: { logType: CustomLogType; density:
   const navigate = useNavigate();
   const { days, isLoading } = useMemoryDays(logType.id);
 
+  // Only the most recent days are rendered, so sign thumbnails for just those
+  // rows (mirrors the Daily view) instead of the whole scrapbook.
+  const recent = useMemo(() => days.slice(0, MAX_DATES), [days]);
+  const visibleEntryIds = useMemo(
+    () => recent.flatMap((day) => day.entries.map((e) => e.id)),
+    [recent],
+  );
+  const covers = useMemoryCovers(visibleEntryIds);
+
   const openViewer = (date?: string, entryId?: string) =>
     navigate(
       `/custom/memories?type=${logType.id}${date ? `&date=${date}` : ''}${entryId ? `&entry=${entryId}` : ''}`,
@@ -478,13 +487,10 @@ function MemoryTypeBody({ logType, density }: { logType: CustomLogType; density:
     return <p className="text-xs text-muted-foreground italic">No entries yet. Tap "+ Log" to add one.</p>;
   }
 
-  const recent = days.slice(0, MAX_DATES);
   const hiddenCount = days.length - recent.length;
 
   return (
     <div className="space-y-3">
-
-
       <div className="space-y-2">
         {recent.map((day) => (
           <div key={day.date} className="space-y-0">
@@ -495,7 +501,8 @@ function MemoryTypeBody({ logType, density }: { logType: CustomLogType; density:
               <MemoryEntryRow
                 key={entry.id}
                 entry={entry}
-                media={entry.media}
+                media={covers.get(entry.id) ?? []}
+                totalCount={entry.media.length}
                 density={density}
                 onOpen={() => openViewer(day.date, entry.id)}
               />
