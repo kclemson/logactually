@@ -64,7 +64,56 @@ function computeStart(
   return { dayIndex: 0, itemIndex: 0 };
 }
 
-const MemoryViewer = () => {
+/**
+ * Resolve the media `offset` slides away from the given position, crossing day
+ * boundaries the same way the viewer's next/prev navigation does — but purely,
+ * without touching state. Used to warm neighbor URLs/bitmaps ahead of a swipe.
+ * Returns null when there's nothing in that direction or the slot is text-only.
+ */
+function resolveNeighbor(
+  days: MemoryDay[],
+  dayIndex: number,
+  itemIndex: number,
+  offset: number,
+): MemoryMedia | null {
+  if (offset === 0) return null;
+  const step = offset > 0 ? 1 : -1;
+  let d = dayIndex;
+  let i = itemIndex;
+  for (let n = 0; n < Math.abs(offset); n++) {
+    let items = days[d] ? buildDayItems(days[d]) : [];
+    if (step > 0) {
+      if (i < items.length - 1) {
+        i += 1;
+      } else if (d < days.length - 1) {
+        d += 1;
+        i = 0;
+      } else {
+        return null;
+      }
+    } else {
+      if (i > 0) {
+        i -= 1;
+      } else if (d > 0) {
+        d -= 1;
+        items = buildDayItems(days[d]);
+        i = Math.max(0, items.length - 1);
+      } else {
+        return null;
+      }
+    }
+  }
+  const finalItems = days[d] ? buildDayItems(days[d]) : [];
+  return finalItems[i]?.media ?? null;
+}
+
+/** Signed URL for an image's full-bleed viewer display (downscaled transform).
+ * Centralized so the preloader and MediaSlide request the *same* cache key. */
+function viewerImageUrl(media: MemoryMedia): Promise<string | null> {
+  return getSignedMemoryUrl(media.storage_path, MEMORY_VIEW_TRANSFORM);
+}
+
+
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const typeId = searchParams.get('type');
