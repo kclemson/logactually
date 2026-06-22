@@ -142,6 +142,8 @@ const MemoryViewer = () => {
   const [direction, setDirection] = useState(0);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+
   const startedRef = useRef(initialStart.current !== null);
 
 
