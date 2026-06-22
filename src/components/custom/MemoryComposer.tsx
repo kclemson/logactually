@@ -334,8 +334,9 @@ export function MemoryComposer({
   const lift = keyboardInset ? { transform: `translateY(-${keyboardInset}px)` } : undefined;
 
   return createPortal(
+    <div className="fixed inset-0 z-50 md:flex md:items-center md:justify-center md:bg-black/80 md:p-6 lg:p-10">
     <div
-      className="fixed inset-0 z-50 flex select-none flex-col text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.35)]"
+      className="relative flex h-full w-full select-none flex-col text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.35)] md:h-auto md:max-h-[88vh] md:max-w-2xl md:overflow-hidden md:rounded-2xl md:shadow-2xl"
       style={{ backgroundImage: CANVAS_GRADIENT }}
     >
       {/* Header */}
