@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowDownUp, Upload } from 'lucide-react';
+import { ArrowDownUp, Upload, Download } from 'lucide-react';
 import { CollapsibleSection } from '@/components/CollapsibleSection';
 import { AppleHealthImport } from '@/components/AppleHealthImport';
 import { MemoryImportDialog } from '@/components/custom/MemoryImportDialog';
