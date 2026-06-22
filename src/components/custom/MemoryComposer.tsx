@@ -334,8 +334,9 @@ export function MemoryComposer({
   const lift = keyboardInset ? { transform: `translateY(-${keyboardInset}px)` } : undefined;
 
   return createPortal(
+    <div className="fixed inset-0 z-50 md:flex md:items-center md:justify-center md:bg-black/80 md:p-6 lg:p-10">
     <div
-      className="fixed inset-0 z-50 flex select-none flex-col text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.35)]"
+      className="relative flex h-full w-full select-none flex-col text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.35)] md:h-auto md:max-h-[88vh] md:max-w-2xl md:overflow-hidden md:rounded-2xl md:shadow-2xl"
       style={{ backgroundImage: CANVAS_GRADIENT }}
     >
       {/* Header */}
@@ -396,10 +397,10 @@ export function MemoryComposer({
               type="button"
               onClick={handlePick}
               disabled={disabled || saving}
-              className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-white/20 bg-white/[0.03] transition-colors hover:border-white/35 hover:bg-white/[0.06] disabled:opacity-50"
+              className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-white/20 bg-white/[0.03] transition-colors hover:border-white/35 hover:bg-white/[0.06] disabled:opacity-50 md:mx-auto md:max-w-md"
             >
-              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-teal-500/20 ring-1 ring-teal-400/40">
-                <ImagePlus className="h-7 w-7 text-teal-300" />
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-teal-500/20 ring-1 ring-teal-400/40 md:h-12 md:w-12">
+                <ImagePlus className="h-7 w-7 text-teal-300 md:h-6 md:w-6" />
               </span>
               <span className="text-base font-medium">Add photos or video</span>
 
@@ -407,7 +408,7 @@ export function MemoryComposer({
           ) : (
             <>
               {current && (
-                <div className="relative h-[42vh] w-full overflow-hidden rounded-2xl bg-black/30 ring-1 ring-white/10">
+                <div className="relative h-[42vh] w-full overflow-hidden rounded-2xl bg-black/30 ring-1 ring-white/10 md:mx-auto md:max-h-[440px] md:max-w-xl">
                   <MediaPreview file={current} />
                   {current.source === 'new' && current.status === 'uploading' && (
                     <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/45 backdrop-blur-[1px]">
@@ -418,7 +419,7 @@ export function MemoryComposer({
               )}
 
               {/* Filmstrip */}
-              <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1">
+              <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1 md:mx-auto md:max-w-xl">
                 {files.map((f, i) => (
                   <button
                     key={f.id}
@@ -552,6 +553,7 @@ export function MemoryComposer({
         className="hidden"
         onChange={handleFiles}
       />
+    </div>
     </div>,
     document.body,
   );
