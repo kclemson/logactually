@@ -454,7 +454,7 @@ export function buildReadme(manifest: ScrapbookManifest, skipped: number): strin
     `Scrapbooks: ${manifest.scrapbooks.length}`,
     `Posts: ${totalEntries}`,
     `Media files: ${totalMedia}`,
-    skipped > 0 ? `Skipped (could not download): ${skipped}` : '',
+    skipped > 0 ? `Skipped (could not download): ${skipped}` : null,
     '',
     'Contents',
     '--------',
