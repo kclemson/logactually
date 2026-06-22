@@ -196,13 +196,7 @@ const MemoryViewer = () => {
       onPrev={goPrevItem}
       onNext={goNextItem}
     >
-      {currentItem && (
-        <SlideContent
-          item={currentItem}
-          soundOn={soundOn}
-          onToggleSound={() => setSoundOn((v) => !v)}
-        />
-      )}
+      {currentItem && <SlideContent item={currentItem} />}
     </MemoryStage>
   );
 
