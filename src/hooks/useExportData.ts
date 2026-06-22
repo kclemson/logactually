@@ -3,6 +3,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 import { FoodEntry, FoodItem } from '@/types/food';
 import { exportFoodLog, exportWeightLog as exportWeightLogCSV, exportCustomLog, exportBloodworkLog, WeightSetExport, CustomLogExportRow, BloodworkExportRow } from '@/lib/csv-export';
+import {
+  buildScrapbookExport,
+  renderScrapbookHtml,
+  buildReadme,
+  type ExportScrapbookInput,
+  type ExportEntryInput,
+  type ExportMediaInput,
+} from '@/lib/scrapbook-export';
+import { MEMORY_BUCKET } from '@/lib/memory-media';
 import JSZip from 'jszip';
 import { format } from 'date-fns';
 
