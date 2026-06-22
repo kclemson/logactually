@@ -113,7 +113,7 @@ function viewerImageUrl(media: MemoryMedia): Promise<string | null> {
   return getSignedMemoryUrl(media.storage_path, MEMORY_VIEW_TRANSFORM);
 }
 
-
+const MemoryViewer = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const typeId = searchParams.get('type');
