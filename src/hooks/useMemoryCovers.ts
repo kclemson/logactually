@@ -1,12 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { getSignedMemoryUrls, memoryThumbPath, MEMORY_THUMB_TRANSFORM } from '@/lib/memory-media';
 import type { MemoryMedia } from './useMemoryMedia';
 
 /**
  * Fetches the first N media items (ordered by sort_order) for each of the given
- * memory entry ids, so list rows can show a leading thumbnail strip. Returns a
- * map of entryId -> media[]. Entries with no media (text-only) are absent.
+ * memory entry ids, so list rows can show a leading thumbnail strip. Each media
+ * item carries a pre-signed, resized `thumbUrl` (minted in one batched pass) so
+ * thumbnails render up-front instead of each one fetching its own signed URL.
+ * Returns a map of entryId -> media[]. Entries with no media (text-only) are absent.
  */
 export function useMemoryCovers(entryIds: string[], limit = 4) {
   const { user } = useAuth();
@@ -32,6 +35,13 @@ export function useMemoryCovers(entryIds: string[], limit = 4) {
           map.set(m.entry_id, [m as MemoryMedia]);
         }
       }
+      // Batch-sign every visible thumbnail in one pass, then attach the URL.
+      const shown = Array.from(map.values()).flat();
+      const urls = await getSignedMemoryUrls(
+        shown.map((m) => memoryThumbPath(m)),
+        MEMORY_THUMB_TRANSFORM,
+      );
+      for (const m of shown) m.thumbUrl = urls.get(memoryThumbPath(m)) ?? null;
       return map;
     },
     enabled: !!user && sorted.length > 0,
