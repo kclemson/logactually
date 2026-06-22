@@ -80,6 +80,8 @@ export function useMemoryDays(logTypeId: string | null) {
       return dayList;
     },
     enabled: !!user && !!logTypeId,
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
   });
 
   const deleteMemory = useMutation({
