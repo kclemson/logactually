@@ -372,15 +372,7 @@ function kenBurnsVariant(id: string) {
   return KEN_BURNS_PRESETS[hash % KEN_BURNS_PRESETS.length];
 }
 
-function MediaSlide({
-  media,
-  soundOn,
-  onToggleSound,
-}: {
-  media: MemoryMedia;
-  soundOn: boolean;
-  onToggleSound: () => void;
-}) {
+function MediaSlide({ media }: { media: MemoryMedia }) {
   const [url, setUrl] = useState<string | null>(null);
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
