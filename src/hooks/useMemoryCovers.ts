@@ -45,6 +45,8 @@ export function useMemoryCovers(entryIds: string[], limit = 4) {
       return map;
     },
     enabled: !!user && sorted.length > 0,
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
   });
 
   return covers;

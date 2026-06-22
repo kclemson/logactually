@@ -11,7 +11,14 @@ import { MemoryActionBar, type MemoryAction } from '@/components/custom/MemoryAc
 import { useCustomLogTypes } from '@/hooks/useCustomLogTypes';
 import { useMemoryDays, type MemoryDay, type MemoryEntry } from '@/hooks/useMemoryDays';
 import type { MemoryMedia } from '@/hooks/useMemoryMedia';
-import { getSignedMemoryUrl, invalidateSignedUrl, formatTag } from '@/lib/memory-media';
+import {
+  getSignedMemoryUrl,
+  invalidateSignedUrl,
+  formatTag,
+  memoryThumbPath,
+  MEMORY_THUMB_TRANSFORM,
+  MEMORY_VIEW_TRANSFORM,
+} from '@/lib/memory-media';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { cn } from '@/lib/utils';
 
@@ -55,6 +62,55 @@ function computeStart(
     if (dIdx >= 0) return { dayIndex: dIdx, itemIndex: 0 };
   }
   return { dayIndex: 0, itemIndex: 0 };
+}
+
+/**
+ * Resolve the media `offset` slides away from the given position, crossing day
+ * boundaries the same way the viewer's next/prev navigation does — but purely,
+ * without touching state. Used to warm neighbor URLs/bitmaps ahead of a swipe.
+ * Returns null when there's nothing in that direction or the slot is text-only.
+ */
+function resolveNeighbor(
+  days: MemoryDay[],
+  dayIndex: number,
+  itemIndex: number,
+  offset: number,
+): MemoryMedia | null {
+  if (offset === 0) return null;
+  const step = offset > 0 ? 1 : -1;
+  let d = dayIndex;
+  let i = itemIndex;
+  for (let n = 0; n < Math.abs(offset); n++) {
+    let items = days[d] ? buildDayItems(days[d]) : [];
+    if (step > 0) {
+      if (i < items.length - 1) {
+        i += 1;
+      } else if (d < days.length - 1) {
+        d += 1;
+        i = 0;
+      } else {
+        return null;
+      }
+    } else {
+      if (i > 0) {
+        i -= 1;
+      } else if (d > 0) {
+        d -= 1;
+        items = buildDayItems(days[d]);
+        i = Math.max(0, items.length - 1);
+      } else {
+        return null;
+      }
+    }
+  }
+  const finalItems = days[d] ? buildDayItems(days[d]) : [];
+  return finalItems[i]?.media ?? null;
+}
+
+/** Signed URL for an image's full-bleed viewer display (downscaled transform).
+ * Centralized so the preloader and MediaSlide request the *same* cache key. */
+function viewerImageUrl(media: MemoryMedia): Promise<string | null> {
+  return getSignedMemoryUrl(media.storage_path, MEMORY_VIEW_TRANSFORM);
 }
 
 const MemoryViewer = () => {
@@ -137,7 +193,37 @@ const MemoryViewer = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, [goNextItem, goPrevItem, close, editing, calendarOpen]);
 
+  // Warm the neighbor slides so swiping doesn't flash "Loading…". For each
+  // adjacent position we mint its signed URL (populating the in-memory cache)
+  // and, for images, decode the bitmap ahead of time. Fire-and-forget; videos
+  // only get their URL warmed (no byte-buffering).
+  useEffect(() => {
+    let cancelled = false;
+    for (const offset of [1, -1, 2]) {
+      const media = resolveNeighbor(days, dayIndex, clampedItemIndex, offset);
+      if (!media) continue;
+      if (media.kind === 'image') {
+        viewerImageUrl(media).then((u) => {
+          if (cancelled || !u) return;
+          const img = new Image();
+          img.src = u;
+        });
+        if (media.poster_path) getSignedMemoryUrl(media.poster_path, MEMORY_THUMB_TRANSFORM);
+      } else {
+        getSignedMemoryUrl(media.storage_path);
+        if (media.poster_path) getSignedMemoryUrl(media.poster_path, MEMORY_THUMB_TRANSFORM);
+      }
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [days, dayIndex, clampedItemIndex]);
+
   const datesWithData = useMemo(() => days.map((d) => parseISO(d.date)), [days]);
+
+  // O(1) membership test for the calendar (one Set instead of a linear scan per
+  // rendered day cell).
+  const dateKeySet = useMemo(() => new Set(days.map((d) => d.date)), [days]);
 
   // Category suggestions for the edit composer.
   const memoryCategories = useMemo(
@@ -294,7 +380,7 @@ const MemoryViewer = () => {
               }}
               modifiers={{ hasData: datesWithData }}
               modifiersClassNames={{ hasData: 'font-semibold text-teal-600 dark:text-teal-400' }}
-              disabled={(date) => !days.some((d) => d.date === format(date, 'yyyy-MM-dd'))}
+              disabled={(date) => !dateKeySet.has(format(date, 'yyyy-MM-dd'))}
             />
           </div>
         </div>
@@ -375,6 +461,10 @@ function kenBurnsVariant(id: string) {
 function MediaSlide({ media }: { media: MemoryMedia }) {
   const [url, setUrl] = useState<string | null>(null);
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
+  // A small (240px) signed URL used only for the blurred backdrop — blurring a
+  // full-res image every frame is the most expensive thing on screen, and a
+  // thumbnail looks identical once blurred.
+  const [backdropUrl, setBackdropUrl] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   // Smart per-orientation fill: portrait media fills the frame (cover) for a
   // true full-bleed feel; landscape/square stays letterboxed (contain) so
@@ -382,21 +472,31 @@ function MediaSlide({ media }: { media: MemoryMedia }) {
   const [fit, setFit] = useState<'contain' | 'cover'>('contain');
   const retriedRef = useRef(false);
 
+  const isImage = media.kind === 'image';
 
   useEffect(() => {
     let active = true;
     retriedRef.current = false;
     setUrl(null);
     setPosterUrl(null);
+    setBackdropUrl(null);
     setFit('contain');
-    getSignedMemoryUrl(media.storage_path).then((u) => active && setUrl(u));
+    // Images load a downscaled viewer-sized derivative; videos load the raw file.
+    (isImage ? viewerImageUrl(media) : getSignedMemoryUrl(media.storage_path)).then(
+      (u) => active && setUrl(u),
+    );
+    getSignedMemoryUrl(memoryThumbPath(media), MEMORY_THUMB_TRANSFORM).then(
+      (u) => active && setBackdropUrl(u),
+    );
     if (media.poster_path) {
-      getSignedMemoryUrl(media.poster_path).then((u) => active && setPosterUrl(u));
+      getSignedMemoryUrl(media.poster_path, MEMORY_THUMB_TRANSFORM).then(
+        (u) => active && setPosterUrl(u),
+      );
     }
     return () => {
       active = false;
     };
-  }, [media.storage_path, media.poster_path]);
+  }, [media, isImage]);
 
   // Autoplay each new video. Videos always start muted (so autoplay is
   // allowed); the native controls own muting from there, so there's no React
@@ -413,15 +513,15 @@ function MediaSlide({ media }: { media: MemoryMedia }) {
     if (retriedRef.current) return;
     retriedRef.current = true;
     invalidateSignedUrl(media.storage_path);
-    const fresh = await getSignedMemoryUrl(media.storage_path);
+    const fresh = await (isImage ? viewerImageUrl(media) : getSignedMemoryUrl(media.storage_path));
     setUrl(fresh);
-  }, [media.storage_path]);
+  }, [media, isImage]);
 
   const applyFit = useCallback((w: number, h: number) => {
     if (w > 0 && h > 0) setFit(h > w ? 'cover' : 'contain');
   }, []);
 
-  const backdrop = media.kind === 'image' ? url : posterUrl;
+  const backdrop = backdropUrl;
   const mediaFit =
     fit === 'cover' ? 'h-full w-full object-cover' : 'max-h-full max-w-full object-contain';
 

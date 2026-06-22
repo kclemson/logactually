@@ -135,6 +135,17 @@ export const MEMORY_THUMB_TRANSFORM: ThumbTransform = {
   resize: 'cover',
 };
 
+/** Viewer-sized transform for the immersive full-bleed image. `contain` bounds
+ * the image within the box while preserving aspect ratio (no padding), so the
+ * longest side is capped (~1600px) — lighter to fetch/decode than the raw
+ * original while staying crisp full-screen. Aspect ratio is preserved, so the
+ * viewer's cover/contain fit logic (which reads natural W/H) is unaffected. */
+export const MEMORY_VIEW_TRANSFORM: ThumbTransform = {
+  width: 1600,
+  height: 1600,
+  resize: 'contain',
+};
+
 /** Cache key for a (path, transform) pair — transformed and full URLs differ. */
 function cacheKey(path: string, transform?: ThumbTransform): string {
   return transform ? `${path}@${transform.width}x${transform.height}:${transform.resize ?? 'cover'}` : path;
