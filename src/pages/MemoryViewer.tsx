@@ -411,6 +411,29 @@ const MemoryViewer = () => {
           onCancel={() => setEditing(false)}
         />
       )}
+
+      {/* Delete confirmation */}
+      {confirmDeleteOpen && (
+        <AlertDialog open onOpenChange={(open) => !open && setConfirmDeleteOpen(false)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete this memory?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This permanently removes the memory and all its photos and videos.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </>
   );
 
