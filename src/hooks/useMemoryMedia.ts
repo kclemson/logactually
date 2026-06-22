@@ -26,6 +26,10 @@ export interface MemoryMedia {
   poster_path: string | null;
   sort_order: number;
   created_at: string;
+  /** The name of the file the user originally uploaded, kept so data exports
+   * can use friendly filenames instead of the GUID storage path. Null for media
+   * uploaded before this was captured. */
+  original_filename: string | null;
   /** Pre-signed, resized thumbnail URL, attached up-front by list/cover hooks so
    * thumbnails render without each one minting its own signed URL. */
   thumbUrl?: string | null;
