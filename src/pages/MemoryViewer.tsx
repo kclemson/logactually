@@ -398,15 +398,14 @@ function MediaSlide({ media }: { media: MemoryMedia }) {
     };
   }, [media.storage_path, media.poster_path]);
 
-  // Apply the session sound preference to the autoplaying (initially muted)
-  // video. Starting muted guarantees autoplay; unmuting works because `soundOn`
-  // only flips from a user tap, so the page already has activation.
+  // Autoplay each new video. Videos always start muted (so autoplay is
+  // allowed); the native controls own muting from there, so there's no React
+  // state mirroring the element's muted property.
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
-    el.muted = !soundOn;
     void el.play().catch(() => {});
-  }, [soundOn, url]);
+  }, [url]);
 
 
   const handleError = useCallback(async () => {
