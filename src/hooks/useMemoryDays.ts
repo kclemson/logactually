@@ -49,21 +49,11 @@ export function useMemoryDays(logTypeId: string | null) {
           .order('sort_order', { ascending: true });
         if (mediaErr) throw mediaErr;
         const all = (media ?? []) as MemoryMedia[];
-        // Batch-sign the first thumbnails per entry up-front so the list shows
-        // its leading thumbnail strip without per-thumbnail signing requests.
-        const coverPaths = new Set<string>();
-        const perEntryCount = new Map<string, number>();
-        for (const m of all) {
-          const n = perEntryCount.get(m.entry_id) ?? 0;
-          if (n < 4) {
-            coverPaths.add(memoryThumbPath(m));
-            perEntryCount.set(m.entry_id, n + 1);
-          }
-        }
-        const urls = await getSignedMemoryUrls([...coverPaths], MEMORY_THUMB_TRANSFORM);
+        // Group media metadata by entry. Thumbnails are signed separately, only
+        // for the rows actually rendered on screen (see useMemoryCovers); the
+        // immersive viewer signs full-resolution URLs itself.
         mediaByEntry = all.reduce((acc, m) => {
           const list = acc.get(m.entry_id) ?? [];
-          m.thumbUrl = urls.get(memoryThumbPath(m)) ?? null;
           list.push(m);
           acc.set(m.entry_id, list);
           return acc;
