@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowDownUp, Upload } from 'lucide-react';
+import { ArrowDownUp, Upload, Download } from 'lucide-react';
 import { CollapsibleSection } from '@/components/CollapsibleSection';
 import { AppleHealthImport } from '@/components/AppleHealthImport';
 import { MemoryImportDialog } from '@/components/custom/MemoryImportDialog';
@@ -15,10 +15,11 @@ interface ImportExportSectionProps {
 }
 
 export function ImportExportSection({ showWeights, showCustomLogs, hasCustomLogTypes, hasBloodworkLogType, memoryLogTypes, isReadOnly }: ImportExportSectionProps) {
-  const { isExporting, exportFoodLog, exportWeightLog, exportCustomLog, exportBloodwork, exportBloodworkFiles } = useExportData();
+  const { isExporting, exportFoodLog, exportWeightLog, exportCustomLog, exportBloodwork, exportBloodworkFiles, exportScrapbook } = useExportData();
   const [memoryImportOpen, setMemoryImportOpen] = useState(false);
 
-  const canImportMemories = showCustomLogs && memoryLogTypes.length > 0 && !isReadOnly;
+  const hasScrapbooks = showCustomLogs && memoryLogTypes.length > 0;
+  const canImportMemories = hasScrapbooks && !isReadOnly;
 
   return (
     <CollapsibleSection title="Import and Export" icon={ArrowDownUp} storageKey="settings-export" iconClassName="text-zinc-500 dark:text-zinc-400">
@@ -80,6 +81,19 @@ export function ImportExportSection({ showWeights, showCustomLogs, hasCustomLogT
               </button>
             </div>
           </>
+        )}
+        {hasScrapbooks && !isReadOnly && (
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">Export photos, videos &amp; notes (zip)</p>
+            <button
+              onClick={exportScrapbook}
+              disabled={isExporting}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors disabled:opacity-50"
+            >
+              <Download className="h-4 w-4" />
+              Export Scrapbook
+            </button>
+          </div>
         )}
         {canImportMemories && (
           <div className="flex items-center justify-between">

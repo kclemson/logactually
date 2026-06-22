@@ -1,0 +1,1 @@
+ALTER TABLE public.memory_media ADD COLUMN original_filename text;

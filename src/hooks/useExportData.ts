@@ -3,6 +3,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 import { FoodEntry, FoodItem } from '@/types/food';
 import { exportFoodLog, exportWeightLog as exportWeightLogCSV, exportCustomLog, exportBloodworkLog, WeightSetExport, CustomLogExportRow, BloodworkExportRow } from '@/lib/csv-export';
+import {
+  buildScrapbookExport,
+  renderScrapbookHtml,
+  buildReadme,
+  type ExportScrapbookInput,
+  type ExportEntryInput,
+  type ExportMediaInput,
+} from '@/lib/scrapbook-export';
+import { MEMORY_BUCKET } from '@/lib/memory-media';
 import JSZip from 'jszip';
 import { format } from 'date-fns';
 
@@ -274,6 +283,128 @@ export function useExportData() {
     }
   };
 
+  // Build one zip with every scrapbook: a self-rendering index.html, a
+  // machine-readable metadata.json, and the actual photo/video files.
+  const handleExportScrapbook = async () => {
+    setIsExporting(true);
+    try {
+      // 1. Find all memory-type ("scrapbook") log types.
+      const logTypes = await fetchAllPages<{ id: string; name: string }>((from, to) =>
+        supabase
+          .from('custom_log_types')
+          .select('id, name')
+          .eq('value_type', 'memory')
+          .order('created_at', { ascending: true })
+          .range(from, to)
+      );
+      if (logTypes.length === 0) return;
+
+      // 2. For each scrapbook, load its posts (oldest first) and their media.
+      const scrapbooks: ExportScrapbookInput[] = [];
+      for (const lt of logTypes) {
+        const entries = await fetchAllPages<any>((from, to) =>
+          supabase
+            .from('custom_log_entries')
+            .select('id, logged_date, created_at, text_value, category')
+            .eq('log_type_id', lt.id)
+            .order('logged_date', { ascending: true })
+            .order('created_at', { ascending: true })
+            .range(from, to)
+        );
+
+        const entryIds = entries.map((e) => e.id);
+        const mediaByEntry = new Map<string, ExportMediaInput[]>();
+        // Load media in chunks to stay well under URL/row limits.
+        const CHUNK = 200;
+        for (let i = 0; i < entryIds.length; i += CHUNK) {
+          const chunk = entryIds.slice(i, i + CHUNK);
+          const media = await fetchAllPages<any>((from, to) =>
+            supabase
+              .from('memory_media')
+              .select('id, entry_id, kind, mime_type, width, height, duration_secs, sort_order, original_filename, storage_path, poster_path')
+              .in('entry_id', chunk)
+              .order('sort_order', { ascending: true })
+              .range(from, to)
+          );
+          for (const m of media) {
+            const list = mediaByEntry.get(m.entry_id) ?? [];
+            list.push({
+              id: m.id,
+              entry_id: m.entry_id,
+              kind: m.kind,
+              mime_type: m.mime_type,
+              width: m.width != null ? Number(m.width) : null,
+              height: m.height != null ? Number(m.height) : null,
+              duration_secs: m.duration_secs != null ? Number(m.duration_secs) : null,
+              sort_order: m.sort_order ?? 0,
+              original_filename: m.original_filename ?? null,
+              storage_path: m.storage_path,
+              poster_path: m.poster_path ?? null,
+            });
+            mediaByEntry.set(m.entry_id, list);
+          }
+        }
+
+        const exportEntries: ExportEntryInput[] = entries.map((e) => ({
+          id: e.id,
+          date: e.logged_date,
+          created_at: e.created_at,
+          category: e.category ?? null,
+          note: e.text_value ?? null,
+          media: mediaByEntry.get(e.id) ?? [],
+        }));
+
+        scrapbooks.push({ log_type_id: lt.id, name: lt.name, entries: exportEntries });
+      }
+
+      // 3. Build the manifest + the list of media files to fetch.
+      const { manifest, tasks } = buildScrapbookExport(scrapbooks);
+
+      // 4. Download each media file (concurrency = 3) into the zip.
+      const zip = new JSZip();
+      let skipped = 0;
+      const queue = [...tasks];
+      const workers = Array.from({ length: 3 }, async () => {
+        while (queue.length) {
+          const task = queue.shift();
+          if (!task) continue;
+          try {
+            const { data: signed, error } = await supabase.storage
+              .from(MEMORY_BUCKET)
+              .createSignedUrl(task.storage_path, 600);
+            if (error || !signed?.signedUrl) throw error ?? new Error('No signed URL');
+            const res = await fetch(signed.signedUrl);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            zip.file(task.zip_path, await res.blob());
+          } catch (err) {
+            skipped++;
+            logger.error('Scrapbook media export skipped:', task.storage_path, err);
+          }
+        }
+      });
+      await Promise.all(workers);
+
+      // 5. Add the human + machine readable files and download.
+      zip.file('index.html', renderScrapbookHtml(manifest));
+      zip.file('metadata.json', JSON.stringify(manifest, null, 2));
+      zip.file('README.txt', buildReadme(manifest, skipped));
+
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `scrapbook-export-${format(new Date(), 'yyyy-MM-dd')}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      logger.error('Export failed:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return {
     isExporting,
     exportFoodLog: handleExportFoodLog,
@@ -281,5 +412,6 @@ export function useExportData() {
     exportCustomLog: handleExportCustomLog,
     exportBloodwork: handleExportBloodwork,
     exportBloodworkFiles: handleExportBloodworkFiles,
+    exportScrapbook: handleExportScrapbook,
   };
 }

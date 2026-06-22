@@ -26,6 +26,10 @@ export interface MemoryMedia {
   poster_path: string | null;
   sort_order: number;
   created_at: string;
+  /** The name of the file the user originally uploaded, kept so data exports
+   * can use friendly filenames instead of the GUID storage path. Null for media
+   * uploaded before this was captured. */
+  original_filename: string | null;
   /** Pre-signed, resized thumbnail URL, attached up-front by list/cover hooks so
    * thumbnails render without each one minting its own signed URL. */
   thumbUrl?: string | null;
@@ -50,6 +54,7 @@ interface UploadedFile {
   width: number | null;
   height: number | null;
   duration: number | null;
+  originalName: string;
 }
 
 /**
@@ -107,6 +112,7 @@ export function useCreateMemory() {
               width,
               height,
               duration: null,
+              originalName: file.name,
             });
           } else {
             const meta = await extractVideoMeta(file);
@@ -133,6 +139,7 @@ export function useCreateMemory() {
               width: meta.width || null,
               height: meta.height || null,
               duration: meta.duration || null,
+              originalName: file.name,
             });
           }
           onFileProgress?.(i, 'done');
@@ -170,6 +177,7 @@ export function useCreateMemory() {
             duration_secs: u.duration,
             poster_path: u.posterPath,
             sort_order: idx,
+            original_filename: u.originalName,
           }));
           const { error: mediaErr } = await supabase.from('memory_media').insert(rows);
           if (mediaErr) {
@@ -268,6 +276,7 @@ export function useUpdateMemory() {
           width: number | null;
           height: number | null;
           duration: number | null;
+          original_filename: string | null;
         }
         const finalRows: FinalRow[] = [];
 
@@ -284,6 +293,7 @@ export function useUpdateMemory() {
               width: m.width,
               height: m.height,
               duration: m.duration_secs,
+              original_filename: m.original_filename,
             });
             continue;
           }
@@ -312,6 +322,7 @@ export function useUpdateMemory() {
               width,
               height,
               duration: null,
+              original_filename: file.name,
             });
           } else {
             const meta = await extractVideoMeta(file);
@@ -341,6 +352,7 @@ export function useUpdateMemory() {
               width: meta.width || null,
               height: meta.height || null,
               duration: meta.duration || null,
+              original_filename: file.name,
             });
           }
           onItemProgress?.(i, 'done');
@@ -373,6 +385,7 @@ export function useUpdateMemory() {
             duration_secs: r.duration,
             poster_path: r.poster_path,
             sort_order: idx,
+            original_filename: r.original_filename,
           }));
         if (newInserts.length > 0) {
           const { error: insErr } = await supabase.from('memory_media').insert(newInserts);

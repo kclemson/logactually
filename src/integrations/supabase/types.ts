@@ -369,6 +369,7 @@ export type Database = {
           id: string
           kind: string
           mime_type: string | null
+          original_filename: string | null
           poster_path: string | null
           sort_order: number
           storage_path: string
@@ -384,6 +385,7 @@ export type Database = {
           id?: string
           kind: string
           mime_type?: string | null
+          original_filename?: string | null
           poster_path?: string | null
           sort_order?: number
           storage_path: string
@@ -399,6 +401,7 @@ export type Database = {
           id?: string
           kind?: string
           mime_type?: string | null
+          original_filename?: string | null
           poster_path?: string | null
           sort_order?: number
           storage_path?: string
