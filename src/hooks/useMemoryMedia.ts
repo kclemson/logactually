@@ -385,6 +385,7 @@ export function useUpdateMemory() {
             duration_secs: r.duration,
             poster_path: r.poster_path,
             sort_order: idx,
+            original_filename: r.original_filename,
           }));
         if (newInserts.length > 0) {
           const { error: insErr } = await supabase.from('memory_media').insert(newInserts);
