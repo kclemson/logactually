@@ -10,6 +10,7 @@ import {
   buildPosterPath,
   processImageFile,
   extractVideoMeta,
+  uploadMemoryFileResumable,
 } from '@/lib/memory-media';
 
 export interface MemoryMedia {
@@ -37,13 +38,23 @@ export interface MemoryMedia {
 
 export type FileUploadStatus = 'queued' | 'uploading' | 'done';
 
+/**
+ * Report per-file upload progress. `progress` is the fraction (0..1) of bytes
+ * uploaded for that file; for 'queued'/'done' it's 0/1 respectively.
+ */
+export type FileProgressFn = (
+  index: number,
+  status: FileUploadStatus,
+  progress: number,
+) => void;
+
 export interface CreateMemoryParams {
   logTypeId: string;
   loggedDate: string;
   note: string | null;
   category: string | null;
   files: File[];
-  onFileProgress?: (index: number, status: FileUploadStatus) => void;
+  onFileProgress?: FileProgressFn;
 }
 
 interface UploadedFile {
@@ -96,14 +107,13 @@ export function useCreateMemory() {
           const mediaId = crypto.randomUUID();
           const ext = fileExtension(file.name, kind);
           const mediaPath = buildMediaPath(user.id, entryId, mediaId, ext);
-          onFileProgress?.(i, 'uploading');
+          onFileProgress?.(i, 'uploading', 0);
 
           if (kind === 'image') {
             const { blob, width, height } = await processImageFile(file);
-            const { error } = await supabase.storage
-              .from(MEMORY_BUCKET)
-              .upload(mediaPath, blob, { contentType: 'image/jpeg', upsert: false });
-            if (error) throw error;
+            await uploadMemoryFileResumable(mediaPath, blob, 'image/jpeg', (p) =>
+              onFileProgress?.(i, 'uploading', p),
+            );
             uploaded.push({
               mediaPath,
               posterPath: null,
@@ -116,20 +126,24 @@ export function useCreateMemory() {
             });
           } else {
             const meta = await extractVideoMeta(file);
-            const { error } = await supabase.storage
-              .from(MEMORY_BUCKET)
-              .upload(mediaPath, file, { contentType: file.type, upsert: false });
-            if (error) throw error;
+            await uploadMemoryFileResumable(
+              mediaPath,
+              file,
+              file.type || 'video/mp4',
+              (p) => onFileProgress?.(i, 'uploading', p),
+            );
             let posterPath: string | null = null;
             if (meta.posterBlob) {
               posterPath = buildPosterPath(user.id, entryId, mediaId);
-              const { error: posterErr } = await supabase.storage
-                .from(MEMORY_BUCKET)
-                .upload(posterPath, meta.posterBlob, {
-                  contentType: 'image/jpeg',
-                  upsert: false,
-                });
-              if (posterErr) posterPath = null; // poster is best-effort
+              try {
+                await uploadMemoryFileResumable(
+                  posterPath,
+                  meta.posterBlob,
+                  'image/jpeg',
+                );
+              } catch {
+                posterPath = null; // poster is best-effort
+              }
             }
             uploaded.push({
               mediaPath,
@@ -142,7 +156,7 @@ export function useCreateMemory() {
               originalName: file.name,
             });
           }
-          onFileProgress?.(i, 'done');
+          onFileProgress?.(i, 'done', 1);
         }
 
         // All uploads succeeded — now persist the DB rows.
@@ -225,7 +239,7 @@ export interface UpdateMemoryParams {
   /** Final ordered media list (existing kept + new uploads). */
   items: EditMediaItem[];
   /** Progress callback keyed by the item index within `items`. */
-  onItemProgress?: (index: number, status: FileUploadStatus) => void;
+  onItemProgress?: FileProgressFn;
 }
 
 /**
@@ -304,14 +318,13 @@ export function useUpdateMemory() {
           const mediaId = crypto.randomUUID();
           const ext = fileExtension(file.name, kind);
           const mediaPath = buildMediaPath(user.id, entryId, mediaId, ext);
-          onItemProgress?.(i, 'uploading');
+          onItemProgress?.(i, 'uploading', 0);
 
           if (kind === 'image') {
             const { blob, width, height } = await processImageFile(file);
-            const { error } = await supabase.storage
-              .from(MEMORY_BUCKET)
-              .upload(mediaPath, blob, { contentType: 'image/jpeg', upsert: false });
-            if (error) throw error;
+            await uploadMemoryFileResumable(mediaPath, blob, 'image/jpeg', (p) =>
+              onItemProgress?.(i, 'uploading', p),
+            );
             newlyUploaded.push(mediaPath);
             finalRows.push({
               existingId: null,
@@ -326,22 +339,26 @@ export function useUpdateMemory() {
             });
           } else {
             const meta = await extractVideoMeta(file);
-            const { error } = await supabase.storage
-              .from(MEMORY_BUCKET)
-              .upload(mediaPath, file, { contentType: file.type, upsert: false });
-            if (error) throw error;
+            await uploadMemoryFileResumable(
+              mediaPath,
+              file,
+              file.type || 'video/mp4',
+              (p) => onItemProgress?.(i, 'uploading', p),
+            );
             newlyUploaded.push(mediaPath);
             let posterPath: string | null = null;
             if (meta.posterBlob) {
               posterPath = buildPosterPath(user.id, entryId, mediaId);
-              const { error: posterErr } = await supabase.storage
-                .from(MEMORY_BUCKET)
-                .upload(posterPath, meta.posterBlob, {
-                  contentType: 'image/jpeg',
-                  upsert: false,
-                });
-              if (posterErr) posterPath = null;
-              else newlyUploaded.push(posterPath);
+              try {
+                await uploadMemoryFileResumable(
+                  posterPath,
+                  meta.posterBlob,
+                  'image/jpeg',
+                );
+                newlyUploaded.push(posterPath);
+              } catch {
+                posterPath = null;
+              }
             }
             finalRows.push({
               existingId: null,
@@ -355,7 +372,7 @@ export function useUpdateMemory() {
               original_filename: file.name,
             });
           }
-          onItemProgress?.(i, 'done');
+          onItemProgress?.(i, 'done', 1);
         }
 
         // 2. Update the entry's caption, category + date.

@@ -27,6 +27,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useKeyboardInset } from '@/hooks/useKeyboardInset';
 import { MemoryActionBar, type MemoryAction } from './MemoryActionBar';
+import { RadialProgress } from './RadialProgress';
 
 interface MemoryComposerProps {
   label: string;
@@ -52,6 +53,7 @@ type PendingFile =
       kind: MediaKind;
       previewUrl: string;
       status: FileUploadStatus;
+      progress: number; // 0..1, byte-level upload progress
     }
   | {
       id: string;
@@ -60,6 +62,7 @@ type PendingFile =
       kind: MediaKind;
       previewUrl: string; // '' until the signed URL resolves
       status: FileUploadStatus;
+      progress: number;
     };
 
 // One continuous teal-to-navy canvas. Flows edge-to-edge — writing and media
@@ -92,6 +95,7 @@ export function MemoryComposer({
       kind: m.kind,
       previewUrl: '',
       status: 'done' as FileUploadStatus,
+      progress: 1,
     })),
   );
   const [index, setIndex] = useState(0);
@@ -144,6 +148,20 @@ export function MemoryComposer({
   const current = files[Math.min(index, files.length - 1)];
   const canSave = !disabled && !saving && (note.trim().length > 0 || hasMedia);
 
+  // Upload aggregates for the centered "Saving…" overlay. Only newly-added files
+  // actually upload; existing media (in edit mode) is already stored.
+  const uploadingFiles = files.filter((f) => f.source === 'new');
+  const totalUploads = uploadingFiles.length;
+  const doneUploads = uploadingFiles.filter((f) => f.status === 'done').length;
+  const overallProgress =
+    totalUploads === 0
+      ? saving
+        ? 1
+        : 0
+      : uploadingFiles.reduce((sum, f) => sum + (f.status === 'done' ? 1 : f.progress), 0) /
+        totalUploads;
+  const isSingleMedia = files.length === 1;
+
   const dateObj = parseISO(loggedDate);
   const dateLabel = isToday(dateObj) ? 'Today' : format(dateObj, 'EEE, MMM d, yyyy');
 
@@ -165,6 +183,7 @@ export function MemoryComposer({
         kind,
         previewUrl: URL.createObjectURL(file),
         status: 'queued',
+        progress: 0,
       });
     }
     if (added.length === 0) return;
@@ -211,7 +230,9 @@ export function MemoryComposer({
     const onSettledError = (err: unknown) => {
       setError(err instanceof Error ? err.message : 'Could not save memory');
       setFiles((prev) =>
-        prev.map((f) => (f.source === 'new' ? { ...f, status: 'queued' } : f)),
+        prev.map((f) =>
+          f.source === 'new' ? { ...f, status: 'queued', progress: 0 } : f,
+        ),
       );
     };
 
@@ -231,8 +252,10 @@ export function MemoryComposer({
           category,
           originalMedia: editEntry.media,
           items,
-          onItemProgress: (i, status) => {
-            setFiles((prev) => prev.map((f, fi) => (fi === i ? { ...f, status } : f)));
+          onItemProgress: (i, status, progress) => {
+            setFiles((prev) =>
+              prev.map((f, fi) => (fi === i ? { ...f, status, progress } : f)),
+            );
           },
         },
         {
@@ -250,8 +273,10 @@ export function MemoryComposer({
         note,
         category,
         files: files.flatMap((f) => (f.source === 'new' ? [f.file] : [])),
-        onFileProgress: (i, status) => {
-          setFiles((prev) => prev.map((f, fi) => (fi === i ? { ...f, status } : f)));
+        onFileProgress: (i, status, progress) => {
+          setFiles((prev) =>
+            prev.map((f, fi) => (fi === i ? { ...f, status, progress } : f)),
+          );
         },
       },
       {
@@ -382,8 +407,13 @@ export function MemoryComposer({
           ) : (
             <>
               {current && (
-                <div className="h-[42vh] w-full overflow-hidden rounded-2xl bg-black/30 ring-1 ring-white/10">
+                <div className="relative h-[42vh] w-full overflow-hidden rounded-2xl bg-black/30 ring-1 ring-white/10">
                   <MediaPreview file={current} />
+                  {current.source === 'new' && current.status === 'uploading' && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/45 backdrop-blur-[1px]">
+                      <RadialProgress value={current.progress} size={92} stroke={6} showPercent />
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -413,9 +443,9 @@ export function MemoryComposer({
                         </span>
                       </>
                     )}
-                    {f.status === 'uploading' && (
-                      <span className="absolute inset-0 flex items-center justify-center bg-black/50">
-                        <Loader2 className="h-4 w-4 animate-spin text-white" />
+                    {files.length > 1 && f.status === 'uploading' && (
+                      <span className="absolute inset-0 flex items-center justify-center bg-black/55">
+                        <RadialProgress value={f.progress} size={34} stroke={3} />
                       </span>
                     )}
                   </button>
@@ -440,7 +470,7 @@ export function MemoryComposer({
         className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/55 via-black/25 to-transparent px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-10"
         style={lift}
       >
-        {error && <p className="mb-2 text-xs text-red-300">{error}</p>}
+        
 
         <div className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5">
           <span className="text-sm text-teal-300">#</span>
@@ -463,6 +493,56 @@ export function MemoryComposer({
 
         <MemoryActionBar actions={actions} />
       </div>
+
+      {/* Centered status overlay: an unmissable saving state, and a clear
+          failure card so a failed save can't be mistaken for success. */}
+      {(saving || error) && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 px-6 backdrop-blur-sm">
+          {saving ? (
+            <div className="flex w-full max-w-xs flex-col items-center gap-5 rounded-3xl bg-white/[0.07] px-8 py-9 text-center ring-1 ring-white/10">
+              <RadialProgress value={overallProgress} size={84} stroke={6} showPercent />
+              <div className="space-y-1">
+                <p className="text-base font-semibold">Saving your memory…</p>
+                <p className="text-sm text-white/70">
+                  {totalUploads > 0
+                    ? `Uploading ${Math.min(doneUploads + 1, totalUploads)} of ${totalUploads}…`
+                    : 'Almost there…'}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex w-full max-w-xs flex-col items-center gap-4 rounded-3xl bg-white/[0.07] px-8 py-9 text-center ring-1 ring-white/10">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/20 ring-1 ring-red-400/40">
+                <X className="h-6 w-6 text-red-300" />
+              </span>
+              <div className="space-y-1">
+                <p className="text-base font-semibold">Couldn’t save</p>
+                <p className="text-sm text-white/70">{error}</p>
+              </div>
+              <div className="flex w-full gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setError(null)}
+                  className="flex-1 rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white/85 transition-colors hover:bg-white/15"
+                >
+                  Dismiss
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError(null);
+                    handleSave();
+                  }}
+                  className="flex-1 rounded-full bg-teal-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-400"
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
 
       <input
         ref={fileInputRef}

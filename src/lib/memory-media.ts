@@ -1,6 +1,61 @@
+import { Upload } from 'tus-js-client';
 import { supabase } from '@/integrations/supabase/client';
 
 export const MEMORY_BUCKET = 'memory-media';
+
+// ---------------------------------------------------------------------------
+// Resumable uploads (TUS) — used for ALL memory media so large phone videos
+// upload reliably (no ~50MB single-request cap) and we get real byte-level
+// progress to drive the per-file progress rings.
+// ---------------------------------------------------------------------------
+
+/** 6MB chunks — the size the storage resumable endpoint expects. */
+const RESUMABLE_CHUNK_SIZE = 6 * 1024 * 1024;
+
+/**
+ * Upload a blob/file to the memory bucket via the resumable (TUS) protocol,
+ * reporting fractional progress (0..1) as bytes flow. Resolves once the upload
+ * completes; rejects on error. `upsert` is false to preserve the existing
+ * "never overwrite" semantics.
+ */
+export async function uploadMemoryFileResumable(
+  path: string,
+  data: Blob | File,
+  contentType: string,
+  onProgress?: (fraction: number) => void,
+): Promise<void> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) throw new Error('Not authenticated');
+
+  const endpoint = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/upload/resumable`;
+
+  await new Promise<void>((resolve, reject) => {
+    const upload = new Upload(data, {
+      endpoint,
+      retryDelays: [0, 1000, 3000, 5000],
+      headers: { authorization: `Bearer ${accessToken}` },
+      uploadDataDuringCreation: true,
+      removeFingerprintOnSuccess: true,
+      chunkSize: RESUMABLE_CHUNK_SIZE,
+      metadata: {
+        bucketName: MEMORY_BUCKET,
+        objectName: path,
+        contentType,
+        cacheControl: '3600',
+      },
+      onError: (err) => reject(err),
+      onProgress: (bytesUploaded, bytesTotal) => {
+        if (bytesTotal > 0) onProgress?.(bytesUploaded / bytesTotal);
+      },
+      onSuccess: () => {
+        onProgress?.(1);
+        resolve();
+      },
+    });
+    upload.start();
+  });
+}
 
 // Signed URLs are minted with a long TTL so nothing expires while the user is
 // browsing a session. The in-memory cache treats an entry as valid for a bit
