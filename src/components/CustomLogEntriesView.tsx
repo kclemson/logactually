@@ -387,7 +387,7 @@ export function MemoryEntryRow({
   const thumbnails = (
     <div className="flex items-center gap-1.5">
       {shown.map((m) => (
-        <MemoryThumb key={m.id} media={m} className={thumbSize} />
+        <MemoryThumb key={m.id} media={m} url={m.thumbUrl} className={thumbSize} />
       ))}
       {extra > 0 && (
         <span className={cn('flex shrink-0 items-center justify-center rounded-md bg-muted text-xs text-muted-foreground', thumbSize)}>
