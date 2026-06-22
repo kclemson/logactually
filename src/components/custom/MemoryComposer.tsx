@@ -27,6 +27,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useKeyboardInset } from '@/hooks/useKeyboardInset';
 import { MemoryActionBar, type MemoryAction } from './MemoryActionBar';
+import { RadialProgress } from './RadialProgress';
 
 interface MemoryComposerProps {
   label: string;
