@@ -468,31 +468,21 @@ function MediaSlide({ media }: { media: MemoryMedia }) {
             <div className="text-white/50 text-sm">Loading…</div>
           )
         ) : url ? (
-          <>
-            <video
-              ref={videoRef}
-              src={url}
-              poster={posterUrl ?? undefined}
-              controls
-              autoPlay
-              loop
-              muted
-              playsInline
-              onLoadedMetadata={(e) =>
-                applyFit(e.currentTarget.videoWidth, e.currentTarget.videoHeight)
-              }
-              onError={handleError}
-              className={mediaFit}
-            />
-            <button
-              type="button"
-              onClick={onToggleSound}
-              aria-label={soundOn ? 'Mute' : 'Unmute'}
-              className="absolute right-3 top-3 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-black/45 text-white backdrop-blur-md transition-colors hover:bg-black/65"
-            >
-              {soundOn ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
-            </button>
-          </>
+          <video
+            ref={videoRef}
+            src={url}
+            poster={posterUrl ?? undefined}
+            controls
+            autoPlay
+            loop
+            muted
+            playsInline
+            onLoadedMetadata={(e) =>
+              applyFit(e.currentTarget.videoWidth, e.currentTarget.videoHeight)
+            }
+            onError={handleError}
+            className={mediaFit}
+          />
         ) : (
           <div className="text-white/50 text-sm">Loading…</div>
         )}
