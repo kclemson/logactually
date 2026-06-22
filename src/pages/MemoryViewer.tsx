@@ -8,6 +8,16 @@ import { MemoryComposer } from '@/components/custom/MemoryComposer';
 import { MemoryScaffold } from '@/components/custom/MemoryScaffold';
 import { MemoryStage } from '@/components/custom/MemoryStage';
 import { MemoryActionBar, type MemoryAction } from '@/components/custom/MemoryActionBar';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useCustomLogTypes } from '@/hooks/useCustomLogTypes';
 import { useMemoryDays, type MemoryDay, type MemoryEntry } from '@/hooks/useMemoryDays';
 import type { MemoryMedia } from '@/hooks/useMemoryMedia';
