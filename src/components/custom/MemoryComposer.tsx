@@ -553,6 +553,7 @@ export function MemoryComposer({
         className="hidden"
         onChange={handleFiles}
       />
+    </div>
     </div>,
     document.body,
   );
