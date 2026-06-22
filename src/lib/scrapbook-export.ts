@@ -446,7 +446,7 @@ export function renderScrapbookHtml(manifest: ScrapbookManifest): string {
 export function buildReadme(manifest: ScrapbookManifest, skipped: number): string {
   const totalEntries = manifest.scrapbooks.reduce((n, s) => n + s.entry_count, 0);
   const totalMedia = manifest.scrapbooks.reduce((n, s) => n + s.media_count, 0);
-  const lines = [
+  const lines: (string | null)[] = [
     `${manifest.app} — Scrapbook export`,
     `Exported: ${manifest.exported_at}`,
     `Schema: ${manifest.schema} (version ${manifest.version})`,
