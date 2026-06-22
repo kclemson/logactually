@@ -1,40 +1,20 @@
-# Unify scrapbook thumbnail loading: one signing path, bounded to what's on screen
+## Make the Ken Burns effect more noticeable
 
-## Problem
+The memory viewer's Ken Burns motion is too subtle to perceive. Two factors cause this: the zoom is tiny (`scale(1.12)`), and the per-photo drift offsets are tiny (~1.5–2%), spread across a long `25s` loop. We'll increase the zoom and drift magnitudes and modestly shorten the loop so the motion reads clearly without becoming distracting.
 
-Scrapbook list items render through one shared component (`MemoryEntryRow`), but they're fed by two different data hooks:
+### Changes
 
-- **Daily** uses `useMemoryCovers(entryIds)` — fetches the first 4 media and signs small thumbnails **only for the entries passed in**. Lean and bounded.
-- **All** and **Scrapbook (focused)** use `useMemoryDays(typeId)` — loads every entry + all media, and signs the first-4 cover thumbnails for **every** entry (up to 2000) before the list can paint, even though only 30 days are rendered.
+**`src/index.css`** — strengthen the zoom and speed of the `.kenburns` animation:
+- In `@keyframes kenburns`, bump the end scale from `1.12` to roughly `1.25` so the push-in is clearly visible.
+- Reduce the animation duration from `25s` to about `18s` so the motion is perceptible within a single view of a photo.
+- Leave the `prefers-reduced-motion` disable rule untouched.
 
-`useMemoryDays` exists mainly for the immersive viewer (`MemoryViewer`), which needs each entry's full media to build slides — but the viewer signs full-resolution URLs itself and never reads the `thumbUrl` the hook mints. So that signing pass is wasted for the viewer and far too broad for the list. That is what makes All/Scrapbook lag with gray squares while Daily feels fine.
+**`src/pages/MemoryViewer.tsx`** — increase the drift in `KEN_BURNS_PRESETS`:
+- Roughly double the `tx`/`ty` offsets (e.g. `±2%` → `±4–5%`, `±1.5%` → `±3%`) so the pan/drift accompanying the zoom is noticeable. Keep the center "push-in" preset at `0%/0%` (its motion comes purely from the stronger zoom). Keep the deterministic per-id selection so each photo still animates consistently.
 
-## Fix: make `useMemoryCovers` the single thumbnail-signing path
+### Notes / tradeoffs
+- A larger zoom (`1.25`) means more of the image edges are cropped at the end of the loop. The frame is already `overflow-hidden` and portrait media uses `object-cover`, so this is safe; letterboxed (contain) photos simply crop slightly more inward at peak zoom, which is the intended Ken Burns look.
+- These are the two tunable knobs (zoom scale + drift %, plus duration). If after seeing it you want it stronger or gentler, we can nudge `scale` and the drift percentages further.
 
-### 1. `src/hooks/useMemoryDays.ts`
-Remove the up-front cover-signing pass (the block that collects `coverPaths`, calls `getSignedMemoryUrls`, and assigns `m.thumbUrl`). The hook keeps loading entries + full media metadata (still needed by the viewer and by delete), but no longer signs anything. Media items come back with `thumbUrl` unset.
-
-### 2. `src/components/CustomLogByTypeView.tsx` (`MemoryTypeBody`)
-After computing `recent = days.slice(0, MAX_DATES)`:
-- Collect the entry ids of the visible days only.
-- Call `useMemoryCovers(visibleEntryIds)` to fetch + sign thumbnails for just those rows — exactly how Daily works.
-- Pass the signed covers to each `MemoryEntryRow` for the thumbnail strip, while still passing the entry's full media count so the "+N" overflow badge stays accurate.
-
-### 3. `src/components/CustomLogEntriesView.tsx` (`MemoryEntryRow`)
-Add an optional `totalCount` prop (defaults to `media.length`). Since `useMemoryCovers` caps its result at 4, the focused/All views pass `totalCount={entry.media.length}` so "+N" reflects the true number of attachments. Daily's call site is unchanged. The thumbnail strip renders from the (capped, signed) `media` prop; the overflow count uses `totalCount`.
-
-## Result
-- Thumbnails are signed and downloaded **only for the rows actually on screen**, in all three views.
-- One signing path (`useMemoryCovers`) instead of two divergent strategies.
-- The immersive viewer is untouched (it already signs full-resolution media itself).
-- The "+N more" badge keeps working.
-
-## Out of scope (possible later follow-up — "Option B")
-`useMemoryDays` still loads all media *metadata* (JSON only, no image bytes) for the list's grouping. That's cheap and not what's causing the visible lag. If it ever matters, a later change can give the list its own lean "entries grouped by day" query and make `useMemoryDays` viewer-only — independently, without redoing this work.
-
-## Verification
-- Sign into the preview; with Playwright at mobile width, load Daily, All, and Scrapbook and confirm:
-  - Each view fires `render/image` (small transformed) thumbnail requests scaled to the number of **visible** rows, not the whole scrapbook.
-  - All/Scrapbook no longer sign covers for off-screen entries.
-- Confirm the "+N" badge still appears on entries with more than 4 media.
-- Confirm the immersive viewer still opens and loads full-resolution slides.
+### Verification
+Open a memory in the immersive viewer in the preview and confirm the zoom/drift is now clearly visible within the first several seconds, and that no blank edges appear at peak zoom.
