@@ -566,7 +566,7 @@ function MediaPreview({ file }: { file: PendingFile }) {
       {file.previewUrl && file.kind === 'image' && (
         <div
           aria-hidden
-          className="absolute inset-0 scale-110 bg-cover bg-center opacity-40 blur-2xl"
+          className="absolute inset-0 scale-110 bg-cover bg-center opacity-40 blur-xl"
           style={{ backgroundImage: `url(${file.previewUrl})` }}
         />
       )}
