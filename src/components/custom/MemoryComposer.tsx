@@ -94,6 +94,7 @@ export function MemoryComposer({
       kind: m.kind,
       previewUrl: '',
       status: 'done' as FileUploadStatus,
+      progress: 1,
     })),
   );
   const [index, setIndex] = useState(0);
