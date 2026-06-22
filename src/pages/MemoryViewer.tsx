@@ -461,6 +461,10 @@ function kenBurnsVariant(id: string) {
 function MediaSlide({ media }: { media: MemoryMedia }) {
   const [url, setUrl] = useState<string | null>(null);
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
+  // A small (240px) signed URL used only for the blurred backdrop — blurring a
+  // full-res image every frame is the most expensive thing on screen, and a
+  // thumbnail looks identical once blurred.
+  const [backdropUrl, setBackdropUrl] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   // Smart per-orientation fill: portrait media fills the frame (cover) for a
   // true full-bleed feel; landscape/square stays letterboxed (contain) so
@@ -468,21 +472,31 @@ function MediaSlide({ media }: { media: MemoryMedia }) {
   const [fit, setFit] = useState<'contain' | 'cover'>('contain');
   const retriedRef = useRef(false);
 
+  const isImage = media.kind === 'image';
 
   useEffect(() => {
     let active = true;
     retriedRef.current = false;
     setUrl(null);
     setPosterUrl(null);
+    setBackdropUrl(null);
     setFit('contain');
-    getSignedMemoryUrl(media.storage_path).then((u) => active && setUrl(u));
+    // Images load a downscaled viewer-sized derivative; videos load the raw file.
+    (isImage ? viewerImageUrl(media) : getSignedMemoryUrl(media.storage_path)).then(
+      (u) => active && setUrl(u),
+    );
+    getSignedMemoryUrl(memoryThumbPath(media), MEMORY_THUMB_TRANSFORM).then(
+      (u) => active && setBackdropUrl(u),
+    );
     if (media.poster_path) {
-      getSignedMemoryUrl(media.poster_path).then((u) => active && setPosterUrl(u));
+      getSignedMemoryUrl(media.poster_path, MEMORY_THUMB_TRANSFORM).then(
+        (u) => active && setPosterUrl(u),
+      );
     }
     return () => {
       active = false;
     };
-  }, [media.storage_path, media.poster_path]);
+  }, [media, isImage]);
 
   // Autoplay each new video. Videos always start muted (so autoplay is
   // allowed); the native controls own muting from there, so there's no React
