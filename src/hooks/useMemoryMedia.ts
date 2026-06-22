@@ -112,6 +112,7 @@ export function useCreateMemory() {
               width,
               height,
               duration: null,
+              originalName: file.name,
             });
           } else {
             const meta = await extractVideoMeta(file);
