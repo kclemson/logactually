@@ -332,15 +332,7 @@ const MemoryViewer = () => {
 export default MemoryViewer;
 
 /** Resolves a signed URL for the item's media and renders it full-bleed. */
-function SlideContent({
-  item,
-  soundOn,
-  onToggleSound,
-}: {
-  item: ViewItem;
-  soundOn: boolean;
-  onToggleSound: () => void;
-}) {
+function SlideContent({ item }: { item: ViewItem }) {
   const media = item.media;
 
   if (!media) {
@@ -354,7 +346,7 @@ function SlideContent({
     );
   }
 
-  return <MediaSlide media={media} soundOn={soundOn} onToggleSound={onToggleSound} />;
+  return <MediaSlide media={media} />;
 }
 
 
