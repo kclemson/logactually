@@ -107,14 +107,13 @@ export function useCreateMemory() {
           const mediaId = crypto.randomUUID();
           const ext = fileExtension(file.name, kind);
           const mediaPath = buildMediaPath(user.id, entryId, mediaId, ext);
-          onFileProgress?.(i, 'uploading');
+          onFileProgress?.(i, 'uploading', 0);
 
           if (kind === 'image') {
             const { blob, width, height } = await processImageFile(file);
-            const { error } = await supabase.storage
-              .from(MEMORY_BUCKET)
-              .upload(mediaPath, blob, { contentType: 'image/jpeg', upsert: false });
-            if (error) throw error;
+            await uploadMemoryFileResumable(mediaPath, blob, 'image/jpeg', (p) =>
+              onFileProgress?.(i, 'uploading', p),
+            );
             uploaded.push({
               mediaPath,
               posterPath: null,
@@ -127,20 +126,24 @@ export function useCreateMemory() {
             });
           } else {
             const meta = await extractVideoMeta(file);
-            const { error } = await supabase.storage
-              .from(MEMORY_BUCKET)
-              .upload(mediaPath, file, { contentType: file.type, upsert: false });
-            if (error) throw error;
+            await uploadMemoryFileResumable(
+              mediaPath,
+              file,
+              file.type || 'video/mp4',
+              (p) => onFileProgress?.(i, 'uploading', p),
+            );
             let posterPath: string | null = null;
             if (meta.posterBlob) {
               posterPath = buildPosterPath(user.id, entryId, mediaId);
-              const { error: posterErr } = await supabase.storage
-                .from(MEMORY_BUCKET)
-                .upload(posterPath, meta.posterBlob, {
-                  contentType: 'image/jpeg',
-                  upsert: false,
-                });
-              if (posterErr) posterPath = null; // poster is best-effort
+              try {
+                await uploadMemoryFileResumable(
+                  posterPath,
+                  meta.posterBlob,
+                  'image/jpeg',
+                );
+              } catch {
+                posterPath = null; // poster is best-effort
+              }
             }
             uploaded.push({
               mediaPath,
@@ -153,7 +156,7 @@ export function useCreateMemory() {
               originalName: file.name,
             });
           }
-          onFileProgress?.(i, 'done');
+          onFileProgress?.(i, 'done', 1);
         }
 
         // All uploads succeeded — now persist the DB rows.
