@@ -10,6 +10,7 @@ import {
   buildPosterPath,
   processImageFile,
   extractVideoMeta,
+  uploadMemoryFileResumable,
 } from '@/lib/memory-media';
 
 export interface MemoryMedia {
