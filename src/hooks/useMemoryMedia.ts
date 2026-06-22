@@ -38,13 +38,23 @@ export interface MemoryMedia {
 
 export type FileUploadStatus = 'queued' | 'uploading' | 'done';
 
+/**
+ * Report per-file upload progress. `progress` is the fraction (0..1) of bytes
+ * uploaded for that file; for 'queued'/'done' it's 0/1 respectively.
+ */
+export type FileProgressFn = (
+  index: number,
+  status: FileUploadStatus,
+  progress: number,
+) => void;
+
 export interface CreateMemoryParams {
   logTypeId: string;
   loggedDate: string;
   note: string | null;
   category: string | null;
   files: File[];
-  onFileProgress?: (index: number, status: FileUploadStatus) => void;
+  onFileProgress?: FileProgressFn;
 }
 
 interface UploadedFile {
