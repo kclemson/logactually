@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { invalidateCustomLogCaches } from './invalidateCustomLogCaches';
+import { getSignedMemoryUrls, memoryThumbPath, MEMORY_THUMB_TRANSFORM } from '@/lib/memory-media';
 import type { CustomLogEntry } from './useCustomLogEntries';
 import type { MemoryMedia } from './useMemoryMedia';
 
