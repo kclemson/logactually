@@ -356,7 +356,7 @@ const MemoryViewer = () => {
                 icon: Trash2,
                 label: 'Delete memory',
                 tone: 'danger',
-                onClick: handleDelete,
+                onClick: () => setConfirmDeleteOpen(true),
               },
             ] as MemoryAction[])
           : []),
