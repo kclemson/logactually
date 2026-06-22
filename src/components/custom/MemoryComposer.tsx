@@ -237,8 +237,10 @@ export function MemoryComposer({
           category,
           originalMedia: editEntry.media,
           items,
-          onItemProgress: (i, status) => {
-            setFiles((prev) => prev.map((f, fi) => (fi === i ? { ...f, status } : f)));
+          onItemProgress: (i, status, progress) => {
+            setFiles((prev) =>
+              prev.map((f, fi) => (fi === i ? { ...f, status, progress } : f)),
+            );
           },
         },
         {
