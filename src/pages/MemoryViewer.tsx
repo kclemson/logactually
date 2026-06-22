@@ -11,7 +11,14 @@ import { MemoryActionBar, type MemoryAction } from '@/components/custom/MemoryAc
 import { useCustomLogTypes } from '@/hooks/useCustomLogTypes';
 import { useMemoryDays, type MemoryDay, type MemoryEntry } from '@/hooks/useMemoryDays';
 import type { MemoryMedia } from '@/hooks/useMemoryMedia';
-import { getSignedMemoryUrl, invalidateSignedUrl, formatTag } from '@/lib/memory-media';
+import {
+  getSignedMemoryUrl,
+  invalidateSignedUrl,
+  formatTag,
+  memoryThumbPath,
+  MEMORY_THUMB_TRANSFORM,
+  MEMORY_VIEW_TRANSFORM,
+} from '@/lib/memory-media';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { cn } from '@/lib/utils';
 
