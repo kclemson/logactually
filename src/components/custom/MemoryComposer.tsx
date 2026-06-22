@@ -52,6 +52,7 @@ type PendingFile =
       kind: MediaKind;
       previewUrl: string;
       status: FileUploadStatus;
+      progress: number; // 0..1, byte-level upload progress
     }
   | {
       id: string;
@@ -60,6 +61,7 @@ type PendingFile =
       kind: MediaKind;
       previewUrl: string; // '' until the signed URL resolves
       status: FileUploadStatus;
+      progress: number;
     };
 
 // One continuous teal-to-navy canvas. Flows edge-to-edge — writing and media
