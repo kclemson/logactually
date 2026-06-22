@@ -258,11 +258,11 @@ const MemoryViewer = () => {
 
   const itemKey = `${dayIndex}:${clampedItemIndex}`;
 
-  const handleDelete = () => {
+  const confirmDelete = () => {
     if (!currentItem) return;
-    if (!confirm('Delete this memory and all its photos/videos?')) return;
     const entry = currentItem.entry;
     const wasLastInDay = items.length <= 1;
+    setConfirmDeleteOpen(false);
     deleteMemory.mutate(entry, {
       onSuccess: () => {
         if (wasLastInDay) {
