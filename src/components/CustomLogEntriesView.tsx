@@ -367,11 +367,14 @@ export function CustomLogEntriesView({
 export function MemoryEntryRow({
   entry,
   media,
+  totalCount,
   density,
   onOpen,
 }: {
   entry: CustomLogEntry;
   media: MemoryMedia[];
+  /** True attachment count, when `media` is a capped cover subset (drives "+N"). */
+  totalCount?: number;
   density: 'compact' | 'rich';
   onOpen: () => void;
 }) {
@@ -379,7 +382,8 @@ export function MemoryEntryRow({
   const isRich = density === 'rich';
   const thumbSize = isRich ? 'h-20 w-20' : 'h-12 w-12';
   const shown = media.slice(0, 4);
-  const extra = media.length - shown.length;
+  const total = totalCount ?? media.length;
+  const extra = total - shown.length;
   const hasMedia = shown.length > 0;
   const caption = entry.text_value?.trim() || '';
   const time = formatTime(entry.created_at);
