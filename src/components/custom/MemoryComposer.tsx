@@ -215,7 +215,9 @@ export function MemoryComposer({
     const onSettledError = (err: unknown) => {
       setError(err instanceof Error ? err.message : 'Could not save memory');
       setFiles((prev) =>
-        prev.map((f) => (f.source === 'new' ? { ...f, status: 'queued' } : f)),
+        prev.map((f) =>
+          f.source === 'new' ? { ...f, status: 'queued', progress: 0 } : f,
+        ),
       );
     };
 
