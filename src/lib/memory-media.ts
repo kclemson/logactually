@@ -45,6 +45,16 @@ export function buildPosterPath(userId: string, entryId: string, mediaId: string
   return `${buildEntryFolder(userId, entryId)}/${mediaId}-poster.jpg`;
 }
 
+/** The storage path to show as a small preview for a media item: a video's
+ * poster (falling back to the video itself), or the image itself. */
+export function memoryThumbPath(media: {
+  kind: 'image' | 'video';
+  storage_path: string;
+  poster_path: string | null;
+}): string {
+  return media.kind === 'video' ? media.poster_path ?? media.storage_path : media.storage_path;
+}
+
 // ---------------------------------------------------------------------------
 // Signed URL cache (browser only — relies on Supabase storage)
 // ---------------------------------------------------------------------------
