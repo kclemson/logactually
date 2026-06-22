@@ -239,7 +239,7 @@ export interface UpdateMemoryParams {
   /** Final ordered media list (existing kept + new uploads). */
   items: EditMediaItem[];
   /** Progress callback keyed by the item index within `items`. */
-  onItemProgress?: (index: number, status: FileUploadStatus) => void;
+  onItemProgress?: FileProgressFn;
 }
 
 /**
