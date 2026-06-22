@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { invalidateCustomLogCaches } from './invalidateCustomLogCaches';
+import { getSignedMemoryUrls, memoryThumbPath, MEMORY_THUMB_TRANSFORM } from '@/lib/memory-media';
 import type { CustomLogEntry } from './useCustomLogEntries';
 import type { MemoryMedia } from './useMemoryMedia';
 
@@ -47,9 +48,23 @@ export function useMemoryDays(logTypeId: string | null) {
           .in('entry_id', entryIds)
           .order('sort_order', { ascending: true });
         if (mediaErr) throw mediaErr;
-        mediaByEntry = (media ?? []).reduce((acc, m) => {
+        const all = (media ?? []) as MemoryMedia[];
+        // Batch-sign the first thumbnails per entry up-front so the list shows
+        // its leading thumbnail strip without per-thumbnail signing requests.
+        const coverPaths = new Set<string>();
+        const perEntryCount = new Map<string, number>();
+        for (const m of all) {
+          const n = perEntryCount.get(m.entry_id) ?? 0;
+          if (n < 4) {
+            coverPaths.add(memoryThumbPath(m));
+            perEntryCount.set(m.entry_id, n + 1);
+          }
+        }
+        const urls = await getSignedMemoryUrls([...coverPaths], MEMORY_THUMB_TRANSFORM);
+        mediaByEntry = all.reduce((acc, m) => {
           const list = acc.get(m.entry_id) ?? [];
-          list.push(m as MemoryMedia);
+          m.thumbUrl = urls.get(memoryThumbPath(m)) ?? null;
+          list.push(m);
           acc.set(m.entry_id, list);
           return acc;
         }, new Map<string, MemoryMedia[]>());

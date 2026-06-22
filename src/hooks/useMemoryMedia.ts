@@ -26,6 +26,9 @@ export interface MemoryMedia {
   poster_path: string | null;
   sort_order: number;
   created_at: string;
+  /** Pre-signed, resized thumbnail URL, attached up-front by list/cover hooks so
+   * thumbnails render without each one minting its own signed URL. */
+  thumbUrl?: string | null;
 }
 
 export type FileUploadStatus = 'queued' | 'uploading' | 'done';
