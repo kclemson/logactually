@@ -8,6 +8,16 @@ import { MemoryComposer } from '@/components/custom/MemoryComposer';
 import { MemoryScaffold } from '@/components/custom/MemoryScaffold';
 import { MemoryStage } from '@/components/custom/MemoryStage';
 import { MemoryActionBar, type MemoryAction } from '@/components/custom/MemoryActionBar';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useCustomLogTypes } from '@/hooks/useCustomLogTypes';
 import { useMemoryDays, type MemoryDay, type MemoryEntry } from '@/hooks/useMemoryDays';
 import type { MemoryMedia } from '@/hooks/useMemoryMedia';
@@ -132,6 +142,8 @@ const MemoryViewer = () => {
   const [direction, setDirection] = useState(0);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+
   const startedRef = useRef(initialStart.current !== null);
 
 
@@ -246,11 +258,11 @@ const MemoryViewer = () => {
 
   const itemKey = `${dayIndex}:${clampedItemIndex}`;
 
-  const handleDelete = () => {
+  const confirmDelete = () => {
     if (!currentItem) return;
-    if (!confirm('Delete this memory and all its photos/videos?')) return;
     const entry = currentItem.entry;
     const wasLastInDay = items.length <= 1;
+    setConfirmDeleteOpen(false);
     deleteMemory.mutate(entry, {
       onSuccess: () => {
         if (wasLastInDay) {
@@ -344,7 +356,7 @@ const MemoryViewer = () => {
                 icon: Trash2,
                 label: 'Delete memory',
                 tone: 'danger',
-                onClick: handleDelete,
+                onClick: () => setConfirmDeleteOpen(true),
               },
             ] as MemoryAction[])
           : []),
@@ -398,6 +410,29 @@ const MemoryViewer = () => {
           onSuccess={() => setEditing(false)}
           onCancel={() => setEditing(false)}
         />
+      )}
+
+      {/* Delete confirmation */}
+      {confirmDeleteOpen && (
+        <AlertDialog open onOpenChange={(open) => !open && setConfirmDeleteOpen(false)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete this memory?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This permanently removes the memory and all its photos and videos.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
     </>
   );
