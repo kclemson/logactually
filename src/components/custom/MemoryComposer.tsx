@@ -443,9 +443,9 @@ export function MemoryComposer({
                         </span>
                       </>
                     )}
-                    {f.status === 'uploading' && (
-                      <span className="absolute inset-0 flex items-center justify-center bg-black/50">
-                        <Loader2 className="h-4 w-4 animate-spin text-white" />
+                    {files.length > 1 && f.status === 'uploading' && (
+                      <span className="absolute inset-0 flex items-center justify-center bg-black/55">
+                        <RadialProgress value={f.progress} size={34} stroke={3} />
                       </span>
                     )}
                   </button>
