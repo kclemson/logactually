@@ -177,6 +177,7 @@ export function useCreateMemory() {
             duration_secs: u.duration,
             poster_path: u.posterPath,
             sort_order: idx,
+            original_filename: u.originalName,
           }));
           const { error: mediaErr } = await supabase.from('memory_media').insert(rows);
           if (mediaErr) {
