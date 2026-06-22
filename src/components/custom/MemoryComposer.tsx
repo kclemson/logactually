@@ -419,7 +419,7 @@ export function MemoryComposer({
               )}
 
               {/* Filmstrip */}
-              <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1">
+              <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1 md:mx-auto md:max-w-xl">
                 {files.map((f, i) => (
                   <button
                     key={f.id}
