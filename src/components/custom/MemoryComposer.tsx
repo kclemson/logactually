@@ -148,6 +148,20 @@ export function MemoryComposer({
   const current = files[Math.min(index, files.length - 1)];
   const canSave = !disabled && !saving && (note.trim().length > 0 || hasMedia);
 
+  // Upload aggregates for the centered "Saving…" overlay. Only newly-added files
+  // actually upload; existing media (in edit mode) is already stored.
+  const uploadingFiles = files.filter((f) => f.source === 'new');
+  const totalUploads = uploadingFiles.length;
+  const doneUploads = uploadingFiles.filter((f) => f.status === 'done').length;
+  const overallProgress =
+    totalUploads === 0
+      ? saving
+        ? 1
+        : 0
+      : uploadingFiles.reduce((sum, f) => sum + (f.status === 'done' ? 1 : f.progress), 0) /
+        totalUploads;
+  const isSingleMedia = files.length === 1;
+
   const dateObj = parseISO(loggedDate);
   const dateLabel = isToday(dateObj) ? 'Today' : format(dateObj, 'EEE, MMM d, yyyy');
 
