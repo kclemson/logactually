@@ -200,56 +200,55 @@ export function MemoryImportDialog({ open, onOpenChange, memoryLogTypes }: Memor
           </div>
 
           {rows.length > 0 && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-8">
-                    <input
-                      type="checkbox"
-                      aria-label="Select all"
-                      checked={allSelected}
-                      onChange={toggleAll}
-                      disabled={isImporting || selectableRows.length === 0}
-                    />
-                  </TableHead>
-                  <TableHead>Post</TableHead>
-                  <TableHead className="whitespace-nowrap">Date</TableHead>
-                  <TableHead className="text-right">Words</TableHead>
-                  <TableHead className="text-right">Photos</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((row) => (
-                  <TableRow key={row.post.sourceName}>
-                    <TableCell>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between border-b border-border pb-2">
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all"
+                    checked={allSelected}
+                    onChange={toggleAll}
+                    disabled={isImporting || selectableRows.length === 0}
+                  />
+                  Select all
+                </label>
+                <span className="text-xs text-muted-foreground">{includedCount} selected</span>
+              </div>
+              <div className="divide-y divide-border">
+                {rows.map((row) => {
+                  const meta = [
+                    row.post.date ?? 'No date',
+                    `${row.post.wordCount} words`,
+                    `${row.post.images.length} photos`,
+                  ].join(' · ');
+                  return (
+                    <div key={row.post.sourceName} className="flex gap-3 py-3">
                       <input
                         type="checkbox"
                         aria-label={`Include ${row.post.sourceName}`}
                         checked={row.included}
                         onChange={() => toggleRow(row.post.sourceName)}
                         disabled={isImporting || row.kind === 'needs-date'}
+                        className="mt-1 shrink-0"
                       />
-                    </TableCell>
-                    <TableCell className="max-w-[16rem]">
-                      <span className="flex items-center gap-1.5">
-                        <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        <span className="truncate">{previewText(row.post.note, row.post.sourceName)}</span>
-                      </span>
-                      {row.post.category && (
-                        <span className="text-[10px] text-muted-foreground">{formatTag(row.post.category)}</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap tabular-nums text-xs">
-                      {row.post.date ?? '—'}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums text-xs">{row.post.wordCount}</TableCell>
-                    <TableCell className="text-right tabular-nums text-xs">{row.post.images.length}</TableCell>
-                    <TableCell className="whitespace-nowrap text-xs">{renderStatus(row)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="text-xs tabular-nums text-muted-foreground">{meta}</span>
+                          <span className="shrink-0 whitespace-nowrap text-xs">{renderStatus(row)}</span>
+                        </div>
+                        <p className="mt-1 flex items-start gap-1.5 text-sm">
+                          <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                          <span className="line-clamp-3">{previewText(row.post.note, row.post.sourceName)}</span>
+                        </p>
+                        {row.post.category && (
+                          <span className="mt-1 block text-[10px] text-muted-foreground">{formatTag(row.post.category)}</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           )}
 
           {summary && (
