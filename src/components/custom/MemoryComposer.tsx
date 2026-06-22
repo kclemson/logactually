@@ -408,7 +408,7 @@ export function MemoryComposer({
           ) : (
             <>
               {current && (
-                <div className="relative h-[42vh] w-full overflow-hidden rounded-2xl bg-black/30 ring-1 ring-white/10">
+                <div className="relative h-[42vh] w-full overflow-hidden rounded-2xl bg-black/30 ring-1 ring-white/10 md:mx-auto md:max-h-[440px] md:max-w-xl">
                   <MediaPreview file={current} />
                   {current.source === 'new' && current.status === 'uploading' && (
                     <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/45 backdrop-blur-[1px]">
