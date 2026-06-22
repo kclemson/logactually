@@ -397,12 +397,12 @@ export function MemoryComposer({
               type="button"
               onClick={handlePick}
               disabled={disabled || saving}
-              className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-white/20 bg-white/[0.03] transition-colors hover:border-white/35 hover:bg-white/[0.06] disabled:opacity-50 md:mx-auto md:max-w-md"
+              className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-white/20 bg-white/[0.03] transition-colors hover:border-white/35 hover:bg-white/[0.06] disabled:opacity-50 md:mx-auto md:aspect-video md:max-w-xs"
             >
-              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-teal-500/20 ring-1 ring-teal-400/40 md:h-12 md:w-12">
-                <ImagePlus className="h-7 w-7 text-teal-300 md:h-6 md:w-6" />
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-teal-500/20 ring-1 ring-teal-400/40 md:h-10 md:w-10">
+                <ImagePlus className="h-7 w-7 text-teal-300 md:h-5 md:w-5" />
               </span>
-              <span className="text-base font-medium">Add photos or video</span>
+              <span className="text-base font-medium md:text-sm">Add photos or video</span>
 
             </button>
           ) : (
