@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
-import { X, Calendar as CalendarIcon, Trash2, Pencil, Volume2, VolumeX } from 'lucide-react';
+import { X, Calendar as CalendarIcon, Trash2, Pencil } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { MemoryComposer } from '@/components/custom/MemoryComposer';
