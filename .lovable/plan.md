@@ -1,25 +1,35 @@
 ## Goal
 
-Fix two pieces of user-facing copy in the importer:
-1. It says "memories" where the feature is now called "photo scrapbook".
-2. It tells people to add `.html` files specifically — make it format-agnostic and welcoming to exports from any platform.
+Fix the import review list so it works on mobile and shows enough content to identify each post. The current `<Table>` overflows horizontally on mobile (forcing a scrollbar, screenshot 1) and truncates the post text to a few words. Replace it with a vertical list (one stacked card per post) that shows the date with shorthand metadata and a multi-line content preview.
 
-This is copy-only. No parsing logic, file-acceptance rules, edge functions, or data flow change. The file input still technically accepts `.html` for now (that's the only supported parser), but the wording won't lock the user into one format.
+## New row layout (per post)
+
+```text
+[✓]  2023-02-01 · 279 words · 4 photos              New
+     Text from the imported content that goes on for
+     a couple of lines so the user can actually
+     identify which post this is…
+     #BestThingsToday
+```
+
+- Leading checkbox (include/skip), vertically aligned to the top.
+- Metadata line: date + shorthand `· N words · N photos`, in small muted text. Status indicator (New / Already imported / Needs date / Importing / Imported / Failed) sits at the right of this same line.
+- Content preview: ~2–3 lines of the note text via `line-clamp`, normal foreground color, so posts are identifiable.
+- Category tag (e.g. `#BestThingsToday`) shown below in small muted text when present.
+- Rows separated by a divider (`divide-y`), no horizontal scrolling — everything wraps within the dialog width.
+
+A "Select all / none" control moves to a single row above the list (checkbox + "Select all" label + included count), replacing the table header checkbox.
 
 ## Changes
 
-### `src/components/settings/ImportExportSection.tsx`
-- Row label `Import memories from files` → `Import to photo scrapbook` (or similar scrapbook wording).
-- Button text `Import Memories` → `Import to Scrapbook`.
-
 ### `src/components/custom/MemoryImportDialog.tsx`
-- Dialog title `Import memories` → `Import to photo scrapbook`.
-- Dialog description: replace the `.html`-specific text with general guidance, e.g. "Have content exported from another platform (like a blog or newsletter)? Upload the exported files here and we'll pull in the posts and photos. Review the list, then import them all at once."
-- Parse-error message `...Make sure they are exported .html files.` → generic, e.g. "Could not read one or more files. Make sure they're the files you exported from the other platform."
-- Summary line `Imported N memories` → `Imported N posts` (or "entries") so it no longer says "memories".
-
-### Note on the word "memory" in code
-Internal identifiers (`MemoryImportDialog`, `useImportMemories`, `memoryLogTypes`, etc.) stay as-is — these refer to the underlying memory-type custom log and aren't user-visible. Only user-facing strings change.
+- Remove the `Table`/`TableHeader`/`TableBody`/`TableRow`/`TableCell`/`TableHead` import and markup.
+- Render the review rows as a `div` list (`divide-y divide-border`), each row a flex layout: checkbox column + content column.
+- Update `previewText` usage to show more text — render the note preview with `line-clamp-3` (multi-line) instead of just the first line. Keep falling back to `sourceName` when the note is empty.
+- Build the metadata string inline: `{date} · {wordCount} words · {photos} photos` (omit gracefully when date missing → show "Needs date" via status).
+- Keep `renderStatus` logic; reposition it to the top-right of each row.
+- Replace the header-row select-all checkbox with a compact select-all control above the list.
+- No changes to parsing, import logic, hooks, or the dialog title/description copy.
 
 ## Verification
-- Visual check of Settings → Import and Export row and the opened dialog to confirm all visible text reads "photo scrapbook" / general format guidance and no visible "memories" wording remains.
+- Drive the preview with Playwright at mobile width (≈390px): open Settings → Import and Export → Import to Scrapbook, load sample export files, and screenshot to confirm no horizontal scroll, readable multi-line previews, and correct metadata/status. Repeat at desktop width.
