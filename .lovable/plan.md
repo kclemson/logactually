@@ -1,20 +1,37 @@
-## Make the Ken Burns effect more noticeable
+## Goal
 
-The memory viewer's Ken Burns motion is too subtle to perceive. Two factors cause this: the zoom is tiny (`scale(1.12)`), and the per-photo drift offsets are tiny (~1.5–2%), spread across a long `25s` loop. We'll increase the zoom and drift magnitudes and modestly shorten the loop so the motion reads clearly without becoming distracting.
+Fix the desyncing mute button on autoplayed videos in the immersive memory viewer by removing the redundant custom mute button and relying solely on the native video control. This eliminates the dual-source-of-truth bug at its root.
 
-### Changes
+## Why this fixes the bug
 
-**`src/index.css`** — strengthen the zoom and speed of the `.kenburns` animation:
-- In `@keyframes kenburns`, bump the end scale from `1.12` to roughly `1.25` so the push-in is clearly visible.
-- Reduce the animation duration from `25s` to about `18s` so the motion is perceptible within a single view of a photo.
-- Leave the `prefers-reduced-motion` disable rule untouched.
+Today the video renders native `controls` (which already include a mute button) plus a second custom overlay button. The custom button drives React state `soundOn`, which a one-way effect pushes into `videoRef.current.muted`. Because nothing pushes the native control's changes back into React, the two desync the moment the native mute is used, leaving the custom button feeling "dead." Deleting the custom button makes the DOM's `muted` property the single source of truth — no sync, no desync.
 
-**`src/pages/MemoryViewer.tsx`** — increase the drift in `KEN_BURNS_PRESETS`:
-- Roughly double the `tx`/`ty` offsets (e.g. `±2%` → `±4–5%`, `±1.5%` → `±3%`) so the pan/drift accompanying the zoom is noticeable. Keep the center "push-in" preset at `0%/0%` (its motion comes purely from the stronger zoom). Keep the deterministic per-id selection so each photo still animates consistently.
+## Changes (all in `src/pages/MemoryViewer.tsx`)
 
-### Notes / tradeoffs
-- A larger zoom (`1.25`) means more of the image edges are cropped at the end of the loop. The frame is already `overflow-hidden` and portrait media uses `object-cover`, so this is safe; letterboxed (contain) photos simply crop slightly more inward at peak zoom, which is the intended Ken Burns look.
-- These are the two tunable knobs (zoom scale + drift %, plus duration). If after seeing it you want it stronger or gentler, we can nudge `scale` and the drift percentages further.
+1. **Remove the custom mute button** — delete the overlay `<button>` (and the `<>...</>` fragment wrapping it) in `MediaSlide`, leaving just the `<video>` element. Keep the native `controls` attribute and the `muted` attribute (still required so autoplay is allowed).
 
-### Verification
-Open a memory in the immersive viewer in the preview and confirm the zoom/drift is now clearly visible within the first several seconds, and that no blank edges appear at peak zoom.
+2. **Remove the `soundOn` state and its plumbing**:
+   - Delete `const [soundOn, setSoundOn] = useState(false)` and the `onToggleSound` wiring.
+   - Drop the `soundOn` / `onToggleSound` props from `SlideContent` and `MediaSlide`.
+   - Remove the `SlideContent` `onToggleSound={...}`/`soundOn={...}` usage where `<SlideContent>` is rendered.
+
+3. **Replace the state-mirroring effect with autoplay-only logic.** The effect at lines ~429–434 currently does `el.muted = !soundOn; el.play()`. Since the video always starts muted now (via the `muted` attribute) and the native control owns muting, this effect no longer needs to touch `muted`. Keep a minimal effect that just kicks off playback when the source URL changes (`void el.play().catch(() => {})`), keyed on `[url]` — this preserves reliable autoplay across slide changes without mirroring any state.
+
+4. **Remove now-unused imports**: `Volume2` and `VolumeX` from `lucide-react`.
+
+## Behavior after the change
+
+- Each video slide autoplays muted and shows the native controls.
+- The user taps the native unmute to hear sound on that slide.
+- Moving to the next video starts muted again (no cross-slide memory) — accepted as the simplest, desync-proof behavior. If we later move off native controls, we can revisit a custom control + session preference then.
+
+## Technical notes
+
+- The `muted` boolean attribute on `<video>` must stay for autoplay policy compliance; the native control toggles the live `muted` property at runtime, which is independent of the initial attribute.
+- No business-logic, data, or backend changes — this is purely presentation cleanup.
+
+## Verification
+
+- Open a memory with a video in the immersive viewer; confirm it autoplays muted with native controls, and that the native mute/unmute toggles sound reliably with no leftover custom button.
+- Confirm there are no TypeScript errors from removed props/imports.
+- Confirm navigating between multiple video slides keeps autoplay working.
