@@ -513,15 +513,15 @@ function MediaSlide({ media }: { media: MemoryMedia }) {
     if (retriedRef.current) return;
     retriedRef.current = true;
     invalidateSignedUrl(media.storage_path);
-    const fresh = await getSignedMemoryUrl(media.storage_path);
+    const fresh = await (isImage ? viewerImageUrl(media) : getSignedMemoryUrl(media.storage_path));
     setUrl(fresh);
-  }, [media.storage_path]);
+  }, [media, isImage]);
 
   const applyFit = useCallback((w: number, h: number) => {
     if (w > 0 && h > 0) setFit(h > w ? 'cover' : 'contain');
   }, []);
 
-  const backdrop = media.kind === 'image' ? url : posterUrl;
+  const backdrop = backdropUrl;
   const mediaFit =
     fit === 'cover' ? 'h-full w-full object-cover' : 'max-h-full max-w-full object-contain';
 
