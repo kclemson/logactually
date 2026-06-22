@@ -174,12 +174,12 @@ All colors MUST be HSL.
     transform: scale(1) translate(0, 0);
   }
   to {
-    transform: scale(1.25) translate(var(--kb-tx, 0%), var(--kb-ty, 0%));
+    transform: scale(1.45) translate(var(--kb-tx, 0%), var(--kb-ty, 0%));
   }
 }
 
 .kenburns {
-  animation: kenburns 18s ease-in-out infinite alternate;
+  animation: kenburns 14s ease-in-out infinite alternate;
   will-change: transform;
 }
 

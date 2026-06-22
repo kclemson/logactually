@@ -359,11 +359,11 @@ function SlideContent({ item }: { item: ViewItem }) {
  */
 const KEN_BURNS_PRESETS = [
   { origin: 'center', tx: '0%', ty: '0%' }, // push-in
-  { origin: 'top left', tx: '-4.5%', ty: '-3.5%' }, // drift up-left
-  { origin: 'bottom right', tx: '4.5%', ty: '3.5%' }, // drift down-right
-  { origin: 'center left', tx: '-5%', ty: '0%' }, // drift left
-  { origin: 'top center', tx: '0%', ty: '-4.5%' }, // drift up
-  { origin: 'bottom left', tx: '-3.5%', ty: '3.5%' }, // drift down-left
+  { origin: 'top left', tx: '-7%', ty: '-5.5%' }, // drift up-left
+  { origin: 'bottom right', tx: '7%', ty: '5.5%' }, // drift down-right
+  { origin: 'center left', tx: '-8%', ty: '0%' }, // drift left
+  { origin: 'top center', tx: '0%', ty: '-7%' }, // drift up
+  { origin: 'bottom left', tx: '-5.5%', ty: '5.5%' }, // drift down-left
 ] as const;
 
 function kenBurnsVariant(id: string) {
