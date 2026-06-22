@@ -322,6 +322,7 @@ export function useUpdateMemory() {
               width,
               height,
               duration: null,
+              original_filename: file.name,
             });
           } else {
             const meta = await extractVideoMeta(file);
