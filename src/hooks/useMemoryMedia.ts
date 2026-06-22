@@ -276,6 +276,7 @@ export function useUpdateMemory() {
           width: number | null;
           height: number | null;
           duration: number | null;
+          original_filename: string | null;
         }
         const finalRows: FinalRow[] = [];
 
