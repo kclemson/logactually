@@ -470,7 +470,7 @@ export function MemoryComposer({
         className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/55 via-black/25 to-transparent px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-10"
         style={lift}
       >
-        {error && <p className="mb-2 text-xs text-red-300">{error}</p>}
+        
 
         <div className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5">
           <span className="text-sm text-teal-300">#</span>
