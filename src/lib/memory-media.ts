@@ -56,30 +56,78 @@ interface CacheEntry {
 
 const signedUrlCache = new Map<string, CacheEntry>();
 
-/** Drop a cached signed URL so the next request re-mints it (e.g. after a load error). */
+/** On-the-fly resize applied to list/cover thumbnails so a 48–80px square loads
+ * a few KB instead of the full ~1920px original. Sized for retina (≈80px×3dpr). */
+export interface ThumbTransform {
+  width: number;
+  height: number;
+  resize?: 'cover' | 'contain' | 'fill';
+}
+
+export const MEMORY_THUMB_TRANSFORM: ThumbTransform = {
+  width: 240,
+  height: 240,
+  resize: 'cover',
+};
+
+/** Cache key for a (path, transform) pair — transformed and full URLs differ. */
+function cacheKey(path: string, transform?: ThumbTransform): string {
+  return transform ? `${path}@${transform.width}x${transform.height}:${transform.resize ?? 'cover'}` : path;
+}
+
+/** Drop cached signed URLs for a path (both full + any transform) so the next
+ * request re-mints them (e.g. after a load error). */
 export function invalidateSignedUrl(path: string): void {
-  signedUrlCache.delete(path);
+  for (const key of signedUrlCache.keys()) {
+    if (key === path || key.startsWith(`${path}@`)) signedUrlCache.delete(key);
+  }
 }
 
 /**
  * Return a signed URL for a private media path, cached with a long TTL so it
- * never ages out mid-session. Returns null if the path can't be signed.
+ * never ages out mid-session. Pass `transform` to get a resized derivative
+ * (used for thumbnails). Returns null if the path can't be signed.
  */
-export async function getSignedMemoryUrl(path: string | null | undefined): Promise<string | null> {
+export async function getSignedMemoryUrl(
+  path: string | null | undefined,
+  transform?: ThumbTransform,
+): Promise<string | null> {
   if (!path) return null;
-  const cached = signedUrlCache.get(path);
+  const key = cacheKey(path, transform);
+  const cached = signedUrlCache.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached.url;
 
   const { data, error } = await supabase.storage
     .from(MEMORY_BUCKET)
-    .createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
+    .createSignedUrl(path, SIGNED_URL_TTL_SECONDS, transform ? { transform } : undefined);
   if (error || !data?.signedUrl) return null;
 
-  signedUrlCache.set(path, {
+  signedUrlCache.set(key, {
     url: data.signedUrl,
     expiresAt: Date.now() + SIGNED_URL_TTL_SECONDS * 1000 - SIGNED_URL_CACHE_MARGIN_MS,
   });
   return data.signedUrl;
+}
+
+/**
+ * Mint signed URLs for many paths together (one batched pass), so a whole list
+ * of thumbnails resolves up-front instead of each thumbnail firing its own
+ * request after it mounts. Returns a map of path -> signed URL. Already-cached
+ * paths are served from cache and skipped. Null/duplicate paths are ignored.
+ */
+export async function getSignedMemoryUrls(
+  paths: (string | null | undefined)[],
+  transform?: ThumbTransform,
+): Promise<Map<string, string>> {
+  const result = new Map<string, string>();
+  const unique = Array.from(new Set(paths.filter((p): p is string => !!p)));
+  await Promise.all(
+    unique.map(async (p) => {
+      const url = await getSignedMemoryUrl(p, transform);
+      if (url) result.set(p, url);
+    }),
+  );
+  return result;
 }
 
 // ---------------------------------------------------------------------------
