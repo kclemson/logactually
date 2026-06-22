@@ -168,6 +168,7 @@ export function MemoryComposer({
         kind,
         previewUrl: URL.createObjectURL(file),
         status: 'queued',
+        progress: 0,
       });
     }
     if (added.length === 0) return;
