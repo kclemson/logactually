@@ -258,8 +258,10 @@ export function MemoryComposer({
         note,
         category,
         files: files.flatMap((f) => (f.source === 'new' ? [f.file] : [])),
-        onFileProgress: (i, status) => {
-          setFiles((prev) => prev.map((f, fi) => (fi === i ? { ...f, status } : f)));
+        onFileProgress: (i, status, progress) => {
+          setFiles((prev) =>
+            prev.map((f, fi) => (fi === i ? { ...f, status, progress } : f)),
+          );
         },
       },
       {
