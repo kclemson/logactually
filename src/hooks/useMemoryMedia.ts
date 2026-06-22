@@ -54,6 +54,7 @@ interface UploadedFile {
   width: number | null;
   height: number | null;
   duration: number | null;
+  originalName: string;
 }
 
 /**
