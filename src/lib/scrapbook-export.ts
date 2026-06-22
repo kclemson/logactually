@@ -470,5 +470,5 @@ export function buildReadme(manifest: ScrapbookManifest, skipped: number): strin
     '',
     'Note: images are stored at up to 1920px (as displayed in the app).',
   ];
-  return lines.filter((l) => l !== '').join('\n') + '\n';
+  return lines.filter((l): l is string => l !== null).join('\n') + '\n';
 }
