@@ -352,6 +352,7 @@ export function useUpdateMemory() {
               width: meta.width || null,
               height: meta.height || null,
               duration: meta.duration || null,
+              original_filename: file.name,
             });
           }
           onItemProgress?.(i, 'done');
