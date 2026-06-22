@@ -293,6 +293,7 @@ export function useUpdateMemory() {
               width: m.width,
               height: m.height,
               duration: m.duration_secs,
+              original_filename: m.original_filename,
             });
             continue;
           }
