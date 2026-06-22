@@ -193,7 +193,37 @@ const MemoryViewer = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, [goNextItem, goPrevItem, close, editing, calendarOpen]);
 
+  // Warm the neighbor slides so swiping doesn't flash "Loading…". For each
+  // adjacent position we mint its signed URL (populating the in-memory cache)
+  // and, for images, decode the bitmap ahead of time. Fire-and-forget; videos
+  // only get their URL warmed (no byte-buffering).
+  useEffect(() => {
+    let cancelled = false;
+    for (const offset of [1, -1, 2]) {
+      const media = resolveNeighbor(days, dayIndex, clampedItemIndex, offset);
+      if (!media) continue;
+      if (media.kind === 'image') {
+        viewerImageUrl(media).then((u) => {
+          if (cancelled || !u) return;
+          const img = new Image();
+          img.src = u;
+        });
+        if (media.poster_path) getSignedMemoryUrl(media.poster_path, MEMORY_THUMB_TRANSFORM);
+      } else {
+        getSignedMemoryUrl(media.storage_path);
+        if (media.poster_path) getSignedMemoryUrl(media.poster_path, MEMORY_THUMB_TRANSFORM);
+      }
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [days, dayIndex, clampedItemIndex]);
+
   const datesWithData = useMemo(() => days.map((d) => parseISO(d.date)), [days]);
+
+  // O(1) membership test for the calendar (one Set instead of a linear scan per
+  // rendered day cell).
+  const dateKeySet = useMemo(() => new Set(days.map((d) => d.date)), [days]);
 
   // Category suggestions for the edit composer.
   const memoryCategories = useMemo(
