@@ -380,7 +380,7 @@ const MemoryViewer = () => {
               }}
               modifiers={{ hasData: datesWithData }}
               modifiersClassNames={{ hasData: 'font-semibold text-teal-600 dark:text-teal-400' }}
-              disabled={(date) => !days.some((d) => d.date === format(date, 'yyyy-MM-dd'))}
+              disabled={(date) => !dateKeySet.has(format(date, 'yyyy-MM-dd'))}
             />
           </div>
         </div>
