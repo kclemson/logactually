@@ -52,6 +52,8 @@ type PendingFile =
       file: File;
       kind: MediaKind;
       previewUrl: string;
+      /** First-frame poster for videos; undefined while pending, null on failure. */
+      posterUrl?: string | null;
       status: FileUploadStatus;
       progress: number; // 0..1, byte-level upload progress
     }
