@@ -645,6 +645,8 @@ function MediaPreview({ file }: { file: PendingFile }) {
         ) : (
           <video
             src={file.previewUrl}
+            poster={(file.source === 'new' ? file.posterUrl : undefined) ?? undefined}
+            preload="metadata"
             controls
             playsInline
             className="max-h-full max-w-full object-contain"
