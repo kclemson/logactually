@@ -167,13 +167,11 @@ export function MemoryComposer({
 
   const handlePick = () => fileInputRef.current?.click();
 
-  const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const picked = Array.from(e.target.files ?? []);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    if (picked.length === 0) return;
+  const addFiles = (incoming: File[]) => {
+    if (incoming.length === 0) return;
     setError(null);
     const added: PendingFile[] = [];
-    for (const file of picked) {
+    for (const file of incoming) {
       const kind = mediaKindFromMime(file.type);
       if (!kind) continue;
       added.push({
@@ -192,6 +190,37 @@ export function MemoryComposer({
       setIndex(prev.length); // jump to the first newly-added item
       return next;
     });
+  };
+
+  const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(e.target.files ?? []);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    addFiles(picked);
+  };
+
+  // Paste images straight from the clipboard (the native OS "Paste" menu item on
+  // mobile, or Ctrl/Cmd+V on desktop) — routed through the same upload pipeline
+  // as the picker. Plain-text pastes fall through to the textarea's default.
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = Array.from(e.clipboardData?.items ?? []);
+    const images: File[] = [];
+    for (const item of items) {
+      if (!item.type.startsWith('image/')) continue;
+      const file = item.getAsFile();
+      if (!file) continue;
+      // Pasted images often arrive unnamed or as a generic "image.png"; give
+      // them a sensible filename so the scrapbook export stays meaningful.
+      const hasName = file.name && file.name.toLowerCase() !== 'image.png';
+      if (hasName) {
+        images.push(file);
+      } else {
+        const ext = file.type.split('/')[1] || 'png';
+        images.push(new File([file], `pasted-${Date.now()}.${ext}`, { type: file.type }));
+      }
+    }
+    if (images.length === 0) return; // let text paste proceed normally
+    e.preventDefault();
+    addFiles(images);
   };
 
   const removeCurrent = () => {
@@ -384,6 +413,7 @@ export function MemoryComposer({
             setNote(e.target.value);
             autoGrow();
           }}
+          onPaste={handlePaste}
           placeholder="Start writing your memory…"
           autoComplete="off"
           rows={1}

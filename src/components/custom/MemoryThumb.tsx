@@ -25,26 +25,37 @@ interface MemoryThumbProps {
 export function MemoryThumb({ media, url, className }: MemoryThumbProps) {
   const thumbPath = memoryThumbPath(media);
   const [override, setOverride] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const src = override ?? url ?? null;
 
   return (
     <div className={cn('relative shrink-0 overflow-hidden rounded-md bg-muted', className)}>
-      {src ? (
+      {/* Shimmer placeholder — stays mounted beneath the image until it decodes,
+          so there's never a blank gap during the fade-in. */}
+      {!loaded && (
+        <div className="absolute inset-0 overflow-hidden bg-muted">
+          <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-primary/15 to-transparent" />
+        </div>
+      )}
+      {src && (
         <img
           src={src}
           alt=""
           loading="lazy"
           decoding="async"
           draggable={false}
+          onLoad={() => setLoaded(true)}
           onError={async () => {
+            setLoaded(false);
             invalidateSignedUrl(thumbPath);
             const fresh = await getSignedMemoryUrl(thumbPath, MEMORY_THUMB_TRANSFORM);
             setOverride(fresh);
           }}
-          className="h-full w-full object-cover"
+          className={cn(
+            'h-full w-full object-cover transition-opacity duration-500',
+            loaded ? 'opacity-100' : 'opacity-0',
+          )}
         />
-      ) : (
-        <div className="h-full w-full animate-pulse bg-muted" />
       )}
       {media.kind === 'video' && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
