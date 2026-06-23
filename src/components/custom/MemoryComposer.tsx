@@ -21,7 +21,7 @@ import {
   type MemoryMedia,
 } from '@/hooks/useMemoryMedia';
 import type { MemoryEntry } from '@/hooks/useMemoryDays';
-import { mediaKindFromMime, getSignedMemoryUrl, type MediaKind } from '@/lib/memory-media';
+import { mediaKindFromMime, getSignedMemoryUrl, extractVideoMeta, type MediaKind } from '@/lib/memory-media';
 import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
