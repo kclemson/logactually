@@ -21,7 +21,7 @@ import {
   type MemoryMedia,
 } from '@/hooks/useMemoryMedia';
 import type { MemoryEntry } from '@/hooks/useMemoryDays';
-import { mediaKindFromMime, getSignedMemoryUrl, type MediaKind } from '@/lib/memory-media';
+import { mediaKindFromMime, getSignedMemoryUrl, extractVideoMeta, type MediaKind } from '@/lib/memory-media';
 import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -52,6 +52,8 @@ type PendingFile =
       file: File;
       kind: MediaKind;
       previewUrl: string;
+      /** First-frame poster for videos; undefined while pending, null on failure. */
+      posterUrl?: string | null;
       status: FileUploadStatus;
       progress: number; // 0..1, byte-level upload progress
     }
@@ -128,10 +130,14 @@ export function MemoryComposer({
   useEffect(() => {
     return () => {
       filesRef.current.forEach((f) => {
-        if (f.source === 'new') URL.revokeObjectURL(f.previewUrl);
+        if (f.source === 'new') {
+          URL.revokeObjectURL(f.previewUrl);
+          if (f.posterUrl) URL.revokeObjectURL(f.posterUrl);
+        }
       });
     };
   }, []);
+
 
   // Grow the writing area to fit its content (DOM measurement, not state sync).
   const autoGrow = useCallback(() => {
@@ -190,6 +196,25 @@ export function MemoryComposer({
       setIndex(prev.length); // jump to the first newly-added item
       return next;
     });
+    // Generate a first-frame poster for videos so the preview paints immediately
+    // (iOS won't render a <video>'s first frame until it's interacted with).
+    for (const item of added) {
+      if (item.source !== 'new' || item.kind !== 'video') continue;
+      extractVideoMeta(item.file).then(({ posterBlob }) => {
+        const posterUrl = posterBlob ? URL.createObjectURL(posterBlob) : null;
+        setFiles((prev) => {
+          let stillPresent = false;
+          const next = prev.map((f) => {
+            if (f.id !== item.id) return f;
+            stillPresent = true;
+            return { ...f, posterUrl };
+          });
+          // Item was removed before the poster resolved — drop the orphan URL.
+          if (!stillPresent && posterUrl) URL.revokeObjectURL(posterUrl);
+          return next;
+        });
+      });
+    }
   };
 
   const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -226,7 +251,10 @@ export function MemoryComposer({
   const removeCurrent = () => {
     setFiles((prev) => {
       const target = prev[index];
-      if (target && target.source === 'new') URL.revokeObjectURL(target.previewUrl);
+      if (target && target.source === 'new') {
+        URL.revokeObjectURL(target.previewUrl);
+        if (target.posterUrl) URL.revokeObjectURL(target.posterUrl);
+      }
       const next = prev.filter((_, i) => i !== index);
       setIndex((i) => Math.max(0, Math.min(i, next.length - 1)));
       return next;
@@ -468,7 +496,11 @@ export function MemoryComposer({
                       <img src={f.previewUrl} alt="" className="h-full w-full object-cover" />
                     ) : (
                       <>
-                        <video src={f.previewUrl} muted playsInline className="h-full w-full object-cover" />
+                        {f.source === 'new' && f.posterUrl ? (
+                          <img src={f.posterUrl} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <video src={f.previewUrl} muted playsInline className="h-full w-full object-cover" />
+                        )}
                         <span className="absolute inset-0 flex items-center justify-center">
                           <Play className="h-4 w-4 text-white drop-shadow" />
                         </span>
@@ -613,6 +645,8 @@ function MediaPreview({ file }: { file: PendingFile }) {
         ) : (
           <video
             src={file.previewUrl}
+            poster={(file.source === 'new' ? file.posterUrl : undefined) ?? undefined}
+            preload="metadata"
             controls
             playsInline
             className="max-h-full max-w-full object-contain"
