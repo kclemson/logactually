@@ -196,6 +196,25 @@ export function MemoryComposer({
       setIndex(prev.length); // jump to the first newly-added item
       return next;
     });
+    // Generate a first-frame poster for videos so the preview paints immediately
+    // (iOS won't render a <video>'s first frame until it's interacted with).
+    for (const item of added) {
+      if (item.source !== 'new' || item.kind !== 'video') continue;
+      extractVideoMeta(item.file).then(({ posterBlob }) => {
+        const posterUrl = posterBlob ? URL.createObjectURL(posterBlob) : null;
+        setFiles((prev) => {
+          let stillPresent = false;
+          const next = prev.map((f) => {
+            if (f.id !== item.id) return f;
+            stillPresent = true;
+            return { ...f, posterUrl };
+          });
+          // Item was removed before the poster resolved — drop the orphan URL.
+          if (!stillPresent && posterUrl) URL.revokeObjectURL(posterUrl);
+          return next;
+        });
+      });
+    }
   };
 
   const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
