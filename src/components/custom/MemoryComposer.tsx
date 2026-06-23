@@ -496,7 +496,11 @@ export function MemoryComposer({
                       <img src={f.previewUrl} alt="" className="h-full w-full object-cover" />
                     ) : (
                       <>
-                        <video src={f.previewUrl} muted playsInline className="h-full w-full object-cover" />
+                        {f.source === 'new' && f.posterUrl ? (
+                          <img src={f.posterUrl} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <video src={f.previewUrl} muted playsInline className="h-full w-full object-cover" />
+                        )}
                         <span className="absolute inset-0 flex items-center justify-center">
                           <Play className="h-4 w-4 text-white drop-shadow" />
                         </span>
