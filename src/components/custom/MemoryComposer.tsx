@@ -130,10 +130,14 @@ export function MemoryComposer({
   useEffect(() => {
     return () => {
       filesRef.current.forEach((f) => {
-        if (f.source === 'new') URL.revokeObjectURL(f.previewUrl);
+        if (f.source === 'new') {
+          URL.revokeObjectURL(f.previewUrl);
+          if (f.posterUrl) URL.revokeObjectURL(f.posterUrl);
+        }
       });
     };
   }, []);
+
 
   // Grow the writing area to fit its content (DOM measurement, not state sync).
   const autoGrow = useCallback(() => {
