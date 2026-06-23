@@ -413,6 +413,7 @@ export function MemoryComposer({
             setNote(e.target.value);
             autoGrow();
           }}
+          onPaste={handlePaste}
           placeholder="Start writing your memory…"
           autoComplete="off"
           rows={1}
