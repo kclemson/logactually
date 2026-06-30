@@ -94,6 +94,8 @@ interface DynamicChartProps {
   timeRangeSuffix?: string;
   onTitleChange?: (title: string) => void;
   onAiNoteChange?: (note: string) => void;
+  /** Hides the chart card header (caller renders its own title/actions). */
+  hideHeader?: boolean;
 }
 
 function periodLabel(days?: number): string | undefined {
