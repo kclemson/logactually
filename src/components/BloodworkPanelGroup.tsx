@@ -190,12 +190,6 @@ interface BloodworkPanelRowProps {
 }
 
 export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSignedUrl, expanded: controlledExpanded, onToggle, filterQuery = '' }: BloodworkPanelRowProps) {
-  const { pinnedKeys, pin, unpin } = usePinnedBloodworkCharts();
-  const togglePin = (canonicalKey: string, displayName: string) => {
-    if (isReadOnly) return;
-    if (pinnedKeys.has(canonicalKey)) unpin.mutate(canonicalKey);
-    else pin.mutate({ canonicalKey, displayName });
-  };
   const renderPin = (canonicalKey: string, displayName: string) => (
     <AnalytePinButton canonicalKey={canonicalKey} displayName={displayName} isReadOnly={isReadOnly} />
   );
