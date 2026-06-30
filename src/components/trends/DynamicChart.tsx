@@ -416,6 +416,7 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
   return (
     <ChartCard
       title={spec.title}
+      hideHeader={hideHeader}
       isTooltipActive={interaction.isTooltipActive}
       isTouchDevice={interaction.isTouchDevice}
       onDismiss={interaction.dismiss}
