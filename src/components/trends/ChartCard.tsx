@@ -53,37 +53,39 @@ export function ChartCard({
       )}
 
       <div className="relative z-40">
-        <CardHeader className="p-2 pb-1">
-          <div className="flex items-start justify-between gap-1">
-            <div className="flex flex-col gap-0 min-w-0">
-              <ChartTitle>
-                {onTitleChange ? (
-                  <span
-                    contentEditable
-                    suppressContentEditableWarning
-                    spellCheck={false}
-                    onBlur={(e) => {
-                      const newTitle = (e.currentTarget.textContent ?? "").trim();
-                      if (newTitle && newTitle !== title) onTitleChange(newTitle);
-                      else e.currentTarget.textContent = title;
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") { e.preventDefault(); (e.target as HTMLElement).blur(); }
-                      if (e.key === "Escape") { e.preventDefault(); e.currentTarget.textContent = title; (e.target as HTMLElement).blur(); }
-                    }}
-                    className="outline-none border-b border-dashed border-muted-foreground/30 focus:border-primary cursor-text"
-                  >
-                    {title}
-                  </span>
-                ) : title}
-              </ChartTitle>
-              {timeRange && (
-                <span className="text-[10px] text-muted-foreground leading-tight">{timeRange}</span>
-              )}
+        {!hideHeader && (
+          <CardHeader className="p-2 pb-1">
+            <div className="flex items-start justify-between gap-1">
+              <div className="flex flex-col gap-0 min-w-0">
+                <ChartTitle>
+                  {onTitleChange ? (
+                    <span
+                      contentEditable
+                      suppressContentEditableWarning
+                      spellCheck={false}
+                      onBlur={(e) => {
+                        const newTitle = (e.currentTarget.textContent ?? "").trim();
+                        if (newTitle && newTitle !== title) onTitleChange(newTitle);
+                        else e.currentTarget.textContent = title;
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") { e.preventDefault(); (e.target as HTMLElement).blur(); }
+                        if (e.key === "Escape") { e.preventDefault(); e.currentTarget.textContent = title; (e.target as HTMLElement).blur(); }
+                      }}
+                      className="outline-none border-b border-dashed border-muted-foreground/30 focus:border-primary cursor-text"
+                    >
+                      {title}
+                    </span>
+                  ) : title}
+                </ChartTitle>
+                {timeRange && (
+                  <span className="text-[10px] text-muted-foreground leading-tight">{timeRange}</span>
+                )}
+              </div>
+              {headerAction}
             </div>
-            {headerAction}
-          </div>
-        </CardHeader>
+          </CardHeader>
+        )}
         <CardContent className="p-2 pt-0">
           {children}
           {footer}
