@@ -37,11 +37,11 @@ export const BLOODWORK_CANONICAL: CanonicalAnalyte[] = [
   { key: 'rdw', display: 'RDW', synonyms: ['rdw', 'rdw-cv', 'red cell distribution width'] },
   { key: 'platelets', display: 'Platelets', synonyms: ['platelets', 'platelet count', 'plt'] },
   { key: 'mpv', display: 'MPV', synonyms: ['mpv', 'mean platelet volume'] },
-  { key: 'neutrophils_pct', display: 'Neutrophils %', synonyms: ['neutrophils', 'neutrophils %', 'neutrophil percent', 'neut %', 'neut', 'neutrophils percent'] },
-  { key: 'lymphocytes_pct', display: 'Lymphocytes %', synonyms: ['lymphocytes', 'lymphocytes %', 'lymph %', 'lymphs %', 'lymphs', 'lymphocyte percent'] },
-  { key: 'monocytes_pct', display: 'Monocytes %', synonyms: ['monocytes', 'monocytes %', 'mono %'] },
-  { key: 'eosinophils_pct', display: 'Eosinophils %', synonyms: ['eosinophils', 'eosinophils %', 'eos %', 'eos'] },
-  { key: 'basophils_pct', display: 'Basophils %', synonyms: ['basophils', 'basophils %', 'baso %', 'basos'] },
+  { key: 'neutrophils_pct', display: 'Neutrophils %', synonyms: ['neutrophils', 'neutrophils %', '% neutrophils', 'neutrophil percent', 'neut %', 'neut', 'neutrophils percent'] },
+  { key: 'lymphocytes_pct', display: 'Lymphocytes %', synonyms: ['lymphocytes', 'lymphocytes %', '% lymphocytes', 'lymph %', 'lymphs %', 'lymphs', 'lymphocyte percent'] },
+  { key: 'monocytes_pct', display: 'Monocytes %', synonyms: ['monocytes', 'monocytes %', '% monocytes', 'mono %'] },
+  { key: 'eosinophils_pct', display: 'Eosinophils %', synonyms: ['eosinophils', 'eosinophils %', '% eosinophils', 'eos %', 'eos'] },
+  { key: 'basophils_pct', display: 'Basophils %', synonyms: ['basophils', 'basophils %', '% basophils', 'baso %', 'basos'] },
   { key: 'neutrophils_abs', display: 'Neutrophils (Absolute)', synonyms: ['neutrophils absolute', 'absolute neutrophils', 'neut abs', 'anc'] },
   { key: 'lymphocytes_abs', display: 'Lymphocytes (Absolute)', synonyms: ['lymphocytes absolute', 'absolute lymphocytes', 'lymph abs', 'lymphs absolute', 'absolute lymphocyte count'] },
   { key: 'monocytes_abs', display: 'Monocytes (Absolute)', synonyms: ['monocytes absolute', 'absolute monocytes'] },
@@ -139,10 +139,58 @@ for (const a of BLOODWORK_CANONICAL) {
   SYNONYM_INDEX.set(normalize(a.display), a);
 }
 
-export function canonicalize(rawName: string): { canonical_key: string; display_name: string } {
+// CBC differential percent <-> absolute siblings. The same printed label
+// (e.g. "Neutrophils %") can mean a relative percentage on one lab report
+// and an absolute count on another — only the UNIT disambiguates them.
+const DIFFERENTIAL_SIBLINGS: Record<string, string> = {
+  neutrophils_pct: 'neutrophils_abs',
+  neutrophils_abs: 'neutrophils_pct',
+  lymphocytes_pct: 'lymphocytes_abs',
+  lymphocytes_abs: 'lymphocytes_pct',
+  monocytes_pct: 'monocytes_abs',
+  monocytes_abs: 'monocytes_pct',
+  eosinophils_pct: 'eosinophils_abs',
+  eosinophils_abs: 'eosinophils_pct',
+  basophils_pct: 'basophils_abs',
+  basophils_abs: 'basophils_pct',
+};
+
+const KEY_INDEX = new Map<string, CanonicalAnalyte>(
+  BLOODWORK_CANONICAL.map((a) => [a.key, a]),
+);
+
+// Classify a unit string as a percentage or an absolute concentration.
+// Absolute CBC counts use cells-per-volume units (e.g. 10*3/uL, x10E3/uL, K/uL).
+export function classifyUnit(unit?: string | null): 'pct' | 'abs' | null {
+  if (!unit) return null;
+  const u = unit.trim();
+  if (!u) return null;
+  if (/(uL|10\*3|10\*9|10e3|10e9|k\/|\/l|cells)/i.test(u)) return 'abs';
+  if (u === '%' || /percent/i.test(u)) return 'pct';
+  return null;
+}
+
+export function canonicalize(
+  rawName: string,
+  unit?: string | null,
+): { canonical_key: string; display_name: string } {
   const norm = normalize(rawName);
   const hit = SYNONYM_INDEX.get(norm);
-  if (hit) return { canonical_key: hit.key, display_name: hit.display };
+  if (hit) {
+    // Unit-aware disambiguation for CBC differential pct/abs pairs: if the
+    // name resolved to one side but the unit says the other, switch siblings.
+    const siblingKey = DIFFERENTIAL_SIBLINGS[hit.key];
+    if (siblingKey) {
+      const uClass = classifyUnit(unit);
+      const hitIsPct = hit.key.endsWith('_pct');
+      if ((hitIsPct && uClass === 'abs') || (!hitIsPct && uClass === 'pct')) {
+        const sibling = KEY_INDEX.get(siblingKey);
+        if (sibling) return { canonical_key: sibling.key, display_name: sibling.display };
+      }
+    }
+    return { canonical_key: hit.key, display_name: hit.display };
+  }
   // Fallback: slug of raw name, keep raw as display.
   return { canonical_key: slugify(rawName), display_name: rawName.trim() };
 }
+
