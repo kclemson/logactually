@@ -196,41 +196,12 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
     if (pinnedKeys.has(canonicalKey)) unpin.mutate(canonicalKey);
     else pin.mutate({ canonicalKey, displayName });
   };
-  const renderPin = (canonicalKey: string, displayName: string) => {
-    const pinned = pinnedKeys.has(canonicalKey);
-    return (
-      <button
-        type="button"
-        onClick={() => togglePin(canonicalKey, displayName)}
-        disabled={isReadOnly}
-        aria-label={pinned ? 'Unpin from Trends' : 'Pin to Trends'}
-        title={pinned ? 'Pinned to Trends' : 'Pin to Trends'}
-        className={cn(
-          'inline-flex h-4 w-4 shrink-0 items-center justify-center transition-colors',
-          pinned ? 'text-teal-500 dark:text-teal-400' : 'text-muted-foreground/40 hover:text-foreground',
-          isReadOnly && 'opacity-30 cursor-not-allowed',
-        )}
-      >
-        <Pin className={cn('h-3 w-3', pinned && 'fill-current')} />
-      </button>
-    );
-  };
-  const renderLookup = (displayName: string) => {
-    const url = `https://www.google.com/search?q=${encodeURIComponent(`${displayName} blood test`)}`;
-    return (
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={(e) => e.stopPropagation()}
-        aria-label={`Look up ${displayName}`}
-        title={`Look up "${displayName} blood test"`}
-        className="inline-flex h-4 w-4 shrink-0 items-center justify-center text-muted-foreground/40 hover:text-foreground transition-opacity md:opacity-0 md:group-hover/row:opacity-100"
-      >
-        <HelpCircle className="h-3 w-3" />
-      </a>
-    );
-  };
+  const renderPin = (canonicalKey: string, displayName: string) => (
+    <AnalytePinButton canonicalKey={canonicalKey} displayName={displayName} isReadOnly={isReadOnly} />
+  );
+  const renderLookup = (displayName: string) => (
+    <AnalyteLookupLink displayName={displayName} />
+  );
   const [internalExpanded, setInternalExpanded] = useState(true);
   const expanded = controlledExpanded ?? internalExpanded;
   const isPending = panel.parse_status === 'pending';
