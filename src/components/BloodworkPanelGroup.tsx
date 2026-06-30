@@ -281,7 +281,15 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
               <div key={r.id} className="contents">
                 <span className="flex items-center gap-1 min-w-0 py-0.5 group/row">
                   {renderPin(r.canonical_key, r.display_name)}
-                  <span className="truncate">{r.display_name}</span>
+                  <AnalyteTrendPopover canonicalKey={r.canonical_key} displayName={r.display_name}>
+                    <button
+                      type="button"
+                      onClick={(e) => e.stopPropagation()}
+                      className="truncate text-left hover:text-foreground hover:underline decoration-dotted underline-offset-2 py-0.5"
+                    >
+                      {r.display_name}
+                    </button>
+                  </AnalyteTrendPopover>
                   {renderLookup(r.display_name)}
                 </span>
                 <span className="tabular-nums whitespace-nowrap py-0.5">
