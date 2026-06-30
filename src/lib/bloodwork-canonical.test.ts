@@ -157,5 +157,70 @@ describe('canonicalize — unknown analyte fallback', () => {
 
   it('falls back to "unknown" for non-alphanumeric input', () => {
     expect(canonicalize('???').canonical_key).toBe('unknown');
+});
+
+// ---------------------------------------------------------------------------
+// Unit-aware disambiguation of the CBC differential
+//
+// The same printed label can mean a percentage on one lab report and an
+// absolute count on another. Only the UNIT tells them apart, so canonicalize
+// must route "Xxx %" to the absolute series when the unit is a cell count.
+// ---------------------------------------------------------------------------
+
+describe('classifyUnit', () => {
+  it('treats percent units as pct', () => {
+    expect(classifyUnit('%')).toBe('pct');
+    expect(classifyUnit(' % ')).toBe('pct');
   });
+
+  it('treats cell-count concentration units as abs', () => {
+    expect(classifyUnit('10*3/uL')).toBe('abs');
+    expect(classifyUnit('x10E3/uL')).toBe('abs');
+    expect(classifyUnit('10*9/L')).toBe('abs');
+    expect(classifyUnit('K/uL')).toBe('abs');
+  });
+
+  it('returns null for unknown / empty units', () => {
+    expect(classifyUnit('')).toBeNull();
+    expect(classifyUnit(null)).toBeNull();
+    expect(classifyUnit(undefined)).toBeNull();
+    expect(classifyUnit('mg/dL')).toBeNull();
+  });
+});
+
+describe('canonicalize — unit-aware CBC differential', () => {
+  it('routes ambiguous "Xxx %" labels to absolute when the unit is a cell count', () => {
+    expect(canonicalize('Neutrophils %', '10*3/uL').canonical_key).toBe('neutrophils_abs');
+    expect(canonicalize('Monocytes %', '10*3/uL').canonical_key).toBe('monocytes_abs');
+    expect(canonicalize('Basophils %', '10*3/uL').canonical_key).toBe('basophils_abs');
+  });
+
+  it('keeps "Xxx %" as a percentage when the unit is %', () => {
+    expect(canonicalize('Neutrophils %', '%').canonical_key).toBe('neutrophils_pct');
+    expect(canonicalize('Monocytes %', '%').canonical_key).toBe('monocytes_pct');
+  });
+
+  it('defaults to percentage for differential labels when no unit is given', () => {
+    expect(canonicalize('Neutrophils %').canonical_key).toBe('neutrophils_pct');
+    expect(canonicalize('Basophils %').canonical_key).toBe('basophils_pct');
+  });
+
+  it('routes leading-% differential labels to the percentage series', () => {
+    expect(canonicalize('% Basophils', '%').canonical_key).toBe('basophils_pct');
+    expect(canonicalize('% Eosinophils', '%').canonical_key).toBe('eosinophils_pct');
+    expect(canonicalize('% Lymphocytes', '%').canonical_key).toBe('lymphocytes_pct');
+    expect(canonicalize('% Monocytes', '%').canonical_key).toBe('monocytes_pct');
+    expect(canonicalize('% Neutrophils', '%').canonical_key).toBe('neutrophils_pct');
+  });
+
+  it('routes an absolute-named label to percentage when the unit says %', () => {
+    expect(canonicalize('Lymphs (Absolute)', '%').canonical_key).toBe('lymphocytes_pct');
+  });
+
+  it('does not let units affect non-differential analytes', () => {
+    expect(canonicalize('Iron', '%').canonical_key).toBe('iron_serum');
+    expect(canonicalize('Glucose', '10*3/uL').canonical_key).toBe('glucose');
+  });
+});
+
 });
