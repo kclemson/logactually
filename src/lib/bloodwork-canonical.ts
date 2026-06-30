@@ -165,6 +165,13 @@ const KEY_INDEX = new Map<string, CanonicalAnalyte>(
   BLOODWORK_CANONICAL.map((a) => [a.key, a]),
 );
 
+// Expanded full name for an analyte's canonical key, when one is defined.
+// Returns undefined for unknown keys or analytes whose display name is already
+// descriptive, so callers can conditionally show it as a subtitle.
+export function getAnalyteFullName(canonicalKey: string): string | undefined {
+  return KEY_INDEX.get(canonicalKey)?.fullName;
+}
+
 // Classify a unit string as a percentage or an absolute concentration.
 // Absolute CBC counts use cells-per-volume units (e.g. 10*3/uL, x10E3/uL, K/uL).
 export function classifyUnit(unit?: string | null): 'pct' | 'abs' | null {
