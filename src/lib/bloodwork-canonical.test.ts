@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   BLOODWORK_CANONICAL,
   canonicalize,
+  classifyUnit,
   normalize,
 } from './bloodwork-canonical';
 
