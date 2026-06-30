@@ -12,14 +12,14 @@ export const BLOODWORK_CANONICAL: CanonicalAnalyte[] = [
   // Lipid panel
   { key: 'total_cholesterol', display: 'Total Cholesterol', synonyms: ['cholesterol', 'cholesterol total', 'total cholesterol', 'chol'] },
   { key: 'hdl_cholesterol', display: 'HDL Cholesterol', synonyms: ['hdl', 'hdl-c', 'hdl cholesterol', 'hdl chol'] },
-  { key: 'ldl_cholesterol', display: 'LDL Cholesterol', synonyms: ['ldl', 'ldl-c', 'ldl cholesterol', 'ldl chol', 'ldl calc', 'ldl calculated', 'ldl chol calc', 'ldl-cholesterol'] },
+  { key: 'ldl_cholesterol', display: 'LDL Cholesterol', synonyms: ['ldl', 'ldl-c', 'ldl cholesterol', 'ldl chol', 'ldl calc', 'ldl calculated', 'ldl chol calc', 'ldl chol calc nih', 'ldl-cholesterol'] },
   { key: 'vldl_cholesterol', display: 'VLDL Cholesterol', synonyms: ['vldl', 'vldl-c', 'vldl cholesterol', 'vldl chol calc'] },
-  { key: 'triglycerides', display: 'Triglycerides', synonyms: ['triglycerides', 'trig', 'trigs', 'tg'] },
+  { key: 'triglycerides', display: 'Triglycerides', synonyms: ['triglycerides', 'triglyceride', 'trig', 'trigs', 'tg'] },
   { key: 'non_hdl_cholesterol', display: 'Non-HDL Cholesterol', synonyms: ['non hdl cholesterol', 'non-hdl cholesterol', 'non hdl chol'] },
-  { key: 'chol_hdl_ratio', display: 'Cholesterol/HDL Ratio', synonyms: ['chol/hdlc ratio', 'chol/hdl ratio', 'cholesterol/hdl ratio', 'tc/hdl'] },
+  { key: 'chol_hdl_ratio', display: 'Cholesterol/HDL Ratio', synonyms: ['chol/hdlc ratio', 'chol/hdl ratio', 'cholesterol/hdl ratio', 'tc/hdl', 't chol/hdl ratio', 't. chol/hdl ratio'] },
 
   // Iron / TIBC
-  { key: 'iron_serum', display: 'Iron', synonyms: ['iron', 'iron serum', 'iron, serum', 'fe'] },
+  { key: 'iron_serum', display: 'Iron', synonyms: ['iron', 'iron serum', 'iron, serum', 'iron, srm', 'iron srm', 'fe'] },
   { key: 'tibc', display: 'TIBC', synonyms: ['tibc', 'iron binding capacity', 'iron bind cap', 'iron bind cap tibc', 'total iron binding capacity'] },
   { key: 'uibc', display: 'UIBC', synonyms: ['uibc', 'unsat iron binding capacity', 'unsaturated iron binding capacity'] },
   { key: 'iron_saturation', display: 'Iron Saturation', synonyms: ['iron saturation', 'iron sat', 'transferrin saturation', 'transferrin sat', 'percent saturation', '% saturation', 'tsat'] },
@@ -34,42 +34,42 @@ export const BLOODWORK_CANONICAL: CanonicalAnalyte[] = [
   { key: 'mcv', display: 'MCV', synonyms: ['mcv', 'mean corpuscular volume'] },
   { key: 'mch', display: 'MCH', synonyms: ['mch', 'mean corpuscular hemoglobin'] },
   { key: 'mchc', display: 'MCHC', synonyms: ['mchc', 'mean corpuscular hemoglobin concentration'] },
-  { key: 'rdw', display: 'RDW', synonyms: ['rdw', 'red cell distribution width'] },
+  { key: 'rdw', display: 'RDW', synonyms: ['rdw', 'rdw-cv', 'red cell distribution width'] },
   { key: 'platelets', display: 'Platelets', synonyms: ['platelets', 'platelet count', 'plt'] },
   { key: 'mpv', display: 'MPV', synonyms: ['mpv', 'mean platelet volume'] },
-  { key: 'neutrophils_pct', display: 'Neutrophils %', synonyms: ['neutrophils', 'neutrophils %', 'neutrophil percent', 'neut %', 'neutrophils percent'] },
-  { key: 'lymphocytes_pct', display: 'Lymphocytes %', synonyms: ['lymphocytes', 'lymphocytes %', 'lymph %', 'lymphs %', 'lymphocyte percent'] },
+  { key: 'neutrophils_pct', display: 'Neutrophils %', synonyms: ['neutrophils', 'neutrophils %', 'neutrophil percent', 'neut %', 'neut', 'neutrophils percent'] },
+  { key: 'lymphocytes_pct', display: 'Lymphocytes %', synonyms: ['lymphocytes', 'lymphocytes %', 'lymph %', 'lymphs %', 'lymphs', 'lymphocyte percent'] },
   { key: 'monocytes_pct', display: 'Monocytes %', synonyms: ['monocytes', 'monocytes %', 'mono %'] },
-  { key: 'eosinophils_pct', display: 'Eosinophils %', synonyms: ['eosinophils', 'eosinophils %', 'eos %'] },
-  { key: 'basophils_pct', display: 'Basophils %', synonyms: ['basophils', 'basophils %', 'baso %'] },
+  { key: 'eosinophils_pct', display: 'Eosinophils %', synonyms: ['eosinophils', 'eosinophils %', 'eos %', 'eos'] },
+  { key: 'basophils_pct', display: 'Basophils %', synonyms: ['basophils', 'basophils %', 'baso %', 'basos'] },
   { key: 'neutrophils_abs', display: 'Neutrophils (Absolute)', synonyms: ['neutrophils absolute', 'absolute neutrophils', 'neut abs', 'anc'] },
-  { key: 'lymphocytes_abs', display: 'Lymphocytes (Absolute)', synonyms: ['lymphocytes absolute', 'absolute lymphocytes', 'lymph abs'] },
+  { key: 'lymphocytes_abs', display: 'Lymphocytes (Absolute)', synonyms: ['lymphocytes absolute', 'absolute lymphocytes', 'lymph abs', 'lymphs absolute', 'absolute lymphocyte count'] },
   { key: 'monocytes_abs', display: 'Monocytes (Absolute)', synonyms: ['monocytes absolute', 'absolute monocytes'] },
-  { key: 'eosinophils_abs', display: 'Eosinophils (Absolute)', synonyms: ['eosinophils absolute', 'absolute eosinophils'] },
-  { key: 'basophils_abs', display: 'Basophils (Absolute)', synonyms: ['basophils absolute', 'absolute basophils'] },
+  { key: 'eosinophils_abs', display: 'Eosinophils (Absolute)', synonyms: ['eosinophils absolute', 'absolute eosinophils', 'eos absolute', 'absolute eosinophil count'] },
+  { key: 'basophils_abs', display: 'Basophils (Absolute)', synonyms: ['basophils absolute', 'absolute basophils', 'baso absolute'] },
 
   // Metabolic / CMP
   { key: 'glucose', display: 'Glucose', synonyms: ['glucose', 'glucose serum', 'fasting glucose', 'blood glucose'] },
   { key: 'bun', display: 'BUN', synonyms: ['bun', 'blood urea nitrogen', 'urea nitrogen'] },
   { key: 'creatinine', display: 'Creatinine', synonyms: ['creatinine', 'creatinine serum'] },
-  { key: 'egfr', display: 'eGFR', synonyms: ['egfr', 'gfr', 'estimated gfr', 'estimated glomerular filtration rate'] },
+  { key: 'egfr', display: 'eGFR', synonyms: ['egfr', 'gfr', 'estimated gfr', 'estimated glomerular filtration rate', 'egfr by ckd-epi 2021', 'egfr ckd-epi', 'egfr ckd epi'] },
   { key: 'bun_creatinine_ratio', display: 'BUN/Creatinine Ratio', synonyms: ['bun/creatinine ratio', 'bun creatinine ratio'] },
   { key: 'sodium', display: 'Sodium', synonyms: ['sodium', 'na'] },
   { key: 'potassium', display: 'Potassium', synonyms: ['potassium', 'k'] },
   { key: 'chloride', display: 'Chloride', synonyms: ['chloride', 'cl'] },
-  { key: 'co2', display: 'CO2', synonyms: ['co2', 'carbon dioxide', 'bicarbonate', 'hco3'] },
+  { key: 'co2', display: 'CO2', synonyms: ['co2', 'carbon dioxide', 'carbon dioxide total', 'carbon dioxide, total', 'bicarbonate', 'hco3'] },
   { key: 'calcium', display: 'Calcium', synonyms: ['calcium', 'ca'] },
   { key: 'magnesium', display: 'Magnesium', synonyms: ['magnesium', 'mg'] },
   { key: 'phosphorus', display: 'Phosphorus', synonyms: ['phosphorus', 'phosphate'] },
-  { key: 'protein_total', display: 'Total Protein', synonyms: ['total protein', 'protein total'] },
+  { key: 'protein_total', display: 'Total Protein', synonyms: ['total protein', 'protein total', 'total protein beckman'] },
   { key: 'albumin', display: 'Albumin', synonyms: ['albumin'] },
   { key: 'globulin', display: 'Globulin', synonyms: ['globulin', 'globulin total'] },
   { key: 'albumin_globulin_ratio', display: 'A/G Ratio', synonyms: ['a/g ratio', 'albumin/globulin ratio', 'albumin globulin ratio'] },
-  { key: 'bilirubin_total', display: 'Bilirubin (Total)', synonyms: ['bilirubin total', 'total bilirubin'] },
-  { key: 'bilirubin_direct', display: 'Bilirubin (Direct)', synonyms: ['bilirubin direct', 'direct bilirubin'] },
-  { key: 'alp', display: 'Alkaline Phosphatase', synonyms: ['alkaline phosphatase', 'alp', 'alk phos'] },
-  { key: 'ast', display: 'AST', synonyms: ['ast', 'aspartate aminotransferase', 'sgot', 'ast sgot'] },
-  { key: 'alt', display: 'ALT', synonyms: ['alt', 'alanine aminotransferase', 'sgpt', 'alt sgpt'] },
+  { key: 'bilirubin_total', display: 'Bilirubin (Total)', synonyms: ['bilirubin total', 'total bilirubin', 'total bilirubin beckman'] },
+  { key: 'bilirubin_direct', display: 'Bilirubin (Direct)', synonyms: ['bilirubin direct', 'direct bilirubin', 'direct bilirubin beckman'] },
+  { key: 'alp', display: 'Alkaline Phosphatase', synonyms: ['alkaline phosphatase', 'alkaline phosphatase total', 'alp', 'alk phos'] },
+  { key: 'ast', display: 'AST', synonyms: ['ast', 'aspartate aminotransferase', 'sgot', 'ast sgot', 'ast beckman'] },
+  { key: 'alt', display: 'ALT', synonyms: ['alt', 'alanine aminotransferase', 'sgpt', 'alt sgpt', 'alt beckman'] },
   { key: 'ggt', display: 'GGT', synonyms: ['ggt', 'gamma-glutamyl transferase', 'gamma glutamyl transferase'] },
 
   // Diabetes / HbA1c
@@ -87,7 +87,7 @@ export const BLOODWORK_CANONICAL: CanonicalAnalyte[] = [
   // Vitamins / hormones
   { key: 'vitamin_d', display: 'Vitamin D (25-OH)', synonyms: ['vitamin d', 'vitamin d 25 hydroxy', '25-hydroxy vitamin d', '25(oh)d', 'vitamin d 25-oh'] },
   { key: 'vitamin_b12', display: 'Vitamin B12', synonyms: ['vitamin b12', 'b12', 'cobalamin'] },
-  { key: 'folate', display: 'Folate', synonyms: ['folate', 'folic acid'] },
+  { key: 'folate', display: 'Folate', synonyms: ['folate', 'folate srm', 'folate, srm', 'folic acid'] },
   { key: 'testosterone_total', display: 'Testosterone (Total)', synonyms: ['testosterone', 'testosterone total', 'total testosterone'] },
   { key: 'testosterone_free', display: 'Testosterone (Free)', synonyms: ['testosterone free', 'free testosterone'] },
   { key: 'estradiol', display: 'Estradiol', synonyms: ['estradiol', 'e2'] },
@@ -102,9 +102,19 @@ export const BLOODWORK_CANONICAL: CanonicalAnalyte[] = [
   { key: 'esr', display: 'ESR', synonyms: ['esr', 'sed rate', 'sedimentation rate', 'erythrocyte sedimentation rate'] },
   { key: 'homocysteine', display: 'Homocysteine', synonyms: ['homocysteine'] },
   { key: 'uric_acid', display: 'Uric Acid', synonyms: ['uric acid'] },
+
+  // At-home dried-blood / capillary tests — kept SEPARATE from venous lab series.
+  // These finger-prick card tests can read systematically differently from venous
+  // serum draws, so they get their own canonical identity instead of merging.
+  { key: 'total_cholesterol_db', display: 'Total Cholesterol (Dried Blood)', synonyms: ['cholesterol total dried bld', 'cholesterol, total, dried bld', 'cholesterol total dried blood', 'cholesterol dried blood', 'total cholesterol dried blood'] },
+  { key: 'hdl_cholesterol_db', display: 'HDL Cholesterol (Dried Blood)', synonyms: ['hdl cholesterol dried blood', 'hdl cholesterol, dried blood', 'hdl dried blood'] },
+  { key: 'ldl_cholesterol_db', display: 'LDL Cholesterol (Dried Blood)', synonyms: ['ldl chol cal nih db', 'ldl chol cal(nih),db', 'ldl cholesterol dried blood', 'ldl dried blood'] },
+  { key: 'triglycerides_db', display: 'Triglycerides (Dried Blood)', synonyms: ['triglyceride dried blood', 'triglyceride, dried blood', 'triglycerides dried blood'] },
+  { key: 'hba1c_db', display: 'Hemoglobin A1c (Dried Blood)', synonyms: ['hemoglobin a1c dried blood', 'hemoglobin a1c, dried blood', 'a1c dried blood', 'hba1c dried blood'] },
+  { key: 'eag_db', display: 'Est. Average Glucose (Dried Blood)', synonyms: ['est avg glu eag db', 'est avg glu (eag),db', 'estimated average glucose dried blood', 'eag db'] },
 ];
 
-function normalize(s: string): string {
+export function normalize(s: string): string {
   return s
     .toLowerCase()
     .replace(/[^a-z0-9% ]+/g, ' ')
