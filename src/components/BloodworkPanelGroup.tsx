@@ -246,7 +246,7 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
               <div key={r.id} className="contents">
                 <span className="flex items-center gap-1 min-w-0 py-0.5 group/row">
                   {renderPin(r.canonical_key, r.display_name)}
-                  <AnalyteTrendPopover canonicalKey={r.canonical_key} displayName={r.display_name}>
+                  <AnalyteTrendPopover canonicalKey={r.canonical_key} displayName={r.display_name} isReadOnly={isReadOnly}>
                     <button
                       type="button"
                       onClick={(e) => e.stopPropagation()}
