@@ -5,6 +5,12 @@
 export interface CanonicalAnalyte {
   key: string;
   display: string;
+  /**
+   * Expanded human name for abbreviation-style analytes (e.g. MCV → Mean
+   * Corpuscular Volume). These are fixed, lab-independent standards. Omitted
+   * for analytes whose display name is already descriptive.
+   */
+  fullName?: string;
   synonyms: string[];
 }
 
