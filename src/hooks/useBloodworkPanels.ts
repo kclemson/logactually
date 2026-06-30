@@ -334,7 +334,7 @@ export function useDuplicatePendingPanels() {
         (section.results ?? []).forEach((r, rIdx) => {
           const analyte = (r.analyte_name as string) ?? '';
           if (!analyte) return;
-          const { canonical_key, display_name } = canonicalize(analyte);
+          const { canonical_key, display_name } = canonicalize(analyte, (r.unit as string) ?? null);
           rows.push({
             user_id: user.id,
             panel_id: panelId,

@@ -231,7 +231,7 @@ Deno.serve(async (req) => {
       const title = section.section_title?.trim() || '';
       (section.results ?? []).forEach((r, rIdx) => {
         if (!r.analyte_name) return;
-        const { canonical_key, display_name } = canonicalize(r.analyte_name);
+        const { canonical_key, display_name } = canonicalize(r.analyte_name, r.unit ?? null);
         canonicalKeys.push(canonical_key);
         rows.push({
           user_id: userId,
