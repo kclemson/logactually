@@ -7,29 +7,37 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { DynamicChart } from "@/components/trends/DynamicChart";
+import { AnalytePinButton, AnalyteLookupLink } from "@/components/bloodwork/AnalyteActions";
 import { supabase } from "@/integrations/supabase/client";
 import { executeDSL } from "@/lib/chart-dsl";
 import { fetchChartData } from "@/lib/chart-data";
+import { getAnalyteFullName } from "@/lib/bloodwork-canonical";
 import type { ChartDSL } from "@/lib/chart-types";
 
 interface AnalyteTrendPopoverProps {
   canonicalKey: string;
   displayName: string;
+  isReadOnly: boolean;
   /** The element rendered as the tap target (the analyte name). */
   children: ReactNode;
 }
 
 /**
  * Wraps a bloodwork analyte's name so tapping it opens a popover with that
- * analyte's all-time trend chart. Data is fetched lazily on open and cached,
+ * analyte's all-time trend chart. The popover header shows the analyte name
+ * (with its expanded full name when known) plus the same pin and Google-lookup
+ * actions available in the list row. Data is fetched lazily on open and cached,
  * reusing the same client-side bloodwork chart path as pinned charts.
  */
 export function AnalyteTrendPopover({
   canonicalKey,
   displayName,
+  isReadOnly,
   children,
 }: AnalyteTrendPopoverProps) {
   const [open, setOpen] = useState(false);
+  const fullName = getAnalyteFullName(canonicalKey);
+  const showFullName = !!fullName && fullName.toLowerCase() !== displayName.toLowerCase();
 
   const { data: spec, isLoading } = useQuery({
     queryKey: ["analyte-trend", canonicalKey],
@@ -61,16 +69,30 @@ export function AnalyteTrendPopover({
         onClick={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
       >
+        <div className="flex items-start gap-1.5 mb-1.5">
+          <AnalytePinButton
+            canonicalKey={canonicalKey}
+            displayName={displayName}
+            isReadOnly={isReadOnly}
+            size="md"
+          />
+          <div className="flex flex-col min-w-0 flex-1 pt-0.5">
+            <span className="text-sm font-semibold leading-tight truncate">{displayName}</span>
+            {showFullName && (
+              <span className="text-[11px] text-muted-foreground leading-tight">{fullName}</span>
+            )}
+          </div>
+          <AnalyteLookupLink displayName={displayName} size="md" alwaysVisible />
+        </div>
         {isLoading ? (
           <div className="h-32 flex items-center justify-center text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
           </div>
         ) : hasData ? (
-          <DynamicChart spec={spec!} />
+          <DynamicChart spec={spec!} hideHeader />
         ) : (
           <div className="h-32 flex flex-col items-center justify-center text-center px-2">
-            <span className="text-sm font-medium truncate max-w-full">{displayName}</span>
-            <span className="text-xs text-muted-foreground mt-1">No trend data yet</span>
+            <span className="text-xs text-muted-foreground">No trend data yet</span>
           </div>
         )}
       </PopoverContent>

@@ -94,6 +94,8 @@ interface DynamicChartProps {
   timeRangeSuffix?: string;
   onTitleChange?: (title: string) => void;
   onAiNoteChange?: (note: string) => void;
+  /** Hides the chart card header (caller renders its own title/actions). */
+  hideHeader?: boolean;
 }
 
 function periodLabel(days?: number): string | undefined {
@@ -104,7 +106,7 @@ function periodLabel(days?: number): string | undefined {
   return `Last ${days} days`;
 }
 
-export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, period, timeRangeSuffix, onTitleChange, onAiNoteChange }: DynamicChartProps) {
+export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, period, timeRangeSuffix, onTitleChange, onAiNoteChange, hideHeader }: DynamicChartProps) {
   const { data, dataKey, color, chartType, xAxis, valueFormat, referenceLine, secondSeries } = spec;
   const isCategorical = spec.groupBy === "item" || spec.groupBy === "category";
   const isDualSeries = !!secondSeries;
@@ -414,6 +416,7 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
   return (
     <ChartCard
       title={spec.title}
+      hideHeader={hideHeader}
       isTooltipActive={interaction.isTooltipActive}
       isTouchDevice={interaction.isTouchDevice}
       onDismiss={interaction.dismiss}

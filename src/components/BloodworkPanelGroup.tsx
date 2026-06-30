@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight, ExternalLink, Trash2, AlertCircle, Loader2, RefreshCw, ChevronsDownUp, ChevronsUpDown, Search, X, Pin, HelpCircle } from 'lucide-react';
+import { ChevronDown, ChevronRight, ExternalLink, Trash2, AlertCircle, Loader2, RefreshCw, ChevronsDownUp, ChevronsUpDown, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useBloodworkPanelsForDate, type BloodworkPanelWithResults } from '@/hooks/useBloodworkPanels';
-import { usePinnedBloodworkCharts } from '@/hooks/usePinnedBloodworkCharts';
 import {
   readPanelQuery, writePanelQuery,
   readPanelAllCollapsed, writePanelAllCollapsed,
@@ -10,6 +9,7 @@ import {
 } from '@/lib/bloodwork-ui-state';
 import { cn } from '@/lib/utils';
 import { AnalyteTrendPopover } from '@/components/AnalyteTrendPopover';
+import { AnalytePinButton, AnalyteLookupLink } from '@/components/bloodwork/AnalyteActions';
 
 interface BloodworkPanelGroupProps {
   dateStr: string;
@@ -190,47 +190,12 @@ interface BloodworkPanelRowProps {
 }
 
 export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSignedUrl, expanded: controlledExpanded, onToggle, filterQuery = '' }: BloodworkPanelRowProps) {
-  const { pinnedKeys, pin, unpin } = usePinnedBloodworkCharts();
-  const togglePin = (canonicalKey: string, displayName: string) => {
-    if (isReadOnly) return;
-    if (pinnedKeys.has(canonicalKey)) unpin.mutate(canonicalKey);
-    else pin.mutate({ canonicalKey, displayName });
-  };
-  const renderPin = (canonicalKey: string, displayName: string) => {
-    const pinned = pinnedKeys.has(canonicalKey);
-    return (
-      <button
-        type="button"
-        onClick={() => togglePin(canonicalKey, displayName)}
-        disabled={isReadOnly}
-        aria-label={pinned ? 'Unpin from Trends' : 'Pin to Trends'}
-        title={pinned ? 'Pinned to Trends' : 'Pin to Trends'}
-        className={cn(
-          'inline-flex h-4 w-4 shrink-0 items-center justify-center transition-colors',
-          pinned ? 'text-teal-500 dark:text-teal-400' : 'text-muted-foreground/40 hover:text-foreground',
-          isReadOnly && 'opacity-30 cursor-not-allowed',
-        )}
-      >
-        <Pin className={cn('h-3 w-3', pinned && 'fill-current')} />
-      </button>
-    );
-  };
-  const renderLookup = (displayName: string) => {
-    const url = `https://www.google.com/search?q=${encodeURIComponent(`${displayName} blood test`)}`;
-    return (
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={(e) => e.stopPropagation()}
-        aria-label={`Look up ${displayName}`}
-        title={`Look up "${displayName} blood test"`}
-        className="inline-flex h-4 w-4 shrink-0 items-center justify-center text-muted-foreground/40 hover:text-foreground transition-opacity md:opacity-0 md:group-hover/row:opacity-100"
-      >
-        <HelpCircle className="h-3 w-3" />
-      </a>
-    );
-  };
+  const renderPin = (canonicalKey: string, displayName: string) => (
+    <AnalytePinButton canonicalKey={canonicalKey} displayName={displayName} isReadOnly={isReadOnly} />
+  );
+  const renderLookup = (displayName: string) => (
+    <AnalyteLookupLink displayName={displayName} />
+  );
   const [internalExpanded, setInternalExpanded] = useState(true);
   const expanded = controlledExpanded ?? internalExpanded;
   const isPending = panel.parse_status === 'pending';
@@ -281,7 +246,7 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
               <div key={r.id} className="contents">
                 <span className="flex items-center gap-1 min-w-0 py-0.5 group/row">
                   {renderPin(r.canonical_key, r.display_name)}
-                  <AnalyteTrendPopover canonicalKey={r.canonical_key} displayName={r.display_name}>
+                  <AnalyteTrendPopover canonicalKey={r.canonical_key} displayName={r.display_name} isReadOnly={isReadOnly}>
                     <button
                       type="button"
                       onClick={(e) => e.stopPropagation()}
@@ -425,7 +390,7 @@ export function BloodworkPanelRow({ panel, isReadOnly, onDelete, onRetry, getSig
                     <div key={r.id} className="contents">
                       <span className="flex items-center gap-1 min-w-0 py-0.5 group/row">
                         {renderPin(r.canonical_key, r.display_name)}
-                        <AnalyteTrendPopover canonicalKey={r.canonical_key} displayName={r.display_name}>
+                        <AnalyteTrendPopover canonicalKey={r.canonical_key} displayName={r.display_name} isReadOnly={isReadOnly}>
                           <button
                             type="button"
                             onClick={(e) => e.stopPropagation()}
