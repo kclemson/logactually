@@ -9,6 +9,7 @@ import {
   readPanelOverrides, writePanelOverrides,
 } from '@/lib/bloodwork-ui-state';
 import { cn } from '@/lib/utils';
+import { AnalyteTrendPopover } from '@/components/AnalyteTrendPopover';
 
 interface BloodworkPanelGroupProps {
   dateStr: string;
