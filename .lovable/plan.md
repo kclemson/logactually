@@ -1,39 +1,47 @@
-## Problem
+## Goals
 
-The bloodwork y-axis now starts at 0 (good), but its **top tick is an ugly decimal** — e.g. `299.16` on Iron, `51.84` on Iron Saturation, `577.8` on TIBC, `17.928` on a smaller analyte. This is because the axis max is computed as `max × 1.08`, which produces arbitrary decimals that Recharts then prints as the top tick.
+1. Fix the analyte popover header so the pin icon lines up with the title (the `fullName` subtitle currently pushes the row out of alignment).
+2. Show the expected/reference range in parentheses in the chart **title**, so it appears both in the popover and on the pinned charts — giving context for what the shaded band represents.
 
-## Fix
+## 1. Popover header alignment — `src/components/AnalyteTrendPopover.tsx`
 
-In `src/components/trends/DynamicChart.tsx`, replace the raw padded max with a **"nice" rounded top** so the axis ends on a clean number (300, 40, 400, 20, etc.) while still:
-- starting at 0,
-- enclosing the top of the reference range,
-- leaving a little headroom above the highest reading.
+Current header uses `items-start` with the pin (a 28px `md` box) and a two-line title/subtitle column, so the pin's centered icon doesn't align with the first line.
 
-Add a small helper that rounds a value up to a clean step (1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10 × the appropriate power of 10):
+Restructure into a single centered top row (pin · title · lookup) with the subtitle on its own line beneath, indented to sit under the title:
 
 ```text
-niceTop(v):
-  if v <= 0 -> return 1
-  exp  = floor(log10(v))
-  base = 10^exp
-  for step in [1,1.2,1.5,2,2.5,3,4,5,6,8,10]:
-     if v <= step*base -> return step*base
-  return 10*base
+<div className="mb-1.5">
+  <div className="flex items-center gap-1.5">
+    <AnalytePinButton ... size="md" />
+    <span className="text-sm font-semibold leading-tight truncate flex-1">
+      {displayName}
+      {rangeText && <span className="font-normal text-muted-foreground"> {rangeText}</span>}
+    </span>
+    <AnalyteLookupLink ... size="md" alwaysVisible />
+  </div>
+  {showFullName && (
+    <span className="block text-[11px] text-muted-foreground leading-tight pl-[2.125rem]">
+      {fullName}
+    </span>
+  )}
+</div>
 ```
 
-Then compute the bloodwork domain as:
+`pl-[2.125rem]` = pin width (`h-7` = 1.75rem) + `gap-1.5` (0.375rem), so the subtitle aligns under the title text. Now the pin, title, and lookup icon share one centered row regardless of whether a subtitle is present.
 
-```text
-dataMax = max(numeric values)
-refHigh = spec.referenceRange.high (when present)
-top     = niceTop( max(dataMax, refHigh) )
-domain  = [0, top]
-```
+`rangeText` is derived from `spec.referenceRange`: `(low–high unit)` (en dash), e.g. `(65–175 ug/dL)`, omitted when no range exists.
 
-Examples with your data: Iron 277 → top 300; Iron Saturation 38 → top 40; TIBC 364 → top 400; a ~16.6 analyte → top 20; creatinine ~1.2 → top 1.5 (stays tight for small-valued analytes). Recharts then generates clean interior ticks (e.g. 0 / 75 / 150 / 225 / 300), and no decimal like `299.16` appears.
+## 2. Reference range in the title — pinned charts
+
+To make the range show on pinned charts too (which render through `DynamicChart` → `ChartCard`) without breaking the inline-editable title, add a non-editable **title suffix**:
+
+- `src/components/trends/ChartCard.tsx`: add an optional `titleSuffix?: string` prop, rendered inline right after the title inside `ChartTitle` in muted, normal-weight text. It sits outside the `contentEditable` span so editing the title is unaffected.
+- `src/components/trends/DynamicChart.tsx`: when `isBloodwork` and `spec.referenceRange` has both bounds, compute `(low–high unit)` and pass it as `titleSuffix` to `ChartCard`. Non-bloodwork charts pass nothing.
+
+Result: pinned bloodwork charts show e.g. `Iron (65–175 ug/dL)`, matching the popover.
 
 ## Technical detail
 
-- Only the `isBloodwork` single-series branch changes; swap the current `bloodworkYDomain` computation (which pads by `× 1.08`) for the `niceTop`-based one above. The `domain={bloodworkYDomain}` usage on the YAxis stays the same.
-- Keep Recharts' default `allowDecimals` so small-range analytes (e.g. creatinine 0–1.5) still get sensible half-step ticks; large analytes round to whole numbers naturally.
-- No backend, DSL, or data changes — pure presentation. Applies to both pinned bloodwork charts and the analyte trend popover.
+- Range formatting lives in a tiny shared inline helper in each spot (numbers shown as-is, en dash between, unit appended when present). Kept trivial rather than adding a util.
+- The range value comes from the live-executed spec (`spec.referenceRange`), which is already populated by `executeBloodworkDSL` from the most recent panel with a reference range.
+- Pure presentation: no backend, DSL, data, or stored-title changes. Existing pins pick up the suffix automatically at render time.

@@ -18,6 +18,8 @@ interface ChartCardProps {
   timeRange?: string;
   /** When set, title becomes inline-editable */
   onTitleChange?: (title: string) => void;
+  /** Non-editable text appended after the title (e.g. reference range). */
+  titleSuffix?: string;
   /** Hides the card header entirely (caller renders its own title/actions). */
   hideHeader?: boolean;
 }
