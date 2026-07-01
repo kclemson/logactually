@@ -80,6 +80,9 @@ export function ChartCard({
                       {title}
                     </span>
                   ) : title}
+                  {titleSuffix && (
+                    <span className="font-normal text-muted-foreground"> {titleSuffix}</span>
+                  )}
                 </ChartTitle>
                 {timeRange && (
                   <span className="text-[10px] text-muted-foreground leading-tight">{timeRange}</span>
