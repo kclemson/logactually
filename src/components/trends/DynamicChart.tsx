@@ -466,7 +466,7 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
           ) : chartType === "line" ? (
             <LineChart data={chartData} margin={{ top: 16, right: 4, left: isBloodwork ? 4 : 0, bottom: 0 }} onClick={handleChartClick}>
               <XAxis {...sharedXAxisProps} />
-              {isBloodwork && <YAxis tick={{ fontSize: 7 }} width={24} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} domain={["dataMin", "dataMax"]} />}
+              {isBloodwork && <YAxis tick={{ fontSize: 7 }} width={24} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} domain={bloodworkYDomain} />}
               {referenceAreaEl}
               {referenceLineEl}
               <Tooltip {...sharedTooltipProps} />
