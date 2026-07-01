@@ -311,6 +311,12 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
     };
     return [0, niceTop(high)];
   })();
+
+  // Bloodwork reference range shown after the title (e.g. "(65–175 ug/dL)").
+  const bloodworkRangeSuffix =
+    isBloodwork && spec.referenceRange && spec.referenceRange.low != null && spec.referenceRange.high != null
+      ? `(${spec.referenceRange.low}–${spec.referenceRange.high}${spec.referenceRange.unit ? ` ${spec.referenceRange.unit}` : ""})`
+      : undefined;
   const referenceAreaEl = spec.referenceRange && spec.referenceRange.low != null && spec.referenceRange.high != null ? (
     <ReferenceArea
       y1={spec.referenceRange.low}
