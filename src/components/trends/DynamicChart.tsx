@@ -454,6 +454,7 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
       onContextMenu={onContextMenu}
       timeRange={[periodLabel(period), timeRangeSuffix].filter(Boolean).join(" ")}
       onTitleChange={onTitleChange}
+      titleSuffix={bloodworkRangeSuffix}
     >
       <div className="h-24">
         <ResponsiveContainer width="100%" height="100%" style={{ overflow: "visible" }}>
