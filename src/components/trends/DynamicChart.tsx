@@ -289,9 +289,9 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
 
   const isBloodwork = spec.dataSource === "bloodwork";
 
-  // Bloodwork y-axis: anchor at 0 and extend the top to include both the highest
-  // reading and the top of the reference band, so the recommended range is always
-  // fully visible (never clipped at the bottom).
+  // Bloodwork y-axis: anchor at 0 and round the top up to a "nice" number that
+  // encloses both the highest reading and the top of the reference band. This keeps
+  // the recommended range fully visible while avoiding ugly decimal top ticks.
   const bloodworkYDomain = ((): [number, number] => {
     const values = data
       .map((d) => d[dataKey])
@@ -299,8 +299,17 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
     const dataMax = values.length ? Math.max(...values) : 1;
     const refHigh = spec.referenceRange?.high;
     const high = Math.max(dataMax, refHigh ?? dataMax);
-    const pad = high * 0.08 || 1;
-    return [0, high + pad];
+    const niceTop = (v: number): number => {
+      if (v <= 0) return 1;
+      const exp = Math.floor(Math.log10(v));
+      const base = Math.pow(10, exp);
+      const steps = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
+      for (const step of steps) {
+        if (v <= step * base + 1e-9) return step * base;
+      }
+      return 10 * base;
+    };
+    return [0, niceTop(high)];
   })();
   const referenceAreaEl = spec.referenceRange && spec.referenceRange.low != null && spec.referenceRange.high != null ? (
     <ReferenceArea
