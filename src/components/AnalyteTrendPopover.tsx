@@ -59,6 +59,11 @@ export function AnalyteTrendPopover({
   });
 
   const hasData = !!spec && spec.data.length > 0;
+  const ref = spec?.referenceRange;
+  const rangeText =
+    ref && ref.low != null && ref.high != null
+      ? `(${ref.low}–${ref.high}${ref.unit ? ` ${ref.unit}` : ""})`
+      : undefined;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
