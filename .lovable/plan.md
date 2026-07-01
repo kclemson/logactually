@@ -1,23 +1,36 @@
-# Fix the empty "Iron, SRM" pinned chart
+## Goal
 
-## Root cause
-The one-time canonicalization backfill re-keyed `bloodwork_results` rows (e.g. `iron_srm` → `iron_serum`) but did **not** update the saved pinned charts in `saved_charts`, whose `chart_dsl.filter.canonicalKey` still points at the old key. The pin titled "Iron, SRM" filters on `iron_srm`, which no longer has any rows — hence the empty chart.
+Make the recommended (reference) range band always fully visible on bloodwork trend charts. Today the y-axis is fitted to `["dataMin", "dataMax"]`, so when your values sit above (or tightly within) the normal range, the lower part of the shaded band gets clipped off the bottom.
 
-Confirmed in the database: exactly one orphaned bloodwork pin exists.
-- `Iron, SRM` → `iron_srm` → 0 rows (empty)
-- `Iron` → `iron_serum` → 10 rows (already working)
+## The change
 
-All other bloodwork pins (Ferritin, Total Cholesterol, TIBC, Iron Saturation) resolve correctly.
+In `src/components/trends/DynamicChart.tsx`, change the bloodwork y-axis to **start at 0** and extend the top to include both the highest reading and the top of the reference band, with a little padding.
 
-## Fix
-Because a correct `iron_serum` "Iron" pin already exists, remapping the stale pin would just create a duplicate. So the fix is a one-time data correction:
+New domain logic (bloodwork line charts only):
 
-- Delete the orphaned pinned chart (`saved_charts` row `56bcee34-9740-4c01-becf-3495a9f462ea`, key `iron_srm`).
+```text
+values      = all numeric points for the analyte
+dataMax     = max(values)
+refHigh     = spec.referenceRange.high  (when present)
 
-After this, the empty chart disappears and the working "Iron" pin remains.
+high   = max(dataMax, refHigh ?? dataMax)
+pad    = high * 0.08   (small headroom so the top isn't glued to the edge)
+domain = [0, high + pad]
+```
 
-## Why no general migration is needed
-A scan of every `source: "bloodwork"` pin shows this is the only one referencing a now-dead key, so a broad remap script isn't warranted. If more orphaned pins surface later, the same approach applies: remap the pin's `canonicalKey` to the new key, or delete it when a pin for the new key already exists.
+Effect:
+- Axis always starts at 0, so the entire shaded normal range (which is always above 0) is visible with context below it.
+- Top of the axis stretches to fit the highest reading and the top of the band.
+- Non-bloodwork charts are untouched — this only changes the `isBloodwork` YAxis branch.
 
-## Verification
-- Re-query `saved_charts` bloodwork pins joined against `bloodwork_results` row counts to confirm no pin resolves to 0 rows.
+This applies everywhere bloodwork charts render through `DynamicChart` — the pinned charts on the Custom page and the analyte trend popover (both use the same component).
+
+## Technical detail
+
+- Only the single-series bloodwork branch at `DynamicChart.tsx:455` changes; swap `domain={["dataMin", "dataMax"]}` for `domain={[0, computedHigh]}` computed from `data`, `dataKey`, and `spec.referenceRange`.
+- The `<ReferenceArea>` element stays as-is; the domain now guarantees the band fits.
+- No backend, DSL, or data changes — pure presentation.
+
+## Tradeoff to keep in mind
+
+Anchoring at 0 means analytes whose values sit far from 0 will show a flatter line, so small fluctuations look smaller. This is the simpler, more intuitive behavior and keeps the reference band clearly framed. If any specific chart later feels too flat, we can revisit padding the bottom instead.

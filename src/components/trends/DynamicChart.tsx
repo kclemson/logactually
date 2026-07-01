@@ -288,6 +288,20 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
   ) : null;
 
   const isBloodwork = spec.dataSource === "bloodwork";
+
+  // Bloodwork y-axis: anchor at 0 and extend the top to include both the highest
+  // reading and the top of the reference band, so the recommended range is always
+  // fully visible (never clipped at the bottom).
+  const bloodworkYDomain = ((): [number, number] => {
+    const values = data
+      .map((d) => d[dataKey])
+      .filter((v): v is number => typeof v === "number");
+    const dataMax = values.length ? Math.max(...values) : 1;
+    const refHigh = spec.referenceRange?.high;
+    const high = Math.max(dataMax, refHigh ?? dataMax);
+    const pad = high * 0.08 || 1;
+    return [0, high + pad];
+  })();
   const referenceAreaEl = spec.referenceRange && spec.referenceRange.low != null && spec.referenceRange.high != null ? (
     <ReferenceArea
       y1={spec.referenceRange.low}
@@ -452,7 +466,7 @@ export function DynamicChart({ spec, onNavigate, headerAction, onContextMenu, pe
           ) : chartType === "line" ? (
             <LineChart data={chartData} margin={{ top: 16, right: 4, left: isBloodwork ? 4 : 0, bottom: 0 }} onClick={handleChartClick}>
               <XAxis {...sharedXAxisProps} />
-              {isBloodwork && <YAxis tick={{ fontSize: 7 }} width={24} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} domain={["dataMin", "dataMax"]} />}
+              {isBloodwork && <YAxis tick={{ fontSize: 7 }} width={24} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} domain={bloodworkYDomain} />}
               {referenceAreaEl}
               {referenceLineEl}
               <Tooltip {...sharedTooltipProps} />
