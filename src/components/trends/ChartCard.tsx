@@ -35,6 +35,7 @@ export function ChartCard({
   onContextMenu,
   timeRange,
   onTitleChange,
+  titleSuffix,
   hideHeader,
 }: ChartCardProps) {
   return (
