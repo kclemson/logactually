@@ -18,6 +18,8 @@ interface ChartCardProps {
   timeRange?: string;
   /** When set, title becomes inline-editable */
   onTitleChange?: (title: string) => void;
+  /** Non-editable text appended after the title (e.g. reference range). */
+  titleSuffix?: string;
   /** Hides the card header entirely (caller renders its own title/actions). */
   hideHeader?: boolean;
 }
@@ -33,6 +35,7 @@ export function ChartCard({
   onContextMenu,
   timeRange,
   onTitleChange,
+  titleSuffix,
   hideHeader,
 }: ChartCardProps) {
   return (
@@ -77,6 +80,9 @@ export function ChartCard({
                       {title}
                     </span>
                   ) : title}
+                  {titleSuffix && (
+                    <span className="font-normal text-muted-foreground"> {titleSuffix}</span>
+                  )}
                 </ChartTitle>
                 {timeRange && (
                   <span className="text-[10px] text-muted-foreground leading-tight">{timeRange}</span>

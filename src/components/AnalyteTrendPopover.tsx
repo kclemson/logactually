@@ -59,6 +59,11 @@ export function AnalyteTrendPopover({
   });
 
   const hasData = !!spec && spec.data.length > 0;
+  const ref = spec?.referenceRange;
+  const rangeText =
+    ref && ref.low != null && ref.high != null
+      ? `(${ref.low}–${ref.high}${ref.unit ? ` ${ref.unit}` : ""})`
+      : undefined;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -69,20 +74,27 @@ export function AnalyteTrendPopover({
         onClick={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start gap-1.5 mb-1.5">
-          <AnalytePinButton
-            canonicalKey={canonicalKey}
-            displayName={displayName}
-            isReadOnly={isReadOnly}
-            size="md"
-          />
-          <div className="flex flex-col min-w-0 flex-1 pt-0.5">
-            <span className="text-sm font-semibold leading-tight truncate">{displayName}</span>
-            {showFullName && (
-              <span className="text-[11px] text-muted-foreground leading-tight">{fullName}</span>
-            )}
+        <div className="mb-1.5">
+          <div className="flex items-center gap-1.5">
+            <AnalytePinButton
+              canonicalKey={canonicalKey}
+              displayName={displayName}
+              isReadOnly={isReadOnly}
+              size="md"
+            />
+            <span className="text-sm font-semibold leading-tight truncate flex-1">
+              {displayName}
+              {rangeText && (
+                <span className="font-normal text-muted-foreground"> {rangeText}</span>
+              )}
+            </span>
+            <AnalyteLookupLink displayName={displayName} size="md" alwaysVisible />
           </div>
-          <AnalyteLookupLink displayName={displayName} size="md" alwaysVisible />
+          {showFullName && (
+            <span className="block text-[11px] text-muted-foreground leading-tight pl-[2.125rem]">
+              {fullName}
+            </span>
+          )}
         </div>
         {isLoading ? (
           <div className="h-32 flex items-center justify-center text-muted-foreground">
