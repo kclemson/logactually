@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getAnalyzeFoodPrompt, buildBulkFoodParsingPrompt } from '../_shared/prompts.ts';
+import { canonicalize } from '../_shared/bloodwork-canonical.ts';
 
 // Declare EdgeRuntime for background processing
 declare const EdgeRuntime: { waitUntil: (promise: Promise<unknown>) => void };
