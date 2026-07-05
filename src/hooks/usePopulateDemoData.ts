@@ -8,6 +8,7 @@ export interface PopulateDemoDataParams {
   generateFood?: boolean;
   generateWeights?: boolean;
   generateCustomLogs?: boolean;
+  generateBloodwork?: boolean;
   generateSavedMeals?: number;
   generateSavedRoutines?: number;
 }
