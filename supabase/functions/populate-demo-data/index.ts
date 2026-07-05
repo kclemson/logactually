@@ -1007,8 +1007,190 @@ function generateSavedRoutines(count: number): GeneratedRoutine[] {
 }
 
 // ============================================================================
-// BACKGROUND WORK FUNCTION
+// BLOODWORK GENERATION
+// Models iron-deficiency anemia + high cholesterol improving across 3 draws.
 // ============================================================================
+
+interface BloodworkAnalyteSpec {
+  name: string;
+  unit: string;
+  low: number | null;
+  high: number | null;
+  refRaw: string;
+  /** Values for draw 1 (worst), draw 2 (better), draw 3 (near normal). */
+  values: [number, number, number];
+}
+
+interface BloodworkSectionSpec {
+  section: string;
+  analytes: BloodworkAnalyteSpec[];
+}
+
+const BLOODWORK_SECTIONS: BloodworkSectionSpec[] = [
+  {
+    section: 'CBC',
+    analytes: [
+      { name: 'WBC', unit: 'K/uL', low: 4.0, high: 11.0, refRaw: '4.0-11.0', values: [6.2, 6.0, 5.8] },
+      { name: 'RBC', unit: 'M/uL', low: 4.5, high: 5.9, refRaw: '4.5-5.9', values: [4.1, 4.4, 4.9] },
+      { name: 'Hemoglobin', unit: 'g/dL', low: 13.5, high: 17.5, refRaw: '13.5-17.5', values: [10.2, 11.8, 14.1] },
+      { name: 'Hematocrit', unit: '%', low: 41, high: 53, refRaw: '41-53', values: [32, 37, 43] },
+      { name: 'MCV', unit: 'fL', low: 80, high: 100, refRaw: '80-100', values: [74, 79, 86] },
+      { name: 'MCH', unit: 'pg', low: 27, high: 33, refRaw: '27-33', values: [23, 25.5, 29] },
+      { name: 'MCHC', unit: 'g/dL', low: 32, high: 36, refRaw: '32-36', values: [31, 32.5, 33.5] },
+      { name: 'RDW', unit: '%', low: 11.5, high: 14.5, refRaw: '11.5-14.5', values: [17.5, 15.5, 13.8] },
+      { name: 'Platelets', unit: 'K/uL', low: 150, high: 400, refRaw: '150-400', values: [420, 360, 300] },
+    ],
+  },
+  {
+    section: 'Iron Panel',
+    analytes: [
+      { name: 'Iron', unit: 'ug/dL', low: 65, high: 175, refRaw: '65-175', values: [28, 52, 95] },
+      { name: 'TIBC', unit: 'ug/dL', low: 250, high: 400, refRaw: '250-400', values: [450, 410, 360] },
+      { name: 'Iron Saturation', unit: '%', low: 20, high: 50, refRaw: '20-50', values: [6, 13, 26] },
+      { name: 'Ferritin', unit: 'ng/mL', low: 30, high: 400, refRaw: '30-400', values: [8, 22, 65] },
+      { name: 'Transferrin', unit: 'mg/dL', low: 200, high: 360, refRaw: '200-360', values: [380, 340, 300] },
+    ],
+  },
+  {
+    section: 'Lipid Panel',
+    analytes: [
+      { name: 'Total Cholesterol', unit: 'mg/dL', low: null, high: 200, refRaw: '<200', values: [245, 218, 185] },
+      { name: 'LDL Cholesterol', unit: 'mg/dL', low: null, high: 100, refRaw: '<100', values: [172, 138, 105] },
+      { name: 'HDL Cholesterol', unit: 'mg/dL', low: 40, high: null, refRaw: '>40', values: [38, 44, 52] },
+      { name: 'Triglycerides', unit: 'mg/dL', low: null, high: 150, refRaw: '<150', values: [210, 165, 120] },
+    ],
+  },
+];
+
+/** Determine High/Low flag from a value against optional reference bounds. */
+function bloodworkFlag(value: number, low: number | null, high: number | null): string | null {
+  if (low != null && value < low) return 'Low';
+  if (high != null && value > high) return 'High';
+  return null;
+}
+
+/** Clamp a date to sit within [min, max]. */
+function clampDate(d: Date, min: Date, max: Date): Date {
+  if (d.getTime() < min.getTime()) return new Date(min);
+  if (d.getTime() > max.getTime()) return new Date(max);
+  return d;
+}
+
+/**
+ * Seed the demo account with three bloodwork panels (CBC + Iron + Lipid),
+ * modeling anemia and high cholesterol improving over time.
+ * Returns the number of panels created.
+ */
+async function generateBloodworkData(
+  demoUserId: string,
+  // deno-lint-ignore no-explicit-any
+  serviceClient: any,
+  startDate: Date,
+  endDate: Date,
+): Promise<number> {
+  console.log('Generating demo bloodwork...');
+
+  // Clear existing demo bloodwork: results -> panels -> the Bloodwork log type.
+  const { error: clrResErr } = await serviceClient
+    .from('bloodwork_results')
+    .delete()
+    .eq('user_id', demoUserId);
+  if (clrResErr) console.error('Error clearing bloodwork results:', clrResErr);
+
+  const { error: clrPanErr } = await serviceClient
+    .from('bloodwork_panels')
+    .delete()
+    .eq('user_id', demoUserId);
+  if (clrPanErr) console.error('Error clearing bloodwork panels:', clrPanErr);
+
+  const { error: clrTypeErr } = await serviceClient
+    .from('custom_log_types')
+    .delete()
+    .eq('user_id', demoUserId)
+    .eq('name', 'Bloodwork');
+  if (clrTypeErr) console.error('Error clearing Bloodwork log type:', clrTypeErr);
+
+  // Create the Bloodwork (document upload) log type.
+  const { data: bwType, error: typeErr } = await serviceClient
+    .from('custom_log_types')
+    .insert({ user_id: demoUserId, name: 'Bloodwork', value_type: 'panel', sort_order: 100 })
+    .select()
+    .single();
+  if (typeErr || !bwType) {
+    console.error('Error creating Bloodwork log type:', typeErr);
+    return 0;
+  }
+
+  // Place three draws at ~85, ~45, ~7 days before today, clamped to the range.
+  const today = new Date();
+  const drawDates = [85, 45, 7].map((offset) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() - offset);
+    return clampDate(d, startDate, endDate);
+  });
+
+  let panelsCreated = 0;
+
+  for (let drawIdx = 0; drawIdx < drawDates.length; drawIdx++) {
+    const dateStr = formatDate(drawDates[drawIdx]);
+
+    const { data: panel, error: panelErr } = await serviceClient
+      .from('bloodwork_panels')
+      .insert({
+        user_id: demoUserId,
+        log_type_id: bwType.id,
+        collected_date: dateStr,
+        panel_title: 'Complete Blood Count + Iron + Lipid Panel',
+        storage_path: `demo/${demoUserId}/bloodwork-${dateStr}.pdf`,
+        source_mime_type: 'application/pdf',
+        source_filename: `bloodwork-${dateStr}.pdf`,
+        parse_status: 'success',
+      })
+      .select()
+      .single();
+
+    if (panelErr || !panel) {
+      console.error('Error creating bloodwork panel:', panelErr);
+      continue;
+    }
+
+    const rows: Record<string, unknown>[] = [];
+    BLOODWORK_SECTIONS.forEach((section, sIdx) => {
+      section.analytes.forEach((a, rIdx) => {
+        const value = a.values[drawIdx];
+        const { canonical_key, display_name } = canonicalize(a.name, a.unit);
+        rows.push({
+          user_id: demoUserId,
+          panel_id: panel.id,
+          collected_date: dateStr,
+          panel_section: section.section,
+          section_order: sIdx,
+          result_order: rIdx,
+          analyte_name: a.name,
+          canonical_key,
+          display_name,
+          numeric_value: value,
+          unit: a.unit,
+          reference_low: a.low,
+          reference_high: a.high,
+          reference_raw: a.refRaw,
+          flag: bloodworkFlag(value, a.low, a.high),
+        });
+      });
+    });
+
+    const { error: rowsErr } = await serviceClient.from('bloodwork_results').insert(rows);
+    if (rowsErr) {
+      console.error('Error inserting bloodwork results:', rowsErr);
+      continue;
+    }
+    panelsCreated++;
+  }
+
+  console.log(`Created ${panelsCreated} bloodwork panels`);
+  return panelsCreated;
+}
+
 
 interface PopulationParams {
   startDate: Date;
