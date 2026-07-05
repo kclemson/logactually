@@ -1916,6 +1916,7 @@ interface RequestParams {
   generateFood?: boolean;
   generateWeights?: boolean;
   generateCustomLogs?: boolean;
+  generateBloodwork?: boolean;
   generateSavedMeals?: number;
   generateSavedRoutines?: number;
   clearExisting?: boolean;
