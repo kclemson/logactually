@@ -19,6 +19,7 @@ interface PopulateSummary {
   savedMeals?: number;
   savedRoutines?: number;
   customLogEntries?: number;
+  bloodworkPanels?: number;
   deleted?: {
     foodEntries?: number;
     weightSets?: number;
