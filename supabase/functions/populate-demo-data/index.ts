@@ -2028,6 +2028,7 @@ Deno.serve(async (req) => {
       generateFood,
       generateWeights,
       generateCustomLogs,
+      generateBloodwork,
       savedMealsCount,
       savedRoutinesCount,
       clearExisting,
