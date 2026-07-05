@@ -48,6 +48,7 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
       generateFood,
       generateWeights,
       generateCustomLogs,
+      generateBloodwork,
       generateSavedMeals: generateSavedMeals ? savedMealsCount : 0,
       generateSavedRoutines: generateSavedRoutines ? savedRoutinesCount : 0,
     };
