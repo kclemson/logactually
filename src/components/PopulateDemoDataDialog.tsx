@@ -38,7 +38,7 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
   const [savedMealsCount, setSavedMealsCount] = useState(5);
   const [savedRoutinesCount, setSavedRoutinesCount] = useState(4);
 
-  const nothingSelected = !generateFood && !generateWeights && !generateCustomLogs && !generateSavedMeals && !generateSavedRoutines;
+  const nothingSelected = !generateFood && !generateWeights && !generateCustomLogs && !generateBloodwork && !generateSavedMeals && !generateSavedRoutines;
 
   const handleSubmit = async () => {
     const params: PopulateDemoDataParams = {
