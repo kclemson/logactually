@@ -2014,6 +2014,7 @@ Deno.serve(async (req) => {
     const generateFood = params.generateFood ?? true;
     const generateWeights = params.generateWeights ?? true;
     const generateCustomLogs = params.generateCustomLogs ?? false;
+    const generateBloodwork = params.generateBloodwork ?? false;
     const savedMealsCount = params.generateSavedMeals ?? 5;
     const savedRoutinesCount = params.generateSavedRoutines ?? 4;
     const clearExisting = params.clearExisting ?? false;
