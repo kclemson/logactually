@@ -1314,6 +1314,7 @@ async function doPopulationWork(
 
     let foodEntriesCreated = 0;
     let weightSetsCreated = 0;
+    let bloodworkPanelsCreated = 0;
 
     // ========================================================================
     // INSERT SAVED ROUTINES UP-FRONT (so daily logs can reference them)
