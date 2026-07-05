@@ -1885,6 +1885,7 @@ async function doPopulationWork(
       savedMeals: savedMealsCreated,
       savedRoutines: savedRoutinesCreated,
       customLogEntries: customLogEntriesCreated,
+      bloodworkPanels: bloodworkPanelsCreated,
       parsedInputs: parsedCache.size,
       dateRange: {
         start: formatDate(startDate),
