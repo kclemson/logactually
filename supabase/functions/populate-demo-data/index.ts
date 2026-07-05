@@ -1223,6 +1223,7 @@ async function doPopulationWork(
     generateFood,
     generateWeights,
     generateCustomLogs,
+    generateBloodwork,
     savedMealsCount,
     savedRoutinesCount,
     clearExisting,
