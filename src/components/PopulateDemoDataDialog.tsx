@@ -32,6 +32,7 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
   const [generateFood, setGenerateFood] = useState(true);
   const [generateWeights, setGenerateWeights] = useState(true);
   const [generateCustomLogs, setGenerateCustomLogs] = useState(true);
+  const [generateBloodwork, setGenerateBloodwork] = useState(true);
   const [generateSavedMeals, setGenerateSavedMeals] = useState(true);
   const [generateSavedRoutines, setGenerateSavedRoutines] = useState(true);
   const [savedMealsCount, setSavedMealsCount] = useState(5);
