@@ -247,6 +247,9 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
                         {result.summary.customLogEntries != null && (
                           <li>Created {result.summary.customLogEntries} custom log entries</li>
                         )}
+                        {result.summary.bloodworkPanels != null && (
+                          <li>Created {result.summary.bloodworkPanels} bloodwork panels</li>
+                        )}
                       </ul>
                     )}
                   </div>
