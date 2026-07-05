@@ -1859,6 +1859,25 @@ async function doPopulationWork(
       }
     }
 
+    if (generateBloodwork) {
+      bloodworkPanelsCreated = await generateBloodworkData(demoUserId, serviceClient, startDate, endDate);
+
+      // Bloodwork lives under Custom logs, so make sure the section is visible.
+      const { data: profile } = await serviceClient
+        .from('profiles')
+        .select('settings')
+        .eq('id', demoUserId)
+        .single();
+      const currentSettings = (profile?.settings as Record<string, unknown>) || {};
+      const { error: settingsErr } = await serviceClient
+        .from('profiles')
+        .update({ settings: { ...currentSettings, showCustomLogs: true } })
+        .eq('id', demoUserId);
+      if (settingsErr) console.error('Error enabling showCustomLogs for bloodwork:', settingsErr);
+    }
+
+
+
     const summary = {
       daysPopulated: selectedDays.length,
       foodEntries: foodEntriesCreated,
