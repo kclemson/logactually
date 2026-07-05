@@ -32,12 +32,13 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
   const [generateFood, setGenerateFood] = useState(true);
   const [generateWeights, setGenerateWeights] = useState(true);
   const [generateCustomLogs, setGenerateCustomLogs] = useState(true);
+  const [generateBloodwork, setGenerateBloodwork] = useState(true);
   const [generateSavedMeals, setGenerateSavedMeals] = useState(true);
   const [generateSavedRoutines, setGenerateSavedRoutines] = useState(true);
   const [savedMealsCount, setSavedMealsCount] = useState(5);
   const [savedRoutinesCount, setSavedRoutinesCount] = useState(4);
 
-  const nothingSelected = !generateFood && !generateWeights && !generateCustomLogs && !generateSavedMeals && !generateSavedRoutines;
+  const nothingSelected = !generateFood && !generateWeights && !generateCustomLogs && !generateBloodwork && !generateSavedMeals && !generateSavedRoutines;
 
   const handleSubmit = async () => {
     const params: PopulateDemoDataParams = {
@@ -47,6 +48,7 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
       generateFood,
       generateWeights,
       generateCustomLogs,
+      generateBloodwork,
       generateSavedMeals: generateSavedMeals ? savedMealsCount : 0,
       generateSavedRoutines: generateSavedRoutines ? savedRoutinesCount : 0,
     };
@@ -159,6 +161,15 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
               <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
+                  checked={generateBloodwork}
+                  onChange={(e) => setGenerateBloodwork(e.target.checked)}
+                  className="rounded border-input"
+                />
+                <span>Generate Bloodwork</span>
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
                   checked={generateSavedMeals}
                   onChange={(e) => setGenerateSavedMeals(e.target.checked)}
                   className="rounded border-input"
@@ -235,6 +246,9 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
                         )}
                         {result.summary.customLogEntries != null && (
                           <li>Created {result.summary.customLogEntries} custom log entries</li>
+                        )}
+                        {result.summary.bloodworkPanels != null && (
+                          <li>Created {result.summary.bloodworkPanels} bloodwork panels</li>
                         )}
                       </ul>
                     )}

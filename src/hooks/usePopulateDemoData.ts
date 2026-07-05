@@ -8,6 +8,7 @@ export interface PopulateDemoDataParams {
   generateFood?: boolean;
   generateWeights?: boolean;
   generateCustomLogs?: boolean;
+  generateBloodwork?: boolean;
   generateSavedMeals?: number;
   generateSavedRoutines?: number;
 }
@@ -18,6 +19,7 @@ interface PopulateSummary {
   savedMeals?: number;
   savedRoutines?: number;
   customLogEntries?: number;
+  bloodworkPanels?: number;
   deleted?: {
     foodEntries?: number;
     weightSets?: number;
