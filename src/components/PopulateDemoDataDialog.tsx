@@ -161,6 +161,15 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
               <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
+                  checked={generateBloodwork}
+                  onChange={(e) => setGenerateBloodwork(e.target.checked)}
+                  className="rounded border-input"
+                />
+                <span>Generate Bloodwork</span>
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
                   checked={generateSavedMeals}
                   onChange={(e) => setGenerateSavedMeals(e.target.checked)}
                   className="rounded border-input"
