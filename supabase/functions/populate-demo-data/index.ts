@@ -1192,6 +1192,10 @@ async function generateBloodworkData(
 }
 
 
+// ============================================================================
+// BACKGROUND WORK FUNCTION
+// ============================================================================
+
 interface PopulationParams {
   startDate: Date;
   endDate: Date;
@@ -1199,6 +1203,7 @@ interface PopulationParams {
   generateFood: boolean;
   generateWeights: boolean;
   generateCustomLogs: boolean;
+  generateBloodwork: boolean;
   savedMealsCount: number;
   savedRoutinesCount: number;
   clearExisting: boolean;
