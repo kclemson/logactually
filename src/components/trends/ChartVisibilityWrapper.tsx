@@ -37,7 +37,7 @@ export function ChartVisibilityWrapper({
         type="button"
         onClick={() => onToggle(chartId)}
         aria-label={isHidden ? 'Show chart' : 'Hide chart'}
-        className="absolute right-1 top-1 z-10 rounded-md bg-background/90 p-1 text-[hsl(217_91%_60%)] shadow-sm ring-1 ring-border backdrop-blur-sm transition-colors hover:bg-background"
+        className="absolute right-1 top-1 z-50 rounded-md bg-background/90 p-1 text-[hsl(217_91%_60%)] shadow-sm ring-1 ring-border backdrop-blur-sm transition-colors hover:bg-background"
       >
         {isHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
       </button>
