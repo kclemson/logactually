@@ -4,7 +4,7 @@ import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, LabelList } from "r
 import { Card, CardContent, CardHeader, ChartTitle, ChartSubtitle } from "@/components/ui/card";
 import { CompactChartTooltip } from "@/components/trends/CompactChartTooltip";
 import { useHasHover } from "@/hooks/use-has-hover";
-import { getMuscleGroupDisplayWithTooltip, hasDistanceTracking } from "@/lib/exercise-metadata";
+import { getMuscleGroupDisplayWithTooltip, hasDistanceTracking, getExerciseDisplayName, getSubtypeDisplayName } from "@/lib/exercise-metadata";
 import { formatDurationMmSs, convertDistance, convertSpeed, type DistanceUnit, type SpeedUnit } from "@/lib/weight-units";
 import { type ExerciseTrend } from "@/hooks/useWeightTrends";
 import { type WeightUnit } from "@/lib/weight-units";
@@ -213,7 +213,7 @@ export const ExerciseChart = ({ exercise, unit, onBarClick, distanceUnit = 'mi' 
           onClick={handleHeaderClick}
         >
           <div className="flex flex-col gap-0.5">
-            <ChartTitle className="truncate">{exercise.description}</ChartTitle>
+            <ChartTitle className="truncate">{getSubtypeDisplayName(exercise.exercise_subtype) ?? getExerciseDisplayName(exercise.exercise_key)}</ChartTitle>
             <ChartSubtitle>
               {supportsSpeedToggle ? (
                 <>Cardio · {cardioMode === 'mph' ? speedLabel : cardioMode === 'distance' ? distLabel : cardioMode} <span className="opacity-50">▾</span></>
