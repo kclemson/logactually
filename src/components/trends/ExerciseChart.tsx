@@ -213,7 +213,7 @@ export const ExerciseChart = ({ exercise, unit, onBarClick, distanceUnit = 'mi' 
           onClick={handleHeaderClick}
         >
           <div className="flex flex-col gap-0.5">
-            <ChartTitle className="truncate">{exercise.description}</ChartTitle>
+            <ChartTitle className="truncate">{getSubtypeDisplayName(exercise.exercise_subtype) ?? getExerciseDisplayName(exercise.exercise_key)}</ChartTitle>
             <ChartSubtitle>
               {supportsSpeedToggle ? (
                 <>Cardio · {cardioMode === 'mph' ? speedLabel : cardioMode === 'distance' ? distLabel : cardioMode} <span className="opacity-50">▾</span></>
