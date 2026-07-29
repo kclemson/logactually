@@ -13,6 +13,7 @@ import type {
   HourlyTotals,
 } from "./chart-types";
 import { isCardioExercise } from "./exercise-metadata";
+import { fetchAllRows } from "./supabase-paginate";
 
 type TypedClient = SupabaseClient<Database>;
 
