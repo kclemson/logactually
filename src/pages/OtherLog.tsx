@@ -515,9 +515,11 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                   initialNumericValue={editingEntry.numeric_value}
                   initialNumericValue2={editingEntry.numeric_value_2}
                   initialTextValue={editingEntry.text_value}
+                  loggedDate={dialogDate}
+                  onLoggedDateChange={setDialogDate}
                   onSubmit={(params) => {
                     updateEntry.mutate(
-                      { id: editingEntry.id, ...params },
+                      { id: editingEntry.id, logged_date: dialogDate, ...params },
                       { onSuccess: () => setEditingEntry(null) }
                     );
                   }}
