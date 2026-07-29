@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { LogDatePicker } from './LogDatePicker';
 import { cn } from '@/lib/utils';
 
 interface MedicationEntryInputProps {
@@ -22,6 +23,7 @@ interface MedicationEntryInputProps {
   initialTimeInList?: string | null;
   /** yyyy-MM-dd date being logged for — used to show date in title and fix count label */
   loggedDate?: string;
+  onLoggedDateChange?: (date: string) => void;
   onSubmit: (params: {
     numeric_value: number | null;
     dose_time: string | null;
