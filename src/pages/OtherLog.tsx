@@ -192,6 +192,11 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
     setShowInputDialog(true);
   }
 
+  function handleEditEntry(entry: import('@/hooks/useCustomLogEntries').CustomLogEntry) {
+    setDialogDate(entry.logged_date);
+    setEditingEntry(entry);
+  }
+
   const handleCreateType = (name: string, valueType: 'numeric' | 'text' | 'dual_numeric', unit?: string) => {
     createType.mutate({ name, value_type: valueType, unit: unit || null }, {
       onSuccess: (newType) => {
