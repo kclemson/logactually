@@ -806,7 +806,7 @@ const Trends = () => {
       )}
 
       {/* Other Trends Section */}
-      {((showCustomLogs && customLogTrends.length > 0) || bloodworkCharts.length > 0) && customSectionVisible && (
+      {((showCustomLogs && qualifiedCustomLogTrends.length > 0) || bloodworkCharts.length > 0) && customSectionVisible && (
         <CollapsibleSection title="Custom Trends" icon={ClipboardList} iconClassName="text-teal-500 dark:text-teal-400" defaultOpen={true} storageKey="trends-other">
           <div className="grid grid-cols-2 gap-2">
             {bloodworkCharts.map((chart) => {
