@@ -412,11 +412,12 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                 doseTimes={dialogType.dose_times}
                 todayEntryCount={todayMedEntries.length}
                 todayLoggedTimes={todayMedEntries.map(e => e.dose_time).filter(Boolean) as string[]}
-                loggedDate={logTargetDate}
+                loggedDate={dialogDate}
+                onLoggedDateChange={setDialogDate}
                 onSubmit={(params) => {
                   createEntry.mutate({
                     log_type_id: dialogType.id,
-                    logged_date: logTargetDate,
+                    logged_date: dialogDate,
                     unit: dialogType.unit || null,
                     ...params,
                   }, {
