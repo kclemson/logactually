@@ -136,6 +136,10 @@ const Trends = () => {
     () => savedCharts.filter((c) => (c.chart_dsl as ChartDSL | null)?.source === "bloodwork"),
     [savedCharts]
   );
+  const myCharts = useMemo(
+    () => savedCharts.filter((c) => (c.chart_dsl as ChartDSL | null)?.source !== "bloodwork"),
+    [savedCharts]
+  );
 
   // Re-execute v2 saved charts with live data
   const v2ChartIds = useMemo(
