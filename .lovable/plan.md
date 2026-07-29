@@ -1,11 +1,31 @@
-Add one new entry to the top of `CHANGELOG_ENTRIES` in `src/pages/Changelog.tsx`, and update `LAST_UPDATED` to today's date (`Jul-29-26`).
+## Problem
+You want to log iron infusions as a numeric custom log (date + mg amount), but the current flow forces the entry onto either the selected day in Daily view or today in By-Type/Focused view. That makes backfilling your 2024–2026 infusion history painful or impossible without navigating one day at a time.
 
-Scope: only user-facing fixes that affect everyone. My Charts is admin/beta-only (`canUseCharts = isAdmin || isBeta`) so nothing about the bloodwork-pin double-render belongs in the changelog.
+## Proposed fix
+Add a manual date picker to the custom log entry creation and editing dialogs so you can override the default date before saving. This applies to **all custom log types** (numeric, text, medication, panel, etc.) because all of them can have backdated entries.
 
-Proposed entry (no image):
+## What we'll build
+1. **Date override in the create/edit dialog**
+   - In the existing `LogEntryInput`/dialog flow, add a `DatePicker` that defaults to the current context date (selected day or today) but lets you pick any date.
+   - Pass the chosen date through to the `createEntry`/`updateEntry` mutation instead of always using the context date.
 
-```
-{ date: "Jul-29", text: "Trends charts now hide exercises with very little data — you need at least 3 sessions (and a weight logged, for strength exercises) before a chart appears, and low-frequency exercises are hidden once you have others with much more history. Custom log charts also hide until there are at least 2 days of data. Also fixed 'All time' on the Trends page to include your full history instead of stopping partway through." },
-```
+2. **Support editing the date on existing entries**
+   - Allow the date to be changed when editing an entry, so mistakes or backfilled entries can be corrected.
 
-No other files change.
+3. **No new log type needed**
+   - You'll create a standard numeric custom log type named "Iron Infusion" with unit "mg" through the existing UI. The code change is only about the date picker.
+
+## Out of scope for now
+- Charting ferritin alongside infusions (you said you're not sure yet about priority).
+- Overlaying infusion events on bloodwork charts.
+- New structured fields like brand/location.
+
+## Files likely to change
+- `src/components/LogEntryInput.tsx` — add date picker state and pass date override.
+- `src/pages/OtherLog.tsx` — wire the date picker into the entry creation dialog.
+- `src/hooks/useCustomLogEntries.ts` — support `logged_date` override in `createEntry`/`updateEntry`.
+- `src/hooks/useCustomLogEntriesForType.ts` — already accepts `logged_date`, may need minor alignment.
+
+## Risks
+- Low. The change is additive and only affects the custom log entry creation/editing flow.
+- Need to make sure the date picker works inside the dialog on mobile (use `pointer-events-auto` on the calendar popover).
