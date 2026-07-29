@@ -66,6 +66,7 @@ export function MedicationEntryInput({
   initialNotes,
   initialTimeInList,
   loggedDate,
+  onLoggedDateChange,
   onSubmit,
   onCancel,
   isLoading,
