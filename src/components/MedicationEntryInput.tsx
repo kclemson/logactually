@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { LogDatePicker } from './LogDatePicker';
 import { cn } from '@/lib/utils';
 
 interface MedicationEntryInputProps {
@@ -22,6 +23,7 @@ interface MedicationEntryInputProps {
   initialTimeInList?: string | null;
   /** yyyy-MM-dd date being logged for — used to show date in title and fix count label */
   loggedDate?: string;
+  onLoggedDateChange?: (date: string) => void;
   onSubmit: (params: {
     numeric_value: number | null;
     dose_time: string | null;
@@ -64,6 +66,7 @@ export function MedicationEntryInput({
   initialNotes,
   initialTimeInList,
   loggedDate,
+  onLoggedDateChange,
   onSubmit,
   onCancel,
   isLoading,
@@ -138,6 +141,11 @@ export function MedicationEntryInput({
 
   return (
     <div className="space-y-2 rounded-lg border border-border bg-card p-3">
+      {/* Date picker */}
+      {loggedDate && onLoggedDateChange && (
+        <LogDatePicker date={loggedDate} onChange={onLoggedDateChange} />
+      )}
+
       {/* Name (+ date suffix when not today) + cancel */}
       <div className="flex items-center gap-1">
         <span className="text-sm font-medium flex-1 truncate">

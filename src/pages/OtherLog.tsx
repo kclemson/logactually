@@ -119,37 +119,36 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
 
   // In by_type/focused mode there is no date navigator, so new entries land on today.
   const logTargetDate = effectiveViewMode === 'date' ? dateStr : today;
+  const [dialogDate, setDialogDate] = useState<string>(logTargetDate);
 
-  // Entries for the dialog type (used by MedicationEntryInput to show today's logged times).
-  // In date mode we reuse `entries` (already scoped to dateStr); otherwise we fetch by type and filter.
-  const { entries: dialogTypeEntries } = useCustomLogEntriesForType(
-    effectiveViewMode !== 'date' ? effectiveTypeId : null
-  );
+  // Entries for the dialog type (used by MedicationEntryInput to show logged times for the selected date).
+  const { entries: dialogTypeEntries } = useCustomLogEntriesForType(effectiveTypeId);
 
   // Used for the edit dialog — scoped to the type being edited, regardless of view mode
   const { entries: editingTypeEntries } = useCustomLogEntriesForType(
     editingEntry?.log_type_id ?? null
   );
   const editingTodayEntries = editingTypeEntries.filter(
-    (e) => e.logged_date === dateStr
+    (e) => e.logged_date === dialogDate
   );
 
   // Update mutation for editing medication entries
   const updateMedEntry = useMutation({
-    mutationFn: async ({ id, numeric_value, dose_time, entry_notes }: {
+    mutationFn: async ({ id, logged_date, numeric_value, dose_time, entry_notes }: {
       id: string;
+      logged_date?: string;
       numeric_value: number | null;
       dose_time: string | null;
       entry_notes: string | null;
     }) => {
       const { error } = await supabase
         .from('custom_log_entries')
-        .update({ numeric_value, dose_time, entry_notes })
+        .update({ logged_date, numeric_value, dose_time, entry_notes })
         .eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
-      invalidateCustomLogCaches(queryClient, { loggedDate: dateStr });
+      invalidateCustomLogCaches(queryClient, {});
       setEditingEntry(null);
     },
   });
@@ -187,7 +186,13 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
       setViewMode('date');
     }
     setSelectedTypeId(typeId);
+    setDialogDate(logTargetDate);
     setShowInputDialog(true);
+  }
+
+  function handleEditEntry(entry: import('@/hooks/useCustomLogEntries').CustomLogEntry) {
+    setDialogDate(entry.logged_date);
+    setEditingEntry(entry);
   }
 
   const handleCreateType = (name: string, valueType: 'numeric' | 'text' | 'dual_numeric', unit?: string) => {
@@ -201,12 +206,9 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
 
   const hasLogTypes = !isLoading && sortedLogTypes.length > 0;
 
-  // Today's entries for the selected medication (used in dialog).
-  // In date mode `entries` is already today's (if dateStr=today); otherwise we filter dialogTypeEntries to today.
+  // Entries for the selected medication on the dialog date (used to show logged times/count).
   const todayMedEntries = dialogType
-    ? effectiveViewMode !== 'date'
-      ? dialogTypeEntries.filter((e) => e.log_type_id === dialogType.id && e.logged_date === today)
-      : entries.filter((e) => e.log_type_id === dialogType.id)
+    ? dialogTypeEntries.filter((e) => e.log_type_id === dialogType.id && e.logged_date === dialogDate)
     : [];
 
   const swipeHandlers = useSwipeNavigation(
@@ -341,7 +343,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
             isReadOnly={isReadOnly}
             filterTypeId={effectiveViewMode === 'focused' ? featuredTypeId : null}
             onLogNew={handleLogNew}
-            onEditEntry={(entry) => setEditingEntry(entry)}
+            onEditEntry={handleEditEntry}
             onDeleteEntry={(id) => deleteEntry.mutate(id)}
             onUpdateEntry={(params) => updateEntry.mutate(params)}
           />
@@ -374,7 +376,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
               logTypes={logTypes}
               isLoading={isLoading}
               onDelete={(id) => deleteEntry.mutate(id)}
-              onEdit={(entry) => setEditingEntry(entry)}
+              onEdit={handleEditEntry}
               onUpdate={(params) => updateEntry.mutate(params)}
               isReadOnly={isReadOnly}
               dateStr={dateStr}
@@ -411,11 +413,12 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                 doseTimes={dialogType.dose_times}
                 todayEntryCount={todayMedEntries.length}
                 todayLoggedTimes={todayMedEntries.map(e => e.dose_time).filter(Boolean) as string[]}
-                loggedDate={logTargetDate}
+                loggedDate={dialogDate}
+                onLoggedDateChange={setDialogDate}
                 onSubmit={(params) => {
                   createEntry.mutate({
                     log_type_id: dialogType.id,
-                    logged_date: logTargetDate,
+                    logged_date: dialogDate,
                     unit: dialogType.unit || null,
                     ...params,
                   }, {
@@ -443,10 +446,12 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                   valueType={dialogType.value_type}
                   label={dialogType.name}
                   unit={dialogType.unit}
+                  loggedDate={dialogDate}
+                  onLoggedDateChange={setDialogDate}
                   onSubmit={(params) => {
                     createEntry.mutate({
                       log_type_id: dialogType.id,
-                      logged_date: logTargetDate,
+                      logged_date: dialogDate,
                       unit: dialogType.unit || null,
                       ...params,
                     }, {
@@ -486,9 +491,16 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                 todayEntryCount={editingTodayEntries.length}
                 todayLoggedTimes={editingTodayEntries.map(e => e.dose_time).filter(Boolean) as string[]}
                 initialTimeInList={editingEntry.dose_time}
-                loggedDate={dateStr}
+                loggedDate={dialogDate}
+                onLoggedDateChange={setDialogDate}
                 onSubmit={(params) => {
-                  updateMedEntry.mutate({ id: editingEntry.id, numeric_value: params.numeric_value, dose_time: params.dose_time, entry_notes: params.entry_notes });
+                  updateMedEntry.mutate({
+                    id: editingEntry.id,
+                    logged_date: dialogDate,
+                    numeric_value: params.numeric_value,
+                    dose_time: params.dose_time,
+                    entry_notes: params.entry_notes,
+                  });
                 }}
                 onCancel={() => setEditingEntry(null)}
                 isLoading={updateMedEntry.isPending}
@@ -503,9 +515,11 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                   initialNumericValue={editingEntry.numeric_value}
                   initialNumericValue2={editingEntry.numeric_value_2}
                   initialTextValue={editingEntry.text_value}
+                  loggedDate={dialogDate}
+                  onLoggedDateChange={setDialogDate}
                   onSubmit={(params) => {
                     updateEntry.mutate(
-                      { id: editingEntry.id, ...params },
+                      { id: editingEntry.id, logged_date: dialogDate, ...params },
                       { onSuccess: () => setEditingEntry(null) }
                     );
                   }}

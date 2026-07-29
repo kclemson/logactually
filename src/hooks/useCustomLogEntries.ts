@@ -70,6 +70,7 @@ export function useCustomLogEntries(dateStr: string) {
   const updateEntry = useMutation({
     mutationFn: async (params: {
       id: string;
+      logged_date?: string;
       numeric_value?: number | null;
       numeric_value_2?: number | null;
       text_value?: string | null;
@@ -83,20 +84,30 @@ export function useCustomLogEntries(dateStr: string) {
       if (error) throw error;
     },
     onMutate: async (params) => {
+      const newDate = params.logged_date;
       await queryClient.cancelQueries({ queryKey: ['custom-log-entries', dateStr] });
+      if (newDate && newDate !== dateStr) {
+        await queryClient.cancelQueries({ queryKey: ['custom-log-entries', newDate] });
+      }
       const previous = queryClient.getQueryData<CustomLogEntry[]>(['custom-log-entries', dateStr]);
       queryClient.setQueryData<CustomLogEntry[]>(['custom-log-entries', dateStr], (old) =>
         old?.map(e => e.id === params.id ? { ...e, ...params } : e)
       );
-      return { previous };
+      return { previous, newDate };
     },
     onError: (_err, _params, context) => {
       if (context?.previous) {
         queryClient.setQueryData(['custom-log-entries', dateStr], context.previous);
       }
     },
-    onSettled: () => {
-      invalidateCustomLogCaches(queryClient, { loggedDate: dateStr, userId: user?.id });
+    onSettled: (_data, _err, _params, context) => {
+      if (context?.newDate && context.newDate !== dateStr) {
+        // Date moved: invalidate all day caches so the entry appears on the new date
+        // and disappears from the old one.
+        invalidateCustomLogCaches(queryClient, { userId: user?.id });
+      } else {
+        invalidateCustomLogCaches(queryClient, { loggedDate: dateStr, userId: user?.id });
+      }
     },
   });
 

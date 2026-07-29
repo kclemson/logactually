@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { LogDatePicker } from './LogDatePicker';
 import type { ValueType } from '@/hooks/useCustomLogTypes';
 
 interface LogEntryInputProps {
@@ -17,6 +18,8 @@ interface LogEntryInputProps {
   initialNumericValue2?: number | null;
   initialTextValue?: string | null;
   mode?: 'create' | 'edit';
+  loggedDate?: string;
+  onLoggedDateChange?: (date: string) => void;
 }
 
 export function LogEntryInput({
@@ -31,6 +34,8 @@ export function LogEntryInput({
   initialNumericValue2,
   initialTextValue,
   mode = 'create',
+  loggedDate,
+  onLoggedDateChange,
 }: LogEntryInputProps) {
   const [numericValue, setNumericValue] = useState(initialNumericValue != null ? String(initialNumericValue) : '');
   const [numericValue2, setNumericValue2] = useState(initialNumericValue2 != null ? String(initialNumericValue2) : '');
@@ -61,82 +66,87 @@ export function LogEntryInput({
   };
 
   return (
-    <form onSubmit={handleSubmit} className={cn("flex gap-2", valueType === 'text_multiline' ? "items-start" : "items-center")}>
-      {label && (
-        <span className="text-xs font-medium text-muted-foreground shrink-0">{label}</span>
+    <div className="space-y-2">
+      {loggedDate && onLoggedDateChange && (
+        <LogDatePicker date={loggedDate} onChange={onLoggedDateChange} />
       )}
-  {(valueType === 'text_numeric' || valueType === 'text') && (
-        <Input
-          value={textValue}
-          onChange={(e) => setTextValue(e.target.value)}
-          placeholder={valueType === 'text_numeric' ? 'Label' : 'Enter text...'}
-          className="h-8 text-sm flex-1"
-          autoComplete="off"
-          autoFocus
-        />
-      )}
-      {valueType === 'text_multiline' && (
-        <textarea
-          value={textValue}
-          onChange={(e) => setTextValue(e.target.value)}
-          placeholder="Enter text..."
-          className="w-full min-w-0 min-h-[60px] rounded-md border border-input bg-background px-2 py-1 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y"
-          autoComplete="off"
-          autoFocus
-        />
-      )}
-      {valueType === 'dual_numeric' && (
-        <div className="flex items-center gap-1">
+      <form onSubmit={handleSubmit} className={cn("flex gap-2", valueType === 'text_multiline' ? "items-start" : "items-center")}>
+        {label && (
+          <span className="text-xs font-medium text-muted-foreground shrink-0">{label}</span>
+        )}
+    {(valueType === 'text_numeric' || valueType === 'text') && (
           <Input
-            type="number"
-            step="any"
-            value={numericValue}
-            onChange={(e) => setNumericValue(e.target.value)}
-            placeholder="120"
-            className="h-8 text-sm w-16"
+            value={textValue}
+            onChange={(e) => setTextValue(e.target.value)}
+            placeholder={valueType === 'text_numeric' ? 'Label' : 'Enter text...'}
+            className="h-8 text-sm flex-1"
             autoComplete="off"
             autoFocus
           />
-          <span className="text-sm text-muted-foreground">/</span>
-          <Input
-            type="number"
-            step="any"
-            value={numericValue2}
-            onChange={(e) => setNumericValue2(e.target.value)}
-            placeholder="80"
-            className="h-8 text-sm w-16"
+        )}
+        {valueType === 'text_multiline' && (
+          <textarea
+            value={textValue}
+            onChange={(e) => setTextValue(e.target.value)}
+            placeholder="Enter text..."
+            className="w-full min-w-0 min-h-[60px] rounded-md border border-input bg-background px-2 py-1 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y"
             autoComplete="off"
+            autoFocus
           />
-          {unit && (
-            <span className="text-xs text-muted-foreground shrink-0">{unit}</span>
-          )}
-        </div>
-      )}
-      {(valueType === 'numeric' || valueType === 'text_numeric') && (
-        <div className="flex items-center gap-1">
-          <Input
-            type="number"
-            step="any"
-            value={numericValue}
-            onChange={(e) => setNumericValue(e.target.value)}
-            placeholder="Value"
-            className="h-8 text-sm w-20"
-            autoComplete="off"
-            autoFocus={valueType === 'numeric'}
-          />
-          {unit && (
-            <span className="text-xs text-muted-foreground shrink-0">{unit}</span>
-          )}
-        </div>
-      )}
-      <Button type="submit" variant="ghost" size="sm" className="h-8 shrink-0 text-sm" disabled={isLoading || disabled}>
-        {mode === 'edit' ? 'Save changes' : 'Save'}
-      </Button>
-      {onCancel && (
-        <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={onCancel}>
-          <X className="h-4 w-4" />
+        )}
+        {valueType === 'dual_numeric' && (
+          <div className="flex items-center gap-1">
+            <Input
+              type="number"
+              step="any"
+              value={numericValue}
+              onChange={(e) => setNumericValue(e.target.value)}
+              placeholder="120"
+              className="h-8 text-sm w-16"
+              autoComplete="off"
+              autoFocus
+            />
+            <span className="text-sm text-muted-foreground">/</span>
+            <Input
+              type="number"
+              step="any"
+              value={numericValue2}
+              onChange={(e) => setNumericValue2(e.target.value)}
+              placeholder="80"
+              className="h-8 text-sm w-16"
+              autoComplete="off"
+            />
+            {unit && (
+              <span className="text-xs text-muted-foreground shrink-0">{unit}</span>
+            )}
+          </div>
+        )}
+        {(valueType === 'numeric' || valueType === 'text_numeric') && (
+          <div className="flex items-center gap-1">
+            <Input
+              type="number"
+              step="any"
+              value={numericValue}
+              onChange={(e) => setNumericValue(e.target.value)}
+              placeholder="Value"
+              className="h-8 text-sm w-20"
+              autoComplete="off"
+              autoFocus={valueType === 'numeric'}
+            />
+            {unit && (
+              <span className="text-xs text-muted-foreground shrink-0">{unit}</span>
+            )}
+          </div>
+        )}
+        <Button type="submit" variant="ghost" size="sm" className="h-8 shrink-0 text-sm" disabled={isLoading || disabled}>
+          {mode === 'edit' ? 'Save changes' : 'Save'}
         </Button>
-      )}
-    </form>
+        {onCancel && (
+          <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={onCancel}>
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+      </form>
+    </div>
   );
 }
