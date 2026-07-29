@@ -202,16 +202,23 @@ const Trends = () => {
 
   // Filter exercises to only those worth charting:
   // - at least 3 sessions
-  // - within top 90% of activity (>= 10% of max session count)
+  // - within top 90% of activity (>= 10% of max session count) — computed
+  //   per bucket (cardio vs strength) so cardio's high frequency doesn't
+  //   invalidate strength progress charts
   // - non-cardio exercises must have weight data
   const qualifiedExercises = useMemo(() => {
     if (weightExercises.length === 0) return [];
-    const maxSessionCount = Math.max(...weightExercises.map((ex) => ex.sessionCount));
-    const sessionFloor = Math.max(3, Math.ceil(maxSessionCount * 0.1));
+    const isCardio = (ex: ExerciseTrend) =>
+      ex.maxWeight === 0 && (ex.maxDuration > 0 || ex.maxDistance > 0);
+    const cardioMax = Math.max(0, ...weightExercises.filter(isCardio).map((ex) => ex.sessionCount));
+    const strengthMax = Math.max(0, ...weightExercises.filter((ex) => !isCardio(ex)).map((ex) => ex.sessionCount));
+    const cardioFloor = Math.max(3, Math.ceil(cardioMax * 0.1));
+    const strengthFloor = Math.max(3, Math.ceil(strengthMax * 0.1));
     return weightExercises.filter((ex) => {
-      if (ex.sessionCount < sessionFloor) return false;
-      const isCardio = ex.maxWeight === 0 && (ex.maxDuration > 0 || ex.maxDistance > 0);
-      if (!isCardio && ex.maxWeight === 0) return false;
+      const cardio = isCardio(ex);
+      if (!cardio && ex.maxWeight === 0) return false;
+      const floor = cardio ? cardioFloor : strengthFloor;
+      if (ex.sessionCount < floor) return false;
       return true;
     });
   }, [weightExercises]);
