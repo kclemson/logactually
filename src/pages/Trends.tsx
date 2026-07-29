@@ -200,6 +200,22 @@ const Trends = () => {
   const { data: customLogTrends = [] } = useCustomLogTrends(selectedPeriod);
   const showCustomLogs = settings.showCustomLogs;
 
+  // Filter exercises to only those worth charting:
+  // - at least 3 sessions
+  // - within top 90% of activity (>= 10% of max session count)
+  // - non-cardio exercises must have weight data
+  const qualifiedExercises = useMemo(() => {
+    if (weightExercises.length === 0) return [];
+    const maxSessionCount = Math.max(...weightExercises.map((ex) => ex.sessionCount));
+    const sessionFloor = Math.max(3, Math.ceil(maxSessionCount * 0.1));
+    return weightExercises.filter((ex) => {
+      if (ex.sessionCount < sessionFloor) return false;
+      const isCardio = ex.maxWeight === 0 && (ex.maxDuration > 0 || ex.maxDistance > 0);
+      if (!isCardio && ex.maxWeight === 0) return false;
+      return true;
+    });
+  }, [weightExercises]);
+
   // Detect duplicate exercises (same description, different keys)
   const duplicateGroups = useMemo((): DuplicateGroup[] => {
     const byDescription = new Map<string, ExerciseTrend[]>();
