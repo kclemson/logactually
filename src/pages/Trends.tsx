@@ -412,7 +412,7 @@ const Trends = () => {
     || qualifiedExercises.some((ex) => !hiddenSet.has(exerciseChartId(ex.exercise_key, ex.exercise_subtype)));
   const customSectionVisible = customizeMode
     || bloodworkCharts.some((c) => !hiddenSet.has(bloodworkChartId(c.id)))
-    || customLogTrends.some((t) => !hiddenSet.has(customLogChartId(t.logTypeId)));
+    || qualifiedCustomLogTrends.some((t) => !hiddenSet.has(customLogChartId(t.logTypeId)));
 
   return (
     <div className="space-y-6 -mx-2">
