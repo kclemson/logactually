@@ -348,7 +348,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
             isReadOnly={isReadOnly}
             filterTypeId={effectiveViewMode === 'focused' ? featuredTypeId : null}
             onLogNew={handleLogNew}
-            onEditEntry={(entry) => setEditingEntry(entry)}
+            onEditEntry={handleEditEntry}
             onDeleteEntry={(id) => deleteEntry.mutate(id)}
             onUpdateEntry={(params) => updateEntry.mutate(params)}
           />
