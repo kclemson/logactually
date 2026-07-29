@@ -381,7 +381,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
               logTypes={logTypes}
               isLoading={isLoading}
               onDelete={(id) => deleteEntry.mutate(id)}
-              onEdit={(entry) => setEditingEntry(entry)}
+              onEdit={handleEditEntry}
               onUpdate={(params) => updateEntry.mutate(params)}
               isReadOnly={isReadOnly}
               dateStr={dateStr}
