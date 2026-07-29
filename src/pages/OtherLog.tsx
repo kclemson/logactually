@@ -75,6 +75,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>(getStoredViewMode);
   const [editingEntry, setEditingEntry] = useState<import('@/hooks/useCustomLogEntries').CustomLogEntry | null>(null);
+  const [dialogDate, setDialogDate] = useState<string>(logTargetDate);
   const createNewClickedRef = useRef(false);
   const queryClient = useQueryClient();
 
