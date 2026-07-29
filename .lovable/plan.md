@@ -1,38 +1,23 @@
-## Plan
+## Goal
+Make every exercise chart title self-describing by including the parent exercise name whenever a subtype is present.
 
-### 1. Smallest prompt change
+## Change
+In `src/components/trends/ExerciseChart.tsx`, replace the current title logic:
 
-File: `supabase/functions/_shared/prompts.ts`
-
-Current line (appears in both `ANALYZE_WEIGHTS_PROMPT_DEFAULT` and `ANALYZE_WEIGHTS_PROMPT_EXPERIMENTAL`):
-```text
-- exercise_key: a canonical snake_case identifier. PREFER using keys from the reference list below when the user's input matches. You may create new keys for exercises not in the list.
+```ts
+getSubtypeDisplayName(exercise.exercise_subtype) ?? getExerciseDisplayName(exercise.exercise_key)
 ```
 
-Change to:
-```text
-- exercise_key: a canonical snake_case identifier. PREFER using keys from the reference list below when the user's input matches exactly. You may create new keys for exercises not in the list, including distinct variants of listed exercises.
-```
+with a uniform pattern: when a subtype exists, render `"{Parent} — {Subtype}"`; otherwise render the parent name alone.
 
-This adds only six words (`exactly` and `including distinct variants of listed exercises`) and does not restructure anything else.
+Examples:
+- Cycling + indoor → "Cycling — Indoor"
+- Walk/Run + walking → "Walk/Run — Walking"
+- Swimming + pool → "Swimming — Pool"
+- Leg press (no subtype) → "Leg press"
 
-### 2. Add `landmine_press` to the canonical catalog
+No other files change. No prompt or catalog changes. Redundancy in cases like "Walk/Run — Walking" is accepted per user preference for consistency.
 
-File: `supabase/functions/_shared/exercises.ts`
-- Insert near `shoulder_press`:
-  - key: `landmine_press`
-  - name: `Landmine Press`
-  - aliases: `['landmine shoulder press']`
-  - primaryMuscle: `Shoulders`
-  - secondaryMuscles: `['Triceps']`
-
-### 3. Sync frontend metadata
-
-File: `src/lib/exercise-metadata.ts`
-- Add `landmine_press: 'Landmine Press'` to `EXERCISE_DISPLAY_NAMES`.
-- Add muscle mapping if the file keeps a separate muscle catalog.
-
-### 4. Verify
-
-- Typecheck.
-- Run any existing weight/exercise tests.
+## Verification
+- Typecheck
+- Spot-check the "Indoor" chart now reads "Cycling — Indoor"
