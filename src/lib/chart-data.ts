@@ -234,23 +234,19 @@ async function fetchExerciseData(
   exerciseSubtypeFilter?: string,
   primaryMetric?: string,
 ): Promise<DailyTotals> {
-  let query = supabase
-    .from("weight_sets")
-    .select("logged_date, exercise_key, description, sets, reps, weight_lbs, duration_minutes, distance_miles, exercise_metadata, created_at, exercise_subtype, entry_id, calories_burned_override, calories_burned_estimate, heart_rate, effort, incline_pct, cadence_rpm, speed_mph")
-    .gte("logged_date", startDate)
-    .order("logged_date", { ascending: true })
-    .order("created_at", { ascending: true })
-    .limit(10000);
-
-  if (exerciseKeyFilter) {
-    query = query.eq("exercise_key", exerciseKeyFilter);
-  }
-  if (exerciseSubtypeFilter) {
-    query = query.eq("exercise_subtype", exerciseSubtypeFilter);
-  }
-
-  const { data, error } = await query;
-  if (error) throw error;
+  const data = await fetchAllRows<any>(
+    () => {
+      let query = supabase
+        .from("weight_sets")
+        .select("logged_date, exercise_key, description, sets, reps, weight_lbs, duration_minutes, distance_miles, exercise_metadata, created_at, exercise_subtype, entry_id, calories_burned_override, calories_burned_estimate, heart_rate, effort, incline_pct, cadence_rpm, speed_mph")
+        .gte("logged_date", startDate)
+        .order("logged_date", { ascending: true })
+        .order("created_at", { ascending: true });
+      if (exerciseKeyFilter) query = query.eq("exercise_key", exerciseKeyFilter);
+      if (exerciseSubtypeFilter) query = query.eq("exercise_subtype", exerciseSubtypeFilter);
+      return query as any;
+    },
+  );
 
   const exercise: Record<string, ExerciseDayTotals> = {};
   const exerciseByHour: HourlyTotals<ExerciseDayTotals> | undefined = needsHourly ? {} : undefined;
