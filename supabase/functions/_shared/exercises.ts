@@ -26,6 +26,7 @@ export const CANONICAL_EXERCISES: CanonicalExercise[] = [
   { key: 'dumbbell_press', name: 'Dumbbell Press', aliases: ['db press', 'dumbbell bench'], primaryMuscle: 'Chest', secondaryMuscles: ['Triceps', 'Shoulders'] },
   { key: 'chest_fly', name: 'Chest Fly', aliases: ['pec fly', 'fly machine', 'cable fly', 'dumbbell fly'], primaryMuscle: 'Chest', secondaryMuscles: ['Shoulders'] },
   { key: 'shoulder_press', name: 'Shoulder Press', aliases: ['overhead press', 'OHP', 'military press'], primaryMuscle: 'Shoulders', secondaryMuscles: ['Triceps'] },
+  { key: 'landmine_press', name: 'Landmine Press', aliases: ['landmine shoulder press'], primaryMuscle: 'Shoulders', secondaryMuscles: ['Triceps'] },
   { key: 'lateral_raise', name: 'Lateral Raise', aliases: ['side raise', 'shoulder raise', 'side lateral'], primaryMuscle: 'Shoulders' },
   { key: 'front_raise', name: 'Front Raise', aliases: ['front delt raise'], primaryMuscle: 'Shoulders' },
   { key: 'tricep_pushdown', name: 'Tricep Pushdown', aliases: ['cable pushdown', 'tricep cable', 'rope pushdown'], primaryMuscle: 'Triceps' },
