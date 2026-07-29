@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { LogDatePicker } from './LogDatePicker';
 import type { ValueType } from '@/hooks/useCustomLogTypes';
 
 interface LogEntryInputProps {
@@ -17,6 +18,8 @@ interface LogEntryInputProps {
   initialNumericValue2?: number | null;
   initialTextValue?: string | null;
   mode?: 'create' | 'edit';
+  loggedDate?: string;
+  onLoggedDateChange?: (date: string) => void;
 }
 
 export function LogEntryInput({
