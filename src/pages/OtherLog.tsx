@@ -121,11 +121,8 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
   const logTargetDate = effectiveViewMode === 'date' ? dateStr : today;
   const [dialogDate, setDialogDate] = useState<string>(logTargetDate);
 
-  // Entries for the dialog type (used by MedicationEntryInput to show today's logged times).
-  // In date mode we reuse `entries` (already scoped to dateStr); otherwise we fetch by type and filter.
-  const { entries: dialogTypeEntries } = useCustomLogEntriesForType(
-    effectiveViewMode !== 'date' ? effectiveTypeId : null
-  );
+  // Entries for the dialog type (used by MedicationEntryInput to show logged times for the selected date).
+  const { entries: dialogTypeEntries } = useCustomLogEntriesForType(effectiveTypeId);
 
   // Used for the edit dialog — scoped to the type being edited, regardless of view mode
   const { entries: editingTypeEntries } = useCustomLogEntriesForType(
