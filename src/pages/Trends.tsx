@@ -457,7 +457,7 @@ const Trends = () => {
 
 
       {/* My Charts Section — admin only */}
-      {canUseCharts && savedCharts.length > 0 && (
+      {canUseCharts && myCharts.length > 0 && (
         <CollapsibleSection
           title="My Charts"
           icon={BarChart3}
@@ -475,7 +475,7 @@ const Trends = () => {
           }
         >
           <div className="grid grid-cols-2 gap-2">
-            {savedCharts.map((chart, index) => (
+            {myCharts.map((chart, index) => (
               <div
                 key={chart.id}
                 draggable={isEditMode}
