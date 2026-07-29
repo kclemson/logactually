@@ -134,20 +134,21 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
 
   // Update mutation for editing medication entries
   const updateMedEntry = useMutation({
-    mutationFn: async ({ id, numeric_value, dose_time, entry_notes }: {
+    mutationFn: async ({ id, logged_date, numeric_value, dose_time, entry_notes }: {
       id: string;
+      logged_date?: string;
       numeric_value: number | null;
       dose_time: string | null;
       entry_notes: string | null;
     }) => {
       const { error } = await supabase
         .from('custom_log_entries')
-        .update({ numeric_value, dose_time, entry_notes })
+        .update({ logged_date, numeric_value, dose_time, entry_notes })
         .eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
-      invalidateCustomLogCaches(queryClient, { loggedDate: dateStr });
+      invalidateCustomLogCaches(queryClient, {});
       setEditingEntry(null);
     },
   });
