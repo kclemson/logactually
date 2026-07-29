@@ -200,11 +200,27 @@ const Trends = () => {
   const { data: customLogTrends = [] } = useCustomLogTrends(selectedPeriod);
   const showCustomLogs = settings.showCustomLogs;
 
+  // Filter exercises to only those worth charting:
+  // - at least 3 sessions
+  // - within top 90% of activity (>= 10% of max session count)
+  // - non-cardio exercises must have weight data
+  const qualifiedExercises = useMemo(() => {
+    if (weightExercises.length === 0) return [];
+    const maxSessionCount = Math.max(...weightExercises.map((ex) => ex.sessionCount));
+    const sessionFloor = Math.max(3, Math.ceil(maxSessionCount * 0.1));
+    return weightExercises.filter((ex) => {
+      if (ex.sessionCount < sessionFloor) return false;
+      const isCardio = ex.maxWeight === 0 && (ex.maxDuration > 0 || ex.maxDistance > 0);
+      if (!isCardio && ex.maxWeight === 0) return false;
+      return true;
+    });
+  }, [weightExercises]);
+
   // Detect duplicate exercises (same description, different keys)
   const duplicateGroups = useMemo((): DuplicateGroup[] => {
     const byDescription = new Map<string, ExerciseTrend[]>();
 
-    weightExercises.forEach((ex) => {
+    qualifiedExercises.forEach((ex) => {
       const normalized = ex.description.toLowerCase().trim();
       const group = byDescription.get(normalized) || [];
       group.push(ex);
@@ -223,7 +239,7 @@ const Trends = () => {
           losers: sorted.slice(1),
         };
       });
-  }, [weightExercises, dismissedDuplicates]);
+  }, [qualifiedExercises, dismissedDuplicates]);
 
   const handleMerge = (group: DuplicateGroup) => {
     mergeMutation.mutate({
@@ -277,9 +293,9 @@ const Trends = () => {
   // stay (dimmed) so they can be brought back.
   const exercisePool = useMemo(
     () => customizeMode
-      ? weightExercises
-      : weightExercises.filter((ex) => !hiddenSet.has(exerciseChartId(ex.exercise_key, ex.exercise_subtype))),
-    [weightExercises, customizeMode, hiddenSet]
+      ? qualifiedExercises
+      : qualifiedExercises.filter((ex) => !hiddenSet.has(exerciseChartId(ex.exercise_key, ex.exercise_subtype))),
+    [qualifiedExercises, customizeMode, hiddenSet]
   );
   const visibleExercises = exercisePool.slice(0, visibleExerciseCount);
   const hasMoreExercises = exercisePool.length > visibleExerciseCount;
@@ -378,7 +394,7 @@ const Trends = () => {
   const foodSectionVisible = customizeMode || foodChartIds.some((id) => !hiddenSet.has(id));
   const exerciseSectionVisible = customizeMode
     || !hiddenSet.has(CHART_IDS.exerciseCalorieBurn)
-    || weightExercises.some((ex) => !hiddenSet.has(exerciseChartId(ex.exercise_key, ex.exercise_subtype)));
+    || qualifiedExercises.some((ex) => !hiddenSet.has(exerciseChartId(ex.exercise_key, ex.exercise_subtype)));
   const customSectionVisible = customizeMode
     || bloodworkCharts.some((c) => !hiddenSet.has(bloodworkChartId(c.id)))
     || customLogTrends.some((t) => !hiddenSet.has(customLogChartId(t.logTypeId)));
@@ -707,8 +723,12 @@ const Trends = () => {
             <div className="flex justify-center py-8">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
             </div>
-          ) : weightExercises.length === 0 ? (
-            <div className="py-8 text-center text-muted-foreground">No weight training data for this period</div>
+          ) : qualifiedExercises.length === 0 ? (
+            <div className="py-8 text-center text-muted-foreground">
+              {weightExercises.length === 0
+                ? "No weight training data for this period"
+                : "No exercises meet the chart threshold (3+ sessions)"}
+            </div>
           ) : (
             <div className="space-y-3">
               {duplicateGroups.length > 0 && (
