@@ -1,32 +1,40 @@
-# Fix: Exercise trend chart titles use arbitrary user text
+## Root cause (confirmed)
 
-## Problem
+All the trends fetchers pass `.limit(10000)` but the backend caps PostgREST responses at 1000 rows. When "All time" is selected, the queries order ascending by date and return only the earliest 1000 rows.
 
-Exercise chart titles in Trends (e.g. "NE 40th 1.4m walk", "One mile treadmill run") come from the first `weight_sets.description` row picked up by the aggregation, not from the canonical exercise catalog. Any user-typed entry text on the first-seen row becomes the chart's title.
+Verified against your data:
+- `food_entries` has 4,357 rows spanning 2025-11-03 → 2026-07-31
+- The 1,000th row (ordered by `eaten_date ASC`) lands on **2026-02-12**
+- That's exactly the "November through February" window you're seeing
 
-Verified in code:
-- `src/hooks/useWeightTrends.ts:68` seeds `ExerciseTrend.description` with `row.description` (first-wins, never overwritten).
-- `src/components/trends/ExerciseChart.tsx:216` renders `<ChartTitle>{exercise.description}</ChartTitle>`.
-- Canonical labels already exist: `getExerciseDisplayName(exercise_key)` and `getSubtypeDisplayName(exercise_subtype)` in `src/lib/exercise-metadata.ts`.
+The 7/30/90-day views work because those windows fit under 1,000 rows.
+
+The same bug exists in three fetchers:
+- `src/lib/chart-data.ts` → `fetchFoodData` and `fetchExerciseData` (both `.limit(10000)`)
+- `src/hooks/useWeightTrends.ts` (`.limit(10000)`)
+- `src/hooks/useCustomLogTrends.ts` (`.limit(10000)`)
 
 ## Fix
 
-Render the chart title from the canonical exercise key/subtype instead of the user description. Drop the user description from the trends view entirely (it still lives on each entry in the log).
+Add a small pagination helper that pages through results in 1,000-row chunks using `.range(from, to)` until fewer than a full page comes back, then use it in place of the four `.limit(10000)` calls. Keep an upper cap (e.g. 50k rows) so a runaway query can't hang the client.
 
-### Title rule
-- If `exercise_subtype` is present → `getSubtypeDisplayName(exercise_subtype)` (e.g. "Walking", "Running").
-- Otherwise → `getExerciseDisplayName(exercise_key)` (e.g. "Leg press", "Diverging low row", "Cycling").
+```text
+fetchAllRows(baseQuery, { pageSize: 1000, maxRows: 50000 })
+  → loops .range(offset, offset+pageSize-1)
+  → concatenates rows
+  → stops when a page returns < pageSize rows or maxRows hit
+```
 
-This matches the answered preference: subtype-only when the trend is split by subtype (currently only `walk_run`), falling back to the base canonical name for everything else.
+Then:
+- `fetchFoodData`: build the base `.select(...).gte(...).order(...)` query and page it
+- `fetchExerciseData`: same, preserving the optional `.eq(exercise_key)` / `.eq(exercise_subtype)` filters
+- `useWeightTrends`: page the `weight_sets` query
+- `useCustomLogTrends`: page the `custom_log_entries` query
 
-### Changes
-- `src/components/trends/ExerciseChart.tsx`: replace `{exercise.description}` in the `<ChartTitle>` with the canonical name derived from `exercise.exercise_key` + `exercise.exercise_subtype` via the helpers above. Import the helpers from `@/lib/exercise-metadata`.
-- `src/hooks/useWeightTrends.ts`: `description` is no longer used for display; either drop the field from `ExerciseTrend` or leave it as internal metadata. Preference: **drop it** from the type and select list so there's no future confusion. Check for any other reader before deleting (grep for `.description` on the exercise trend shape).
+No API/schema changes. Same ordering guarantees. 7/30/90-day paths still make a single request (pagination stops after page 1).
 
-### Out of scope
-- Chart ordering, aggregation, muscle-group subtitle, and everything downstream of the title.
-- Individual log entries still show the user's typed description as before.
+## Out of scope
 
-## Verification
-- Manual: on /trends the walk_run split now shows "Walking" and "Running" (or subtype title-case fallback); every other exercise shows its `EXERCISE_DISPLAY_NAMES` label ("Leg press", "Diverging low row", etc.).
-- `tsgo` typecheck passes after removing `description` from `ExerciseTrend` (compiler will flag any remaining reader).
+- Server-side pre-aggregation (bigger refactor; not needed to fix the visible bug)
+- Changing the `.limit()` semantics on chart types unrelated to all-time
+- Any UI changes

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format, subDays, startOfDay } from 'date-fns';
+import { fetchAllRows } from '@/lib/supabase-paginate';
 
 export interface WeightPoint {
   date: string;
@@ -39,14 +40,13 @@ export function useWeightTrends(days: number) {
         ? '2000-01-01'
         : format(subDays(startOfDay(new Date()), days - 1), 'yyyy-MM-dd');
 
-      const { data, error } = await supabase
-        .from('weight_sets')
-        .select('exercise_key, exercise_subtype, description, sets, reps, weight_lbs, logged_date, duration_minutes, distance_miles, exercise_metadata, calories_burned_override, calories_burned_estimate, heart_rate, effort, incline_pct, cadence_rpm, speed_mph')
-        .gte('logged_date', startDate)
-        .order('logged_date', { ascending: true })
-        .limit(10000);
-
-      if (error) throw error;
+      const data = await fetchAllRows<any>(
+        () => supabase
+          .from('weight_sets')
+          .select('exercise_key, exercise_subtype, description, sets, reps, weight_lbs, logged_date, duration_minutes, distance_miles, exercise_metadata, calories_burned_override, calories_burned_estimate, heart_rate, effort, incline_pct, cadence_rpm, speed_mph')
+          .gte('logged_date', startDate)
+          .order('logged_date', { ascending: true }) as any,
+      );
 
       // Aggregate by exercise_key + exercise_subtype
       const exerciseMap = new Map<string, ExerciseTrend>();

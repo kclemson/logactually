@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { format, subDays, startOfDay } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { fetchAllRows } from '@/lib/supabase-paginate';
 
 export interface CustomLogTrendPoint {
   date: string;
@@ -34,13 +35,14 @@ export function useCustomLogTrends(days: number) {
       if (typesError) throw typesError;
 
       // Fetch entries in range
-      const { data: entries, error: entriesError } = await supabase
-        .from('custom_log_entries')
-        .select('*')
-        .gte('logged_date', startDate)
-        .order('logged_date')
-        .limit(10000);
-      if (entriesError) throw entriesError;
+      const entries = await fetchAllRows<any>(
+        () => supabase
+          .from('custom_log_entries')
+          .select('*')
+          .gte('logged_date', startDate)
+          .order('logged_date') as any,
+      );
+      
 
       const result: CustomLogTrendSeries[] = [];
 
