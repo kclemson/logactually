@@ -1,20 +1,29 @@
-## Problem
-`CollapsibleSection` uses `max-h-[2000px]` with `overflow-visible` when open. Once the exercise grid exceeds 2000px (via "Show more"), the extra content visually overflows but the section's layout box is still 2000px tall — so the next section ("Custom Trends") is positioned starting at 2000px and overlaps the overflowing charts.
+Add filtering so the Exercise Trends section only renders charts that are actually useful, based on the user's chosen thresholds.
 
-## Fix
-In `src/components/CollapsibleSection.tsx`, drop the max-height cap when the section is open so its layout height matches its content.
+## Threshold rules
 
-Change:
-```tsx
-isOpen ? 'max-h-[2000px] opacity-100 overflow-visible' : 'max-h-0 opacity-0 overflow-hidden'
-```
-to:
-```tsx
-isOpen ? 'opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
-```
+Apply these filters to the exercise list before rendering charts (after `useWeightTrends` returns data, in `src/pages/Trends.tsx`):
 
-Trade-off: the open→close animation loses its height transition (still fades). This matches the actual behavior users see — the max-h cap was already broken for tall sections — and eliminates the overlap for every collapsible section on the page.
+1. **Minimum sessions**: require `sessionCount >= 3`.
+2. **Relative activity floor**: require `sessionCount >= 0.10 * maxSessionCount` across all exercises for the selected period.
+3. **Weight-bearing usefulness**: for non-cardio exercises, require `maxWeight > 0`. Cardio exercises (duration/distance-based) are exempt.
 
-## Verification
-- Typecheck
-- Open Trends, click Show more repeatedly; Custom Trends header should sit below the last exercise chart with no overlap.
+The combined effect: an exercise must have at least 3 sessions, be in the top 90% of your logged activity, and (for weights) actually have weight data.
+
+## Implementation
+
+- In `src/pages/Trends.tsx`, derive a `qualifiedExercises` array from `weightExercises` by applying the three rules above.
+- Replace `weightExercises` with `qualifiedExercises` when building:
+  - `exercisePool`
+  - `visibleExercises`
+  - `hasMoreExercises`
+  - `duplicateGroups` (so duplicate detection only runs on exercises that would be charted)
+  - `exerciseSectionVisible` logic
+- Keep `useWeightTrends` unchanged; this is a presentation-layer filter.
+- Update the empty-state copy when no exercises qualify, so it doesn't just say "No weight training data for this period." Suggest something like: "No exercises meet the chart threshold (3+ sessions)."
+
+## Out of scope
+
+- Does not add a reps/volume chart for bodyweight exercises.
+- Does not change the "Show more" batch size (still +10).
+- Does not affect the exercise log, calorie burn chart, or custom charts.
