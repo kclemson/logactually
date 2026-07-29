@@ -119,6 +119,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
 
   // In by_type/focused mode there is no date navigator, so new entries land on today.
   const logTargetDate = effectiveViewMode === 'date' ? dateStr : today;
+  const [dialogDate, setDialogDate] = useState<string>(logTargetDate);
 
   // Entries for the dialog type (used by MedicationEntryInput to show today's logged times).
   // In date mode we reuse `entries` (already scoped to dateStr); otherwise we fetch by type and filter.
