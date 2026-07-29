@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { format, subDays, startOfDay } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { fetchAllRows } from '@/lib/supabase-paginate';
 
 export interface CustomLogTrendPoint {
   date: string;
