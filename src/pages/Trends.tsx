@@ -496,10 +496,18 @@ const Trends = () => {
                     setDragOverIndex(null);
                     return;
                   }
-                  const reordered = [...savedCharts];
-                  const [moved] = reordered.splice(dragIndex, 1);
-                  reordered.splice(index, 0, moved);
-                  const items = reordered.map((c, i) => ({ id: c.id, sort_order: i }));
+                  const reorderedMy = [...myCharts];
+                  const [moved] = reorderedMy.splice(dragIndex, 1);
+                  reorderedMy.splice(index, 0, moved);
+                  // Merge back into full savedCharts order: bloodwork keeps its slots,
+                  // myCharts slots get filled by the reordered list.
+                  const myIter = reorderedMy[Symbol.iterator]();
+                  const merged = savedCharts.map((c) =>
+                    (c.chart_dsl as ChartDSL | null)?.source === "bloodwork"
+                      ? c
+                      : myIter.next().value!
+                  );
+                  const items = merged.map((c, i) => ({ id: c.id, sort_order: i }));
                   reorderMutation.mutate(items);
                   setDragIndex(null);
                   setDragOverIndex(null);
