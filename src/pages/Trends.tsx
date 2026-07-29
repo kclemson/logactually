@@ -223,6 +223,14 @@ const Trends = () => {
     });
   }, [weightExercises]);
 
+  // Hide custom-log charts with <2 distinct dates (a single datapoint isn't a trend).
+  const qualifiedCustomLogTrends = useMemo(() => {
+    return customLogTrends.filter((trend) => {
+      const uniqueDates = new Set(trend.series.flatMap((s) => s.data.map((d) => d.date)));
+      return uniqueDates.size >= 2;
+    });
+  }, [customLogTrends]);
+
   // Detect duplicate exercises (same description, different keys)
   const duplicateGroups = useMemo((): DuplicateGroup[] => {
     const byDescription = new Map<string, ExerciseTrend[]>();
