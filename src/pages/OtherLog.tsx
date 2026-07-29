@@ -491,9 +491,16 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                 todayEntryCount={editingTodayEntries.length}
                 todayLoggedTimes={editingTodayEntries.map(e => e.dose_time).filter(Boolean) as string[]}
                 initialTimeInList={editingEntry.dose_time}
-                loggedDate={dateStr}
+                loggedDate={dialogDate}
+                onLoggedDateChange={setDialogDate}
                 onSubmit={(params) => {
-                  updateMedEntry.mutate({ id: editingEntry.id, numeric_value: params.numeric_value, dose_time: params.dose_time, entry_notes: params.entry_notes });
+                  updateMedEntry.mutate({
+                    id: editingEntry.id,
+                    logged_date: dialogDate,
+                    numeric_value: params.numeric_value,
+                    dose_time: params.dose_time,
+                    entry_notes: params.entry_notes,
+                  });
                 }}
                 onCancel={() => setEditingEntry(null)}
                 isLoading={updateMedEntry.isPending}
