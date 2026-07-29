@@ -1,16 +1,11 @@
-## Fix
+Add one new entry to the top of `CHANGELOG_ENTRIES` in `src/pages/Changelog.tsx`, and update `LAST_UPDATED` to today's date (`Jul-29-26`).
 
-In `src/pages/Trends.tsx`, filter bloodwork-sourced pins out of the "My Charts" section so they only appear under Custom Trends (next to their parent bloodwork context).
+Scope: only user-facing fixes that affect everyone. My Charts is admin/beta-only (`canUseCharts = isAdmin || isBeta`) so nothing about the bloodwork-pin double-render belongs in the changelog.
 
-## Changes
+Proposed entry (no image):
 
-1. Derive `myCharts = savedCharts.filter(c => (c.chart_dsl as ChartDSL | null)?.source !== "bloodwork")`.
-2. Replace the `savedCharts.map(...)` render at line 474 with `myCharts.map(...)`, and update the reorder handler to operate on `myCharts` (map back to the full `savedCharts` order when persisting, so bloodwork pin positions in the underlying list aren't disturbed).
-3. Gate the "My Charts" section visibility on `myCharts.length > 0` instead of `savedCharts.length > 0`, so a user with only bloodwork pins doesn't see an empty My Charts header.
-4. Leave the Custom Trends bloodwork rendering (line 812) and all pin/unpin logic untouched.
+```
+{ date: "Jul-29", text: "Trends charts now hide exercises with very little data — you need at least 3 sessions (and a weight logged, for strength exercises) before a chart appears, and low-frequency exercises are hidden once you have others with much more history. Custom log charts also hide until there are at least 2 days of data. Also fixed 'All time' on the Trends page to include your full history instead of stopping partway through." },
+```
 
-## Not changing
-
-- Database schema — bloodwork pins continue to live in `saved_charts` with `source: "bloodwork"`.
-- The pin/unpin flow from bloodwork lists.
-- Ask-AI pinned charts (no `source` field) continue to appear in My Charts as before.
+No other files change.
