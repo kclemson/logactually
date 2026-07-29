@@ -220,7 +220,7 @@ const Trends = () => {
   const duplicateGroups = useMemo((): DuplicateGroup[] => {
     const byDescription = new Map<string, ExerciseTrend[]>();
 
-    weightExercises.forEach((ex) => {
+    qualifiedExercises.forEach((ex) => {
       const normalized = ex.description.toLowerCase().trim();
       const group = byDescription.get(normalized) || [];
       group.push(ex);
@@ -239,7 +239,7 @@ const Trends = () => {
           losers: sorted.slice(1),
         };
       });
-  }, [weightExercises, dismissedDuplicates]);
+  }, [qualifiedExercises, dismissedDuplicates]);
 
   const handleMerge = (group: DuplicateGroup) => {
     mergeMutation.mutate({
