@@ -34,6 +34,8 @@ export function LogEntryInput({
   initialNumericValue2,
   initialTextValue,
   mode = 'create',
+  loggedDate,
+  onLoggedDateChange,
 }: LogEntryInputProps) {
   const [numericValue, setNumericValue] = useState(initialNumericValue != null ? String(initialNumericValue) : '');
   const [numericValue2, setNumericValue2] = useState(initialNumericValue2 != null ? String(initialNumericValue2) : '');
