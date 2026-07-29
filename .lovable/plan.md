@@ -1,22 +1,22 @@
-## Problem
+## Diagnosis (confirmed against your data)
 
-The relative activity floor is being computed against the single global max session count across all exercises. Cardio entries like Walking dominate that max (likely 300+ sessions in your account), so `sessionFloor = ceil(300 * 0.1) = 30`. Any strength exercise done fewer than 30 times gets filtered out — that's why you're only seeing 7 charts and "Show more" is gone (the entire qualified pool now fits under the initial visible count).
+On the all-time view, your top strength exercise (`lat_pulldown`) has 77 sessions, so the current 10% relative floor evaluates to `ceil(77 * 0.1) = 8`. Deadlift has **7 all-time sessions**, so it falls one below the cutoff. Same story for `shoulder_press` (7), `lateral_raise` (6), `romanian_deadlift` (4), `dumbbell_row` (4).
 
-The 10% rule was meant to hide the long tail *within a comparable group*, not to make cardio's frequency invalidate strength progress.
+The 10% rule works as intended on shorter periods (90d floor for strength is ~3), but on all-time it becomes disproportionately aggressive because prolific machine work dominates the max.
 
 ## Fix
 
-Split the relative floor calculation by exercise type so cardio and strength don't distort each other:
+Cap the relative floor at **5 sessions**. Formula becomes:
 
-- In `src/pages/Trends.tsx`, change `qualifiedExercises` to:
-  1. Classify each exercise as cardio vs strength (same rule already used: `maxWeight === 0 && (maxDuration > 0 || maxDistance > 0)`).
-  2. Compute `maxSessionCount` **separately** for the cardio bucket and the strength bucket.
-  3. Apply `sessionFloor = max(3, ceil(bucketMax * 0.1))` **within each bucket**.
-  4. Keep the existing rules: min 3 sessions; drop non-cardio with `maxWeight === 0`.
+```
+floor = max(3, min(ceil(bucketMax * 0.1), 5))
+```
 
-Nothing else changes — `exercisePool`, `visibleExercises`, `hasMoreExercises`, and the "Show more" button all derive from `qualifiedExercises` and will start populating correctly again.
+Effect:
+- Small history: floor stays at 3 (unchanged from today).
+- Medium history: floor scales up to 5.
+- Large history: floor is capped at 5, so anything you've done 5+ times always shows.
 
-## Verification
+This preserves "hide the long tail" (something done 1–4 times remains hidden) while ensuring genuinely recurring exercises like deadlifts survive. With this change, your all-time view picks up deadlift, shoulder_press, lateral_raise, seated_leg_curl, shoulder_press_machine, etc. — about 12 strength charts + 2 cardio instead of 4+2.
 
-- Typecheck + existing tests.
-- No unit test currently covers `qualifiedExercises`; the change is small and localized to one `useMemo`.
+Only touches the `qualifiedExercises` `useMemo` in `src/pages/Trends.tsx`.
