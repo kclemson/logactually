@@ -121,15 +121,14 @@ async function fetchFoodData(
   needsHourly: boolean,
   needsItem: boolean = false,
 ): Promise<DailyTotals> {
-  const { data, error } = await supabase
-    .from("food_entries")
-    .select("eaten_date, food_items, created_at")
-    .gte("eaten_date", startDate)
-    .order("eaten_date", { ascending: true })
-    .order("created_at", { ascending: true })
-    .limit(10000);
-
-  if (error) throw error;
+  const data = await fetchAllRows<{ eaten_date: string; food_items: any; created_at: string | null }>(
+    () => supabase
+      .from("food_entries")
+      .select("eaten_date, food_items, created_at")
+      .gte("eaten_date", startDate)
+      .order("eaten_date", { ascending: true })
+      .order("created_at", { ascending: true }) as any,
+  );
 
   const food: Record<string, FoodDayTotals> = {};
   const foodByHour: HourlyTotals<FoodDayTotals> | undefined = needsHourly ? {} : undefined;
