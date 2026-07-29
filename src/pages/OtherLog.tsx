@@ -188,6 +188,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
       setViewMode('date');
     }
     setSelectedTypeId(typeId);
+    setDialogDate(logTargetDate);
     setShowInputDialog(true);
   }
 
