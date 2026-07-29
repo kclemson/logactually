@@ -35,13 +35,14 @@ export function useCustomLogTrends(days: number) {
       if (typesError) throw typesError;
 
       // Fetch entries in range
-      const { data: entries, error: entriesError } = await supabase
-        .from('custom_log_entries')
-        .select('*')
-        .gte('logged_date', startDate)
-        .order('logged_date')
-        .limit(10000);
-      if (entriesError) throw entriesError;
+      const entries = await fetchAllRows<any>(
+        () => supabase
+          .from('custom_log_entries')
+          .select('*')
+          .gte('logged_date', startDate)
+          .order('logged_date') as any,
+      );
+      const entriesError = null;
 
       const result: CustomLogTrendSeries[] = [];
 
