@@ -205,12 +205,9 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
 
   const hasLogTypes = !isLoading && sortedLogTypes.length > 0;
 
-  // Today's entries for the selected medication (used in dialog).
-  // In date mode `entries` is already today's (if dateStr=today); otherwise we filter dialogTypeEntries to today.
+  // Entries for the selected medication on the dialog date (used to show logged times/count).
   const todayMedEntries = dialogType
-    ? effectiveViewMode !== 'date'
-      ? dialogTypeEntries.filter((e) => e.log_type_id === dialogType.id && e.logged_date === today)
-      : entries.filter((e) => e.log_type_id === dialogType.id)
+    ? dialogTypeEntries.filter((e) => e.log_type_id === dialogType.id && e.logged_date === dialogDate)
     : [];
 
   const swipeHandlers = useSwipeNavigation(
