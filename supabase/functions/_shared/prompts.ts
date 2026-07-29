@@ -123,7 +123,7 @@ Workout description: "{{rawInput}}"
 ## WEIGHT EXERCISES
 
 For weight exercises, provide:
-- exercise_key: a canonical snake_case identifier. PREFER using keys from the reference list below when the user's input matches. You may create new keys for exercises not in the list.
+- exercise_key: a canonical snake_case identifier. PREFER using keys from the reference list below when the user's input matches exactly. You may create new keys for exercises not in the list, including distinct variants of listed exercises.
 - exercise_subtype: (optional) a more specific activity subtype when the input is unambiguous. For walk_run: use "running" if clearly running/jogging, "walking" if clearly walking, "hiking" if clearly hiking. For cycling: use "indoor" or "outdoor" if clear. For swimming: use "pool" or "open_water" if clear. Omit if ambiguous (e.g., "treadmill 30 min" could be walking or running).
 - description: a user-friendly name for the exercise (e.g., "Lat Pulldown", "Bench Press")
 - sets: number of sets performed (integer)
@@ -192,7 +192,7 @@ Workout description: "{{rawInput}}"
 ## WEIGHT EXERCISES
 
 For weight exercises, provide:
-- exercise_key: a canonical snake_case identifier. PREFER using keys from the reference list below when the user's input matches. You may create new keys for exercises not in the list.
+- exercise_key: a canonical snake_case identifier. PREFER using keys from the reference list below when the user's input matches exactly. You may create new keys for exercises not in the list, including distinct variants of listed exercises.
 - exercise_subtype: (optional) a more specific activity subtype when the input is unambiguous. For walk_run: use "running" if clearly running/jogging, "walking" if clearly walking, "hiking" if clearly hiking. For cycling: use "indoor" or "outdoor" if clear. For swimming: use "pool" or "open_water" if clear. Omit if ambiguous (e.g., "treadmill 30 min" could be walking or running).
 - description: a user-friendly name for the exercise (e.g., "Lat Pulldown", "Bench Press")
 - sets: number of sets performed (integer)

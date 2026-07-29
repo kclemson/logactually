@@ -22,6 +22,7 @@ export const EXERCISE_MUSCLE_GROUPS: Record<string, ExerciseMuscles> = {
   dumbbell_press: { primary: 'Chest', secondary: ['Triceps', 'Shoulders'] },
   chest_fly: { primary: 'Chest', secondary: ['Shoulders'] },
   shoulder_press: { primary: 'Shoulders', secondary: ['Triceps'] },
+  landmine_press: { primary: 'Shoulders', secondary: ['Triceps'] },
   lateral_raise: { primary: 'Shoulders' },
   front_raise: { primary: 'Shoulders' },
   tricep_pushdown: { primary: 'Triceps' },
@@ -111,6 +112,7 @@ export const EXERCISE_DISPLAY_NAMES: Record<string, string> = {
   dumbbell_press: 'Dumbbell press',
   chest_fly: 'Chest fly',
   shoulder_press: 'Shoulder press',
+  landmine_press: 'Landmine press',
   lateral_raise: 'Lateral raise',
   front_raise: 'Front raise',
   tricep_pushdown: 'Tricep pushdown',
@@ -188,7 +190,7 @@ export const EXERCISE_DISPLAY_NAMES: Record<string, string> = {
 
 // Ordered groups for dropdown rendering
 export const EXERCISE_GROUPS: { label: string; keys: string[] }[] = [
-  { label: 'Upper body – push', keys: ['bench_press', 'incline_bench_press', 'decline_bench_press', 'dumbbell_press', 'chest_fly', 'shoulder_press', 'lateral_raise', 'front_raise', 'tricep_pushdown', 'tricep_extension', 'dips'] },
+  { label: 'Upper body – push', keys: ['bench_press', 'incline_bench_press', 'decline_bench_press', 'dumbbell_press', 'chest_fly', 'shoulder_press', 'landmine_press', 'lateral_raise', 'front_raise', 'tricep_pushdown', 'tricep_extension', 'dips'] },
   { label: 'Upper body – pull', keys: ['lat_pulldown', 'pull_up', 'seated_row', 'bent_over_row', 'dumbbell_row', 't_bar_row', 'face_pull', 'rear_delt_fly', 'bicep_curl', 'hammer_curl', 'preacher_curl', 'cable_curl', 'diverging_low_row', 'shrugs'] },
   { label: 'Lower body', keys: ['squat', 'front_squat', 'goblet_squat', 'leg_press', 'hack_squat', 'leg_extension', 'leg_curl', 'seated_leg_curl', 'romanian_deadlift', 'hip_thrust', 'calf_raise', 'seated_calf_raise', 'lunge', 'bulgarian_split_squat', 'step_up'] },
   { label: 'Compound', keys: ['deadlift', 'sumo_deadlift', 'trap_bar_deadlift', 'clean', 'snatch', 'kettlebell_swing'] },
