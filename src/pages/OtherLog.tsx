@@ -445,10 +445,12 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
                   valueType={dialogType.value_type}
                   label={dialogType.name}
                   unit={dialogType.unit}
+                  loggedDate={dialogDate}
+                  onLoggedDateChange={setDialogDate}
                   onSubmit={(params) => {
                     createEntry.mutate({
                       log_type_id: dialogType.id,
-                      logged_date: logTargetDate,
+                      logged_date: dialogDate,
                       unit: dialogType.unit || null,
                       ...params,
                     }, {
