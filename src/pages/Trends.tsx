@@ -212,8 +212,8 @@ const Trends = () => {
       ex.maxWeight === 0 && (ex.maxDuration > 0 || ex.maxDistance > 0);
     const cardioMax = Math.max(0, ...weightExercises.filter(isCardio).map((ex) => ex.sessionCount));
     const strengthMax = Math.max(0, ...weightExercises.filter((ex) => !isCardio(ex)).map((ex) => ex.sessionCount));
-    const cardioFloor = Math.max(3, Math.ceil(cardioMax * 0.1));
-    const strengthFloor = Math.max(3, Math.ceil(strengthMax * 0.1));
+    const cardioFloor = Math.max(3, Math.min(Math.ceil(cardioMax * 0.1), 5));
+    const strengthFloor = Math.max(3, Math.min(Math.ceil(strengthMax * 0.1), 5));
     return weightExercises.filter((ex) => {
       const cardio = isCardio(ex);
       if (!cardio && ex.maxWeight === 0) return false;
