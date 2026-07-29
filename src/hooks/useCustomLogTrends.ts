@@ -42,7 +42,7 @@ export function useCustomLogTrends(days: number) {
           .gte('logged_date', startDate)
           .order('logged_date') as any,
       );
-      const entriesError = null;
+      
 
       const result: CustomLogTrendSeries[] = [];
 
