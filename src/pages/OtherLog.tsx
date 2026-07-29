@@ -129,7 +129,7 @@ const OtherLogContent = ({ initialDate }: { initialDate: string }) => {
     editingEntry?.log_type_id ?? null
   );
   const editingTodayEntries = editingTypeEntries.filter(
-    (e) => e.logged_date === dateStr
+    (e) => e.logged_date === dialogDate
   );
 
   // Update mutation for editing medication entries
