@@ -141,6 +141,11 @@ export function MedicationEntryInput({
 
   return (
     <div className="space-y-2 rounded-lg border border-border bg-card p-3">
+      {/* Date picker */}
+      {loggedDate && onLoggedDateChange && (
+        <LogDatePicker date={loggedDate} onChange={onLoggedDateChange} />
+      )}
+
       {/* Name (+ date suffix when not today) + cancel */}
       <div className="flex items-center gap-1">
         <span className="text-sm font-medium flex-1 truncate">
