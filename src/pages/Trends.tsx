@@ -823,7 +823,7 @@ const Trends = () => {
                 </ChartVisibilityWrapper>
               );
             })}
-            {showCustomLogs && customLogTrends.map((trend) => {
+            {showCustomLogs && qualifiedCustomLogTrends.map((trend) => {
               const id = customLogChartId(trend.logTypeId);
               return (
                 <ChartVisibilityWrapper key={trend.logTypeId} chartId={id} isHidden={hiddenSet.has(id)} customizeMode={customizeMode} onToggle={toggleChart}>
