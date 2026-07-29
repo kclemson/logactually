@@ -223,6 +223,14 @@ const Trends = () => {
     });
   }, [weightExercises]);
 
+  // Hide custom-log charts with <2 distinct dates (a single datapoint isn't a trend).
+  const qualifiedCustomLogTrends = useMemo(() => {
+    return customLogTrends.filter((trend) => {
+      const uniqueDates = new Set(trend.series.flatMap((s) => s.data.map((d) => d.date)));
+      return uniqueDates.size >= 2;
+    });
+  }, [customLogTrends]);
+
   // Detect duplicate exercises (same description, different keys)
   const duplicateGroups = useMemo((): DuplicateGroup[] => {
     const byDescription = new Map<string, ExerciseTrend[]>();
@@ -404,7 +412,7 @@ const Trends = () => {
     || qualifiedExercises.some((ex) => !hiddenSet.has(exerciseChartId(ex.exercise_key, ex.exercise_subtype)));
   const customSectionVisible = customizeMode
     || bloodworkCharts.some((c) => !hiddenSet.has(bloodworkChartId(c.id)))
-    || customLogTrends.some((t) => !hiddenSet.has(customLogChartId(t.logTypeId)));
+    || qualifiedCustomLogTrends.some((t) => !hiddenSet.has(customLogChartId(t.logTypeId)));
 
   return (
     <div className="space-y-6 -mx-2">
@@ -798,7 +806,7 @@ const Trends = () => {
       )}
 
       {/* Other Trends Section */}
-      {((showCustomLogs && customLogTrends.length > 0) || bloodworkCharts.length > 0) && customSectionVisible && (
+      {((showCustomLogs && qualifiedCustomLogTrends.length > 0) || bloodworkCharts.length > 0) && customSectionVisible && (
         <CollapsibleSection title="Custom Trends" icon={ClipboardList} iconClassName="text-teal-500 dark:text-teal-400" defaultOpen={true} storageKey="trends-other">
           <div className="grid grid-cols-2 gap-2">
             {bloodworkCharts.map((chart) => {
@@ -815,7 +823,7 @@ const Trends = () => {
                 </ChartVisibilityWrapper>
               );
             })}
-            {showCustomLogs && customLogTrends.map((trend) => {
+            {showCustomLogs && qualifiedCustomLogTrends.map((trend) => {
               const id = customLogChartId(trend.logTypeId);
               return (
                 <ChartVisibilityWrapper key={trend.logTypeId} chartId={id} isHidden={hiddenSet.has(id)} customizeMode={customizeMode} onToggle={toggleChart}>
