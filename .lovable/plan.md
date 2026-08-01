@@ -1,67 +1,45 @@
-# Making exercise keys consistent
+# Quick Add: one-tap row for your most-repeated saved items
 
-## What the data actually shows
+A row of one-tap chips sits directly under the date row on the Food log (and Weight log), letting you add the saved meals/routines you log almost every day without opening the Saved menu.
 
-Querying your logged sets confirms the drift is real and it is a naming problem, not a one-off:
+## The concept and name
 
-| What you typed | Key it got | Rows |
-|---|---|---|
-| "chest press" | `chest_press_machine` | 43 |
-| "chest press" | `bench_press` | 36 |
-| "bench press" | `bench_press` | 48 |
-| "bench press" | `chest_press_machine` | 3 |
-| "reclined arm press" | `chest_press_machine` | 18 |
-| "reclined arm press" | `bench_press` | 2 |
+Use **Quick Add**, with a **pin** for manual control (pin = "always show here", the same mental model already used for pinned bloodwork charts). "Saved" (star) stays as-is for the full list, so the two ideas don't collide.
 
-The exact same phrase lands on two different keys depending on the run. Same pattern elsewhere: `back_extension` (20) vs `back_extensions` (5), `bicep_curl` absorbing "preacher curl" (19 rows) while `preacher_curl` exists as its own key.
+## Where it appears
 
-Root cause: the exercise key is chosen entirely by the AI at write time, from free text, with no deterministic step afterward. Nothing snaps "chest press" to one key, and nothing prevents a plural or typo from minting a new key.
+Under the date navigation row, above the day's entries — so it reads as "not yet in today's list". Chips are laid out inline and all visible at once (wrapping to at most two rows), never a dropdown.
 
-## The approach
+Each chip:
+- Leading `+` icon, saved item name, and a small trailing figure (calories for meals, exercise count for routines).
+- Tapping it logs the item to the currently selected day immediately (same path as picking it from the Saved menu, so `source_meal_id` / `source_routine_id` and use counts stay correct).
+- Once logged for that day, the chip briefly flips to a check and then leaves the row — the row only ever shows things not yet logged that day. If everything's logged, the row disappears.
+- Food chips use the blue accent, exercise chips purple.
 
-Three layers, cheapest first. Each is independently useful.
+A trailing `⋯` chip opens a small popover to unpin/hide an individual item or turn Quick Add off entirely.
 
-### 1. Deterministic key resolution after the AI call
+## Threshold (which items qualify)
 
-Add a resolver that runs on the AI's output before the row is written. It takes the model's proposed `exercise_key` plus the raw description and snaps it to a canonical key using the alias table that already exists in `CANONICAL_EXERCISES`.
+Computed from actual logged days in a rolling **30-day window**, not the all-time `use_count`:
 
-Rules, in order:
-- Normalize the proposed key: lowercase, singularize trailing `s`, collapse separators. This alone kills `back_extensions`, `farmers_carries`, and typo keys.
-- Exact key match against the catalog wins.
-- Alias match against the catalog (checking the description text too) wins next.
-- No match: keep the model's key as a new one, which is the current behavior and the thing that lets genuine new exercises through.
+- `activeDays` = distinct days in the window where you logged anything in that domain (food days for meals, exercise days for routines).
+- `usedDays` = distinct days in the window where that saved item was logged.
+- The row only appears at all when `activeDays >= 5` (new accounts see nothing until there's a real pattern).
+- An item qualifies when `usedDays >= max(3, 0.3 * activeDays)` — i.e. roughly a third of your active days, with a floor of 3 days so it can't trigger on a single busy week.
+- Ranked by `usedDays` (tie-break: most recently used), capped at **4** chips so they always fit on screen.
+- Manually pinned items always show and sort first; manually hidden items never show. Pins are exempt from the cap only up to a total of 6 chips.
 
-This makes key assignment reproducible: the same text always produces the same key, regardless of model mood.
+These numbers live in one constants block so they're easy to tune after you use it.
 
-### 2. Equipment as an explicit dimension
+## Settings
 
-The ambiguity in "chest press" is not really about the exercise, it is about the equipment. Today equipment is baked into the key name (`chest_press_machine` vs `dumbbell_press` vs `bench_press`), which forces the model to guess an equipment word that you never said.
+New "Quick Add" control in Settings, defaulting **on** for everyone, plus per-item pin/hide managed from the row's `⋯` popover. Off = row never renders in either domain.
 
-Store equipment in the existing `exercise_subtype` column instead — no migration needed, it is already nullable text and already carries variants for cardio. Values: `machine`, `barbell`, `dumbbell`, `cable`, `kettlebell`, `bodyweight`, `smith`.
+## Technical notes
 
-Then:
-- `chest_press` becomes one movement key, with equipment as the splitter.
-- The prompt asks for equipment only when it is stated or clearly implied, and leaves it null otherwise, rather than forcing a key-level guess.
-- The trends chart already splits by subtype for `walk_run`. Generalize that: split a movement into separate charts when the subtypes each clear the existing session threshold, otherwise show one combined chart.
-
-### 3. One-time backfill of your history
-
-With the resolver written, run it over your existing `weight_sets` rows to produce a proposed mapping, review the list before anything is written, then apply. The two-key "chest press" split and the singular/plural pairs get collapsed. Any pin or saved chart pointing at a retired key gets re-pointed in the same pass — the earlier bloodwork backfill left a stale pin behind, so this is a real failure mode to cover.
-
-## Scope note
-
-You already have merge tooling: `useMergeExercises` plus the `DuplicateExercisePrompt` card on the trends page, which detects same-description duplicates and offers a one-tap merge. That handles cleanup after the fact but does nothing to stop new drift, which is why the resolver comes first.
-
-## Technical detail
-
-- New `src/lib/exercise-resolve.ts` with `resolveExerciseKey(proposedKey, description)`, plus a mirror under `supabase/functions/_shared/`. Unit tests covering the cases in the table above.
-- `supabase/functions/analyze-weights/index.ts` calls the resolver on each returned set before responding.
-- `supabase/functions/_shared/prompts.ts`: movement key and equipment become separate asks; drop the pressure to encode equipment in the key.
-- `src/lib/exercise-metadata.ts` and `supabase/functions/_shared/exercises.ts`: add an `equipment` field to catalog entries, keep retired keys as aliases so old data and typeahead still resolve.
-- `src/hooks/useWeightTrends.ts`: replace the hardcoded `exerciseKey === 'walk_run'` split with a general subtype-split rule.
-- `src/components/trends/ExerciseChart.tsx`: title stays `{Movement} — {Subtype}`, now covering equipment.
-- Backfill runs through the insert tool after you approve the mapping list.
-
-## Suggested order
-
-Start with layer 1 alone. It stops new drift and is low risk. Layer 2 is the larger change and is worth doing only if you want machine vs dumbbell to be a thing you can filter and chart on, rather than just a naming detail. Layer 3 comes last either way, since the backfill should use the final resolver.
+- `src/lib/quick-add.ts` — pure, domain-agnostic: takes `{ usageByItemId, activeDays, pinned, hidden, limit }` and returns ranked candidate ids. Unit-tested for the threshold edges (below floor, exactly at 30%, pin/hide overrides, cap).
+- `src/hooks/useQuickAddUsage.ts` — generic usage query: given a table, date column, source-id column and window, returns `{ activeDays, usedDays per id }`. Food reads `food_entries.source_meal_id` / `eaten_date`; exercise reads `weight_sets.source_routine_id` / `logged_date`. Thin wrappers `useFoodQuickAdd` / `useRoutineQuickAdd` join with `useSavedMeals` / `useSavedRoutines`. Custom logs can plug in later with a third wrapper — no changes to the lib or the UI component.
+- `src/components/QuickAddRow.tsx` — presentational only: `items`, `accent`, `onAdd`, `onPin`, `onHide`, `onDisable`.
+- `src/hooks/useUserSettings.ts` — add `quickAddEnabled: boolean` (default `true`), `quickAddPinned: string[]`, `quickAddHidden: string[]` (saved-item UUIDs, so one pair of arrays covers all domains).
+- Wire into `src/pages/FoodLog.tsx` and `src/pages/WeightLog.tsx` reusing their existing `handleLogSavedMeal` / saved-routine handlers; respect read-only mode (row hidden for demo/read-only users).
+- Settings toggle added to the existing Preferences section.
