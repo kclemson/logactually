@@ -38,30 +38,31 @@ export function usePopulateDemoData() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<PopulateResult | null>(null);
 
-  const populate = async (params: PopulateDemoDataParams) => {
+  const populate = async (params: PopulateDemoDataParams): Promise<PopulateResult> => {
     setIsLoading(true);
     setResult(null);
 
+    let outcome: PopulateResult;
     try {
       const { data, error } = await supabase.functions.invoke("populate-demo-data", {
         body: params,
       });
 
-      if (error) {
-        setResult({ success: false, error: error.message });
-      } else {
-        setResult({ 
-          success: true, 
-          summary: data?.summary,
-          message: data?.message,
-          status: data?.status || 'complete',
-        });
-      }
+      outcome = error
+        ? { success: false, error: error.message }
+        : {
+            success: true,
+            summary: data?.summary,
+            message: data?.message,
+            status: data?.status || 'complete',
+          };
     } catch (err) {
-      setResult({ success: false, error: (err as Error).message });
-    } finally {
-      setIsLoading(false);
+      outcome = { success: false, error: (err as Error).message };
     }
+
+    setResult(outcome);
+    setIsLoading(false);
+    return outcome;
   };
 
   const reset = () => setResult(null);

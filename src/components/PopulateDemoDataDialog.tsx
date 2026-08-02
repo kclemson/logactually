@@ -55,7 +55,10 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
       generateSavedMeals: generateSavedMeals ? savedMealsCount : 0,
       generateSavedRoutines: generateSavedRoutines ? savedRoutinesCount : 0,
     };
-    await populate(params);
+    const outcome = await populate(params);
+    if (outcome.success && outcome.status === 'processing') {
+      markDemoPopulateStarted();
+    }
   };
 
   const handleClose = () => {

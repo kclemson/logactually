@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PopulateDemoDataDialog } from "@/components/PopulateDemoDataDialog";
+import { DemoPopulateProgress } from "@/components/DemoPopulateProgress";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { AppleHealthExplorer } from "@/components/AppleHealthExplorer";
 import { useUserActivityDates, formatActivityDates } from "@/hooks/useUserActivityDates";
@@ -791,6 +792,7 @@ export default function Admin() {
         <Button variant="outline" size="sm" className="text-xs" onClick={() => setShowPopulateDialog(true)}>
           Populate Demo Data
         </Button>
+        <DemoPopulateProgress />
       </div>
 
       <PopulateDemoDataDialog open={showPopulateDialog} onOpenChange={setShowPopulateDialog} />
