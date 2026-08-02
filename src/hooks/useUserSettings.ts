@@ -68,6 +68,10 @@ const DEFAULT_SETTINGS: UserSettings = {
   weekStartDay: 0,
   displayMacros: DEFAULT_DISPLAY_MACROS,
   hiddenCharts: [],
+  quickAddEnabled: true,
+  quickAddPinned: [],
+  quickAddHidden: [],
+
   defaultFocusedTypeId: null,
 };
 
