@@ -1543,7 +1543,44 @@ async function doPopulationWork(
         const cardioCount = Math.random() < 0.3 ? 2 : 1; // 30% chance of 2 cardio exercises
         const usedCardioKeys = new Set<string>();
 
-        for (let c = 0; c < cardioCount; c++) {
+        // On recent days the demo user has a habitual cardio routine, so Quick
+        // Add has an item that clears its usage threshold.
+        const useHabitCardio =
+          habitCardioRoutine !== null && isRecentDay(day) && Math.random() < 0.75;
+
+        if (useHabitCardio) {
+          const routine = habitCardioRoutine!;
+          routineUsage.set(routine.id, (routineUsage.get(routine.id) ?? 0) + 1);
+          const habitEntryId = crypto.randomUUID();
+          for (let j = 0; j < routine.exercise_sets.length; j++) {
+            const s = routine.exercise_sets[j];
+            usedCardioKeys.add(`${s.exercise_key}_${s.exercise_subtype ?? ''}`);
+            const { error: habitError } = await serviceClient
+              .from('weight_sets')
+              .insert({
+                user_id: demoUserId,
+                entry_id: habitEntryId,
+                logged_date: dateStr,
+                exercise_key: s.exercise_key,
+                exercise_subtype: s.exercise_subtype ?? null,
+                description: s.description,
+                sets: s.sets ?? 0,
+                reps: s.reps ?? 0,
+                weight_lbs: s.weight_lbs ?? 0,
+                duration_minutes: s.duration_minutes ?? null,
+                distance_miles: s.distance_miles ?? null,
+                raw_input: j === 0 ? routine.original_input : null,
+                source_routine_id: routine.id,
+              });
+            if (habitError) {
+              console.error('Error inserting habit cardio entry:', habitError);
+            } else {
+              weightSetsCreated++;
+            }
+          }
+        }
+
+        for (let c = useHabitCardio ? 1 : 0; c < cardioCount; c++) {
           // Avoid duplicating the same activity
           const available = CARDIO_EXERCISES.filter(a => !usedCardioKeys.has(`${a.key}_${a.subtype}`));
           if (available.length === 0) break;
@@ -1577,6 +1614,7 @@ async function doPopulationWork(
           }
         }
       }
+
 
       // Generate casual activity (12% chance per day)
       if (generateWeights && Math.random() < 0.12) {
