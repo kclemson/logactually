@@ -3,11 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { FeedbackForm } from "@/components/FeedbackForm";
+import calendarSummaryAsset from "@/assets/changelog-calendar-summary.png.asset.json";
 
 // ============================================
 // CHANGELOG ENTRIES - Add new entries at the top
 // Each entry: { date: "Mon-DD", text: "description", image?: "feature.png" }
-// Images go in /public/changelog/ folder
+// Images can be placed in /public/changelog/ or uploaded as a Lovable Asset
+// and referenced via imageAsset.
 //
 // NOTE: When updating entries, also update the changelog link text
 // in src/pages/Settings.tsx which displays the last-updated date to users.
@@ -16,13 +18,15 @@ import { FeedbackForm } from "@/components/FeedbackForm";
 type ChangelogEntry = {
   date: string;
   text: string;
-  image?: string; // Single image (existing)
+  image?: string; // Filename in /public/changelog/
+  imageAsset?: string; // Full CDN URL from a Lovable Assets pointer
   images?: string[]; // Multiple images side-by-side (new)
   large?: boolean; // Larger desktop rendering for dense screenshots
 };
 
 // prettier-ignore
 const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+{ date: "Aug-02", text: "added a short summary of the number of days that food or exercise was logged in a given month to the Calendar view", imageAsset: calendarSummaryAsset.url },
 { date: "Aug-02", text: "New \"Quick Add\" feature - if there's a saved meal or exercise routine you tend to log very frequently (such as a morning coffee, or twice a week leg day), it'll show up in ghost text at the bottom of the page, just tap/click on it once to add it. The Quick Add list is populated automatically with items you log very frequently, but you can also manually add something to the list in Settings.", image: "quickadd3-both.png", large: true },
 { date: "Jul-29", text: "Some minor bug fixes: Trends charts now hide exercises with very little data — you need at least 3 sessions (and a weight logged, for strength exercises) before a chart appears, and low-frequency exercises are hidden once you have others with much more history. Custom log charts also hide until there are at least 2 days of data. Also fixed 'All time' on the Trends page to include your full history instead of stopping partway through, for users with a lot of data logged. Added a date picker to the dialog for creating new custom logs so you can override any date." },
 { date: "Jun-02", text: "Tweaked charts for certain custom logs like body weight or body fat %, they now show as line charts zoomed in to your range instead of columns starting at zero, to make gradual changes easier to spot." },
@@ -110,13 +114,13 @@ export default function Changelog() {
                   <span className="text-muted-foreground shrink-0">{entry.date}:</span>
                   <span className="text-foreground">{entry.text}</span>
                 </div>
-                {entry.image && (
+                {(entry.image || entry.imageAsset) && (
                   <img
                     loading="lazy"
-                    src={`/changelog/${entry.image}?v=${LAST_UPDATED}`}
+                    src={entry.imageAsset || `/changelog/${entry.image}?v=${LAST_UPDATED}`}
                     alt={`Screenshot for ${entry.date} update`}
                     className={`mt-2 mx-auto block max-h-[200px] max-w-[280px] w-auto object-contain cursor-pointer ${entry.large ? "md:max-h-[400px] md:max-w-[600px]" : ""}`}
-                    onClick={() => setLightboxSrc(`/changelog/${entry.image}?v=${LAST_UPDATED}`)}
+                    onClick={() => setLightboxSrc(entry.imageAsset || `/changelog/${entry.image}?v=${LAST_UPDATED}`)}
                   />
                 )}
                 {entry.images && (
