@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Plus, MoreHorizontal, Pin, PinOff, EyeOff, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useHasHover } from '@/hooks/use-has-hover';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 export interface QuickAddItem {
