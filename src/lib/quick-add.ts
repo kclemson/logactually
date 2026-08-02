@@ -17,6 +17,8 @@ export const QUICK_ADD = {
   MIN_USED_DAYS: 3,
   /** ...and on at least this fraction of the user's active days. */
   ACTIVE_DAY_RATIO: 0.3,
+  /** Auto-detected items must have been used within this many days to stay. */
+  RECENT_DAYS: 10,
   /** Chips shown from automatic detection. */
   MAX_CHIPS: 4,
   /** Hard ceiling including manual pins. */
