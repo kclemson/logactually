@@ -18,6 +18,7 @@ type ChangelogEntry = {
   text: string;
   image?: string; // Single image (existing)
   images?: string[]; // Multiple images side-by-side (new)
+  large?: boolean; // Larger desktop rendering for dense screenshots
 };
 
 // prettier-ignore
