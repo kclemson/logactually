@@ -401,6 +401,26 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
     createEntryFromExercises(exercises, null, routineId);
   }, [createEntryFromExercises, isReadOnly]);
 
+  // Quick Add: same path as the Saved popover (log mutation, then create entry)
+  const logSavedRoutine = useLogSavedRoutine();
+  const [quickAddPendingId, setQuickAddPendingId] = useState<string | null>(null);
+  const loggedRoutineIds = useMemo(
+    () => weightSets.map(s => s.sourceRoutineId).filter((id): id is string => !!id),
+    [weightSets]
+  );
+  const quickAddRoutines = useQuickAddRoutines(loggedRoutineIds);
+  const handleQuickAdd = useCallback(async (routineId: string) => {
+    setQuickAddPendingId(routineId);
+    try {
+      const exerciseSets = await logSavedRoutine.mutateAsync(routineId);
+      handleLogSavedRoutine(exerciseSets, routineId);
+    } finally {
+      setQuickAddPendingId(null);
+    }
+  }, [logSavedRoutine, handleLogSavedRoutine]);
+
+
+
   // Typeahead candidates: saved routines only (history is intentionally excluded —
   // exercise has too much intentional variation per instance to make name-only matching useful).
   const typeaheadCandidates = useMemo((): TypeaheadCandidate[] | undefined => {
