@@ -69,7 +69,7 @@ export function QuickAddRow({
   if (items.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5" aria-label="Quick add">
+    <div className="flex flex-wrap items-center gap-1" aria-label="Quick add">
       {items.map((item) => {
         const isPending = pendingId === item.id;
         const isPinned = pinnedIds.includes(item.id);
@@ -77,7 +77,7 @@ export function QuickAddRow({
           <div
             key={item.id}
             className={cn(
-              'flex items-stretch rounded-full border overflow-hidden transition-colors',
+              'flex h-6 items-stretch rounded-full border overflow-hidden transition-colors',
               isPinned ? ACCENT_PINNED[accent] : ACCENT[accent]
             )}
           >
@@ -89,14 +89,14 @@ export function QuickAddRow({
               // expanding the chip re-wrapped the row and caused hover flicker.
               title={item.name}
               aria-label={`Quick add ${item.name}`}
-              className="flex items-center gap-1 pl-2 pr-1.5 py-1 text-xs font-medium disabled:opacity-60"
+              className="flex items-center gap-1 pl-1.5 pr-1 text-[11px] font-medium disabled:opacity-60"
             >
               {isPending ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
+                <Loader2 className="h-2.5 w-2.5 animate-spin" />
               ) : isPinned ? (
-                <Pin className="h-3 w-3 fill-current" />
+                <Pin className="h-2.5 w-2.5 fill-current" />
               ) : (
-                <Plus className="h-3 w-3" />
+                <Plus className="h-2.5 w-2.5" />
               )}
               <span className="whitespace-nowrap">{shortenChipName(item.name)}</span>
 
@@ -110,10 +110,11 @@ export function QuickAddRow({
                 <button
                   type="button"
                   aria-label={`Quick add options for ${item.name}`}
-                  className="px-1.5 border-l border-inherit text-muted-foreground"
+                  className="px-1 border-l border-inherit text-muted-foreground"
                 >
-                  <MoreHorizontal className="h-3 w-3" />
+                  <MoreHorizontal className="h-2.5 w-2.5" />
                 </button>
+
               </PopoverTrigger>
               <PopoverContent align="start" className="w-48 p-1">
                 <button
