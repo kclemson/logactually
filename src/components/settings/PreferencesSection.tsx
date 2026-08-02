@@ -73,30 +73,11 @@ export function PreferencesSection({ settings, updateSettings }: PreferencesSect
             </Select>
           </div>
 
-          {/* Daily Calorie Target */}
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground">Daily Calorie Target</p>
-              <p className="text-[10px] text-muted-foreground/70">
-                Show <span className="text-green-500 dark:text-green-400">●</span>{' '}
-                <span className="text-amber-500 dark:text-amber-400">●</span>{' '}
-                <span className="text-rose-500 dark:text-rose-400">●</span>{' '}
-                color indicators on calendar view
-              </p>
-            </div>
-            <button
-              onClick={() => setCalorieTargetDialogOpen(true)}
-              className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors"
-            >
-              {settings.calorieTargetEnabled ? 'Edit' : 'Set up'}
-            </button>
-          </div>
-
           {/* Quick Add toggle */}
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground">Quick Add</p>
-              <p className="text-[10px] text-muted-foreground/70">One-tap chips for saved items you log most days</p>
+              <p className="text-[10px] text-muted-foreground/70">One-tap chips for saved meals and routines you log very frequently</p>
               {settings.quickAddHidden.length > 0 && (
                 <button
                   onClick={() => updateSettings({ quickAddHidden: [] })}
@@ -124,6 +105,26 @@ export function PreferencesSection({ settings, updateSettings }: PreferencesSect
               />
             </button>
           </div>
+
+          {/* Daily Calorie Target */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">Daily Calorie Target</p>
+              <p className="text-[10px] text-muted-foreground/70">
+                Show <span className="text-green-500 dark:text-green-400">●</span>{' '}
+                <span className="text-amber-500 dark:text-amber-400">●</span>{' '}
+                <span className="text-rose-500 dark:text-rose-400">●</span>{' '}
+                color indicators on calendar view
+              </p>
+            </div>
+            <button
+              onClick={() => setCalorieTargetDialogOpen(true)}
+              className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted/50 transition-colors"
+            >
+              {settings.calorieTargetEnabled ? 'Edit' : 'Set up'}
+            </button>
+          </div>
+
 
           {/* Enable Custom logging toggle */}
           <div className="flex items-center justify-between">
