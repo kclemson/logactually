@@ -1485,13 +1485,18 @@ async function doPopulationWork(
               total_protein: totalProtein,
               total_carbs: totalCarbs,
               total_fat: totalFat,
+              source_meal_id: meal.sourceMealId ?? null,
             });
 
           if (foodError) {
             console.error('Error inserting food entry:', foodError);
           } else {
             foodEntriesCreated++;
+            if (meal.sourceMealId) {
+              mealUsage.set(meal.sourceMealId, (mealUsage.get(meal.sourceMealId) ?? 0) + 1);
+            }
           }
+
         }
       }
 
