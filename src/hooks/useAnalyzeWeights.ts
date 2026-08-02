@@ -4,6 +4,7 @@ import { AnalyzedExercise } from '@/types/weight';
 
 interface AnalyzeWeightsResult {
   exercises: AnalyzedExercise[];
+  summary?: string;
 }
 
 export function useAnalyzeWeights() {
