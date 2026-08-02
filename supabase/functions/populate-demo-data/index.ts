@@ -1375,7 +1375,12 @@ async function doPopulationWork(
 
     // Habitual routines: Quick Add only surfaces items used on a large share of
     // recent active days, so the demo user needs a couple of clear favorites.
-    const habitStrengthRoutine = strengthRoutines.length > 0 ? strengthRoutines[0] : null;
+    // Prefer a multi-exercise day routine as the habit so Quick Add shows
+    // "Leg Day" rather than a single isolation lift.
+    const habitStrengthRoutine =
+      strengthRoutines.find(r => r.exercise_sets.length >= 3) ??
+      strengthRoutines.find(r => r.exercise_sets.length >= 2) ??
+      (strengthRoutines.length > 0 ? strengthRoutines[0] : null);
     const habitCardioRoutine = cardioRoutines.length > 0 ? cardioRoutines[0] : null;
 
     // ========================================================================
