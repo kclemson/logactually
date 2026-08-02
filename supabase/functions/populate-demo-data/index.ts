@@ -1712,6 +1712,7 @@ async function doPopulationWork(
               duration_minutes: entry.duration_minutes ?? null,
               distance_miles: entry.distance_miles ?? null,
               raw_input: entry.rawInput ?? null,
+              group_name: null,
             });
 
           if (cardioError) {
