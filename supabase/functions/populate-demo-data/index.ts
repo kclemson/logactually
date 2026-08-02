@@ -973,14 +973,14 @@ function generateSavedRoutines(count: number): GeneratedRoutine[] {
   const routines: GeneratedRoutine[] = [];
 
   // 1. Named full-day routines first — these become the habit candidates.
-  const dayTemplates = shuffle([...FULL_DAY_ROUTINE_TEMPLATES]);
+  const dayTemplates = shuffleArray([...FULL_DAY_ROUTINE_TEMPLATES]);
   const dayCount = Math.min(dayTemplates.length, Math.max(1, Math.round(count * 0.4)));
   for (let i = 0; i < dayCount; i++) {
     routines.push(buildFullDayRoutine(dayTemplates[i]));
   }
 
   // 2. Themed mini routines next.
-  const miniTemplates = shuffle([...MINI_ROUTINE_TEMPLATES]);
+  const miniTemplates = shuffleArray([...MINI_ROUTINE_TEMPLATES]);
   const miniCount = Math.min(miniTemplates.length, Math.max(0, Math.round((count - routines.length) * 0.5)));
   for (let i = 0; i < miniCount && routines.length < count; i++) {
     routines.push(buildMiniRoutine(miniTemplates[i]));
