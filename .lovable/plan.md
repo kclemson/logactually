@@ -1,38 +1,29 @@
-# Definitive Demo Population Completion Signal
-
-## Problem
-The Admin page currently guesses whether a `populate-demo-data` run is finished by polling row counts and waiting for them to stop changing for 60 seconds. It shows "likely finished," which is a heuristic, not a real completion signal. The edge function could still be running, paused, or failed, and the UI has no way to know.
+Add per-poll delta badges to the demo data population progress panel
 
 ## Goal
-Make the edge function report its own run state, and update the Admin UI to display a definitive status.
+On the Admin page, while a demo-data population run is in progress, show a `+#` next to each live count (Food entries, Exercise sets, etc.) indicating how much that count changed between the most recent poll and the previous poll.
 
-## Proposed Changes
+## Current state
+- `src/hooks/useDemoPopulateProgress.ts` polls `get_user_stats` every 3 seconds and exposes the latest counts, but it only keeps one signature string for idle detection. It has no memory of the previous poll's numeric values.
+- `src/components/DemoPopulateProgress.tsx` renders the counts as a plain bulleted list.
 
-### Backend
-1. Add a small status table `public.demo_populate_status` with columns:
-   - `id` (uuid primary key)
-   - `started_at` (timestamptz)
-   - `completed_at` (timestamptz, nullable)
-   - `status` (text: 'running' | 'completed' | 'failed')
-   - `error_message` (text, nullable)
-   - `counts_snapshot` (jsonb, nullable)
-2. Include the required `GRANT` statements for `service_role` (edge function) and `authenticated` (admin RPC readers).
-3. Update `supabase/functions/populate-demo-data/index.ts`:
-   - At the start of a run, insert a `running` row.
-   - When `doPopulationWork` finishes, update the row to `completed` with a counts snapshot.
-   - On failure, update the row to `failed` with `error_message`.
-4. Add an admin-only RPC `get_demo_populate_status()` that returns the latest row.
+## Plan
 
-### Frontend
-1. Update `src/hooks/useDemoPopulateProgress.ts` to read from `get_demo_populate_status()` in addition to (or instead of) the idle-count heuristic.
-2. Update `src/components/DemoPopulateProgress.tsx` to show:
-   - "Running" while status is `running`
-   - "Done" with a timestamp when status is `completed`
-   - "Failed: <message>" when status is `failed`
-3. Keep the existing idle-count fallback as a secondary guard so the UI still settles if the edge function fails to write status.
+1. **Track previous counts in the hook**
+   - Replace `lastSignature` with a `previousCounts` ref of type `DemoProgressCounts | null`.
+   - On each successful poll, compute a `deltas` object by subtracting each field of `previousCounts` from the new `counts`.
+   - After computing deltas, store the new counts into `previousCounts` for the next poll.
+   - Expose `deltas` alongside `counts` from the hook. If there is no previous poll yet, return zero deltas.
 
-## Acceptance Criteria
-- Starting a new populate run creates a visible `running` status on `/admin` immediately.
-- When the run finishes, the banner changes to a clear "Done" state with the completion time.
-- If the run fails, the banner shows "Failed" with the error message.
-- Running a second populate while one is `running` is blocked or clearly warned (optional but recommended).
+2. **Render deltas in the progress UI**
+   - In `DemoPopulateProgress.tsx`, for each count row show a small delta badge when the delta is positive, e.g. `Food entries: 1,247  +12`.
+   - Use the existing blue/green text color so the badge matches the banner state.
+   - Omit the badge when the delta is `0` or negative (population should only grow; a negative value would be noise).
+
+3. **Verify**
+   - Run the TypeScript typecheck.
+   - If there are existing tests for `useDemoPopulateProgress`, update them to assert that the second poll returns the expected deltas.
+
+## Out of scope
+- No backend or edge-function changes.
+- No changes to the "likely finished" heuristic or polling interval.
