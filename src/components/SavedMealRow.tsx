@@ -11,6 +11,8 @@ interface SavedMealRowProps {
   onDeleteMeal: (id: string) => void;
   openDeletePopoverId: string | null;
   setOpenDeletePopoverId: (id: string | null) => void;
+  isPinned?: boolean;
+  onTogglePin?: () => void;
 }
 
 export function SavedMealRow({
@@ -21,6 +23,8 @@ export function SavedMealRow({
   onDeleteMeal,
   openDeletePopoverId,
   setOpenDeletePopoverId,
+  isPinned,
+  onTogglePin,
 }: SavedMealRowProps) {
   const itemsWithUids = useMemo(() =>
     meal.food_items.map((item, idx) => ({
@@ -63,6 +67,8 @@ export function SavedMealRow({
       deleteConfirmDescription={`"${meal.name}" will be permanently removed.`}
       openDeletePopoverId={openDeletePopoverId}
       setOpenDeletePopoverId={setOpenDeletePopoverId}
+      isPinned={isPinned}
+      onTogglePin={onTogglePin}
       isExpanded={isExpanded}
       onToggleExpand={onToggleExpand}
       meta={`${meal.food_items.length} ${meal.food_items.length === 1 ? 'item' : 'items'}`}

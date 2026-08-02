@@ -11,6 +11,8 @@ interface SavedRoutineRowProps {
   onDeleteRoutine: (id: string) => void;
   openDeletePopoverId: string | null;
   setOpenDeletePopoverId: (id: string | null) => void;
+  isPinned?: boolean;
+  onTogglePin?: () => void;
 }
 
 export function SavedRoutineRow({
@@ -21,6 +23,8 @@ export function SavedRoutineRow({
   onDeleteRoutine,
   openDeletePopoverId,
   setOpenDeletePopoverId,
+  isPinned,
+  onTogglePin,
 }: SavedRoutineRowProps) {
   const itemsWithUids = useMemo((): WeightSet[] =>
     routine.exercise_sets.map((set, idx) => ({
@@ -56,6 +60,8 @@ export function SavedRoutineRow({
       deleteConfirmDescription={`"${routine.name}" will be permanently removed.`}
       openDeletePopoverId={openDeletePopoverId}
       setOpenDeletePopoverId={setOpenDeletePopoverId}
+      isPinned={isPinned}
+      onTogglePin={onTogglePin}
       isExpanded={isExpanded}
       onToggleExpand={onToggleExpand}
       meta={`${routine.exercise_sets.length} ${routine.exercise_sets.length === 1 ? 'exercise' : 'exercises'}`}

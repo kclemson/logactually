@@ -1,5 +1,5 @@
 import { type ReactNode, useState } from 'react';
-import { ChevronRight, Pencil } from 'lucide-react';
+import { ChevronRight, Pencil, Pin, PinOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DeleteConfirmPopover } from '@/components/DeleteConfirmPopover';
 import { DescriptionCell } from '@/components/DescriptionCell';
@@ -21,6 +21,9 @@ interface SavedItemRowProps {
   meta?: ReactNode;
   children?: ReactNode;
   existingNames?: string[];
+  /** When defined, renders a Quick Add pin toggle. */
+  isPinned?: boolean;
+  onTogglePin?: () => void;
 }
 
 export function SavedItemRow({
@@ -40,6 +43,8 @@ export function SavedItemRow({
   meta,
   children,
   existingNames = [],
+  isPinned,
+  onTogglePin,
 }: SavedItemRowProps) {
   const [flashError, setFlashError] = useState(false);
 
@@ -96,6 +101,21 @@ export function SavedItemRow({
             aria-label="Edit details"
           >
             <Pencil className="h-3.5 w-3.5" />
+          </button>
+        )}
+
+        {onTogglePin && (
+          <button
+            onClick={onTogglePin}
+            title={isPinned ? 'Unpin from Quick Add' : 'Pin to Quick Add'}
+            aria-label={isPinned ? 'Unpin from Quick Add' : 'Pin to Quick Add'}
+            aria-pressed={!!isPinned}
+            className={cn(
+              'p-0.5 shrink-0 transition-colors',
+              isPinned ? 'text-primary' : 'text-muted-foreground/50 hover:text-foreground'
+            )}
+          >
+            {isPinned ? <Pin className="h-3.5 w-3.5 fill-current" /> : <PinOff className="h-3.5 w-3.5" />}
           </button>
         )}
 

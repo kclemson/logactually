@@ -21,6 +21,16 @@ export function SavedMealsSection({ settings, updateSettings, isReadOnly }: Save
   const [createMealDialogOpen, setCreateMealDialogOpen] = useState(false);
   const [expandedMealIds, setExpandedMealIds] = useState<Set<string>>(new Set());
 
+
+  const pinned = settings.quickAddPinned ?? [];
+  const togglePin = (id: string) => {
+    const isPinned = pinned.includes(id);
+    updateSettings({
+      quickAddPinned: isPinned ? pinned.filter((p) => p !== id) : [...pinned, id],
+      quickAddHidden: (settings.quickAddHidden ?? []).filter((h) => h !== id),
+    });
+  };
+
   const toggleMealExpand = (id: string) => {
     setExpandedMealIds((prev) => {
       const next = new Set(prev);
@@ -58,6 +68,10 @@ export function SavedMealsSection({ settings, updateSettings, isReadOnly }: Save
                 onDeleteMeal={(id) => deleteMeal.mutate(id)}
                 openDeletePopoverId={openMealPopoverId}
                 setOpenDeletePopoverId={setOpenMealPopoverId}
+                isPinned={pinned.includes(meal.id)}
+                onTogglePin={
+                  !isReadOnly && settings.quickAddEnabled ? () => togglePin(meal.id) : undefined
+                }
               />
             ))}
           </ul>

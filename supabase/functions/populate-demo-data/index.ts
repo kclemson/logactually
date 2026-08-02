@@ -963,45 +963,43 @@ function buildFullDayRoutine(template: { name: string; exercises: string[] }): G
 }
 
 /**
- * Shape-mix generator: ~70% single-exercise, ~20% mini, ~10% full-day.
- * Cardio sneaks in via single-exercise slot at ~20% rate.
+ * Front-loads day/theme routines ("Leg Day", "Quick Pull") so the habitual
+ * routines a demo user sees in Quick Add read like real training days rather
+ * than a single isolation lift. Single-exercise routines fill the tail.
  */
 function generateSavedRoutines(count: number): GeneratedRoutine[] {
   const allStrengthExercises = [...EXERCISES.machine, ...EXERCISES.compound, ...EXERCISES.freeWeight];
   const usedSingleKeys = new Set<string>();
-  const usedMiniNames = new Set<string>();
-  const usedDayNames = new Set<string>();
   const routines: GeneratedRoutine[] = [];
 
-  for (let i = 0; i < count; i++) {
-    const r = Math.random();
-    if (r < 0.7) {
-      // Single exercise (with 20% chance of cardio variant)
-      if (Math.random() < 0.2) {
-        routines.push(buildCardioRoutine());
-      } else {
-        const available = allStrengthExercises.filter(e => !usedSingleKeys.has(e.key));
-        const pool = available.length > 0 ? available : allStrengthExercises;
-        const ex = randomChoice(pool);
-        usedSingleKeys.add(ex.key);
-        routines.push(buildSingleExerciseRoutine(ex));
-      }
-    } else if (r < 0.9) {
-      // Mini routine
-      const available = MINI_ROUTINE_TEMPLATES.filter(t => !usedMiniNames.has(t.name));
-      const pool = available.length > 0 ? available : MINI_ROUTINE_TEMPLATES;
-      const tmpl = randomChoice(pool);
-      usedMiniNames.add(tmpl.name);
-      routines.push(buildMiniRoutine(tmpl));
-    } else {
-      // Full day
-      const available = FULL_DAY_ROUTINE_TEMPLATES.filter(t => !usedDayNames.has(t.name));
-      const pool = available.length > 0 ? available : FULL_DAY_ROUTINE_TEMPLATES;
-      const tmpl = randomChoice(pool);
-      usedDayNames.add(tmpl.name);
-      routines.push(buildFullDayRoutine(tmpl));
-    }
+  // 1. Named full-day routines first — these become the habit candidates.
+  const dayTemplates = shuffleArray([...FULL_DAY_ROUTINE_TEMPLATES]);
+  const dayCount = Math.min(dayTemplates.length, Math.max(1, Math.round(count * 0.4)));
+  for (let i = 0; i < dayCount; i++) {
+    routines.push(buildFullDayRoutine(dayTemplates[i]));
   }
+
+  // 2. Themed mini routines next.
+  const miniTemplates = shuffleArray([...MINI_ROUTINE_TEMPLATES]);
+  const miniCount = Math.min(miniTemplates.length, Math.max(0, Math.round((count - routines.length) * 0.5)));
+  for (let i = 0; i < miniCount && routines.length < count; i++) {
+    routines.push(buildMiniRoutine(miniTemplates[i]));
+  }
+
+  // 3. Fill the remainder with single-exercise routines (plus occasional cardio).
+  while (routines.length < count) {
+    if (Math.random() < 0.25) {
+      routines.push(buildCardioRoutine());
+      continue;
+    }
+    const available = allStrengthExercises.filter(e => !usedSingleKeys.has(e.key));
+    const pool = available.length > 0 ? available : allStrengthExercises;
+    const ex = randomChoice(pool);
+    usedSingleKeys.add(ex.key);
+    routines.push(buildSingleExerciseRoutine(ex));
+  }
+
+  routines.length = Math.min(routines.length, count);
 
   // Guarantee a cardio routine so the demo account always has a habitual
   // cardio item available for Quick Add.
@@ -1012,6 +1010,7 @@ function generateSavedRoutines(count: number): GeneratedRoutine[] {
   }
 
   return routines;
+
 
 }
 
@@ -1376,7 +1375,12 @@ async function doPopulationWork(
 
     // Habitual routines: Quick Add only surfaces items used on a large share of
     // recent active days, so the demo user needs a couple of clear favorites.
-    const habitStrengthRoutine = strengthRoutines.length > 0 ? strengthRoutines[0] : null;
+    // Prefer a multi-exercise day routine as the habit so Quick Add shows
+    // "Leg Day" rather than a single isolation lift.
+    const habitStrengthRoutine =
+      strengthRoutines.find(r => r.exercise_sets.length >= 3) ??
+      strengthRoutines.find(r => r.exercise_sets.length >= 2) ??
+      (strengthRoutines.length > 0 ? strengthRoutines[0] : null);
     const habitCardioRoutine = cardioRoutines.length > 0 ? cardioRoutines[0] : null;
 
     // ========================================================================
