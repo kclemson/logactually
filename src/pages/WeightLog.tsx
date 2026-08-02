@@ -793,7 +793,6 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
               items={quickAddRoutines.map(routine => ({
                 id: routine.id,
                 name: routine.name,
-                meta: `${routine.exercise_sets.length} ex`,
               }))}
               pinnedIds={settings.quickAddPinned}
               pendingId={quickAddPendingId}

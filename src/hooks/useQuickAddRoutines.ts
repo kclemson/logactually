@@ -28,7 +28,10 @@ export function useQuickAddRoutines(alreadyLoggedRoutineIds: Iterable<string>) {
         .from('weight_sets')
         .select('logged_date, source_routine_id')
         .gte('logged_date', cutoff)
-        .neq('raw_input', 'apple-health-import');
+        // Null-safe: `neq` alone would also drop rows with a null raw_input,
+        // which is how manually logged saved-routine sets are stored.
+        .or('raw_input.is.null,raw_input.neq.apple-health-import');
+
 
       if (error) throw error;
       return (data ?? []).map((row) => ({ date: row.logged_date, itemId: row.source_routine_id }));

@@ -835,7 +835,6 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
               items={quickAddMeals.map(meal => ({
                 id: meal.id,
                 name: meal.name,
-                meta: `${Math.round(calculateTotals(meal.food_items).calories)} cal`,
               }))}
               pinnedIds={settings.quickAddPinned}
               pendingId={quickAddPendingId}

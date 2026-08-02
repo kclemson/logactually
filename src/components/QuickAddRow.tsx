@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Plus, MoreHorizontal, Pin, PinOff, EyeOff, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useHasHover } from '@/hooks/use-has-hover';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 export interface QuickAddItem {
   id: string;
   name: string;
-  /** Small trailing figure, e.g. "310 cal" or "4 exercises". */
+  /** Optional small trailing figure. Omitted by default — habitual items don't need it. */
   meta?: string;
 }
 
@@ -26,6 +27,27 @@ const ACCENT = {
   purple: 'border-purple-500/40 text-purple-700 dark:text-purple-300 hover:bg-purple-500/10 active:bg-purple-500/20',
 } as const;
 
+const ACCENT_PINNED = {
+  blue: 'border-blue-500 bg-blue-500/15 text-blue-700 dark:text-blue-200 hover:bg-blue-500/25 active:bg-blue-500/30',
+  purple: 'border-purple-500 bg-purple-500/15 text-purple-700 dark:text-purple-200 hover:bg-purple-500/25 active:bg-purple-500/30',
+} as const;
+
+/** Max characters shown on a collapsed chip before shortening. */
+const NAME_BUDGET = 18;
+
+/**
+ * Shorten at the last word boundary that fits, so chips never cut a word in
+ * half. Falls back to a hard cut for single very long words.
+ */
+export function shortenChipName(name: string, budget = NAME_BUDGET): string {
+  const trimmed = name.trim();
+  if (trimmed.length <= budget) return trimmed;
+  const head = trimmed.slice(0, budget);
+  const lastSpace = head.lastIndexOf(' ');
+  const cut = lastSpace >= Math.ceil(budget / 2) ? head.slice(0, lastSpace) : head;
+  return `${cut.replace(/[\s,.;:–-]+$/, '')}…`;
+}
+
 /**
  * Presentational row of one-tap "add this again" chips.
  * Holds no data or domain logic so any log domain can reuse it.
@@ -41,6 +63,8 @@ export function QuickAddRow({
   onDisable,
 }: QuickAddRowProps) {
   const [menuId, setMenuId] = useState<string | null>(null);
+  const [hoverId, setHoverId] = useState<string | null>(null);
+  const hasHover = useHasHover();
 
   if (items.length === 0) return null;
 
@@ -49,25 +73,42 @@ export function QuickAddRow({
       {items.map((item) => {
         const isPending = pendingId === item.id;
         const isPinned = pinnedIds.includes(item.id);
+        const expanded = hasHover && hoverId === item.id;
         return (
-          <div key={item.id} className={cn('flex items-stretch rounded-full border overflow-hidden', ACCENT[accent])}>
+          <div
+            key={item.id}
+            className={cn(
+              'flex items-stretch rounded-full border overflow-hidden transition-colors',
+              isPinned ? ACCENT_PINNED[accent] : ACCENT[accent]
+            )}
+            onMouseEnter={() => hasHover && setHoverId(item.id)}
+            onMouseLeave={() => hasHover && setHoverId((cur) => (cur === item.id ? null : cur))}
+          >
             <button
               type="button"
               onClick={() => onAdd(item.id)}
+              onFocus={() => hasHover && setHoverId(item.id)}
+              onBlur={() => hasHover && setHoverId((cur) => (cur === item.id ? null : cur))}
               disabled={isPending}
+              title={item.name}
               aria-label={`Quick add ${item.name}`}
               className="flex items-center gap-1 pl-2 pr-1.5 py-1 text-xs font-medium disabled:opacity-60"
             >
               {isPending ? (
                 <Loader2 className="h-3 w-3 animate-spin" />
+              ) : isPinned ? (
+                <Pin className="h-3 w-3 fill-current" />
               ) : (
                 <Plus className="h-3 w-3" />
               )}
-              <span className="truncate max-w-[9rem]">{item.name}</span>
+              <span className="whitespace-nowrap">
+                {expanded ? item.name : shortenChipName(item.name)}
+              </span>
               {item.meta && (
                 <span className="text-[10px] text-muted-foreground tabular-nums">{item.meta}</span>
               )}
             </button>
+
             <Popover open={menuId === item.id} onOpenChange={(open) => setMenuId(open ? item.id : null)}>
               <PopoverTrigger asChild>
                 <button
