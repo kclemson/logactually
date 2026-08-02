@@ -21,6 +21,16 @@ export function SavedRoutinesSection({ settings, updateSettings, isReadOnly }: S
   const [createRoutineDialogOpen, setCreateRoutineDialogOpen] = useState(false);
   const [expandedRoutineIds, setExpandedRoutineIds] = useState<Set<string>>(new Set());
 
+
+  const pinned = settings.quickAddPinned ?? [];
+  const togglePin = (id: string) => {
+    const isPinned = pinned.includes(id);
+    updateSettings({
+      quickAddPinned: isPinned ? pinned.filter((p) => p !== id) : [...pinned, id],
+      quickAddHidden: (settings.quickAddHidden ?? []).filter((h) => h !== id),
+    });
+  };
+
   const toggleRoutineExpand = (id: string) => {
     setExpandedRoutineIds((prev) => {
       const next = new Set(prev);
@@ -58,6 +68,10 @@ export function SavedRoutinesSection({ settings, updateSettings, isReadOnly }: S
                 onDeleteRoutine={(id) => deleteRoutine.mutate(id)}
                 openDeletePopoverId={openRoutinePopoverId}
                 setOpenDeletePopoverId={setOpenRoutinePopoverId}
+                isPinned={pinned.includes(routine.id)}
+                onTogglePin={
+                  !isReadOnly && settings.quickAddEnabled ? () => togglePin(routine.id) : undefined
+                }
               />
             ))}
           </ul>
