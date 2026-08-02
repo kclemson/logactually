@@ -139,8 +139,12 @@ export function useDemoPopulateProgress() {
   }, [snapshots]);
 
   // Stop polling once counts go quiet, or after the safety cap.
+  // Keyed on the poll timestamp, not `counts`: React Query's structural sharing
+  // keeps the same `counts` object across identical polls, so depending on it
+  // would make this effect stop re-running exactly when it matters most.
+  const polledAt = query.data?.at;
   useEffect(() => {
-    if (!active || stopped || !counts || startedAt === null) return;
+    if (!active || stopped || !counts || startedAt === null || !polledAt) return;
     const signature = JSON.stringify(counts);
     const now = Date.now();
     if (signature !== lastSignature.current) {
@@ -151,7 +155,7 @@ export function useDemoPopulateProgress() {
     if (now - lastChangeAt.current > IDLE_STOP_MS || now - startedAt > MAX_RUN_MS) {
       setStopped(true);
     }
-  }, [counts, active, stopped, startedAt]);
+  }, [polledAt, active, stopped, startedAt]);
 
   const dismiss = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
