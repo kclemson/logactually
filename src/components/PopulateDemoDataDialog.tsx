@@ -223,11 +223,30 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
               {result.success ? (
                 result.status === 'processing' ? (
                   <div className="space-y-1">
-                    <p className="font-medium">⏳ Processing in background</p>
+                    <p className="font-medium">
+                      {progress.isPolling ? '⏳ Working in the background' : '⏳ Processing in background'}
+                    </p>
                     <p>{result.message}</p>
-                    <p className="text-muted-foreground mt-1">You can close this dialog.</p>
+                    {progress.counts && (
+                      <ul className="list-disc list-inside mt-1">
+                        <li>Food entries: {progress.counts.foodEntries}</li>
+                        <li>Exercise sets: {progress.counts.weightSets}</li>
+                        <li>Custom logs: {progress.counts.customLogEntries}</li>
+                        <li>Saved meals: {progress.counts.savedMeals}</li>
+                        <li>Saved routines: {progress.counts.savedRoutines}</li>
+                      </ul>
+                    )}
+                    <p className="text-muted-foreground mt-1">
+                      {progress.settled
+                        ? 'Counts stopped changing — likely finished.'
+                        : progress.updatedAt
+                          ? `Counts update as data is written · last checked ${format(progress.updatedAt, 'h:mm:ss a')}`
+                          : 'Checking current totals…'}
+                    </p>
+                    <p className="text-muted-foreground">You can close this dialog.</p>
                   </div>
                 ) : (
+
                   <div className="space-y-1">
                     <p className="font-medium">✓ Done!</p>
                     {result.summary && (
