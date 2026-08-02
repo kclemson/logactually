@@ -30,6 +30,7 @@ function readStartedAt(): number | null {
 }
 
 interface RawUserStats {
+  user_id: string;
   is_read_only: boolean;
   total_entries: number;
   total_weight_entries: number;
@@ -70,13 +71,19 @@ export function useDemoPopulateProgress() {
     gcTime: 0,
     queryFn: async (): Promise<{ counts: DemoProgressCounts; at: number }> => {
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const { data, error } = await supabase.rpc("get_user_stats", {
-        user_timezone: timezone,
-        include_read_only: true,
-      });
-      if (error) throw error;
-      const rows = (data as unknown as RawUserStats[]) ?? [];
-      const demo = rows.find((r) => r.is_read_only);
+      const [statsRes, demoIdRes] = await Promise.all([
+        supabase.rpc("get_user_stats", {
+          user_timezone: timezone,
+          include_read_only: true,
+        }),
+        supabase.rpc("get_demo_user_id" as never),
+      ]);
+      if (statsRes.error) throw statsRes.error;
+      const rows = (statsRes.data as unknown as RawUserStats[]) ?? [];
+      // Match the demo account by id: it may be temporarily unlocked mid-run,
+      // so `is_read_only` is not a reliable identifier.
+      const demoId = demoIdRes.data as unknown as string | null;
+      const demo = rows.find((r) => r.user_id === demoId) ?? rows.find((r) => r.is_read_only);
       return {
         counts: {
           foodEntries: Number(demo?.total_entries ?? 0),
