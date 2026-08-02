@@ -201,6 +201,28 @@ const History = () => {
     return map;
   }, [weightSummaries]);
 
+  // Monthly log-day counts
+  const monthPrefix = format(currentMonth, 'yyyy-MM');
+  const { foodDays, exerciseDays, strengthDays, cardioDays } = useMemo(() => {
+    let foodDays = 0;
+    let exerciseDays = 0;
+    let strengthDays = 0;
+    let cardioDays = 0;
+
+    summaryByDate.forEach((_, dateStr) => {
+      if (dateStr.startsWith(monthPrefix)) foodDays++;
+    });
+
+    weightByDate.forEach((summary, dateStr) => {
+      if (!dateStr.startsWith(monthPrefix)) return;
+      exerciseDays++;
+      if (summary.hasLifting) strengthDays++;
+      if (summary.hasRunWalk || summary.hasCycling) cardioDays++;
+    });
+
+    return { foodDays, exerciseDays, strengthDays, cardioDays };
+  }, [summaryByDate, weightByDate, monthPrefix]);
+
   const navigateToDay = (date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
     const todayStr = format(new Date(), 'yyyy-MM-dd');
@@ -319,6 +341,17 @@ const History = () => {
           }}
         />
       )}
+
+      {/* Monthly log-day summary */}
+      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        <span className="text-blue-500 dark:text-blue-400">Food: {foodDays} days</span>
+        <span className="text-purple-500 dark:text-purple-400">
+          Exercise: {exerciseDays}{' '}
+          <span className="text-muted-foreground/80">
+            (strength: {strengthDays}, cardio: {cardioDays})
+          </span>
+        </span>
+      </div>
 
       {/* Swipe zone: calendar grid (swipe left = next month, swipe right = prev month) */}
       <div ref={swipeHandlers.ref} onTouchStart={swipeHandlers.onTouchStart} onTouchEnd={swipeHandlers.onTouchEnd} style={{ touchAction: 'none' }} className="min-h-[calc(100dvh-10rem)] md:min-h-0">
