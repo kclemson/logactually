@@ -201,6 +201,28 @@ const History = () => {
     return map;
   }, [weightSummaries]);
 
+  // Monthly log-day counts
+  const monthPrefix = format(currentMonth, 'yyyy-MM');
+  const { foodDays, exerciseDays, strengthDays, cardioDays } = useMemo(() => {
+    let foodDays = 0;
+    let exerciseDays = 0;
+    let strengthDays = 0;
+    let cardioDays = 0;
+
+    summaryByDate.forEach((_, dateStr) => {
+      if (dateStr.startsWith(monthPrefix)) foodDays++;
+    });
+
+    weightByDate.forEach((summary, dateStr) => {
+      if (!dateStr.startsWith(monthPrefix)) return;
+      exerciseDays++;
+      if (summary.hasLifting) strengthDays++;
+      if (summary.hasRunWalk || summary.hasCycling) cardioDays++;
+    });
+
+    return { foodDays, exerciseDays, strengthDays, cardioDays };
+  }, [summaryByDate, weightByDate, monthPrefix]);
+
   const navigateToDay = (date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
     const todayStr = format(new Date(), 'yyyy-MM-dd');
