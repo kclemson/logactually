@@ -3,6 +3,15 @@ import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDemoPopulateProgress } from "@/hooks/useDemoPopulateProgress";
 
+function DeltaBadge({ value }: { value: number }) {
+  if (value <= 0) return null;
+  return (
+    <span className="ml-1.5 text-[10px] opacity-80 font-medium">
+      +{value}
+    </span>
+  );
+}
+
 /**
  * Live row counts for the demo account while a populate run is in flight.
  * Lives on the Admin page (not the dialog) so closing the dialog — or reloading
@@ -37,11 +46,26 @@ export function DemoPopulateProgress() {
 
       {progress.counts ? (
         <ul className="list-disc list-inside mt-1">
-          <li>Food entries: {progress.counts.foodEntries}</li>
-          <li>Exercise sets: {progress.counts.weightSets}</li>
-          <li>Custom logs: {progress.counts.customLogEntries}</li>
-          <li>Saved meals: {progress.counts.savedMeals}</li>
-          <li>Saved routines: {progress.counts.savedRoutines}</li>
+          <li>
+            Food entries: {progress.counts.foodEntries}
+            <DeltaBadge value={progress.deltas.foodEntries} />
+          </li>
+          <li>
+            Exercise sets: {progress.counts.weightSets}
+            <DeltaBadge value={progress.deltas.weightSets} />
+          </li>
+          <li>
+            Custom logs: {progress.counts.customLogEntries}
+            <DeltaBadge value={progress.deltas.customLogEntries} />
+          </li>
+          <li>
+            Saved meals: {progress.counts.savedMeals}
+            <DeltaBadge value={progress.deltas.savedMeals} />
+          </li>
+          <li>
+            Saved routines: {progress.counts.savedRoutines}
+            <DeltaBadge value={progress.deltas.savedRoutines} />
+          </li>
         </ul>
       ) : progress.error ? (
         <p className="text-destructive mt-1">Couldn't read counts: {progress.error.message}</p>
