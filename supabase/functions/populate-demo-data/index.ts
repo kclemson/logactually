@@ -1677,6 +1677,7 @@ async function doPopulationWork(
                 distance_miles: s.distance_miles ?? null,
                 raw_input: j === 0 ? routine.original_input : null,
                 source_routine_id: routine.id,
+                group_name: routine.name,
               });
             if (habitError) {
               console.error('Error inserting habit cardio entry:', habitError);
