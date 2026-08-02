@@ -1609,30 +1609,24 @@ async function doPopulationWork(
       }
     }
 
-    // Generate saved meals with AI-parsed items
-    let savedMealsCreated = 0;
-    if (savedMealsCount > 0) {
-      const savedMeals = generateSavedMeals(savedMealsCount, parsedCache);
-      
-      for (const meal of savedMeals) {
-        const { error: mealError } = await serviceClient
+    // Bump use_count and last_used_at for saved meals that got referenced
+    if (mealUsage.size > 0) {
+      for (const [mealId, addCount] of mealUsage) {
+        const { data: existing } = await serviceClient
           .from('saved_meals')
-          .insert({
-            user_id: demoUserId,
-            name: meal.name,
-            original_input: meal.original_input,
-            food_items: meal.food_items,
-            use_count: meal.use_count,
-            last_used_at: new Date(Date.now() - randomInt(1, 14) * 24 * 60 * 60 * 1000).toISOString(),
-          });
-
-        if (mealError) {
-          console.error('Error inserting saved meal:', mealError);
-        } else {
-          savedMealsCreated++;
-        }
+          .select('use_count')
+          .eq('id', mealId)
+          .single();
+        await serviceClient
+          .from('saved_meals')
+          .update({
+            use_count: (existing?.use_count ?? 0) + addCount,
+            last_used_at: new Date().toISOString(),
+          })
+          .eq('id', mealId);
       }
     }
+
 
     // Bump use_count and last_used_at for saved routines that got referenced
     if (routineUsage.size > 0) {
