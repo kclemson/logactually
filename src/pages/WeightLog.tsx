@@ -852,22 +852,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
 
           <QuickAddGhostRows
             accent="purple"
-            gridCols="grid-cols-[1fr_45px_45px_60px_24px]"
-            items={quickAddRoutines.map(routine => {
-              const sets = routine.exercise_sets ?? [];
-              const totalSets = sets.reduce((sum, s) => sum + Number(s.sets || 0), 0);
-              const totalReps = sets.reduce((sum, s) => sum + Number(s.reps || 0), 0);
-              const maxWeight = sets.reduce((max, s) => Math.max(max, Number(s.weight_lbs || 0)), 0);
-              return {
-                id: routine.id,
-                name: routine.name,
-                cells: [
-                  totalSets || '',
-                  totalReps || '',
-                  maxWeight ? formatWeight(maxWeight, settings.weightUnit, 0) : '',
-                ],
-              };
-            })}
+            items={quickAddRoutines.map(routine => ({ id: routine.id, name: routine.name }))}
             pinnedIds={settings.quickAddPinned}
             pendingId={quickAddPendingId}
             onAdd={handleQuickAdd}
