@@ -508,6 +508,24 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     createEntryFromItems(foodItems, null, mealId, groupName);
   };
 
+  // Quick Add: same path as the Saved popover (log mutation, then create entry)
+  const [quickAddPendingId, setQuickAddPendingId] = useState<string | null>(null);
+  const loggedMealIds = useMemo(
+    () => entries.map(e => e.source_meal_id).filter((id): id is string => !!id),
+    [entries]
+  );
+  const quickAddMeals = useQuickAddFood(loggedMealIds);
+  const handleQuickAdd = async (mealId: string) => {
+    setQuickAddPendingId(mealId);
+    try {
+      const foodItems = await logSavedMeal.mutateAsync(mealId);
+      await handleLogSavedMeal(foodItems, mealId);
+    } finally {
+      setQuickAddPendingId(null);
+    }
+  };
+
+
   // Handle meal created from CreateMealDialog - optionally log it
   const handleMealCreated = (_meal: SavedMeal, foodItems: FoodItem[]) => {
     // User chose "Yes, log it too" from the dialog prompt
