@@ -131,4 +131,32 @@ describe('buildQuickAddUsage', () => {
     expect(usage.get('a')).toEqual({ usedDays: 2, lastUsedAt: '2026-08-02' });
     expect(usage.get('b')).toEqual({ usedDays: 1, lastUsedAt: '2026-08-03' });
   });
+
+  it('future-dated rows dilute nothing when callers clamp the window', () => {
+    // Callers query [today - window, today]; this asserts the shape the
+    // selection math depends on: only past days feed activeDays.
+    const rows = [
+      { date: '2026-08-01', itemId: 'a' },
+      { date: '2026-08-02', itemId: 'a' },
+    ];
+    const { usage, activeDays } = buildQuickAddUsage(rows);
+    expect(activeDays).toBe(2);
+    expect(usage.get('a')?.usedDays).toBe(2);
+
+    const withFuture = buildQuickAddUsage([
+      ...rows,
+      { date: '2026-08-20', itemId: null },
+      { date: '2026-08-21', itemId: null },
+    ]);
+    expect(withFuture.activeDays).toBe(4);
+    // Same item, inflated denominator -> no longer selected.
+    expect(
+      selectQuickAddIds({
+        availableIds: ['a'],
+        usage: withFuture.usage,
+        activeDays: withFuture.activeDays,
+        today: '2026-08-02',
+      })
+    ).toEqual([]);
+  });
 });
