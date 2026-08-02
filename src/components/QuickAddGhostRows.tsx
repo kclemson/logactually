@@ -82,7 +82,7 @@ export function QuickAddGhostRows({
               disabled={isPending}
               title={`Add ${item.name}`}
               aria-label={`Quick add ${item.name}`}
-              className="flex items-center gap-1.5 min-w-0 pl-1 py-1 text-left leading-snug disabled:opacity-60"
+              className="flex min-h-[28px] items-center gap-1.5 min-w-0 pl-1 py-0.5 text-left leading-tight disabled:opacity-60"
             >
               {isPending ? (
                 <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
@@ -91,11 +91,11 @@ export function QuickAddGhostRows({
               ) : (
                 <Plus className="h-3 w-3 shrink-0" />
               )}
-              <span className="truncate italic">{item.name}</span>
+              <span className="line-clamp-2 italic text-xs">{item.name}</span>
             </button>
 
             {(item.cells ?? []).map((cell, i) => (
-              <span key={i} className="px-1 py-1 text-center text-xs tabular-nums">
+              <span key={i} className="px-1 py-0.5 text-center text-[11px] tabular-nums">
                 {cell}
               </span>
             ))}
