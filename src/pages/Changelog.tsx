@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { FeedbackForm } from "@/components/FeedbackForm";
+import calendarSummaryAsset from "@/assets/changelog-calendar-summary.png.asset.json";
 
 // ============================================
 // CHANGELOG ENTRIES - Add new entries at the top
