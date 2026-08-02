@@ -26,6 +26,8 @@ interface PopulateDemoDataDialogProps {
 
 export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataDialogProps) {
   const { populate, isLoading, result, reset } = usePopulateDemoData();
+  const progress = useDemoPopulateProgress(open && result?.status === 'processing');
+
 
   // Default: 90 days ago to 30 days from now
   const [startDate, setStartDate] = useState<Date>(subDays(new Date(), 90));
