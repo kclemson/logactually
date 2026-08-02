@@ -115,20 +115,12 @@ export function useDemoPopulateProgress() {
     },
   });
 
-  // Append each new poll result to the snapshot history so the UI can show
-  // per-poll deltas (current count minus previous count).
+  // Append every poll result (even unchanged ones) so deltas reflect the true
+  // last-two-poll difference and fall back to 0 once writes stop.
   useEffect(() => {
     if (!query.data) return;
     const counts = query.data.counts;
-    setSnapshots((prev) => {
-      if (
-        prev.length > 0 &&
-        JSON.stringify(prev[prev.length - 1]) === JSON.stringify(counts)
-      ) {
-        return prev;
-      }
-      return [...prev, counts];
-    });
+    setSnapshots((prev) => [...prev, counts].slice(-5));
   }, [query.data?.at]);
 
   const counts = query.data?.counts;
@@ -147,8 +139,12 @@ export function useDemoPopulateProgress() {
   }, [snapshots]);
 
   // Stop polling once counts go quiet, or after the safety cap.
+  // Keyed on the poll timestamp, not `counts`: React Query's structural sharing
+  // keeps the same `counts` object across identical polls, so depending on it
+  // would make this effect stop re-running exactly when it matters most.
+  const polledAt = query.data?.at;
   useEffect(() => {
-    if (!active || stopped || !counts || startedAt === null) return;
+    if (!active || stopped || !counts || startedAt === null || !polledAt) return;
     const signature = JSON.stringify(counts);
     const now = Date.now();
     if (signature !== lastSignature.current) {
@@ -159,7 +155,7 @@ export function useDemoPopulateProgress() {
     if (now - lastChangeAt.current > IDLE_STOP_MS || now - startedAt > MAX_RUN_MS) {
       setStopped(true);
     }
-  }, [counts, active, stopped, startedAt]);
+  }, [polledAt, active, stopped, startedAt]);
 
   const dismiss = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
