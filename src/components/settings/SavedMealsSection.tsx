@@ -5,6 +5,7 @@ import { CollapsibleSection } from '@/components/CollapsibleSection';
 import { SavedMealRow } from '@/components/SavedMealRow';
 import { CreateMealDialog } from '@/components/CreateMealDialog';
 import { useSavedMeals, useUpdateSavedMeal, useDeleteSavedMeal } from '@/hooks/useSavedMeals';
+import { useQuickAddFood } from '@/hooks/useQuickAddFood';
 import type { UserSettings } from '@/hooks/useUserSettings';
 
 interface SavedMealsSectionProps {
@@ -23,11 +24,19 @@ export function SavedMealsSection({ settings, updateSettings, isReadOnly }: Save
 
 
   const pinned = settings.quickAddPinned ?? [];
+  // Day-independent view of what's actually in Quick Add right now (manual pins
+  // plus auto-detected habits), so the icon matches the log page.
+  const quickAddItems = useQuickAddFood([]);
+  const quickAddIds = new Set(quickAddItems.map((m) => m.id));
+  const pinSourceFor = (id: string): 'manual' | 'auto' | null =>
+    pinned.includes(id) ? 'manual' : quickAddIds.has(id) ? 'auto' : null;
+
   const togglePin = (id: string) => {
-    const isPinned = pinned.includes(id);
+    const inQuickAdd = pinSourceFor(id) !== null;
+    const hidden = settings.quickAddHidden ?? [];
     updateSettings({
-      quickAddPinned: isPinned ? pinned.filter((p) => p !== id) : [...pinned, id],
-      quickAddHidden: (settings.quickAddHidden ?? []).filter((h) => h !== id),
+      quickAddPinned: inQuickAdd ? pinned.filter((p) => p !== id) : [...pinned, id],
+      quickAddHidden: inQuickAdd ? [...hidden.filter((h) => h !== id), id] : hidden.filter((h) => h !== id),
     });
   };
 
@@ -68,7 +77,7 @@ export function SavedMealsSection({ settings, updateSettings, isReadOnly }: Save
                 onDeleteMeal={(id) => deleteMeal.mutate(id)}
                 openDeletePopoverId={openMealPopoverId}
                 setOpenDeletePopoverId={setOpenMealPopoverId}
-                isPinned={pinned.includes(meal.id)}
+                pinSource={pinSourceFor(meal.id)}
                 onTogglePin={
                   !isReadOnly && settings.quickAddEnabled ? () => togglePin(meal.id) : undefined
                 }
