@@ -113,13 +113,13 @@ export default function Changelog() {
                   <span className="text-muted-foreground shrink-0">{entry.date}:</span>
                   <span className="text-foreground">{entry.text}</span>
                 </div>
-                {entry.image && (
+                {(entry.image || entry.imageAsset) && (
                   <img
                     loading="lazy"
-                    src={`/changelog/${entry.image}?v=${LAST_UPDATED}`}
+                    src={entry.imageAsset || `/changelog/${entry.image}?v=${LAST_UPDATED}`}
                     alt={`Screenshot for ${entry.date} update`}
                     className={`mt-2 mx-auto block max-h-[200px] max-w-[280px] w-auto object-contain cursor-pointer ${entry.large ? "md:max-h-[400px] md:max-w-[600px]" : ""}`}
-                    onClick={() => setLightboxSrc(`/changelog/${entry.image}?v=${LAST_UPDATED}`)}
+                    onClick={() => setLightboxSrc(entry.imageAsset || `/changelog/${entry.image}?v=${LAST_UPDATED}`)}
                   />
                 )}
                 {entry.images && (
