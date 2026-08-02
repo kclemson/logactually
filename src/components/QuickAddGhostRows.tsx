@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { useState } from 'react';
 import { Plus, MoreHorizontal, Pin, PinOff, EyeOff, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -6,18 +6,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 export interface QuickAddItem {
   id: string;
   name: string;
-  /**
-   * Right-hand cells, already formatted by the calling domain. They land in the
-   * same grid columns as a real logged row, so the ghost lines up exactly.
-   */
-  cells?: ReactNode[];
 }
 
 interface QuickAddGhostRowsProps {
   items: QuickAddItem[];
   accent: 'blue' | 'purple';
-  /** Grid template matching the domain's real entry table, e.g. 'grid-cols-[1fr_50px_90px_24px]'. */
-  gridCols: string;
   pinnedIds: string[];
   pendingId?: string | null;
   onAdd: (id: string) => void;
