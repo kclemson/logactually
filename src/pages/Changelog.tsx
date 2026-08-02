@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { FeedbackForm } from "@/components/FeedbackForm";
-import quickAddBothImage from "@/assets/changelog/quickadd3-both.png.asset.json";
 
 // ============================================
 // CHANGELOG ENTRIES - Add new entries at the top
