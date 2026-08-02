@@ -732,6 +732,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_demo_read_only: { Args: never; Returns: boolean }
+      get_demo_user_id: { Args: never; Returns: string }
       get_login_count: {
         Args: { timeframe_hours?: number; user_filter?: string }
         Returns: number
