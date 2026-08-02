@@ -119,7 +119,7 @@ export default function Changelog() {
                   />
                 )}
                 {entry.images && (
-                  <div className="flex flex-wrap gap-2 mt-2 justify-center">
+                  <div className="flex flex-col gap-2 mt-2 items-center">
                     {entry.images.map((img, i) => (
                       <img
                         key={i}
