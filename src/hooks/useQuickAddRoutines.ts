@@ -23,11 +23,15 @@ export function useQuickAddRoutines(alreadyLoggedRoutineIds: Iterable<string>, r
   const { data: usageRows } = useQuery({
     queryKey: ['quick-add-usage', 'exercise', user?.id],
     queryFn: async () => {
+      const today = format(new Date(), 'yyyy-MM-dd');
       const cutoff = format(subDays(new Date(), QUICK_ADD.WINDOW_DAYS), 'yyyy-MM-dd');
       const { data, error } = await supabase
         .from('weight_sets')
         .select('logged_date, source_routine_id')
         .gte('logged_date', cutoff)
+        // Future-dated logs must not dilute the habit ratio or count as usage.
+        .lte('logged_date', today)
+
         // Null-safe: `neq` alone would also drop rows with a null raw_input,
         // which is how manually logged saved-routine sets are stored.
         .or('raw_input.is.null,raw_input.neq.apple-health-import');
