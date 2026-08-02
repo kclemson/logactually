@@ -1383,8 +1383,24 @@ async function doPopulationWork(
         const dailyBudget = randomInt(tierConfig.min, tierConfig.max);
 
         // Track meals selected for this day
-        const dayMeals: Array<{ rawInput: string; parsedItems: ParsedFoodItem[] }> = [];
+        const dayMeals: Array<{ rawInput: string; parsedItems: ParsedFoodItem[]; sourceMealId?: string }> = [];
         let runningCalories = 0;
+
+        // 0. Habitual saved meals — logged on most recent days so Quick Add has
+        // items that clear its usage threshold.
+        if (isRecentDay(day)) {
+          for (const habit of habitMeals) {
+            if (Math.random() >= 0.6) continue;
+            dayMeals.push({
+              rawInput: habit.original_input,
+              parsedItems: habit.parsedItems,
+              sourceMealId: habit.id,
+            });
+            runningCalories += habit.parsedItems.reduce((sum, it) => sum + (it.calories || 0), 0);
+          }
+        }
+
+
 
         // 1. Pick breakfast (random)
         const breakfastInputs = DEMO_FOOD_INPUTS.breakfast.filter(inp => parsedCache.has(inp) && (parsedCache.get(inp)?.length || 0) > 0);
