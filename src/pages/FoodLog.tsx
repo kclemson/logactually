@@ -20,6 +20,8 @@ import { useFoodEntries } from '@/hooks/useFoodEntries';
 import { useRecentFoodEntries } from '@/hooks/useRecentFoodEntries';
 import { useEditableFoodItems } from '@/hooks/useEditableItems';
 import { useSavedMeals, useSaveMeal, useLogSavedMeal } from '@/hooks/useSavedMeals';
+import { useQuickAddFood } from '@/hooks/useQuickAddFood';
+import { QuickAddRow } from '@/components/QuickAddRow';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { createItemsSignature, preprocessText } from '@/lib/text-similarity';
@@ -508,6 +510,24 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     createEntryFromItems(foodItems, null, mealId, groupName);
   };
 
+  // Quick Add: same path as the Saved popover (log mutation, then create entry)
+  const [quickAddPendingId, setQuickAddPendingId] = useState<string | null>(null);
+  const loggedMealIds = useMemo(
+    () => entries.map(e => e.source_meal_id).filter((id): id is string => !!id),
+    [entries]
+  );
+  const quickAddMeals = useQuickAddFood(loggedMealIds);
+  const handleQuickAdd = async (mealId: string) => {
+    setQuickAddPendingId(mealId);
+    try {
+      const foodItems = await logSavedMeal.mutateAsync(mealId);
+      await handleLogSavedMeal(foodItems, mealId);
+    } finally {
+      setQuickAddPendingId(null);
+    }
+  };
+
+
   // Handle meal created from CreateMealDialog - optionally log it
   const handleMealCreated = (_meal: SavedMeal, foodItems: FoodItem[]) => {
     // User chose "Yes, log it too" from the dialog prompt
@@ -807,6 +827,34 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
           highlightClassName="text-blue-600 dark:text-blue-400 font-semibold"
           weekStartDay={settings.weekStartDay}
         />
+
+        {quickAddMeals.length > 0 && (
+          <div className="mt-3">
+            <QuickAddRow
+              accent="blue"
+              items={quickAddMeals.map(meal => ({
+                id: meal.id,
+                name: meal.name,
+                meta: `${Math.round(calculateTotals(meal.food_items).calories)} cal`,
+              }))}
+              pinnedIds={settings.quickAddPinned}
+              pendingId={quickAddPendingId}
+              onAdd={handleQuickAdd}
+              onTogglePin={(id) => updateSettings({
+                quickAddPinned: settings.quickAddPinned.includes(id)
+                  ? settings.quickAddPinned.filter(p => p !== id)
+                  : [...settings.quickAddPinned, id],
+              })}
+              onHide={(id) => updateSettings({
+                quickAddHidden: [...settings.quickAddHidden, id],
+                quickAddPinned: settings.quickAddPinned.filter(p => p !== id),
+              })}
+              onDisable={() => updateSettings({ quickAddEnabled: false })}
+            />
+          </div>
+        )}
+
+
 
         <section className={cn("mt-4", mountDir === 'left' && 'animate-slide-in-from-right', mountDir === 'right' && 'animate-slide-in-from-left')}>
           {displayItems.length > 0 && (

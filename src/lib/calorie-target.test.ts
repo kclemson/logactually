@@ -113,6 +113,10 @@ const baseSettings: UserSettings = {
   weekStartDay: 0,
   displayMacros: ['protein', 'carbs', 'fat'],
   hiddenCharts: [],
+  quickAddEnabled: true,
+  quickAddPinned: [],
+  quickAddHidden: [],
+
   defaultFocusedTypeId: null,
 };
 

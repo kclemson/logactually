@@ -21,7 +21,9 @@ import { useAnalyzeWeights } from '@/hooks/useAnalyzeWeights';
 import { useWeightEntries } from '@/hooks/useWeightEntries';
 import { useRecentWeightEntries } from '@/hooks/useRecentWeightEntries';
 import { useEditableItems } from '@/hooks/useEditableItems';
-import { useSavedRoutines } from '@/hooks/useSavedRoutines';
+import { useSavedRoutines, useLogSavedRoutine } from '@/hooks/useSavedRoutines';
+import { useQuickAddRoutines } from '@/hooks/useQuickAddRoutines';
+import { QuickAddRow } from '@/components/QuickAddRow';
 import { useSaveRoutine } from '@/hooks/useSavedRoutines';
 import { useUpdateSavedRoutine } from '@/hooks/useSavedRoutines';
 import { useUserSettings } from '@/hooks/useUserSettings';
@@ -399,6 +401,26 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
     createEntryFromExercises(exercises, null, routineId);
   }, [createEntryFromExercises, isReadOnly]);
 
+  // Quick Add: same path as the Saved popover (log mutation, then create entry)
+  const logSavedRoutine = useLogSavedRoutine();
+  const [quickAddPendingId, setQuickAddPendingId] = useState<string | null>(null);
+  const loggedRoutineIds = useMemo(
+    () => weightSets.map(s => s.sourceRoutineId).filter((id): id is string => !!id),
+    [weightSets]
+  );
+  const quickAddRoutines = useQuickAddRoutines(loggedRoutineIds);
+  const handleQuickAdd = useCallback(async (routineId: string) => {
+    setQuickAddPendingId(routineId);
+    try {
+      const exerciseSets = await logSavedRoutine.mutateAsync(routineId);
+      handleLogSavedRoutine(exerciseSets, routineId);
+    } finally {
+      setQuickAddPendingId(null);
+    }
+  }, [logSavedRoutine, handleLogSavedRoutine]);
+
+
+
   // Typeahead candidates: saved routines only (history is intentionally excluded —
   // exercise has too much intentional variation per instance to make name-only matching useful).
   const typeaheadCandidates = useMemo((): TypeaheadCandidate[] | undefined => {
@@ -763,6 +785,34 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
           highlightClassName="text-purple-600 dark:text-purple-400 font-semibold"
           weekStartDay={settings.weekStartDay}
         />
+
+        {quickAddRoutines.length > 0 && (
+          <div className="mt-3">
+            <QuickAddRow
+              accent="purple"
+              items={quickAddRoutines.map(routine => ({
+                id: routine.id,
+                name: routine.name,
+                meta: `${routine.exercise_sets.length} ex`,
+              }))}
+              pinnedIds={settings.quickAddPinned}
+              pendingId={quickAddPendingId}
+              onAdd={handleQuickAdd}
+              onTogglePin={(id) => updateSettings({
+                quickAddPinned: settings.quickAddPinned.includes(id)
+                  ? settings.quickAddPinned.filter(p => p !== id)
+                  : [...settings.quickAddPinned, id],
+              })}
+              onHide={(id) => updateSettings({
+                quickAddHidden: [...settings.quickAddHidden, id],
+                quickAddPinned: settings.quickAddPinned.filter(p => p !== id),
+              })}
+              onDisable={() => updateSettings({ quickAddEnabled: false })}
+            />
+          </div>
+        )}
+
+
 
         <div className={cn("mt-4", mountDir === 'left' && 'animate-slide-in-from-right', mountDir === 'right' && 'animate-slide-in-from-left')}>
           {displayItems.length > 0 && (
