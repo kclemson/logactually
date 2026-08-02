@@ -737,6 +737,12 @@ interface GeneratedExercise {
   rawInput?: string;
 }
 
+/** Produce a clean header for generated multi-exercise groups. */
+function deriveGroupName(exercises: GeneratedExercise[]): string | null {
+  if (exercises.length < 2) return null; // UI falls back to single exercise description
+  return 'Strength Workout';
+}
+
 function generateWeightEntriesForDay(
   config: WeightConfig,
   dayIndex: number,
