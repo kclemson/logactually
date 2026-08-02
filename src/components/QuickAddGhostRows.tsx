@@ -33,13 +33,13 @@ const ACCENT_PIN = {
 
 /**
  * Presentational "ghost" rows: a tentative, faded version of a logged entry row.
- * Holds no data, query or domain logic so any log domain can reuse it — the
- * caller supplies the grid template, accent and preformatted metric cells.
+ * Name-only by design — these are one-tap shortcuts for items the user already
+ * logs constantly, so metrics would be noise. Holds no data, query or domain
+ * logic so any log domain can reuse it.
  */
 export function QuickAddGhostRows({
   items,
   accent,
-  gridCols,
   pinnedIds,
   pendingId,
   onAdd,
@@ -64,8 +64,7 @@ export function QuickAddGhostRows({
           <div
             key={item.id}
             className={cn(
-              'grid gap-0.5 items-center group text-muted-foreground/70 transition-colors rounded',
-              gridCols,
+              'flex items-center gap-1 group text-muted-foreground/70 transition-colors rounded',
               ACCENT_HOVER[accent]
             )}
           >
@@ -75,7 +74,7 @@ export function QuickAddGhostRows({
               disabled={isPending}
               title={`Add ${item.name}`}
               aria-label={`Quick add ${item.name}`}
-              className="flex min-h-[28px] items-center gap-1.5 min-w-0 pl-1 py-0.5 text-left leading-tight disabled:opacity-60"
+              className="flex min-h-[28px] flex-1 items-center gap-1.5 min-w-0 pl-1 py-0.5 text-left leading-tight disabled:opacity-60"
             >
               {isPending ? (
                 <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
@@ -84,14 +83,9 @@ export function QuickAddGhostRows({
               ) : (
                 <Plus className="h-3 w-3 shrink-0" />
               )}
-              <span className="line-clamp-2 italic text-xs">{item.name}</span>
+              <span className="truncate italic text-xs">{item.name}</span>
             </button>
 
-            {(item.cells ?? []).map((cell, i) => (
-              <span key={i} className="px-1 py-0.5 text-center text-[11px] tabular-nums">
-                {cell}
-              </span>
-            ))}
 
             <Popover open={menuId === item.id} onOpenChange={(open) => setMenuId(open ? item.id : null)}>
               <PopoverTrigger asChild>
