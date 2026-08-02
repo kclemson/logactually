@@ -12,6 +12,7 @@ interface SavedRoutineRowProps {
   openDeletePopoverId: string | null;
   setOpenDeletePopoverId: (id: string | null) => void;
   isPinned?: boolean;
+  pinSource?: 'manual' | 'auto' | null;
   onTogglePin?: () => void;
 }
 
@@ -24,6 +25,7 @@ export function SavedRoutineRow({
   openDeletePopoverId,
   setOpenDeletePopoverId,
   isPinned,
+  pinSource,
   onTogglePin,
 }: SavedRoutineRowProps) {
   const itemsWithUids = useMemo((): WeightSet[] =>
@@ -61,6 +63,7 @@ export function SavedRoutineRow({
       openDeletePopoverId={openDeletePopoverId}
       setOpenDeletePopoverId={setOpenDeletePopoverId}
       isPinned={isPinned}
+      pinSource={pinSource}
       onTogglePin={onTogglePin}
       isExpanded={isExpanded}
       onToggleExpand={onToggleExpand}

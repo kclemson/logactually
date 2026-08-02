@@ -12,6 +12,7 @@ interface SavedMealRowProps {
   openDeletePopoverId: string | null;
   setOpenDeletePopoverId: (id: string | null) => void;
   isPinned?: boolean;
+  pinSource?: 'manual' | 'auto' | null;
   onTogglePin?: () => void;
 }
 
@@ -24,6 +25,7 @@ export function SavedMealRow({
   openDeletePopoverId,
   setOpenDeletePopoverId,
   isPinned,
+  pinSource,
   onTogglePin,
 }: SavedMealRowProps) {
   const itemsWithUids = useMemo(() =>
@@ -68,6 +70,7 @@ export function SavedMealRow({
       openDeletePopoverId={openDeletePopoverId}
       setOpenDeletePopoverId={setOpenDeletePopoverId}
       isPinned={isPinned}
+      pinSource={pinSource}
       onTogglePin={onTogglePin}
       isExpanded={isExpanded}
       onToggleExpand={onToggleExpand}

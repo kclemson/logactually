@@ -23,6 +23,8 @@ interface SavedItemRowProps {
   existingNames?: string[];
   /** When defined, renders a Quick Add pin toggle. */
   isPinned?: boolean;
+  /** Why the item is in Quick Add: manually pinned, auto-detected, or not at all. */
+  pinSource?: 'manual' | 'auto' | null;
   onTogglePin?: () => void;
 }
 
@@ -44,6 +46,7 @@ export function SavedItemRow({
   children,
   existingNames = [],
   isPinned,
+  pinSource,
   onTogglePin,
 }: SavedItemRowProps) {
   const [flashError, setFlashError] = useState(false);
@@ -104,20 +107,37 @@ export function SavedItemRow({
           </button>
         )}
 
-        {onTogglePin && (
-          <button
-            onClick={onTogglePin}
-            title={isPinned ? 'Unpin from Quick Add' : 'Pin to Quick Add'}
-            aria-label={isPinned ? 'Unpin from Quick Add' : 'Pin to Quick Add'}
-            aria-pressed={!!isPinned}
-            className={cn(
-              'p-0.5 shrink-0 transition-colors',
-              isPinned ? 'text-primary' : 'text-muted-foreground/50 hover:text-foreground'
-            )}
-          >
-            {isPinned ? <Pin className="h-3.5 w-3.5 fill-current" /> : <PinOff className="h-3.5 w-3.5" />}
-          </button>
-        )}
+        {onTogglePin && (() => {
+          const source = pinSource !== undefined ? pinSource : isPinned ? 'manual' : null;
+          const inQuickAdd = source !== null;
+          const label = !inQuickAdd
+            ? 'Add to Quick Add'
+            : source === 'auto'
+              ? 'In Quick Add (automatic) - tap to remove'
+              : 'Pinned to Quick Add - tap to remove';
+          return (
+            <button
+              onClick={onTogglePin}
+              title={label}
+              aria-label={label}
+              aria-pressed={inQuickAdd}
+              className={cn(
+                'p-0.5 shrink-0 transition-colors',
+                source === 'manual'
+                  ? 'text-primary'
+                  : source === 'auto'
+                    ? 'text-muted-foreground'
+                    : 'text-muted-foreground/50 hover:text-foreground'
+              )}
+            >
+              {inQuickAdd ? (
+                <Pin className="h-3.5 w-3.5 fill-current" />
+              ) : (
+                <PinOff className="h-3.5 w-3.5" />
+              )}
+            </button>
+          );
+        })()}
 
         <DeleteConfirmPopover
           id={id}
