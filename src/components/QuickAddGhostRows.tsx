@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { ReactNode, useState } from 'react';
 import { Plus, MoreHorizontal, Pin, PinOff, EyeOff, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -6,13 +6,18 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 export interface QuickAddItem {
   id: string;
   name: string;
-  /** Optional small trailing figure. Omitted by default — habitual items don't need it. */
-  meta?: string;
+  /**
+   * Right-hand cells, already formatted by the calling domain. They land in the
+   * same grid columns as a real logged row, so the ghost lines up exactly.
+   */
+  cells?: ReactNode[];
 }
 
-interface QuickAddRowProps {
+interface QuickAddGhostRowsProps {
   items: QuickAddItem[];
   accent: 'blue' | 'purple';
+  /** Grid template matching the domain's real entry table, e.g. 'grid-cols-[1fr_50px_90px_24px]'. */
+  gridCols: string;
   pinnedIds: string[];
   pendingId?: string | null;
   onAdd: (id: string) => void;
@@ -22,54 +27,43 @@ interface QuickAddRowProps {
 }
 
 // Resting state is deliberately muted: these are suggestions, not logged
-// content. Accent colour only appears on hover/press (and for pinned chips).
-const ACCENT = {
-  blue: 'border-border text-muted-foreground hover:border-blue-500/40 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-500/10 active:bg-blue-500/20',
-  purple: 'border-border text-muted-foreground hover:border-purple-500/40 hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-500/10 active:bg-purple-500/20',
+// content. Accent only appears on hover/press (and on the pin for pinned rows).
+const ACCENT_HOVER = {
+  blue: 'hover:bg-blue-500/5 hover:text-blue-700 dark:hover:text-blue-300 active:bg-blue-500/10',
+  purple: 'hover:bg-purple-500/5 hover:text-purple-700 dark:hover:text-purple-300 active:bg-purple-500/10',
 } as const;
 
-const ACCENT_PINNED = {
-  blue: 'border-blue-500/50 bg-blue-500/10 text-blue-700 dark:text-blue-300 hover:bg-blue-500/20 active:bg-blue-500/30',
-  purple: 'border-purple-500/50 bg-purple-500/10 text-purple-700 dark:text-purple-300 hover:bg-purple-500/20 active:bg-purple-500/30',
+const ACCENT_PIN = {
+  blue: 'text-blue-600 dark:text-blue-400',
+  purple: 'text-purple-600 dark:text-purple-400',
 } as const;
 
-
-/** Max characters shown on a collapsed chip before shortening. */
-const NAME_BUDGET = 18;
-
 /**
- * Shorten at the last word boundary that fits, so chips never cut a word in
- * half. Falls back to a hard cut for single very long words.
+ * Presentational "ghost" rows: a tentative, faded version of a logged entry row.
+ * Holds no data, query or domain logic so any log domain can reuse it — the
+ * caller supplies the grid template, accent and preformatted metric cells.
  */
-export function shortenChipName(name: string, budget = NAME_BUDGET): string {
-  const trimmed = name.trim();
-  if (trimmed.length <= budget) return trimmed;
-  const head = trimmed.slice(0, budget);
-  const lastSpace = head.lastIndexOf(' ');
-  const cut = lastSpace >= Math.ceil(budget / 2) ? head.slice(0, lastSpace) : head;
-  return `${cut.replace(/[\s,.;:–-]+$/, '')}…`;
-}
-
-/**
- * Presentational row of one-tap "add this again" chips.
- * Holds no data or domain logic so any log domain can reuse it.
- */
-export function QuickAddRow({
+export function QuickAddGhostRows({
   items,
   accent,
+  gridCols,
   pinnedIds,
   pendingId,
   onAdd,
   onTogglePin,
   onHide,
   onDisable,
-}: QuickAddRowProps) {
+}: QuickAddGhostRowsProps) {
   const [menuId, setMenuId] = useState<string | null>(null);
 
   if (items.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-1" aria-label="Quick add">
+    <div className="mt-3" aria-label="Quick add">
+      <div className="flex items-center gap-2 border-t border-dashed border-border pt-1.5">
+        <span className="text-[10px] uppercase tracking-wide text-muted-foreground/70">Quick add</span>
+      </div>
+
       {items.map((item) => {
         const isPending = pendingId === item.id;
         const isPinned = pinnedIds.includes(item.id);
@@ -77,46 +71,46 @@ export function QuickAddRow({
           <div
             key={item.id}
             className={cn(
-              'flex h-6 items-stretch rounded-full border overflow-hidden transition-colors',
-              isPinned ? ACCENT_PINNED[accent] : ACCENT[accent]
+              'grid gap-0.5 items-center group text-muted-foreground/70 transition-colors rounded',
+              gridCols,
+              ACCENT_HOVER[accent]
             )}
           >
             <button
               type="button"
               onClick={() => onAdd(item.id)}
               disabled={isPending}
-              // Native tooltip shows the full name on hover without any reflow —
-              // expanding the chip re-wrapped the row and caused hover flicker.
-              title={item.name}
+              title={`Add ${item.name}`}
               aria-label={`Quick add ${item.name}`}
-              className="flex items-center gap-1 pl-1.5 pr-1 text-[11px] font-medium disabled:opacity-60"
+              className="flex items-center gap-1.5 min-w-0 pl-1 py-1 text-left leading-snug disabled:opacity-60"
             >
               {isPending ? (
-                <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
               ) : isPinned ? (
-                <Pin className="h-2.5 w-2.5 fill-current" />
+                <Pin className={cn('h-3 w-3 shrink-0 fill-current', ACCENT_PIN[accent])} />
               ) : (
-                <Plus className="h-2.5 w-2.5" />
+                <Plus className="h-3 w-3 shrink-0" />
               )}
-              <span className="whitespace-nowrap">{shortenChipName(item.name)}</span>
-
-              {item.meta && (
-                <span className="text-[10px] text-muted-foreground tabular-nums">{item.meta}</span>
-              )}
+              <span className="truncate italic">{item.name}</span>
             </button>
+
+            {(item.cells ?? []).map((cell, i) => (
+              <span key={i} className="px-1 py-1 text-center text-xs tabular-nums">
+                {cell}
+              </span>
+            ))}
 
             <Popover open={menuId === item.id} onOpenChange={(open) => setMenuId(open ? item.id : null)}>
               <PopoverTrigger asChild>
                 <button
                   type="button"
                   aria-label={`Quick add options for ${item.name}`}
-                  className="px-1 border-l border-inherit text-muted-foreground"
+                  className="flex h-6 w-6 items-center justify-center text-muted-foreground/70"
                 >
-                  <MoreHorizontal className="h-2.5 w-2.5" />
+                  <MoreHorizontal className="h-3.5 w-3.5" />
                 </button>
-
               </PopoverTrigger>
-              <PopoverContent align="start" className="w-48 p-1">
+              <PopoverContent align="end" className="w-48 p-1">
                 <button
                   type="button"
                   className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"

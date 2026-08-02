@@ -21,7 +21,7 @@ import { useRecentFoodEntries } from '@/hooks/useRecentFoodEntries';
 import { useEditableFoodItems } from '@/hooks/useEditableItems';
 import { useSavedMeals, useSaveMeal, useLogSavedMeal } from '@/hooks/useSavedMeals';
 import { useQuickAddFood } from '@/hooks/useQuickAddFood';
-import { QuickAddRow } from '@/components/QuickAddRow';
+import { QuickAddGhostRows } from '@/components/QuickAddGhostRows';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { createItemsSignature, preprocessText } from '@/lib/text-similarity';
@@ -828,31 +828,8 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
           weekStartDay={settings.weekStartDay}
         />
 
-        {quickAddMeals.length > 0 && (
-          <div className="mt-2 pb-2 border-b border-border/50">
 
-            <QuickAddRow
-              accent="blue"
-              items={quickAddMeals.map(meal => ({
-                id: meal.id,
-                name: meal.name,
-              }))}
-              pinnedIds={settings.quickAddPinned}
-              pendingId={quickAddPendingId}
-              onAdd={handleQuickAdd}
-              onTogglePin={(id) => updateSettings({
-                quickAddPinned: settings.quickAddPinned.includes(id)
-                  ? settings.quickAddPinned.filter(p => p !== id)
-                  : [...settings.quickAddPinned, id],
-              })}
-              onHide={(id) => updateSettings({
-                quickAddHidden: [...settings.quickAddHidden, id],
-                quickAddPinned: settings.quickAddPinned.filter(p => p !== id),
-              })}
-              onDisable={() => updateSettings({ quickAddEnabled: false })}
-            />
-          </div>
-        )}
+
 
 
 
@@ -918,6 +895,32 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
               {isTodaySelected ? 'No entries yet today.' : 'No entries for this day.'}
             </p>
           )}
+
+          <QuickAddGhostRows
+            accent="blue"
+            gridCols="grid-cols-[1fr_50px_90px_24px]"
+            items={quickAddMeals.map(meal => ({
+              id: meal.id,
+              name: meal.name,
+              cells: [
+                Math.round(meal.food_items.reduce((sum, item) => sum + Number(item.calories || 0), 0)) || '',
+                '',
+              ],
+            }))}
+            pinnedIds={settings.quickAddPinned}
+            pendingId={quickAddPendingId}
+            onAdd={handleQuickAdd}
+            onTogglePin={(id) => updateSettings({
+              quickAddPinned: settings.quickAddPinned.includes(id)
+                ? settings.quickAddPinned.filter(p => p !== id)
+                : [...settings.quickAddPinned, id],
+            })}
+            onHide={(id) => updateSettings({
+              quickAddHidden: [...settings.quickAddHidden, id],
+              quickAddPinned: settings.quickAddPinned.filter(p => p !== id),
+            })}
+            onDisable={() => updateSettings({ quickAddEnabled: false })}
+          />
         </section>
       </div>
 

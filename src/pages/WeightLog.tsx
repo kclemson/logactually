@@ -23,7 +23,8 @@ import { useRecentWeightEntries } from '@/hooks/useRecentWeightEntries';
 import { useEditableItems } from '@/hooks/useEditableItems';
 import { useSavedRoutines, useLogSavedRoutine } from '@/hooks/useSavedRoutines';
 import { useQuickAddRoutines } from '@/hooks/useQuickAddRoutines';
-import { QuickAddRow } from '@/components/QuickAddRow';
+import { QuickAddGhostRows } from '@/components/QuickAddGhostRows';
+import { formatWeight } from '@/lib/weight-units';
 import { useSaveRoutine } from '@/hooks/useSavedRoutines';
 import { useUpdateSavedRoutine } from '@/hooks/useSavedRoutines';
 import { useUserSettings } from '@/hooks/useUserSettings';
@@ -786,31 +787,8 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
           weekStartDay={settings.weekStartDay}
         />
 
-        {quickAddRoutines.length > 0 && (
-          <div className="mt-2 pb-2 border-b border-border/50">
 
-            <QuickAddRow
-              accent="purple"
-              items={quickAddRoutines.map(routine => ({
-                id: routine.id,
-                name: routine.name,
-              }))}
-              pinnedIds={settings.quickAddPinned}
-              pendingId={quickAddPendingId}
-              onAdd={handleQuickAdd}
-              onTogglePin={(id) => updateSettings({
-                quickAddPinned: settings.quickAddPinned.includes(id)
-                  ? settings.quickAddPinned.filter(p => p !== id)
-                  : [...settings.quickAddPinned, id],
-              })}
-              onHide={(id) => updateSettings({
-                quickAddHidden: [...settings.quickAddHidden, id],
-                quickAddPinned: settings.quickAddPinned.filter(p => p !== id),
-              })}
-              onDisable={() => updateSettings({ quickAddEnabled: false })}
-            />
-          </div>
-        )}
+
 
 
 
@@ -871,6 +849,39 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
               No exercises logged for this day
             </div>
           )}
+
+          <QuickAddGhostRows
+            accent="purple"
+            gridCols="grid-cols-[1fr_45px_45px_60px_24px]"
+            items={quickAddRoutines.map(routine => {
+              const sets = routine.exercise_sets ?? [];
+              const totalSets = sets.reduce((sum, s) => sum + Number(s.sets || 0), 0);
+              const totalReps = sets.reduce((sum, s) => sum + Number(s.reps || 0), 0);
+              const maxWeight = sets.reduce((max, s) => Math.max(max, Number(s.weight_lbs || 0)), 0);
+              return {
+                id: routine.id,
+                name: routine.name,
+                cells: [
+                  totalSets || '',
+                  totalReps || '',
+                  maxWeight ? formatWeight(maxWeight, settings.weightUnit, 0) : '',
+                ],
+              };
+            })}
+            pinnedIds={settings.quickAddPinned}
+            pendingId={quickAddPendingId}
+            onAdd={handleQuickAdd}
+            onTogglePin={(id) => updateSettings({
+              quickAddPinned: settings.quickAddPinned.includes(id)
+                ? settings.quickAddPinned.filter(p => p !== id)
+                : [...settings.quickAddPinned, id],
+            })}
+            onHide={(id) => updateSettings({
+              quickAddHidden: [...settings.quickAddHidden, id],
+              quickAddPinned: settings.quickAddPinned.filter(p => p !== id),
+            })}
+            onDisable={() => updateSettings({ quickAddEnabled: false })}
+          />
         </div>
       </div>
 
