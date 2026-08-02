@@ -1588,9 +1588,11 @@ async function doPopulationWork(
         let exercises: GeneratedExercise[];
         let sourceRoutineId: string | null = null;
 
+        let groupName: string | null = null;
         if (useRoutine) {
           const routine = useHabitStrength ? habitStrengthRoutine! : randomChoice(strengthRoutines);
           sourceRoutineId = routine.id;
+          groupName = routine.name;
 
           routineUsage.set(routine.id, (routineUsage.get(routine.id) ?? 0) + 1);
 
@@ -1608,6 +1610,7 @@ async function doPopulationWork(
           const generated = generateWeightEntriesForDay(weightConfig, i, selectedDays.length);
           rawInput = generated.rawInput;
           exercises = generated.exercises;
+          groupName = deriveGroupName(exercises);
         }
 
         const entryId = crypto.randomUUID();
@@ -1630,6 +1633,7 @@ async function doPopulationWork(
               distance_miles: exercise.distance_miles ?? null,
               raw_input: j === 0 ? rawInput : null,
               source_routine_id: sourceRoutineId,
+              group_name: groupName,
             });
 
           if (weightError) {
