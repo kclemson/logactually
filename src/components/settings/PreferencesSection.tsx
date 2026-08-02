@@ -97,7 +97,16 @@ export function PreferencesSection({ settings, updateSettings }: PreferencesSect
             <div>
               <p className="text-xs text-muted-foreground">Quick Add</p>
               <p className="text-[10px] text-muted-foreground/70">One-tap chips for saved items you log most days</p>
+              {settings.quickAddHidden.length > 0 && (
+                <button
+                  onClick={() => updateSettings({ quickAddHidden: [] })}
+                  className="text-[10px] text-blue-600 dark:text-blue-400 underline"
+                >
+                  Restore {settings.quickAddHidden.length} hidden
+                </button>
+              )}
             </div>
+
             <button
               onClick={() => updateSettings({ quickAddEnabled: !settings.quickAddEnabled })}
               className={cn(
