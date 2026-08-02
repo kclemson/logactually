@@ -92,8 +92,33 @@ export function PreferencesSection({ settings, updateSettings }: PreferencesSect
             </button>
           </div>
 
+          {/* Quick Add toggle */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">Quick Add</p>
+              <p className="text-[10px] text-muted-foreground/70">One-tap chips for saved items you log most days</p>
+            </div>
+            <button
+              onClick={() => updateSettings({ quickAddEnabled: !settings.quickAddEnabled })}
+              className={cn(
+                "w-12 h-6 rounded-full transition-colors relative border flex-shrink-0",
+                settings.quickAddEnabled ? "bg-primary border-primary" : "bg-muted border-border"
+              )}
+            >
+              <span
+                className={cn(
+                  "absolute left-0 top-0.5 w-5 h-5 rounded-full shadow transition-transform",
+                  settings.quickAddEnabled
+                    ? "translate-x-6 bg-primary-foreground"
+                    : "translate-x-0.5 bg-white"
+                )}
+              />
+            </button>
+          </div>
+
           {/* Enable Custom logging toggle */}
           <div className="flex items-center justify-between">
+
             <div>
               <p className="text-xs text-muted-foreground">Enable Custom logging</p>
               <p className="text-[10px] text-muted-foreground/70">Use the Custom tab to log weight, blood pressure, and more</p>
