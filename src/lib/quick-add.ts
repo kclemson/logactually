@@ -42,6 +42,8 @@ export interface QuickAddSelectionInput {
   hidden?: string[];
   /** Items already logged on the viewed day — never offered again. */
   alreadyLoggedIds?: Iterable<string>;
+  /** ISO date used as "now" for the recency guard. Defaults to today. */
+  today?: string;
 }
 
 function byUsage(a: string, b: string, usage: Map<string, QuickAddUsage>): number {
@@ -50,6 +52,13 @@ function byUsage(a: string, b: string, usage: Map<string, QuickAddUsage>): numbe
   const daysDiff = (ub?.usedDays ?? 0) - (ua?.usedDays ?? 0);
   if (daysDiff !== 0) return daysDiff;
   return (ub?.lastUsedAt ?? '').localeCompare(ua?.lastUsedAt ?? '');
+}
+
+/** ISO date `days` before `from`, compared lexically (both are yyyy-MM-dd). */
+function isoDaysBefore(from: string, days: number): string {
+  const d = new Date(`${from}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - days);
+  return d.toISOString().slice(0, 10);
 }
 
 /**
@@ -62,6 +71,7 @@ export function selectQuickAddIds({
   pinned = [],
   hidden = [],
   alreadyLoggedIds,
+  today,
 }: QuickAddSelectionInput): string[] {
   const hiddenSet = new Set(hidden);
   const loggedSet = new Set(alreadyLoggedIds ?? []);
@@ -77,10 +87,21 @@ export function selectQuickAddIds({
 
   // Automatic detection only kicks in once there's a real pattern to detect.
   const threshold = Math.max(QUICK_ADD.MIN_USED_DAYS, QUICK_ADD.ACTIVE_DAY_RATIO * activeDays);
+  // Habits change: an item that was frequent early in the window but has gone
+  // quiet shouldn't keep occupying a row. Pins deliberately skip this check.
+  const recencyCutoff = isoDaysBefore(
+    today ?? new Date().toISOString().slice(0, 10),
+    QUICK_ADD.RECENT_DAYS
+  );
   const detected =
     activeDays >= QUICK_ADD.MIN_ACTIVE_DAYS
       ? eligible
-          .filter((id) => !pinnedSet.has(id) && (usage.get(id)?.usedDays ?? 0) >= threshold)
+          .filter((id) => {
+            if (pinnedSet.has(id)) return false;
+            const u = usage.get(id);
+            if ((u?.usedDays ?? 0) < threshold) return false;
+            return !!u?.lastUsedAt && u.lastUsedAt >= recencyCutoff;
+          })
           .sort((a, b) => byUsage(a, b, usage))
       : [];
 
