@@ -33,9 +33,15 @@ export interface UserSettings {
   weekStartDay: 0 | 1 | 2 | 3 | 4 | 5 | 6;
   displayMacros: DisplayMacros;
   hiddenCharts: string[];
+  // Quick Add: one-tap chips for habitually logged saved items.
+  // Pinned/hidden hold saved-item ids (UUIDs), shared across domains.
+  quickAddEnabled: boolean;
+  quickAddPinned: string[];
+  quickAddHidden: string[];
   // Featured custom log type for the /custom view toggle.
   // null = unset (derive most-recently-created); 'none' = explicit opt-out; otherwise a type id.
   defaultFocusedTypeId: string | null;
+
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
