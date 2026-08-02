@@ -1,43 +1,37 @@
-# Quick Add chips: quieter, smarter labels
+# Quick Add chips: quieter styling and placement
 
-The real problem isn't the layout — it's that every chip has to re-state the same words. Three "Dog walk" chips that only differ by duration waste the whole label budget on the part that's identical. Fix the label first, then dial down the visual weight.
+Scope for this pass: visual weight and position only. Labeling/truncation stays exactly as it is today and gets its own pass afterwards.
 
-## 1. Shared-prefix labeling
+## 1. Make the chips recede
 
-When two or more chips in the row start with the same words, show the common stem once and let each chip carry only what makes it different.
+Today the chips are accent-colored, full-size buttons — they read as active content competing with the day's list. Change the resting state to "suggestion, not yet added":
 
-```text
-before:  [+ Dog walk (25m…]  [+ Dog walk (30m…]  [+ Dog walk (20m…]
-after:   Dog walk  [+ 25m]  [+ 30m]  [+ 20m]
-```
+- Muted treatment by default: `border-border`, `text-muted-foreground`, no fill.
+- Accent color (blue food / purple exercise) only on hover, press, and pinned chips. Pinned still stands out; the rest recede.
+- Smaller footprint: `text-[11px]`, `h-6`, tighter horizontal padding, `gap-1` between chips.
+- The `…` overflow menu shrinks to a narrow chevron-free `⋯` at the same reduced height, so the chip's total width drops noticeably.
 
-- The stem is computed per-row from the chip names actually being shown (word-level common prefix, at least one full word).
-- Chips that don't share the stem keep their own full label and sit after the grouped set.
-- Only group when 2+ chips share a stem; a lone item just shows its name.
-- The remainder gets punctuation stripped, so `Dog walk (25m)` yields `25m`, not `(25m)`.
-- Full original name still lives on the native `title` tooltip and `aria-label`, so nothing is lost for screen readers or hover.
+Net effect on the screenshots: the exercise row goes from two wrapped rows of chunky purple pills to one line of small gray pills.
 
-Because the shared words disappear, the per-chip character budget goes much further — chips get shorter *and* more informative at the same time. For non-grouped chips the budget rises from 18 to ~22 characters since we're no longer paying for repeated words.
+## 2. Placement
 
-## 2. Quieter, "not yet logged" styling
+Keep the row directly under the date navigation. Moving it to the middle or bottom of the page makes it unfindable once a day has entries, and its whole value is "add before/while I'm logging." The de-emphasis in step 1 is what removes the visual shouting — position isn't the problem.
 
-Chips currently use full accent color, which reads as active state. Switch the default to a muted treatment:
+Two placement refinements:
 
-- Neutral/muted border and `text-muted-foreground` label, with a small `+` in the same muted tone.
-- Accent color (blue for food, purple for exercise) appears only on hover/active and on pinned chips — so pinned still stands out, and the un-pinned row recedes.
-- Slightly smaller: `text-[11px]`, tighter padding, `h-6` chips.
+- Reduce the gap above it (`mt-3` → `mt-2`) and add a small bottom margin so it visually attaches to the date row as a sub-line rather than floating as its own block.
+- It already stays visible after entries exist; keep that, since it now costs one short line.
 
-The row reads as a suggestion strip rather than as content.
+## 3. Divider affordance
 
-## 3. Placement
-
-Keep the row where it is (directly under the date navigation) — moving it to the middle or bottom of the page breaks the "add to today" adjacency and would make it hard to find once the day's list gets long. The reduced size and muted color do the de-emphasis work instead.
-
-One change: the row currently only renders when the list is non-empty in a `mt-3` block. It stays visible after entries exist (already the case) — with the smaller footprint it costs one short line rather than two wrapped rows.
+Add a faint hairline between the chip row and the day's entry list so the strip reads as a separate "not logged yet" zone. Nothing else changes structurally.
 
 ## Technical notes
 
-- New pure helper `buildChipLabels(names: string[])` in `src/lib/quick-add.ts`, returning `{ stem, labels }`. Unit tests in `src/lib/quick-add.test.ts` covering: no shared stem, partial group, three-way group, stem that is the whole name, and punctuation trimming.
-- `src/components/QuickAddRow.tsx` renders an optional stem label before the grouped chips and uses the derived per-chip label; existing `shortenChipName` stays as the fallback for ungrouped names (budget bumped to 22).
-- Restyle is confined to the `ACCENT` / `ACCENT_PINNED` maps and chip sizing classes; colors use existing semantic tokens plus the established blue/purple accents.
-- `FoodLog.tsx` / `WeightLog.tsx` need no logic changes — they already pass raw names.
+- All changes are in `src/components/QuickAddRow.tsx` (`ACCENT` / `ACCENT_PINNED` maps, chip sizing classes) plus the two wrapper `div`s in `src/pages/FoodLog.tsx` and `src/pages/WeightLog.tsx`.
+- Colors come from existing semantic tokens (`border-border`, `text-muted-foreground`) plus the established blue/purple accents already in the file.
+- No hook, data, or label logic touched; `shortenChipName` and its tests are unchanged.
+
+## Next pass (not in this change)
+
+Label length and how to differentiate similar names — revisited after seeing the restyled row in place.
