@@ -20,6 +20,8 @@ import { useFoodEntries } from '@/hooks/useFoodEntries';
 import { useRecentFoodEntries } from '@/hooks/useRecentFoodEntries';
 import { useEditableFoodItems } from '@/hooks/useEditableItems';
 import { useSavedMeals, useSaveMeal, useLogSavedMeal } from '@/hooks/useSavedMeals';
+import { useQuickAddFood } from '@/hooks/useQuickAddFood';
+import { QuickAddRow } from '@/components/QuickAddRow';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
 import { createItemsSignature, preprocessText } from '@/lib/text-similarity';
