@@ -16,6 +16,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { usePopulateDemoData, PopulateDemoDataParams } from "@/hooks/usePopulateDemoData";
+import { useDemoPopulateProgress } from "@/hooks/useDemoPopulateProgress";
+
 
 interface PopulateDemoDataDialogProps {
   open: boolean;
