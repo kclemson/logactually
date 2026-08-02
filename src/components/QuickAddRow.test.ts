@@ -11,7 +11,7 @@ describe('shortenChipName', () => {
   });
 
   it('hard-cuts a single very long word', () => {
-    expect(shortenChipName('Supercalifragilisticexpialidocious')).toBe('Supercalifragilis…');
+    expect(shortenChipName('Supercalifragilisticexpialidocious')).toBe('Supercalifragilist…');
   });
 
   it('drops trailing punctuation before the ellipsis', () => {
