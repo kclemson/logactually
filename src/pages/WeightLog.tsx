@@ -786,6 +786,34 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
           weekStartDay={settings.weekStartDay}
         />
 
+        {quickAddRoutines.length > 0 && (
+          <div className="mt-3">
+            <QuickAddRow
+              accent="purple"
+              items={quickAddRoutines.map(routine => ({
+                id: routine.id,
+                name: routine.name,
+                meta: `${routine.exercise_sets.length} ex`,
+              }))}
+              pinnedIds={settings.quickAddPinned}
+              pendingId={quickAddPendingId}
+              onAdd={handleQuickAdd}
+              onTogglePin={(id) => updateSettings({
+                quickAddPinned: settings.quickAddPinned.includes(id)
+                  ? settings.quickAddPinned.filter(p => p !== id)
+                  : [...settings.quickAddPinned, id],
+              })}
+              onHide={(id) => updateSettings({
+                quickAddHidden: [...settings.quickAddHidden, id],
+                quickAddPinned: settings.quickAddPinned.filter(p => p !== id),
+              })}
+              onDisable={() => updateSettings({ quickAddEnabled: false })}
+            />
+          </div>
+        )}
+
+
+
         <div className={cn("mt-4", mountDir === 'left' && 'animate-slide-in-from-right', mountDir === 'right' && 'animate-slide-in-from-left')}>
           {displayItems.length > 0 && (
             <>
