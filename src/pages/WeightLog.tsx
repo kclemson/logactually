@@ -409,7 +409,8 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
     () => weightSets.map(s => s.sourceRoutineId).filter((id): id is string => !!id),
     [weightSets]
   );
-  const quickAddRoutines = useQuickAddRoutines(loggedRoutineIds);
+  // Wait for the day's sets before filtering, so already-logged routines never flash in.
+  const quickAddRoutines = useQuickAddRoutines(loggedRoutineIds, !isFetching);
   const handleQuickAdd = useCallback(async (routineId: string) => {
     setQuickAddPendingId(routineId);
     try {

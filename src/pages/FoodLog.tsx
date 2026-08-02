@@ -516,7 +516,8 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     () => entries.map(e => e.source_meal_id).filter((id): id is string => !!id),
     [entries]
   );
-  const quickAddMeals = useQuickAddFood(loggedMealIds);
+  // Wait for the day's entries before filtering, so already-logged items never flash in.
+  const quickAddMeals = useQuickAddFood(loggedMealIds, !isFetching);
   const handleQuickAdd = async (mealId: string) => {
     setQuickAddPendingId(mealId);
     try {
