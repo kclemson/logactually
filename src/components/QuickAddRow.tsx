@@ -21,15 +21,18 @@ interface QuickAddRowProps {
   onDisable: () => void;
 }
 
+// Resting state is deliberately muted: these are suggestions, not logged
+// content. Accent colour only appears on hover/press (and for pinned chips).
 const ACCENT = {
-  blue: 'border-blue-500/40 text-blue-700 dark:text-blue-300 hover:bg-blue-500/10 active:bg-blue-500/20',
-  purple: 'border-purple-500/40 text-purple-700 dark:text-purple-300 hover:bg-purple-500/10 active:bg-purple-500/20',
+  blue: 'border-border text-muted-foreground hover:border-blue-500/40 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-500/10 active:bg-blue-500/20',
+  purple: 'border-border text-muted-foreground hover:border-purple-500/40 hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-500/10 active:bg-purple-500/20',
 } as const;
 
 const ACCENT_PINNED = {
-  blue: 'border-blue-500 bg-blue-500/15 text-blue-700 dark:text-blue-200 hover:bg-blue-500/25 active:bg-blue-500/30',
-  purple: 'border-purple-500 bg-purple-500/15 text-purple-700 dark:text-purple-200 hover:bg-purple-500/25 active:bg-purple-500/30',
+  blue: 'border-blue-500/50 bg-blue-500/10 text-blue-700 dark:text-blue-300 hover:bg-blue-500/20 active:bg-blue-500/30',
+  purple: 'border-purple-500/50 bg-purple-500/10 text-purple-700 dark:text-purple-300 hover:bg-purple-500/20 active:bg-purple-500/30',
 } as const;
+
 
 /** Max characters shown on a collapsed chip before shortening. */
 const NAME_BUDGET = 18;
