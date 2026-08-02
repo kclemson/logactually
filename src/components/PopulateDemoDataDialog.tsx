@@ -16,7 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { usePopulateDemoData, PopulateDemoDataParams } from "@/hooks/usePopulateDemoData";
-import { useDemoPopulateProgress } from "@/hooks/useDemoPopulateProgress";
+import { markDemoPopulateStarted } from "@/hooks/useDemoPopulateProgress";
 
 
 interface PopulateDemoDataDialogProps {
@@ -26,7 +26,6 @@ interface PopulateDemoDataDialogProps {
 
 export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataDialogProps) {
   const { populate, isLoading, result, reset } = usePopulateDemoData();
-  const progress = useDemoPopulateProgress(open && result?.status === 'processing');
 
 
   // Default: 90 days ago to 30 days from now
@@ -56,7 +55,10 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
       generateSavedMeals: generateSavedMeals ? savedMealsCount : 0,
       generateSavedRoutines: generateSavedRoutines ? savedRoutinesCount : 0,
     };
-    await populate(params);
+    const outcome = await populate(params);
+    if (outcome.success && outcome.status === 'processing') {
+      markDemoPopulateStarted();
+    }
   };
 
   const handleClose = () => {
@@ -227,27 +229,12 @@ export function PopulateDemoDataDialog({ open, onOpenChange }: PopulateDemoDataD
               {result.success ? (
                 result.status === 'processing' ? (
                   <div className="space-y-1">
-                    <p className="font-medium">
-                      {progress.isPolling ? '⏳ Working in the background' : '⏳ Processing in background'}
-                    </p>
+                    <p className="font-medium">⏳ Started</p>
                     <p>{result.message}</p>
-                    {progress.counts && (
-                      <ul className="list-disc list-inside mt-1">
-                        <li>Food entries: {progress.counts.foodEntries}</li>
-                        <li>Exercise sets: {progress.counts.weightSets}</li>
-                        <li>Custom logs: {progress.counts.customLogEntries}</li>
-                        <li>Saved meals: {progress.counts.savedMeals}</li>
-                        <li>Saved routines: {progress.counts.savedRoutines}</li>
-                      </ul>
-                    )}
-                    <p className="text-muted-foreground mt-1">
-                      {progress.settled
-                        ? 'Counts stopped changing — likely finished.'
-                        : progress.updatedAt
-                          ? `Counts update as data is written · last checked ${format(progress.updatedAt, 'h:mm:ss a')}`
-                          : 'Checking current totals…'}
+                    <p className="text-muted-foreground">
+                      Running in the background — live progress shows on the Admin page under the
+                      Populate Demo Data button. You can close this dialog.
                     </p>
-                    <p className="text-muted-foreground">You can close this dialog.</p>
                   </div>
                 ) : (
 

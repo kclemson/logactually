@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -13,6 +13,21 @@ export interface DemoProgressCounts {
 const POLL_MS = 3000;
 const IDLE_STOP_MS = 60_000; // counts unchanged this long => treat as finished
 const MAX_RUN_MS = 15 * 60_000;
+const STORAGE_KEY = "demo-populate-started-at";
+
+/** Records that a populate run just kicked off, so the Admin page can poll it. */
+export function markDemoPopulateStarted() {
+  localStorage.setItem(STORAGE_KEY, String(Date.now()));
+  window.dispatchEvent(new Event("demo-populate-started"));
+}
+
+function readStartedAt(): number | null {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return null;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || Date.now() - value > MAX_RUN_MS) return null;
+  return value;
+}
 
 interface RawUserStats {
   is_read_only: boolean;
@@ -25,28 +40,33 @@ interface RawUserStats {
 
 /**
  * Polls the admin user-stats function for the demo account's row totals so the
- * populate dialog can show progress while the edge function runs in background.
+ * Admin page can show progress while the edge function runs in the background.
+ * The run's start time lives in localStorage, so a reload resumes polling.
  */
-export function useDemoPopulateProgress(enabled: boolean) {
+export function useDemoPopulateProgress() {
+  const [startedAt, setStartedAt] = useState<number | null>(() => readStartedAt());
   const [stopped, setStopped] = useState(false);
-  const startedAt = useRef<number>(Date.now());
   const lastChangeAt = useRef<number>(Date.now());
   const lastSignature = useRef<string>("");
 
-  // Reset the timers whenever a new run begins.
+  // A run started elsewhere on the page (the dialog) should wake polling up.
   useEffect(() => {
-    if (enabled) {
-      startedAt.current = Date.now();
+    const onStart = () => {
       lastChangeAt.current = Date.now();
       lastSignature.current = "";
       setStopped(false);
-    }
-  }, [enabled]);
+      setStartedAt(readStartedAt());
+    };
+    window.addEventListener("demo-populate-started", onStart);
+    return () => window.removeEventListener("demo-populate-started", onStart);
+  }, []);
+
+  const active = startedAt !== null;
 
   const query = useQuery({
     queryKey: ["demo-populate-progress"],
-    enabled: enabled && !stopped,
-    refetchInterval: enabled && !stopped ? POLL_MS : false,
+    enabled: active && !stopped,
+    refetchInterval: active && !stopped ? POLL_MS : false,
     gcTime: 0,
     queryFn: async (): Promise<{ counts: DemoProgressCounts; at: number }> => {
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -73,7 +93,7 @@ export function useDemoPopulateProgress(enabled: boolean) {
   // Stop polling once counts go quiet, or after the safety cap.
   const counts = query.data?.counts;
   useEffect(() => {
-    if (!enabled || stopped || !counts) return;
+    if (!active || stopped || !counts || startedAt === null) return;
     const signature = JSON.stringify(counts);
     const now = Date.now();
     if (signature !== lastSignature.current) {
@@ -81,15 +101,25 @@ export function useDemoPopulateProgress(enabled: boolean) {
       lastChangeAt.current = now;
       return;
     }
-    if (now - lastChangeAt.current > IDLE_STOP_MS || now - startedAt.current > MAX_RUN_MS) {
+    if (now - lastChangeAt.current > IDLE_STOP_MS || now - startedAt > MAX_RUN_MS) {
       setStopped(true);
     }
-  }, [counts, enabled, stopped]);
+  }, [counts, active, stopped, startedAt]);
+
+  const dismiss = useCallback(() => {
+    localStorage.removeItem(STORAGE_KEY);
+    setStartedAt(null);
+    setStopped(false);
+  }, []);
 
   return {
     counts,
+    startedAt,
     updatedAt: query.data?.at,
-    isPolling: enabled && !stopped,
+    active,
+    isPolling: active && !stopped,
     settled: stopped,
+    error: query.error as Error | null,
+    dismiss,
   };
 }
