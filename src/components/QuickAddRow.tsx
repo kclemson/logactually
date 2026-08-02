@@ -63,8 +63,6 @@ export function QuickAddRow({
   onDisable,
 }: QuickAddRowProps) {
   const [menuId, setMenuId] = useState<string | null>(null);
-  const [hoverId, setHoverId] = useState<string | null>(null);
-  const hasHover = useHasHover();
 
   if (items.length === 0) return null;
 
@@ -73,7 +71,6 @@ export function QuickAddRow({
       {items.map((item) => {
         const isPending = pendingId === item.id;
         const isPinned = pinnedIds.includes(item.id);
-        const expanded = hasHover && hoverId === item.id;
         return (
           <div
             key={item.id}
@@ -81,15 +78,13 @@ export function QuickAddRow({
               'flex items-stretch rounded-full border overflow-hidden transition-colors',
               isPinned ? ACCENT_PINNED[accent] : ACCENT[accent]
             )}
-            onMouseEnter={() => hasHover && setHoverId(item.id)}
-            onMouseLeave={() => hasHover && setHoverId((cur) => (cur === item.id ? null : cur))}
           >
             <button
               type="button"
               onClick={() => onAdd(item.id)}
-              onFocus={() => hasHover && setHoverId(item.id)}
-              onBlur={() => hasHover && setHoverId((cur) => (cur === item.id ? null : cur))}
               disabled={isPending}
+              // Native tooltip shows the full name on hover without any reflow —
+              // expanding the chip re-wrapped the row and caused hover flicker.
               title={item.name}
               aria-label={`Quick add ${item.name}`}
               className="flex items-center gap-1 pl-2 pr-1.5 py-1 text-xs font-medium disabled:opacity-60"
@@ -101,9 +96,8 @@ export function QuickAddRow({
               ) : (
                 <Plus className="h-3 w-3" />
               )}
-              <span className="whitespace-nowrap">
-                {expanded ? item.name : shortenChipName(item.name)}
-              </span>
+              <span className="whitespace-nowrap">{shortenChipName(item.name)}</span>
+
               {item.meta && (
                 <span className="text-[10px] text-muted-foreground tabular-nums">{item.meta}</span>
               )}
