@@ -24,11 +24,15 @@ export function useQuickAddFood(alreadyLoggedMealIds: Iterable<string>, ready = 
   const { data: usageRows } = useQuery({
     queryKey: ['quick-add-usage', 'food', user?.id],
     queryFn: async () => {
+      const today = format(new Date(), 'yyyy-MM-dd');
       const cutoff = format(subDays(new Date(), QUICK_ADD.WINDOW_DAYS), 'yyyy-MM-dd');
       const { data, error } = await supabase
         .from('food_entries')
         .select('eaten_date, source_meal_id')
-        .gte('eaten_date', cutoff);
+        .gte('eaten_date', cutoff)
+        // Future-dated logs must not dilute the habit ratio or count as usage.
+        .lte('eaten_date', today);
+
 
       if (error) throw error;
       return (data ?? []).map((row) => ({ date: row.eaten_date, itemId: row.source_meal_id }));
