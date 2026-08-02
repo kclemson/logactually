@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -10,10 +10,26 @@ export interface DemoProgressCounts {
   savedRoutines: number;
 }
 
+export interface DemoProgressDeltas {
+  foodEntries: number;
+  weightSets: number;
+  customLogEntries: number;
+  savedMeals: number;
+  savedRoutines: number;
+}
+
 const POLL_MS = 3000;
 const IDLE_STOP_MS = 60_000; // counts unchanged this long => treat as finished
 const MAX_RUN_MS = 15 * 60_000;
 const STORAGE_KEY = "demo-populate-started-at";
+
+const ZERO_DELTAS: DemoProgressDeltas = {
+  foodEntries: 0,
+  weightSets: 0,
+  customLogEntries: 0,
+  savedMeals: 0,
+  savedRoutines: 0,
+};
 
 /** Records that a populate run just kicked off, so the Admin page can poll it. */
 export function markDemoPopulateStarted() {
@@ -47,6 +63,7 @@ interface RawUserStats {
 export function useDemoPopulateProgress() {
   const [startedAt, setStartedAt] = useState<number | null>(() => readStartedAt());
   const [stopped, setStopped] = useState(false);
+  const [snapshots, setSnapshots] = useState<DemoProgressCounts[]>([]);
   const lastChangeAt = useRef<number>(Date.now());
   const lastSignature = useRef<string>("");
 
@@ -55,6 +72,7 @@ export function useDemoPopulateProgress() {
     const onStart = () => {
       lastChangeAt.current = Date.now();
       lastSignature.current = "";
+      setSnapshots([]);
       setStopped(false);
       setStartedAt(readStartedAt());
     };
@@ -97,8 +115,38 @@ export function useDemoPopulateProgress() {
     },
   });
 
-  // Stop polling once counts go quiet, or after the safety cap.
+  // Append each new poll result to the snapshot history so the UI can show
+  // per-poll deltas (current count minus previous count).
+  useEffect(() => {
+    if (!query.data) return;
+    const counts = query.data.counts;
+    setSnapshots((prev) => {
+      if (
+        prev.length > 0 &&
+        JSON.stringify(prev[prev.length - 1]) === JSON.stringify(counts)
+      ) {
+        return prev;
+      }
+      return [...prev, counts];
+    });
+  }, [query.data?.at]);
+
   const counts = query.data?.counts;
+
+  const deltas = useMemo<DemoProgressDeltas>(() => {
+    if (snapshots.length < 2) return ZERO_DELTAS;
+    const current = snapshots[snapshots.length - 1];
+    const previous = snapshots[snapshots.length - 2];
+    return {
+      foodEntries: current.foodEntries - previous.foodEntries,
+      weightSets: current.weightSets - previous.weightSets,
+      customLogEntries: current.customLogEntries - previous.customLogEntries,
+      savedMeals: current.savedMeals - previous.savedMeals,
+      savedRoutines: current.savedRoutines - previous.savedRoutines,
+    };
+  }, [snapshots]);
+
+  // Stop polling once counts go quiet, or after the safety cap.
   useEffect(() => {
     if (!active || stopped || !counts || startedAt === null) return;
     const signature = JSON.stringify(counts);
@@ -117,10 +165,12 @@ export function useDemoPopulateProgress() {
     localStorage.removeItem(STORAGE_KEY);
     setStartedAt(null);
     setStopped(false);
+    setSnapshots([]);
   }, []);
 
   return {
     counts,
+    deltas,
     startedAt,
     updatedAt: query.data?.at,
     active,
