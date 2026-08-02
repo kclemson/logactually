@@ -97,39 +97,40 @@ export function QuickAddGhostRows({
                   <MoreHorizontal className="h-3.5 w-3.5" />
                 </button>
               </PopoverTrigger>
-              <PopoverContent align="end" className="w-48 p-1">
+              <PopoverContent align="end" className="w-56 p-1">
                 <button
                   type="button"
-                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
                   onClick={() => {
                     onTogglePin(item.id);
                     setMenuId(null);
                   }}
                 >
-                  {isPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
-                  {isPinned ? 'Unpin' : 'Always show'}
+                  {isPinned ? <PinOff className="h-4 w-4 shrink-0" /> : <Pin className="h-4 w-4 shrink-0" />}
+                  {isPinned ? 'Stop always showing' : 'Always show here'}
                 </button>
                 <button
                   type="button"
-                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
                   onClick={() => {
                     onHide(item.id);
                     setMenuId(null);
                   }}
                 >
-                  <EyeOff className="h-4 w-4" />
-                  Hide this
+                  <EyeOff className="h-4 w-4 shrink-0" />
+                  Remove from Quick Add
                 </button>
                 <button
                   type="button"
-                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent"
+                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm text-muted-foreground hover:bg-accent"
                   onClick={() => {
                     onDisable();
                     setMenuId(null);
                   }}
                 >
-                  Turn off Quick Add
+                  Turn off Quick Add everywhere
                 </button>
+
               </PopoverContent>
             </Popover>
           </div>

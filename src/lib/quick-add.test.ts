@@ -89,6 +89,33 @@ describe('selectQuickAddIds', () => {
       })
     ).toEqual([]);
   });
+
+  it('drops frequent items that have gone quiet', () => {
+    const usage = new Map([['a', { usedDays: 9, lastUsedAt: '2026-07-01' }]]);
+    expect(
+      selectQuickAddIds({ availableIds: ['a'], usage, activeDays: 10, today: '2026-08-02' })
+    ).toEqual([]);
+  });
+
+  it('keeps items used within the recency window', () => {
+    const usage = new Map([['a', { usedDays: 9, lastUsedAt: '2026-07-26' }]]);
+    expect(
+      selectQuickAddIds({ availableIds: ['a'], usage, activeDays: 10, today: '2026-08-02' })
+    ).toEqual(['a']);
+  });
+
+  it('pinned items ignore the recency window', () => {
+    const usage = new Map([['a', { usedDays: 9, lastUsedAt: '2026-05-01' }]]);
+    expect(
+      selectQuickAddIds({
+        availableIds: ['a'],
+        usage,
+        activeDays: 10,
+        pinned: ['a'],
+        today: '2026-08-02',
+      })
+    ).toEqual(['a']);
+  });
 });
 
 describe('buildQuickAddUsage', () => {
