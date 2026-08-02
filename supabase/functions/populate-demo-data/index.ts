@@ -737,6 +737,12 @@ interface GeneratedExercise {
   rawInput?: string;
 }
 
+/** Produce a clean header for generated multi-exercise groups. */
+function deriveGroupName(exercises: GeneratedExercise[]): string | null {
+  if (exercises.length < 2) return null; // UI falls back to single exercise description
+  return 'Strength Workout';
+}
+
 function generateWeightEntriesForDay(
   config: WeightConfig,
   dayIndex: number,
@@ -1582,9 +1588,11 @@ async function doPopulationWork(
         let exercises: GeneratedExercise[];
         let sourceRoutineId: string | null = null;
 
+        let groupName: string | null = null;
         if (useRoutine) {
           const routine = useHabitStrength ? habitStrengthRoutine! : randomChoice(strengthRoutines);
           sourceRoutineId = routine.id;
+          groupName = routine.name;
 
           routineUsage.set(routine.id, (routineUsage.get(routine.id) ?? 0) + 1);
 
@@ -1602,6 +1610,7 @@ async function doPopulationWork(
           const generated = generateWeightEntriesForDay(weightConfig, i, selectedDays.length);
           rawInput = generated.rawInput;
           exercises = generated.exercises;
+          groupName = deriveGroupName(exercises);
         }
 
         const entryId = crypto.randomUUID();
@@ -1624,6 +1633,7 @@ async function doPopulationWork(
               distance_miles: exercise.distance_miles ?? null,
               raw_input: j === 0 ? rawInput : null,
               source_routine_id: sourceRoutineId,
+              group_name: groupName,
             });
 
           if (weightError) {
@@ -1667,6 +1677,7 @@ async function doPopulationWork(
                 distance_miles: s.distance_miles ?? null,
                 raw_input: j === 0 ? routine.original_input : null,
                 source_routine_id: routine.id,
+                group_name: routine.name,
               });
             if (habitError) {
               console.error('Error inserting habit cardio entry:', habitError);
@@ -1701,6 +1712,7 @@ async function doPopulationWork(
               duration_minutes: entry.duration_minutes ?? null,
               distance_miles: entry.distance_miles ?? null,
               raw_input: entry.rawInput ?? null,
+              group_name: null,
             });
 
           if (cardioError) {
@@ -1733,6 +1745,7 @@ async function doPopulationWork(
             duration_minutes: entry.duration_minutes ?? null,
             distance_miles: entry.distance_miles ?? null,
             raw_input: entry.rawInput ?? null,
+            group_name: null,
           });
 
         if (casualError) {
