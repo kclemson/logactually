@@ -15,7 +15,7 @@ import { SavedRoutine } from '@/types/weight';
  * Apple Health imports are excluded so bulk-imported walks can't inflate the
  * active-day denominator (same exclusion the save-suggestion history uses).
  */
-export function useQuickAddRoutines(alreadyLoggedRoutineIds: Iterable<string>) {
+export function useQuickAddRoutines(alreadyLoggedRoutineIds: Iterable<string>, ready = true) {
   const { user } = useAuth();
   const { data: savedRoutines } = useSavedRoutines();
   const { settings } = useUserSettings();
@@ -43,7 +43,7 @@ export function useQuickAddRoutines(alreadyLoggedRoutineIds: Iterable<string>) {
   const loggedKey = [...alreadyLoggedRoutineIds].sort().join(',');
 
   return useMemo<SavedRoutine[]>(() => {
-    if (!settings.quickAddEnabled || !savedRoutines?.length || !usageRows) return [];
+    if (!ready || !settings.quickAddEnabled || !savedRoutines?.length || !usageRows) return [];
 
     const { usage, activeDays } = buildQuickAddUsage(usageRows);
     const ids = selectQuickAddIds({
@@ -58,6 +58,7 @@ export function useQuickAddRoutines(alreadyLoggedRoutineIds: Iterable<string>) {
     const byId = new Map(savedRoutines.map((r) => [r.id, r]));
     return ids.map((id) => byId.get(id)).filter((r): r is SavedRoutine => !!r);
   }, [
+    ready,
     savedRoutines,
     usageRows,
     loggedKey,

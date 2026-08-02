@@ -16,7 +16,7 @@ import { SavedMeal } from '@/types/food';
  * save-suggestion history: two columns over 30 days, so it can't hit row caps
  * and can't perturb that feature's behavior.
  */
-export function useQuickAddFood(alreadyLoggedMealIds: Iterable<string>) {
+export function useQuickAddFood(alreadyLoggedMealIds: Iterable<string>, ready = true) {
   const { user } = useAuth();
   const { data: savedMeals } = useSavedMeals();
   const { settings } = useUserSettings();
@@ -40,7 +40,7 @@ export function useQuickAddFood(alreadyLoggedMealIds: Iterable<string>) {
   const loggedKey = [...alreadyLoggedMealIds].sort().join(',');
 
   return useMemo<SavedMeal[]>(() => {
-    if (!settings.quickAddEnabled || !savedMeals?.length || !usageRows) return [];
+    if (!ready || !settings.quickAddEnabled || !savedMeals?.length || !usageRows) return [];
 
     const { usage, activeDays } = buildQuickAddUsage(usageRows);
     const ids = selectQuickAddIds({
@@ -55,6 +55,7 @@ export function useQuickAddFood(alreadyLoggedMealIds: Iterable<string>) {
     const byId = new Map(savedMeals.map((m) => [m.id, m]));
     return ids.map((id) => byId.get(id)).filter((m): m is SavedMeal => !!m);
   }, [
+    ready,
     savedMeals,
     usageRows,
     loggedKey,
