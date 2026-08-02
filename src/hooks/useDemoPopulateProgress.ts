@@ -115,20 +115,12 @@ export function useDemoPopulateProgress() {
     },
   });
 
-  // Append each new poll result to the snapshot history so the UI can show
-  // per-poll deltas (current count minus previous count).
+  // Append every poll result (even unchanged ones) so deltas reflect the true
+  // last-two-poll difference and fall back to 0 once writes stop.
   useEffect(() => {
     if (!query.data) return;
     const counts = query.data.counts;
-    setSnapshots((prev) => {
-      if (
-        prev.length > 0 &&
-        JSON.stringify(prev[prev.length - 1]) === JSON.stringify(counts)
-      ) {
-        return prev;
-      }
-      return [...prev, counts];
-    });
+    setSnapshots((prev) => [...prev, counts].slice(-5));
   }, [query.data?.at]);
 
   const counts = query.data?.counts;
