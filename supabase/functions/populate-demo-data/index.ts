@@ -1003,7 +1003,16 @@ function generateSavedRoutines(count: number): GeneratedRoutine[] {
     }
   }
 
+  // Guarantee a cardio routine so the demo account always has a habitual
+  // cardio item available for Quick Add.
+  const isCardio = (r: GeneratedRoutine) =>
+    r.exercise_sets.every(s => (s.duration_minutes ?? 0) > 0 && (s.sets ?? 0) === 0);
+  if (count >= 2 && !routines.some(isCardio)) {
+    routines[routines.length - 1] = buildCardioRoutine();
+  }
+
   return routines;
+
 }
 
 // ============================================================================
@@ -1363,6 +1372,64 @@ async function doPopulationWork(
       }
     }
     const strengthRoutines = routinePool.filter(r => !r.is_cardio);
+    const cardioRoutines = routinePool.filter(r => r.is_cardio);
+
+    // Habitual routines: Quick Add only surfaces items used on a large share of
+    // recent active days, so the demo user needs a couple of clear favorites.
+    const habitStrengthRoutine = strengthRoutines.length > 0 ? strengthRoutines[0] : null;
+    const habitCardioRoutine = cardioRoutines.length > 0 ? cardioRoutines[0] : null;
+
+    // ========================================================================
+    // INSERT SAVED MEALS UP-FRONT (so daily food entries can reference them)
+    // ========================================================================
+    interface MealPoolEntry {
+      id: string;
+      name: string;
+      original_input: string;
+      parsedItems: ParsedFoodItem[];
+    }
+    const mealPool: MealPoolEntry[] = [];
+    const mealUsage = new Map<string, number>(); // id -> daily-use count
+    let savedMealsCreated = 0;
+
+    if (savedMealsCount > 0) {
+      const savedMeals = generateSavedMeals(savedMealsCount, parsedCache);
+      for (const meal of savedMeals) {
+        const { data, error: mealError } = await serviceClient
+          .from('saved_meals')
+          .insert({
+            user_id: demoUserId,
+            name: meal.name,
+            original_input: meal.original_input,
+            food_items: meal.food_items,
+            use_count: meal.use_count,
+            last_used_at: new Date(Date.now() - randomInt(1, 14) * 24 * 60 * 60 * 1000).toISOString(),
+          })
+          .select('id')
+          .single();
+
+        if (mealError) {
+          console.error('Error inserting saved meal:', mealError);
+        } else if (data?.id) {
+          savedMealsCreated++;
+          mealPool.push({
+            id: data.id,
+            name: meal.name,
+            original_input: meal.original_input,
+            parsedItems: parsedCache.get(meal.original_input) ?? [],
+          });
+        }
+      }
+    }
+    // Two habitual meals with real parsed macros so daily totals stay sane.
+    const habitMeals = mealPool.filter(m => m.parsedItems.length > 0).slice(0, 2);
+
+    /** Quick Add measures usage over the trailing 30 days from today. */
+    const quickAddCutoff = new Date();
+    quickAddCutoff.setDate(quickAddCutoff.getDate() - 28);
+    const isRecentDay = (d: Date) => d >= quickAddCutoff && d <= new Date();
+
+
 
     // Pre-compute calorie index for budget-aware selection
     const calorieIndex = buildCalorieIndex(parsedCache);
@@ -1383,8 +1450,24 @@ async function doPopulationWork(
         const dailyBudget = randomInt(tierConfig.min, tierConfig.max);
 
         // Track meals selected for this day
-        const dayMeals: Array<{ rawInput: string; parsedItems: ParsedFoodItem[] }> = [];
+        const dayMeals: Array<{ rawInput: string; parsedItems: ParsedFoodItem[]; sourceMealId?: string }> = [];
         let runningCalories = 0;
+
+        // 0. Habitual saved meals — logged on most recent days so Quick Add has
+        // items that clear its usage threshold.
+        if (isRecentDay(day)) {
+          for (const habit of habitMeals) {
+            if (Math.random() >= 0.6) continue;
+            dayMeals.push({
+              rawInput: habit.original_input,
+              parsedItems: habit.parsedItems,
+              sourceMealId: habit.id,
+            });
+            runningCalories += habit.parsedItems.reduce((sum, it) => sum + (it.calories || 0), 0);
+          }
+        }
+
+
 
         // 1. Pick breakfast (random)
         const breakfastInputs = DEMO_FOOD_INPUTS.breakfast.filter(inp => parsedCache.has(inp) && (parsedCache.get(inp)?.length || 0) > 0);
@@ -1469,27 +1552,36 @@ async function doPopulationWork(
               total_protein: totalProtein,
               total_carbs: totalCarbs,
               total_fat: totalFat,
+              source_meal_id: meal.sourceMealId ?? null,
             });
 
           if (foodError) {
             console.error('Error inserting food entry:', foodError);
           } else {
             foodEntriesCreated++;
+            if (meal.sourceMealId) {
+              mealUsage.set(meal.sourceMealId, (mealUsage.get(meal.sourceMealId) ?? 0) + 1);
+            }
           }
+
         }
       }
 
       // Generate weight entries (roughly every other day)
       if (generateWeights && Math.random() < 0.5) {
-        // 30% of workout days reference a saved routine (if any exist)
-        const useRoutine = strengthRoutines.length > 0 && Math.random() < 0.3;
+        // On recent days the demo user leans on one habitual strength routine
+        // (so Quick Add has a qualifying item); older days stay varied.
+        const useHabitStrength =
+          habitStrengthRoutine !== null && isRecentDay(day) && Math.random() < 0.8;
+        const useRoutine = useHabitStrength || (strengthRoutines.length > 0 && Math.random() < 0.3);
         let rawInput: string;
         let exercises: GeneratedExercise[];
         let sourceRoutineId: string | null = null;
 
         if (useRoutine) {
-          const routine = randomChoice(strengthRoutines);
+          const routine = useHabitStrength ? habitStrengthRoutine! : randomChoice(strengthRoutines);
           sourceRoutineId = routine.id;
+
           routineUsage.set(routine.id, (routineUsage.get(routine.id) ?? 0) + 1);
 
           // Apply the day's progression to each exercise's weight
@@ -1543,7 +1635,44 @@ async function doPopulationWork(
         const cardioCount = Math.random() < 0.3 ? 2 : 1; // 30% chance of 2 cardio exercises
         const usedCardioKeys = new Set<string>();
 
-        for (let c = 0; c < cardioCount; c++) {
+        // On recent days the demo user has a habitual cardio routine, so Quick
+        // Add has an item that clears its usage threshold.
+        const useHabitCardio =
+          habitCardioRoutine !== null && isRecentDay(day) && Math.random() < 0.75;
+
+        if (useHabitCardio) {
+          const routine = habitCardioRoutine!;
+          routineUsage.set(routine.id, (routineUsage.get(routine.id) ?? 0) + 1);
+          const habitEntryId = crypto.randomUUID();
+          for (let j = 0; j < routine.exercise_sets.length; j++) {
+            const s = routine.exercise_sets[j];
+            usedCardioKeys.add(`${s.exercise_key}_${s.exercise_subtype ?? ''}`);
+            const { error: habitError } = await serviceClient
+              .from('weight_sets')
+              .insert({
+                user_id: demoUserId,
+                entry_id: habitEntryId,
+                logged_date: dateStr,
+                exercise_key: s.exercise_key,
+                exercise_subtype: s.exercise_subtype ?? null,
+                description: s.description,
+                sets: s.sets ?? 0,
+                reps: s.reps ?? 0,
+                weight_lbs: s.weight_lbs ?? 0,
+                duration_minutes: s.duration_minutes ?? null,
+                distance_miles: s.distance_miles ?? null,
+                raw_input: j === 0 ? routine.original_input : null,
+                source_routine_id: routine.id,
+              });
+            if (habitError) {
+              console.error('Error inserting habit cardio entry:', habitError);
+            } else {
+              weightSetsCreated++;
+            }
+          }
+        }
+
+        for (let c = useHabitCardio ? 1 : 0; c < cardioCount; c++) {
           // Avoid duplicating the same activity
           const available = CARDIO_EXERCISES.filter(a => !usedCardioKeys.has(`${a.key}_${a.subtype}`));
           if (available.length === 0) break;
@@ -1578,6 +1707,7 @@ async function doPopulationWork(
         }
       }
 
+
       // Generate casual activity (12% chance per day)
       if (generateWeights && Math.random() < 0.12) {
         const activity = randomChoice(CASUAL_ACTIVITIES);
@@ -1609,30 +1739,24 @@ async function doPopulationWork(
       }
     }
 
-    // Generate saved meals with AI-parsed items
-    let savedMealsCreated = 0;
-    if (savedMealsCount > 0) {
-      const savedMeals = generateSavedMeals(savedMealsCount, parsedCache);
-      
-      for (const meal of savedMeals) {
-        const { error: mealError } = await serviceClient
+    // Bump use_count and last_used_at for saved meals that got referenced
+    if (mealUsage.size > 0) {
+      for (const [mealId, addCount] of mealUsage) {
+        const { data: existing } = await serviceClient
           .from('saved_meals')
-          .insert({
-            user_id: demoUserId,
-            name: meal.name,
-            original_input: meal.original_input,
-            food_items: meal.food_items,
-            use_count: meal.use_count,
-            last_used_at: new Date(Date.now() - randomInt(1, 14) * 24 * 60 * 60 * 1000).toISOString(),
-          });
-
-        if (mealError) {
-          console.error('Error inserting saved meal:', mealError);
-        } else {
-          savedMealsCreated++;
-        }
+          .select('use_count')
+          .eq('id', mealId)
+          .single();
+        await serviceClient
+          .from('saved_meals')
+          .update({
+            use_count: (existing?.use_count ?? 0) + addCount,
+            last_used_at: new Date().toISOString(),
+          })
+          .eq('id', mealId);
       }
     }
+
 
     // Bump use_count and last_used_at for saved routines that got referenced
     if (routineUsage.size > 0) {
