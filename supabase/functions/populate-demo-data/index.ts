@@ -1003,7 +1003,16 @@ function generateSavedRoutines(count: number): GeneratedRoutine[] {
     }
   }
 
+  // Guarantee a cardio routine so the demo account always has a habitual
+  // cardio item available for Quick Add.
+  const isCardio = (r: GeneratedRoutine) =>
+    r.exercise_sets.every(s => (s.duration_minutes ?? 0) > 0 && (s.sets ?? 0) === 0);
+  if (count >= 2 && !routines.some(isCardio)) {
+    routines[routines.length - 1] = buildCardioRoutine();
+  }
+
   return routines;
+
 }
 
 // ============================================================================
