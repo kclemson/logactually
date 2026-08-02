@@ -1363,6 +1363,64 @@ async function doPopulationWork(
       }
     }
     const strengthRoutines = routinePool.filter(r => !r.is_cardio);
+    const cardioRoutines = routinePool.filter(r => r.is_cardio);
+
+    // Habitual routines: Quick Add only surfaces items used on a large share of
+    // recent active days, so the demo user needs a couple of clear favorites.
+    const habitStrengthRoutine = strengthRoutines.length > 0 ? strengthRoutines[0] : null;
+    const habitCardioRoutine = cardioRoutines.length > 0 ? cardioRoutines[0] : null;
+
+    // ========================================================================
+    // INSERT SAVED MEALS UP-FRONT (so daily food entries can reference them)
+    // ========================================================================
+    interface MealPoolEntry {
+      id: string;
+      name: string;
+      original_input: string;
+      parsedItems: ParsedFoodItem[];
+    }
+    const mealPool: MealPoolEntry[] = [];
+    const mealUsage = new Map<string, number>(); // id -> daily-use count
+    let savedMealsCreated = 0;
+
+    if (savedMealsCount > 0) {
+      const savedMeals = generateSavedMeals(savedMealsCount, parsedCache);
+      for (const meal of savedMeals) {
+        const { data, error: mealError } = await serviceClient
+          .from('saved_meals')
+          .insert({
+            user_id: demoUserId,
+            name: meal.name,
+            original_input: meal.original_input,
+            food_items: meal.food_items,
+            use_count: meal.use_count,
+            last_used_at: new Date(Date.now() - randomInt(1, 14) * 24 * 60 * 60 * 1000).toISOString(),
+          })
+          .select('id')
+          .single();
+
+        if (mealError) {
+          console.error('Error inserting saved meal:', mealError);
+        } else if (data?.id) {
+          savedMealsCreated++;
+          mealPool.push({
+            id: data.id,
+            name: meal.name,
+            original_input: meal.original_input,
+            parsedItems: parsedCache.get(meal.original_input) ?? [],
+          });
+        }
+      }
+    }
+    // Two habitual meals with real parsed macros so daily totals stay sane.
+    const habitMeals = mealPool.filter(m => m.parsedItems.length > 0).slice(0, 2);
+
+    /** Quick Add measures usage over the trailing 30 days from today. */
+    const quickAddCutoff = new Date();
+    quickAddCutoff.setDate(quickAddCutoff.getDate() - 28);
+    const isRecentDay = (d: Date) => d >= quickAddCutoff && d <= new Date();
+
+
 
     // Pre-compute calorie index for budget-aware selection
     const calorieIndex = buildCalorieIndex(parsedCache);
