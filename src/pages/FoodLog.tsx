@@ -898,15 +898,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
 
           <QuickAddGhostRows
             accent="blue"
-            gridCols="grid-cols-[1fr_50px_90px_24px]"
-            items={quickAddMeals.map(meal => ({
-              id: meal.id,
-              name: meal.name,
-              cells: [
-                Math.round(meal.food_items.reduce((sum, item) => sum + Number(item.calories || 0), 0)) || '',
-                '',
-              ],
-            }))}
+            items={quickAddMeals.map(meal => ({ id: meal.id, name: meal.name }))}
             pinnedIds={settings.quickAddPinned}
             pendingId={quickAddPendingId}
             onAdd={handleQuickAdd}
