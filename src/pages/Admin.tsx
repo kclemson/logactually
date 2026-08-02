@@ -130,13 +130,11 @@ export default function Admin() {
   const { data: demoLocked } = useQuery({
     queryKey: ['demoReadOnly'],
     queryFn: async () => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('is_read_only')
-        .eq('is_read_only', true)
-        .limit(1)
-        .maybeSingle();
-      return data?.is_read_only ?? true;
+      // Resolve the demo account by identity — matching on `is_read_only = true`
+      // can't distinguish "unlocked" from "not found".
+      const { data, error } = await supabase.rpc('get_demo_read_only' as any);
+      if (error) throw error;
+      return data === true;
     },
     staleTime: 60_000,
   });
