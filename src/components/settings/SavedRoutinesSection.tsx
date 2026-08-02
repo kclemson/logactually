@@ -5,6 +5,7 @@ import { CollapsibleSection } from '@/components/CollapsibleSection';
 import { SavedRoutineRow } from '@/components/SavedRoutineRow';
 import { CreateRoutineDialog } from '@/components/CreateRoutineDialog';
 import { useSavedRoutines, useUpdateSavedRoutine, useDeleteSavedRoutine } from '@/hooks/useSavedRoutines';
+import { useQuickAddRoutines } from '@/hooks/useQuickAddRoutines';
 import type { UserSettings } from '@/hooks/useUserSettings';
 
 interface SavedRoutinesSectionProps {
@@ -23,11 +24,19 @@ export function SavedRoutinesSection({ settings, updateSettings, isReadOnly }: S
 
 
   const pinned = settings.quickAddPinned ?? [];
+  // Day-independent view of what's actually in Quick Add right now (manual pins
+  // plus auto-detected habits), so the icon matches the log page.
+  const quickAddItems = useQuickAddRoutines([]);
+  const quickAddIds = new Set(quickAddItems.map((r) => r.id));
+  const pinSourceFor = (id: string): 'manual' | 'auto' | null =>
+    pinned.includes(id) ? 'manual' : quickAddIds.has(id) ? 'auto' : null;
+
   const togglePin = (id: string) => {
-    const isPinned = pinned.includes(id);
+    const inQuickAdd = pinSourceFor(id) !== null;
+    const hidden = settings.quickAddHidden ?? [];
     updateSettings({
-      quickAddPinned: isPinned ? pinned.filter((p) => p !== id) : [...pinned, id],
-      quickAddHidden: (settings.quickAddHidden ?? []).filter((h) => h !== id),
+      quickAddPinned: inQuickAdd ? pinned.filter((p) => p !== id) : [...pinned, id],
+      quickAddHidden: inQuickAdd ? [...hidden.filter((h) => h !== id), id] : hidden.filter((h) => h !== id),
     });
   };
 
@@ -68,7 +77,7 @@ export function SavedRoutinesSection({ settings, updateSettings, isReadOnly }: S
                 onDeleteRoutine={(id) => deleteRoutine.mutate(id)}
                 openDeletePopoverId={openRoutinePopoverId}
                 setOpenDeletePopoverId={setOpenRoutinePopoverId}
-                isPinned={pinned.includes(routine.id)}
+                pinSource={pinSourceFor(routine.id)}
                 onTogglePin={
                   !isReadOnly && settings.quickAddEnabled ? () => togglePin(routine.id) : undefined
                 }
