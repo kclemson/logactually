@@ -22,6 +22,7 @@ type ChangelogEntry = {
 
 // prettier-ignore
 const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+{ date: "Aug-02", text: "New \"Quick Add\" feature - if there's a saved meal or exercise routine you tend to log very frequently (such as a morning coffee, or twice a week leg day), it'll show up in ghost text at the bottom of the page, just tap/click on it once to add it. The Quick Add list is populated automatically with items you log very frequently, but you can also manually add something to the list in Settings.", images: ["quick-add-food.png", "quick-add-exercise.png"] },
 { date: "Jul-29", text: "Some minor bug fixes: Trends charts now hide exercises with very little data — you need at least 3 sessions (and a weight logged, for strength exercises) before a chart appears, and low-frequency exercises are hidden once you have others with much more history. Custom log charts also hide until there are at least 2 days of data. Also fixed 'All time' on the Trends page to include your full history instead of stopping partway through, for users with a lot of data logged. Added a date picker to the dialog for creating new custom logs so you can override any date." },
 { date: "Jun-02", text: "Tweaked charts for certain custom logs like body weight or body fat %, they now show as line charts zoomed in to your range instead of columns starting at zero, to make gradual changes easier to spot." },
 { date: "May-09", text: "Easily re-log a saved routine by typing a few characters, and any matches will show up in a dropdown.", image: "exercise-typeahead.png" },
@@ -58,7 +59,7 @@ const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   { date: "Jan-23", text: "It's alive! v1 of app published with support for food logging & AI integration, editing logged items (and editing calories auto-scales protein/carbs/fat), charts for trends over time, mobile & desktop layouts, PWA support for pinning to home screen." },
 ];
 
-export const LAST_UPDATED = "Jul-29-26";
+export const LAST_UPDATED = "Aug-02-26";
 // ============================================
 
 export default function Changelog() {
