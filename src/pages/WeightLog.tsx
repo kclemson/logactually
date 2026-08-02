@@ -24,6 +24,7 @@ import { useEditableItems } from '@/hooks/useEditableItems';
 import { useSavedRoutines, useLogSavedRoutine } from '@/hooks/useSavedRoutines';
 import { useQuickAddRoutines } from '@/hooks/useQuickAddRoutines';
 import { QuickAddGhostRows } from '@/components/QuickAddGhostRows';
+import { formatWeight } from '@/lib/weight-units';
 import { useSaveRoutine } from '@/hooks/useSavedRoutines';
 import { useUpdateSavedRoutine } from '@/hooks/useSavedRoutines';
 import { useUserSettings } from '@/hooks/useUserSettings';
