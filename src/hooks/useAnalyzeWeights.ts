@@ -41,7 +41,7 @@ export function useAnalyzeWeights() {
         return null;
       }
 
-      return { exercises: data.exercises };
+      return { exercises: data.exercises, summary: typeof data.summary === 'string' ? data.summary : undefined };
     } catch (err) {
       let message = err instanceof Error ? err.message : 'Failed to analyze workout';
       
