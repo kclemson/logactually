@@ -17,7 +17,8 @@ import calendarSummaryAsset from "@/assets/changelog-calendar-summary.png.asset.
 type ChangelogEntry = {
   date: string;
   text: string;
-  image?: string; // Single image (existing)
+  image?: string; // Filename in /public/changelog/
+  imageAsset?: string; // Full CDN URL from a Lovable Assets pointer
   images?: string[]; // Multiple images side-by-side (new)
   large?: boolean; // Larger desktop rendering for dense screenshots
 };
