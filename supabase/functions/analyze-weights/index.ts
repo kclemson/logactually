@@ -229,7 +229,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ exercises: normalizedExercises }),
+      JSON.stringify({ exercises: normalizedExercises, ...(parsed.summary && { summary: String(parsed.summary) }) }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {

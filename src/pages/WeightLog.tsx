@@ -237,7 +237,8 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   const createEntryFromExercises = useCallback(async (
     exercises: Omit<WeightSet, 'id' | 'uid' | 'entryId' | 'editedFields'>[],
     rawInput: string | null,
-    sourceRoutineId?: string | null
+    sourceRoutineId?: string | null,
+    summary?: string | null
   ) => {
     const entryId = crypto.randomUUID();
     const setsWithEntryId = exercises.map(exercise => ({
@@ -252,9 +253,11 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
         const routine = savedRoutines.find(r => r.id === sourceRoutineId);
         if (routine) groupName = routine.name;
       }
-      if (!groupName && rawInput) groupName = rawInput;
-      if (!groupName) groupName = exercises[0].description;
+      if (!groupName && summary?.trim()) groupName = summary.trim();
+      // Never use raw input as a label — it's the full typed sentence
+      if (!groupName || groupName.length > 40) groupName = exercises[0].description;
     }
+
     
     try {
       await createEntry.mutateAsync({
@@ -377,7 +380,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
         return;
       }
 
-      createEntryFromExercises(result.exercises, text);
+      createEntryFromExercises(result.exercises, text, null, result.summary);
     }
   };
 
