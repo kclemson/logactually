@@ -828,6 +828,34 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
           weekStartDay={settings.weekStartDay}
         />
 
+        {quickAddMeals.length > 0 && (
+          <div className="mt-3">
+            <QuickAddRow
+              accent="blue"
+              items={quickAddMeals.map(meal => ({
+                id: meal.id,
+                name: meal.name,
+                meta: `${Math.round(calculateTotals(meal.food_items).calories)} cal`,
+              }))}
+              pinnedIds={settings.quickAddPinned}
+              pendingId={quickAddPendingId}
+              onAdd={handleQuickAdd}
+              onTogglePin={(id) => updateSettings({
+                quickAddPinned: settings.quickAddPinned.includes(id)
+                  ? settings.quickAddPinned.filter(p => p !== id)
+                  : [...settings.quickAddPinned, id],
+              })}
+              onHide={(id) => updateSettings({
+                quickAddHidden: [...settings.quickAddHidden, id],
+                quickAddPinned: settings.quickAddPinned.filter(p => p !== id),
+              })}
+              onDisable={() => updateSettings({ quickAddEnabled: false })}
+            />
+          </div>
+        )}
+
+
+
         <section className={cn("mt-4", mountDir === 'left' && 'animate-slide-in-from-right', mountDir === 'right' && 'animate-slide-in-from-left')}>
           {displayItems.length > 0 && (
             <FoodItemsTable
