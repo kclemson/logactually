@@ -17,10 +17,20 @@ Replace the chip row with "ghost" rows that mirror exactly how a logged entry lo
 - Pinned items keep a filled pin icon before the name, in the domain accent color.
 - Row count and selection logic are unchanged (existing `selectQuickAddIds`).
 
+## Reuse and architecture (unchanged goals)
+
+The original architecture holds: selection logic stays domain-agnostic, the UI stays presentational, and each domain only supplies data.
+
+- `src/lib/quick-add.ts` (thresholds, `selectQuickAddIds`, `buildQuickAddUsage`) is untouched — still the single shared brain for food, exercise, and any future custom-log domain.
+- `useQuickAddFood` / `useQuickAddRoutines` keep their current shape; a future `useQuickAddCustomLog` plugs in the same way.
+- The new component holds no domain logic, no queries, no settings access — it renders items and calls back, exactly like `QuickAddRow` did. Everything domain-specific (grid template, accent, right-hand metric cells) arrives as props.
+- Settings keys (`quickAddEnabled`, `quickAddPinned`, `quickAddHidden`) stay shared and global across domains.
+
 ## Technical notes
 
-- New `src/components/QuickAddGhostRows.tsx` replacing `QuickAddRow.tsx`'s usage. It takes the same props plus an optional per-item `metrics` slot so each domain supplies its own right-hand columns.
-- To stay aligned with real rows, the component accepts a `gridCols` class string; `FoodLog.tsx` and `WeightLog.tsx` pass the same grid template used by `FoodItemsTable` / `WeightItemsTable` (`grid-cols-[1fr_50px_90px_24px]` and `grid-cols-[1fr_45px_45px_60px_24px]` respectively, matching whatever delete/select columns are active).
-- Ghost styling: `text-muted-foreground/70`, `border-dashed`, hover raises to full foreground plus a faint accent tint (blue for food, purple for exercise), consistent with current accent maps.
+- New `src/components/QuickAddGhostRows.tsx` replacing `QuickAddRow.tsx`'s usage. Props mirror the current ones (`items`, `accent`, `pinnedIds`, `pendingId`, `onAdd`, `onTogglePin`, `onHide`, `onDisable`) plus `gridCols` and an optional per-item `cells: ReactNode[]` so each domain supplies its own right-hand columns without the component knowing what they mean.
+- To stay aligned with real rows, `FoodLog.tsx` and `WeightLog.tsx` pass the same grid template used by `FoodItemsTable` / `WeightItemsTable` (`grid-cols-[1fr_50px_90px_24px]` and `grid-cols-[1fr_45px_45px_60px_24px]` respectively, matching whatever delete/select columns are active).
+- Ghost styling: `text-muted-foreground/70`, `border-dashed`, hover raises to full foreground plus a faint accent tint (blue for food, purple for exercise), reusing the existing accent maps.
 - Move the render site in both pages from above the entry list to just after it; keep `settings.quickAddEnabled` gating and all existing handlers.
-- `shortenChipName` and `QuickAddRow.test.ts` are no longer needed for the row layout — the shortening helper gets deleted along with `QuickAddRow.tsx`, and the test file is removed. `src/lib/quick-add.ts` and its tests are untouched.
+- `shortenChipName` and `QuickAddRow.test.ts` are no longer needed for the row layout — the shortening helper is deleted along with `QuickAddRow.tsx`, and its test file is removed. `src/lib/quick-add.test.ts` stays and keeps covering the shared selection logic.
+
