@@ -380,7 +380,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
         return;
       }
 
-      createEntryFromExercises(result.exercises, text);
+      createEntryFromExercises(result.exercises, text, null, result.summary);
     }
   };
 
