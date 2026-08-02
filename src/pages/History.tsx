@@ -342,6 +342,17 @@ const History = () => {
         />
       )}
 
+      {/* Monthly log-day summary */}
+      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        <span className="text-blue-500 dark:text-blue-400">Food: {foodDays} days</span>
+        <span className="text-purple-500 dark:text-purple-400">
+          Exercise: {exerciseDays}{' '}
+          <span className="text-muted-foreground/80">
+            (strength: {strengthDays}, cardio: {cardioDays})
+          </span>
+        </span>
+      </div>
+
       {/* Swipe zone: calendar grid (swipe left = next month, swipe right = prev month) */}
       <div ref={swipeHandlers.ref} onTouchStart={swipeHandlers.onTouchStart} onTouchEnd={swipeHandlers.onTouchEnd} style={{ touchAction: 'none' }} className="min-h-[calc(100dvh-10rem)] md:min-h-0">
         <div
