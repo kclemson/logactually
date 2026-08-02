@@ -1481,15 +1481,19 @@ async function doPopulationWork(
 
       // Generate weight entries (roughly every other day)
       if (generateWeights && Math.random() < 0.5) {
-        // 30% of workout days reference a saved routine (if any exist)
-        const useRoutine = strengthRoutines.length > 0 && Math.random() < 0.3;
+        // On recent days the demo user leans on one habitual strength routine
+        // (so Quick Add has a qualifying item); older days stay varied.
+        const useHabitStrength =
+          habitStrengthRoutine !== null && isRecentDay(day) && Math.random() < 0.8;
+        const useRoutine = useHabitStrength || (strengthRoutines.length > 0 && Math.random() < 0.3);
         let rawInput: string;
         let exercises: GeneratedExercise[];
         let sourceRoutineId: string | null = null;
 
         if (useRoutine) {
-          const routine = randomChoice(strengthRoutines);
+          const routine = useHabitStrength ? habitStrengthRoutine! : randomChoice(strengthRoutines);
           sourceRoutineId = routine.id;
+
           routineUsage.set(routine.id, (routineUsage.get(routine.id) ?? 0) + 1);
 
           // Apply the day's progression to each exercise's weight
