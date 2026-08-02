@@ -787,7 +787,8 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
         />
 
         {quickAddRoutines.length > 0 && (
-          <div className="mt-3">
+          <div className="mt-2 pb-2 border-b border-border/50">
+
             <QuickAddRow
               accent="purple"
               items={quickAddRoutines.map(routine => ({

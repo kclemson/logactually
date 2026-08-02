@@ -829,7 +829,8 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
         />
 
         {quickAddMeals.length > 0 && (
-          <div className="mt-3">
+          <div className="mt-2 pb-2 border-b border-border/50">
+
             <QuickAddRow
               accent="blue"
               items={quickAddMeals.map(meal => ({

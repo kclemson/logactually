@@ -21,15 +21,18 @@ interface QuickAddRowProps {
   onDisable: () => void;
 }
 
+// Resting state is deliberately muted: these are suggestions, not logged
+// content. Accent colour only appears on hover/press (and for pinned chips).
 const ACCENT = {
-  blue: 'border-blue-500/40 text-blue-700 dark:text-blue-300 hover:bg-blue-500/10 active:bg-blue-500/20',
-  purple: 'border-purple-500/40 text-purple-700 dark:text-purple-300 hover:bg-purple-500/10 active:bg-purple-500/20',
+  blue: 'border-border text-muted-foreground hover:border-blue-500/40 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-500/10 active:bg-blue-500/20',
+  purple: 'border-border text-muted-foreground hover:border-purple-500/40 hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-500/10 active:bg-purple-500/20',
 } as const;
 
 const ACCENT_PINNED = {
-  blue: 'border-blue-500 bg-blue-500/15 text-blue-700 dark:text-blue-200 hover:bg-blue-500/25 active:bg-blue-500/30',
-  purple: 'border-purple-500 bg-purple-500/15 text-purple-700 dark:text-purple-200 hover:bg-purple-500/25 active:bg-purple-500/30',
+  blue: 'border-blue-500/50 bg-blue-500/10 text-blue-700 dark:text-blue-300 hover:bg-blue-500/20 active:bg-blue-500/30',
+  purple: 'border-purple-500/50 bg-purple-500/10 text-purple-700 dark:text-purple-300 hover:bg-purple-500/20 active:bg-purple-500/30',
 } as const;
+
 
 /** Max characters shown on a collapsed chip before shortening. */
 const NAME_BUDGET = 18;
@@ -66,7 +69,7 @@ export function QuickAddRow({
   if (items.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5" aria-label="Quick add">
+    <div className="flex flex-wrap items-center gap-1" aria-label="Quick add">
       {items.map((item) => {
         const isPending = pendingId === item.id;
         const isPinned = pinnedIds.includes(item.id);
@@ -74,7 +77,7 @@ export function QuickAddRow({
           <div
             key={item.id}
             className={cn(
-              'flex items-stretch rounded-full border overflow-hidden transition-colors',
+              'flex h-6 items-stretch rounded-full border overflow-hidden transition-colors',
               isPinned ? ACCENT_PINNED[accent] : ACCENT[accent]
             )}
           >
@@ -86,14 +89,14 @@ export function QuickAddRow({
               // expanding the chip re-wrapped the row and caused hover flicker.
               title={item.name}
               aria-label={`Quick add ${item.name}`}
-              className="flex items-center gap-1 pl-2 pr-1.5 py-1 text-xs font-medium disabled:opacity-60"
+              className="flex items-center gap-1 pl-1.5 pr-1 text-[11px] font-medium disabled:opacity-60"
             >
               {isPending ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
+                <Loader2 className="h-2.5 w-2.5 animate-spin" />
               ) : isPinned ? (
-                <Pin className="h-3 w-3 fill-current" />
+                <Pin className="h-2.5 w-2.5 fill-current" />
               ) : (
-                <Plus className="h-3 w-3" />
+                <Plus className="h-2.5 w-2.5" />
               )}
               <span className="whitespace-nowrap">{shortenChipName(item.name)}</span>
 
@@ -107,10 +110,11 @@ export function QuickAddRow({
                 <button
                   type="button"
                   aria-label={`Quick add options for ${item.name}`}
-                  className="px-1.5 border-l border-inherit text-muted-foreground"
+                  className="px-1 border-l border-inherit text-muted-foreground"
                 >
-                  <MoreHorizontal className="h-3 w-3" />
+                  <MoreHorizontal className="h-2.5 w-2.5" />
                 </button>
+
               </PopoverTrigger>
               <PopoverContent align="start" className="w-48 p-1">
                 <button
