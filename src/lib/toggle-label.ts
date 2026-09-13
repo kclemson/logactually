@@ -18,7 +18,7 @@ const CANONICAL_LABELS: Record<string, string> = {
 };
 
 // Timing probe: temporary no-op comment.
-const DEFAULT_MAX_LEN = 11;
+const DEFAULT_MAX_LEN: number = 11;
 
 /**
  * Returns a compact label for the toggle segment of a featured custom log type.
