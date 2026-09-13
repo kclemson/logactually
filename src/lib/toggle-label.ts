@@ -17,6 +17,7 @@ const CANONICAL_LABELS: Record<string, string> = {
   'Medication': 'Meds',
 };
 
+// Timing probe: temporary no-op comment.
 const DEFAULT_MAX_LEN = 11;
 
 /**
