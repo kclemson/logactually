@@ -4,7 +4,8 @@
 
 These features currently use Gemini 3 Flash as their main model. They'll switch to Gemini 3.8 Flash with its thinking turned down, the setup that answered in about 2 seconds in testing:
 
-- Logging food from text, photos and barcode fill-in
+- Logging food from text and photos
+- Barcode scans, but only the last-resort step, when Open Food Facts doesn't recognize the barcode even after the padded retry. Normal scans don't use AI at all.
 - Logging exercise
 - Ask AI on Trends
 - Both chart builders
