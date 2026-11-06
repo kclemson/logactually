@@ -2,7 +2,7 @@
 
 ## What round 1 showed
 
-I ran 9 of your recent food entries and 6 of your exercise entries through five models, using the app's exact instructions. That's one run per model per entry, all sent at the same time.
+I ran 9 recent food entries and 6 exercise entries through five models, using the app's exact instructions. That's one run per model per entry, all sent at the same time. These came from several users' accounts, not only yours, because I didn't limit the lookup to your account. Round 2 uses only your entries.
 
 | Model | Typical wait | Max wait | Notable mistakes |
 |---|---|---|---|
@@ -30,5 +30,6 @@ On the exercise entries, all five models got sets, reps, weight and distance rig
 
 ## Technical details
 
+- Test entries are pulled only from your own account, matched by your sign-in email. Bloodwork tests use only your own lab reports.
 - The test script lives outside the project, in temporary storage. It imports the real instructions the app's functions use and calls the AI gateway directly. Round 1 results are saved for comparison.
 - Caveat: all 75 round-1 requests went out at once, which may have inflated some wait times. Round 2 will send them in smaller batches.
