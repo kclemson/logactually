@@ -26,11 +26,11 @@ export const BLOODWORK_CANONICAL: CanonicalAnalyte[] = [
 
   // Iron / TIBC
   { key: 'iron_serum', display: 'Iron', synonyms: ['iron', 'iron serum', 'iron, serum', 'iron, srm', 'iron srm', 'fe'] },
-  { key: 'tibc', display: 'TIBC', fullName: 'Total Iron-Binding Capacity', synonyms: ['tibc', 'iron binding capacity', 'iron bind cap', 'iron bind cap tibc', 'total iron binding capacity'] },
+  { key: 'tibc', display: 'TIBC', fullName: 'Total Iron-Binding Capacity', synonyms: ['total iron binding capacity roche', 'tibc', 'iron binding capacity', 'iron bind cap', 'iron bind cap tibc', 'total iron binding capacity'] },
   { key: 'uibc', display: 'UIBC', fullName: 'Unsaturated Iron-Binding Capacity', synonyms: ['uibc', 'unsat iron binding capacity', 'unsaturated iron binding capacity'] },
-  { key: 'iron_saturation', display: 'Iron Saturation', synonyms: ['iron saturation', 'iron sat', 'transferrin saturation', 'transferrin sat', 'percent saturation', '% saturation', 'tsat'] },
-  { key: 'ferritin', display: 'Ferritin', synonyms: ['ferritin', 'ferritin serum'] },
-  { key: 'transferrin', display: 'Transferrin', synonyms: ['transferrin'] },
+  { key: 'iron_saturation', display: 'Iron Saturation', synonyms: ['transferrin saturation roche', 'iron saturation', 'iron sat', 'transferrin saturation', 'transferrin sat', 'percent saturation', '% saturation', 'tsat'] },
+  { key: 'ferritin', display: 'Ferritin', synonyms: ['ferritin roche', 'ferritin', 'ferritin serum'] },
+  { key: 'transferrin', display: 'Transferrin', synonyms: ['transferrin roche', 'transferrin'] },
 
   // CBC
   { key: 'wbc', display: 'WBC', fullName: 'White Blood Cell Count', synonyms: ['wbc', 'white blood cell count', 'white blood cells', 'leukocytes'] },
@@ -67,15 +67,15 @@ export const BLOODWORK_CANONICAL: CanonicalAnalyte[] = [
   { key: 'calcium', display: 'Calcium', synonyms: ['calcium', 'ca'] },
   { key: 'magnesium', display: 'Magnesium', synonyms: ['magnesium', 'mg'] },
   { key: 'phosphorus', display: 'Phosphorus', synonyms: ['phosphorus', 'phosphate'] },
-  { key: 'protein_total', display: 'Total Protein', synonyms: ['total protein', 'protein total', 'total protein beckman'] },
+  { key: 'protein_total', display: 'Total Protein', synonyms: ['total protein roche', 'total protein', 'protein total', 'total protein beckman'] },
   { key: 'albumin', display: 'Albumin', synonyms: ['albumin'] },
   { key: 'globulin', display: 'Globulin', synonyms: ['globulin', 'globulin total'] },
   { key: 'albumin_globulin_ratio', display: 'A/G Ratio', fullName: 'Albumin/Globulin Ratio', synonyms: ['a/g ratio', 'albumin/globulin ratio', 'albumin globulin ratio'] },
-  { key: 'bilirubin_total', display: 'Bilirubin (Total)', synonyms: ['bilirubin total', 'total bilirubin', 'total bilirubin beckman'] },
-  { key: 'bilirubin_direct', display: 'Bilirubin (Direct)', synonyms: ['bilirubin direct', 'direct bilirubin', 'direct bilirubin beckman'] },
+  { key: 'bilirubin_total', display: 'Bilirubin (Total)', synonyms: ['total bilirubin roche', 'bilirubin total', 'total bilirubin', 'total bilirubin beckman'] },
+  { key: 'bilirubin_direct', display: 'Bilirubin (Direct)', synonyms: ['direct bilirubin roche', 'bilirubin direct', 'direct bilirubin', 'direct bilirubin beckman'] },
   { key: 'alp', display: 'Alkaline Phosphatase', fullName: 'Alkaline Phosphatase', synonyms: ['alkaline phosphatase', 'alkaline phosphatase total', 'alp', 'alk phos'] },
-  { key: 'ast', display: 'AST', fullName: 'Aspartate Aminotransferase', synonyms: ['ast', 'aspartate aminotransferase', 'sgot', 'ast sgot', 'ast beckman'] },
-  { key: 'alt', display: 'ALT', fullName: 'Alanine Aminotransferase', synonyms: ['alt', 'alanine aminotransferase', 'sgpt', 'alt sgpt', 'alt beckman'] },
+  { key: 'ast', display: 'AST', fullName: 'Aspartate Aminotransferase', synonyms: ['ast roche', 'ast', 'aspartate aminotransferase', 'sgot', 'ast sgot', 'ast beckman'] },
+  { key: 'alt', display: 'ALT', fullName: 'Alanine Aminotransferase', synonyms: ['alt roche', 'alt', 'alanine aminotransferase', 'sgpt', 'alt sgpt', 'alt beckman'] },
   { key: 'ggt', display: 'GGT', fullName: 'Gamma-Glutamyl Transferase', synonyms: ['ggt', 'gamma-glutamyl transferase', 'gamma glutamyl transferase'] },
 
   // Diabetes / HbA1c
@@ -84,7 +84,7 @@ export const BLOODWORK_CANONICAL: CanonicalAnalyte[] = [
   { key: 'homa_ir', display: 'HOMA-IR', fullName: 'Homeostatic Model Assessment of Insulin Resistance', synonyms: ['homa-ir', 'homa ir'] },
 
   // Thyroid
-  { key: 'tsh', display: 'TSH', fullName: 'Thyroid-Stimulating Hormone', synonyms: ['tsh', 'thyroid stimulating hormone', 'thyrotropin'] },
+  { key: 'tsh', display: 'TSH', fullName: 'Thyroid-Stimulating Hormone', synonyms: ['thyroid stimulating hormone roche', 'tsh', 'thyroid stimulating hormone', 'thyrotropin'] },
   { key: 'free_t4', display: 'Free T4', fullName: 'Free Thyroxine', synonyms: ['free t4', 'ft4', 't4 free'] },
   { key: 'free_t3', display: 'Free T3', fullName: 'Free Triiodothyronine', synonyms: ['free t3', 'ft3', 't3 free'] },
   { key: 'total_t4', display: 'Total T4', fullName: 'Thyroxine', synonyms: ['t4', 'total t4', 'thyroxine'] },
