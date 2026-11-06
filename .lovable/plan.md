@@ -1,35 +1,30 @@
-# LogActually AI models: results from round 1, and next steps
+# Switch everyday AI features to Gemini 3.8 Flash
 
-## What round 1 showed
+## What changes
 
-I ran 9 recent food entries and 6 exercise entries through five models, using the app's exact instructions. That's one run per model per entry, all sent at the same time. These came from several users' accounts, not only yours, because I didn't limit the lookup to your account. Round 2 uses only your entries.
+These features currently use Gemini 3 Flash as their main model. They'll switch to Gemini 3.8 Flash with its thinking turned down, the setup that answered in about 2 seconds in testing:
 
-| Model | Typical wait | Max wait | Notable mistakes |
-|---|---|---|---|
-| Gemini 3 Flash (today's main model) | 1.4s | 5s | Ignored your label on the tuna: you wrote 135 cal / 11g protein, it logged 103 / 14 |
-| Gemini 3.8 Flash (newest Flash) | 6.4s | 23s | None. But it's about 4x slower, likely because it "thinks" before answering by default |
-| Gemini 3.1 Flash Lite | 1.2s | 2s | Generic names ("Shortbread cookie" for Abbraccio, "Oat cereal" for Cheerios) |
-| GPT-5 mini (today's backup) | 8.1s | 22s | Logged "Trancio di pizza Conad 240g" as white fish (197 cal instead of about 550). OpenAI has also deprecated this model |
-| GPT-6 Luna | 6.6s | 23s | Made up a new exercise type, "leg_press_upper". That would split your leg press history into two charts again |
+- Logging food from text, photos and barcode fill-in
+- Logging exercise
+- Ask AI on Trends
+- Both chart builders
+- Populate demo data (admin)
 
-On the exercise entries, all five models got sets, reps, weight and distance right.
+## What stays the same
 
-## What this means
+- **Backup model:** stays GPT-5 mini for now. It only runs when the main model fails. It is deprecated, though, so replacing it is a separate decision for later.
+- **Bloodwork report reading:** stays on Gemini 2.5 Pro. It wasn't tested.
+- **Everything else:** the app's instructions to the AI, retries and error handling don't change.
 
-- **Today's main model is still competitive.** None of the newer models was clearly better at the same speed.
-- **Today's backup is the weak link.** It made the worst mistake in the set and it's deprecated. It only runs when the main model fails, but it should still be replaced.
-- **Gemini 3.8 Flash's accuracy looked good, but its speed was a dealbreaker as tested.** A 6–23 second wait per food log is a real regression. It may be fast with its "thinking" turned down, but I haven't tested that.
-- **I haven't tested food photos, Ask AI or bloodwork yet.**
+## What to watch for
 
-## Proposed round 2 (testing only, no app changes)
-
-1. Re-run Gemini 3.8 Flash with thinking turned to its lowest setting, on the same 15 entries. If it matches today's speed with equal or better accuracy, it becomes the main-model candidate.
-2. Test backup candidates (GPT-6 Luna, GPT-6.1 Terra, Gemini 3.1 Flash Lite) against the same entries. The winner is whichever doesn't invent new exercise types or misidentify foods.
-3. Run 3 real food photos and 2 of your past lab reports through the current models and the candidates (Gemini 3.1 Pro for bloodwork). Compare values against what's already saved.
-4. Bring you a final side-by-side and a specific model swap for approval. Nothing in the app changes until then.
+- Food first guesses will differ from before, like the test showed. For example, Gouda defaulted to 1 oz and Reese's to 1 cup. Brand names will also be kept more often ("Starburst" rather than "Fruit Chews").
+- **Photo logging wasn't tested.** After deploying, I'll log one test photo and one text entry on your account, check both come back correctly and quickly, then delete them.
+- I'll watch the AI request logs for errors or slow responses over the following day.
 
 ## Technical details
 
-- Test entries are pulled only from your own account, matched by your sign-in email, which matches exactly one account. Round 1's test files were deleted. Round 2 uses only your entries. Bloodwork tests use only your own lab reports.
-- The test script lives outside the project, in temporary storage. It imports the real instructions the app's functions use and calls the AI gateway directly. Round 1 results are saved for comparison.
-- Caveat: all 75 round-1 requests went out at once, which may have inflated some wait times. Round 2 will send them in smaller batches.
+- In each of 8 functions (`analyze-food`, `analyze-food-photo`, `lookup-upc`, `analyze-weights`, `ask-trends-ai`, `generate-chart`, `generate-chart-dsl`, `populate-demo-data`), the primary model changes from `google/gemini-3-flash-preview` to `google/gemini-3.8-flash`.
+- `reasoning_effort: "low"` is added to the request body only when the model is Gemini 3.8 Flash, so the GPT-5 mini fallback request doesn't change.
+- Redeploy those 8 functions.
+- Add a changelog entry only if you want one.
