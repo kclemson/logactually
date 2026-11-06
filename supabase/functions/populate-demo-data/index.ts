@@ -251,7 +251,7 @@ async function callLovableAI(
     try {
       console.log(`AI call attempt ${attempt + 1}...`);
 
-      const models = ['google/gemini-3-flash-preview', 'openai/gpt-5-mini'];
+      const models = ['google/gemini-3.8-flash', 'openai/gpt-5-mini'];
       let response: Response | null = null;
       for (const model of models) {
         const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -262,6 +262,7 @@ async function callLovableAI(
           },
           body: JSON.stringify({
             model,
+            ...(model === "google/gemini-3.8-flash" ? { reasoning_effort: "low" } : {}),
             messages: [
               { role: 'system', content: systemPrompt },
               { role: 'user', content: userPrompt },
