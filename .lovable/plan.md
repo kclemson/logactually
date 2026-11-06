@@ -30,6 +30,6 @@ On the exercise entries, all five models got sets, reps, weight and distance rig
 
 ## Technical details
 
-- Test entries are pulled only from your own account, matched by your sign-in email. Bloodwork tests use only your own lab reports.
+- Test entries are pulled only from your own account, matched by your sign-in email, which matches exactly one account. Round 1's test files were deleted. Round 2 uses only your entries. Bloodwork tests use only your own lab reports.
 - The test script lives outside the project, in temporary storage. It imports the real instructions the app's functions use and calls the AI gateway directly. Round 1 results are saved for comparison.
 - Caveat: all 75 round-1 requests went out at once, which may have inflated some wait times. Round 2 will send them in smaller batches.
