@@ -196,7 +196,7 @@ Deno.serve(async (req) => {
 
     let extracted: ExtractedPanel | null = null;
     try {
-      extracted = await callGateway('google/gemini-2.5-pro', base64, mimeType);
+      extracted = await callGateway('google/gemini-3.8-flash', base64, mimeType);
     } catch (e) {
       if (e instanceof Response) return e;
       console.error('Gemini call threw:', e);
