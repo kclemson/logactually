@@ -60,7 +60,7 @@ interface AnalyzeResponse {
 
 
 async function callAI(body: object): Promise<Response> {
-  const models = ['google/gemini-3-flash-preview', 'openai/gpt-5-mini'];
+  const models = ['google/gemini-3.8-flash', 'openai/gpt-5-mini'];
   let lastResponse: Response | null = null;
   for (const model of models) {
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -69,7 +69,7 @@ async function callAI(body: object): Promise<Response> {
         'Authorization': `Bearer ${Deno.env.get('LOVABLE_API_KEY')}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ ...body, model }),
+      body: JSON.stringify({ ...body, model, ...(model === "google/gemini-3.8-flash" ? { reasoning_effort: "low" } : {}) }),
     });
     if (response.ok) return response;
     lastResponse = response;

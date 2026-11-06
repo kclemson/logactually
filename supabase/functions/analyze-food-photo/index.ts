@@ -93,7 +93,7 @@ serve(async (req) => {
       { type: 'text', text: prompt },
       { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
     ];
-    const models = ['google/gemini-3-flash-preview', 'openai/gpt-5-mini'];
+    const models = ['google/gemini-3.8-flash', 'openai/gpt-5-mini'];
     let response: Response | null = null;
     for (const model of models) {
       const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -104,6 +104,7 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           model,
+          ...(model === "google/gemini-3.8-flash" ? { reasoning_effort: "low" } : {}),
           messages: [{ role: 'user', content: messageContent }],
         }),
       });

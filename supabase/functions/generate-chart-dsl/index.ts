@@ -292,7 +292,7 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const models = ["google/gemini-3-flash-preview", "openai/gpt-5-mini"];
+    const models = ["google/gemini-3.8-flash", "openai/gpt-5-mini"];
     let aiResponse: Response | null = null;
     for (const model of models) {
       const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -303,6 +303,7 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           model,
+          ...(model === "google/gemini-3.8-flash" ? { reasoning_effort: "low" } : {}),
           messages: aiMessages,
           response_format: { type: "json_object" },
         }),
