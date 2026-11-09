@@ -20,6 +20,7 @@ import { useAnalyzeFood } from '@/hooks/useAnalyzeFood';
 import { useAnalyzeFoodPhoto } from '@/hooks/useAnalyzeFoodPhoto';
 import { useFoodEntries } from '@/hooks/useFoodEntries';
 import { useRecentFoodEntries } from '@/hooks/useRecentFoodEntries';
+import { buildFoodTypeaheadCandidates } from '@/lib/food-typeahead';
 import { useEditableFoodItems } from '@/hooks/useEditableItems';
 import { useSavedMeals, useSaveMeal, useLogSavedMeal } from '@/hooks/useSavedMeals';
 import { useQuickAddFood } from '@/hooks/useQuickAddFood';
@@ -99,7 +100,12 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   const { analyzeFood, isAnalyzing, error: analyzeError, warning: analyzeWarning, noMatch, dismissWarning } = useAnalyzeFood();
   const { analyzePhoto, isAnalyzing: isAnalyzingPhoto, error: photoError } = useAnalyzeFoodPhoto();
   const { data: savedMeals } = useSavedMeals();
-  const { data: recentEntries } = useRecentFoodEntries(90);
+  const { data: recentEntries } = useRecentFoodEntries(180);
+  // Save-suggestion detection keeps its original 90-day window; typeahead uses 180.
+  const recentEntries90 = useMemo(() => {
+    const cutoff = subDays(new Date(), 90).toISOString();
+    return recentEntries?.filter((e) => e.created_at >= cutoff);
+  }, [recentEntries]);
   const saveMeal = useSaveMeal();
   const logSavedMeal = useLogSavedMeal();
   const { settings, updateSettings } = useUserSettings();
@@ -120,75 +126,8 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   // Named groups stay as single candidates; ungrouped entries are exploded into individual items
   const typeaheadCandidates = useMemo((): TypeaheadCandidate[] | undefined => {
     if (!recentEntries?.length) return undefined;
-
-    const candidates = new Map<string, { label: string; searchText: string; subtitle: string; timestamp: string; frequency: number; items: FoodItem[] }>();
-
-    for (const entry of recentEntries) {
-      // Skip entries from saved meals (users have the Saved button for those)
-      if (entry.source_meal_id) continue;
-
-      // Named groups (intentional groupings) → keep as single candidate
-      if (entry.group_name && entry.food_items.length > 1) {
-        const key = `group:${entry.group_name.toLowerCase().trim()}`;
-        const existing = candidates.get(key);
-        if (existing) {
-          existing.frequency += 1;
-          if (entry.eaten_date > existing.timestamp) existing.timestamp = entry.eaten_date;
-        } else {
-          candidates.set(key, {
-            label: entry.group_name,
-            searchText: [entry.raw_input || '', ...entry.food_items.map(i => i.description)].join(' '),
-            subtitle: `${Math.round(entry.total_calories)} cal`,
-            timestamp: entry.eaten_date,
-            frequency: 1,
-            items: entry.food_items,
-          });
-        }
-      } else {
-        // Explode into individual items
-        for (const item of entry.food_items) {
-          const normDesc = item.description.toLowerCase().trim().replace(/\s*\(.*?\)\s*/g, ' ').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
-          const calBucket = item.calories <= 0 ? 0 : Math.round(Math.log2(item.calories) * 3);
-          const key = `item:${normDesc}:${calBucket}`;
-          const existing = candidates.get(key);
-          if (existing) {
-            existing.frequency += 1;
-            if (entry.eaten_date > existing.timestamp) existing.timestamp = entry.eaten_date;
-          } else {
-            candidates.set(key, {
-              label: item.description,
-              searchText: entry.food_items.length === 1
-                ? [entry.raw_input, item.description].filter(Boolean).join(' ')
-                : item.description,
-              subtitle: `${Math.round(item.calories)} cal`,
-              timestamp: entry.eaten_date,
-              frequency: 1,
-              items: [item],
-            });
-          }
-        }
-      }
-    }
-
-    // Add saved meals as candidates so meal names are searchable
-    if (savedMeals?.length) {
-      for (const meal of savedMeals) {
-        const key = `saved-meal:${meal.id}`;
-        if (candidates.has(key)) continue;
-        const totalCal = meal.food_items.reduce((sum, i) => sum + (i.calories || 0), 0);
-        candidates.set(key, {
-          label: meal.name,
-          searchText: [meal.name, meal.original_input, ...meal.food_items.map(i => i.description)].filter(Boolean).join(' '),
-          subtitle: `${Math.round(totalCal)} cal`,
-          timestamp: meal.last_used_at ?? meal.created_at,
-          frequency: Math.max(1, meal.use_count ?? 1),
-          items: meal.food_items,
-        });
-      }
-    }
-
-    return [...candidates.entries()].map(([id, g]) => ({
-      id,
+    return buildFoodTypeaheadCandidates(recentEntries, savedMeals ?? []).map((g) => ({
+      id: g.id,
       label: g.label,
       searchText: g.searchText,
       subtitle: g.subtitle,
@@ -331,8 +270,8 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       foodInputRef.current?.clear();
       
       // Check for repeated patterns (skip demo mode and saved meal entries)
-      if (!isReadOnly && settings.suggestMealSaves && recentEntries && !sourceMealId && !skipSuggestionCheck) {
-        const suggestion = detectRepeatedFoodEntry(items, recentEntries);
+      if (!isReadOnly && settings.suggestMealSaves && recentEntries90 && !sourceMealId && !skipSuggestionCheck) {
+        const suggestion = detectRepeatedFoodEntry(items, recentEntries90);
         if (suggestion && !isDismissed(suggestion.signatureHash)) {
           setSaveSuggestion(suggestion);
           setSaveSuggestionItems([...suggestion.items]);
@@ -341,7 +280,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     } catch {
       // Error already logged by mutation's onError
     }
-  }, [createEntry, dateStr, queryClient, markEntryAsNew, isReadOnly, settings.suggestMealSaves, recentEntries]);
+  }, [createEntry, dateStr, queryClient, markEntryAsNew, isReadOnly, settings.suggestMealSaves, recentEntries90]);
 
   // Handle typeahead selection — bypass AI, log directly
   const handleSelectTypeahead = useCallback((candidate: TypeaheadCandidate) => {
