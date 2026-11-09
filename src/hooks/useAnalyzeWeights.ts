@@ -11,11 +11,15 @@ export function useAnalyzeWeights() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
+  // True when the AI found nothing of this tab's kind (likely logged on the wrong tab).
+  const [noMatch, setNoMatch] = useState(false);
+  const dismissWarning = () => { setWarning(null); setNoMatch(false); };
 
   const analyzeWeights = useCallback(async (rawInput: string): Promise<AnalyzeWeightsResult | null> => {
     setIsAnalyzing(true);
     setError(null);
     setWarning(null);
+    setNoMatch(false);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -38,6 +42,7 @@ export function useAnalyzeWeights() {
       // Check for empty results (e.g., user entered food on weights page)
       if (data.exercises.length === 0) {
         setWarning("No exercises detected. If this is food, try the Food page.");
+        setNoMatch(true);
         return null;
       }
 
@@ -57,5 +62,5 @@ export function useAnalyzeWeights() {
     }
   }, []);
 
-  return { analyzeWeights, isAnalyzing, error, warning };
+  return { analyzeWeights, isAnalyzing, error, warning, noMatch, dismissWarning };
 }
