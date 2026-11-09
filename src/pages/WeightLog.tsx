@@ -5,6 +5,7 @@ import { isMultiItemEntry } from '@/lib/entry-boundaries';
 import { useSearchParams } from 'react-router-dom';
 import { WrongTabPrompt } from '@/components/WrongTabPrompt';
 import { useTabHandoff } from '@/hooks/useTabHandoff';
+import { moveEntryId, sortByEntryOrder, persistEntryOrder, uniqueInOrder } from '@/lib/entry-order';
 import { useQueryClient } from '@tanstack/react-query';
 import { format, isToday, parseISO } from 'date-fns';
 import { useWeightDatesWithData } from '@/hooks/useDatesWithData';
@@ -317,6 +318,16 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
   }, [createEntry, dateStr, queryClient, markEntryAsNew, isReadOnly, settings.suggestRoutineSaves, recentWeightEntries]);
 
   // Copy an entry to today's date
+  const handleMoveEntry = useCallback((entryId: string, dir: -1 | 1) => {
+    const next = moveEntryId(uniqueInOrder(weightSets.map(s => s.entryId)), entryId, dir);
+    if (!next) return;
+    queryClient.setQueriesData({ queryKey: ['weight-sets', dateStr] }, (old: WeightSet[] | undefined) =>
+      old ? sortByEntryOrder(old, s => s.entryId, next) : old);
+    persistEntryOrder('weights', next).catch(() => {
+      queryClient.invalidateQueries({ queryKey: ['weight-sets', dateStr] });
+    });
+  }, [weightSets, dateStr, queryClient]);
+
   const handleCopyEntryToToday = useCallback(async (entryId: string) => {
     const entrySets = weightSets.filter(s => s.entryId === entryId);
     if (entrySets.length === 0) return;
@@ -856,6 +867,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
                 onShowDetails={handleShowDetails}
                 onUpdateCalorieBurn={handleUpdateCalorieBurn}
                 onCopyEntryToToday={!isTodaySelected && !isReadOnly ? handleCopyEntryToToday : undefined}
+                onMoveEntry={!isReadOnly ? handleMoveEntry : undefined}
               />
             </>
           )}

@@ -24,6 +24,7 @@ export function useWeightEntries(date: string, calorieBurnSettings?: CalorieBurn
         .from('weight_sets')
         .select('*')
         .eq('logged_date', date)
+        .order('sort_order', { ascending: true, nullsFirst: false })
         .order('created_at', { ascending: true })
         .order('id', { ascending: true });
 

@@ -291,6 +291,7 @@ export type Database = {
           group_portion_multiplier: number | null
           id: string
           raw_input: string | null
+          sort_order: number | null
           source_meal_id: string | null
           total_calories: number
           total_carbs: number
@@ -307,6 +308,7 @@ export type Database = {
           group_portion_multiplier?: number | null
           id?: string
           raw_input?: string | null
+          sort_order?: number | null
           source_meal_id?: string | null
           total_calories?: number
           total_carbs?: number
@@ -323,6 +325,7 @@ export type Database = {
           group_portion_multiplier?: number | null
           id?: string
           raw_input?: string | null
+          sort_order?: number | null
           source_meal_id?: string | null
           total_calories?: number
           total_carbs?: number
@@ -665,6 +668,7 @@ export type Database = {
           raw_input: string | null
           reps: number
           sets: number
+          sort_order: number | null
           source_routine_id: string | null
           speed_mph: number | null
           updated_at: string
@@ -692,6 +696,7 @@ export type Database = {
           raw_input?: string | null
           reps?: number
           sets?: number
+          sort_order?: number | null
           source_routine_id?: string | null
           speed_mph?: number | null
           updated_at?: string
@@ -719,6 +724,7 @@ export type Database = {
           raw_input?: string | null
           reps?: number
           sets?: number
+          sort_order?: number | null
           source_routine_id?: string | null
           speed_mph?: number | null
           updated_at?: string
