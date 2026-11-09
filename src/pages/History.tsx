@@ -87,6 +87,7 @@ const History = () => {
   };
   const { settings, updateSettings } = useUserSettings();
   const showWeights = settings.showWeights;
+  const showCustomLogs = settings.showCustomLogs;
   const calendarRows = resolveCalendarRows(settings.calendarRows, showWeights);
   const setCalendarRow = (key: 'top' | 'bottom', value: string) => {
     updateSettings({ calendarRows: { ...calendarRows, [key]: value } });
@@ -102,7 +103,6 @@ const History = () => {
     const next = current.includes(icon) ? current.filter((i) => i !== icon) : [...current, icon];
     updateSettings({ calendarIcons: next });
   };
-  const showCustomLogs = settings.showCustomLogs;
 
   // Fetch entries for the visible month range
   const monthStart = startOfMonth(currentMonth);
