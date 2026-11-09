@@ -523,7 +523,7 @@ const History = () => {
                   {calendarRows.bottom !== 'icons' ? renderMetricLine(calendarRows.bottom) : (
                   <span className={cn(
                     "h-3 flex items-center justify-center gap-0.5",
-                    !((hasWeights || hasCustomLogs) && isCurrentMonth) && "invisible"
+                    !((hasWeights || (hasCustomLogs && iconOn('custom'))) && isCurrentMonth) && "invisible"
                   )}>
                     {(() => {
                       const maxIcons = isMobile ? 3 : 4;
@@ -533,7 +533,7 @@ const History = () => {
                       if (weightData?.hasCycling && iconOn('cycling')) exerciseKeys.push('cycling');
                       if (weightData?.hasOtherCardio && iconOn('othercardio')) exerciseKeys.push('othercardio');
                       const hasExercise = exerciseKeys.length > 0;
-                      const exerciseSlots = (hasCustomLogs && hasExercise) ? maxIcons - 1 : maxIcons;
+                      const exerciseSlots = ((hasCustomLogs && iconOn('custom')) && hasExercise) ? maxIcons - 1 : maxIcons;
                       const visible = exerciseKeys.slice(0, exerciseSlots);
                       return (
                         <>
@@ -541,7 +541,7 @@ const History = () => {
                             const Icon = ICON_MAP[key];
                             return <Icon key={key} className="h-3 w-3 text-purple-500 dark:text-purple-400" />;
                           })}
-                          {hasCustomLogs && <ClipboardList className="h-3 w-3 text-teal-500 dark:text-teal-400" />}
+                          {hasCustomLogs && iconOn('custom') && <ClipboardList className="h-3 w-3 text-teal-500 dark:text-teal-400" />}
                         </>
                       );
                     })()}
