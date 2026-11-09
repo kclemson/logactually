@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { FeedbackForm } from "@/components/FeedbackForm";
 import calendarSummaryAsset from "@/assets/changelog-calendar-summary.png.asset.json";
+import calendarCustomizeAsset from '@/assets/changelog-calendar-customize.png.asset.json';
 
 // ============================================
 // CHANGELOG ENTRIES - Add new entries at the top
@@ -26,6 +27,7 @@ type ChangelogEntry = {
 
 // prettier-ignore
 const CHANGELOG_ENTRIES: ChangelogEntry[] = [
+{ date: "Nov-09", text: "Customize which data is shown in the Calendar view", imageAsset: calendarCustomizeAsset.url },
 { date: "Aug-02", text: "added a short summary of the number of days that food or exercise was logged in a given month to the Calendar view", imageAsset: calendarSummaryAsset.url },
 { date: "Aug-02", text: "New \"Quick Add\" feature - if there's a saved meal or exercise routine you tend to log very frequently (such as a morning coffee, or twice a week leg day), it'll show up in ghost text at the bottom of the page, just tap/click on it once to add it. The Quick Add list is populated automatically with items you log very frequently, but you can also manually add something to the list in Settings.", image: "quickadd3-both.png", large: true },
 { date: "Jul-29", text: "Some minor bug fixes: Trends charts now hide exercises with very little data — you need at least 3 sessions (and a weight logged, for strength exercises) before a chart appears, and low-frequency exercises are hidden once you have others with much more history. Custom log charts also hide until there are at least 2 days of data. Also fixed 'All time' on the Trends page to include your full history instead of stopping partway through, for users with a lot of data logged. Added a date picker to the dialog for creating new custom logs so you can override any date." },
@@ -64,7 +66,7 @@ const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   { date: "Jan-23", text: "It's alive! v1 of app published with support for food logging & AI integration, editing logged items (and editing calories auto-scales protein/carbs/fat), charts for trends over time, mobile & desktop layouts, PWA support for pinning to home screen." },
 ];
 
-export const LAST_UPDATED = "Aug-02-26";
+export const LAST_UPDATED = "Nov-09-26";
 // ============================================
 
 export default function Changelog() {
