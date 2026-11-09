@@ -4,11 +4,15 @@
 When exercise text is submitted on the Food tab, the app already notices that no food came back. It shows a red message, "No food items detected. If this is exercise, try the Weights page." The Exercise tab works the same way in reverse. The text stays in the box, but you have to copy it, switch tabs, and submit again yourself.
 
 ## New behavior
-The red message becomes a question with two buttons, shown in the same spot:
+The red message becomes a question with two short buttons, shown in the same spot:
 
-> Didn't find any food in that. Log it as exercise instead?   **[Log as exercise]** **[No]**
+```text
+No food found. Log it as exercise instead?   [Yes] [No]
+```
 
-- **Log as exercise:** switches to the Exercise tab on the **same day** and submits the text there automatically. The new entry appears as if you'd typed it on that tab, and the Food box empties.
+- The buttons are just **Yes** and **No**: the question already says "as exercise", and short buttons fit on a phone. The question goes on the left and the buttons on the right. On a narrow phone, the question can wrap onto a second line, but the buttons always stay together on one line.
+- The box uses normal, readable text in place of today's dim red (hard to read in dark mode in your screenshot), because it's now a question, not an error.
+- **Yes:** switches to the Exercise tab on the **same day** and submits the text there automatically. The new entry appears as if you'd typed it on that tab, and the Food box empties.
 - **No:** closes the question and leaves your text in the Food box so you can fix it.
 - The Exercise tab mirrors this ("Log it as food instead?").
 - If exercise tracking is turned off in Settings, the Food tab keeps showing the current plain message, with no offer to move to a hidden tab.
