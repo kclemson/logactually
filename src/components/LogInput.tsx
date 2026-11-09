@@ -1,3 +1,4 @@
+import { getDraft, setDraft } from '@/lib/log-drafts';
 import { useState, useImperativeHandle, forwardRef, useRef, useCallback, useEffect } from "react";
 import { Mic, Send, Loader2, ScanBarcode, Star, Camera, ImagePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -108,6 +109,8 @@ interface LogInputProps {
   /** Typeahead candidates for inline suggestions (generic, mode-agnostic) */
   typeaheadCandidates?: TypeaheadCandidate[];
   /** Handler when user selects a typeahead suggestion */
+  /** Opt-in: remember unsubmitted text across page remounts (e.g. day changes). */
+  draftKey?: string;
   onSelectTypeahead?: (candidate: TypeaheadCandidate) => void;
 }
 
@@ -133,13 +136,17 @@ const getCameraSupport = (): boolean => {
 };
 
 export const LogInput = forwardRef<LogInputRef, LogInputProps>(function LogInput(
-  { mode, onSubmit, isLoading, onScanResult, onPhotoSubmit, onLogSavedMeal, onCreateNewMeal, onLogSavedRoutine, onCreateNewRoutine, placeholder: customPlaceholder, weightUnit, typeaheadCandidates, onSelectTypeahead },
+  { mode, onSubmit, isLoading, onScanResult, onPhotoSubmit, onLogSavedMeal, onCreateNewMeal, onLogSavedRoutine, onCreateNewRoutine, placeholder: customPlaceholder, weightUnit, typeaheadCandidates, onSelectTypeahead, draftKey },
   ref,
 ) {
   const config = MODE_CONFIGS[mode];
   const placeholders = getPlaceholders(mode, weightUnit);
   
-  const [text, setText] = useState("");
+  const [text, setTextState] = useState(() => (draftKey ? getDraft(draftKey) : ""));
+  const setText = (value: string) => {
+    setTextState(value);
+    if (draftKey) setDraft(draftKey, value);
+  };
   const [isListening, setIsListening] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [savedMealsOpen, setSavedMealsOpen] = useState(false);

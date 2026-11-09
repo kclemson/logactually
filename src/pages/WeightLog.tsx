@@ -706,6 +706,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
       {/* Weight Input Section */}
       <section>
         <LogInput
+          draftKey="weights"
           mode="weights"
           ref={weightInputRef}
           onSubmit={handleSubmit}
