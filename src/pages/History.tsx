@@ -353,11 +353,11 @@ const History = () => {
               <SlidersHorizontal className="h-4 w-4" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-56 space-y-3 text-sm">
+          <PopoverContent align="end" className="w-60 space-y-3 text-sm">
             <p className="font-medium">Show on each day</p>
             {(['top', 'bottom'] as const).map((key) => (
               <label key={key} className="flex items-center justify-between gap-2">
-                <span className="text-muted-foreground">{key === 'top' ? 'Top line' : 'Bottom line'}</span>
+                <span className="text-muted-foreground whitespace-nowrap">{key === 'top' ? 'Top' : 'Bottom'}</span>
                 <select
                   className="rounded-md border border-input bg-background px-2 py-1 text-sm"
                   value={calendarRows[key]}
