@@ -747,6 +747,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
       {/* Food Input Section - At top */}
       <section>
         <LogInput
+          draftKey="food"
           mode="food"
           ref={foodInputRef}
           onSubmit={handleSubmit}
