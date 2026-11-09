@@ -93,6 +93,8 @@ interface WeightItemsTableProps {
   distanceUnit?: DistanceUnit;
   /** Callback to copy an entry to today's date */
   onCopyEntryToToday?: (entryId: string) => void;
+  /** Move an entry up (-1) or down (+1) within the day */
+  onMoveEntry?: (entryId: string, dir: -1 | 1) => void;
 }
 
 /**
@@ -165,6 +167,7 @@ export function WeightItemsTable({
   onUpdateCalorieBurn,
   distanceUnit = 'mi',
   onCopyEntryToToday,
+  onMoveEntry,
 }: WeightItemsTableProps) {
   const { isReadOnly, triggerOverlay } = useReadOnlyContext();
   const hasHover = useHasHover();
@@ -795,6 +798,16 @@ export function WeightItemsTable({
                     onCopyToToday={onCopyEntryToToday && currentEntryId
                       ? () => onCopyEntryToToday(currentEntryId)
                       : undefined}
+                    {...(() => {
+                      if (!onMoveEntry || !currentEntryId || !entryBoundaries) return {};
+                      const order = [...entryBoundaries].sort((a, b) => a.startIndex - b.startIndex).map(b => b.entryId);
+                      const pos = order.indexOf(currentEntryId);
+                      return {
+                        canReorder: order.length > 1,
+                        onMoveUp: pos > 0 ? () => onMoveEntry(currentEntryId, -1) : undefined,
+                        onMoveDown: pos >= 0 && pos < order.length - 1 ? () => onMoveEntry(currentEntryId, 1) : undefined,
+                      };
+                    })()}
                     onShowDetails={onShowDetails && currentEntryId
                       ? () => {
                           const boundary = entryBoundaries?.find(b => b.entryId === currentEntryId);

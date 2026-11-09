@@ -13,6 +13,7 @@ export function useFoodEntries(date?: string) {
       let query = supabase
         .from('food_entries')
         .select('*')
+        .order('sort_order', { ascending: true, nullsFirst: false })
         .order('created_at', { ascending: true })
         .order('id', { ascending: true });
 

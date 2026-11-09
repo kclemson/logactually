@@ -1,6 +1,7 @@
 import { type ReactNode, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { ArrowUp, ArrowDown } from 'lucide-react';
 
 interface SavedItemInfo {
   type: 'meal' | 'routine';
@@ -25,6 +26,11 @@ interface EntryExpandedPanelProps {
   onCopyToToday?: () => void;
   /** Callback to open the detail dialog for this entry */
   onShowDetails?: () => void;
+  /** Reorder within the day; omit to hide (e.g. top/bottom entry) */
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  /** Show the reorder controls at all (keeps layout stable when one arrow is hidden) */
+  canReorder?: boolean;
 }
 
 /**
@@ -39,6 +45,9 @@ export function EntryExpandedPanel({
   extraContent,
   onCopyToToday,
   onShowDetails,
+  onMoveUp,
+  onMoveDown,
+  canReorder,
 }: EntryExpandedPanelProps) {
   const { type, name, isFromSaved } = savedItemInfo;
   const typeLabel = type === 'meal' ? 'meal' : 'routine';
@@ -92,7 +101,25 @@ export function EntryExpandedPanel({
                 </button>
               )}
             </div>
-            <div className="flex gap-4">
+            <div className="flex items-center gap-4">
+              {canReorder && (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={onMoveUp}
+                    aria-label="Move up"
+                    className={cn("h-9 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted", !onMoveUp && "invisible")}
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={onMoveDown}
+                    aria-label="Move down"
+                    className={cn("h-9 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted", !onMoveDown && "invisible")}
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
               {onCopyToToday && (
                 copied ? (
                   <span className="text-xs text-green-600 dark:text-green-400 py-1">
