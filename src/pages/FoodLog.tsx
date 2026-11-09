@@ -5,7 +5,7 @@ import { useSearchParams } from 'react-router-dom';
 import { WrongTabPrompt } from '@/components/WrongTabPrompt';
 import { useTabHandoff } from '@/hooks/useTabHandoff';
 import { useQueryClient } from '@tanstack/react-query';
-import { format, isToday, parseISO } from 'date-fns';
+import { format, isToday, parseISO, subDays } from 'date-fns';
 import { useFoodDatesWithData } from '@/hooks/useDatesWithData';
 import { LogInput, LogInputRef, TypeaheadCandidate } from '@/components/LogInput';
 import { DateNavigation } from '@/components/DateNavigation';
