@@ -442,6 +442,28 @@ const History = () => {
               const tooltipContent = showTooltip && summary ? buildDayTooltip(day, summary) : null;
               const isActive = activeDayIndex === index;
 
+              const renderMetricLine = (metric: CalendarMetric) => {
+                const show = hasEntries && isCurrentMonth && metric !== 'none' && summary;
+                const target = usesBurns && baseTarget
+                  ? getExerciseAdjustedTarget(baseTarget, burnByDate.get(dateStr) ?? 0)
+                  : baseTarget;
+                return (
+                  <span className={cn("text-[10px]", show ? "text-blue-500 dark:text-blue-400" : "invisible")}>
+                    {show ? (
+                      <>
+                        {formatDayMetric(metric, {
+                          calories: summary.totalCalories, protein: summary.protein,
+                          carbs: summary.carbs, fiber: summary.fiber, fat: summary.fat,
+                        })}
+                        {metric === 'calories' && target && target > 0 ? (
+                          <span className={`text-[10px] leading-none relative top-[-0.5px] ${getTargetDotColor(summary.totalCalories, target)}`}>●</span>
+                        ) : null}
+                      </>
+                    ) : "\u00A0"}
+                  </span>
+                );
+              };
+
               const cellContent = (
                 <button
                   data-swipe-exempt
@@ -459,29 +481,8 @@ const History = () => {
                     isTodayDate && "ring-2 ring-primary ring-inset",
                   )}
                 >
-                  {/* Row 1: Calorie count */}
-                  <span className={cn(
-                    "text-[10px]",
-                    hasEntries && isCurrentMonth 
-                      ? "text-blue-500 dark:text-blue-400" 
-                      : "invisible"
-                  )}>
-                    {hasEntries && isCurrentMonth 
-                      ? (
-                        <>
-                          {`${Math.round(summary.totalCalories).toLocaleString()}`}
-                          {(() => {
-                            const target = usesBurns && baseTarget
-                              ? getExerciseAdjustedTarget(baseTarget, burnByDate.get(dateStr) ?? 0)
-                              : baseTarget;
-                            return target && target > 0 ? (
-                              <span className={`text-[10px] leading-none relative top-[-0.5px] ${getTargetDotColor(summary.totalCalories, target)}`}>●</span>
-                            ) : null;
-                          })()}
-                        </>
-                      )
-                      : "\u00A0"}
-                  </span>
+                  {/* Row 1: user-chosen metric */}
+                  {renderMetricLine(calendarRows.top)}
                   
                   {/* Row 2: Day number */}
                   <span
@@ -494,7 +495,8 @@ const History = () => {
                     {format(day, 'd')}
                   </span>
 
-                  {/* Row 3: Exercise/custom log indicators */}
+                  {/* Row 3: user-chosen metric or activity icons */}
+                  {calendarRows.bottom !== 'activity' ? renderMetricLine(calendarRows.bottom) : (
                   <span className={cn(
                     "h-3 flex items-center justify-center gap-0.5",
                     !((hasWeights || hasCustomLogs) && isCurrentMonth) && "invisible"
@@ -520,6 +522,7 @@ const History = () => {
                       );
                     })()}
                   </span>
+                  )}
                 </button>
               );
 
