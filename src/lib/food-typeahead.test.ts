@@ -20,9 +20,9 @@ describe('buildFoodTypeaheadCandidates', () => {
 
   it('group name is searchable', () => {
     const [c] = buildFoodTypeaheadCandidates([
-      { eaten_date: '2026-11-09', raw_input: 'apple and peanut butter', group_name: 'Afternoon snack',
-        food_items: [item('Apple'), item('Peanut Butter')], total_calories: 280 },
+      { eaten_date: '2026-11-09', raw_input: 'yogurt and granola', group_name: 'Protein parfait',
+        food_items: [item('Greek Yogurt'), item('Granola')], total_calories: 280 },
     ]);
-    expect(matches('afternoon snack', c.searchText)).toBe(true);
+    expect(matches('protein parfait', c.searchText)).toBe(true);
   });
 });
