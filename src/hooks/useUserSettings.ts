@@ -3,6 +3,7 @@ import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 import { useRecomputeEstimates } from './useRecomputeEstimates';
+import type { CalendarRows } from '@/lib/calendar-rows';
 import type { CalorieBurnSettings } from '@/lib/calorie-burn';
 import type { WeightUnit, DistanceUnit } from '@/lib/weight-units';
 import { type DisplayMacros, DEFAULT_DISPLAY_MACROS, MACRO_META } from '@/lib/macro-display';
@@ -41,7 +42,8 @@ export interface UserSettings {
   // Featured custom log type for the /custom view toggle.
   // null = unset (derive most-recently-created); 'none' = explicit opt-out; otherwise a type id.
   defaultFocusedTypeId: string | null;
-
+  // Calendar day-cell lines; null = use defaults (see resolveCalendarRows).
+  calendarRows: Partial<CalendarRows> | null;
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
@@ -73,6 +75,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   quickAddHidden: [],
 
   defaultFocusedTypeId: null,
+  calendarRows: null,
 };
 
 // Persist the resolved settings per user so the first paint after a (re)load

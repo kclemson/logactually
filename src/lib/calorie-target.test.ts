@@ -118,6 +118,7 @@ const baseSettings: UserSettings = {
   quickAddHidden: [],
 
   defaultFocusedTypeId: null,
+  calendarRows: null,
 };
 
 describe('getEffectiveDailyTarget', () => {

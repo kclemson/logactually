@@ -31,12 +31,28 @@ import { useUserSettings } from '@/hooks/useUserSettings';
 import { setStoredDate } from '@/lib/selected-date';
 import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
 import { useState as useAnimState } from 'react';
+import { SlidersHorizontal } from 'lucide-react';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import {
+  resolveCalendarRows,
+  formatDayMetric,
+  CALENDAR_METRIC_LABELS,
+  type CalendarMetric,
+  type CalendarBottom,
+} from '@/lib/calendar-rows';
 
 interface DaySummary {
   date: string;
   totalCalories: number;
   entryCount: number;
+  protein: number;
+  carbs: number;
+  fiber: number;
+  fat: number;
 }
+
+const TOP_OPTIONS: CalendarMetric[] = ['calories', 'protein', 'carbs', 'net_carbs', 'fat', 'none'];
+const BOTTOM_OPTIONS: CalendarBottom[] = ['activity', 'calories', 'protein', 'carbs', 'net_carbs', 'fat', 'none'];
 
 interface WeightDaySummary {
   date: string;
@@ -66,8 +82,12 @@ const History = () => {
     setActiveDayIndex(null);
     setRollupTooltipOpen(false);
   };
-  const { settings } = useUserSettings();
+  const { settings, updateSettings } = useUserSettings();
   const showWeights = settings.showWeights;
+  const calendarRows = resolveCalendarRows(settings.calendarRows, showWeights);
+  const setCalendarRow = (key: 'top' | 'bottom', value: string) => {
+    updateSettings({ calendarRows: { ...calendarRows, [key]: value } });
+  };
   const showCustomLogs = settings.showCustomLogs;
 
   // Fetch entries for the visible month range
@@ -95,7 +115,7 @@ const History = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('food_entries')
-        .select('eaten_date, total_calories')
+        .select('eaten_date, total_calories, total_protein, total_carbs, total_fat, food_items')
         .gte('eaten_date', format(monthStart, 'yyyy-MM-dd'))
         .lte('eaten_date', format(monthEnd, 'yyyy-MM-dd'));
 
@@ -104,17 +124,18 @@ const History = () => {
       // Aggregate by date
       const summaryMap = new Map<string, DaySummary>();
       (data || []).forEach((entry) => {
-        const existing = summaryMap.get(entry.eaten_date);
-        if (existing) {
-          existing.totalCalories += entry.total_calories;
-          existing.entryCount += 1;
-        } else {
-          summaryMap.set(entry.eaten_date, {
-            date: entry.eaten_date,
-            totalCalories: entry.total_calories,
-            entryCount: 1,
-          });
-        }
+        const items = Array.isArray(entry.food_items) ? (entry.food_items as Array<{ fiber?: unknown }>) : [];
+        const fiber = items.reduce((s, it) => s + Number(it?.fiber || 0), 0);
+        const existing = summaryMap.get(entry.eaten_date) ?? {
+          date: entry.eaten_date, totalCalories: 0, entryCount: 0, protein: 0, carbs: 0, fiber: 0, fat: 0,
+        };
+        existing.totalCalories += Number(entry.total_calories) || 0;
+        existing.protein += Number(entry.total_protein) || 0;
+        existing.carbs += Number(entry.total_carbs) || 0;
+        existing.fat += Number(entry.total_fat) || 0;
+        existing.fiber += fiber;
+        existing.entryCount += 1;
+        summaryMap.set(entry.eaten_date, existing);
       });
 
       return Array.from(summaryMap.values());
@@ -326,6 +347,30 @@ const History = () => {
         >
           <ChevronRight className="h-5 w-5" />
         </Button>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="icon" aria-label="Choose what each day shows">
+              <SlidersHorizontal className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-56 space-y-3 text-sm">
+            <p className="font-medium">Show on each day</p>
+            {(['top', 'bottom'] as const).map((key) => (
+              <label key={key} className="flex items-center justify-between gap-2">
+                <span className="text-muted-foreground">{key === 'top' ? 'Top line' : 'Bottom line'}</span>
+                <select
+                  className="rounded-md border border-input bg-background px-2 py-1 text-sm"
+                  value={calendarRows[key]}
+                  onChange={(e) => setCalendarRow(key, e.target.value)}
+                >
+                  {(key === 'top' ? TOP_OPTIONS : BOTTOM_OPTIONS).map((opt) => (
+                    <option key={opt} value={opt}>{CALENDAR_METRIC_LABELS[opt]}</option>
+                  ))}
+                </select>
+              </label>
+            ))}
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Rolling calorie target summary */}
@@ -397,6 +442,28 @@ const History = () => {
               const tooltipContent = showTooltip && summary ? buildDayTooltip(day, summary) : null;
               const isActive = activeDayIndex === index;
 
+              const renderMetricLine = (metric: CalendarMetric) => {
+                const show = hasEntries && isCurrentMonth && metric !== 'none' && summary;
+                const target = usesBurns && baseTarget
+                  ? getExerciseAdjustedTarget(baseTarget, burnByDate.get(dateStr) ?? 0)
+                  : baseTarget;
+                return (
+                  <span className={cn("text-[10px]", show ? "text-blue-500 dark:text-blue-400" : "invisible")}>
+                    {show ? (
+                      <>
+                        {formatDayMetric(metric, {
+                          calories: summary.totalCalories, protein: summary.protein,
+                          carbs: summary.carbs, fiber: summary.fiber, fat: summary.fat,
+                        })}
+                        {metric === 'calories' && target && target > 0 ? (
+                          <span className={`text-[10px] leading-none relative top-[-0.5px] ${getTargetDotColor(summary.totalCalories, target)}`}>●</span>
+                        ) : null}
+                      </>
+                    ) : "\u00A0"}
+                  </span>
+                );
+              };
+
               const cellContent = (
                 <button
                   data-swipe-exempt
@@ -414,29 +481,8 @@ const History = () => {
                     isTodayDate && "ring-2 ring-primary ring-inset",
                   )}
                 >
-                  {/* Row 1: Calorie count */}
-                  <span className={cn(
-                    "text-[10px]",
-                    hasEntries && isCurrentMonth 
-                      ? "text-blue-500 dark:text-blue-400" 
-                      : "invisible"
-                  )}>
-                    {hasEntries && isCurrentMonth 
-                      ? (
-                        <>
-                          {`${Math.round(summary.totalCalories).toLocaleString()}`}
-                          {(() => {
-                            const target = usesBurns && baseTarget
-                              ? getExerciseAdjustedTarget(baseTarget, burnByDate.get(dateStr) ?? 0)
-                              : baseTarget;
-                            return target && target > 0 ? (
-                              <span className={`text-[10px] leading-none relative top-[-0.5px] ${getTargetDotColor(summary.totalCalories, target)}`}>●</span>
-                            ) : null;
-                          })()}
-                        </>
-                      )
-                      : "\u00A0"}
-                  </span>
+                  {/* Row 1: user-chosen metric */}
+                  {renderMetricLine(calendarRows.top)}
                   
                   {/* Row 2: Day number */}
                   <span
@@ -449,7 +495,8 @@ const History = () => {
                     {format(day, 'd')}
                   </span>
 
-                  {/* Row 3: Exercise/custom log indicators */}
+                  {/* Row 3: user-chosen metric or activity icons */}
+                  {calendarRows.bottom !== 'activity' ? renderMetricLine(calendarRows.bottom) : (
                   <span className={cn(
                     "h-3 flex items-center justify-center gap-0.5",
                     !((hasWeights || hasCustomLogs) && isCurrentMonth) && "invisible"
@@ -475,6 +522,7 @@ const History = () => {
                       );
                     })()}
                   </span>
+                  )}
                 </button>
               );
 
