@@ -1,5 +1,19 @@
 export type CalendarMetric = 'calories' | 'protein' | 'carbs' | 'net_carbs' | 'fat' | 'none';
-export type CalendarBottom = CalendarMetric | 'activity';
+export type CalendarBottom = CalendarMetric | 'icons';
+
+export type CalendarIcon = 'lifting' | 'runwalk' | 'cycling' | 'othercardio' | 'custom';
+export const CALENDAR_ICON_LABELS: Record<CalendarIcon, string> = {
+  lifting: 'Lifting',
+  runwalk: 'Run / walk',
+  cycling: 'Cycling',
+  othercardio: 'Other cardio',
+  custom: 'Custom logs',
+};
+
+/** null = all icons enabled. */
+export function isCalendarIconEnabled(selected: string[] | null | undefined, icon: CalendarIcon): boolean {
+  return selected == null || selected.includes(icon);
+}
 
 export interface CalendarRows {
   top: CalendarMetric;
@@ -12,18 +26,20 @@ export const CALENDAR_METRIC_LABELS: Record<CalendarBottom, string> = {
   carbs: 'Carbs',
   net_carbs: 'Net carbs',
   fat: 'Fat',
-  activity: 'Activity icons',
+  icons: 'Icons',
   none: 'Nothing',
 };
 
 /** Saved choice wins; otherwise default bottom depends on whether exercise tracking is on. */
 export function resolveCalendarRows(
-  saved: Partial<CalendarRows> | null | undefined,
+  saved: { top?: string; bottom?: string } | null | undefined,
   showWeights: boolean,
 ): CalendarRows {
+  // Legacy saved value 'activity' was renamed to 'icons'.
+  const savedBottom = saved?.bottom === 'activity' ? 'icons' : saved?.bottom;
   return {
-    top: saved?.top ?? 'calories',
-    bottom: saved?.bottom ?? (showWeights ? 'activity' : 'protein'),
+    top: (saved?.top as CalendarMetric) ?? 'calories',
+    bottom: (savedBottom as CalendarBottom) ?? (showWeights ? 'icons' : 'protein'),
   };
 }
 

@@ -119,6 +119,7 @@ const baseSettings: UserSettings = {
 
   defaultFocusedTypeId: null,
   calendarRows: null,
+  calendarIcons: null,
 };
 
 describe('getEffectiveDailyTarget', () => {

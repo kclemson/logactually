@@ -37,6 +37,9 @@ import {
   resolveCalendarRows,
   formatDayMetric,
   CALENDAR_METRIC_LABELS,
+  CALENDAR_ICON_LABELS,
+  isCalendarIconEnabled,
+  type CalendarIcon,
   type CalendarMetric,
   type CalendarBottom,
 } from '@/lib/calendar-rows';
@@ -52,7 +55,7 @@ interface DaySummary {
 }
 
 const TOP_OPTIONS: CalendarMetric[] = ['calories', 'protein', 'carbs', 'net_carbs', 'fat', 'none'];
-const BOTTOM_OPTIONS: CalendarBottom[] = ['activity', 'calories', 'protein', 'carbs', 'net_carbs', 'fat', 'none'];
+const BOTTOM_OPTIONS: CalendarBottom[] = ['icons', 'calories', 'protein', 'carbs', 'net_carbs', 'fat', 'none'];
 
 interface WeightDaySummary {
   date: string;
@@ -84,11 +87,22 @@ const History = () => {
   };
   const { settings, updateSettings } = useUserSettings();
   const showWeights = settings.showWeights;
+  const showCustomLogs = settings.showCustomLogs;
   const calendarRows = resolveCalendarRows(settings.calendarRows, showWeights);
   const setCalendarRow = (key: 'top' | 'bottom', value: string) => {
     updateSettings({ calendarRows: { ...calendarRows, [key]: value } });
   };
-  const showCustomLogs = settings.showCustomLogs;
+  const iconOn = (icon: CalendarIcon) => isCalendarIconEnabled(settings.calendarIcons, icon);
+  const availableIcons: CalendarIcon[] = [
+    ...(showWeights ? (['lifting', 'runwalk', 'cycling', 'othercardio'] as CalendarIcon[]) : []),
+    ...(showCustomLogs ? (['custom'] as CalendarIcon[]) : []),
+  ];
+  const toggleIcon = (icon: CalendarIcon) => {
+    const all: CalendarIcon[] = ['lifting', 'runwalk', 'cycling', 'othercardio', 'custom'];
+    const current = settings.calendarIcons ?? all;
+    const next = current.includes(icon) ? current.filter((i) => i !== icon) : [...current, icon];
+    updateSettings({ calendarIcons: next });
+  };
 
   // Fetch entries for the visible month range
   const monthStart = startOfMonth(currentMonth);
@@ -369,6 +383,16 @@ const History = () => {
                 </select>
               </label>
             ))}
+            {calendarRows.bottom === 'icons' && availableIcons.length > 0 && (
+              <div className="space-y-1.5 pl-1">
+                {availableIcons.map((icon) => (
+                  <label key={icon} className="flex items-center gap-2">
+                    <input type="checkbox" checked={iconOn(icon)} onChange={() => toggleIcon(icon)} />
+                    <span>{CALENDAR_ICON_LABELS[icon]}</span>
+                  </label>
+                ))}
+              </div>
+            )}
           </PopoverContent>
         </Popover>
       </div>
@@ -496,20 +520,20 @@ const History = () => {
                   </span>
 
                   {/* Row 3: user-chosen metric or activity icons */}
-                  {calendarRows.bottom !== 'activity' ? renderMetricLine(calendarRows.bottom) : (
+                  {calendarRows.bottom !== 'icons' ? renderMetricLine(calendarRows.bottom) : (
                   <span className={cn(
                     "h-3 flex items-center justify-center gap-0.5",
-                    !((hasWeights || hasCustomLogs) && isCurrentMonth) && "invisible"
+                    !((hasWeights || (hasCustomLogs && iconOn('custom'))) && isCurrentMonth) && "invisible"
                   )}>
                     {(() => {
                       const maxIcons = isMobile ? 3 : 4;
                       const exerciseKeys: string[] = [];
-                      if (weightData?.hasLifting) exerciseKeys.push('lifting');
-                      if (weightData?.hasRunWalk) exerciseKeys.push('runwalk');
-                      if (weightData?.hasCycling) exerciseKeys.push('cycling');
-                      if (weightData?.hasOtherCardio) exerciseKeys.push('othercardio');
+                      if (weightData?.hasLifting && iconOn('lifting')) exerciseKeys.push('lifting');
+                      if (weightData?.hasRunWalk && iconOn('runwalk')) exerciseKeys.push('runwalk');
+                      if (weightData?.hasCycling && iconOn('cycling')) exerciseKeys.push('cycling');
+                      if (weightData?.hasOtherCardio && iconOn('othercardio')) exerciseKeys.push('othercardio');
                       const hasExercise = exerciseKeys.length > 0;
-                      const exerciseSlots = (hasCustomLogs && hasExercise) ? maxIcons - 1 : maxIcons;
+                      const exerciseSlots = ((hasCustomLogs && iconOn('custom')) && hasExercise) ? maxIcons - 1 : maxIcons;
                       const visible = exerciseKeys.slice(0, exerciseSlots);
                       return (
                         <>
@@ -517,7 +541,7 @@ const History = () => {
                             const Icon = ICON_MAP[key];
                             return <Icon key={key} className="h-3 w-3 text-purple-500 dark:text-purple-400" />;
                           })}
-                          {hasCustomLogs && <ClipboardList className="h-3 w-3 text-teal-500 dark:text-teal-400" />}
+                          {hasCustomLogs && iconOn('custom') && <ClipboardList className="h-3 w-3 text-teal-500 dark:text-teal-400" />}
                         </>
                       );
                     })()}
