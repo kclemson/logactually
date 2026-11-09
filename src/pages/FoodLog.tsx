@@ -2,6 +2,8 @@ import { useState, useMemo, useRef, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { DetailDialog, buildFoodDetailFields, FOOD_HIDE_WHEN_ZERO } from '@/components/DetailDialog';
 import { useSearchParams } from 'react-router-dom';
+import { WrongTabPrompt } from '@/components/WrongTabPrompt';
+import { useTabHandoff } from '@/hooks/useTabHandoff';
 import { useQueryClient } from '@tanstack/react-query';
 import { format, isToday, parseISO } from 'date-fns';
 import { useFoodDatesWithData } from '@/hooks/useDatesWithData';
@@ -94,7 +96,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
   const queryClient = useQueryClient();
   const { entries, isFetching, createEntry, updateEntry, deleteEntry, deleteAllByDate } = useFoodEntries(dateStr);
   const { data: datesWithFood = [] } = useFoodDatesWithData(dateNav.calendarMonth);
-  const { analyzeFood, isAnalyzing, error: analyzeError, warning: analyzeWarning } = useAnalyzeFood();
+  const { analyzeFood, isAnalyzing, error: analyzeError, warning: analyzeWarning, noMatch, dismissWarning } = useAnalyzeFood();
   const { analyzePhoto, isAnalyzing: isAnalyzingPhoto, error: photoError } = useAnalyzeFoodPhoto();
   const { data: savedMeals } = useSavedMeals();
   const { data: recentEntries } = useRecentFoodEntries(90);
@@ -363,7 +365,11 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     );
   }, [entries, createEntryFromItems]);
 
-  const handleSubmit = async (text: string) => {
+  const lastSubmitRef = useRef<{ text: string; fromOtherTab: boolean }>({ text: '', fromOtherTab: false });
+  const { sendTo } = useTabHandoff((text) => handleSubmit(text, true));
+
+  const handleSubmit = async (text: string, fromOtherTab = false) => {
+    lastSubmitRef.current = { text, fromOtherTab };
     const result = await analyzeFood(text);
     if (result) {
       // Demo mode: show preview instead of saving
@@ -769,11 +775,22 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
             Photo analysis failed: {photoError}
           </div>
         )}
-        {analyzeWarning && (
+        {analyzeWarning && (settings.showWeights && noMatch && !lastSubmitRef.current.fromOtherTab ? (
+          <WrongTabPrompt
+            message="No food found. Log it as exercise instead?"
+            onYes={() => {
+              const text = lastSubmitRef.current.text;
+              dismissWarning();
+              foodInputRef.current?.clear();
+              sendTo('weights', text, dateStr);
+            }}
+            onNo={dismissWarning}
+          />
+        ) : (
           <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive mt-3">
             {analyzeWarning}
           </div>
-        )}
+        ))}
         
 
         

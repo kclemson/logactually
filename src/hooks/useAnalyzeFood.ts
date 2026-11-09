@@ -21,6 +21,9 @@ export function useAnalyzeFood() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
+  // True when the AI found nothing of this tab's kind (likely logged on the wrong tab).
+  const [noMatch, setNoMatch] = useState(false);
+  const dismissWarning = () => { setWarning(null); setNoMatch(false); };
 
   const analyzeFood = async (
     rawInput: string,
@@ -30,6 +33,7 @@ export function useAnalyzeFood() {
     setIsAnalyzing(true);
     setError(null);
     setWarning(null);
+    setNoMatch(false);
 
     try {
       const { data, error: invokeError } = await supabase.functions.invoke(
@@ -49,7 +53,8 @@ export function useAnalyzeFood() {
 
       // Check for empty results (e.g., user entered exercise on food page)
       if (!data.food_items || data.food_items.length === 0) {
-        setWarning("No food items detected. If this is exercise, try the Weights page.");
+        setWarning("No food items detected. If this is exercise, try the Exercise page.");
+        setNoMatch(true);
         return null;
       }
 
@@ -87,5 +92,5 @@ export function useAnalyzeFood() {
     }
   };
 
-  return { analyzeFood, isAnalyzing, error, warning };
+  return { analyzeFood, isAnalyzing, error, warning, noMatch, dismissWarning };
 }

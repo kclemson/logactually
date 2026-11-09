@@ -3,6 +3,8 @@ import { cn } from '@/lib/utils';
 import { DetailDialog, buildExerciseDetailFields, flattenExerciseValues, processExerciseSaveUpdates, EXERCISE_HIDE_WHEN_EMPTY } from '@/components/DetailDialog';
 import { isMultiItemEntry } from '@/lib/entry-boundaries';
 import { useSearchParams } from 'react-router-dom';
+import { WrongTabPrompt } from '@/components/WrongTabPrompt';
+import { useTabHandoff } from '@/hooks/useTabHandoff';
 import { useQueryClient } from '@tanstack/react-query';
 import { format, isToday, parseISO } from 'date-fns';
 import { useWeightDatesWithData } from '@/hooks/useDatesWithData';
@@ -107,7 +109,7 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
 
   const { weightSets, isFetching, createEntry, updateSet, deleteSet, deleteEntry, deleteAllByDate, updateGroupName } = useWeightEntries(dateStr, calorieBurnSettings);
   const { data: datesWithWeights = [] } = useWeightDatesWithData(dateNav.calendarMonth);
-  const { analyzeWeights, isAnalyzing, error: analyzeError, warning: analyzeWarning } = useAnalyzeWeights();
+  const { analyzeWeights, isAnalyzing, error: analyzeError, warning: analyzeWarning, noMatch, dismissWarning } = useAnalyzeWeights();
   const saveRoutineMutation = useSaveRoutine();
   const updateSavedRoutine = useUpdateSavedRoutine();
   const { data: savedRoutines } = useSavedRoutines();
@@ -362,7 +364,11 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
     }
   }, [weightSets, createEntry, queryClient]);
 
-  const handleSubmit = async (text: string) => {
+  const lastSubmitRef = useRef<{ text: string; fromOtherTab: boolean }>({ text: '', fromOtherTab: false });
+  const { sendTo } = useTabHandoff((text) => handleSubmit(text, true));
+
+  const handleSubmit = async (text: string, fromOtherTab = false) => {
+    lastSubmitRef.current = { text, fromOtherTab };
     const result = await analyzeWeights(text);
     if (result) {
       // Demo mode: show preview instead of saving
@@ -722,11 +728,22 @@ const WeightLogContent = ({ initialDate }: WeightLogContentProps) => {
             Analysis failed: {analyzeError}
           </div>
         )}
-        {analyzeWarning && (
+        {analyzeWarning && (noMatch && !lastSubmitRef.current.fromOtherTab ? (
+          <WrongTabPrompt
+            message="No exercise found. Log it as food instead?"
+            onYes={() => {
+              const text = lastSubmitRef.current.text;
+              dismissWarning();
+              weightInputRef.current?.clear();
+              sendTo('food', text, dateStr);
+            }}
+            onNo={dismissWarning}
+          />
+        ) : (
           <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive mt-3">
             {analyzeWarning}
           </div>
-        )}
+        ))}
         
         {/* Save Suggestion Prompt (for repeated entries) */}
         {saveSuggestion && (
