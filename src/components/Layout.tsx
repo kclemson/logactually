@@ -11,7 +11,6 @@ import { PullToRefresh } from './PullToRefresh';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { useReadOnlyContext } from '@/contexts/ReadOnlyContext';
-import { useIsMobile } from '@/hooks/use-mobile';
 
 export function Layout() {
   const { data: isAdmin } = useIsAdmin();
@@ -20,7 +19,6 @@ export function Layout() {
   const hasSyncedRef = useRef(false);
   const { isReadOnly } = useReadOnlyContext();
   const queryClient = useQueryClient();
-  const isMobile = useIsMobile();
   const [searchParams] = useSearchParams();
   const hideAdmin = searchParams.get('hideAdmin') === 'true';
 
@@ -52,13 +50,11 @@ export function Layout() {
       {isReadOnly && <DemoBanner />}
       <ReadOnlyOverlay />
       <Header />
-      {isMobile ? (
-        <PullToRefresh onRefresh={handleRefresh}>
-          {mainContent}
-        </PullToRefresh>
-      ) : (
-        mainContent
-      )}
+      {/* Always wrapped (touch-only, inert on desktop) so the tree stays stable
+          across the mobile breakpoint — e.g. rotating a phone must not remount pages. */}
+      <PullToRefresh onRefresh={handleRefresh}>
+        {mainContent}
+      </PullToRefresh>
       <BottomNav />
       {isAdmin && !hideAdmin && <DevToolsPanel />}
     </div>
