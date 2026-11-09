@@ -21,6 +21,7 @@ import { useAnalyzeFoodPhoto } from '@/hooks/useAnalyzeFoodPhoto';
 import { useFoodEntries } from '@/hooks/useFoodEntries';
 import { useRecentFoodEntries } from '@/hooks/useRecentFoodEntries';
 import { buildFoodTypeaheadCandidates } from '@/lib/food-typeahead';
+import { moveEntryId, sortByEntryOrder, persistEntryOrder, uniqueInOrder } from '@/lib/entry-order';
 import { useEditableFoodItems } from '@/hooks/useEditableItems';
 import { useSavedMeals, useSaveMeal, useLogSavedMeal } from '@/hooks/useSavedMeals';
 import { useQuickAddFood } from '@/hooks/useQuickAddFood';
@@ -480,6 +481,16 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
     createEntryFromItems(foodItems, null, _meal.id, _meal.name);
   };
 
+  const handleMoveEntry = useCallback((entryId: string, dir: -1 | 1) => {
+    const next = moveEntryId(entries.map(e => e.id), entryId, dir);
+    if (!next) return;
+    queryClient.setQueryData(['food-entries', dateStr], (old: FoodEntry[] | undefined) =>
+      old ? sortByEntryOrder(old, e => e.id, next) : old);
+    persistEntryOrder('food', next).catch(() => {
+      queryClient.invalidateQueries({ queryKey: ['food-entries', dateStr] });
+    });
+  }, [entries, dateStr, queryClient]);
+
   // Handle save as meal from FoodItemsTable expando
   const handleSaveAsMeal = (entryId: string, rawInput: string | null, foodItems: FoodItem[]) => {
     const entry = entries.find(e => e.id === entryId);
@@ -838,6 +849,7 @@ const FoodLogContent = ({ initialDate }: FoodLogContentProps) => {
               }}
               onShowDetails={handleShowDetails}
               onCopyEntryToToday={!isTodaySelected && !isReadOnly ? handleCopyEntryToToday : undefined}
+              onMoveEntry={!isReadOnly ? handleMoveEntry : undefined}
               displayMacros={settings.displayMacros}
             />
           )}
