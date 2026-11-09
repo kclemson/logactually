@@ -44,6 +44,8 @@ export interface UserSettings {
   defaultFocusedTypeId: string | null;
   // Calendar day-cell lines; null = use defaults (see resolveCalendarRows).
   calendarRows: Partial<CalendarRows> | null;
+  // Calendar bottom-line icon types to show; null = all.
+  calendarIcons: string[] | null;
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
@@ -76,6 +78,7 @@ const DEFAULT_SETTINGS: UserSettings = {
 
   defaultFocusedTypeId: null,
   calendarRows: null,
+  calendarIcons: null,
 };
 
 // Persist the resolved settings per user so the first paint after a (re)load
